@@ -55,7 +55,8 @@ project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
   patch_size, 
   unknowns, time_step_size,
   flux = True,
-  ncp  = False
+  ncp  = False,
+  enclaves = True
 ))
 
 
@@ -111,18 +112,18 @@ if build_mode == peano4.output.CompileMode.Asserts:
   success = True
   if success:
     success = peano4_project.run( ["--threads", "1"] )
-  if success:
-    success = peano4_project.run( ["--threads", "2"] )
-  if success:
-    success = peano4_project.run( ["--threads", "4"] )
-  if success:
-    success = peano4_project.run( ["--threads", "1"], ["mpirun", "-n", "2"] )
-  if success:
-    success = peano4_project.run( ["--threads", "1"], ["mpirun", "-n", "4"] )
-  if success:
-    success = peano4_project.run( ["--threads", "2"], ["mpirun", "-n", "4"] )
-  if success:
-    success = peano4_project.run( ["--threads", "4"], ["mpirun", "-n", "4"] )
+  #if success:
+  #  success = peano4_project.run( ["--threads", "2"] )
+  #if success:
+  #  success = peano4_project.run( ["--threads", "4"] )
+  #if success:
+  #  success = peano4_project.run( ["--threads", "1"], ["mpirun", "-n", "2"] )
+  #if success:
+  #  success = peano4_project.run( ["--threads", "1"], ["mpirun", "-n", "4"] )
+  #if success:
+  #  success = peano4_project.run( ["--threads", "2"], ["mpirun", "-n", "4"] )
+  #if success:
+  #  success = peano4_project.run( ["--threads", "4"], ["mpirun", "-n", "4"] )
 else:
   success = peano4_project.run( ["--threads", "8"] )
   

@@ -11,6 +11,7 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 import exahype2.grid.AMROnPatch
 
+from abc import abstractmethod
 
 
 class FV(object):
@@ -27,14 +28,16 @@ class FV(object):
   namespace Sequence of strings representing the (nested) namespace. Pass in 
     ["examples", "exahype2", "finitevolumes"] for example.
     
-    
+  enclaves  A simple boolean
+  
   """
-  def __init__(self, name, patch_size, overlap, unknowns):
+  def __init__(self, name, patch_size, overlap, unknowns, enclaves):
     self._name  = name
     self._patch = peano4.datamodel.Patch( (patch_size,patch_size,patch_size), unknowns, self._unknown_identifier() )
     self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() )
     self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() + "Old" )
     self._patch_overlap.generator.set_merge_method_definition( peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap) )
+    self._enclaves = enclaves
     pass
   
   
@@ -85,13 +88,16 @@ class FV(object):
 """
 
 
+  @abstractmethod
   def get_user_includes(self):
     """
   
-    Use this to add include statements to the generated C++ code.
+    Use this to add include statements to the generated C++ code. Is there for
+    subclasses to hook in.
   
     """
     return ""
+
 
   CreateCellTemplate = ""
   
@@ -168,6 +174,7 @@ class FV(object):
     pass
 
 
+  @abstractmethod
   def add_entries_to_text_replacement_dictionary(self,d):
     pass  
 

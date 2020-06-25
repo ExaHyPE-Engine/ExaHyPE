@@ -4,6 +4,9 @@
 {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}():
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
   _timeStamp(0.0) {
+  {% if ENCLAVE %}
+  _traversalState = TraversalState::Primary;
+  {% endif %}
 }
 
 
@@ -37,7 +40,17 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startTi
 
 
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishTimeStep() {
+  {% if ENCLAVE %}
+  if ( _traversalState == TraversalState::Primary ) {
+    _traversalState = TraversalState::Secondary;
+  }
+  else {
+    _traversalState = TraversalState::Primary;
+    _timeStamp += {{TIME_STEP_SIZE}};
+  }
+  {% else %}
   _timeStamp += {{TIME_STEP_SIZE}};
+  {% endif %}
 }
 
 

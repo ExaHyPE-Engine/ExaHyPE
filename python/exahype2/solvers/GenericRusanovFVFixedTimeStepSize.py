@@ -15,11 +15,11 @@ class GenericRusanovFVFixedTimeStepSize( FV ):
   __None         = "<none>"
   
   
-  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False):
+  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False, enclaves=False):
     """
       Instantiate a generic FV scheme with an overlap of 1.
     """
-    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, 1, unknowns)
+    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, 1, unknowns, enclaves)
 
     self._time_step_size              = time_step_size
     
@@ -201,10 +201,17 @@ class GenericRusanovFVFixedTimeStepSize( FV ):
 
 
   def add_entries_to_text_replacement_dictionary(self,d):
-    d[ "TIME_STEP_SIZE" ]  = self._time_step_size
-    d[ "FLUX_IMPLEMENTATION"] = self._flux_implementation
-    d[ "NCP_IMPLEMENTATION"] = self._ncp_implementation
-    d[ "EIGENVALUES_IMPLEMENTATION"] = self._eigenvalues_implementation
-    d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"] = self._boundary_conditions_implementation
+    """
+    
+     This routine befills a dictionary d which is in turn passed to Jinja2 to 
+     befill the template for the solver.
+    
+    """
+    d[ "TIME_STEP_SIZE" ]                     = self._time_step_size
+    d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
+    d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
+    d[ "EIGENVALUES_IMPLEMENTATION"]          = self._eigenvalues_implementation
+    d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
-    d[ "INITIAL_CONDITIONS_IMPLEMENTATION"] = self._initial_conditions_implementation
+    d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+    d[ "ENCLAVE"]                             = self._enclaves

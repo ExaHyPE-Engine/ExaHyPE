@@ -35,6 +35,15 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
   protected:
 	const int  _NumberOfFiniteVolumesPerAxisPerPatch;
     double     _timeStamp;
+
+    {% if ENCLAVE %}
+    enum class TraversalState {
+      Primary,
+	  Secondary
+    };
+
+    TraversalState  _traversalState;
+    {% endif %}
   public:
     {{CLASSNAME}}();
 
