@@ -1897,7 +1897,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
             inVertexPositionWithinCell,
             inOutStack,
             outCallStackCounter,    // Relative position in stack from top
-            fromStack               // Rank
+            fromStack,              // Rank
+            TraversalObserver::SendReceiveContext::BoundaryExchange
           );
         }
       }
@@ -1928,7 +1929,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
             inFacePositionWithinCell,
             inOutStack,
             outCallStackCounter,    // Relative position in stack from top
-            fromStack
+            fromStack,
+            TraversalObserver::SendReceiveContext::BoundaryExchange
           );
         }
       }
@@ -1981,7 +1983,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           observer.sendVertex(
             outVertexStack,
             (totalOutStackWrites-1),
-            toStack
+            toStack,
+            TraversalObserver::SendReceiveContext::BoundaryExchange
           );
         }
       }
@@ -2000,7 +2003,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           observer.sendVertex(
             outVertexStack,
             (totalOutStackWrites-1),
-            toStack
+            toStack,
+            TraversalObserver::SendReceiveContext::Rebalancing
           );
         }
       }
@@ -2038,7 +2042,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           observer.sendFace(
             outFaceStack,
             (totalOutStackWrites-1),
-            toStack
+            toStack,
+            TraversalObserver::SendReceiveContext::BoundaryExchange
           );
         }
       }
@@ -2057,7 +2062,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           observer.sendFace(
             outFaceStack,
             (totalOutStackWrites-1),
-            toStack
+            toStack,
+            TraversalObserver::SendReceiveContext::Rebalancing
           );
         }
       }
@@ -2081,7 +2087,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
       const int toStack   = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange( p );
       observer.sendCell(
         outCellStack,
-        toStack
+        toStack,
+        TraversalObserver::SendReceiveContext::Rebalancing
       );
     }
   }

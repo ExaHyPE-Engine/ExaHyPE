@@ -15,8 +15,8 @@ class AMROnPatch(peano4.toolbox.blockstructured.ApplyFunctorOnPatch):
    You can inject an instance of this class as action set.
   
   """
-  def __init__(self,patch,functor_implementation,additional_includes):
-    super(AMROnPatch,self).__init__(patch,functor_implementation,additional_includes)
+  def __init__(self,patch,functor_implementation,guard,additional_includes):
+    super(AMROnPatch,self).__init__(patch,functor_implementation,guard,additional_includes)
     
   
   def get_body_of_getGridControlEvents(self):

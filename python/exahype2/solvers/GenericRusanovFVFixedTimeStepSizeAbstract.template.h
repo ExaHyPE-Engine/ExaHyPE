@@ -33,17 +33,19 @@
 
 class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
   protected:
-	const int  _NumberOfFiniteVolumesPerAxisPerPatch;
+    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
     double     _timeStamp;
 
-    {% if ENCLAVE %}
-    enum class TraversalState {
-      Primary,
-	  Secondary
+    enum class SolverState {
+      GridConstruction,
+      GridInitialisation,
+      TimeStep,
+      Plotting
     };
 
-    TraversalState  _traversalState;
-    {% endif %}
+    SolverState  _solverState;
+
+    static std::string toString(SolverState);
   public:
     {{CLASSNAME}}();
 
@@ -105,6 +107,15 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
 
+
+    virtual void startGridConstructionStep();
+    virtual void finishGridConstructionStep();
+
+    virtual void startGridInitialisationStep();
+    virtual void finishGridInitialisationStep();
+
+    virtual bool mayUpdateLoadBalancing();
+
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -121,6 +132,15 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
      * operation is still invoked.
      */
     virtual void finishTimeStep();
+
+    virtual void startPlottingStep(
+      double globalMinTimeStamp,
+      double globalMaxTimeStamp,
+      double globalMinTimeStepSize,
+      double globalMaxTimeStepSize
+    );
+
+    virtual void finishPlottingStep();
 
     {% if FLUX_IMPLEMENTATION!="<none>" %}
    virtual void flux(

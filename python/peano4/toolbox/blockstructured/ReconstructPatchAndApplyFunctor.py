@@ -19,7 +19,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap,functor_implementation,touch_face_first_time_functor,additional_includes):
+  def __init__(self,patch,patch_overlap,functor_implementation,touch_face_first_time_functor,guard_cell_operation,guard_face_operation,additional_includes):
     """
 
   patch          Instance of peano4.datamodel.Patch
@@ -77,12 +77,12 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "assertion5"
     self.d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "assertion6"
     
-    self.d[ "FUNCTOR_IMPLEMENTATION" ]               = functor_implementation
-    self.touch_face_first_time_functor               = """
-  logTraceInWith2Arguments( "touchFaceFirstTime(...)", marker.toString(), marker.isLocal() );
-""" + touch_face_first_time_functor + """
-  logTraceOut( "touchFaceFirstTime(...)" );
-"""
+    self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = functor_implementation
+    self.d[ "FACE_FUNCTOR_IMPLEMENTATION" ] = touch_face_first_time_functor
+
+    self.d[ "GUARD_CELL_OPERATION" ]                 = guard_cell_operation
+    self.d[ "GUARD_FACE_OPERATION" ]                 = guard_face_operation
+
     self.additional_includes                         = additional_includes
 
 
@@ -107,8 +107,16 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     return False
 
 
+  __Tempalte_TouchFaceFirstTime = """
+  if ( {GUARD_FACE_OPERATION} ) {{
+    logTraceInWith2Arguments( "touchFaceFirstTime(...)", marker.toString(), marker.isLocal() );
+    {FACE_FUNCTOR_IMPLEMENTATION}
+    logTraceOut( "touchFaceFirstTime(...)" );
+  }}
+"""
+
+
   __Template_TouchCellFirstTime = """
-  logTraceInWith1Argument( "touchCellFirstTime(...)", marker.toString() );
   auto serialisePatchIndex = [](tarch::la::Vector<Dimensions,int> overlapCell, int normal) {{
     int base   = 1;
     int result = 0;
@@ -124,11 +132,14 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     return result;
   }};
 
-  #if Dimensions==2
-  double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}];
-  #elif Dimensions==3
-  double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}];
-  #endif
+  if ({GUARD_CELL_OPERATION}) {{
+    logTraceInWith1Argument( "touchCellFirstTime(...)", marker.toString() );
+
+    #if Dimensions==2
+    double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}];
+    #elif Dimensions==3
+    double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}];
+    #endif
 
   logTraceIn( "touchCellFirstTime(...)::loopOverPatch" );
   //
@@ -195,11 +206,12 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   #elif Dimensions==3
   auto f = [&]( double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}], double originalPatch[{NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D}] ) -> void {{
   #endif
-{FUNCTOR_IMPLEMENTATION}
+    {CELL_FUNCTOR_IMPLEMENTATION}
   }};
 
   f( reconstructedPatch, {CELL_ACCESSOR}.value );
   logTraceOut( "touchCellFirstTime(...)" );
+  }}
 """
 
 
@@ -209,7 +221,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       result = self.__Template_TouchCellFirstTime.format(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = self.touch_face_first_time_functor
+      result = self.__Tempalte_TouchFaceFirstTime.format(**self.d)
       pass 
     
     return result

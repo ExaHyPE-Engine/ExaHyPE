@@ -47,6 +47,11 @@ class MPI(object):
     static void sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag );
 #endif
+
+
+    static bool receiveAndMerge();
+    static bool send();
+
     """
     
     if self._dof_association==DoFAssociation.Vertex:
@@ -69,6 +74,16 @@ void merge(const """ + full_qualified_name + """& neighbour, const peano4::datam
 
   def get_implementation(self,full_qualified_name):
     result = """
+bool """ + full_qualified_name + """::receiveAndMerge() {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::send() {
+  return true;
+}
+    
+    
 #ifdef Parallel
 void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag ) {
   """ + full_qualified_name + """::send(

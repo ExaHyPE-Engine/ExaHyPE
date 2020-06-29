@@ -19,7 +19,7 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
   if (tarch::la::equals(t,0.0) and tarch::la::max(h)>MaxHOfVolume) {
     result = ::exahype2::RefinementCommand::Refine;
   }
-  logTraceOutWith1Argument( "refinementCriterion(...)", toString(result) );
+  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;
 }
 

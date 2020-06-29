@@ -30,14 +30,29 @@ class FV(object):
     
   enclaves  A simple boolean
   
+  The guard variables are used within the templates and switch them on/off. By 
+  default, they all are true, i.e. the actions are triggered in every grid 
+  traversal an action in theory could be active.
+  
   """
-  def __init__(self, name, patch_size, overlap, unknowns, enclaves):
+  def __init__(self, name, patch_size, overlap, unknowns):
     self._name  = name
     self._patch = peano4.datamodel.Patch( (patch_size,patch_size,patch_size), unknowns, self._unknown_identifier() )
     self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() )
     self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() + "Old" )
-    self._patch_overlap.generator.set_merge_method_definition( peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap) )
-    self._enclaves = enclaves
+    self._patch_overlap.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
+    
+    self._patch_overlap.generator.includes += """
+#include "peano4/utils/Loop.h" 
+"""
+
+    self._guard_backup_faces = "true"
+    self._guard_create_cell  = "true"
+    self._guard_AMR          = "true"
+    self._guard_project_patch_onto_faces = "true"
+    self._guard_update_cell  = "true"
+    self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary()"
+
     pass
   
   
@@ -111,9 +126,22 @@ class FV(object):
     self.add_entries_to_text_replacement_dictionary(d)
     d["IS_GRID_CREATION"] = "true"
     
-    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(self._patch,self._patch_overlap) )
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(self._patch,self.CreateCellTemplate.format(**d),self.__get_default_includes() + self.get_user_includes()) )
-    step.add_action_set( exahype2.grid.AMROnPatch(self._patch,self.AMRTemplate.format(**d),  self.__get_default_includes() + self.get_user_includes()) )
+    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
+      self._patch,
+      self._patch_overlap,
+      self._guard_project_patch_onto_faces, 
+      self.__get_default_includes() + self.get_user_includes()
+    ))
+    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+      self._patch,self.CreateCellTemplate.format(**d),
+      self._guard_create_cell,
+      self.__get_default_includes() + self.get_user_includes()
+    ))
+    step.add_action_set( exahype2.grid.AMROnPatch(
+      self._patch,self.AMRTemplate.format(**d),
+      "true", 
+      self.__get_default_includes() + self.get_user_includes()
+    ))
     pass
   
   
@@ -123,8 +151,17 @@ class FV(object):
     self.add_entries_to_text_replacement_dictionary(d)
     
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat("solution" + self._name,self._patch, self._unknown_identifier()) )
-    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(self._patch,self._patch_overlap) )
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(self._patch,self.CreateCellTemplate.format(**d),self.__get_default_includes() + self.get_user_includes()) )
+    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
+      self._patch,self._patch_overlap,
+      self._guard_project_patch_onto_faces,
+      self.__get_default_includes() + self.get_user_includes()
+    ))
+    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+      self._patch,
+      self.CreateCellTemplate.format(**d),
+      self._guard_create_cell,
+      self.__get_default_includes() + self.get_user_includes()
+    ))
     pass
   
   HandleBoundaryTemplate = ""
@@ -133,13 +170,6 @@ class FV(object):
  
  
   def add_actions_to_perform_time_step(self, step):
-    touchFaceFirstTimeTemplate = """
-  if (fineGridFaceLabel.getBoundary()) {{
-""" + self.HandleBoundaryTemplate + """
-  }}
-"""
-   
-    
     d = {}
     self.__init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
@@ -150,7 +180,9 @@ class FV(object):
       self._patch,
       self._patch_overlap,
       self.HandleCellTemplate.format(**d),
-      touchFaceFirstTimeTemplate.format(**d),
+      self.HandleBoundaryTemplate.format(**d),
+      self._guard_update_cell,
+      self._guard_touch_face_first_time_in_time_step,
       self.__get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
 """
     )
@@ -163,13 +195,28 @@ class FV(object):
     step.add_action_set( reconstruct_patch_and_apply_FV_kernel ) 
      
      
-    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(self._patch,self._patch_overlap_new) )
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(self._patch,self.CreateCellTemplate.format(**d),self.__get_default_includes() + self.get_user_includes()) )
-    step.add_action_set( exahype2.grid.AMROnPatch(self._patch,self.AMRTemplate.format(**d),  self.__get_default_includes() + self.get_user_includes()) )
+    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
+      self._patch,
+      self._patch_overlap_new,
+      self._guard_project_patch_onto_faces,
+      self.__get_default_includes() + self.get_user_includes()
+    ))
+    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+      self._patch,self.CreateCellTemplate.format(**d),
+      self._guard_create_cell,
+      self.__get_default_includes() + self.get_user_includes()
+    ))
+    step.add_action_set( exahype2.grid.AMROnPatch(
+      self._patch,self.AMRTemplate.format(**d),  
+      self._guard_AMR,
+      self.__get_default_includes() + self.get_user_includes()
+    ))
     step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
       self._patch_overlap_new,
       self._patch_overlap,
-      False
+      False,
+      self._guard_backup_faces,
+      self.__get_default_includes() + self.get_user_includes()
     ))
     pass
 

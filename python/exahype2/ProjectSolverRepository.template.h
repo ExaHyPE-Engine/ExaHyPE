@@ -6,24 +6,43 @@
 // This is generated. If you change fundamental properties, you will have to
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _{INCLUDE_GUARD}_
-#define _{INCLUDE_GUARD}_
+#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
 
 
-{SOLVER_INCLUDES}
 
 #include "toolbox/loadbalancing/RecursiveSubdivision.h"
 #include "exahype2/RefinementControl.h"
 
 
-{OPEN_NAMESPACE}
-{SOLVER_DECLARATIONS}
+{% for item in SOLVERS -%}
+#include "{{ item[0] }}.h"
+{%- endfor %}
+
+
+{% for item in NAMESPACE -%}
+  namespace {{ item }} {
+{%- endfor %}
+
+  {% for item in SOLVERS -%}
+  extern {{ item[0] }}  {{ item[1] }};
+  {%- endfor %}
+
+
   extern ::exahype2::RefinementControl  refinementControl;
+
+  {% if LOAD_BALANCER!="" -%}
+  extern {{LOAD_BALANCER}}              loadBalancer;
+  {% endif -%}
+
 
   double getMinTimeStamp();
   double getMaxTimeStamp();
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
+
+  void startGridConstructionStep();
+  void startGridInitialisationStep();
 
   void startTimeStep(
     double globalMinTimeStamp,
@@ -32,11 +51,23 @@
     double globalMaxTimeStepSize
   );
 
+  void startPlottingStep(
+    double globalMinTimeStamp,
+    double globalMaxTimeStamp,
+    double globalMinTimeStepSize,
+    double globalMaxTimeStepSize
+  );
+
   void finishGridConstructionStep();
+  void finishGridInitialisationStep();
   void finishTimeStep();
+  void finishPlottingStep();
+
   void finishSimulation();
 
-{CLOSE_NAMESPACE}
+{% for item in NAMESPACE -%}
+  }
+{%- endfor %}
 
 
 #endif

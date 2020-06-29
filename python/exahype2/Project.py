@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
-import peano4.output.TemplatedHeaderImplementationFilePair
+import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 
 import os
@@ -149,42 +149,16 @@ class Project(object):
     
   def __generate_solver_repository(self):
     solverRepositoryDictionary = {
-      "SOLVER_INCLUDES" : "",
-      "SOLVER_DECLARATIONS" : "",
-      "SOLVER_DEFINITIONS" : "",
-      "SEQUENCE_OF_GET_MAX_TIME_STEP_SIZE_CALLS": "0.0",
-      "SEQUENCE_OF_GET_MIN_TIME_STEP_SIZE_CALLS": "std::numeric_limits<double>::max()",
-      "SEQUENCE_OF_GET_MAX_TIME_STAMP_CALLS": "0.0",
-      "SEQUENCE_OF_GET_MIN_TIME_STAMP_CALLS": "std::numeric_limits<double>::max()",
-      "SEQUENCE_OF_START_TIME_STEP_CALLS": "",
-      "SEQUENCE_OF_FINISH_TIME_STEP_CALLS": "",
-      "SEQUENCE_OF_FINISH_GRID_CONSTRUCTION_STEP_CALLS": "",
-      "SEQUENCE_OF_FINISH_FINISH_SIMULATION_CALLS": ""
+      "SOLVERS" : [],
+      "LOAD_BALANCER" : self._load_balancer_name
     }
 
     for solver in self._solvers:
-      solverRepositoryDictionary[ "SOLVER_INCLUDES" ]     += """#include "../""" + solver._name + """.h" \n"""
-      solverRepositoryDictionary[ "SOLVER_DECLARATIONS" ] += "  extern " + solver._name + "  " + solver.get_name_of_global_instance() + ";\n"
-      solverRepositoryDictionary[ "SOLVER_DEFINITIONS" ]  += solver._name + "  " + solver.get_name_of_global_instance() + ";\n"
-      solverRepositoryDictionary[ "SEQUENCE_OF_GET_MAX_TIME_STEP_SIZE_CALLS" ]  += "," + solver.get_name_of_global_instance() + ".getMaxTimeStepSize()"
-      solverRepositoryDictionary[ "SEQUENCE_OF_GET_MIN_TIME_STEP_SIZE_CALLS" ]  += "," + solver.get_name_of_global_instance() + ".getMinTimeStepSize()"
-      solverRepositoryDictionary[ "SEQUENCE_OF_GET_MAX_TIME_STAMP_CALLS" ]      += "," + solver.get_name_of_global_instance() + ".getMaxTimeStamp()"
-      solverRepositoryDictionary[ "SEQUENCE_OF_GET_MIN_TIME_STAMP_CALLS" ]      += "," + solver.get_name_of_global_instance() + ".getMinTimeStamp()"
-      solverRepositoryDictionary[ "SEQUENCE_OF_START_TIME_STEP_CALLS" ]         += solver.get_name_of_global_instance() + ".startTimeStep(minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize); \n"
-      solverRepositoryDictionary[ "SEQUENCE_OF_FINISH_TIME_STEP_CALLS" ]        += solver.get_name_of_global_instance() + ".finishTimeStep(); \n"
-
-
-    if self._load_balancer_name != "":
-      solverRepositoryDictionary[ "SOLVER_INCLUDES" ]                                 += "#include \"" + self._load_balancer_name.replace( "::", "/") + ".h\" \n"
-      solverRepositoryDictionary[ "SOLVER_DECLARATIONS" ]                             += "  extern " + self._load_balancer_name + "  loadBalancer;\n"
-      solverRepositoryDictionary[ "SOLVER_DEFINITIONS" ]                              += self._load_balancer_name + "  loadBalancer" + self._load_balancer_arguments + ";\n"
-      solverRepositoryDictionary[ "SEQUENCE_OF_FINISH_TIME_STEP_CALLS" ]              += "loadBalancer.finishStep(); "
-      solverRepositoryDictionary[ "SEQUENCE_OF_FINISH_GRID_CONSTRUCTION_STEP_CALLS" ] += "loadBalancer.finishStep(); "
-      solverRepositoryDictionary[ "SEQUENCE_OF_FINISH_FINISH_SIMULATION_CALLS" ]      += "loadBalancer.finishSimulation(); "
-
+      solverRepositoryDictionary[ "SOLVERS" ].append( (solver._name,solver.get_name_of_global_instance()) )
+      
 
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
-    generated_solver_files = peano4.output.TemplatedHeaderImplementationFilePair(
+    generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + "SolverRepository.template.h",
       templatefile_prefix + "SolverRepository.template.cpp",
       "SolverRepository", 
@@ -219,13 +193,14 @@ class Project(object):
     self.__configure_makefile()
     
     create_grid       = peano4.solversteps.Step( "CreateGrid", False )
+    init_grid         = peano4.solversteps.Step( "InitGrid", False )
     plot_solution     = peano4.solversteps.Step( "PlotSolution", False )
     perform_time_step = peano4.solversteps.Step( "TimeStep", False )
     
     self._project.solversteps.add_step(create_grid)
+    self._project.solversteps.add_step(init_grid)
     self._project.solversteps.add_step(plot_solution)
     self._project.solversteps.add_step(perform_time_step)
-
     
     for solver in self._solvers:
       solver.add_to_Peano4_datamodel( self._project.datamodel )
@@ -233,8 +208,10 @@ class Project(object):
       solver.add_use_data_statements_to_Peano4_solver_step( create_grid )
       solver.add_use_data_statements_to_Peano4_solver_step( plot_solution )
       solver.add_use_data_statements_to_Peano4_solver_step( perform_time_step )
+      solver.add_use_data_statements_to_Peano4_solver_step( init_grid )
       
       solver.add_actions_to_create_grid( create_grid )
+      solver.add_actions_to_create_grid( init_grid )
       solver.add_actions_to_plot_solution( plot_solution )
       solver.add_actions_to_perform_time_step( perform_time_step )
       
@@ -245,11 +222,13 @@ class Project(object):
     face_label = exahype2.grid.create_face_label()  
     self._project.datamodel.add_face(face_label)
     create_grid.use_face(face_label)
+    init_grid.use_face(face_label)
     plot_solution.use_face(face_label)
     perform_time_step.use_face(face_label)
     
     set_labels_action_set = exahype2.grid.SetLabels()
     create_grid.add_action_set( set_labels_action_set )
+    init_grid.add_action_set( set_labels_action_set )
     plot_solution.add_action_set( set_labels_action_set )
     perform_time_step.add_action_set( set_labels_action_set )
     

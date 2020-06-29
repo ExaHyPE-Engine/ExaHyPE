@@ -193,12 +193,18 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
    */
   virtual void finishAllOutstandingSendsAndReceives() {};
 
-  virtual void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack) {};
-  virtual void sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack) {};
-  virtual void sendCell(int inOutStack, int toStack) {};
+  enum class SendReceiveContext {
+    BoundaryExchange,
+    MultiscaleExchange,
+    Rebalancing
+  };
 
-  virtual void receiveAndMergeVertex(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack) {};
-  virtual void receiveAndMergeFace(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack) {};
+  virtual void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context) {};
+  virtual void sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context) {};
+  virtual void sendCell(int inOutStack, int toStack, SendReceiveContext context) {};
+
+  virtual void receiveAndMergeVertex(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context) {};
+  virtual void receiveAndMergeFace(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context) {};
 
   virtual void deleteAllStacks() {};
 };

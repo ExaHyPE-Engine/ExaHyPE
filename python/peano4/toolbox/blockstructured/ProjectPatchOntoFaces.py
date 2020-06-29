@@ -21,7 +21,7 @@ class ProjectPatchOntoFaces(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap):
+  def __init__(self,patch,patch_overlap,guard,additional_includes):
     self.d = {}
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
@@ -38,6 +38,9 @@ class ProjectPatchOntoFaces(ActionSet):
     self.d[ "OVERLAP" ]            = str(patch_overlap.dim[0]/2)
     self.d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + patch_overlap.name
     self.d[ "CELL_ACCESSOR" ]      = "fineGridCell" + patch.name
+    self.d[ "GUARD" ]                                        = guard
+    
+    self.additional_includes = additional_includes
 
 
   def get_constructor_body(self):
@@ -61,6 +64,7 @@ class ProjectPatchOntoFaces(ActionSet):
 
 
   __Template_TouchCellFirstTime = """
+  if ( {GUARD} ) {{
   logTraceIn( "touchCellFirstTime(...)" );
   auto serialisePatchIndex = [](tarch::la::Vector<Dimensions,int> overlapCell, int normal) {{
     int base   = 1;
@@ -112,6 +116,7 @@ class ProjectPatchOntoFaces(ActionSet):
     }}
   }}
   logTraceOut( "touchCellFirstTime(...)" );
+  }}
 """
 
 
@@ -130,4 +135,4 @@ class ProjectPatchOntoFaces(ActionSet):
   def get_includes(self):
     return """
 #include "peano4/utils/Loop.h"
-"""
+""" + self.additional_includes

@@ -50,13 +50,13 @@ time_step_size = 0.0001
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
+#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
   "Euler", 
   patch_size, 
   unknowns, time_step_size,
   flux = True,
-  ncp  = False,
-  enclaves = True
+  ncp  = False
 ))
 
 
@@ -72,8 +72,8 @@ build_mode = peano4.output.CompileMode.Asserts
 if dimensions==2:
   project.set_global_simulation_parameters(
     dimensions,  [0.0,0.0],  [1.0,1.0],
-    0.01,          # end time
-    0.0, 0.001     # snapshots
+    0.001,           # end time
+    0.0, 0.001      # snapshots
   )
 else:
   project.set_global_simulation_parameters(
@@ -110,10 +110,10 @@ peano4_project.build()
 #
 if build_mode == peano4.output.CompileMode.Asserts:
   success = True
-  if success:
-    success = peano4_project.run( ["--threads", "1"] )
   #if success:
-  #  success = peano4_project.run( ["--threads", "2"] )
+  #  success = peano4_project.run( ["--threads", "1"] )
+  if success:
+    success = peano4_project.run( ["--threads", "2"] )
   #if success:
   #  success = peano4_project.run( ["--threads", "4"] )
   #if success:
@@ -129,6 +129,7 @@ else:
   
 #success = peano4_project.run( ["--threads", "2"], ["mpirun", "-n", "4"] )
 #success = peano4_project.run( ["--threads", "28"], ["mpirun", "-n", "4"] )
+
 
 
 success = False

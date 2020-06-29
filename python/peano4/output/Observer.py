@@ -1050,7 +1050,7 @@ void {FULL_QUALIFIED_CLASSNAME}::finishAllOutstandingSendsAndReceives() {{
 
 
   TemplateExchangeRoutines_sendVertex_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack) {{
+void {FULL_QUALIFIED_CLASSNAME}::sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
   logTraceInWith4Arguments( "sendVertex(int,int,int)", inOutStack, relativePositionOnInOutStack, toStack, _spacetreeId );
 """
 
@@ -1060,7 +1060,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendVertex(int inOutStack, int relativePosition
 """
 
   TemplateExchangeRoutines_sendFace_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack) {{
+void {FULL_QUALIFIED_CLASSNAME}::sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
   logTraceInWith4Arguments( "sendFace(int,int,int)", inOutStack, relativePositionOnInOutStack, toStack, _spacetreeId );
 """
 
@@ -1071,7 +1071,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendFace(int inOutStack, int relativePositionOn
 
 
   TemplateExchangeRoutines_sendCell_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack) {{
+void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
   logTraceInWith3Arguments( "sendCell(int,int)", inOutStack, toStack, _spacetreeId );
   const int relativePositionOnInOutStack = 0;
 """
@@ -1083,7 +1083,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack) {{
 
 
   TemplateExchangeRoutines_send_Exchange = """
-  {{
+  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::send() ) {{
     auto& data = DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId,inOutStack
     )->top(relativePositionOnInOutStack);
@@ -1097,7 +1097,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack) {{
 
 
   TemplateExchangeRoutines_receiveAndMergeVertex_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack) {{
+void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
   peano4::datamanagement::VertexMarker marker(event);
   marker.select(positionWithinCell); 
 
@@ -1110,11 +1110,11 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(const peano4::grid::GridT
 """
 
   TemplateExchangeRoutines_receiveAndMergeFace_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack) {{
+void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
   peano4::datamanagement::FaceMarker marker(event);
   marker.select(positionWithinCell); 
 
-  logTraceInWith7Arguments( "receiveAndMergeFace(...)", event.toString(), positionWithinCell, inOutStack, relativePositionOnInOutStack, fromStack, marker.toString(), _spacetreeId );
+  logTraceInWith7Arguments( "receiveAndMergeFace(...)", event.toString(), positionWithinCell, inOutStack, relativePositionOnInOutStack, fromStack, marker.toString(), _spacetreeId ); 
 """
 
   TemplateExchangeRoutines_receiveAndMergeFace_Epilogue = """
@@ -1124,7 +1124,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTra
 
 
   TemplateExchangeRoutines_receiveAndMerge_Exchange = """
-  {{
+  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::receiveAndMerge() ) {{
     auto   incomingData = DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId, fromStack
     )->pop();
@@ -1237,31 +1237,36 @@ void {FULL_QUALIFIED_CLASSNAME}::deleteAllStacks() {{
 
     output_file.write( self.TemplateExchangeRoutines_sendVertex_Prologue.format(**self.d) )
     for vertex in self.vertices:
-      self.d[ "logical_type_name" ] = vertex.get_logical_type_name()
+      self.d[ "logical_type_name" ]   = vertex.get_logical_type_name()
+      self.d[ "full_qualified_type" ] = vertex.get_full_qualified_type()
       output_file.write( self.TemplateExchangeRoutines_send_Exchange.format(**self.d) )
     output_file.write( self.TemplateExchangeRoutines_sendVertex_Epilogue.format(**self.d) )
       
     output_file.write( self.TemplateExchangeRoutines_sendFace_Prologue.format(**self.d) )
     for face in self.faces:
-      self.d[ "logical_type_name" ] = face.get_logical_type_name()
+      self.d[ "logical_type_name" ]   = face.get_logical_type_name()
+      self.d[ "full_qualified_type" ] = face.get_full_qualified_type()
       output_file.write( self.TemplateExchangeRoutines_send_Exchange.format(**self.d) )
     output_file.write( self.TemplateExchangeRoutines_sendFace_Epilogue.format(**self.d) )
 
     output_file.write( self.TemplateExchangeRoutines_sendCell_Prologue.format(**self.d) )
     for cell in self.cells:
-      self.d[ "logical_type_name" ] = cell.get_logical_type_name()
+      self.d[ "logical_type_name" ]   = cell.get_logical_type_name()
+      self.d[ "full_qualified_type" ] = cell.get_full_qualified_type()
       output_file.write( self.TemplateExchangeRoutines_send_Exchange.format(**self.d) )
     output_file.write( self.TemplateExchangeRoutines_sendCell_Epilogue.format(**self.d) )
 
     output_file.write( self.TemplateExchangeRoutines_receiveAndMergeVertex_Prologue.format(**self.d) )
     for vertex in self.vertices:
-      self.d[ "logical_type_name" ] = vertex.get_logical_type_name()
+      self.d[ "logical_type_name" ]   = vertex.get_logical_type_name()
+      self.d[ "full_qualified_type" ] = vertex.get_full_qualified_type()
       output_file.write( self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**self.d) )
     output_file.write( self.TemplateExchangeRoutines_receiveAndMergeVertex_Epilogue.format(**self.d) )
       
     output_file.write( self.TemplateExchangeRoutines_receiveAndMergeFace_Prologue.format(**self.d) )
     for face in self.faces:
-      self.d[ "logical_type_name" ] = face.get_logical_type_name()
+      self.d[ "logical_type_name" ]   = face.get_logical_type_name()
+      self.d[ "full_qualified_type" ] = face.get_full_qualified_type()
       output_file.write( self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**self.d) )
     output_file.write( self.TemplateExchangeRoutines_receiveAndMergeFace_Epilogue.format(**self.d) )
 

@@ -10,18 +10,12 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 from .FV import FV
 
 
-class GenericRusanovFVFixedTimeStepSize( FV ):
+class AbstractGenericRusanovFV( FV ):
   __User_Defined = "<user-defined>"
   __None         = "<none>"
-  
-  
-  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False, enclaves=False):
-    """
-      Instantiate a generic FV scheme with an overlap of 1.
-    """
-    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, 1, unknowns, enclaves)
 
-    self._time_step_size              = time_step_size
+  def __init__(self, name, patch_size, unknowns, flux, ncp):
+    super(AbstractGenericRusanovFV,self).__init__(name, patch_size, 1, unknowns)
     
     if flux and not ncp:
       self.HandleCellTemplate = self.HandleCellTemplate_Flux
@@ -46,8 +40,7 @@ class GenericRusanovFVFixedTimeStepSize( FV ):
     self._boundary_conditions_implementation        = self.__User_Defined
     self._refinement_criterion_implementation       = self.__User_Defined
     self._initial_conditions_implementation         = self.__User_Defined
-      
-      
+  
   def set_implementation(self,flux=__None,ncp=__None,eigenvalues=__User_Defined,boundary_conditions=__User_Defined,refinement_criterion=__User_Defined,initial_conditions=__User_Defined):
     self._flux_implementation        = flux
     self._ncp_implementation         = ncp
@@ -199,7 +192,6 @@ class GenericRusanovFVFixedTimeStepSize( FV ):
   );
 """
 
-
   def add_entries_to_text_replacement_dictionary(self,d):
     """
     
@@ -214,4 +206,55 @@ class GenericRusanovFVFixedTimeStepSize( FV ):
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
-    d[ "ENCLAVE"]                             = self._enclaves
+
+
+
+
+
+class GenericRusanovFVFixedTimeStepSize( AbstractGenericRusanovFV ):
+  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False):
+    """
+      Instantiate a generic FV scheme with an overlap of 1.
+    """
+    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, flux, ncp)
+    self._time_step_size              = time_step_size
+    pass
+
+
+
+   
+
+class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
+  """
+  
+    @image html GenericRusanovFVFixedTimeStepSizeWithEnclaves_state-transitions.svg
+    
+  """
+  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False):
+    """
+      Instantiate a generic FV scheme with an overlap of 1.
+    """
+    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).__init__(name, patch_size, unknowns, flux, ncp)
+
+    self._time_step_size              = time_step_size
+
+    #
+    # Distribute activities over the two grid sweeps
+    #
+    self._guard_backup_faces                       = self.get_name_of_global_instance() + ".isPrimary()"
+    self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary() and " + self.get_name_of_global_instance() + ".isPrimary()"
+    self._guard_AMR                                = self.get_name_of_global_instance() + ".isSecondary()"
+    
+    #
+    # Actual enclave tasking
+    #
+    self._guard_project_patch_onto_faces = self.get_name_of_global_instance() + ".isPrimary() or " + self.get_name_of_global_instance() + ".isGridInitialisation()"
+    self._guard_update_cell              = self.get_name_of_global_instance() + ".isPrimary()"
+
+    #
+    # Ensure that data is sent out after primary traversal and received after secondary traversal
+    #
+    self._patch_overlap.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".sendOutBoundaryData()"
+    self._patch_overlap.generator.receive_and_merge_condition  = "observers::" + self.get_name_of_global_instance() + ".receiveAndMergeBoundaryData()"
+    self._patch_overlap.generator.includes                    += """#include "observers/SolverRepository.h" """ 
+
