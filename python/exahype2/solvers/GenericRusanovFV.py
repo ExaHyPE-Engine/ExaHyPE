@@ -14,8 +14,8 @@ class AbstractGenericRusanovFV( FV ):
   __User_Defined = "<user-defined>"
   __None         = "<none>"
 
-  def __init__(self, name, patch_size, unknowns, flux, ncp):
-    super(AbstractGenericRusanovFV,self).__init__(name, patch_size, 1, unknowns)
+  def __init__(self, name, patch_size, unknowns, flux, ncp, plot_grid_properties):
+    super(AbstractGenericRusanovFV,self).__init__(name, patch_size, 1, unknowns, plot_grid_properties)
     
     if flux and not ncp:
       self.HandleCellTemplate = self.HandleCellTemplate_Flux
@@ -212,11 +212,11 @@ class AbstractGenericRusanovFV( FV ):
 
 
 class GenericRusanovFVFixedTimeStepSize( AbstractGenericRusanovFV ):
-  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False):
+  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
     """
       Instantiate a generic FV scheme with an overlap of 1.
     """
-    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, flux, ncp)
+    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, flux, ncp, plot_grid_properties)
     self._time_step_size              = time_step_size
     pass
 
@@ -230,11 +230,11 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     @image html GenericRusanovFVFixedTimeStepSizeWithEnclaves_state-transitions.svg
     
   """
-  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False):
+  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
     """
       Instantiate a generic FV scheme with an overlap of 1.
     """
-    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).__init__(name, patch_size, unknowns, flux, ncp)
+    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).__init__(name, patch_size, unknowns, flux, ncp, plot_grid_properties)
 
     self._time_step_size              = time_step_size
 

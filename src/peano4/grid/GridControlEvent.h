@@ -64,6 +64,11 @@ struct peano4::grid::GridControlEvent {
     static void sendAndPollDanglingMessages(const peano4::grid::GridControlEvent& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(peano4::grid::GridControlEvent& message, int source, int tag );
 #endif
+
+
+    static bool receiveAndMerge();
+    static bool send();
+
     
 
     #ifdef Parallel

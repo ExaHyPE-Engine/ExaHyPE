@@ -69,6 +69,8 @@ class peano4::grid::Spacetree {
      */
     std::bitset<TwoPowerD> areVerticesLocal(GridVertex  vertices[TwoPowerD]) const;
 
+    std::bitset<TwoPowerD> areVerticesInsideDomain(GridVertex  vertices[TwoPowerD]) const;
+
     /**
      * Identifies for the @f$ 2 \cdot d @f$ faces whether they are local or not.
      *

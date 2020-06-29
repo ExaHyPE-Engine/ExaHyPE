@@ -56,7 +56,8 @@ project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEncla
   patch_size, 
   unknowns, time_step_size,
   flux = True,
-  ncp  = False
+  ncp  = False,
+  plot_grid_properties = True
 ))
 
 
@@ -158,6 +159,8 @@ if success:
   #
   # mkdir output
   # rm output/*; ../../../../src/visualisation/convert apply-filter solutionEuler.peano-patch-file EulerQ output plot-domain-decomposition DD; ../../../../src/visualisation/convert apply-filter output/solutionEuler.peano-patch-file DD     output extract-fine-grid finegridDD; ../../../../src/visualisation/convert apply-filter output/solutionEuler.peano-patch-file EulerQ output extract-fine-grid finegridQ; ../../../../src/visualisation/convert convert-file output/solutionEuler.peano-patch-file all    output vtu
+  #
+  # ../../../../src/visualisation/convert apply-filter gridEuler.peano-patch-file cell-marker\(refined,local,enclave\) output extract-fine-grid finegrid-cell-marker\(refined,local,enclave\); ../../../../src/visualisation/convert convert-file output/gridEuler.peano-patch-file all    output vtu
   #
   convert = peano4.visualisation.Convert( "solutionEuler", True )
   convert.set_visualisation_tools_path( "../../../../src/visualisation" )

@@ -347,6 +347,17 @@ std::bitset<TwoPowerD> peano4::grid::Spacetree::areVerticesRefined(GridVertex  v
 }
 
 
+std::bitset<TwoPowerD> peano4::grid::Spacetree::areVerticesInsideDomain(GridVertex  vertices[TwoPowerD]) const {
+  std::bitset<TwoPowerD> bitset;
+  for (int i=0; i<TwoPowerD; i++) {
+    bitset.set(i,
+      tarch::la::equals( vertices[i].getBackupOfAdjacentRanks(), _id )
+    );
+  }
+  return bitset;
+}
+
+
 std::bitset<TwoPowerD> peano4::grid::Spacetree::areVerticesLocal(GridVertex  vertices[TwoPowerD]) const {
   std::bitset<TwoPowerD> bitset;
   for (int i=0; i<TwoPowerD; i++) {
@@ -1716,6 +1727,8 @@ peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createGenericCellTrave
   event.setIsCellLocal(   isSpacetreeNodeLocal(fineGridVertices, true, true) );
   event.setIsFaceLocal(   areFacesLocal(fineGridVertices) );
   event.setIsVertexLocal( areVerticesLocal(fineGridVertices) );
+
+  event.setIsVertexInsideDomain( areVerticesInsideDomain(fineGridVertices) );
 
   logTraceOut( "createGenericCellTraversalEvent(...)" );
   return event;

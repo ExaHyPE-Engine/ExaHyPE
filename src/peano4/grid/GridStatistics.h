@@ -60,6 +60,11 @@ struct peano4::grid::GridStatistics {
     static void sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(peano4::grid::GridStatistics& message, int source, int tag );
 #endif
+
+
+    static bool receiveAndMerge();
+    static bool send();
+
     
 
     #ifdef Parallel

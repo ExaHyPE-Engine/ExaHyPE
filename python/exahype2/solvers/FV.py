@@ -35,7 +35,7 @@ class FV(object):
   traversal an action in theory could be active.
   
   """
-  def __init__(self, name, patch_size, overlap, unknowns):
+  def __init__(self, name, patch_size, overlap, unknowns, plot_grid_properties):
     self._name  = name
     self._patch = peano4.datamodel.Patch( (patch_size,patch_size,patch_size), unknowns, self._unknown_identifier() )
     self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() )
@@ -53,6 +53,7 @@ class FV(object):
     self._guard_update_cell  = "true"
     self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary()"
 
+    self._plot_grid_properties = plot_grid_properties
     pass
   
   
@@ -151,6 +152,10 @@ class FV(object):
     self.add_entries_to_text_replacement_dictionary(d)
     
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat("solution" + self._name,self._patch, self._unknown_identifier()) )
+
+    if self._plot_grid_properties:    
+        step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid" + self._name,None ))
+
     step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
       self._patch,self._patch_overlap,
       self._guard_project_patch_onto_faces,

@@ -89,8 +89,13 @@ class PlotGridInPeanoBlockFormat(ActionSet):
   );
 
   assertion( _dataWriter!=nullptr );
-  // @todo Use marker data here
- _dataWriter->plotCell(indices,1.0);
+  
+  double markerData[] = {{
+    marker.isRefined(),
+    marker.isLocal(),
+    marker.isEnclaveCell()
+  }};
+ _dataWriter->plotCell(indices,markerData);
 """
 
 
@@ -119,7 +124,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     );
   }}
 
-  _dataWriter = _writer->createCellDataWriter( "cell-marker", 1, 1 );
+  _dataWriter = _writer->createCellDataWriter( "cell-marker(refined,local,enclave)", 1, 3 );
 """
 
 

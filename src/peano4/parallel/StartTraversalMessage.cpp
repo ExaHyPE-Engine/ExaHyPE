@@ -36,6 +36,16 @@ void   peano4::parallel::StartTraversalMessage::setStepIdentifier(int value) {
 
 
 
+bool peano4::parallel::StartTraversalMessage::receiveAndMerge() {
+  return true;
+}
+
+
+bool peano4::parallel::StartTraversalMessage::send() {
+  return true;
+}
+    
+    
 #ifdef Parallel
 void peano4::parallel::StartTraversalMessage::sendAndPollDanglingMessages(const peano4::parallel::StartTraversalMessage& message, int destination, int tag ) {
   peano4::parallel::StartTraversalMessage::send(

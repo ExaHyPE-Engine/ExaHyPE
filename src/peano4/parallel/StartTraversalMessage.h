@@ -50,6 +50,11 @@ struct peano4::parallel::StartTraversalMessage {
     static void sendAndPollDanglingMessages(const peano4::parallel::StartTraversalMessage& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(peano4::parallel::StartTraversalMessage& message, int source, int tag );
 #endif
+
+
+    static bool receiveAndMerge();
+    static bool send();
+
     
 
     #ifdef Parallel

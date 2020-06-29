@@ -50,6 +50,11 @@ struct tarch::mpi::IntegerMessage {
     static void sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag );
 #endif
+
+
+    static bool receiveAndMerge();
+    static bool send();
+
     
 
     #ifdef Parallel
