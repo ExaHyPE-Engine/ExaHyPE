@@ -48,10 +48,6 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
 
 
 toolbox::loadbalancing::RecursiveSubdivision::~RecursiveSubdivision() {
-  #ifdef Parallel
-  assertion(_globalSumRequest == nullptr );
-  assertion(_globalLightestRankRequest == nullptr );
-  #endif
 }
 
 

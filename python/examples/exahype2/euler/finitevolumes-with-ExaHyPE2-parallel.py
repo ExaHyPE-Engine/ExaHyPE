@@ -51,8 +51,8 @@ time_step_size = 0.0001
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
-project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
+#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
   "Euler", 
   patch_size, 
   unknowns, time_step_size,
