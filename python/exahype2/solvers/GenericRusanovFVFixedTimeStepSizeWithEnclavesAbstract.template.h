@@ -32,10 +32,7 @@
 
 
 class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
-  protected:
-    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
-    double     _timeStamp;
-
+  public:
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
@@ -46,25 +43,16 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
       Plotting
     };
 
-    SolverState  _solverState;
-
     static std::string toString(SolverState);
-  public:
+
     {{CLASSNAME}}();
-
-    bool sendOutBoundaryData() const;
-    bool receiveAndMergeBoundaryData() const;
-
-    bool isPrimary() const;
-    bool isSecondary() const;
-    bool isGridInitialisation() const;
 
     double getMinTimeStamp() const;
     double getMaxTimeStamp() const;
     double getMinTimeStepSize() const;
     double getMaxTimeStepSize() const;
 
-    virtual bool mayUpdateLoadBalancing();
+    SolverState  getSolverState() const;
 
     /**
      * @param Q Vector of unknowns
@@ -173,6 +161,13 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
       double                                       F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
      {% endif %}
+
+  protected:
+    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
+
+    double     _timeStamp;
+
+    SolverState  _solverState;
 };
 
 

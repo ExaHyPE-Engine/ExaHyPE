@@ -62,7 +62,7 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = false;
   }}
   else if (not gridConstructed) {{
-    if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=3 ) {{
+    if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4 ) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
       );

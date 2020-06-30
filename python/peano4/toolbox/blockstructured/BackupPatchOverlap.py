@@ -59,7 +59,7 @@ class BackupPatchOverlap(ActionSet):
 
   __Template = """
     if ({GUARD_PREDICATE}) {{
-      logTraceIn( "--backup patch overlap--(...)" );
+      logTraceIn( "--backup patch overlap from {FACES_ACCESSOR_IN} into {FACES_ACCESSOR_OUT}--(...)" );
       int counter = 0;
       dfore(k,{DOFS_PER_AXIS},0,0) {{
         for (int i=0; i<{OVERLAP}*2; i++) {{

@@ -30,11 +30,6 @@ double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMa
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::mayUpdateLoadBalancing() {
-  return true;
-}
-
-
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startGridConstructionStep() {
 }
 

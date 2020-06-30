@@ -39,14 +39,14 @@ class FV(object):
     self._name  = name
     self._patch = peano4.datamodel.Patch( (patch_size,patch_size,patch_size), unknowns, self._unknown_identifier() )
     self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() )
-    self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() + "Old" )
+    self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() + "New" )
     self._patch_overlap.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     
     self._patch_overlap.generator.includes += """
 #include "peano4/utils/Loop.h" 
 """
 
-    self._guard_backup_faces = "true"
+    self._guard_copy_new_face_data_into_face_data = "true"
     self._guard_create_cell  = "true"
     self._guard_AMR          = "true"
     self._guard_project_patch_onto_faces = "true"
@@ -90,7 +90,7 @@ class FV(object):
     step.use_face(self._patch_overlap_new)
 
   
-  def __get_default_includes(self):
+  def _get_default_includes(self):
     return """
 #include "tarch/la/Vector.h" 
 
@@ -123,7 +123,7 @@ class FV(object):
 
   def add_actions_to_create_grid(self, step):
     d = {}
-    self.__init_dictionary_with_default_parameters(d)
+    self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     d["IS_GRID_CREATION"] = "true"
     
@@ -131,24 +131,24 @@ class FV(object):
       self._patch,
       self._patch_overlap,
       self._guard_project_patch_onto_faces, 
-      self.__get_default_includes() + self.get_user_includes()
+      self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
       self._patch,self.CreateCellTemplate.format(**d),
       self._guard_create_cell,
-      self.__get_default_includes() + self.get_user_includes()
+      self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( exahype2.grid.AMROnPatch(
       self._patch,self.AMRTemplate.format(**d),
       "true", 
-      self.__get_default_includes() + self.get_user_includes()
+      self._get_default_includes() + self.get_user_includes()
     ))
     pass
   
   
   def add_actions_to_plot_solution(self, step):
     d = {}
-    self.__init_dictionary_with_default_parameters(d)
+    self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat("solution" + self._name,self._patch, self._unknown_identifier()) )
@@ -159,13 +159,13 @@ class FV(object):
     step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
       self._patch,self._patch_overlap,
       self._guard_project_patch_onto_faces,
-      self.__get_default_includes() + self.get_user_includes()
+      self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
       self._patch,
       self.CreateCellTemplate.format(**d),
       self._guard_create_cell,
-      self.__get_default_includes() + self.get_user_includes()
+      self._get_default_includes() + self.get_user_includes()
     ))
     pass
   
@@ -176,52 +176,43 @@ class FV(object):
  
   def add_actions_to_perform_time_step(self, step):
     d = {}
-    self.__init_dictionary_with_default_parameters(d)
+    self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     d["IS_GRID_CREATION"] = "false"
 
 
-    reconstruct_patch_and_apply_FV_kernel = peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
+    step.add_action_set( peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
       self._patch,
       self._patch_overlap,
       self.HandleCellTemplate.format(**d),
       self.HandleBoundaryTemplate.format(**d),
       self._guard_update_cell,
       self._guard_touch_face_first_time_in_time_step,
-      self.__get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
+      self._get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
 """
-    )
-    reconstruct_patch_and_apply_FV_kernel.d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
-    reconstruct_patch_and_apply_FV_kernel.d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
-    reconstruct_patch_and_apply_FV_kernel.d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
-    reconstruct_patch_and_apply_FV_kernel.d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
-    reconstruct_patch_and_apply_FV_kernel.d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
-    reconstruct_patch_and_apply_FV_kernel.d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
-    step.add_action_set( reconstruct_patch_and_apply_FV_kernel ) 
-     
-     
+    )) 
     step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
       self._patch,
       self._patch_overlap_new,
       self._guard_project_patch_onto_faces,
-      self.__get_default_includes() + self.get_user_includes()
+      self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
       self._patch,self.CreateCellTemplate.format(**d),
       self._guard_create_cell,
-      self.__get_default_includes() + self.get_user_includes()
+      self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( exahype2.grid.AMROnPatch(
       self._patch,self.AMRTemplate.format(**d),  
       self._guard_AMR,
-      self.__get_default_includes() + self.get_user_includes()
+      self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
       self._patch_overlap_new,
       self._patch_overlap,
       False,
-      self._guard_backup_faces,
-      self.__get_default_includes() + self.get_user_includes()
+      self._guard_copy_new_face_data_into_face_data,
+      self._get_default_includes() + self.get_user_includes()
     ))
     pass
 
@@ -243,8 +234,8 @@ class FV(object):
     
     abstractHeaderDictionary = {}
     implementationDictionary = {}
-    self.__init_dictionary_with_default_parameters(abstractHeaderDictionary)
-    self.__init_dictionary_with_default_parameters(implementationDictionary)
+    self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
+    self._init_dictionary_with_default_parameters(implementationDictionary)
     self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
         
@@ -271,7 +262,7 @@ class FV(object):
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
 
-  def __init_dictionary_with_default_parameters(self,d):
+  def _init_dictionary_with_default_parameters(self,d):
     """
     
     """
@@ -282,4 +273,10 @@ class FV(object):
     d["NUMBER_OF_UNKNOWNS"]         = self._patch.no_of_unknowns
     if self._patch_overlap.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
+    d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
+    d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
+    d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
+    d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
+    d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
+    d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
  

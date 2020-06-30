@@ -118,41 +118,10 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::isPrimary() const {
-  return _solverState==SolverState::Primary
-      or _solverState==SolverState::PrimaryAfterGridInitialisation;
+{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::SolverState {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getSolverState() const {
+  return _solverState;
 }
 
-
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::isSecondary() const {
-  return _solverState==SolverState::Secondary;
-}
-
-
-
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::isGridInitialisation() const {
-  return _solverState==SolverState::GridInitialisation;
-}
-
-
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::sendOutBoundaryData() const {
-  return _solverState==SolverState::GridInitialisation
-      or _solverState==SolverState::Primary
-      or _solverState==SolverState::PrimaryAfterGridInitialisation;
-}
-
-
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::receiveAndMergeBoundaryData() const {
-  return _solverState==SolverState::Secondary
-      or _solverState==SolverState::PlottingInitialCondition
-      or _solverState==SolverState::PrimaryAfterGridInitialisation;
-}
-
-
-// @todo wieder raus!
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::mayUpdateLoadBalancing() {
-  return _solverState!=SolverState::Primary and _solverState!=SolverState::Secondary;
-}
 
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}

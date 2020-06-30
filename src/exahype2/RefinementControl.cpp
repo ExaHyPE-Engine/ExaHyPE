@@ -74,7 +74,7 @@ void exahype2::RefinementControl::addCommand(
           peano4::grid::GridControlEvent::RefinementControl::Refine,
           x-0.5 * h - shift,
           expandedH,
-          1.0/3.0 * h
+          (1.0+_Tolerance) * 1.0/3.0 * h
         );
         assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
         assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );

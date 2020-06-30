@@ -43,15 +43,16 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 #
 # Add the Finite Volumes solver
 #
-patch_size     = 13
+#patch_size     = 13
+patch_size     = 3
 unknowns       = 5
 time_step_size = 0.0001
 #
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
-#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
+project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
   "Euler", 
   patch_size, 
   unknowns, time_step_size,
@@ -98,6 +99,7 @@ if dimensions==2 and build_mode == peano4.output.CompileMode.Release:
 elif dimensions==2:
   peano4_project.constants.export( "MaxHOfVolume", 0.01 )
   #peano4_project.constants.export( "MaxHOfVolume", 0.1 )
+  #peano4_project.constants.export( "MaxHOfVolume", 0.2 )
 peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
 peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
@@ -111,20 +113,20 @@ peano4_project.build()
 #
 if build_mode == peano4.output.CompileMode.Asserts:
   success = True
-  #if success:
-  #  success = peano4_project.run( ["--threads", "1"] )
+  if success:
+    success = peano4_project.run( ["--threads", "1"] )
   if success:
     success = peano4_project.run( ["--threads", "2"] )
-  #if success:
-  #  success = peano4_project.run( ["--threads", "4"] )
-  #if success:
-  #  success = peano4_project.run( ["--threads", "1"], ["mpirun", "-n", "2"] )
-  #if success:
-  #  success = peano4_project.run( ["--threads", "1"], ["mpirun", "-n", "4"] )
-  #if success:
-  #  success = peano4_project.run( ["--threads", "2"], ["mpirun", "-n", "4"] )
-  #if success:
-  #  success = peano4_project.run( ["--threads", "4"], ["mpirun", "-n", "4"] )
+  if success:
+    success = peano4_project.run( ["--threads", "4"] )
+  if success:
+    success = peano4_project.run( ["--threads", "1"], ["mpirun", "-n", "2"] )
+  if success:
+    success = peano4_project.run( ["--threads", "1"], ["mpirun", "-n", "4"] )
+  if success:
+    success = peano4_project.run( ["--threads", "2"], ["mpirun", "-n", "4"] )
+  if success:
+    success = peano4_project.run( ["--threads", "4"], ["mpirun", "-n", "4"] )
 else:
   success = peano4_project.run( ["--threads", "8"] )
   

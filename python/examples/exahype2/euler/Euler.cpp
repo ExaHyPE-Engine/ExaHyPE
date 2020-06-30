@@ -18,7 +18,9 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 
   if (tarch::la::equals(t,0.0) and tarch::la::max(h)>MaxHOfVolume) {
     result = ::exahype2::RefinementCommand::Refine;
+    logDebug( "refinementCriterion(...)", "refine as mesh width is only " << tarch::la::max(h) << " as compared to " << MaxHOfVolume );
   }
+
   logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;
 }
@@ -113,6 +115,8 @@ void examples::exahype2::euler::Euler::flux(
   nonCriticalAssertion9( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
 
   nonCriticalAssertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  // @todo Remove
+  assertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3

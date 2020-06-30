@@ -240,21 +240,87 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 
     #
     # Distribute activities over the two grid sweeps
+    # @todo Ist das korrekt?
+    # -> erster Fehler, aber nicht der Einzige
+    # -> werden BCs auch rueberkopiert auf Old?
     #
-    self._guard_backup_faces                       = self.get_name_of_global_instance() + ".isPrimary()"
-    self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary() and " + self.get_name_of_global_instance() + ".isPrimary()"
-    self._guard_AMR                                = self.get_name_of_global_instance() + ".isSecondary()"
+    #self._guard_copy_new_face_data_into_face_data                       = "true"
+    self._guard_copy_new_face_data_into_face_data = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary"
     
     #
-    # Actual enclave tasking
+    # @todo
+    # I would love to impose the BCs only in the primary iteration. Seems not to work however
+    # Das geht hier aus irgendeinem Grund net und es ist nicht der MPI-Austausch, weil der beim globalen Rand gar keine Rolle spielt!
     #
-    self._guard_project_patch_onto_faces = self.get_name_of_global_instance() + ".isPrimary() or " + self.get_name_of_global_instance() + ".isGridInitialisation()"
-    self._guard_update_cell              = self.get_name_of_global_instance() + ".isPrimary()"
+    self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary()"
+    #self._guard_touch_face_first_time_in_time_step = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary and fineGridFaceLabel.getBoundary()"
+    #self._guard_AMR                                = self.get_name_of_global_instance() + ".isSecondary()"
+    
+       
+    # Geht net, sollte aber:
+    self._guard_project_patch_onto_faces = \
+     "   (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
+     "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
+     "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
+     "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )"
+    
+    # Geht, ist aber falsch:
+    #self._guard_project_patch_onto_faces = self.get_name_of_global_instance() + ".isPrimary() or " + self.get_name_of_global_instance() + ".isSecondary() or " + self.get_name_of_global_instance() + ".isGridInitialisation()"
+    
+    # Geht nicht. Ist auch falsch
+    #self._guard_project_patch_onto_faces = "(" + self.get_name_of_global_instance() + ".isPrimary() and marker.isSkeletonCell() ) " + \
+    #  " or " + self.get_name_of_global_instance() + ".isGridInitialisation()" + \
+    #  " or (" + self.get_name_of_global_instance() + ".isSecondary() ) "
+
+    # Geht, ist aber zu generell; geht nicht seriell!
+    #self._guard_project_patch_onto_faces = "(" + self.get_name_of_global_instance() + ".isPrimary()) " + \
+    #  " or " + self.get_name_of_global_instance() + ".isGridInitialisation()" + \
+    #  " or (" + self.get_name_of_global_instance() + ".isSecondary() and marker.isEnclaveCell() ) "
+     
+    self._guard_update_cell = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary and marker.isSkeletonCell() and not marker.isRefined()"
+
+    # Es scheint gar nix mim Zellupdate zu tun zu haben, sondern nur mit dem Projizieren
+    # Dann muss der Fehler wohl irgendwo im Datenaustausch liegen, denn sonst macht das
+    # Projizieren ja keinen Unterschied. Wir wissen aber noch net, ob es nicht vielleicht
+    # ein Relikt aus dem 0ten Zeitschritt ist (eher net), oder ob der eigentliche Fehler
+    # im Randaustausch zu finden ist. Kann ich aber jetzt Schritt fuer Schritt ausmisten, 
+    # indem ich boolean schrittweise zuruecknehme. 
+
 
     #
     # Ensure that data is sent out after primary traversal and received after secondary traversal
     #
-    self._patch_overlap.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".sendOutBoundaryData()"
-    self._patch_overlap.generator.receive_and_merge_condition  = "observers::" + self.get_name_of_global_instance() + ".receiveAndMergeBoundaryData()"
+    # @todo All die andere Logik ist hier untergebracht. Es ist auch net klar, warum der User
+    #       theoretisch das Versenden ueberschreibn kann!
+    #
+    #self._patch_overlap.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".sendOutBoundaryData()"
+    #self._patch_overlap.generator.receive_and_merge_condition  = "observers::" + self.get_name_of_global_instance() + ".receiveAndMergeBoundaryData()"
+    #self._patch_overlap.generator.send_condition               = "true"
+    #self._patch_overlap.generator.receive_and_merge_condition  = "true"
+    self._patch_overlap.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " \
+                                                               + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " \
+                                                               + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation"
+    self._patch_overlap.generator.receive_and_merge_condition  = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " \
+                                                               + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " \
+                                                               + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation"
     self._patch_overlap.generator.includes                    += """#include "observers/SolverRepository.h" """ 
 
+
+  def add_actions_to_perform_time_step(self, step):
+    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).add_actions_to_perform_time_step(step)
+
+    d = {}
+    self._init_dictionary_with_default_parameters(d)
+    self.add_entries_to_text_replacement_dictionary(d)
+
+    reconstruct_patch_and_apply_FV_kernel = peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
+      self._patch,
+      self._patch_overlap,
+      self.HandleCellTemplate.format(**d),
+      "",
+      self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary and marker.isEnclaveCell() and not marker.isRefined()",
+      "false",
+      self._get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
+"""
+    )
+    step.add_action_set( reconstruct_patch_and_apply_FV_kernel ) 

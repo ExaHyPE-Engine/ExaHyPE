@@ -104,14 +104,7 @@ void finishTimeStep() {
 
   refinementControl.finishStep();
 
-  bool mayUpdateLoadBalancing = true;
-  {% for item in SOLVERS -%}
-    mayUpdateLoadBalancing &= {{ item[1] }}.mayUpdateLoadBalancing();
-  {%- endfor %}
-
-  if (mayUpdateLoadBalancing) {
-    loadBalancer.finishStep();
-  }
+  loadBalancer.finishStep();
 }
 
 

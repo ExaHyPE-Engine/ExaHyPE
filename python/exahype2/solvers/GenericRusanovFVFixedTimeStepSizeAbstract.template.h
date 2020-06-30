@@ -32,10 +32,7 @@
 
 
 class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
-  protected:
-    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
-    double     _timeStamp;
-
+  public:
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
@@ -43,10 +40,8 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
       Plotting
     };
 
-    SolverState  _solverState;
-
     static std::string toString(SolverState);
-  public:
+
     {{CLASSNAME}}();
 
     double getMinTimeStamp() const;
@@ -114,8 +109,6 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
     virtual void startGridInitialisationStep();
     virtual void finishGridInitialisationStep();
 
-    virtual bool mayUpdateLoadBalancing();
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -163,6 +156,13 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
       double                                       F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
      {% endif %}
+
+  protected:
+    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
+
+    double     _timeStamp;
+
+    SolverState  _solverState;
 };
 
 

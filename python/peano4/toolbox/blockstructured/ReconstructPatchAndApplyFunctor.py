@@ -107,7 +107,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     return False
 
 
-  __Tempalte_TouchFaceFirstTime = """
+  __Template_TouchFaceFirstTime = """
   if ( {GUARD_FACE_OPERATION} ) {{
     logTraceInWith2Arguments( "touchFaceFirstTime(...)", marker.toString(), marker.isLocal() );
     {FACE_FUNCTOR_IMPLEMENTATION}
@@ -221,7 +221,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       result = self.__Template_TouchCellFirstTime.format(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = self.__Tempalte_TouchFaceFirstTime.format(**self.d)
+      result = self.__Template_TouchFaceFirstTime.format(**self.d)
       pass 
     
     return result
