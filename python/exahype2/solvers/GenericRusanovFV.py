@@ -226,8 +226,120 @@ class GenericRusanovFVFixedTimeStepSize( AbstractGenericRusanovFV ):
 
 class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
   """
+    A fixed time stepping scheme with enclave tasking
+    
+    This is a simple implementation of a FV scheme using a generic 
+    Rusanov solver. It applies the concept of enclave tasking and 
+    thus exhibits a higher concurrency level than a plain FV 
+    counterpart. The price to pay is a higher memory pressure and 
+    further admin overhead.
+    
+    Algorithmic workflow
+    --------------------
+    
+    The enclave tasking variant here is simpler than the original
+    enclave tasking as proposed by Charrier et al. The reason that 
+    we keep it simpler is that the baseline code scales better.
+    Therefore, it is reasonable to keep the enclave complexity and
+    overhead down more aggressively.
+    
+    The basic idea behind enclave tasking is that each time step 
+    consists of two grid sweeps and that we distinguish enclave 
+    tasks from skeleton cells. Skeleton cells are cells that are
+    adjacent to a resolution transition or adjacent to a domain 
+    boundary. The FV steps are distributed among these two sweeps
+    as follows:
+    
+    image:: GenericRusanovFVFixedTimeStepSizeWithEnclaves_state-transitions.svg
+    
+    The variant of enclave tasking as it is discussed here has nothing
+    in common with the fused tasking as discussed by Charrier and 
+    Weinzierl.
+    
+    
+    
+    Attributes
+    ----------
+    
+    _guard_copy_new_face_data_into_face_data: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      The routine triggers the roll-over, i.e. the actual commit of 
+      a new time step. It is logically called after a time step and
+      hence in touch -face-last-time in the secondary traversal.
+
+    _guard_touch_face_first_time_in_time_step: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      Updates the boundary. By definition, boundary cells in the domain
+      are skeleton cells. Furthermore, the initialiation/setting of 
+      boundary conditions only has to happen once per time step. We 
+      hence trigger this routine for skeletons in the primary sweeps.
+      There's no need to trigger the step in the very first primary
+      sweep, as all boundary data is implicitly set by the initial 
+      conditions.
+
+    _guard_project_patch_onto_faces: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      This routine guards the mapping of an updated cell content onto a
+      cell's faces. The destination in QNew, i.e. is not "seen" by 
+      others unless the faces' new data are committed. Therefore, I 
+      trigger this routine in the primary sweep for skeleton cells and
+      in the secondary  sweep for enclave cells. The primary calls 
+      ensure that data are mapped onto the faces before faces are 
+      exchanged with neighbour partitions.
+      
+    _guard_update_cell: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      Actual FV kernel invocation. I use the FV's blueprint kernel calls
+      only for skeleton cells, i.e. in the primary grid sweep. While 
+      this guard cares for all skeleton cells, I need specialised 
+      treatment of enclaves cells. This is realised within
+      add_actions_to_perform_time_step().
+      
+    _patch_overlap.generator.send_condition: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      Send out the faces in the grid initialisation. There's no need to 
+      send out data in other iterations, as all data exchange is 
+      realised through the QNew field. This is different to the plain
+      FV realisation, where data exchange happens through Q: The enclave
+      tasking exchanges QNew and then rolls data over from QNew into Q.
+      The plain FV scheme rolls over QNew into Q and then exchanges the
+      data.
+    
+    _patch_overlap.generator: string
+      See documentation of _patch_overlap.generator.send_condition.
+      
+    _patch_overlap.generator.merge_method_definition: string
+      See documentation of _patch_overlap.generator.send_condition.
+
+    _guard_AMR: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      AMR is active throughout the grid construction. After that, it is
+      only available for skeleton cells.
+    
+    _patch_overlap_new.generator.send_condition: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      See discussion of _patch_overlap.generator.send_condition for 
+      details. As we effectively disable the data exchange for Q and
+      instead ask for data exchange of QNew, we have to add merge 
+      operations to QNew.
+      
+    _patch_overlap_new.generator.receive_and_merge_condition: string
+      See _patch_overlap_new.generator.send_condition.
+      
+    _patch_overlap_new.generator.merge_method_definition: string
+      See _patch_overlap_new.generator.send_condition.
+      
+    
+    Methods
+    -------
   
-    @image html GenericRusanovFVFixedTimeStepSizeWithEnclaves_state-transitions.svg
     
   """
   def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
@@ -266,6 +378,9 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 #include "observers/SolverRepository.h" 
 #include "peano4/utils/Loop.h" 
 """ 
+
+    self._guard_AMR = " observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction or" \ 
+                    + "(observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary and maker.isSkeleton() )"
     
     
     #
