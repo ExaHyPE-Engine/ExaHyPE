@@ -89,8 +89,7 @@ class peano4::parallel::Tasks {
     Tasks(
       std::function<bool()>  task,
       TaskType               type,
-      int                    location,
-      bool                   waitForCompletion = false
+      int                    location
     );
 
 
@@ -101,8 +100,7 @@ class peano4::parallel::Tasks {
     Tasks(
       tarch::multicore::Task*  task,
       TaskType                 type,
-      int                      location,
-      bool                     waitForCompletion = false
+      int                      location
     );
 
 
