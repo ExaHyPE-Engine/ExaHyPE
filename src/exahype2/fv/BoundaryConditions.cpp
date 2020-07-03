@@ -67,7 +67,6 @@ void exahype2::fv::applyBoundaryConditions(
     int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
     int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
 
-    logInfo( "applyBoundaryConditions(...)", "we do run boundary stuff for " << x << "x" << volumeH << " now for cell at " << faceCentre << "x" << volumeH << " and face offset " << faceOffset );
     boundaryCondition(
       Q + insideVolumeSerialised * unknowns,
       Q + outsideVolumeSerialised * unknowns,
