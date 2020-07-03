@@ -60,6 +60,7 @@ class AbstractGenericRusanovFV( FV ):
 
 
   HandleBoundaryTemplate = """ 
+    logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
     ::exahype2::fv::applyBoundaryConditions(
       [&](
         double                                       Qinside[],
@@ -277,9 +278,6 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
       are skeleton cells. Furthermore, the initialiation/setting of 
       boundary conditions only has to happen once per time step. We 
       hence trigger this routine for skeletons in the primary sweeps.
-      There's no need to trigger the step in the very first primary
-      sweep, as all boundary data is implicitly set by the initial 
-      conditions.
 
     _guard_project_patch_onto_faces: string
       This is a predicate, i.e. identifies in C code when to trigger 
@@ -362,8 +360,9 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     #
     self._guard_copy_new_face_data_into_face_data = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary"
     
-    self._guard_touch_face_first_time_in_time_step = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary and fineGridFaceLabel.getBoundary()"
-       
+    self._guard_touch_face_first_time_in_time_step = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary and fineGridFaceLabel.getBoundary() or " \
+                                                   + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation and fineGridFaceLabel.getBoundary()"
+    
     self._guard_project_patch_onto_faces = \
      "   (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
      "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
