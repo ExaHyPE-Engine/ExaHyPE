@@ -47,13 +47,14 @@ void exahype2::fv::applyBoundaryConditions(
 
   tarch::la::Vector<Dimensions,double> volumeH    = exahype2::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
   tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
-
   faceOffset(faceNumber%Dimensions) += 0.5 * patchSize(faceNumber%Dimensions);
 
   dfore(volume,numberOfVolumesPerAxisInPatch,faceNumber % Dimensions,0) {
     tarch::la::Vector<Dimensions,int> insideVolume  = volume;
     tarch::la::Vector<Dimensions,int> outsideVolume = volume;
     tarch::la::Vector<Dimensions,double> x          = faceOffset + tarch::la::multiplyComponents( volume.convertScalar<double>()+tarch::la::Vector<Dimensions,double>(0.5), volumeH);
+
+    x(faceNumber%Dimensions) -= 0.5 * volumeH(faceNumber%Dimensions);
 
     if (faceNumber<Dimensions) {
       insideVolume(faceNumber % Dimensions)  = 1;
