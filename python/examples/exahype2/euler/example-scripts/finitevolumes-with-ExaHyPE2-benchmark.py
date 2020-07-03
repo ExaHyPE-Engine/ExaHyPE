@@ -44,7 +44,8 @@ time_step_size = 0.000001
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
   "Euler", 
   patch_size, 
   unknowns, time_step_size,
@@ -65,8 +66,8 @@ build_mode = peano4.output.CompileMode.Release
 #
 project.set_global_simulation_parameters(
   dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
-  time_step_size * 50,           # end time
-  0.0, 0                         # snapshots
+  time_step_size * 1000,           # end time
+  0.0, 0                          # snapshots
 )
 
 
