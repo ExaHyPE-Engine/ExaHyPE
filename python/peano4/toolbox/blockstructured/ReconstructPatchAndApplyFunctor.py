@@ -60,13 +60,13 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       print( "Error: Patch of overlap and patch of cell have to match" )
       assert( patch_overlap.dim[1] == patch.dim[0] )
       
-    self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
-    self.d[ "DOFS_PER_AXIS" ]      = str(patch.dim[0])
-    self.d[ "OVERLAP" ]            = str(patch_overlap.dim[0]/2)
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(patch.no_of_unknowns * patch.dim[0] * patch.dim[0])
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(patch.no_of_unknowns * patch.dim[0] * patch.dim[0] * patch.dim[0])
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0]))
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = str(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0]))
+    self.d[ "UNKNOWNS" ]           = str(int(patch.no_of_unknowns))
+    self.d[ "DOFS_PER_AXIS" ]      = str(int(patch.dim[0]))
+    self.d[ "OVERLAP" ]            = str(int(patch_overlap.dim[0]/2))
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ]      = str(int(patch.no_of_unknowns * patch.dim[0] * patch.dim[0]))
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ]      = str(int(patch.no_of_unknowns * patch.dim[0] * patch.dim[0] * patch.dim[0]))
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(int(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0])))
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = str(int(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0])))
     self.d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + patch_overlap.name
     self.d[ "CELL_ACCESSOR" ]      = "fineGridCell" + patch.name
     
