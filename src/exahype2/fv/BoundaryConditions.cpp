@@ -26,6 +26,8 @@ void exahype2::fv::applyBoundaryConditions(
   int                                          faceNumber,
   double                                       Q[]
 ) {
+  static tarch::logging::Log _log( "exahype2::fv" );
+
   auto serialisePatchIndex = [&](tarch::la::Vector<Dimensions,int> overlapCell) {{
     int base   = 1;
     int result = 0;
@@ -41,8 +43,10 @@ void exahype2::fv::applyBoundaryConditions(
     return result;
   }};
 
+  logTraceInWith4Arguments( "applyBoundaryConditions(...)", faceCentre, patchSize, numberOfVolumesPerAxisInPatch, faceNumber);
+
   tarch::la::Vector<Dimensions,double> volumeH    = exahype2::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
-  tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize - 0.5 * volumeH;
+  tarch::la::Vector<Dimensions,double> faceOffset = faceCentre - 0.5 * patchSize;
 
   faceOffset(faceNumber%Dimensions) += 0.5 * patchSize(faceNumber%Dimensions);
 
@@ -63,12 +67,15 @@ void exahype2::fv::applyBoundaryConditions(
     int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
     int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
 
+    logInfo( "applyBoundaryConditions(...)", "we do run boundary stuff for " << x << "x" << volumeH << " now for cell at " << faceCentre << "x" << volumeH << " and face offset " << faceOffset );
     boundaryCondition(
       Q + insideVolumeSerialised * unknowns,
       Q + outsideVolumeSerialised * unknowns,
       x, volumeH, t, dt, faceNumber
     );
   }
+
+  logTraceOut( "applyBoundaryConditions(...)" );
 }
 
 
