@@ -68,6 +68,8 @@ void exahype2::fv::applyBoundaryConditions(
     int insideVolumeSerialised  = serialisePatchIndex(insideVolume);
     int outsideVolumeSerialised = serialisePatchIndex(outsideVolume);
 
+    logDebug( "applyBoundaryConditions(...)", insideVolume << "->" << outsideVolume << " (" << insideVolumeSerialised << "->" << outsideVolumeSerialised << ")" );
+
     boundaryCondition(
       Q + insideVolumeSerialised * unknowns,
       Q + outsideVolumeSerialised * unknowns,
