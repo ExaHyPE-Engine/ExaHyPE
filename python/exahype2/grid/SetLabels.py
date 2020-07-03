@@ -2,9 +2,19 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
+import dastgen2
+import peano4.datamodel.DaStGen2
+
+
+def create_face_label():
+  result = peano4.datamodel.DaStGen2( SetLabels.AttributeName )
+  result.data.add_attribute( dastgen2.attributes.Boolean("Boundary") )
+  return result
 
 
 class SetLabels(ActionSet):
+  AttributeName = "Label"
+  
   """
   
    SetLabels is an action set which is automatically merged into all ExaHyPE2
@@ -46,7 +56,7 @@ class SetLabels(ActionSet):
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
   }}
-  fineGridFaceLabel.setBoundary( isBoundary );
+  fineGridFace""" + self.AttributeName + """.setBoundary( isBoundary );
 """
 
     return result

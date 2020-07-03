@@ -101,6 +101,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 """    
 
     self.additional_includes                         = additional_includes
+    self.additional_attributes                       = ""
 
 
   def get_constructor_body(self):
@@ -212,15 +213,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       logTraceOut( "touchCellFirstTime(...)::loopOverFace" );
     }}
 
-    #if Dimensions==2
-    auto f = [marker]( double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}], double originalPatch[{NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D}] ) -> void {{
-    #elif Dimensions==3
-    auto f = [marker]( double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}], double originalPatch[{NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D}] ) -> void {{
-    #endif
-      {CELL_FUNCTOR_IMPLEMENTATION}
-    }};
-
-    f( reconstructedPatch, {CELL_ACCESSOR}.value );
+    double* originalPatch = {CELL_ACCESSOR}.value;
+    {CELL_FUNCTOR_IMPLEMENTATION}
     logTraceOut( "touchCellFirstTime(...)" );
   }}
 """
@@ -240,7 +234,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 
   def get_attributes(self):
     return """int  _treeNumber;
-"""    
+""" + self.additional_attributes   
 
 
   def get_includes(self):

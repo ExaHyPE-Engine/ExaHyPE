@@ -7,6 +7,8 @@ import peano4.datamodel
 import peano4.output.TemplatedHeaderFile
 import peano4.output.TemplatedHeaderImplementationFilePair
 
+import exahype2.grid.EnclaveLabels
+
 from .FV import FV
 
 
@@ -340,6 +342,11 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     Methods
     -------
   
+    We extend the superclass' add_actions_to_perform_time_step(), 
+    add_to_Peano4_datamodel() and add_use_data_statements_to_Peano4_solver_step().
+    For the actions, I add a further action which administers the task
+    spawning over the enclaves. I plug into the data model routines to 
+    add the marker to the cell which holds the semaphore/cell number.
     
   """
   def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
@@ -379,8 +386,8 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 #include "peano4/utils/Loop.h" 
 """ 
 
-    self._guard_AMR = " observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction or" \ 
-                    + "(observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary and maker.isSkeleton() )"
+    self._guard_AMR = " observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction or " \
+                    + "(observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary and marker.isSkeletonCell() )"
     
     
     #
@@ -396,42 +403,113 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 """ 
     self._patch_overlap_new.generator.merge_method_definition      = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
 
+    self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
+   
+
+
+  def add_actions_to_create_grid(self, step):
+    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).add_actions_to_create_grid(step)
+    step.add_action_set( exahype2.grid.EnclaveLabels( self._name ) )
+    
 
   def add_actions_to_perform_time_step(self, step):
+    """
+      Add enclave aspect to time stepping
+      
+      The additional aspect is only guarded by an enclave check, as we 
+      have to do something both in primary and secondary tasks.  
+    """
     super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).add_actions_to_perform_time_step(step)
 
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ]               = self._patch.no_of_unknowns * self._patch.dim[0] * self._patch.dim[0] 
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ]               = self._patch.no_of_unknowns * self._patch.dim[0] * self._patch.dim[0] * self._patch.dim[0] 
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     
-    task_based_implementation = """
-peano4::parallel::Tasks spawnBackgroundTask(
-  [marker,reconstructedPatch,originalPatch]() -> bool {{
-""" + self.HandleCellTemplate + """  
-  
-    delete[] reconstructedPatch;
+    task_based_implementation_primary_iteration = """
+    static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
+      ::exahype2::fv::copyPatch(
+        reconstructedPatch,
+        originalPatch,
+        {NUMBER_OF_UNKNOWNS},
+        {NUMBER_OF_VOLUMES_PER_AXIS},
+        {HALO_SIZE}
+      );
+      
+      """ + self.HandleCellTemplate + """  
+    }};
+        
+    ::exahype2::EnclaveTask* task = new ::exahype2::EnclaveTask(
+        marker,
+        reconstructedPatch,
+        #if Dimensions==2
+        {NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D},
+        #else
+        {NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D},
+        #endif
+        taskBody        
+    );
 
-    return false;
-  }},
-  //peano4::parallel::Tasks::TaskType::LowPriority,
-  peano4::parallel::Tasks::TaskType::Sequential,
-  peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFVFixedTimeStepSizeWithEnclaves" ),
-  true            // waitForCompletion
-);    
+    peano4::parallel::Tasks spawn( 
+        task,
+        peano4::parallel::Tasks::TaskType::LowPriority,
+        //peano4::parallel::Tasks::TaskType::Sequential,
+        peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFV" )
+    );
+      
+    fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( task->getTaskNumber() );
+    """ 
+    
+    task_based_implementation_secondary_iteration = """
+      const int taskNumber = fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.getSemaphoreNumber();
+      if ( taskNumber>=0 ) {
+        ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, patchData );
+      }
+      fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
 """    
-
 
     reconstruct_patch_and_apply_FV_kernel = peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
       self._patch,
       self._patch_overlap,
-      task_based_implementation.format(**d),
+      task_based_implementation_primary_iteration.format(**d),
       "",
-      self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary and marker.isEnclaveCell() and not marker.isRefined()",
+      "marker.isEnclaveCell() and not marker.isRefined() and " + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + """::SolverState::Primary""",
       "false",
       self._get_default_includes() + self.get_user_includes() + """
 #include "exahype2/NonCriticalAssertions.h" 
+#include "exahype2/fv/Generic.h" 
 #include "peano4/parallel/Tasks.h" 
 """,
       True
     )
-    step.add_action_set( reconstruct_patch_and_apply_FV_kernel ) 
+    reconstruct_patch_and_apply_FV_kernel.additional_includes += """
+#include "exahype2/EnclaveBookkeeping.h"
+#include "exahype2/EnclaveTask.h"
+"""    
+
+    roll_over_enclave_task_results = peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+      self._patch,
+      task_based_implementation_secondary_iteration,
+      "marker.isEnclaveCell() and not marker.isRefined() and " + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + """::SolverState::Secondary""",
+      self._get_default_includes() + self.get_user_includes() + """
+#include "exahype2/EnclaveBookkeeping.h"
+#include "exahype2/EnclaveTask.h"
+"""    
+    )
+
+    step.add_action_set( reconstruct_patch_and_apply_FV_kernel )
+    step.add_action_set( exahype2.grid.EnclaveLabels(self._name) ) 
+    step.add_action_set( roll_over_enclave_task_results )
+    
+
+  def add_to_Peano4_datamodel( self, datamodel ):
+    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).add_to_Peano4_datamodel(datamodel)
+    datamodel.add_cell(self._cell_sempahore_label)
+ 
+ 
+  def add_use_data_statements_to_Peano4_solver_step(self, step):
+    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).add_use_data_statements_to_Peano4_solver_step(step)
+    step.use_cell(self._cell_sempahore_label)

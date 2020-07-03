@@ -115,6 +115,18 @@ void examples::exahype2::euler::Euler::flux(
   nonCriticalAssertion9( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
 
   nonCriticalAssertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+
+  //
+  // If the solution becomes unphysical, the density often becomes zero or
+  // negative. I catch them as non-critical, i.e. the code then will complete
+  // its timestep and plot the result. While this is convenient for numerical
+  // errors (you in particular can spot where problems arise within the domain)
+  // programming errors often manifest in negative pressures, too, and should
+  // lead to an immediate termination so you can use a debugger to analyse the
+  // backtrace. In this case, I simply comment the following assertion in.
+  //
+  // assertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3

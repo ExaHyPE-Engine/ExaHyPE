@@ -16,7 +16,7 @@ from abc import abstractmethod
 
 class FV(object):
   """ 
-  An abstract finite volume solver with fixed time step sizes that works on patch-based
+  An abstract finite volume solver step sizes that works on patch-based
   AMR with a halo layer of one.
   
   We use two overlaps in this case: the standard one and one we call new. In the
@@ -25,10 +25,8 @@ class FV(object):
   iteration is not overwritten by some adjacent cell halfway through the 
   computation.
   
-  namespace Sequence of strings representing the (nested) namespace. Pass in 
-    ["examples", "exahype2", "finitevolumes"] for example.
-    
-  enclaves  A simple boolean
+  Attributes
+  -----------
   
   The guard variables are used within the templates and switch them on/off. By 
   default, they all are true, i.e. the actions are triggered in every grid 
@@ -36,6 +34,15 @@ class FV(object):
   
   """
   def __init__(self, name, patch_size, overlap, unknowns, plot_grid_properties):
+    """
+    
+      namespace: [string]
+        Sequence of strings representing the (nested) namespace. Pass in 
+        ["examples", "exahype2", "finitevolumes"] for example.
+    
+      enclaves: Boolean
+  
+    """
     self._name  = name
     self._patch = peano4.datamodel.Patch( (patch_size,patch_size,patch_size), unknowns, self._unknown_identifier() )
     self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() )
@@ -80,9 +87,11 @@ class FV(object):
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     """
-     
+      Tell Peano what data to move around
+      
       Inform Peano4 step which data are to be moved around via the 
-      use_cell and use_face commands.
+      use_cell and use_face commands. This operation is generic from
+      ExaHyPE's point of view, i.e. I use it for all grid sweep types. 
     
     """
     step.use_cell(self._patch)
@@ -267,7 +276,7 @@ class FV(object):
     
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"] = self._patch.dim[0]
-    d["HALO_SIZE"]                  = self._patch_overlap.dim[0]/2
+    d["HALO_SIZE"]                  = int(self._patch_overlap.dim[0]/2)
     d["SOLVER_INSTANCE"]            = self.get_name_of_global_instance()
     d["UNKNOWN_IDENTIFIER"]         = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]         = self._patch.no_of_unknowns
