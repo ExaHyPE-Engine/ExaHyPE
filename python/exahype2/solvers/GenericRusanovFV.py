@@ -85,7 +85,7 @@ class AbstractGenericRusanovFV( FV ):
 """
 
 
-  CreateCellTemplate = """
+  AdjustCellTemplate = """
   {{ 
     int index = 0;
     dfor( volume, {NUMBER_OF_VOLUMES_PER_AXIS} ) {{

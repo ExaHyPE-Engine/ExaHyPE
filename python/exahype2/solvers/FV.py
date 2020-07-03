@@ -54,7 +54,7 @@ class FV(object):
 """
 
     self._guard_copy_new_face_data_into_face_data = "true"
-    self._guard_create_cell  = "true"
+    self._guard_adjust_cell  = "true"
     self._guard_AMR          = "true"
     self._guard_project_patch_onto_faces = "true"
     self._guard_update_cell  = "true"
@@ -124,7 +124,7 @@ class FV(object):
     return ""
 
 
-  CreateCellTemplate = ""
+  AdjustCellTemplate = ""
   
   
   _AMRTemplate = ""
@@ -143,8 +143,8 @@ class FV(object):
       self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self.CreateCellTemplate.format(**d),
-      self._guard_create_cell,
+      self._patch,self.AdjustCellTemplate.format(**d),
+      self._guard_adjust_cell,
       self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( exahype2.grid.AMROnPatch(
@@ -172,8 +172,8 @@ class FV(object):
     ))
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
       self._patch,
-      self.CreateCellTemplate.format(**d),
-      self._guard_create_cell,
+      self.AdjustCellTemplate.format(**d),
+      self._guard_adjust_cell,
       self._get_default_includes() + self.get_user_includes()
     ))
     pass
@@ -207,8 +207,8 @@ class FV(object):
       self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self.CreateCellTemplate.format(**d),
-      self._guard_create_cell,
+      self._patch,self.AdjustCellTemplate.format(**d),
+      self._guard_adjust_cell,
       self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( exahype2.grid.AMROnPatch(
