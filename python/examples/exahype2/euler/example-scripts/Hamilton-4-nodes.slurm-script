@@ -24,7 +24,7 @@ ratio=0.$SLURM_ARRAY_TASK_ID
 
 for myH in 0.05 0.02
 do
-  python3 example/scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=$ratio --h=$myH
+  python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=$ratio --h=$myH
   mv peano4 ./peano4-$myH-$ratio
   mpirun ./peano4-$myH-$ratio --threads $SLURM_CPUS_ON_NODE > Hamilton-$SLURM_NTASKS-nodes-trees-per-core-$ratio-h-$myH.out
 done
