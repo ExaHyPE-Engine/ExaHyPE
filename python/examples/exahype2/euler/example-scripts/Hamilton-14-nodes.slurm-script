@@ -1,0 +1,29 @@
+#!/bin/bash
+#SBATCH -t 24:00:00
+#SBATCH --exclusive
+#SBATCH -p par7.q
+#SBATCH -N 14
+#SBATCH --array=1-24
+#SBATCH --ntasks-per-node=1
+#SBATCH --mail-type=END
+#SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
+
+source /etc/profile.d/modules.sh
+
+module purge
+module load intel/2019.5
+module load intelmpi/intel/2019.6
+module load python/3.6.8 
+module unload gcc/8.2.0
+module load gcc/9.3.0
+
+export OMP_NUM_THREADS=$SLURM_ARRAY_TASK_ID 
+export PYTHONPATH=../../..
+
+for myH in 0.02 0.01 0.005
+do
+  mpirun ./peano4-$myH --threads $SLURM_ARRAY_TASK_ID > Hamilton-$SLURM_NTASKS-nodes-$SLURM_ARRAY_TASK_ID-cores-h-$myH.out
+done
+
+
+
