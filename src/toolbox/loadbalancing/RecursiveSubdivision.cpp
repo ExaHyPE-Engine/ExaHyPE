@@ -16,15 +16,16 @@
 tarch::logging::Log  toolbox::loadbalancing::RecursiveSubdivision::_log( "toolbox::loadbalancing::RecursiveSubdivision" );
 
 
-toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double percentageOfCoresThatShouldInTheoryGetAtLeastOneCell):
-  _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell( percentageOfCoresThatShouldInTheoryGetAtLeastOneCell ),
+toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double ratioOfCoresThatShouldInTheoryGetAtLeastOneCell):
+  _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell( ratioOfCoresThatShouldInTheoryGetAtLeastOneCell ),
   _blacklist(),
   _hasSpreadOutOverAllRanks( false ),
   _localNumberOfInnerUnrefinedCell( 0 ),
   _globalNumberOfInnerUnrefinedCell( 0 ),
   _state( StrategyState::Standard ),
   _roundRobinToken(0),
-  _roundRobinThreshold(1) {
+  _roundRobinThreshold(1),
+  _maxTreeWeightAtLastSplit( std::numeric_limits<int>::max() ) {
   #ifdef Parallel
   _globalSumRequest          = nullptr;
   _globalLightestRankRequest = nullptr;
@@ -152,17 +153,12 @@ int toolbox::loadbalancing::RecursiveSubdivision::getMaximumSpacetreeSize(int lo
     	              * tarch::multicore::Core::getInstance().getNumberOfThreads();
 
   logTraceInWith3Arguments( "getMaximumSpacetreeSize(int)", localSize, _globalNumberOfInnerUnrefinedCell, alphaP );
-// @tood Ist nicht percentage sondern ratio. Falscher Name!
-// global sollte Mehrzahl sein. Auch falsch
-//
+
   double partitionSize = _globalNumberOfInnerUnrefinedCell / alphaP;
   double result = std::min( partitionSize, localSize - partitionSize);
   int roundedResult = std::max(  static_cast<int>(std::round(result)),  1 );
   logTraceOutWith1Argument( "getMaximumSpacetreeSize(int)", result );
   return roundedResult;
-
-
-// @tood Dann mal komplett das cool-down entfernen - ich denke nicht mehr, dass man das noch braucht, jetzt wo ich das Round Robin habe
 }
 
 
@@ -209,7 +205,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
     _state = StrategyState::PostponedDecisionDueToLackOfCells;
   }
   else if (_roundRobinToken>_roundRobinThreshold) {
-	_state = StrategyState::WaitForRoundRobinToken;
+    _state = StrategyState::WaitForRoundRobinToken;
+  }
+  else if (_maxTreeWeightAtLastSplit == getWeightOfHeaviestLocalSpacetree()) {
+    _state = StrategyState::Stagnation;
   }
   else {
     _state = StrategyState::Standard;
@@ -246,6 +245,8 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
 
   if (
     _state==StrategyState::PostponedDecisionDueToLackOfCells
+    or
+    _state==StrategyState::Stagnation
   ) {
     return StrategyStep::Wait;
   }
@@ -299,6 +300,8 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString( StrategyStat
       return "wait-for-round-robin-token";
     case StrategyState::PostponedDecisionDueToLackOfCells:
       return "postponed-due-to-lack-of-cells";
+    case StrategyState::Stagnation:
+      return "stagnation";
   }
   return "<undef>";
 }
@@ -327,7 +330,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
     ", heaviest local tree=" << getIdOfHeaviestLocalSpacetree() << ", heaviest local weight=" << getWeightOfHeaviestLocalSpacetree() << 
     ",lightest-rank=" << _lightestRank << ",max-tree-size=" << getMaximumSpacetreeSize() << ",has-spread=" <<
 	_hasSpreadOutOverAllRanks << ",round-robin-token=" << _roundRobinToken << ",round-robin-threshold=" << 
-    _roundRobinThreshold << ",ratio=" << _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell << ")"
+    _roundRobinThreshold << ",ratio=" << _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell << 
+    ",heaviest-tree-when-last-split=" << _maxTreeWeightAtLastSplit << ")"
   );
 
   switch ( step ) {
@@ -380,8 +384,6 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
               "finishStep()",
               "lightest global rank is rank " << _lightestRank << ", so assign this rank " << cellsPerCore << " cell(s)"
             );
-// @todo raus
-if (_lightestRank==tarch::mpi::Rank::getInstance().getRank())
             triggerSplit(heaviestSpacetree, cellsPerCore, _lightestRank);
           }
         }
@@ -404,7 +406,7 @@ if (_lightestRank==tarch::mpi::Rank::getInstance().getRank())
               "finishStep()",
               "lightest global rank is rank " << _lightestRank << ", so assign this rank " << cellsPerCore << " cell(s)"
             );
-            //triggerSplit(heaviestSpacetree, cellsPerCore, _lightestRank);
+            triggerSplit(heaviestSpacetree, cellsPerCore, _lightestRank);
           }
         }
       }
@@ -434,4 +436,9 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
     logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
   }
   _blacklist.insert( std::pair<int,int>(sourceTree,3) );
+  // Not always known a priori for example when we spread accross all
+  // local ranks, then this field might not be yet set.
+  if (getWeightOfHeaviestLocalSpacetree()>0) {
+    _maxTreeWeightAtLastSplit = std::min(_maxTreeWeightAtLastSplit,getWeightOfHeaviestLocalSpacetree());
+  }
 }

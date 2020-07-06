@@ -60,9 +60,12 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
     }
   }
   else if ( sourceRank==tarch::mpi::Rank::getInstance().getRank() ) {
+    // send stuff to the new worker via MPI
     #ifdef Parallel
     const int tag            = peano4::parallel::Node::getInstance().getGridDataExchangeTag(master, worker, peano4::parallel::Node::ExchangeMode::VerticalData);
-    const int messageSize    = stackContainer.getForPop(master,sourceStack)->size();
+    const int messageSize    = 
+      stackContainer.holdsStack( master, sourceStack ) ?
+      stackContainer.getForPop(master,sourceStack)->size() : 0;
 
     logDebug(
       "copyDataFromSplittingTreesToNewTrees()",
