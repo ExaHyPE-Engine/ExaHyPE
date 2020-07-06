@@ -53,7 +53,8 @@ time_step_size = 0.000001
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
   "Euler", 
   patch_size, 
   unknowns, time_step_size,
@@ -83,20 +84,12 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-
-Da ist kein Ratio mit drin. Den brauch ich aber fuer Enclave-Tasking
-
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.trees_per_core) + ")" )
 
 import sys
 
 peano4_project = project.generate_Peano4_project()
-if len(sys.argv)>1:
-  volume_max = float( sys.argv[1] )
-  print( "use max FV size of " + str(volume_max) )
-  peano4_project.constants.export( "MaxHOfVolume", volume_max )
-else:
-  peano4_project.constants.export( "MaxHOfVolume", 0.1 )
+peano4_project.constants.export( "MaxHOfVolume", args.h )
 peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
 peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
