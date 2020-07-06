@@ -30,8 +30,8 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("--trees-per-core", dest="trees_per_core", type=float, help="Target number of trees per core (use 1 without enclaves and something smaller than 1 with enclaves)", action="store_true" )
-parser.add_argument("--h",              dest="h",              type=float, help="Mesh size", action="store_true" )
+parser.add_argument("--trees-per-core", dest="trees_per_core", type=float, required=True, help="Target number of trees per core (use 1 without enclaves and something smaller than 1 with enclaves)" )
+parser.add_argument("--h",              dest="h",              type=float, required=True, help="Mesh size" )
 args = parser.parse_args()
 
 
@@ -85,8 +85,6 @@ project.set_global_simulation_parameters(
 # prototype we did start off with.
 #
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.trees_per_core) + ")" )
-
-import sys
 
 peano4_project = project.generate_Peano4_project()
 peano4_project.constants.export( "MaxHOfVolume", args.h )

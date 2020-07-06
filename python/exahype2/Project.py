@@ -155,7 +155,7 @@ class Project(object):
   def __generate_solver_repository(self):
     solverRepositoryDictionary = {
       "SOLVERS" : [],
-      "LOAD_BALANCER" : self._load_balancer_name
+      "LOAD_BALANCER" : self._load_balancer_name,
       "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments
     }
 

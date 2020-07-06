@@ -326,7 +326,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
     toString( step ) << " in state " << toString( _state ) << " (global cell count=" << _globalNumberOfInnerUnrefinedCell <<
     ", heaviest local tree=" << getIdOfHeaviestLocalSpacetree() << ", heaviest local weight=" << getWeightOfHeaviestLocalSpacetree() << 
     ",lightest-rank=" << _lightestRank << ",max-tree-size=" << getMaximumSpacetreeSize() << ",has-spread=" <<
-	_hasSpreadOutOverAllRanks << ",round-robin-token=" << _roundRobinToken << ",round-robin-threshold=" << _roundRobinThreshold << ")"
+	_hasSpreadOutOverAllRanks << ",round-robin-token=" << _roundRobinToken << ",round-robin-threshold=" << 
+    _roundRobinThreshold << ",ratio=" << _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell << ")"
   );
 
   switch ( step ) {
