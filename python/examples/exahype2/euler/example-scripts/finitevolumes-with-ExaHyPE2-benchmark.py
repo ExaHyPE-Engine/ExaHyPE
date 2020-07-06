@@ -25,6 +25,15 @@ import peano4.toolbox.blockstructured
 import exahype2
 
 
+import argparse
+
+
+
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
+parser.add_argument("--trees-per-core", dest="trees_per_core", type=float, help="Target number of trees per core (use 1 without enclaves and something smaller than 1 with enclaves)", action="store_true" )
+parser.add_argument("--h",              dest="h",              type=float, help="Mesh size", action="store_true" )
+args = parser.parse_args()
+
 
 #
 # Create a project and configure it to end up in a subnamespace (and thus
@@ -44,8 +53,7 @@ time_step_size = 0.000001
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
-project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
+project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
   "Euler", 
   patch_size, 
   unknowns, time_step_size,
@@ -66,8 +74,8 @@ build_mode = peano4.output.CompileMode.Release
 #
 project.set_global_simulation_parameters(
   dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
-  time_step_size * 1000,           # end time
-  0.0, 0                          # snapshots
+  time_step_size * 50,           # end time
+  0.0, 0                         # snapshots
 )
 
 
@@ -75,6 +83,9 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
+
+Da ist kein Ratio mit drin. Den brauch ich aber fuer Enclave-Tasking
+
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
 
 import sys

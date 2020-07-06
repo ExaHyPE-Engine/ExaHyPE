@@ -9,14 +9,23 @@ import exahype2
 import matplotlib.pyplot as plt
 
 
+#Colors = [ "#ff0000", "#00ff00", "#0000ff" ]
+#
+# Number of symbols should differ from colours by one
+#
+Symbols = [ "o", "s", "<", ">" , "v", "^" ]
+
+
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='ExaHyPE 2 scaling plotter')
   parser.add_argument("file",   help="filename of the file to parse (should be a tar.gz file)")
   parser.add_argument("-v", "--verbose", help="increase output verbosity", action="store_true" )
   parser.add_argument("--grid-construction", dest="grid_construction", help="plot grid construction time, too", action="store_true" )
   parser.add_argument("--last-iteration", dest="last_iteration", help="measure only the last iteration", action="store_true" )
-  parser.add_argument("--pattern", dest="file_pattern", help="define pattern that has to be in the filename", default="")
+  parser.add_argument("--pattern", dest="file_pattern", help="define pattern that has to be in the filename. If you have multiple data sets, separate them via a |", default="")
+  parser.add_argument("--max-cores-per-rank", dest="max_cores_per_rank", type=int, help="max. number of cores per rank", default=0)
   parser.add_argument("--log", dest="log", help="plot with logarithmic axes", action="store_true" )
+  parser.add_argument("--plot-efficiency", dest="plot_efficiency", help="Don't plot raw times but efficiency", action="store_true" )
   args = parser.parse_args()
 
   open_mode = ""  
@@ -29,39 +38,66 @@ if __name__ == "__main__":
 
   tar = tarfile.open( args.file, "r:gz" )
   data_files = tar.getnames()
-  
-  data_points = []
-  for data_file in data_files:
-    if args.file_pattern in data_file:
-      if args.verbose:
-        print( "parse " + data_file )
-      tar.extract( data_file )
-      new_data = exahype2.postprocessing.PerformanceDataPoint(data_file,args.verbose)
-      if new_data.valid:
-        data_points.append( new_data ) 
-      os.remove( data_file )
-    elif args.verbose:
-      print( "ignore " + data_file + " as file name does not match pattern")
 
   plt.clf()
-
-  if args.grid_construction:
-    (x_data, y_data) = exahype2.postprocessing.extract_grid_construction_times( data_points )    
-    plt.plot( x_data, y_data, label="total grid construction (incl. initial lb)" )
-
-  (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.last_iteration )    
-  plt.plot( x_data, y_data, label="time per time step" )
-
-  plt.plot( x_data, exahype2.postprocessing.linear_runtime_trend_line(x_data,y_data), "--", label="linear trend" )
   
-  plt.xlabel( "Threads" )
-  plt.ylabel( "Time [t]=s" )
+  different_file_patterns = [ "" ]
+  if args.file_pattern!="":
+    different_file_patterns = args.file_pattern.split( "|" )
+
+  for current_file_type in different_file_patterns:  
+    data_points = []
+    for data_file in data_files:
+      if current_file_type in data_file:
+        tar.extract( data_file )
+        new_data = exahype2.postprocessing.PerformanceDataPoint(data_file)
+        if args.verbose:
+          print( "parsed " + data_file + ": " + str(new_data) )
+        if new_data.valid:
+          data_points.append( new_data ) 
+        os.remove( data_file )
+
+    #if args.grid_construction:
+    # -- file type
+    #  (x_data, y_data) = exahype2.postprocessing.extract_grid_construction_times( data_points )    
+    #  plt.plot( x_data, y_data, label="total grid construction (incl. initial lb)" )
+
+    (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.last_iteration, args.max_cores_per_rank )    
+    
+    if different_file_patterns.index(current_file_type)==0 and not args.plot_efficiency:
+      plt.plot( x_data, exahype2.postprocessing.linear_runtime_trend_line(x_data,y_data), ":", color="#000000", label="linear trend" )  
+    if args.plot_efficiency:
+      normalised_fasted_time = y_data[0] * x_data[0]
+      for i in range(0,len(x_data)):
+        y_data[i] = normalised_fasted_time / y_data[i] / x_data[i]
+      if args.max_cores_per_rank>0:
+        y_data = [y/float(args.max_cores_per_rank) for y in y_data]
+      y_data = [ min(y,1.1) for y in y_data]
+      
+    symbol = "-" + Symbols[ different_file_patterns.index(current_file_type) % len(Symbols) ]
+    my_markevery = 0.9
+    #if args.max_cores_per_rank>0:
+    #  my_markevery=args.max_cores_per_rank-0.1
+      
+    if len(different_file_patterns)==0:
+      plt.plot( x_data, y_data, symbol, label="time per time step", markevery=my_markevery )
+    elif different_file_patterns.index(current_file_type)==0:
+      plt.plot( x_data, y_data, symbol, label="time per time step, " + str(current_file_type), markevery=my_markevery )
+    else:
+      plt.plot( x_data, y_data, symbol, label=str(current_file_type), markevery=my_markevery )
+
+  
+  plt.xlabel( "Ranks" )
+  if args.plot_efficiency:
+    plt.ylabel( "Efficiency" )
+  else:
+    plt.ylabel( "Time [t]=s" )
   if args.log:
     plt.xscale( "log", basex=2 )
     plt.yscale( "log" )
   xtics   = [ 1 ]
-  xlabels = [ "serial" ]
-  while xtics[-1] < x_data[-1]:
+  xlabels = [ "1" ]
+  while xtics[-1]*2 < x_data[-1]:
     xtics.append( xtics[-1]*2 )
     xlabels.append( str(xtics[-1]) )
   plt.xticks( xtics, xlabels )
