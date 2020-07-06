@@ -170,15 +170,17 @@ class FV(object):
       self._guard_project_patch_onto_faces,
       self._get_default_includes() + self.get_user_includes()
     ))
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,
-      self.AdjustCellTemplate.format(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    #step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+    #  self._patch,
+    #  self.AdjustCellTemplate.format(**d),
+    #  self._guard_adjust_cell,
+    #  self._get_default_includes() + self.get_user_includes()
+    #))
     pass
   
+
   HandleBoundaryTemplate = ""
+
 
   HandleCellTemplate = ""
  
