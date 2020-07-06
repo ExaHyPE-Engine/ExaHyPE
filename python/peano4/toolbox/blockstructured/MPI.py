@@ -35,7 +35,7 @@ def get_face_overlap_merge_implementation(patch_overlap):
   //
   #if PeanoDebug>0
   tarch::logging::Log _log( "Q" );
-  logDebug( "mergeHorizontally()", "merge at x=" << marker.toString() << " with an outer normal of " << marker.outerNormal() ); 
+  logDebug( "merge()", "merge at x=" << marker.toString() << " with an outer normal of " << marker.outerNormal() ); 
   #endif
   
   const int faceNormal = marker.getSelectedFaceNumber() % Dimensions;

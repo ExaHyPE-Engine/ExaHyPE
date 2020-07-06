@@ -34,7 +34,7 @@ class Jinja2TemplatedHeaderImplementationFilePair(object):
       self.d["NAMESPACE"].append(i)
     
 
-  def generate_file(self,overwrite,full_qualified_filename,template_file):
+  def __generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and writeFile(overwrite,self.default_overwrite,full_qualified_filename):
       print( "write " + full_qualified_filename + " (generated from template " + template_file + ")")
 
@@ -53,7 +53,7 @@ class Jinja2TemplatedHeaderImplementationFilePair(object):
     header_filename = directory + "/" + self.subdirectory + "/" + self.classname + ".h";
     cpp_filename    = directory + "/" + self.subdirectory + "/" + self.classname + ".cpp";
 
-    self.generate_file(overwrite,header_filename,self.headerfile_template)    
-    self.generate_file(overwrite,cpp_filename   ,self.cppfile_template)    
+    self.__generate_file(overwrite,header_filename,self.headerfile_template)    
+    self.__generate_file(overwrite,cpp_filename   ,self.cppfile_template)    
     
       

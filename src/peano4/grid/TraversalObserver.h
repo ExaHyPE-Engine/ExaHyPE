@@ -36,9 +36,13 @@ class peano4::grid::TraversalObserver {
   public:
     virtual ~TraversalObserver() {}
 
-    static constexpr int NoData                              = -1;
-
     static constexpr int NoRebalancing                       = -1;
+
+    /**
+     * I use this one to indicate that no data is associated with a grid entity,
+     * as the grid entity is outside of the domain.
+     */
+    static constexpr int NoData                              = -1;
 
 	  /**
 	   * Implies that the data will then be local or had been local.
@@ -189,11 +193,18 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
    */
   virtual void finishAllOutstandingSendsAndReceives() {};
 
-  virtual void sendVertexHorizontally(int inOutStack, int relativePositionOnInOutStack, int toTree) {};
-  virtual void sendFaceHorizontally(int inOutStack, int relativePositionOnInOutStack, int toTree) {};
+  enum class SendReceiveContext {
+    BoundaryExchange,
+    MultiscaleExchange,
+    Rebalancing
+  };
 
-  virtual void receiveAndMergeVertexHorizontally(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromTree) {};
-  virtual void receiveAndMergeFaceHorizontally(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromTree) {};
+  virtual void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context) {};
+  virtual void sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context) {};
+  virtual void sendCell(int inOutStack, int toStack, SendReceiveContext context) {};
+
+  virtual void receiveAndMergeVertex(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context) {};
+  virtual void receiveAndMergeFace(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context) {};
 
   virtual void deleteAllStacks() {};
 };

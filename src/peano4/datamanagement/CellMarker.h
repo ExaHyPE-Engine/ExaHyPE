@@ -28,6 +28,9 @@ struct peano4::datamanagement::CellMarker {
 
     bool _isRefined;
     bool _isLocal;
+    bool _areAllVerticesRefined;
+    bool _isOneVertexHanging;
+    bool _areAllVerticesInsideDomain;
   public:
     CellMarker(const peano4::grid::GridTraversalEvent& event);
 
@@ -43,6 +46,23 @@ struct peano4::datamanagement::CellMarker {
     std::string toString() const;
 
     bool isLocal() const;
+
+    /*
+    bool areAllVerticesRefined() const;
+    bool isOneVertexHanging() const;
+    bool isAdjacentToDomainBoundary() const;
+     */
+
+
+    /**
+     * A enclave cell in the definition of Charrier, Hazelwood, Weinzierl is a
+     * cell that is not a skeleton cell. A skeleton cell is cell which either
+     *
+     * - is adjacent to a resolution transitions; or
+     * - is adjacent to a domain boundary
+     */
+    bool isEnclaveCell() const;
+    bool isSkeletonCell() const;
 };
 
 

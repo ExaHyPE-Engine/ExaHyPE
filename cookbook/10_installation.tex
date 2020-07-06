@@ -189,6 +189,9 @@ i.e.~you can both assess a valid build plus a working MPI environment.
 \section{Python configuration}
 
 \Peano\ is developed with Python 3. Python 2 is not supported. 
+
+
+\subsection{Python paths}
 To make any Python example pass, you have to set the Python paths.
 There are multiple ways to do so.
 
@@ -225,6 +228,37 @@ library accept additional search paths), or you can again use the
  As long as you run through environment variables or the \Peano\ routines to
  specify paths, your makefiles also will continue to work that way. 
 \end{remark}
+
+
+\subsection{Python packages}
+
+\Peano\ currently relies on the following Python packages/projects:
+
+
+\begin{center}
+ \begin{tabular}{lp{6cm}ll}\\
+   Package & Description & Ubuntu & OpenSUSE \\
+   \hline
+   jinja2 & For all the templated glue code. & 
+    \texttt{python3-jinja2} &
+    \texttt{} 
+    \\
+   sympy & For the symbolic modelling of partial differential equations
+    (predominantly in \ExaHyPE). &
+    \texttt{python3-sympy} &
+    \texttt{python3-sympy} 
+ \end{tabular}
+\end{center}
+
+
+\noindent
+The table above specifies the corresponding packages in our two main
+distributions for which we test \Peano. 
+They can be installed via \texttt{zypper install} (SUSE) or \texttt{apt-get
+install} (Ubuntu), respectively.
+Alternatively, you might want to use Python's \texttt{pip}.
+
+
 
 
 

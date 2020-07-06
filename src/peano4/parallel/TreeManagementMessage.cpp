@@ -62,6 +62,16 @@ void   peano4::parallel::TreeManagementMessage::setAction(Action value) {
 
 
 
+bool peano4::parallel::TreeManagementMessage::receiveAndMerge() {
+  return true;
+}
+
+
+bool peano4::parallel::TreeManagementMessage::send() {
+  return true;
+}
+    
+    
 #ifdef Parallel
 void peano4::parallel::TreeManagementMessage::sendAndPollDanglingMessages(const peano4::parallel::TreeManagementMessage& message, int destination, int tag ) {
   peano4::parallel::TreeManagementMessage::send(

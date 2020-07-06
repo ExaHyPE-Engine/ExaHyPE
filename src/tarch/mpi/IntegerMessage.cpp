@@ -36,6 +36,16 @@ void   tarch::mpi::IntegerMessage::setValue(int value) {
 
 
 
+bool tarch::mpi::IntegerMessage::receiveAndMerge() {
+  return true;
+}
+
+
+bool tarch::mpi::IntegerMessage::send() {
+  return true;
+}
+    
+    
 #ifdef Parallel
 void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag ) {
   tarch::mpi::IntegerMessage::send(

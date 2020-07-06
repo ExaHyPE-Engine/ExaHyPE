@@ -32,10 +32,16 @@
 
 
 class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
-  protected:
-	const int  _NumberOfFiniteVolumesPerAxisPerPatch;
-    double     _timeStamp;
   public:
+    enum class SolverState {
+      GridConstruction,
+      GridInitialisation,
+      TimeStep,
+      Plotting
+    };
+
+    static std::string toString(SolverState);
+
     {{CLASSNAME}}();
 
     double getMinTimeStamp() const;
@@ -96,6 +102,13 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
 
+
+    virtual void startGridConstructionStep();
+    virtual void finishGridConstructionStep();
+
+    virtual void startGridInitialisationStep();
+    virtual void finishGridInitialisationStep();
+
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -112,6 +125,15 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
      * operation is still invoked.
      */
     virtual void finishTimeStep();
+
+    virtual void startPlottingStep(
+      double globalMinTimeStamp,
+      double globalMaxTimeStamp,
+      double globalMinTimeStepSize,
+      double globalMaxTimeStepSize
+    );
+
+    virtual void finishPlottingStep();
 
     {% if FLUX_IMPLEMENTATION!="<none>" %}
    virtual void flux(
@@ -134,6 +156,13 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
       double                                       F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
      {% endif %}
+
+  protected:
+    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
+
+    double     _timeStamp;
+
+    SolverState  _solverState;
 };
 
 

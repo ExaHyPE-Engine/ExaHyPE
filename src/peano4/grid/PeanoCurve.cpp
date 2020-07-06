@@ -171,6 +171,11 @@ bool peano4::grid::PeanoCurve::isInOutStack( int number ) {
 }
 
 
+bool peano4::grid::PeanoCurve::isTemporaryStack( int number ) {
+  return number >= NumberOfBaseStacks;
+}
+
+
 int peano4::grid::PeanoCurve::getVertexWriteStackNumber(const AutomatonState& cell, const std::bitset<Dimensions>& vertex ) {
   int biggestValue = 2*Dimensions+1;
   int result       = getOutputStackNumber(cell);

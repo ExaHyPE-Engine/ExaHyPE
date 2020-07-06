@@ -3,32 +3,74 @@
 #include <algorithm>
 
 
-{OPEN_NAMESPACE}
-{SOLVER_DEFINITIONS}
+
+{% for item in NAMESPACE -%}
+  namespace {{ item }} {
+
+{%- endfor %}
 
 
 ::exahype2::RefinementControl  refinementControl;
 
 
+{% if LOAD_BALANCER!="" -%}
+{{LOAD_BALANCER}}              loadBalancer{{LOAD_BALANCER_ARGUMENTS}};
+{% endif -%}
 
-double getMinTimeStamp() {{
-  return std::min( {{ {SEQUENCE_OF_GET_MIN_TIME_STAMP_CALLS} }} );
-}}
-
-
-double getMaxTimeStamp() {{
-  return std::max( {{ {SEQUENCE_OF_GET_MAX_TIME_STAMP_CALLS} }} );
-}}
+{% for item in SOLVERS -%}
+{{ item[0] }} {{ item[1] }};
+{%- endfor %}
 
 
-double getMinTimeStepSize() {{
-  return std::min( {{ {SEQUENCE_OF_GET_MIN_TIME_STEP_SIZE_CALLS} }} );
-}}
+
+double getMinTimeStamp() {
+  double result = std::numeric_limits<double>::max();
+  {% for item in SOLVERS -%}
+  result = std::min( result, {{ item[1] }}.getMinTimeStamp() );
+  {%- endfor %}
+  return result;
+}
 
 
-double getMaxTimeStepSize() {{
-  return std::max( {{ {SEQUENCE_OF_GET_MAX_TIME_STEP_SIZE_CALLS} }} );
-}}
+double getMaxTimeStamp() {
+  double result = 0.0;
+  {% for item in SOLVERS -%}
+  result = std::max( result, {{ item[1] }}.getMaxTimeStamp() );
+  {%- endfor %}
+  return result;
+}
+
+
+double getMinTimeStepSize() {
+  double result = std::numeric_limits<double>::max();
+  {% for item in SOLVERS -%}
+  result = std::min( result, {{ item[1] }}.getMinTimeStepSize() );
+  {%- endfor %}
+  return result;
+}
+
+
+double getMaxTimeStepSize() {
+  double result = 0.0;
+  {% for item in SOLVERS -%}
+  result = std::max( result, {{ item[1] }}.getMaxTimeStepSize() );
+  {%- endfor %}
+  return result;
+}
+
+
+void startGridConstructionStep() {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.startGridConstructionStep();
+  {%- endfor %}
+}
+
+
+void startGridInitialisationStep() {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.startGridInitialisationStep();
+  {%- endfor %}
+}
 
 
 void startTimeStep(
@@ -36,28 +78,67 @@ void startTimeStep(
   double maxTimeStamp,
   double minTimeStepSize,
   double maxTimeStepSize
-) {{
-  {SEQUENCE_OF_START_TIME_STEP_CALLS}
-}}
+) {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.startTimeStep(minTimeStamp,maxTimeStamp,minTimeStepSize,maxTimeStepSize);
+  {%- endfor %}
+}
 
 
-void finishTimeStep() {{
-  {SEQUENCE_OF_FINISH_TIME_STEP_CALLS}
+void startPlottingStep(
+  double minTimeStamp,
+  double maxTimeStamp,
+  double minTimeStepSize,
+  double maxTimeStepSize
+) {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.startPlottingStep(minTimeStamp,maxTimeStamp,minTimeStepSize,maxTimeStepSize);
+  {%- endfor %}
+}
+
+
+void finishTimeStep() {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.finishTimeStep();
+  {%- endfor %}
+
   refinementControl.finishStep();
-}}
+
+  loadBalancer.finishStep();
+}
 
 
-void finishGridConstructionStep() {{
-  {SEQUENCE_OF_FINISH_GRID_CONSTRUCTION_STEP_CALLS}
+void finishGridConstructionStep() {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.finishGridConstructionStep();
+  {%- endfor %}
+
   refinementControl.finishStep();
-}}
+  loadBalancer.finishStep();
+}
 
 
-void finishSimulation() {{
-  {SEQUENCE_OF_FINISH_FINISH_SIMULATION_CALLS}
+void finishGridInitialisationStep() {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.finishGridInitialisationStep();
+  {%- endfor %}
+}
+
+
+void finishPlottingStep() {
+  {% for item in SOLVERS -%}
+  {{ item[1] }}.finishPlottingStep();
+  {%- endfor %}
+}
+
+
+void finishSimulation() {
   refinementControl.finishStep();
-}}
+}
 
 
-{CLOSE_NAMESPACE}
+{% for item in NAMESPACE -%}
+  }
+
+{%- endfor %}
 

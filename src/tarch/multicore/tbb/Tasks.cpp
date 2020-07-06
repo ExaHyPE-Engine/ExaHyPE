@@ -92,19 +92,20 @@ namespace {
        * @see enqueue()
        */
       tbb::task* execute() {
-    	int  numberOfPendingTasksPriorToStart = nonblockingTasks.size();
-    	bool handledTasks                     = tarch::multicore::processPendingTasks(_maxJobs);
+        int  numberOfPendingTasksPriorToStart = nonblockingTasks.size();
+        bool handledTasks                     = tarch::multicore::processPendingTasks(_maxJobs);
 
-      	if (handledTasks and nonblockingTasks.size()>numberOfPendingTasksPriorToStart*2) {
+        if (handledTasks and nonblockingTasks.size()>numberOfPendingTasksPriorToStart*2) {
           enqueue(_maxJobs);
           enqueue(_maxJobs);
-    	}
+        }
       	else if (handledTasks and nonblockingTasks.size()>numberOfPendingTasksPriorToStart) {
           enqueue(_maxJobs+1);
-    	}
-    	else if (handledTasks and _maxJobs>1) {
+        }
+        else if (handledTasks and _maxJobs>1) {
           enqueue(_maxJobs-1);
-    	}
+        }
+
         numberOfConsumerTasks.fetch_and_add(-1);
 
         return nullptr;
@@ -140,19 +141,31 @@ namespace {
  */
 bool tarch::multicore::processPendingTasks( int maxTasks ) {
   assertion(maxTasks>=0);
-  bool result = false;
-  while ( maxTasks>0 ) {
-	// try to get a task and store in p
-    Task* myTask = nullptr;
-    bool gotTask = nonblockingTasks.try_pop(myTask);
+
+  bool  result         = false;
+  Task* myTask         = nullptr;
+  Task* myPrefetchTask = nullptr;
+
+  while ( maxTasks>0 or myPrefetchTask!=nullptr) {
+    bool gotTask = false;
+    if (myPrefetchTask==nullptr) {
+      gotTask = nonblockingTasks.try_pop(myTask);
+    }
+    else {
+      gotTask = true;
+      myTask = myPrefetchTask;
+    }
+
     #if defined(TBBPrefetchesJobData)
-    Task* myPrefetchTask = nullptr;
     bool gotPrefetchTask = nonblockingTasks.try_pop(myPrefetchTask);
-    if (gotPrefetchTask and maxTasks>1) {
+    if (gotPrefetchTask) {
       myPrefetchTask->prefetch();
-      nonblockingTasks.push(myPrefetchTask);
+    }
+    else {
+      myPrefetchTask = nullptr;
     }
     #endif
+
     if (gotTask) {
       bool requeue = myTask->run();
       if (requeue) {
@@ -188,6 +201,7 @@ void tarch::multicore::yield() {
  */
 void tarch::multicore::spawnTask(Task*  task) {
   nonblockingTasks.push( task );
+
   if ( numberOfConsumerTasks==0 ) {
     ConsumerTask::enqueue();
   }

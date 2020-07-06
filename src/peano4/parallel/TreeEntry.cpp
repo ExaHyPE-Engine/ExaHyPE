@@ -49,6 +49,16 @@ void   peano4::parallel::TreeEntry::setMaster(int value) {
 
 
 
+bool peano4::parallel::TreeEntry::receiveAndMerge() {
+  return true;
+}
+
+
+bool peano4::parallel::TreeEntry::send() {
+  return true;
+}
+    
+    
 #ifdef Parallel
 void peano4::parallel::TreeEntry::sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag ) {
   peano4::parallel::TreeEntry::send(

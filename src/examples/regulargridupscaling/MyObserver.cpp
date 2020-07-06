@@ -82,9 +82,8 @@ void examples::regulargridupscaling::MyObserver::enterCell(
           _accumulator += tarch::la::frobeniusNorm(localStiffnessMatrix);
     	  return false;
         },
-		peano4::parallel::Tasks::TaskType::Task,
-		peano4::parallel::Tasks::getLocationIdentifier( "examples::regulargridupscaling::MyObserver::enterCell" ),
-		FractionOfCellsYieldingIntegrationTask<0
+        FractionOfCellsYieldingIntegrationTask<0 ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
+        peano4::parallel::Tasks::getLocationIdentifier( "examples::regulargridupscaling::MyObserver::enterCell" )
       );
     }
   }

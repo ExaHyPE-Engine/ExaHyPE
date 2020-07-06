@@ -10,7 +10,6 @@ template <class Container>
 void peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(
   Container& stackContainer, int master, int worker
 ) {
-
 }
 
 
@@ -36,6 +35,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
   logTraceInWith2Arguments( "streamDataFromSplittingTreeToNewTree(...)", master, worker );
   const int sourceRank      = Node::getInstance().getRank( master );
   const int destinationRank = Node::getInstance().getRank( worker );
+  const int sourceStack     = Node::getOutputStackNumberForVerticalDataExchange(worker);
 
   if (
     sourceRank==tarch::mpi::Rank::getInstance().getRank()
@@ -43,18 +43,14 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
     destinationRank==tarch::mpi::Rank::getInstance().getRank()
   ) {
     int  destinationStack = peano4::grid::PeanoCurve::getOutputStackNumber( getInstance().getSpacetree(worker)._root );
+
     if ( stackContainer.getForPush(worker,destinationStack)->empty() ) {
-      const int sourceStack      = peano4::grid::PeanoCurve::getInputStackNumber( getInstance().getSpacetree(master)._root );
       logDebug(
         "copyDataFromSplittingTreesToNewTrees()",
-        "copy stack " << sourceStack << " from tree " << master << " into stack " << destinationStack << " from tree " << worker
+        "copy stack " << sourceStack << " from tree " << master << " into stack " << destinationStack << " from tree " << worker <<
+        " with a stack size of " << stackContainer.getForPush(master,sourceStack)->size()
       );
       stackContainer.getForPush(worker,destinationStack)->clone( *stackContainer.getForPush(master,sourceStack) );
-
-      logDebug(
-        "copyDataFromSplittingTreesToNewTrees()",
-        "size of stack " << destinationStack << " on tree " << master << ": " << stackContainer.getForPush(master,destinationStack)->size()
-      );
     }
     else {
       logDebug(
@@ -64,23 +60,23 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
     }
   }
   else if ( sourceRank==tarch::mpi::Rank::getInstance().getRank() ) {
+    // send stuff to the new worker via MPI
     #ifdef Parallel
     const int tag            = peano4::parallel::Node::getInstance().getGridDataExchangeTag(master, worker, peano4::parallel::Node::ExchangeMode::VerticalData);
-    const int sourceStack    = peano4::grid::PeanoCurve::getInputStackNumber( getInstance().getSpacetree(master)._root );
-    const int messageSize    = stackContainer.getForPop(master,sourceStack)->size();
-    const int temporaryStack = Node::getOutputStackNumberForVerticalDataExchange(worker);
+    const int messageSize    = 
+      stackContainer.holdsStack( master, sourceStack ) ?
+      stackContainer.getForPop(master,sourceStack)->size() : 0;
 
     logDebug(
       "copyDataFromSplittingTreesToNewTrees()",
-      "send stack " << sourceStack << " (copied temporarily into " << temporaryStack << ") from tree " << master << " on rank " << sourceRank << " through tag " << tag <<
+      "send stack " << sourceStack << " from tree " << master << " on rank " << sourceRank << " through tag " << tag <<
       " to tree " << worker << " on rank " << destinationRank << ". size=" << messageSize
     );
     tarch::mpi::IntegerMessage message( messageSize );
     tarch::mpi::IntegerMessage::send(message, destinationRank, tag, tarch::mpi::Rank::getInstance().getCommunicator());
 
     if (messageSize>0) {
-      stackContainer.getForPush(master,temporaryStack)->clone( *stackContainer.getForPop(master,sourceStack) );
-      stackContainer.getForPush(master,temporaryStack)->startSend(
+      stackContainer.getForPush(master,sourceStack)->startSend(
         destinationRank, tag
       );
     }

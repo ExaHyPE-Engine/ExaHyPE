@@ -13,7 +13,7 @@ class ApplyFunctorOnPatch(ActionSet):
   """
   
   
-  def __init__(self,patch,functor_implementation,additional_includes):
+  def __init__(self,patch,functor_implementation,guard,additional_includes):
     """
 
   patch          Instance of peano4.datamodel.Patch
@@ -44,6 +44,7 @@ class ApplyFunctorOnPatch(ActionSet):
     self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(patch.no_of_unknowns * patch.dim[0] * patch.dim[0] * patch.dim[0])
     self.d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + patch.name
     self.d[ "FUNCTOR_IMPLEMENTATION" ]                       = functor_implementation
+    self.d[ "GUARD" ]                                        = guard
     
     self.additional_includes = additional_includes
 
@@ -65,17 +66,12 @@ class ApplyFunctorOnPatch(ActionSet):
 
 
   __Template_TouchCellFirstTime = """
-  logTraceIn( "touchCellFirstTime(...)" );
-  #if Dimensions==2
-  auto f = [&]( double patchData[{NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D}] ) -> void {{
-  #elif Dimensions==3
-  auto f = [&]( double patchData[{NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D}] ) -> void {{
-  #endif
-{FUNCTOR_IMPLEMENTATION}
-  }};
-
-  f( {CELL_ACCESSOR}.value );
-  logTraceOut( "touchCellFirstTime(...)" );
+  if ({GUARD}) {{
+    logTraceIn( "touchCellFirstTime(...)" );
+    double* patchData = {CELL_ACCESSOR}.value;
+    {FUNCTOR_IMPLEMENTATION}
+    logTraceOut( "touchCellFirstTime(...)" );
+  }}
 """
 
 

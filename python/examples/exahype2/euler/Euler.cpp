@@ -18,8 +18,10 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 
   if (tarch::la::equals(t,0.0) and tarch::la::max(h)>MaxHOfVolume) {
     result = ::exahype2::RefinementCommand::Refine;
+    logDebug( "refinementCriterion(...)", "refine as mesh width is only " << tarch::la::max(h) << " as compared to " << MaxHOfVolume );
   }
-  logTraceOutWith1Argument( "refinementCriterion(...)", toString(result) );
+
+  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;
 }
 
@@ -31,6 +33,7 @@ void examples::exahype2::euler::Euler::adjustSolution(
   double                                       t
 ) {
   if (tarch::la::equals(t,0.0) ) {
+    logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );
     // initial conditions
     bool isInTheCentre = ( tarch::la::norm2( x-tarch::la::Vector<Dimensions,double>(0.5) ) < 0.05 );
     //bool isInTheCentre = x(0)<=0.5;
@@ -104,6 +107,7 @@ void examples::exahype2::euler::Euler::flux(
   int                                          normal,
   double                                       F[5]
 ) {
+  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
   assertion4( normal>=0, faceCentre, volumeH, t, normal );
   assertion4( normal<Dimensions, faceCentre, volumeH, t, normal);
   nonCriticalAssertion9( Q[0]==Q[0], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
@@ -113,6 +117,18 @@ void examples::exahype2::euler::Euler::flux(
   nonCriticalAssertion9( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
 
   nonCriticalAssertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+
+  //
+  // If the solution becomes unphysical, the density often becomes zero or
+  // negative. I catch them as non-critical, i.e. the code then will complete
+  // its timestep and plot the result. While this is convenient for numerical
+  // errors (you in particular can spot where problems arise within the domain)
+  // programming errors often manifest in negative pressures, too, and should
+  // lead to an immediate termination so you can use a debugger to analyse the
+  // backtrace. In this case, I simply comment the following assertion in.
+  //
+  assertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -168,6 +184,8 @@ void examples::exahype2::euler::Euler::flux(
   assertionNumericalEquals11( F[3], validateFlux[3], F[0], validateFlux[0], F[1], validateFlux[1], F[2], validateFlux[2], F[3], validateFlux[3], F[4], validateFlux[4], normal  );
   assertionNumericalEquals11( F[4], validateFlux[4], F[0], validateFlux[0], F[1], validateFlux[1], F[2], validateFlux[2], F[3], validateFlux[3], F[4], validateFlux[4], normal );
   #endif
+
+  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
 
 

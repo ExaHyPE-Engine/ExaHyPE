@@ -384,6 +384,10 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(pean
 
   for (auto& parent: _spacetrees) {
     for (auto& worker: parent._hasSplit) {
+      const int temporaryOutStackForVertices = Node::getOutputStackNumberForVerticalDataExchange(worker);
+      const int sourceStackForVertices       = peano4::grid::PeanoCurve::getInputStackNumber( parent._root );
+      peano4::grid::Spacetree::_vertexStack.getForPush(parent._id,temporaryOutStackForVertices)->clone( *peano4::grid::Spacetree::_vertexStack.getForPop(parent._id,sourceStackForVertices) );
+
       streamDataFromSplittingTreeToNewTree( peano4::grid::Spacetree::_vertexStack, parent._id, worker);
 
       createObserverCloneIfRequired(observer,parent._id);
@@ -723,15 +727,14 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, int cells, int targetRank
 
     if (tarch::mpi::Rank::getInstance().getRank()!=targetRank) {
       #ifdef Parallel
-      // debug
-      logInfo( "split(int,int,int)", "request new tree on rank " << targetRank );
+      logDebug( "split(int,int,int)", "request new tree on rank " << targetRank );
       peano4::parallel::TreeManagementMessage requestMessage;
       requestMessage.setMasterSpacetreeId(treeId);
       requestMessage.setWorkerSpacetreeId(-1);
       requestMessage.setAction( peano4::parallel::TreeManagementMessage::Action::RequestNewRemoteTree );
       TreeManagementMessage::sendAndPollDanglingMessages(requestMessage, targetRank, _requestMessageTag);
 
-      logInfo( "split(int,int,int)", "message " << requestMessage.toString() << " sent - wait for answer" );
+      logDebug( "split(int,int,int)", "message " << requestMessage.toString() << " sent - wait for answer" );
 
       peano4::parallel::TreeManagementMessage answerMessage;
       TreeManagementMessage::receiveAndPollDanglingMessages(answerMessage, targetRank, getAnswerTag(treeId));

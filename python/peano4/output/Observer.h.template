@@ -1,7 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef {INCLUDE_GUARD}
-#define {INCLUDE_GUARD}
+#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
 
 
 #include "tarch/la/Vector.h"
@@ -14,15 +14,20 @@
 #include "DataRepository.h"
 
 
-{INCLUDES}
+{{INCLUDES}}
 
 
-{OPEN_NAMESPACE}
-  class {CLASSNAME};
-{CLOSE_NAMESPACE}
+{% for item in NAMESPACE -%}
+  namespace {{ item }} {
+
+{%- endfor %}
+  class {{CLASSNAME}};
+{% for item in NAMESPACE -%}
+  }
+{%- endfor %}
 
 
-class {FULL_QUALIFIED_CLASSNAME}: public peano4::grid::TraversalObserver {{
+class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public peano4::grid::TraversalObserver {
   public:
     /**
      * Logging device
@@ -31,7 +36,7 @@ class {FULL_QUALIFIED_CLASSNAME}: public peano4::grid::TraversalObserver {{
   
     const int _spacetreeId;
     
-{ATTRIBUTES}
+{{ATTRIBUTES}}
     
   public:
     /**
@@ -46,19 +51,19 @@ class {FULL_QUALIFIED_CLASSNAME}: public peano4::grid::TraversalObserver {{
      *                    instantiated for a spacetree yet but serves as 
      *                    blueprint for the real trees later on.
      */
-    {CLASSNAME}(int spacetreeId = SpacetreePrototype);
+    {{CLASSNAME}}(int spacetreeId = SpacetreePrototype);
     
-	void enterCell(
+    void enterCell(
+     const peano4::grid::GridTraversalEvent&  event
+    ) override;
+
+    void leaveCell(
       const peano4::grid::GridTraversalEvent&  event
     ) override;
 
-	void leaveCell(
-	  const peano4::grid::GridTraversalEvent&  event
-    ) override;
+    TraversalObserver* clone(int spacetreeId) override;
 
-	TraversalObserver* clone(int spacetreeId) override;
-
-	std::vector< peano4::grid::GridControlEvent > getGridControlEvents() override;
+    std::vector< peano4::grid::GridControlEvent > getGridControlEvents() override;
 
     void beginTraversal(
       const tarch::la::Vector<Dimensions,double>&  x,
@@ -79,13 +84,14 @@ class {FULL_QUALIFIED_CLASSNAME}: public peano4::grid::TraversalObserver {{
     
     void finishAllOutstandingSendsAndReceives() override;
     
-    void sendVertexHorizontally(int inOutStack, int relativePositionOnInOutStack, int toTree) override;
-    void sendFaceHorizontally(int inOutStack, int relativePositionOnInOutStack, int toTree) override;
+    void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) override;
+    void sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) override;
+    void sendCell(int inOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) override;
 
-    void receiveAndMergeVertexHorizontally(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromTree) override;
-    void receiveAndMergeFaceHorizontally(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromTree) override;
+    void receiveAndMergeVertex(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) override;
+    void receiveAndMergeFace(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) override;
 
     void deleteAllStacks() override;
-}};
+};
 
 #endif

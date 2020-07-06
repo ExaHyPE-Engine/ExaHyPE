@@ -1,11 +1,9 @@
 #include "{CLASSNAME}.h"
 
 
-// Some MPI routines require the loops
-#include "peano4/utils/Loop.h"
+{INCLUDES}
 
 
- 
 {FULL_QUALIFIED_CLASSNAME}::{CLASSNAME}() {{
 }}
 
@@ -67,6 +65,16 @@ tarch::la::Vector<Dimensions,double> {FULL_QUALIFIED_CLASSNAME}::getDebugH() con
 }}
 
 #endif
+
+
+bool {FULL_QUALIFIED_CLASSNAME}::send() {{
+  return {SEND_CONDITION};
+}}
+
+
+bool {FULL_QUALIFIED_CLASSNAME}::receiveAndMerge() {{
+  return {RECEIVE_AND_MERGE_CONDITION};
+}}
 
 
 {MERGE_METHOD_DEFINITIONS}

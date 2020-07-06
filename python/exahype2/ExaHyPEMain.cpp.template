@@ -56,18 +56,24 @@ bool selectNextAlgorithmicStep() {{
     );
     continueToSolve = true;
     haveReceivedNoncriticialAssertion = true;
-    logError( "selectNextAlgorithmicStep()", "noncritical assertion has been triggered in code. Dump final state and terminate" );
+    logError( "selectNextAlgorithmicStep()", "non-critical assertion has been triggered in code. Dump final state and terminate" );
   }}
   else if (exahype2::hasNonCriticalAssertionBeenViolated()) {{
     continueToSolve = false;
   }}
   else if (not gridConstructed) {{
-    peano4::parallel::Node::getInstance().setNextProgramStep(
-      observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGrid )
-    );
-    if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=5 ) {{
+    if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4 ) {{
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
+      );
+
       assertionNumericalEquals( observers::getMinTimeStamp(), 0.0 );
       gridConstructed = true;
+    }}
+    else {{
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGrid )
+      );
     }}
     continueToSolve = true;
   }}
@@ -123,19 +129,43 @@ void step() {{
   switch ( stepName ) {{
     case observers::StepRepository::Steps::CreateGrid:
       {{
+        observers::startGridConstructionStep();
+        
         observers::CreateGrid  observer;
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        observers::finishGridConstructionStep();
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
+
+        observers::finishGridConstructionStep();
+      }}
+      break;
+    case observers::StepRepository::Steps::InitGrid:
+      {{
+        observers::startGridInitialisationStep();
+        
+        observers::CreateGrid  observer;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        gridConstructionMeasurement.setValue( watch.getCalendarTime() );
+
+        observers::finishGridInitialisationStep();
       }}
       break;
     case observers::StepRepository::Steps::PlotSolution:
       {{
+        const double minTimeStamp    = observers::getMinTimeStamp();
+        const double maxTimeStamp    = observers::getMaxTimeStamp();
+        const double minTimeStepSize = observers::getMinTimeStepSize();
+        const double maxTimeStepSize = observers::getMaxTimeStepSize();
+
+        observers::startPlottingStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
+
         observers::PlotSolution  observer;
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         plotMeasurement.setValue( watch.getCalendarTime() );
+        
+        observers::finishPlottingStep();
       }}
       break;
     case observers::StepRepository::Steps::TimeStep:
@@ -152,11 +182,13 @@ void step() {{
           logInfo( "step()", "dt_{{max}} = " << maxTimeStepSize );
         }}
         observers::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
+        
         observers::TimeStep  observer;
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
-        observers::finishTimeStep();
         watch.stop();
         timeStepMeasurement.setValue( watch.getCalendarTime() );
+        
+        observers::finishTimeStep();
       }}
       break;
   }}

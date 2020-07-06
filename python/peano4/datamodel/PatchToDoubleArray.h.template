@@ -52,6 +52,9 @@ struct {FULL_QUALIFIED_CLASSNAME} {{
   
   {MERGE_METHOD_DECLARATIONS}
   
+  static bool send();
+  static bool receiveAndMerge();
+  
   #ifdef Parallel
   /**
    * Sets the Datatype to MPI_Double.

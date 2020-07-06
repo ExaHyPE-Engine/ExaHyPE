@@ -47,15 +47,20 @@ class MPI(object):
     static void sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag );
 #endif
+
+
+    static bool receiveAndMerge();
+    static bool send();
+
     """
     
     if self._dof_association==DoFAssociation.Vertex:
       result += """
-void mergeHorizontally(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
+void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
 """ 
     elif self._dof_association==DoFAssociation.Face:
       result += """
-void mergeHorizontally(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
+void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
 """ 
     elif self._dof_association==DoFAssociation.Cell:
       pass
@@ -69,6 +74,16 @@ void mergeHorizontally(const """ + full_qualified_name + """& neighbour, const p
 
   def get_implementation(self,full_qualified_name):
     result = """
+bool """ + full_qualified_name + """::receiveAndMerge() {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::send() {
+  return true;
+}
+    
+    
 #ifdef Parallel
 void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag ) {
   """ + full_qualified_name + """::send(
@@ -130,12 +145,12 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
 
     if self._dof_association==DoFAssociation.Vertex:
       result += """
-void """ + full_qualified_name + "::mergeHorizontally(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
 }
 """ 
     elif self._dof_association==DoFAssociation.Face:
       result += """
-void """ + full_qualified_name + "::mergeHorizontally(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
 }
 """ 
     elif self._dof_association==DoFAssociation.Cell:

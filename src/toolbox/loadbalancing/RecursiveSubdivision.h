@@ -116,7 +116,11 @@ namespace toolbox {
  */
 class toolbox::loadbalancing::RecursiveSubdivision {
   public:
-    RecursiveSubdivision(double percentageOfCoresThatShouldInTheoryGetAtLeastOneCell=0.8);
+    /**
+     * @param ratioOfCoresThatShouldInTheoryGetAtLeastOneCell Pass in something between 0 
+     *           and 1 (though bigger than 1 might work, too)
+     */
+    RecursiveSubdivision(double ratioOfCoresThatShouldInTheoryGetAtLeastOneCell=0.8);
     ~RecursiveSubdivision();
 
     /**
@@ -194,7 +198,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     enum class StrategyState {
       Standard,
       WaitForRoundRobinToken,
-      PostponedDecisionDueToLackOfCells
+      PostponedDecisionDueToLackOfCells,
+      Stagnation
     };
 
     static std::string toString( StrategyState state );
@@ -319,6 +324,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * rank is allowed to load balance.
      */
     int _roundRobinThreshold;
+
+    int _maxTreeWeightAtLastSplit;
 };
 
 

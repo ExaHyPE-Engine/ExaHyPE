@@ -46,6 +46,20 @@ void runTests() {
 
 void runSerial() {
   examples::grid::MyObserver emptyObserver;
+
+  peano4::initSingletons(
+#if Dimensions==2
+    {0.0, 0.0},
+    {1.0, 1.0},
+#else
+    {0.0, 0.0, 0.0},
+    {1.0, 1.0, 1.0},
+#endif
+    periodicBC
+  );
+  
+  
+  // You wouldn't do this usually. We always work against the set.
   peano4::grid::Spacetree         spacetree(
 #if Dimensions==2
     {0.0, 0.0},
@@ -55,6 +69,7 @@ void runSerial() {
     {1.0, 1.0, 1.0}
 #endif
   );
+  
 
   for (int i=0; i<2*examples::grid::MyObserver::GridRefinementIterations + examples::grid::MyObserver::StationaryIterations; i++) {
 	tarch::logging::CommandLineLogger::getInstance().closeOutputStreamAndReopenNewOne();
@@ -73,6 +88,8 @@ void runSerial() {
 
   peano4::grid::TraversalVTKPlotter plotterObserver( "grid-serial" );
   spacetree.traverse( plotterObserver );
+
+  peano4::shutdownSingletons();
 }
 
 
@@ -175,14 +192,14 @@ void updateDomainDecomposition() {
 
 
 void runParallel() {
-  peano4::parallel::SpacetreeSet::getInstance().init(
-    #if Dimensions==2
+  peano4::initSingletons(
+#if Dimensions==2
     {0.0, 0.0},
     {1.0, 1.0},
-    #else
+#else
     {0.0, 0.0, 0.0},
     {1.0, 1.0, 1.0},
-    #endif
+#endif
     periodicBC
   );
 
@@ -222,6 +239,8 @@ void runParallel() {
       #endif
     }
   }
+
+  peano4::shutdownSingletons();
 }
 
 

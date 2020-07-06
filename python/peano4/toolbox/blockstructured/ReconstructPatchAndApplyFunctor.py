@@ -19,7 +19,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap,functor_implementation,touch_face_first_time_functor,additional_includes):
+  def __init__(self,patch,patch_overlap,functor_implementation,touch_face_first_time_functor,guard_cell_operation,guard_face_operation,additional_includes,on_heap_with_manual_delete=False):
     """
 
   patch          Instance of peano4.datamodel.Patch
@@ -60,13 +60,13 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       print( "Error: Patch of overlap and patch of cell have to match" )
       assert( patch_overlap.dim[1] == patch.dim[0] )
       
-    self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
-    self.d[ "DOFS_PER_AXIS" ]      = str(patch.dim[0])
-    self.d[ "OVERLAP" ]            = str(patch_overlap.dim[0]/2)
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(patch.no_of_unknowns * patch.dim[0] * patch.dim[0])
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(patch.no_of_unknowns * patch.dim[0] * patch.dim[0] * patch.dim[0])
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0]))
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = str(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0]))
+    self.d[ "UNKNOWNS" ]           = str(int(patch.no_of_unknowns))
+    self.d[ "DOFS_PER_AXIS" ]      = str(int(patch.dim[0]))
+    self.d[ "OVERLAP" ]            = str(int(patch_overlap.dim[0]/2))
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ]      = str(int(patch.no_of_unknowns * patch.dim[0] * patch.dim[0]))
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ]      = str(int(patch.no_of_unknowns * patch.dim[0] * patch.dim[0] * patch.dim[0]))
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(int(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0])))
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = str(int(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0])))
     self.d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + patch_overlap.name
     self.d[ "CELL_ACCESSOR" ]      = "fineGridCell" + patch.name
     
@@ -77,13 +77,31 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "assertion5"
     self.d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "assertion6"
     
-    self.d[ "FUNCTOR_IMPLEMENTATION" ]               = functor_implementation
-    self.touch_face_first_time_functor               = """
-  logTraceInWith2Arguments( "touchFaceFirstTime(...)", marker.toString(), marker.isLocal() );
-""" + touch_face_first_time_functor + """
-  logTraceOut( "touchFaceFirstTime(...)" );
-"""
+    self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = functor_implementation
+    self.d[ "FACE_FUNCTOR_IMPLEMENTATION" ] = touch_face_first_time_functor
+
+    self.d[ "GUARD_CELL_OPERATION" ]                 = guard_cell_operation
+    self.d[ "GUARD_FACE_OPERATION" ]                 = guard_face_operation
+
+    if on_heap_with_manual_delete:
+      self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
+    #if Dimensions==2
+    double* reconstructedPatch = new double[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    #elif Dimensions==3
+    double* reconstructedPatch = new double[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    #endif
+"""    
+    else:
+      self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
+    #if Dimensions==2
+    double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    #elif Dimensions==3
+    double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    #endif
+"""    
+
     self.additional_includes                         = additional_includes
+    self.additional_attributes                       = ""
 
 
   def get_constructor_body(self):
@@ -107,8 +125,16 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     return False
 
 
+  __Template_TouchFaceFirstTime = """
+  if ( {GUARD_FACE_OPERATION} ) {{
+    logTraceInWith2Arguments( "touchFaceFirstTime(...)", marker.toString(), marker.isLocal() );
+    {FACE_FUNCTOR_IMPLEMENTATION}
+    logTraceOut( "touchFaceFirstTime(...)" );
+  }}
+"""
+
+
   __Template_TouchCellFirstTime = """
-  logTraceInWith1Argument( "touchCellFirstTime(...)", marker.toString() );
   auto serialisePatchIndex = [](tarch::la::Vector<Dimensions,int> overlapCell, int normal) {{
     int base   = 1;
     int result = 0;
@@ -124,82 +150,73 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     return result;
   }};
 
-  #if Dimensions==2
-  double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}];
-  #elif Dimensions==3
-  double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}];
-  #endif
+  if ({GUARD_CELL_OPERATION}) {{
+    logTraceInWith1Argument( "touchCellFirstTime(...)", marker.toString() );
 
-  logTraceIn( "touchCellFirstTime(...)::loopOverPatch" );
-  //
-  // Loop over original patch (k) and copy stuff over.
-  //
-  dfor(sourceCell,{DOFS_PER_AXIS}) {{
-    tarch::la::Vector<Dimensions,int> destinationCell = sourceCell + tarch::la::Vector<Dimensions,int>({OVERLAP});
-    int sourceCellSerialised       = peano4::utils::dLinearised(sourceCell,{DOFS_PER_AXIS});
-    int destinationCellSerialised  = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
-    for (int j=0; j<{UNKNOWNS}; j++) {{
-      reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j] = {CELL_ACCESSOR}.value[ sourceCellSerialised*{UNKNOWNS}+j ];
-      {ASSERTION_WITH_3_ARGUMENTS}( reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j]==reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j], sourceCell, j, _treeNumber );
-    }}
-  }}
-  logTraceOut( "touchCellFirstTime(...)::loopOverPatch" );
-  
-  //
-  // Bring in the auxiliary patches, i.e. befill halo
-  //
-  for(int d=0; d<Dimensions; d++) {{
-    logTraceInWith1Argument( "touchCellFirstTime(...)::loopOverFace", d );
+    {CREATE_RECONSTRUCTED_PATCH}
+
     //
-    // d-loop over all dimensions except d. The vector k's entry d is set
-    // to 0. We start with the left/bottom face, i.e. the one closer to the 
-    // coordinate system's origin.
+    // Loop over original patch (k) and copy stuff over.
     //
-    dfore(k,{DOFS_PER_AXIS},d,0) {{
-      for (int i=0; i<{OVERLAP}; i++) {{
-        tarch::la::Vector<Dimensions,int> destinationCell = k + tarch::la::Vector<Dimensions,int>({OVERLAP});
-        tarch::la::Vector<Dimensions,int> sourceCell      = k;
-        destinationCell(d) = i;
-        sourceCell(d)      = i;
-        
-        int destinationCellSerialised   = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
-        int sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
-
-        for (int j=0; j<{UNKNOWNS}; j++) {{
-          reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d).value[ sourceCellSerialised*{UNKNOWNS}+j ];
-          {ASSERTION_WITH_6_ARGUMENTS}( 
-            reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
-            sourceCell, destinationCell, j, d, marker.toString(), _treeNumber 
-          );
-        }}
-
-        destinationCell(d) = i+{DOFS_PER_AXIS}+{OVERLAP};
-        sourceCell(d)      = i+{OVERLAP};
-
-        destinationCellSerialised   = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
-        sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
-        for (int j=0; j<{UNKNOWNS}; j++) {{
-          reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ];
-          {ASSERTION_WITH_6_ARGUMENTS}( 
-            reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
-            sourceCell, destinationCell, j, d, marker.toString(), _treeNumber
-          );
-        }}
+    dfor(sourceCell,{DOFS_PER_AXIS}) {{
+      tarch::la::Vector<Dimensions,int> destinationCell = sourceCell + tarch::la::Vector<Dimensions,int>({OVERLAP});
+      int sourceCellSerialised       = peano4::utils::dLinearised(sourceCell,{DOFS_PER_AXIS});
+      int destinationCellSerialised  = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
+      for (int j=0; j<{UNKNOWNS}; j++) {{
+        reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j] = {CELL_ACCESSOR}.value[ sourceCellSerialised*{UNKNOWNS}+j ];
+        {ASSERTION_WITH_3_ARGUMENTS}( reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j]==reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j], sourceCell, j, _treeNumber );
       }}
     }}
-    logTraceOut( "touchCellFirstTime(...)::loopOverFace" );
+  
+    //
+    // Bring in the auxiliary patches, i.e. befill halo
+    //
+    for(int d=0; d<Dimensions; d++) {{
+      logTraceInWith1Argument( "touchCellFirstTime(...)::loopOverFace", d );
+      //
+      // d-loop over all dimensions except d. The vector k's entry d is set
+      // to 0. We start with the left/bottom face, i.e. the one closer to the 
+      // coordinate system's origin.
+      //
+      dfore(k,{DOFS_PER_AXIS},d,0) {{
+        for (int i=0; i<{OVERLAP}; i++) {{
+          tarch::la::Vector<Dimensions,int> destinationCell = k + tarch::la::Vector<Dimensions,int>({OVERLAP});
+          tarch::la::Vector<Dimensions,int> sourceCell      = k;
+          destinationCell(d) = i;
+          sourceCell(d)      = i;
+          
+          int destinationCellSerialised   = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
+          int sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
+
+          for (int j=0; j<{UNKNOWNS}; j++) {{
+            reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d).value[ sourceCellSerialised*{UNKNOWNS}+j ];
+            {ASSERTION_WITH_6_ARGUMENTS}( 
+              reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
+              sourceCell, destinationCell, j, d, marker.toString(), _treeNumber 
+            );
+          }}
+
+          destinationCell(d) = i+{DOFS_PER_AXIS}+{OVERLAP};
+          sourceCell(d)      = i+{OVERLAP};
+
+          destinationCellSerialised   = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
+          sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
+          for (int j=0; j<{UNKNOWNS}; j++) {{
+            reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ];
+            {ASSERTION_WITH_6_ARGUMENTS}( 
+              reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
+              sourceCell, destinationCell, j, d, marker.toString(), _treeNumber
+            );
+          }}
+        }}
+      }}
+      logTraceOut( "touchCellFirstTime(...)::loopOverFace" );
+    }}
+
+    double* originalPatch = {CELL_ACCESSOR}.value;
+    {CELL_FUNCTOR_IMPLEMENTATION}
+    logTraceOut( "touchCellFirstTime(...)" );
   }}
-
-  #if Dimensions==2
-  auto f = [&]( double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}], double originalPatch[{NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D}] ) -> void {{
-  #elif Dimensions==3
-  auto f = [&]( double reconstructedPatch[{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}], double originalPatch[{NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D}] ) -> void {{
-  #endif
-{FUNCTOR_IMPLEMENTATION}
-  }};
-
-  f( reconstructedPatch, {CELL_ACCESSOR}.value );
-  logTraceOut( "touchCellFirstTime(...)" );
 """
 
 
@@ -209,7 +226,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       result = self.__Template_TouchCellFirstTime.format(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = self.touch_face_first_time_functor
+      result = self.__Template_TouchFaceFirstTime.format(**self.d)
       pass 
     
     return result
@@ -217,7 +234,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 
   def get_attributes(self):
     return """int  _treeNumber;
-"""    
+""" + self.additional_attributes   
 
 
   def get_includes(self):

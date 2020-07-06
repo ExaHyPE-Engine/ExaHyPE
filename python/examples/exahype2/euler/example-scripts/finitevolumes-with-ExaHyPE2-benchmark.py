@@ -25,6 +25,15 @@ import peano4.toolbox.blockstructured
 import exahype2
 
 
+import argparse
+
+
+
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
+parser.add_argument("--trees-per-core", dest="trees_per_core", type=float, required=True, help="Target number of trees per core (use 1 without enclaves and something smaller than 1 with enclaves)" )
+parser.add_argument("--h",              dest="h",              type=float, required=True, help="Mesh size" )
+args = parser.parse_args()
+
 
 #
 # Create a project and configure it to end up in a subnamespace (and thus
@@ -44,7 +53,8 @@ time_step_size = 0.000001
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
   "Euler", 
   patch_size, 
   unknowns, time_step_size,
@@ -74,17 +84,10 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
-
-import sys
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.trees_per_core) + ")" )
 
 peano4_project = project.generate_Peano4_project()
-if len(sys.argv)>1:
-  volume_max = float( sys.argv[1] )
-  print( "use max FV size of " + str(volume_max) )
-  peano4_project.constants.export( "MaxHOfVolume", volume_max )
-else:
-  peano4_project.constants.export( "MaxHOfVolume", 0.1 )
+peano4_project.constants.export( "MaxHOfVolume", args.h )
 peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
 peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
