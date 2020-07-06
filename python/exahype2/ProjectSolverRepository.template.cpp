@@ -14,7 +14,7 @@
 
 
 {% if LOAD_BALANCER!="" -%}
-{{LOAD_BALANCER}}              loadBalancer;
+{{LOAD_BALANCER}}              loadBalancer{{LOAD_BALANCER_ARGUMENTS}};
 {% endif -%}
 
 {% for item in SOLVERS -%}

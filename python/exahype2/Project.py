@@ -44,12 +44,17 @@ class Project(object):
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
     """
     
-      load_balancer_name   Should be full-qualified name of the load balancer. 
+      load_balancer_name: string
+        Should be full-qualified name of the load balancer. 
         By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
         
-      load_balancer_arguments  If your load balancing requires parameters, add them
+      load_balancer_arguments: string
+        If your load balancing requires parameters, add them
         here. It is a string that will be copied into the C++ class instantiation. 
         Please add the brackets yourself, i.e. "(3,4,5)" is fine, but "3,4,5" is not. 
+        The only exception is the empty parameter list. Here, you can/should simply
+        add the empty string.
+        
     """
     self._load_balancer_name      = load_balancer_name
     self._load_balancer_arguments = load_balancer_arguments
@@ -151,6 +156,7 @@ class Project(object):
     solverRepositoryDictionary = {
       "SOLVERS" : [],
       "LOAD_BALANCER" : self._load_balancer_name
+      "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments
     }
 
     for solver in self._solvers:
