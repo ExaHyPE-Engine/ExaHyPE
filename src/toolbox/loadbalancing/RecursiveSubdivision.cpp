@@ -204,11 +204,11 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
   ) {
     _state = StrategyState::PostponedDecisionDueToLackOfCells;
   }
-  else if (_roundRobinToken>_roundRobinThreshold) {
-    _state = StrategyState::WaitForRoundRobinToken;
-  }
   else if (_maxTreeWeightAtLastSplit == getWeightOfHeaviestLocalSpacetree()) {
     _state = StrategyState::Stagnation;
+  }
+  else if (_roundRobinToken>_roundRobinThreshold) {
+    _state = StrategyState::WaitForRoundRobinToken;
   }
   else {
     _state = StrategyState::Standard;
