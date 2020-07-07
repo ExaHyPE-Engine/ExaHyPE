@@ -9,7 +9,7 @@ import exahype2
 import matplotlib.pyplot as plt
 
 
-#Colors = [ "#ff0000", "#00ff00", "#0000ff" ]
+Colors = [ "#aa0000", "#00aa00", "#0000aa", "#797900", "#790079", "#007979", "#ababab" ]
 #
 # Number of symbols should differ from colours by one
 #
@@ -26,8 +26,9 @@ if __name__ == "__main__":
   parser.add_argument("--max-cores-per-rank", dest="max_cores_per_rank", type=int, help="max. number of cores per rank", default=0)
   parser.add_argument("--log", dest="log", help="plot with logarithmic axes", action="store_true" )
   parser.add_argument("--plot-efficiency", dest="plot_efficiency", help="Don't plot raw times but efficiency", action="store_true" )
+  parser.add_argument("--group-measurements", type=int, default=0, dest="group_measurements", help="Number of consecutive measurements that belong together" )
   args = parser.parse_args()
-
+  
   open_mode = ""  
   if args.file.endswith( "tar.gz"):
     open_mode = "r:gz"
@@ -45,6 +46,7 @@ if __name__ == "__main__":
   if args.file_pattern!="":
     different_file_patterns = args.file_pattern.split( "|" )
 
+  color_counter = 0
   for current_file_type in different_file_patterns:  
     data_points = []
     for data_file in data_files:
@@ -76,15 +78,27 @@ if __name__ == "__main__":
       
     symbol = "-" + Symbols[ different_file_patterns.index(current_file_type) % len(Symbols) ]
     my_markevery = 0.9
-    #if args.max_cores_per_rank>0:
-    #  my_markevery=args.max_cores_per_rank-0.1
+
+    my_color = Colors[ color_counter % len(Colors) ]
+    color_counter += 1
+
+    add_entry_to_legend = True
+    if args.group_measurements>0:
+      add_entry_to_legend = different_file_patterns.index(current_file_type) < args.group_measurements \
+                         or different_file_patterns.index(current_file_type) % args.group_measurements == 0
+      symbol = "-" + Symbols[ different_file_patterns.index(current_file_type) % args.group_measurements ]
+      my_color = Colors[ int(different_file_patterns.index(current_file_type) / args.group_measurements) ]
       
+       
     if len(different_file_patterns)==0:
       plt.plot( x_data, y_data, symbol, label="time per time step", markevery=my_markevery )
-    elif different_file_patterns.index(current_file_type)==0:
-      plt.plot( x_data, y_data, symbol, label="time per time step, " + str(current_file_type), markevery=my_markevery )
+    elif add_entry_to_legend:
+      if different_file_patterns.index(current_file_type)==0:
+        plt.plot( x_data, y_data, symbol, label="time per time step, " + str(current_file_type), color=my_color, markevery=my_markevery )
+      else:
+        plt.plot( x_data, y_data, symbol, label=str(current_file_type), color=my_color, markevery=my_markevery )
     else:
-      plt.plot( x_data, y_data, symbol, label=str(current_file_type), markevery=my_markevery )
+      plt.plot( x_data, y_data, symbol, color=my_color, markevery=my_markevery )
 
   
   plt.xlabel( "Ranks" )
@@ -97,7 +111,7 @@ if __name__ == "__main__":
     plt.yscale( "log" )
   xtics   = [ 1 ]
   xlabels = [ "1" ]
-  while xtics[-1]*2 < x_data[-1]:
+  while xtics[-1]*2 <= x_data[-1]:
     xtics.append( xtics[-1]*2 )
     xlabels.append( str(xtics[-1]) )
   plt.xticks( xtics, xlabels )
