@@ -169,9 +169,14 @@ class AbstractGenericRusanovFV( FV ):
     [&](
       double Q[],
       double gradQ[][Dimensions],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
       double BgradQ[]
     ) -> void {{
-      {SOLVER_INSTANCE}.nonconservativeProduct( Q, gradQ, BgradQ );
+      {SOLVER_INSTANCE}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
     }},
     [&](
       double                                       Q[],

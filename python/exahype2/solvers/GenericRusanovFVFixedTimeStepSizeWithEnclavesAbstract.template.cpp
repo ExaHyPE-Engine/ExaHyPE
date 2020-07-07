@@ -202,7 +202,7 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::noncons
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double                                       F[{{NUMBER_OF_UNKNOWNS}}]
+  double                                       BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{NCP_IMPLEMENTATION}}
 }

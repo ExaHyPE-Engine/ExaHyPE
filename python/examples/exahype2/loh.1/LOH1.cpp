@@ -18,7 +18,7 @@ tarch::logging::Log   examples::exahype2::finitevolumes::LOH1::_log( "examples::
   if (tarch::la::equals(t,0.0) and tarch::la::max(h)>3.0 ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
-  logTraceOutWith1Argument( "refinementCriterion(...)", toString(result) );
+  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;
 }
 
@@ -167,7 +167,12 @@ void examples::exahype2::finitevolumes::LOH1::flux(
 void examples::exahype2::finitevolumes::LOH1::nonconservativeProduct(
   double                                       Q[13],
   double                                       gradQ[13][Dimensions],
-  double                                       BgradQ[13] ) {
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double                                       BgradQ[13]
+) {
   logTraceIn( "nonconservativeProduct(...)" );
  
   // modificatons to ExaSeis original

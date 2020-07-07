@@ -76,7 +76,7 @@ project.set_global_simulation_parameters(
   dimensions            = dimensions,
   offset                = [0.0]*dimensions, 
   size                  = [30.0]*dimensions,
-  terminal_time         = 2.0,        
+  end_time              = 2.0,        
   first_plot_time_stamp = 0.0, 
   time_in_between_plots = 0.1
 )

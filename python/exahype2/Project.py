@@ -36,9 +36,10 @@ class Project(object):
     self._domain_size   = [1.0, 1.0, 1.0]
     self._dimensions    = 2
     self._terminal_time = 1.0
-    self._first_plot_time_stamp = 0.0
-    self._time_in_between_plots = 0.1
-    self._load_balancer_name     = ""
+    self._first_plot_time_stamp   = 0.0
+    self._time_in_between_plots   = 0.1
+    self._load_balancer_name      = ""
+    self._load_balancer_arguments = ""
     
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
