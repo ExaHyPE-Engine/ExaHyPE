@@ -57,7 +57,8 @@ project = exahype2.Project(
 # Add the Finite Volumes solver with (flux and ncp)
 #
 project.add_solver(  
-  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
+  #exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
     name           = "LOH1", 
     patch_size     = 14, 
     unknowns       = 3+6+3+1, # 13, vel(3) + stress(6) + material parameters(3) + diffuse interface(1)  
@@ -65,7 +66,9 @@ project.add_solver(
     flux           = True, 
     ncp            = True) )
 
-build_mode = peano4.output.CompileMode.Asserts
+
+#build_mode = peano4.output.CompileMode.Asserts
+build_mode = peano4.output.CompileMode.Release
 
 
 #
@@ -82,9 +85,17 @@ project.set_global_simulation_parameters(
 )
 
 
+#
+# Parallelise
+#
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(0.6)" )
+
+
+
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
+peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
 peano4_project.output.makefile.set_mode(build_mode)
 peano4_project.generate( peano4.output.Overwrite.Default )
 
@@ -93,8 +104,13 @@ peano4_project.build(
 )
 success = peano4_project.run( [] )
 
-if success:
-  convert = peano4.visualisation.Convert( "solutionLOH1", True )
-  convert.set_visualisation_tools_path( "../../../../src/visualisation" )
-  convert.extract_fine_grid()
-  convert.convert_to_vtk()
+#
+# I usually prefer the variant through the command line:
+# mkdir output
+# rm output/*; ../../../../src/visualisation/convert apply-filter solutionLOH1.peano-patch-file LOH1Q output extract-fine-grid finegridLOH1Q; ../../../../src/visualisation/convert convert-file output/solutionLOH1.peano-patch-file finegridLOH1Q output vtu
+#
+#if success:
+#  convert = peano4.visualisation.Convert( "solutionLOH1", True )
+#  convert.set_visualisation_tools_path( "../../../../src/visualisation" )
+#  convert.extract_fine_grid()
+#  convert.convert_to_vtk()
