@@ -18,7 +18,7 @@ tarch::logging::Log   examples::exahype2::finitevolumes::LOH1::_log( "examples::
   #if PeanoDebug>0
   const double minH = 3.0;
   #else
-  const double minH = 0.5;
+  const double minH = 0.3;
   #endif
   if (tarch::la::equals(t,0.0) and tarch::la::max(h)>minH ) {
     result = ::exahype2::RefinementCommand::Refine;

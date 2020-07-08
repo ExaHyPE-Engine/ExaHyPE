@@ -2,6 +2,7 @@
 #include "Constants.h"
 
 #include "tarch/logging/Log.h"
+#include "tarch/logging/Statistics.h"
 #include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/timing/Watch.h"
@@ -252,6 +253,8 @@ int main(int argc, char** argv) {{
       step();
     }}
   }}
+
+  tarch::logging::Statistics::getInstance().writeToCSV();
 
   observers::finishSimulation();
 

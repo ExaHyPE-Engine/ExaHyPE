@@ -4,6 +4,7 @@
 #include <thread>
 #include <queue>
 #include "tarch/multicore/multicore.h"
+#include "tarch/logging/Statistics.h"
 
 
 #ifdef SharedTBB
@@ -39,6 +40,10 @@ namespace {
   // These task groups have to be static inside a cpp file.
   //
   static tbb::task_group_context  backgroundTaskContext(tbb::task_group_context::isolated);
+
+  const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
+  const std::string ConsumerTaskCountStatisticsIdentifier( "tarch::multicore::consumer-tasks");
+  const std::string TasksPerConsumerRunStatisticsIdentifier( "tarch::multicore::tasks-per-consumer-run");
 
   typedef tbb::concurrent_priority_queue< tarch::multicore::Task* >   TaskQueue;
 
@@ -80,7 +85,8 @@ namespace {
       static void enqueue(int maxTasks = nonblockingTasks.size()) {
         numberOfConsumerTasks.fetch_and_add(1);
         ConsumerTask* tbbTask = new (tbb::task::allocate_root(::backgroundTaskContext)) ConsumerTask(maxTasks);
-        tbb::task::enqueue(*tbbTask,tbb::priority_t::priority_low);
+        tbb::task::enqueue(*tbbTask);
+        //tbb::task::enqueue(*tbbTask,tbb::priority_t::priority_low);
       }
 
       ConsumerTask(const ConsumerTask& copy):
@@ -107,6 +113,9 @@ namespace {
         }
 
         numberOfConsumerTasks.fetch_and_add(-1);
+
+        ::tarch::logging::Statistics::getInstance().log( ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks );
+        ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, _maxJobs );
 
         return nullptr;
       }
@@ -141,6 +150,8 @@ namespace {
  */
 bool tarch::multicore::processPendingTasks( int maxTasks ) {
   assertion(maxTasks>=0);
+
+  ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier,        tarch::multicore::getNumberOfPendingTasks() );
 
   bool  result         = false;
   Task* myTask         = nullptr;
@@ -201,6 +212,8 @@ void tarch::multicore::yield() {
  */
 void tarch::multicore::spawnTask(Task*  task) {
   nonblockingTasks.push( task );
+
+  ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
 
   if ( numberOfConsumerTasks==0 ) {
     ConsumerTask::enqueue();
