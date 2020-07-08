@@ -70,6 +70,7 @@ project.add_solver(
 
 #build_mode = peano4.output.CompileMode.Asserts
 build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Trace
 
 
 #
@@ -97,6 +98,7 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(0.
 
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
+peano4_project.output.makefile.add_CXX_flag( "-g3" )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
 peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
 peano4_project.output.makefile.set_mode(build_mode)

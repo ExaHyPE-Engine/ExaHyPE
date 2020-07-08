@@ -101,6 +101,9 @@ namespace {
         int  numberOfPendingTasksPriorToStart = nonblockingTasks.size();
         bool handledTasks                     = tarch::multicore::processPendingTasks(_maxJobs);
 
+        ::tarch::logging::Statistics::getInstance().log( ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks );
+        ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, _maxJobs );
+
         if (handledTasks and nonblockingTasks.size()>numberOfPendingTasksPriorToStart*2) {
           enqueue(_maxJobs);
           enqueue(_maxJobs);
@@ -113,9 +116,6 @@ namespace {
         }
 
         numberOfConsumerTasks.fetch_and_add(-1);
-
-        ::tarch::logging::Statistics::getInstance().log( ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks );
-        ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, _maxJobs );
 
         return nullptr;
       }
@@ -216,7 +216,7 @@ void tarch::multicore::spawnTask(Task*  task) {
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
 
   if ( numberOfConsumerTasks==0 ) {
-    ConsumerTask::enqueue();
+    //ConsumerTask::enqueue();
   }
 }
 
