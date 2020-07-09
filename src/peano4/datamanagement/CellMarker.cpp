@@ -68,8 +68,7 @@ bool peano4::datamanagement::CellMarker::isAdjacentToDomainBoundary() const {
 
 
 bool peano4::datamanagement::CellMarker::isEnclaveCell() const {
-  return false;
-  //return not isSkeletonCell();
+  return not isSkeletonCell();
 }
 
 
