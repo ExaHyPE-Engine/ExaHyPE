@@ -145,6 +145,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/logging/Log.cpp \
  tarch/logging/LogFilterFileReader.cpp \
  tarch/logging/LogFilter.cpp \
+ tarch/logging/Statistics.cpp \
  tarch/timing/Watch.cpp \
  tarch/timing/Measurement.cpp \
  tarch/timing/GlidingAverageMeasurement.cpp \

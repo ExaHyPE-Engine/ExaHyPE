@@ -57,15 +57,20 @@ project = exahype2.Project(
 # Add the Finite Volumes solver with (flux and ncp)
 #
 project.add_solver(  
-  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
+  #exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
     name           = "LOH1", 
-    patch_size     = 14, 
+    patch_size     = 5, 
+    #patch_size     = 14,
     unknowns       = 3+6+3+1, # 13, vel(3) + stress(6) + material parameters(3) + diffuse interface(1)  
     time_step_size = 0.01, 
     flux           = True, 
     ncp            = True) )
 
-build_mode = peano4.output.CompileMode.Asserts
+
+#build_mode = peano4.output.CompileMode.Asserts
+build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Trace
 
 
 #
@@ -76,25 +81,41 @@ project.set_global_simulation_parameters(
   dimensions            = dimensions,
   offset                = [0.0]*dimensions, 
   size                  = [30.0]*dimensions,
-  end_time              = 2.0,        
+  #end_time              = 2.0,        
+  end_time              = 0.1,
   first_plot_time_stamp = 0.0, 
-  time_in_between_plots = 0.1
+  #time_in_between_plots = 0.1
+  time_in_between_plots = 0.0
 )
+
+
+#
+# Parallelise
+#
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(0.8)" )
+
 
 
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
+peano4_project.output.makefile.add_CXX_flag( "-g3" )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
+peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
 peano4_project.output.makefile.set_mode(build_mode)
 peano4_project.generate( peano4.output.Overwrite.Default )
 
 peano4_project.build( 
   make_clean_first = True 
 )
-success = peano4_project.run( [] )
+success = peano4_project.run( ["--threads", "4"] )
 
-if success:
-  convert = peano4.visualisation.Convert( "solutionLOH1", True )
-  convert.set_visualisation_tools_path( "../../../../src/visualisation" )
-  convert.extract_fine_grid()
-  convert.convert_to_vtk()
+#
+# I usually prefer the variant through the command line:
+# mkdir output
+# rm output/*; ../../../../src/visualisation/convert apply-filter solutionLOH1.peano-patch-file LOH1Q output extract-fine-grid finegridLOH1Q; ../../../../src/visualisation/convert convert-file output/solutionLOH1.peano-patch-file finegridLOH1Q output vtu
+#
+#if success:
+#  convert = peano4.visualisation.Convert( "solutionLOH1", True )
+#  convert.set_visualisation_tools_path( "../../../../src/visualisation" )
+#  convert.extract_fine_grid()
+#  convert.convert_to_vtk()
