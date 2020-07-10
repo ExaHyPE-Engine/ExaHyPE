@@ -29,11 +29,10 @@ class ModelToDataRepository(object):
     self.d[ "DATA_CONTAINER_INCLUDES" ]      += i.generator.get_header_file_include()
     self.d[ "DATA_CONTAINER_INCLUDES" ]      += "\n"
     
-    #self.d[ "DATA_CONTAINER_DECLARATION" ]   += "static peano4::maps::HierarchicalStackMap< " + i.generator.get_stack_container() + ">  _" + i.get_logical_type_name() + "Stack;\n"
-    #self.d[ "DATA_CONTAINER_INSTANTIATION" ] += "peano4::maps::HierarchicalStackMap< " + i.generator.get_stack_container()  + ">   " + self.d[ "FULL_QUALIFIED_CLASS_NAME" ] + "::_" + i.get_logical_type_name() + "Stack;\n"
-
-    self.d[ "DATA_CONTAINER_DECLARATION" ]   += "static peano4::maps::STDStackMap< " + i.generator.get_stack_container() + ">  _" + i.get_logical_type_name() + "Stack;\n"
-    self.d[ "DATA_CONTAINER_INSTANTIATION" ] += "peano4::maps::STDStackMap< " + i.generator.get_stack_container()  + ">   " + self.d[ "FULL_QUALIFIED_CLASS_NAME" ] + "::_" + i.get_logical_type_name() + "Stack;\n"
+    self.d[ "DATA_CONTAINER_DECLARATION" ]   += "static peano4::maps::HierarchicalStackMap< " + i.generator.get_stack_container() + ">  _" + i.get_logical_type_name() + "Stack;\n"
+    self.d[ "DATA_CONTAINER_INSTANTIATION" ] += "peano4::maps::HierarchicalStackMap< " + i.generator.get_stack_container()  + ">   " + self.d[ "FULL_QUALIFIED_CLASS_NAME" ] + "::_" + i.get_logical_type_name() + "Stack;\n"
+    #self.d[ "DATA_CONTAINER_DECLARATION" ]   += "static peano4::maps::STDStackMap< " + i.generator.get_stack_container() + ">  _" + i.get_logical_type_name() + "Stack;\n"
+    #self.d[ "DATA_CONTAINER_INSTANTIATION" ] += "peano4::maps::STDStackMap< " + i.generator.get_stack_container()  + ">   " + self.d[ "FULL_QUALIFIED_CLASS_NAME" ] + "::_" + i.get_logical_type_name() + "Stack;\n"
     self.d[ "DATA_CONTAINER_CLEARS" ]        += "_" + i.get_logical_type_name() + "Stack.clear();\n"
 
     self.d[ "MPI_DATAYPE_INITIALISATION" ]   += i.get_full_qualified_type() + "::initDatatype();\n"

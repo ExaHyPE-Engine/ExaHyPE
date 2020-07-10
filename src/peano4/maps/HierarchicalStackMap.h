@@ -41,21 +41,21 @@ namespace peano4 {
 template <typename T>
 class peano4::maps::HierarchicalStackMap {
   private:
-	/**
-	 * Data of one tree.
-	 */
-	struct TreeData {
+    /**
+     * Data of one tree.
+     */
+    struct TreeData {
       std::map< int, T* >                 _stackNumberToData;
       #ifdef UseSemaphoreInHierarchicalStackMap
       tarch::multicore::BooleanSemaphore  _semaphore;
       #endif
-	};
+    };
 
-	/**
-	 * A vector of maps. I hold one entry per local spacetree, i.e.
-	 * map all global ids onto local indices.
-	 */
-	std::vector< TreeData >            _data;
+    /**
+     * A vector of maps. I hold one entry per local spacetree, i.e.
+     * map all global ids onto local indices.
+     */
+    std::vector< TreeData >            _data;
 
     /**
      * This routine is not thread-safe, i.e. if you need it thread-safe then
@@ -67,6 +67,11 @@ class peano4::maps::HierarchicalStackMap {
     ~HierarchicalStackMap();
 
     bool empty(int treeId, int stackId) const;
+
+    /**
+     * @see STDStackMap::clear()
+     */
+    void clear();
 
     /**
      * Get the stack belonging to a tree.
@@ -100,7 +105,10 @@ class peano4::maps::HierarchicalStackMap {
      */
     std::set<StackKey>  getKeys();
 
-    void garbageCollection();
+    /**
+     * @see STDStackMap::garbageCollection(int)
+     */
+    void garbageCollection(int spacetree);
 
     /**
      * For debugging/assertions.
@@ -232,7 +240,22 @@ peano4::maps::HierarchicalStackMap<T>::HierarchicalStackMap():
 
 
 template <typename T>
-void peano4::maps::HierarchicalStackMap<T>::garbageCollection() {
+void peano4::maps::HierarchicalStackMap<T>::garbageCollection(int spacetree) {
+  for (auto& p: _data[spacetree]._stackNumberToData) {
+    if (
+      p.second->empty()
+      and
+      not peano4::parallel::Node::isStorageStackNumber(p.first)
+    ) {
+      delete p.second;
+      p.second = new T();
+    }
+  }
+}
+
+
+template <typename T>
+void peano4::maps::HierarchicalStackMap<T>::clear() {
   for (auto& p: _data) {
     for (auto& pp: p._stackNumberToData) {
       if (pp.second->empty()) {

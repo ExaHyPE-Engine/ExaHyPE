@@ -308,8 +308,8 @@ class peano4::grid::Spacetree {
      */
     std::set< int >      _joining;
 
-    typedef peano4::maps::STDStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
-    //typedef peano4::maps::HierarchicalStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
+    //typedef peano4::maps::STDStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
+    typedef peano4::maps::HierarchicalStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
 
     static GridVertexStackMap  _vertexStack;
 

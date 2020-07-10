@@ -64,29 +64,27 @@ namespace {
       const int _maxJobs;
 
       ConsumerTask(int maxJobs):
-        _maxJobs(maxJobs) {
+        _maxJobs( std::max(1,maxJobs) ) {
       }
 
     public:
-      static tbb::task_group_context  backgroundTaskContext;
-
       /**
        * Schedule a new background job consumer task. We have to tell
-      * each consumer how many jobs it may process at most. By default,
+       * each consumer how many jobs it may process at most. By default,
        * I have a look into the background queue and divide this number
-         * by the number of existing threads. If it is smaller than the
-         * magic constant TBBMinimalNumberOfJobsPerBackgroundConsumerRun,
-         * then I use this one instead. So this approach balanced between
-         * a reasonable distribution of jobs among all available threads
-         * and a reasonable overhead (materialising in queue locking, e.g.).
-         *
-         * @see TBBMinimalNumberOfJobsPerBackgroundConsumerRun
-         */
+       * by the number of existing threads. If it is smaller than the
+       * magic constant TBBMinimalNumberOfJobsPerBackgroundConsumerRun,
+       * then I use this one instead. So this approach balanced between
+       * a reasonable distribution of jobs among all available threads
+       * and a reasonable overhead (materialising in queue locking, e.g.).
+       *
+       * @see TBBMinimalNumberOfJobsPerBackgroundConsumerRun
+       */
       static void enqueue(int maxTasks = nonblockingTasks.size()) {
         numberOfConsumerTasks.fetch_and_add(1);
         ConsumerTask* tbbTask = new (tbb::task::allocate_root(::backgroundTaskContext)) ConsumerTask(maxTasks);
         tbb::task::enqueue(*tbbTask);
-        //tbb::task::enqueue(*tbbTask,tbb::priority_t::priority_low);
+        ::backgroundTaskContext.set_priority(tbb::priority_t::priority_low);
       }
 
       ConsumerTask(const ConsumerTask& copy):
@@ -94,32 +92,37 @@ namespace {
       }
 
       /**
-       * Process _maxJobs from the background job queue and then
+       * Process _maxJobs from the background job queue
+       *
+       * If there had been tasks to be processed, then we know that
+       * processPendingTasks() would have spawned a new consumer. So we
+       * are all fine. If we have not got any work to do, then we might
+       * terminate. However, this would be stupid as the whole idea of
+       * background tasks is that they automatically are processed
+       * whenever the code tends to become idle. So if we haven't got
+       * any data, then we reschedule ourselves but with a lower job
+       * count. Unless we have already rescheduled ourselves tons of
+       * times. In this case, we quit.
+       *
+       * @see processPendingTasks()
        * @see enqueue()
        */
       tbb::task* execute() {
-        int  numberOfPendingTasksPriorToStart = nonblockingTasks.size();
-        bool handledTasks                     = tarch::multicore::processPendingTasks(_maxJobs);
+        bool processedJob = tarch::multicore::processPendingTasks(_maxJobs);
 
         ::tarch::logging::Statistics::getInstance().log( ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks );
         ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, _maxJobs );
 
-        if (handledTasks and nonblockingTasks.size()>numberOfPendingTasksPriorToStart*2) {
-          enqueue(_maxJobs);
-          enqueue(_maxJobs);
-        }
-      	else if (handledTasks and nonblockingTasks.size()>numberOfPendingTasksPriorToStart) {
-          enqueue(_maxJobs+1);
-        }
-        else if (handledTasks and _maxJobs>1) {
+        numberOfConsumerTasks.fetch_and_add(-1);
+
+        if (not processedJob and _maxJobs>1) {
           enqueue(_maxJobs-1);
         }
-
-        numberOfConsumerTasks.fetch_and_add(-1);
 
         return nullptr;
       }
   };
+
 
   class TBBWrapperAroundTask: public tbb::task {
     private:
@@ -139,17 +142,33 @@ namespace {
 
 
 /**
- * If we are tasks and if there are still jobs left once
- * we've done our share, then we spawn a new background task consumer job.
- * This is done for cases where the master processes background jobs and there
- * are plenty of them left. In such a case, the master might be totally blocked
- * by the background jobs (if processJobs() is called in a while loop) and
- * should actually use further tasks instead.
+ * Process up to maxTasks from the background queue
  *
- * @return Have done one
+ * <h2> Task forking </h2>
+ *
+ * If we have processed a task, I spawn a new consumer task before I return.
+ * The rationale is simple: This routine is either called by the user code as
+ * it waits for some results from a background job, or it is called by a
+ * consumer task. In the first case, we have just entered a phase in the
+ * calling thread where we now need results from tasks that are otherwise not
+ * that critical. We may therefore assume that we entered a phase where we are
+ * starting to reduce the concurrency. It is thus reasonable to span a new
+ * consumer task to help out. If we are called by an existing consumer task
+ * and there had been work to do, then it would be unreasonable not to
+ * continue to process work. Therefore, we span another consumer, but this
+ * time with a slightly bigger number of tasks. After all, we wanna get
+ * stuff out of the door.
+ *
+ * So once a consumer task becomes alive, it continues to stay (as it
+ * effectively reschedules itself) until it hits an empty task queue. If the
+ * user code polls the task outcomes and processes one (or more) tasks
+ * in-between, then it effectively serves as spawn mechanism for tons of
+ * consumer tasks.
+ *
+ * @return Have processed at least one task
  */
 bool tarch::multicore::processPendingTasks( int maxTasks ) {
-  assertion(maxTasks>=0);
+  assertion(maxTasks>=1);
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier,        tarch::multicore::getNumberOfPendingTasks() );
 
@@ -192,6 +211,11 @@ bool tarch::multicore::processPendingTasks( int maxTasks ) {
       maxTasks=0;
     }
   }
+
+  if (result) {
+    ConsumerTask::enqueue();
+  }
+
   return result;
 }
 
@@ -207,17 +231,23 @@ void tarch::multicore::yield() {
 
 /**
  * Spawns the task, i.e. puts is into the queue of pending tasks.
- * After this, it ensures that there's at least one consumer still
- * up and running.
+ *
+ * In my original code, I made the spawnTask() routine ensure that
+ * there's always at least one consumer up and running. Spawning
+ * tasks however is expensive, and it is important that this
+ * routine returns asap - after all, it is used to spawn a background
+ * task which has low priority and should not delay the main thread.
+ * Therefore, I removed the auto-spawn. Background tasks now are
+ * parked in the background task queue, i.e. we assume that Peano is
+ * capable of using all cores while it spawns these background tasks.
+ * It is then up to the actual task processing to decide whether it
+ * is reasonable to spawn a few additional tasks to help to tidy
+ * things up.
  */
 void tarch::multicore::spawnTask(Task*  task) {
   nonblockingTasks.push( task );
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
-
-  if ( numberOfConsumerTasks==0 ) {
-    //ConsumerTask::enqueue();
-  }
 }
 
 
