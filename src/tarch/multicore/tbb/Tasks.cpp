@@ -70,15 +70,8 @@ namespace {
     public:
       /**
        * Schedule a new background job consumer task. We have to tell
-       * each consumer how many jobs it may process at most. By default,
-       * I have a look into the background queue and divide this number
-       * by the number of existing threads. If it is smaller than the
-       * magic constant TBBMinimalNumberOfJobsPerBackgroundConsumerRun,
-       * then I use this one instead. So this approach balanced between
-       * a reasonable distribution of jobs among all available threads
-       * and a reasonable overhead (materialising in queue locking, e.g.).
-       *
-       * @see TBBMinimalNumberOfJobsPerBackgroundConsumerRun
+       * each consumer how many jobs it may process at most. The tasks
+       * have to be tied to backgroundTaskContext to remain valid.
        */
       static void enqueue(int maxTasks = nonblockingTasks.size()) {
         numberOfConsumerTasks.fetch_and_add(1);
@@ -114,10 +107,6 @@ namespace {
         ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, _maxJobs );
 
         numberOfConsumerTasks.fetch_and_add(-1);
-
-        if (not processedJob and _maxJobs>1) {
-          enqueue(_maxJobs-1);
-        }
 
         return nullptr;
       }
@@ -168,7 +157,8 @@ namespace {
  * @return Have processed at least one task
  */
 bool tarch::multicore::processPendingTasks( int maxTasks ) {
-  assertion(maxTasks>=1);
+// @todo docu dass maTasks==0 was spezielles meint
+  assertion(maxTasks>=0);
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier,        tarch::multicore::getNumberOfPendingTasks() );
 
@@ -212,8 +202,8 @@ bool tarch::multicore::processPendingTasks( int maxTasks ) {
     }
   }
 
-  if (result) {
-    ConsumerTask::enqueue();
+  if (result or maxTasks==0) {
+    ConsumerTask::enqueue( maxTasks+1 );
   }
 
   return result;
@@ -274,9 +264,11 @@ int tarch::multicore::getNumberOfPendingTasks() {
 void tarch::multicore::tbb::shutdownConsumerTasks() {
   static tarch::logging::Log _log( "tarch::multicore::tbb" );
   logTraceInWith1Argument( "shutdownConsumerTasks()", numberOfConsumerTasks.fetch_and_add(0) );
-  while (numberOfConsumerTasks.fetch_and_add(0)>0) {
-    yield();
-  }
+
+  backgroundTaskContext.cancel_group_execution();
+
+  logInfo( "shutdownConsumerTasks()", "still " << numberOfConsumerTasks << " consumer tasks alive. Cancel all " );
+
   logTraceOut( "shutdownConsumerTasks()" );
 }
 
