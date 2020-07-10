@@ -10,7 +10,7 @@
 
 #include "Log.h"
 #include "tarch/timing/Watch.h"
-
+#include "tarch/multicore/BooleanSemaphore.h"
 
 
 namespace tarch {
@@ -31,7 +31,11 @@ class tarch::logging::Statistics {
     /**
      * Log one particular value
      */
+    #ifdef TrackStatistics
     void log( const std::string& identifier, double value );
+    #else
+    void log( const std::string& identifier, double value ) {}
+    #endif
 
     void writeToCSV( const std::string& filename = "statistics.csv" );
 
@@ -39,6 +43,8 @@ class tarch::logging::Statistics {
     static Statistics   _singleton;
 
     static Log          _log;
+
+    static tarch::multicore::BooleanSemaphore  _semaphore;
 
     int                   _minCountInBetweenTwoMeasurements;
     double                _minTimeInBetweenTwoMeasurements;

@@ -4,8 +4,9 @@
 #include <fstream>
 
 
-tarch::logging::Statistics  tarch::logging::Statistics::_singleton;
-tarch::logging::Log         tarch::logging::Statistics::_log( "tarch::logging::Statistics" );
+tarch::logging::Statistics          tarch::logging::Statistics::_singleton;
+tarch::logging::Log                 tarch::logging::Statistics::_log( "tarch::logging::Statistics" );
+tarch::multicore::BooleanSemaphore  tarch::logging::Statistics::_semaphore;
 
 
 tarch::logging::Statistics& tarch::logging::Statistics::getInstance() {
@@ -51,16 +52,21 @@ double tarch::logging::Statistics::acceptNewData(const std::string& identifier) 
 }
 
 
+
+ #ifdef TrackStatistics
 void tarch::logging::Statistics::log( const std::string& identifier, double value ) {
+  tarch::multicore::Lock lock(_semaphore);
   double t = acceptNewData(identifier);
   if (t>0) {
     logDebug( "log(string,double)", identifier << "=" << value );
     _map[identifier]._data.push_back( std::pair<double,double>(t,value) );
   }
 }
+#endif
 
 
 void tarch::logging::Statistics::writeToCSV( const std::string& filename ) {
+  #ifdef TrackStatistics
   logDebug( "writeToCSV(string)", "start to dump statistics into file " << filename );
 
   std::ofstream file( filename );
@@ -96,4 +102,9 @@ void tarch::logging::Statistics::writeToCSV( const std::string& filename ) {
 
   file.close();
   logInfo( "writeToCSV(string)", "wrote statistics to file " << filename );
+  #else
+  logWarning( "writeToCSV(string)", "no statistics available. Recompile with -DTrackStatistics for runtime sampling" );
+  #endif
 }
+
+
