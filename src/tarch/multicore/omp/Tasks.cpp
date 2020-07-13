@@ -52,9 +52,9 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   }
 
   if (spawnConsumer) {
-    #pragma omp task firstprivate(maxTasks)
+    #pragma omp task firstprivate(backupOfMaxTasks)
     {
-      ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, maxTasks );
+      ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, backupOfMaxTasks+1 );
 
       processPendingTasks(backupOfMaxTasks+1);
     }

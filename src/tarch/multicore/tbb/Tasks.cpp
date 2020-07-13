@@ -76,7 +76,7 @@ namespace {
         numberOfConsumerTasks.fetch_and_add(1);
         ConsumerTask* tbbTask = new (tbb::task::allocate_root(::backgroundTaskContext)) ConsumerTask(maxTasks);
         tbb::task::enqueue(*tbbTask);
-        //::backgroundTaskContext.set_priority(tbb::priority_t::priority_low);
+        ::backgroundTaskContext.set_priority(tbb::priority_t::priority_low);
         //::backgroundTaskContext.set_priority(tbb::priority_t::priority_high);
       }
 
