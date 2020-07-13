@@ -65,6 +65,8 @@ namespace {
 
       ConsumerTask(int maxJobs):
         _maxJobs( std::max(1,maxJobs) ) {
+        ::tarch::logging::Statistics::getInstance().log( ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks, true );
+        ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, _maxJobs, true );
       }
 
     public:
@@ -77,7 +79,8 @@ namespace {
         numberOfConsumerTasks.fetch_and_add(1);
         ConsumerTask* tbbTask = new (tbb::task::allocate_root(::backgroundTaskContext)) ConsumerTask(maxTasks);
         tbb::task::enqueue(*tbbTask);
-        ::backgroundTaskContext.set_priority(tbb::priority_t::priority_low);
+        //::backgroundTaskContext.set_priority(tbb::priority_t::priority_low);
+        //::backgroundTaskContext.set_priority(tbb::priority_t::priority_high);
       }
 
       ConsumerTask(const ConsumerTask& copy):
@@ -101,6 +104,7 @@ namespace {
        * @see enqueue()
        */
       tbb::task* execute() {
+        std::cout << "[[[[[ " << _maxJobs << " ]]]]]";
         bool processedJob = tarch::multicore::processPendingTasks(_maxJobs);
 
         ::tarch::logging::Statistics::getInstance().log( ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks );
@@ -157,7 +161,6 @@ namespace {
  * @return Have processed at least one task
  */
 bool tarch::multicore::processPendingTasks( int maxTasks ) {
-// @todo docu dass maTasks==0 was spezielles meint
   assertion(maxTasks>=0);
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier,        tarch::multicore::getNumberOfPendingTasks() );
@@ -244,6 +247,7 @@ void tarch::multicore::spawnTask(Task*  task) {
 void tarch::multicore::spawnAndWait(
   const std::vector< tarch::multicore::Task* >&  tasks
 ) {
+/*
   ::tbb::task_group g;
   for (auto& p: tasks) {
     g.run([=]{
@@ -253,6 +257,17 @@ void tarch::multicore::spawnAndWait(
     });
   }
   g.wait();
+*/
+  tbb::parallel_for(
+    tbb::blocked_range<int>(0,tasks.size()),
+    [&](const tbb::blocked_range<int>& r) {
+      for(int i=r.begin(); i!=r.end(); ++i) {
+        tarch::multicore::Task* task = tasks[i];
+        task->run();
+        delete task;
+      }
+  });
+  }
 }
 
 

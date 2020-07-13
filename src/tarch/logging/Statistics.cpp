@@ -1,5 +1,5 @@
 #include "Statistics.h"
-
+#include "tarch/multicore/Lock.h"
 
 #include <fstream>
 
@@ -29,17 +29,17 @@ tarch::logging::Statistics::DataSet::DataSet():
 }
 
 
-double tarch::logging::Statistics::acceptNewData(const std::string& identifier) {
+double tarch::logging::Statistics::acceptNewData(const std::string& identifier, bool disableSampling) {
   if ( _map.count( identifier )==0 ) {
     _map.insert( std::pair<std::string,DataSet>( identifier, DataSet() ));
   }
 
   _map[identifier]._counter++;
-  bool guard = _map[identifier]._counter>_minCountInBetweenTwoMeasurements;
+  bool guard = disableSampling or _map[identifier]._counter>_minCountInBetweenTwoMeasurements;
 
   if (guard) {
     _map[identifier]._watch.stop();
-    guard  = _map[identifier]._watch.getCalendarTime() > _minTimeInBetweenTwoMeasurements;
+    guard  = disableSampling or _map[identifier]._watch.getCalendarTime() > _minTimeInBetweenTwoMeasurements;
   }
 
   if (guard) {
@@ -53,10 +53,10 @@ double tarch::logging::Statistics::acceptNewData(const std::string& identifier) 
 
 
 
- #ifdef TrackStatistics
-void tarch::logging::Statistics::log( const std::string& identifier, double value ) {
+#ifdef TrackStatistics
+void tarch::logging::Statistics::log( const std::string& identifier, double value, bool disableSampling ) {
   tarch::multicore::Lock lock(_semaphore);
-  double t = acceptNewData(identifier);
+  double t = acceptNewData(identifier, disableSampling);
   if (t>0) {
     logDebug( "log(string,double)", identifier << "=" << value );
     _map[identifier]._data.push_back( std::pair<double,double>(t,value) );

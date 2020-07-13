@@ -13,6 +13,9 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 
 
+#define TrackStatistics
+
+
 namespace tarch {
   namespace logging {
     class Statistics;
@@ -32,9 +35,9 @@ class tarch::logging::Statistics {
      * Log one particular value
      */
     #ifdef TrackStatistics
-    void log( const std::string& identifier, double value );
+    void log( const std::string& identifier, double value, bool disableSampling = false );
     #else
-    void log( const std::string& identifier, double value ) {}
+    void log( const std::string& identifier, double value, bool disableSampling = false ) {}
     #endif
 
     void writeToCSV( const std::string& filename = "statistics.csv" );
@@ -65,7 +68,7 @@ class tarch::logging::Statistics {
      *
      * @return Something bigger than 0 if new data should be accepted
      */
-    double acceptNewData(const std::string& identifier);
+    double acceptNewData(const std::string& identifier, bool disableSampling);
 };
 
 
