@@ -4,6 +4,13 @@
 #include "peano4/utils/Globals.h"
 
 
+std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::CellMarker& marker ) {
+  out << marker.toString();
+  return out;
+}
+
+
+
 peano4::datamanagement::CellMarker::CellMarker(
   const peano4::grid::GridTraversalEvent& event
 ):

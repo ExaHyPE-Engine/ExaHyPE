@@ -16,6 +16,8 @@ namespace peano4 {
 }
 
 
+std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::CellMarker& marker );
+
 
 /**
  *

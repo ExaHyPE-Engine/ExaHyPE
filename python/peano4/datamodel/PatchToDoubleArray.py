@@ -1,6 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4.output.TemplatedHeaderImplementationFilePair
+import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import os
 
 from .DoF import DoFAssociation
@@ -32,6 +32,8 @@ class PatchToDoubleArray():
     self.merge_method_definition     = ""
     self.send_condition              = "true"
     self.receive_and_merge_condition = "true"
+    self.store_persistent_condition  = "true"
+    self.load_persistent_condition   = "true"
     self.includes                    = ""
 
 
@@ -60,25 +62,19 @@ class PatchToDoubleArray():
         "MERGE_METHOD_DEFINITIONS": "",
         "SEND_CONDITION":              self.send_condition,
         "RECEIVE_AND_MERGE_CONDITION": self.receive_and_merge_condition,
-        "INCLUDES":                    self.includes
+        "INCLUDES":                    self.includes,
+        "DATA_ASSOCIATION":            int(self.data.association),
+        "MERGE_METHOD_DEFINITION":     self.merge_method_definition,
+        "STORE_PERSISTENT_CONDITION":  self.store_persistent_condition,
+        "LOAD_PERSISTENT_CONDITION":   self.load_persistent_condition
       }
-
-    if self.data.association==DoFAssociation.Vertex:
-      d["MERGE_METHOD_DECLARATIONS"] = "void merge(const " + self.data.name + "& neighbour, const peano4::datamanagement::VertexMarker& marker);"
-      d["MERGE_METHOD_DEFINITIONS"]  = "void " + self.data.get_full_qualified_type() + "::merge(const " + self.data.name + "& neighbour, const peano4::datamanagement::VertexMarker& marker) {\n" + self.merge_method_definition + "\n}"
-    elif self.data.association==DoFAssociation.Face:
-      d["MERGE_METHOD_DECLARATIONS"] = "void merge(const " + self.data.name + "& neighbour, const peano4::datamanagement::FaceMarker& marker);"
-      d["MERGE_METHOD_DEFINITIONS"]  = "void " + self.data.get_full_qualified_type() + "::merge(const " + self.data.name + "& neighbour, const peano4::datamanagement::FaceMarker& marker) {\n" + self.merge_method_definition + "\n}"
-    elif self.data.association==DoFAssociation.Cell:
-      d["MERGE_METHOD_DECLARATIONS"] = ""
-
 
     """
       Pass in a version of output
     """
     output.makefile.add_cpp_file( self.data.namespace[-1] + "/" + self.data.name + ".cpp" )
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )
-    generated_files = peano4.output.TemplatedHeaderImplementationFilePair(
+    generated_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix+".h.template",
       templatefile_prefix+".cpp.template",
       self.data.name, 

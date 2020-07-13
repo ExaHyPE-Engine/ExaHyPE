@@ -98,9 +98,13 @@ namespace tarch {
     int getNumberOfPendingTasks();
 
     /**
-     * @return There have been tasks
+     * @param maxTasks You may pass 0 if you want to tell the task system that you
+     *   don't want to use your main thread to process any tasks but you would like
+     *   the task system to occupy some other threads with task processing. This is
+     *   a routine we typically invoke just before we enter a (quasi-)serial program
+     *   phase such as the data exchange.
      *
-     * @todo Default argument
+     * @return There have been tasks
      */
     bool processPendingTasks(int maxTasks = getNumberOfPendingTasks());
 
