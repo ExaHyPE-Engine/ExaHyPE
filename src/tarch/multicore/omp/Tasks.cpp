@@ -22,6 +22,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
 
   bool  result        = false;
   bool  spawnConsumer = maxTasks==0;
+  const int   backupOfMaxTasks = maxTasks;
 
   while (maxTasks>0) {
     Task* myTask = nullptr;
@@ -51,11 +52,11 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   }
 
   if (spawnConsumer) {
-    #pragma omp task private(maxTasks)
+    #pragma omp task firstprivate(maxTasks)
     {
       ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, maxTasks );
 
-      processPendingTasks(maxTasks+1);
+      processPendingTasks(backupOfMaxTasks+1);
     }
   }
 
@@ -87,14 +88,16 @@ void tarch::multicore::spawnTask(Task*  job) {
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
-  for (int i=0; i<tasks.size(); i++) {
-    #pragma omp task
-    {
-      while (tasks[i]->run()) {}
-      delete tasks[i];
+  #pragma omp taskgroup
+  {
+    for (int i=0; i<tasks.size(); i++) {
+      #pragma omp task
+      {
+        while (tasks[i]->run()) {}
+        delete tasks[i];
+      }
     }
   }
-  #pragma omp taskwait
 }
 
 

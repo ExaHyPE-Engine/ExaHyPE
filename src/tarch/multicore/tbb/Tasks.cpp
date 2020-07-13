@@ -167,6 +167,8 @@ bool tarch::multicore::processPendingTasks( int maxTasks ) {
   Task* myPrefetchTask = nullptr;
   bool  spawnConsumer  = maxTasks==0;
 
+  const int   backupOfMaxTasks = maxTasks;
+
   while ( maxTasks>0 or myPrefetchTask!=nullptr) {
     bool gotTask = false;
     if (myPrefetchTask==nullptr) {
@@ -205,7 +207,7 @@ bool tarch::multicore::processPendingTasks( int maxTasks ) {
   }
 
   if (spawnConsumer) {
-    ConsumerTask::enqueue( maxTasks+1 );
+    ConsumerTask::enqueue( backupOfMaxTasks+1 );
   }
 
   return result;
