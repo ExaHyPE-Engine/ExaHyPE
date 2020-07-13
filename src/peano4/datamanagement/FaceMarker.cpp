@@ -1,12 +1,19 @@
 #include "FaceMarker.h"
 
 
+std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::FaceMarker& marker ) {
+  out << marker.toString();
+  return out;
+}
+
+
 peano4::datamanagement::FaceMarker::FaceMarker(
-  const peano4::grid::GridTraversalEvent&   event
+  const peano4::grid::GridTraversalEvent&   event,
+  int                                       select
 ):
   _cellCentre(event.getX()),
   _h(event.getH()),
-  _select(0),
+  _select(select),
   _cellIsLocal(event.getIsCellLocal()) {
 
   for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {

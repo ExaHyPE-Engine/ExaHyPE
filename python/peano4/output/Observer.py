@@ -324,6 +324,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       int outVertexStackPosition = event.getVertexDataTo(i);
       logDebug("enterCell(...)", "vertex stack " << inVertexStack << "->pos-" << outVertexStackPosition );
 
+      peano4::datamanagement::VertexMarker  marker(event,outVertexStackPosition);
+
       {full_qualified_type} data;
       if (
         inVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -331,13 +333,13 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         inVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
         inVertexStack!=peano4::grid::TraversalObserver::NoData
+        and
+        {full_qualified_type}::loadPersistently(marker)
       ) {{
         assertion4( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
         data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inVertexStack))->pop();
       }}
-
-      peano4::datamanagement::VertexMarker  marker(event);
-    
+   
       #if PeanoDebug>0  
       if (
         inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -433,6 +435,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       int inFaceStack          = event.getFaceDataFrom(i);
       int outFaceStackPosition = event.getFaceDataTo(i);
       logDebug("enterCell(...)", "face stack " << inFaceStack << "->pos-" << outFaceStackPosition );
+
+      peano4::datamanagement::FaceMarker  marker(event,outFaceStackPosition);
       
       {full_qualified_type} data ;
       if (
@@ -441,13 +445,12 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         inFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
         inFaceStack!=peano4::grid::TraversalObserver::NoData
+        and
+        {full_qualified_type}::loadPersistently(marker)
       ) {{
         assertion4( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
         data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inFaceStack))->pop();
       }}
-
-      peano4::datamanagement::FaceMarker  marker(event);
-      marker.select(outFaceStackPosition);
       
       #if PeanoDebug>0  
       if (
@@ -548,17 +551,19 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
     logDebug("enterCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
     
+    peano4::datamanagement::CellMarker  marker(event);
+    
     {full_qualified_type}& data = view.get(0);
     if (
       inCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       and
       inCellStack!=peano4::grid::TraversalObserver::NoData
+      and
+      {full_qualified_type}::loadPersistently(marker)
     ) {{
       assertion3( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
       data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inCellStack))->pop();
     }}
-    
-    peano4::datamanagement::CellMarker  marker(event);
     
     #if PeanoDebug>0  
     if (
@@ -1050,7 +1055,7 @@ void {FULL_QUALIFIED_CLASSNAME}::finishAllOutstandingSendsAndReceives() {{
 
 
   TemplateExchangeRoutines_sendVertex_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
+void {FULL_QUALIFIED_CLASSNAME}::sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker) {{
   logTraceInWith4Arguments( "sendVertex(int,int,int)", inOutStack, relativePositionOnInOutStack, toStack, _spacetreeId );
 """
 
@@ -1060,7 +1065,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendVertex(int inOutStack, int relativePosition
 """
 
   TemplateExchangeRoutines_sendFace_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
+void {FULL_QUALIFIED_CLASSNAME}::sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {{
   logTraceInWith4Arguments( "sendFace(int,int,int)", inOutStack, relativePositionOnInOutStack, toStack, _spacetreeId );
 """
 
@@ -1071,7 +1076,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendFace(int inOutStack, int relativePositionOn
 
 
   TemplateExchangeRoutines_sendCell_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
+void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::datamanagement::CellMarker& marker) {{
   logTraceInWith3Arguments( "sendCell(int,int)", inOutStack, toStack, _spacetreeId );
   const int relativePositionOnInOutStack = 0;
 """
@@ -1083,7 +1088,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4:
 
 
   TemplateExchangeRoutines_send_Exchange = """
-  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::send() ) {{
+  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::send(marker) ) {{
     auto& data = DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId,inOutStack
     )->top(relativePositionOnInOutStack);
@@ -1097,10 +1102,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4:
 
 
   TemplateExchangeRoutines_receiveAndMergeVertex_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
-  peano4::datamanagement::VertexMarker marker(event);
-  marker.select(positionWithinCell); 
-
+void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker) {{
   logTraceInWith7Arguments( "receiveAndMergeVertex(...)", event.toString(), positionWithinCell, inOutStack, relativePositionOnInOutStack, fromStack, marker.toString(), _spacetreeId );
 """
 
@@ -1110,10 +1112,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(const peano4::grid::GridT
 """
 
   TemplateExchangeRoutines_receiveAndMergeFace_Prologue = """
-void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context) {{
-  peano4::datamanagement::FaceMarker marker(event);
-  marker.select(positionWithinCell); 
-
+void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {{
   logTraceInWith7Arguments( "receiveAndMergeFace(...)", event.toString(), positionWithinCell, inOutStack, relativePositionOnInOutStack, fromStack, marker.toString(), _spacetreeId ); 
 """
 
@@ -1124,7 +1123,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTra
 
 
   TemplateExchangeRoutines_receiveAndMerge_Exchange = """
-  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::receiveAndMerge() ) {{
+  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::receiveAndMerge(marker) ) {{
     auto   incomingData = DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId, fromStack
     )->pop();

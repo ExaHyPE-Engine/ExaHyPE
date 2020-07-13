@@ -92,7 +92,7 @@ project.set_global_simulation_parameters(
 #
 # Parallelise
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(0.8)" )
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(0.5)" )
 
 
 

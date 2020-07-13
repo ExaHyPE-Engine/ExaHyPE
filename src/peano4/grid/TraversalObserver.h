@@ -19,6 +19,11 @@ namespace peano4 {
     class GridControlEvent;
     class GridTraversalEvent;
   }
+  namespace datamanagement {
+    class CellMarker;
+    class FaceMarker;
+    class VertexMarker;
+  }
 }
 
 
@@ -199,12 +204,12 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
     Rebalancing
   };
 
-  virtual void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context) {};
-  virtual void sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context) {};
-  virtual void sendCell(int inOutStack, int toStack, SendReceiveContext context) {};
+  virtual void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker) {};
+  virtual void sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {};
+  virtual void sendCell(int inOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::CellMarker& marker) {};
 
-  virtual void receiveAndMergeVertex(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context) {};
-  virtual void receiveAndMergeFace(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context) {};
+  virtual void receiveAndMergeVertex(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker) {};
+  virtual void receiveAndMergeFace(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {};
 
   virtual void deleteAllStacks() {};
 };

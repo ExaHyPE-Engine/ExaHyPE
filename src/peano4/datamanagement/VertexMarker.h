@@ -16,6 +16,8 @@ namespace peano4 {
 }
 
 
+std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::VertexMarker& marker );
+
 
 struct peano4::datamanagement::VertexMarker {
   private:
@@ -34,7 +36,7 @@ struct peano4::datamanagement::VertexMarker {
     std::bitset<TwoPowerD>  _isRefined;
     std::bitset<TwoPowerD>  _isLocal;
   public:
-    VertexMarker(const peano4::grid::GridTraversalEvent& event);
+    VertexMarker(const peano4::grid::GridTraversalEvent& event, int select = 0);
 
     /**
      * Picks a vertex within a cell. After that, the routine returns.
