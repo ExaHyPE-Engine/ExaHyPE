@@ -158,7 +158,14 @@ and
 {
  </pre>
 
- environment.
+ environment. Furthermore, you will have to use
+
+ <pre>
+  export OMP_NESTED=true
+ </pre>
+
+ as we rely heavily on nested parallelism.
+
  */
   namespace multicore {
      /**
