@@ -29,6 +29,7 @@
 #include <tbb/task_group.h>
 #include <tbb/concurrent_priority_queue.h>
 #include <tbb/concurrent_hash_map.h>
+#include <tbb/parallel_for.h>
 
 
 namespace {
@@ -40,10 +41,6 @@ namespace {
   // These task groups have to be static inside a cpp file.
   //
   static tbb::task_group_context  backgroundTaskContext(tbb::task_group_context::isolated);
-
-  const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
-  const std::string ConsumerTaskCountStatisticsIdentifier( "tarch::multicore::consumer-tasks");
-  const std::string TasksPerConsumerRunStatisticsIdentifier( "tarch::multicore::tasks-per-consumer-run");
 
   typedef tbb::concurrent_priority_queue< tarch::multicore::Task* >   TaskQueue;
 
@@ -79,7 +76,7 @@ namespace {
         numberOfConsumerTasks.fetch_and_add(1);
         ConsumerTask* tbbTask = new (tbb::task::allocate_root(::backgroundTaskContext)) ConsumerTask(maxTasks);
         tbb::task::enqueue(*tbbTask);
-        //::backgroundTaskContext.set_priority(tbb::priority_t::priority_low);
+        ::backgroundTaskContext.set_priority(tbb::priority_t::priority_low);
         //::backgroundTaskContext.set_priority(tbb::priority_t::priority_high);
       }
 
@@ -168,6 +165,9 @@ bool tarch::multicore::processPendingTasks( int maxTasks ) {
   bool  result         = false;
   Task* myTask         = nullptr;
   Task* myPrefetchTask = nullptr;
+  bool  spawnConsumer  = maxTasks==0;
+
+  const int   backupOfMaxTasks = maxTasks;
 
   while ( maxTasks>0 or myPrefetchTask!=nullptr) {
     bool gotTask = false;
@@ -199,14 +199,15 @@ bool tarch::multicore::processPendingTasks( int maxTasks ) {
       }
       maxTasks--;
       result = true;
+      spawnConsumer = true;
     }
     else {
       maxTasks=0;
     }
   }
 
-  if (result or maxTasks==0) {
-    ConsumerTask::enqueue( maxTasks+1 );
+  if (spawnConsumer) {
+    ConsumerTask::enqueue( backupOfMaxTasks+1 );
   }
 
   return result;
@@ -244,10 +245,17 @@ void tarch::multicore::spawnTask(Task*  task) {
 }
 
 
+/**
+ * I found the task_group to yield way better performance than the parallel for.
+ * However, it seems that the task_group vetoes other consumers to become active
+ * even if it does not require all cores. This is a pity but nothing I can solve
+ * right now.
+ *
+ * @todo Escalate via Intel ticket
+ */
 void tarch::multicore::spawnAndWait(
   const std::vector< tarch::multicore::Task* >&  tasks
 ) {
-/*
   ::tbb::task_group g;
   for (auto& p: tasks) {
     g.run([=]{
@@ -257,17 +265,18 @@ void tarch::multicore::spawnAndWait(
     });
   }
   g.wait();
-*/
-  tbb::parallel_for(
-    tbb::blocked_range<int>(0,tasks.size()),
-    [&](const tbb::blocked_range<int>& r) {
+/*
+  ::tbb::parallel_for(
+    ::tbb::blocked_range<int>(0,tasks.size()),
+    [&](const ::tbb::blocked_range<int>& r) {
       for(int i=r.begin(); i!=r.end(); ++i) {
         tarch::multicore::Task* task = tasks[i];
         task->run();
         delete task;
       }
-  });
-  }
+    }
+  );
+  */
 }
 
 

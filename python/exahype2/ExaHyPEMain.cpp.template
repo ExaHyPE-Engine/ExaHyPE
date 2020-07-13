@@ -238,6 +238,12 @@ int main(int argc, char** argv) {{
   delete peanoTarchTests;
   #endif
 
+  #if defined(SharedOMP)
+  #pragma omp parallel
+  {{
+  #pragma omp master 
+  {{
+  #endif
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
     while ( selectNextAlgorithmicStep() ) {{
       step();
@@ -253,6 +259,10 @@ int main(int argc, char** argv) {{
       step();
     }}
   }}
+  #if defined(SharedOMP)
+  }}
+  }}
+  #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
 
