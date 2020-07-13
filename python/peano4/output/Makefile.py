@@ -101,6 +101,10 @@ class Makefile(object):
     self.d["CXXFLAGS"]      = value
     
     
+  def add_CXX_flag(self,value):    
+    self.d["CXXFLAGS"]     += value
+    
+    
   def set_Fortran_compiler(self,value):
     self.d["F77"]           = value
     

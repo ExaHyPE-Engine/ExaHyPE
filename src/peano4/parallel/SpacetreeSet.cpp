@@ -559,6 +559,9 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
       multitasking,true);
   }
 
+  // Ensure that there's a consumer task around. Well, at least one.
+  tarch::multicore::processPendingTasks(0);
+
   exchangeHorizontalDataBetweenTrees(observer);
 
   _state = SpacetreeSetState::Waiting;

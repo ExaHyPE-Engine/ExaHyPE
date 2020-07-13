@@ -72,9 +72,10 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
 }
 
 
+// Muss net konsekutiv sein
 int  exahype2::EnclaveBookkeeping::reserveTaskNumber() {
   tarch::multicore::Lock lock( _activeTasksSemaphore );
-  int result = 0;
+  int result = _activeTaskNumbers.size();
   while (_activeTaskNumbers.count( result )>0) {
     result++;
   }

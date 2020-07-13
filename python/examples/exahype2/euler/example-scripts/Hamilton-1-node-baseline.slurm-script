@@ -1,0 +1,28 @@
+#!/bin/bash
+#SBATCH -t 24:00:00
+#SBATCH --exclusive
+#SBATCH -p par7.q
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mail-type=END
+#SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
+
+source /etc/profile.d/modules.sh
+
+module purge
+module load intel/2019.5
+module load intelmpi/intel/2019.6
+module load python/3.6.8 
+module unload gcc/8.2.0
+module load gcc/9.3.0
+
+export PYTHONPATH=../../..
+
+for myH in 0.05 0.02 0.01
+do
+  python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=1 --h=$myH
+  mv peano4 ./peano4-$myH-baseline
+  mpirun ./peano4-$myH-baseline --threads 1 > Hamilton-baseline-h-$myH.out
+done
+
+

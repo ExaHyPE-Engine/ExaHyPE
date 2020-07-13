@@ -103,8 +103,9 @@ void finishTimeStep() {
   {%- endfor %}
 
   refinementControl.finishStep();
-
+  {% if LOAD_BALANCER!="" -%}
   loadBalancer.finishStep();
+  {% endif %}
 }
 
 
@@ -114,7 +115,9 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   refinementControl.finishStep();
+  {% if LOAD_BALANCER!="" -%}
   loadBalancer.finishStep();
+  {% endif %}
 }
 
 

@@ -8,17 +8,22 @@ tarch::logging::Log   examples::exahype2::finitevolumes::LOH1::_log( "examples::
 
 
 ::exahype2::RefinementCommand examples::exahype2::finitevolumes::LOH1::refinementCriterion(
-  double Q[13],
+  double                                       Q[13],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
 ) {
   logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  if (tarch::la::equals(t,0.0) and tarch::la::max(h)>3.0 ) {
+  #if PeanoDebug>0
+  const double minH = 3.0;
+  #else
+  const double minH = 0.3;
+  #endif
+  if (tarch::la::equals(t,0.0) and tarch::la::max(h)>minH ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
-  logTraceOutWith1Argument( "refinementCriterion(...)", toString(result) );
+  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;
 }
 
@@ -167,7 +172,12 @@ void examples::exahype2::finitevolumes::LOH1::flux(
 void examples::exahype2::finitevolumes::LOH1::nonconservativeProduct(
   double                                       Q[13],
   double                                       gradQ[13][Dimensions],
-  double                                       BgradQ[13] ) {
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double                                       BgradQ[13]
+) {
   logTraceIn( "nonconservativeProduct(...)" );
  
   // modificatons to ExaSeis original

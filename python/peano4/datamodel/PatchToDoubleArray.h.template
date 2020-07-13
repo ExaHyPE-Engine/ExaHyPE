@@ -4,8 +4,9 @@
 // www.peano-framework.org
 // This is generated. Be careful with adding your own stuff
 //
-#ifndef _{INCLUDE_GUARD}_
-#define _{INCLUDE_GUARD}_
+#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+
 
 
 #include <string>
@@ -20,12 +21,19 @@
 #include "peano4/datamanagement/VertexMarker.h"
 
 
-{OPEN_NAMESPACE}
-  class {CLASSNAME};
-{CLOSE_NAMESPACE}
+{% for item in NAMESPACE -%}
+  namespace {{ item }} {
+{%- endfor %}
+
+  class {{CLASSNAME}};
+
+{% for item in NAMESPACE -%}
+  }
+{%- endfor %}
 
 
-struct {FULL_QUALIFIED_CLASSNAME} {{
+
+struct {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
   #if PeanoDebug>=1
   private:
     tarch::la::Vector<Dimensions,double> _debugX;
@@ -39,21 +47,42 @@ struct {FULL_QUALIFIED_CLASSNAME} {{
   #endif
 
   #if Dimensions==2
-  double                                 value[{CARDINALITY_2D}];
+  double                                 value[{{CARDINALITY_2D}}];
   #else
-  double                                 value[{CARDINALITY_3D}];
+  double                                 value[{{CARDINALITY_3D}}];
   #endif
   
-  {CLASSNAME}();
-  {CLASSNAME}(const {CLASSNAME}& other);
-  {CLASSNAME}& operator=(const {CLASSNAME}& other);
+  {{CLASSNAME}}();
+  {{CLASSNAME}}(const {{CLASSNAME}}& other);
+  {{CLASSNAME}}& operator=(const {{CLASSNAME}}& other);
 
   std::string toString() const;
   
-  {MERGE_METHOD_DECLARATIONS}
+  {% if DATA_ASSOCIATION == 1 -%}
+  void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
+  static bool send(const peano4::datamanagement::VertexMarker& marker);
+  static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
+  static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
+  static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
+  {% endif -%}
+
+  {% if DATA_ASSOCIATION == 2 -%}
+  void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker);
+  static bool send(const peano4::datamanagement::FaceMarker& marker);
+  static bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker);
+  static bool storePersistently(const peano4::datamanagement::FaceMarker& marker);
+  static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
+  {% endif -%}
+
+  {% if DATA_ASSOCIATION == 3 -%}
+  void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker);
+  static bool send(const peano4::datamanagement::CellMarker& marker);
+  static bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker);
+  static bool storePersistently(const peano4::datamanagement::CellMarker& marker);
+  static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
+  {% endif -%}
   
-  static bool send();
-  static bool receiveAndMerge();
+  
   
   #ifdef Parallel
   /**
@@ -71,7 +100,7 @@ struct {FULL_QUALIFIED_CLASSNAME} {{
    */
   static MPI_Datatype   Datatype;
   #endif
-}};
+};
 
 
 #endif

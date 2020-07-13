@@ -96,6 +96,10 @@ class examples::exahype2::finitevolumes::LOH1: public AbstractLOH1 {
     void nonconservativeProduct(
       double                                       Q[13],
       double                                       gradQ[13][Dimensions],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
       double                                       BgradQ[13]
      ) override;
 

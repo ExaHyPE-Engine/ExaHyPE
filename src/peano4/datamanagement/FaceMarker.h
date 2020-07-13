@@ -19,6 +19,9 @@ namespace peano4 {
 }
 
 
+std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::FaceMarker& marker );
+
+
 struct peano4::datamanagement::FaceMarker {
   private:
     /**
@@ -42,7 +45,7 @@ struct peano4::datamanagement::FaceMarker {
      * The derivation of _isLocal and _isRefined is very similar to
      * peano4::grid::Spacetree::getFaceType().
      */
-    FaceMarker(const peano4::grid::GridTraversalEvent& event);
+    FaceMarker(const peano4::grid::GridTraversalEvent& event, int select=0);
 
     /**
      * Selects a face witin a cell, i.e. now the marker knows to which

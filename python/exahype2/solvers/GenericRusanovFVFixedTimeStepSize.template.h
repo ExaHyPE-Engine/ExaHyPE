@@ -83,7 +83,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal,
-      double                                       F[{{NUMBER_OF_UNKNOWNS}}]
+      double                                       BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
 };

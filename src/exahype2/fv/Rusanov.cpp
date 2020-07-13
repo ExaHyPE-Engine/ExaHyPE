@@ -88,6 +88,11 @@ namespace {
     std::function< void(
         double                                       Q[],
         double                                       gradQ[][Dimensions],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
         double                                       BgradQ[]
       ) >   nonconservativeProduct,
     std::function< void(
@@ -128,7 +133,7 @@ namespace {
       gradQ[unknown][normal] = QR[unknown] - QL[unknown];
     }
     double fluxnonconservativeProduct[unknowns];
-    nonconservativeProduct(Qaverage,gradQ,fluxnonconservativeProduct);
+    nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
 
     double lambdas[unknowns];
     double lambdaMax = 0.0;
@@ -256,6 +261,11 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
   std::function< void(
         double                                       Q[],
         double                                       gradQ[][Dimensions],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
         double                                       BgradQ[]
   ) >   nonconservativeProduct,
   std::function< void(

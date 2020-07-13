@@ -169,9 +169,14 @@ class AbstractGenericRusanovFV( FV ):
     [&](
       double Q[],
       double gradQ[][Dimensions],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
       double BgradQ[]
     ) -> void {{
-      {SOLVER_INSTANCE}.nonconservativeProduct( Q, gradQ, BgradQ );
+      {SOLVER_INSTANCE}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
     }},
     [&](
       double                                       Q[],
@@ -293,11 +298,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     _guard_update_cell: string
       This is a predicate, i.e. identifies in C code when to trigger 
       the underlying activity.
-      Actual FV kernel invocation. I use the FV's blueprint kernel calls
-      only for skeleton cells, i.e. in the primary grid sweep. While 
-      this guard cares for all skeleton cells, I need specialised 
-      treatment of enclaves cells. This is realised within
-      add_actions_to_perform_time_step().
+      Actual FV kernel invocation.
       
     _patch_overlap.generator.send_condition: string
       This is a predicate, i.e. identifies in C code when to trigger 
@@ -372,9 +373,16 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     self._guard_update_cell = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary and marker.isSkeletonCell() and not marker.isRefined()"
 
     #
-    # There's no need to exchange the current time step information at all. This is different
-    # to the baseline version where the current time step information is exchanged (after we've
-    # used the time step updates to obtain the new step's solution).
+    # Exchange patch overlaps
+    #
+    # Throughout the actual time stepping, there's no need to exchange the current time step 
+    # information at all. This is different to the baseline version where the current time 
+    # step information is exchanged (after we've used the time step updates to obtain the new 
+    # step's solution). The reason for this is that we exchange the new patch data, i.e. the 
+    # updates, rather than the real data. So consult self._patch_overlap_new for details.
+    #
+    # That leaves us with the fact that we have to exchange all data throughout the grid 
+    # construction. Here, the new patch data is not used yet.
     #
     self._patch_overlap.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" 
     self._patch_overlap.generator.receive_and_merge_condition  = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " \
@@ -390,8 +398,11 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     
     
     #
+    # Exchange new patch data
+    #
     # See above: in the enclave version, we do exchange the new time step's information before
-    # the new time step approximation is rolled over.
+    # the new time step approximation is rolled over. So here, we send out data in the primary
+    # sweep and then receive it in the secondary.
     #
     self._patch_overlap_new.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " \
                                                                    + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation"
@@ -404,6 +415,20 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 
     self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
    
+    #
+    # In the plain version, all cell data are always streamed in and out of the persistent
+    # stacks. For the enclave version, we can be picky: Only skeleton data is stored 
+    # persistently after the primary sweep. All enclave data is backed up (as reconstructed
+    # patch data) in tasks. So no need to stream it to the output stack.
+    # 
+    # In the secondary sweep, only data from skeelton cells is to be streamed in. However, 
+    # we stream out both skeleton and enclave tasks: After any secondary sweep, all data 
+    # resides on the output/input stream. In the subsequent primary sweep, we thus have
+    # to stream in all data again.
+    #
+    self._patch.generator.store_persistent_condition  = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Primary"
+    self._patch.generator.load_persistent_condition   = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Secondary"
+    self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """ 
 
 
   def add_actions_to_create_grid(self, step):
@@ -415,8 +440,19 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     """
       Add enclave aspect to time stepping
       
-      The additional aspect is only guarded by an enclave check, as we 
-      have to do something both in primary and secondary tasks.  
+      There's a bunch of different things to do to extend my standard solver
+      into an enclave solver. In this operation, we add the runtime logic,
+      i.e. what happens at which point.
+      
+      We need additional action sets that are
+      triggered throughout the traversal in every second time step. I call this
+      one task_based_implementation_primary_iteration or secondary, 
+      respectively. One wraps the implementation of HandleCellTemplate into a 
+      task, the other communicates with the task bookkeeping only. Both rely on
+      additional labels within the cell. We therefore end up with three new 
+      action sets: reconstruct_patch_and_apply_FV_kernel, exahype2.grid.EnclaveLabels
+      and roll_over_enclave_task_results.
+ 
     """
     super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).add_actions_to_perform_time_step(step)
 

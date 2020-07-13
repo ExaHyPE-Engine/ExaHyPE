@@ -49,20 +49,36 @@ class MPI(object):
 #endif
 
 
-    static bool receiveAndMerge();
-    static bool send();
 
     """
     
     if self._dof_association==DoFAssociation.Vertex:
       result += """
-void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
+    void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
+    
+    static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
+    static bool send(const peano4::datamanagement::VertexMarker& marker);
+    static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
+    static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
 """ 
     elif self._dof_association==DoFAssociation.Face:
       result += """
-void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
+    void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
+
+    static bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker);
+    static bool send(const peano4::datamanagement::FaceMarker& marker);
+    static bool storePersistently(const peano4::datamanagement::FaceMarker& marker);
+    static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
 """ 
     elif self._dof_association==DoFAssociation.Cell:
+      result += """
+    void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker);
+
+    static bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker);
+    static bool send(const peano4::datamanagement::CellMarker& marker);
+    static bool storePersistently(const peano4::datamanagement::CellMarker& marker);
+    static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
+""" 
       pass
     elif self._dof_association==DoFAssociation.Generic:
       pass
@@ -74,16 +90,6 @@ void merge(const """ + full_qualified_name + """& neighbour, const peano4::datam
 
   def get_implementation(self,full_qualified_name):
     result = """
-bool """ + full_qualified_name + """::receiveAndMerge() {
-  return true;
-}
-
-
-bool """ + full_qualified_name + """::send() {
-  return true;
-}
-    
-    
 #ifdef Parallel
 void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag ) {
   """ + full_qualified_name + """::send(
@@ -147,14 +153,77 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
       result += """
 void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
 }
+
+
+bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::send(const peano4::datamanagement::VertexMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
+  return true;
+}
 """ 
     elif self._dof_association==DoFAssociation.Face:
       result += """
 void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
 }
+
+
+bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::send(const peano4::datamanagement::FaceMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
+  return true;
+}
 """ 
     elif self._dof_association==DoFAssociation.Cell:
-      pass
+      result += """
+void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker) {
+}
+
+
+bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::CellMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::send(const peano4::datamanagement::CellMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::CellMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::CellMarker& marker) {
+  return true;
+}
+"""      
     elif self._dof_association==DoFAssociation.Generic:
       pass
     else:

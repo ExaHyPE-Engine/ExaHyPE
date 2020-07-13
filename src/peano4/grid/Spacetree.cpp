@@ -6,8 +6,13 @@
 
 
 #include "peano4/utils/Loop.h"
+
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
+
+#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/datamanagement/FaceMarker.h"
+#include "peano4/datamanagement/CellMarker.h"
 
 #include "tarch/mpi/Rank.h"
 #include "tarch/multicore/Lock.h"
@@ -1911,7 +1916,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
             inOutStack,
             outCallStackCounter,    // Relative position in stack from top
             fromStack,              // Rank
-            TraversalObserver::SendReceiveContext::BoundaryExchange
+            TraversalObserver::SendReceiveContext::BoundaryExchange,
+            peano4::datamanagement::VertexMarker(enterCellTraversalEvent,inVertexPositionWithinCell)
           );
         }
       }
@@ -1943,7 +1949,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
             inOutStack,
             outCallStackCounter,    // Relative position in stack from top
             fromStack,
-            TraversalObserver::SendReceiveContext::BoundaryExchange
+            TraversalObserver::SendReceiveContext::BoundaryExchange,
+            peano4::datamanagement::FaceMarker(enterCellTraversalEvent,inFacePositionWithinCell)
           );
         }
       }
@@ -1997,7 +2004,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             outVertexStack,
             (totalOutStackWrites-1),
             toStack,
-            TraversalObserver::SendReceiveContext::BoundaryExchange
+            TraversalObserver::SendReceiveContext::BoundaryExchange,
+            peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell)
           );
         }
       }
@@ -2017,7 +2025,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             outVertexStack,
             (totalOutStackWrites-1),
             toStack,
-            TraversalObserver::SendReceiveContext::Rebalancing
+            TraversalObserver::SendReceiveContext::Rebalancing,
+            peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell)
           );
         }
       }
@@ -2056,7 +2065,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             outFaceStack,
             (totalOutStackWrites-1),
             toStack,
-            TraversalObserver::SendReceiveContext::BoundaryExchange
+            TraversalObserver::SendReceiveContext::BoundaryExchange,
+            peano4::datamanagement::FaceMarker(leaveCellTraversalEvent,outFacePositionWithinCell)
           );
         }
       }
@@ -2076,7 +2086,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             outFaceStack,
             (totalOutStackWrites-1),
             toStack,
-            TraversalObserver::SendReceiveContext::Rebalancing
+            TraversalObserver::SendReceiveContext::Rebalancing,
+            peano4::datamanagement::FaceMarker(leaveCellTraversalEvent,outFacePositionWithinCell)
           );
         }
       }
@@ -2101,7 +2112,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
       observer.sendCell(
         outCellStack,
         toStack,
-        TraversalObserver::SendReceiveContext::Rebalancing
+        TraversalObserver::SendReceiveContext::Rebalancing,
+        peano4::datamanagement::CellMarker(leaveCellTraversalEvent)
       );
     }
   }
