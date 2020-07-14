@@ -84,8 +84,16 @@ class Project (object):
           
   def build(self, make_clean_first=True, additional_libraries = [], number_of_parallel_builds = 4):
     """
-    Invokes the underlying make/C build mechanism on the project. 
-    We invoke the make command via a subprocess. That's it.
+      Invokes the underlying make/C build mechanism on the project. 
+      We invoke the make command via a subprocess. That's it.
+      
+      
+      number_of_parallel_builds: int
+        This is mapped onto make -jnumber_of_parallel_builds, i.e. it 
+        determines how many parallel make instances the code spawns.
+        Usually, a lot of the generated code is quite lengthy. Therefore
+        compile time can be high.
+        
     """
     if not self.is_generated:
       self.generate();

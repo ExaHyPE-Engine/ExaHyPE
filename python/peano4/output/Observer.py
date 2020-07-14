@@ -347,6 +347,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         or
         inVertexStack==peano4::grid::TraversalObserver::NoData
+        or
+        not {full_qualified_type}::loadPersistently(marker)
       ) {{
         data.setDebugX( marker.x(outVertexStackPosition) );
         data.setDebugH( marker.h() );
@@ -459,6 +461,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         inFaceStack==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         or
         inFaceStack==peano4::grid::TraversalObserver::NoData
+        or
+        not {full_qualified_type}::loadPersistently(marker)
       ) {{
         data.setDebugX( marker.x(outFaceStackPosition) );
         data.setDebugH( marker.h() );
