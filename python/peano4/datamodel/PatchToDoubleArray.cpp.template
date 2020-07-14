@@ -83,10 +83,12 @@ bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::receive
 
 
 bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
+  return {{STORE_PERSISTENT_CONDITION}};
 }
 
 
 bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
+  return {{LOAD_PERSISTENT_CONDITION}};
 }
 {% endif -%}
 
@@ -108,10 +110,12 @@ bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::receive
 
 
 bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
+  return {{STORE_PERSISTENT_CONDITION}};
 }
 
 
 bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
+  return {{LOAD_PERSISTENT_CONDITION}};
 }
 {% endif -%}
 

@@ -91,7 +91,7 @@ module load slurm_setup
  setenv CXX mpicxx
  setenv CXXFLAGS "-I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include"
  setenv LDFLAGS "-L/ddn/apps/Cluster-Apps/intel/2019.5/tbb/lib/intel64/gcc4.7 -ltbb"
- ./configure --with-multithreading=tbb --with-mpi=mpicxx
+ ./configure --with-multithreading=tbb --with-mpi=mpiicpc
  make clean
  make -j
 \end{code}
