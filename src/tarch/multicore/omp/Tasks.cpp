@@ -119,7 +119,7 @@ void tarch::multicore::spawnAndWait(
  * have to switch the thread context from time to time.
  */
 void tarch::multicore::yield() {
-  std::this_thread::yield();
+  #pragma omp taskyield
 }
 
 
