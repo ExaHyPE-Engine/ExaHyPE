@@ -12,7 +12,7 @@
 
 
 namespace {
-  std::queue<tarch::multicore::Task* > nonblockingTasks;
+  std::priority_queue<tarch::multicore::Task* > nonblockingTasks;
 }
 
 bool tarch::multicore::processPendingTasks(int maxTasks) {
@@ -32,7 +32,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
         maxTasks = 0;
       }
       else {
-        myTask = nonblockingTasks.front();
+        myTask = nonblockingTasks.top();
         nonblockingTasks.pop();
       }
     }
@@ -52,11 +52,13 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   }
 
   if (spawnConsumer) {
-    #pragma omp task firstprivate(backupOfMaxTasks)
-    {
-      ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, backupOfMaxTasks+1 );
-
-      processPendingTasks(backupOfMaxTasks+1);
+    int NumberOfTasksToSpawn = nonblockingTasks.size()>backupOfMaxTasks ? 2 : 1;
+    for (int i=0; i<NumberOfTasksToSpawn; i++) {
+      #pragma omp task firstprivate(backupOfMaxTasks)
+      {
+        ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, backupOfMaxTasks+1 );
+        processPendingTasks(backupOfMaxTasks+1);
+      }
     }
   }
 
@@ -84,18 +86,28 @@ void tarch::multicore::spawnTask(Task*  job) {
  * within a single environment. If we spawn parallel for within a single
  * environment, OpenMP will complain. It won't work, as we operate within
  * single. So I rely here on explicit tasking.
+ *
+ * <h2> Task group </h2>
+ *
+ * If I do not handle the last task explicitly on the master, I ran into the
+ * situation that I had n tasks in tasks, but OpenMP used n+1 threads with the
+ * master not doing any work. This severely limited scalability.
  */
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
-  #pragma omp taskgroup
-  {
-    for (int i=0; i<tasks.size(); i++) {
-      #pragma omp task
-      {
-        while (tasks[i]->run()) {}
-        delete tasks[i];
+  if (not tasks.empty()) {
+    #pragma omp taskgroup
+    {
+      for (int i=1; i<tasks.size(); i++) {
+        #pragma omp task
+        {
+          while (tasks[i]->run()) {}
+          delete tasks[i];
+        }
       }
+      while (tasks[0]->run()) {}
+      delete tasks[0];
     }
   }
 }

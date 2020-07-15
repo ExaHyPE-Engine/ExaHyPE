@@ -53,7 +53,18 @@ class peano4::parallel::Tasks {
        */
       Task,
       HighPriority,
-      LowPriority,
+      LowPriorityFIFO,
+      /**
+       * Try to handle the low priority tasks LIFO. This is important if you spawn
+       * tasks in one iteration and you know that their results will be picked up
+       * in the next grid traversal which has an inverted cell order. As task
+       * execution is, by definition, non-deterministic, I don't really offer LIFO.
+       * What I do offer is a weak LIFO, i.e. the system maps LIFO onto task
+       * priorities which then suggests to the runtime to process the tasks LIFO.
+       *
+       * @see getPriority()
+       */
+      LowPriorityLIFO,
       /**
        * For debugging only
        */
@@ -69,7 +80,31 @@ class peano4::parallel::Tasks {
      */
     bool taskForLocationShouldBeIssuedAsTask( int location, int taskCount ) const;
 
-    int getPriority( TaskType type ) const;
+    /**
+     * Map the task type onto a priority
+     *
+     * Though this operation is called get... it is not const, as it has an
+     * internal counter to realise the LowPriorityLIFO strategy.
+     *
+     * <h2> LIFO </h2>
+     *
+     * My LIFO implementation is really simplistic: I use an internal counter
+     * which I increment after each spawn. This way, the later a task spawn
+     * the higher the task's priority. The counter is not thread-safe, but
+     * that doesn't matter as priorities are only recommendations for the
+     * runtime anyway.
+     *
+     * My priorities cover fixed ranges that we split up into high priority vs
+     * low priority areas. So we have to reset the priorities/LIFO counter
+     * every now and then to ensure that it does not overflow. I do this by
+     * checking against the total number of jobs. If this total number is
+     * low, I reset the counter. I originally wanted to reset when it is
+     * zero, but that means that I can't handle persistent jobs: If one user
+     * uses a persistent job that reschedules itself over and over again, the
+     * tasking would never reset the priority counter. So I use 32. This can
+     * accommodate a relatively high number of persistent tasks.
+     */
+    static int getPriority( TaskType type );
   public:
     /**
      * Codes create an identifier (int) per parallel region through this
