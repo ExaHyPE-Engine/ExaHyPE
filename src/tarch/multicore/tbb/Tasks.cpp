@@ -2,7 +2,7 @@
 
 
 #include <thread>
-#include <queue>
+
 #include "tarch/multicore/multicore.h"
 #include "tarch/logging/Statistics.h"
 
@@ -62,8 +62,8 @@ namespace {
 
       ConsumerTask(int maxJobs):
         _maxJobs( std::max(1,maxJobs) ) {
-        ::tarch::logging::Statistics::getInstance().log( ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks, true );
-        ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, _maxJobs, true );
+        ::tarch::logging::Statistics::getInstance().log( ::tarch::multicore::ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks, true );
+        ::tarch::logging::Statistics::getInstance().log( ::tarch::multicore::TasksPerConsumerRunStatisticsIdentifier, _maxJobs, true );
       }
 
     public:
@@ -101,11 +101,12 @@ namespace {
        * @see enqueue()
        */
       tbb::task* execute() {
+        // @todo I have to remove this one, but it seems never to be called
         std::cout << "[[[[[ " << _maxJobs << " ]]]]]";
         bool processedJob = tarch::multicore::processPendingTasks(_maxJobs);
 
-        ::tarch::logging::Statistics::getInstance().log( ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks );
-        ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, _maxJobs );
+        ::tarch::logging::Statistics::getInstance().log( ::tarch::multicore::ConsumerTaskCountStatisticsIdentifier,   numberOfConsumerTasks );
+        ::tarch::logging::Statistics::getInstance().log( ::tarch::multicore::TasksPerConsumerRunStatisticsIdentifier, _maxJobs );
 
         numberOfConsumerTasks.fetch_and_add(-1);
 
@@ -208,6 +209,9 @@ bool tarch::multicore::processPendingTasks( int maxTasks ) {
 
   if (spawnConsumer) {
     ConsumerTask::enqueue( backupOfMaxTasks+1 );
+    if (nonblockingTasks.size()>backupOfMaxTasks) {
+      ConsumerTask::enqueue( backupOfMaxTasks+1 );
+    }
   }
 
   return result;

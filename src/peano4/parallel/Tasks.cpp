@@ -30,15 +30,25 @@ bool peano4::parallel::Tasks::taskForLocationShouldBeIssuedAsTask( int location,
 }
 
 
-int peano4::parallel::Tasks::getPriority( TaskType type ) const {
-  const int DefaultPriority = 256;
+int peano4::parallel::Tasks::getPriority( TaskType type ) {
+  const int DefaultPriority = 65536;
+
+  static int LIFOCounter = 0;
 
   switch (type) {
     case TaskType::Task:
       return DefaultPriority;
     case TaskType::HighPriority:
       return DefaultPriority * 2;
-    case TaskType::LowPriority:
+    case TaskType::LowPriorityLIFO:
+      {
+        if (tarch::multicore::getNumberOfPendingTasks()<32) {
+          LIFOCounter = 0;
+        }
+        LIFOCounter++;
+        return DefaultPriority / 2 + LIFOCounter;
+      }
+    case TaskType::LowPriorityFIFO:
       return DefaultPriority / 2;
     case TaskType::Sequential:
       assertionMsg( false, "you should not ask for a priority for a sequential task" );

@@ -12,7 +12,7 @@
 
 
 namespace {
-  std::queue<tarch::multicore::Task* > nonblockingTasks;
+  std::priority_queue<tarch::multicore::Task* > nonblockingTasks;
 }
 
 bool tarch::multicore::processPendingTasks(int maxTasks) {
@@ -32,7 +32,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
         maxTasks = 0;
       }
       else {
-        myTask = nonblockingTasks.front();
+        myTask = nonblockingTasks.top();
         nonblockingTasks.pop();
       }
     }
@@ -52,11 +52,13 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   }
 
   if (spawnConsumer) {
-    #pragma omp task firstprivate(backupOfMaxTasks)
-    {
-      ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, backupOfMaxTasks+1 );
-
-      processPendingTasks(backupOfMaxTasks+1);
+    int NumberOfTasksToSpawn = nonblockingTasks.size()>backupOfMaxTasks ? 2 : 1;
+    for (int i=0; i<NumberOfTasksToSpawn; i++) {
+      #pragma omp task firstprivate(backupOfMaxTasks)
+      {
+        ::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, backupOfMaxTasks+1 );
+        processPendingTasks(backupOfMaxTasks+1);
+      }
     }
   }
 
