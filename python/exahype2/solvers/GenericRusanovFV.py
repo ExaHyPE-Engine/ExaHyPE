@@ -490,7 +490,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 
     peano4::parallel::Tasks spawn( 
         task,
-        peano4::parallel::Tasks::TaskType::LowPriority,
+        peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
         //peano4::parallel::Tasks::TaskType::Sequential,
         peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFV" )
     );
