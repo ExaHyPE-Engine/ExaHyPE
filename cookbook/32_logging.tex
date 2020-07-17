@@ -113,23 +113,18 @@ I detail the variants I currently ship with Peano below.
 
 
 
-\subsection{ChromeTraceFileLogger}
-
-This logger writes the one json file per rank. The format conforms to Google
-Chrome's tracing format, i.e.~you can open the file in Google Chrome by typing
-in the URL \texttt{chrome:///tracing} and loading in the file in the GUI that
-pops up.
-As the format is prescribed, there are no opportunities to configure the output.
-While the majority of all output data goes into these Chrome files, warnings,
-errors and info messages are also dumped to the terminal in a format which can
-be read by humans easily.
 
 
 
 \subsection{CommandLineLogger}
 
-Alternatively, you can ask Peano to dump all outcome in a human readable format.
-This one can be tailored towards your needs.
+To select this logger, compile with
+\texttt{-DUsedLogService=CommandLineLogger}.
+This logger is the default.
+
+
+This logger dumps all information in a human readable format.
+It can be tailored towards your needs.
 For this, the logger provides a particular setter.
 Please consult the header or the webpage for details on the semantics of the
 arguments:
@@ -158,6 +153,22 @@ stream the output into a new file.
 Typically, developers use this operation in their iterative schemes to stream
 each iteration to a different file.
 The output files are enumerated automatically.
+
+
+
+\subsection{ChromeTraceFileLogger}
+
+To select this logger, compile with
+\texttt{-DUsedLogService=ChromeTraceFileLogger}.
+
+This logger writes the one json file per rank. The format conforms to Google
+Chrome's tracing format, i.e.~you can open the file in Google Chrome by typing
+in the URL \texttt{chrome:///tracing} and loading in the file in the GUI that
+pops up.
+As the format is prescribed, there are no opportunities to configure the output.
+While the majority of all output data goes into these Chrome files, warnings,
+errors and info messages are also dumped to the terminal in a format which can
+be read by humans easily.
 
 
 
