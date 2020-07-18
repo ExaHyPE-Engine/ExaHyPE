@@ -111,6 +111,21 @@ If you decide to use the C++ multithreading, you can leave out the TBB-specific
 settings.
 
 
+\section{COSMA/DINE (Durham Intelligent NIC Environment)}
+
+
+Log into the first DINE node as by documentation (\texttt{ssh -X b101}) and run
+
+\begin{code}
+module load intel_comp/2020-update1
+module load intel_mpi/2020
+module unload python/2.7.15
+module load python/3.6.5
+./configure --with-multithreading=omp --with-mpi=mpiicpc
+\end{code}
+
+
+
 \section{Local workstations}
 
 
