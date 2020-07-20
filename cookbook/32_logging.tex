@@ -107,7 +107,7 @@ your own alternative implementation or switch to another option.
 Logging can be very time-consuming. I therefore decided to link the Log objects
 to one particular log device statically. If you want to ``redirect'' your
 outcome, you can either manually edit the logging header, or you can retranslate
-your code with \texttt{-DUsedLogService=xxx}.
+your code with \texttt{-DUseLogService=xxx}.
 \texttt{xxx} is the class to be used.
 I detail the variants I currently ship with Peano below.
 
@@ -119,7 +119,7 @@ I detail the variants I currently ship with Peano below.
 \subsection{CommandLineLogger}
 
 To select this logger, compile with
-\texttt{-DUsedLogService=CommandLineLogger}.
+\texttt{-DUseLogService=CommandLineLogger}.
 This logger is the default.
 
 
@@ -159,7 +159,23 @@ The output files are enumerated automatically.
 \subsection{ChromeTraceFileLogger}
 
 To select this logger, compile with
-\texttt{-DUsedLogService=ChromeTraceFileLogger}.
+\texttt{-DUseLogService=ChromeTraceFileLogger}.
+
+This logger writes the one json file per rank. The format conforms to Google
+Chrome's tracing format, i.e.~you can open the file in Google Chrome by typing
+in the URL \texttt{chrome:///tracing} and loading in the file in the GUI that
+pops up.
+As the format is prescribed, there are no opportunities to configure the output.
+While the majority of all output data goes into these Chrome files, warnings,
+errors and info messages are also dumped to the terminal in a format which can
+be read by humans easily.
+
+
+
+\subsection{NVTX logger (NVIDIA SDK)}
+
+To select this logger, compile with
+\texttt{-DUseLogService=NVTXLogger}.
 
 This logger writes the one json file per rank. The format conforms to Google
 Chrome's tracing format, i.e.~you can open the file in Google Chrome by typing
