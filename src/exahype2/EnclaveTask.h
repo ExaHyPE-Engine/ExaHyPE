@@ -41,6 +41,8 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
   private:
     friend class EnclaveBookkeeping;
 
+    static tarch::logging::Log                   _log;
+
     const ::peano4::datamanagement::CellMarker   _marker;
     double*                                      _inputValues;
     double*                                      _outputValues;
