@@ -2,6 +2,10 @@
 #include "EnclaveBookkeeping.h"
 
 
+
+tarch::logging::Log  exahype2::EnclaveTask::_log( "exahype2::EnclaveTask" );
+
+
 exahype2::EnclaveTask::EnclaveTask(
   const ::peano4::datamanagement::CellMarker&    marker,
   double*                                        inputValues,
@@ -24,11 +28,13 @@ int exahype2::EnclaveTask::getTaskNumber() const {
 
 
 bool exahype2::EnclaveTask::run() {
+  logTraceIn( "run()" );
   _outputValues = new double[_numberOfResultValues];
   _functor(_inputValues,_outputValues,_marker);
   delete[] _inputValues;
 
   EnclaveBookkeeping::getInstance().finishedTask(this);
+  logTraceOut( "run()" );
   return false;
 }
 
