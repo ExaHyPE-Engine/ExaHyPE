@@ -1,0 +1,57 @@
+\chapter{Performance Analaysis}
+\label{capter:performance-analysis}
+
+
+\Peano's support for performance analysis tools rests on two legs:
+On the one hand, the code has its built-in statistics tracking which samples
+statistics from a user perspective.
+On the other hand, we provide support for a couple of tracing APIs.
+The classes underlying both features all are located within
+\texttt{tarch::logging}.
+The statistics is only one class therein.
+All the tracing relies on \Peano's logging interface.
+
+
+\section{Statistics}
+
+The collection of statistics is switched on by compiling with
+\texttt{-DTrackStatistics}.
+To configure the statistics, consult the class documentation of
+\texttt{tarch::logging::Statistics}.
+\Peano\ collects user-defined counters and dumps them all as a CSV file if you
+invoke the dump operation on the statistics. 
+You have to do so automatically\footnote{\ExaHyPE\ automatically trigger this
+operation for you.}.
+
+
+
+\section{Tracing}
+
+
+All tracing relies on \Peano's internal tracing API.
+That is, each instrumented function invokes the tracing functions.
+The tracing then filters (does the user want to see these things or not).
+``Successfull'' traces then are forwarded into the tracing backend and written
+in the right format.
+Section \ref{section:logging} discusses how to use the tracing.
+
+
+Here's the steps you have to do:
+\begin{enumerate}
+  \item Set \texttt{-DUseLogService=device} as compile flag to select the
+  correct tracing target. All loggers are described in Section
+  \ref{section:logging:logging-devices}. I recommend to rerun \texttt{configure}
+  to propagate the compiler flag all the way through.
+  \item Recompile the whole code/\Peano\ core.
+  \item Link against the \texttt{\_trace} libraries of \Peano\footnote{In
+  \ExaHyPE, there is a corresponding target that you can select.}.
+  \item Ensure your own code is compiled with \texttt{-DPeanoDebug=1} (or
+  higher). See the discussion on page \pageref{section:logging}.
+  \item Ensure that you have a log filter file and that those routines that you
+  are interested in are whitelisted.
+\end{enumerate}
+
+
+
+
+

@@ -11,6 +11,16 @@
 #include "tarch/logging/ChromeTraceFileLogger.h"
 
 
+#if UsedLogService==ChromeTraceFileLogger
+#include "ChromeTraceFileLogger.h"
+#endif
+
+#if UsedLogService==NVTXLogger
+#include "NVTXLogger.h"
+#endif
+
+
+
 /**
  * For the machine name. If it doesn't work, switch it off in the file
  * CompilerSpecificSettings.h.
@@ -40,7 +50,7 @@ tarch::logging::Log::~Log() {
 #if PeanoDebug>=4
 void tarch::logging::Log::debug(const std::string& methodName, const std::string& message) {
   if (LogFilter::getInstance().writeDebug( _className )) {
-    UsedLogService::getInstance().debug(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().debug(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
   }
 }
 #endif
@@ -48,32 +58,32 @@ void tarch::logging::Log::debug(const std::string& methodName, const std::string
 
 void tarch::logging::Log::info(const std::string& methodName, const std::string& message) {
   if (LogFilter::getInstance().writeInfo( _className )) {
-    UsedLogService::getInstance().info(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().info(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
   }
 }
 
 
 void tarch::logging::Log::warning(const std::string& methodName, const std::string& message) {
-  UsedLogService::getInstance().warning(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+  UseLogService::getInstance().warning(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
 }
 
 
 void tarch::logging::Log::error(const std::string& methodName, const std::string& message) {
-  UsedLogService::getInstance().error(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+  UseLogService::getInstance().error(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
 }
 
 
 #if PeanoDebug>=1
 void tarch::logging::Log::traceIn(const std::string& methodName, const std::string& message) {
   if (LogFilter::getInstance().writeTrace( _className )) {
-    UsedLogService::getInstance().traceIn(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().traceIn(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
   }
 }
 
 
 void tarch::logging::Log::traceOut(const std::string& methodName, const std::string& message) {
   if (LogFilter::getInstance().writeTrace( _className )) {
-    UsedLogService::getInstance().traceOut(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().traceOut(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
   }
 }
 #else
@@ -87,7 +97,7 @@ void tarch::logging::Log::traceOut(const std::string& methodName, const std::str
 
 
 void tarch::logging::Log::indent( bool indent, const std::string& trace, const std::string& message ) const {
-  UsedLogService::getInstance().indent( indent, trace, message );
+  UseLogService::getInstance().indent( indent, trace, message );
 }
 
 
@@ -124,7 +134,7 @@ std::string tarch::logging::Log::getMachineInformation() {
 
 
 void tarch::logging::Log::flushBeforeAssertion() {
-  UsedLogService::getInstance().close();
+  UseLogService::getInstance().close();
 }
 
 
