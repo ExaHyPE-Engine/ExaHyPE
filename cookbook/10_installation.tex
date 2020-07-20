@@ -112,6 +112,14 @@ below:
    \\
   \texttt{--with-delta} & Configure \Peano\  such that the geometry library
   $\Delta $ is used. Not stable at the moment.
+   \\
+  \texttt{--with-nvidia} & Build against the NVIDIA NVTX SDK such that NVIDIA
+  specific logging/tracing becomes available. Ensure that your CXXFLAGS set the
+  right include path\footnote{It is
+  \texttt{CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/}
+  on my system, e.g.}.
+  This is optional.
+   \\
  \end{tabular}
 \end{center}
 
