@@ -20,7 +20,7 @@ exahype2::EnclaveTask::EnclaveTask(
   _functor(functor),
   _taskNumber(EnclaveBookkeeping::getInstance().reserveTaskNumber()) {
   logTraceIn( "EnclaveTask(...)" );
-  logTraceIn( "EnclaveTask(...)" );
+  logTraceOut( "EnclaveTask(...)" );
 }
 
 
@@ -43,7 +43,7 @@ bool exahype2::EnclaveTask::run() {
 
 void exahype2::EnclaveTask::prefetch() {
   logTraceIn( "prefetch()" );
-  logTraceIn( "prefetch()" );
+  logTraceOut( "prefetch()" );
 }
 
 
