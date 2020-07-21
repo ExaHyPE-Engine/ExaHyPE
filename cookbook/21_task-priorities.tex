@@ -279,7 +279,8 @@ void tarch::multicore::spawnAndWait(
   for (int i=1; i<tasks.size(); i++) {
     #pragma omp task
     {
-      while (tasks[i]->run()) {}
+      bool reschedule = tasks[i]->run();
+      assertion( not reschedule ); // these tasks should run only once
       delete tasks[i];
     }
   }
@@ -287,12 +288,20 @@ void tarch::multicore::spawnAndWait(
 \end{code}
 
 \noindent
-It seems that this snippet uses five threads for four subpartitions. 
+It seems that this snippet uses five threads for four subpartitions,
+i.e.~creates a task tree of height one where the parent task of the newly
+created tasks does some busy waiting.
+This is unfortunate, as further tasks might remain in the system which
+should/could be processed meanwhile (see next item).
 
 
 
 \subsection{OpenMP: task group}
 
 If I use a task group, it seems that no further OpenMP tasks are progressed
-while I wait for all tasks to terminate.
+while I wait for all child tasks to terminate.
 Idle time is thus not used efficiently.
+The tasks in \Peano\ can last for quite a while (they are whole domain
+traversals), i.e.~kicking one thread out of the system through busy
+polling/active waiting is kind of a waste.
+Therefore, we need a more elegant solution here.
