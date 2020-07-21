@@ -118,7 +118,7 @@ settings.
 For Intel's ITAC, we have to load the itac module and reconfigure:
 \begin{code}
 module itac/2020.2
-./configure ... --with-intel
+	./configure ... --with-intel CXXFLAGS=-I$ITAC_HOME/itac_2020/intel64/include
 \end{code}
 
 
