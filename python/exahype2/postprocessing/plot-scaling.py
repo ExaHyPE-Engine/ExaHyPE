@@ -47,6 +47,10 @@ if __name__ == "__main__":
     different_file_patterns = args.file_pattern.split( "|" )
 
   color_counter = 0
+  
+  single_node_time = -1
+  max_nodes        = -1
+  
   for current_file_type in different_file_patterns:  
     data_points = []
     for data_file in data_files:
@@ -66,8 +70,14 @@ if __name__ == "__main__":
 
     (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.last_iteration, args.max_cores_per_rank )    
     
-    if different_file_patterns.index(current_file_type)==0 and not args.plot_efficiency:
-      plt.plot( x_data, exahype2.postprocessing.linear_runtime_trend_line(x_data,y_data), ":", color="#000000", label="linear trend" )  
+    if len(x_data)==1:
+      print( "file " + data_file + " hosts only one entry: assume this is the baseline" )
+      single_node_time = y_data[0]  
+      if not args.plot_efficiency:
+        plt.plot( x_data, y_data, ":", color="#000000", label="linear trend" )  
+      
+    max_nodes = max(max_nodes,x_data[-1])
+    
     if args.plot_efficiency:
       normalised_fasted_time = y_data[0] * x_data[0]
       for i in range(0,len(x_data)):
@@ -99,6 +109,14 @@ if __name__ == "__main__":
         plt.plot( x_data, y_data, symbol, label=str(current_file_type), color=my_color, markevery=my_markevery )
     else:
       plt.plot( x_data, y_data, symbol, color=my_color, markevery=my_markevery )
+
+  #
+  # Label alread plotted before
+  #
+  if single_node_time>0 and not args.plot_efficiency:
+    x_data = range(1,max_nodes)
+    y_data = [single_node_time/i for i in x_data]
+    plt.plot( x_data, y_data, ":", color="#000000" )  
 
   
   plt.xlabel( "Ranks" )
