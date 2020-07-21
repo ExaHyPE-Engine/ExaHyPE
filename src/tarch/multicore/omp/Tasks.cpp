@@ -11,6 +11,8 @@
 #include "tarch/logging/Statistics.h"
 
 
+
+#if defined(OpenMPManualTaskPriorityImplementation)
 namespace {
   std::priority_queue<tarch::multicore::Task* > nonblockingTasks;
 }
@@ -113,11 +115,6 @@ void tarch::multicore::spawnAndWait(
 }
 
 
-/**
- * This has to be the standard C++ implementation. Even if multithreading is
- * disabled, the code might logically run with multiple threads, and then we
- * have to switch the thread context from time to time.
- */
 void tarch::multicore::yield() {
   #pragma omp taskyield
 }
@@ -126,5 +123,85 @@ void tarch::multicore::yield() {
 int tarch::multicore::getNumberOfPendingTasks() {
   return nonblockingTasks.size();
 }
+
+#elif !defined(OpenMPManualTaskPriorityImplementation)
+namespace {
+  int numberOfNonblockingTasks;
+}
+
+
+/**
+ * To teh best of my knowledge, there's no way to tell OpenMP directly that I
+ * wanna do up to maxTasks directly and then return. So I have this crude
+ * workaround.
+ */
+bool tarch::multicore::processPendingTasks(int maxTasks) {
+  assertion(maxTasks>=0);
+
+  int previousNumberOfTasks = tarch::multicore::getNumberOfPendingTasks();
+  ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, previousNumberOfTasks );
+
+  if (maxTasks>0) {
+    #pragma omp taskyield
+  }
+
+  return tarch::multicore::getNumberOfPendingTasks() < previousNumberOfTasks;
+}
+
+
+void tarch::multicore::spawnTask(Task*  task) {
+  #pragma omp atomic
+  numberOfNonblockingTasks += 1;
+
+  #pragma omp task priority( task->getPriority() )
+  {
+    bool requeue = task->run();
+    if (requeue) {
+      spawnTask( task );
+    }
+    else {
+      delete task;
+    }
+
+    #pragma omp atomic
+    numberOfNonblockingTasks -= 1;
+  }
+
+  ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
+}
+
+
+/**
+ * In theory, a task can requeue itself. Shouldn't do so in this context though.
+ */
+void tarch::multicore::spawnAndWait(
+  const std::vector< Task* >&  tasks
+) {
+  #pragma omp taskgroup
+  {
+    for (int i=1; i<tasks.size(); i++) {
+      #pragma omp task priority( tasks[i]->getPriority() )
+      {
+        while (tasks[i]->run()) {}
+        delete tasks[i];
+      }
+    }
+  }
+}
+
+
+void tarch::multicore::yield() {
+  #pragma omp taskyield
+}
+
+
+/**
+ * @return Number of background tasks that are still out there
+ */
+int tarch::multicore::getNumberOfPendingTasks() {
+  return numberOfNonblockingTasks;
+}
+
+#endif
 
 #endif
