@@ -13,6 +13,8 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 
 
+#define TrackStatistics
+
 
 namespace tarch {
   namespace logging {

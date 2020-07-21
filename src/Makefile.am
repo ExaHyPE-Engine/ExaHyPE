@@ -144,6 +144,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/logging/ChromeTraceFileLogger.cpp \
  tarch/logging/Log.cpp \
  tarch/logging/LogFilterFileReader.cpp \
+ tarch/logging/NVTXLogger.cpp \
  tarch/logging/LogFilter.cpp \
  tarch/logging/Statistics.cpp \
  tarch/timing/Watch.cpp \

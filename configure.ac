@@ -250,6 +250,24 @@ fi
 
 
 #
+# NVIDIA toolchain
+#
+AC_ARG_WITH(nvidia,
+  AC_HELP_STRING([--with-nvidia], [build with the NVIDIA SDK [default=no]]),
+  [ AC_MSG_CHECKING(for nvidia)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);                                nvidia=false ;;
+      *)     AC_MSG_RESULT(build with support for the NVIDIA SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);  nvidia=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for nvidia); AC_MSG_RESULT(no); nvidia=false ])
+
+if test "$with_nvidia" = "yes"; then
+  AC_DEFINE([UseNVIDIA], [1], [UseNVIDIA])
+  AC_CHECK_HEADERS([nvToolsExt.h],[],[AC_MSG_ERROR([header <nvToolsExt.h> not found])])
+fi
+
+
+#
 # ExaHypE2
 #
 AC_ARG_ENABLE(exahype,
