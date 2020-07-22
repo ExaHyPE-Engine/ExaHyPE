@@ -32,7 +32,11 @@ int exahype2::EnclaveGPUTask::getTaskNumber() const {
 bool exahype2::EnclaveGPUTask::run() {
   logTraceIn( "run()" );
   _outputValues = new double[_numberOfResultValues];
-  _functor(_inputValues,_outputValues,_marker);
+
+  #pragma omp target
+  {
+    _functor(_inputValues,_outputValues,_marker);
+  }
   delete[] _inputValues;
 
   EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);
