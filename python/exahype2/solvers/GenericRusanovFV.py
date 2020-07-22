@@ -518,7 +518,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 #include "exahype2/fv/Generic.h" 
 #include "peano4/parallel/Tasks.h" 
 """,
-      True
+      "HEAP"
     )
     reconstruct_patch_and_apply_FV_kernel.additional_includes += """
 #include "exahype2/EnclaveBookkeeping.h"

@@ -85,13 +85,12 @@ int  exahype2::EnclaveBookkeeping::reserveTaskNumber() {
 }
 
 
-void exahype2::EnclaveBookkeeping::finishedTask(EnclaveTask* task) {
-  const int taskNumber = task->getTaskNumber();
+void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResultValues, double* data) {
   logDebug( "reserveTaskNumber()", "task " << taskNumber << " has terminated. Bookkeep results" );
 
   tarch::multicore::Lock lockFinishedTasks( _finishedTasksSemaphore );
   assertionEquals( _finishedTasks.count(taskNumber),0 );
-  std::pair<int,double*> newEntry(task->_numberOfResultValues,task->_outputValues);
+  std::pair<int,double*> newEntry(numberOfResultValues,data);
   _finishedTasks.insert( std::pair<int, std::pair<int,double*> >(taskNumber,newEntry) );
 
   lockFinishedTasks.free();

@@ -65,7 +65,7 @@ class exahype2::EnclaveBookkeeping {
      * The task remains active until its results are picked up by the
      * application through waitForTaskToTerminateAndCopyResultOver().
      */
-    void finishedTask(EnclaveTask* task);
+    void finishedTask(int taskNumber, int numberOfResultValues, double* data);
 };
 
 #endif

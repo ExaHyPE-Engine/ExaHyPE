@@ -14,6 +14,7 @@
 
 #if defined(OpenMPManualTaskPriorityImplementation)
 namespace {
+  // @todo Doesn't use the priorities as I define them but uses the pointer addresses
   std::priority_queue<tarch::multicore::Task* > nonblockingTasks;
 }
 
