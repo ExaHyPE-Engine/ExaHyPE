@@ -19,7 +19,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap,functor_implementation,touch_face_first_time_functor,guard_cell_operation,guard_face_operation,additional_includes,reconstruction_array_allocation="STACK"):
+  def __init__(self,patch,patch_overlap,functor_implementation,touch_face_first_time_functor,guard_cell_operation,guard_face_operation,additional_includes,on_heap_with_manual_delete=False):
     """
 
   patch: peano4.datamodel.Patch
@@ -29,8 +29,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     Consult remark above about how the dimensions of this overlap 
     patch have to match
      
-  functor_implementation: string
-    Plain C++ code
+  on_heap_with_manual_delete: bool
   
   reconstruction_array_allocation: string
     If this argument is STACK, then we create all reconstructed data on 
@@ -98,7 +97,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.d[ "GUARD_CELL_OPERATION" ]                 = guard_cell_operation
     self.d[ "GUARD_FACE_OPERATION" ]                 = guard_face_operation
 
-    if reconstruction_array_allocation=="STACK":
+    if on_heap_with_manual_delete:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
     double* reconstructedPatch = new double[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
@@ -106,17 +105,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     double* reconstructedPatch = new double[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """    
-    elif reconstruction_array_allocation=="HEAP":
-      self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
-    #if Dimensions==2
-    double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
-    #elif Dimensions==3
-    double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
-    #endif
-"""    
     else:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
-    double* reconstructedPatch = """ + reconstruction_array_allocation +++ """;
     #if Dimensions==2
     double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
     #elif Dimensions==3

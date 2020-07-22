@@ -10,6 +10,7 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import exahype2.grid.EnclaveLabels
 
 from .FV import FV
+from multiprocessing.heap import Heap
 
 
 class AbstractGenericRusanovFV( FV ):
@@ -348,7 +349,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     add the marker to the cell which holds the semaphore/cell number.
     
   """
-  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
+  def __init__(self, name, patch_size, unknowns, time_step_size, flux=True, ncp=False, plot_grid_properties=False, use_gpu=False):
     """
       Instantiate a generic FV scheme with an overlap of 1.
     """
@@ -428,7 +429,9 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     #
     self._patch.generator.store_persistent_condition  = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Primary"
     self._patch.generator.load_persistent_condition   = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Secondary"
-    self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """ 
+    self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """
+    
+    self._use_gpu = use_gpu 
 
 
   def add_actions_to_create_grid(self, step):
@@ -476,7 +479,24 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
       
       """ + self.HandleCellTemplate + """  
     }};
+"""    
         
+
+    if self._use_gpu:        
+      task_based_implementation_primary_iteration += """
+    ::exahype2::EnclaveGPUTask* task = new ::exahype2::EnclaveGPUTask(
+        marker,
+        reconstructedPatch,
+        #if Dimensions==2
+        {NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D},
+        #else
+        {NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D},
+        #endif
+        taskBody        
+    );
+"""
+    else:    
+      task_based_implementation_primary_iteration += """
     ::exahype2::EnclaveTask* task = new ::exahype2::EnclaveTask(
         marker,
         reconstructedPatch,
@@ -487,7 +507,10 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
         #endif
         taskBody        
     );
+"""
 
+
+    task_based_implementation_primary_iteration += """
     peano4::parallel::Tasks spawn( 
         task,
         peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
@@ -518,11 +541,12 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 #include "exahype2/fv/Generic.h" 
 #include "peano4/parallel/Tasks.h" 
 """,
-      "HEAP"
+      True
     )
     reconstruct_patch_and_apply_FV_kernel.additional_includes += """
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
+#include "exahype2/EnclaveGPUTask.h"
 """    
 
     roll_over_enclave_task_results = peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
@@ -532,6 +556,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
       self._get_default_includes() + self.get_user_includes() + """
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
+#include "exahype2/EnclaveGPUTask.h"
 """    
     )
 

@@ -11,11 +11,20 @@
 #include "tarch/logging/Statistics.h"
 
 
+#define OpenMPManualTaskPriorityImplementation
+
+
 #if defined(OpenMPManualTaskPriorityImplementation)
 namespace {
-  // @todo Doesn't use the priorities as I define them but uses the pointer addresses
-  std::priority_queue<tarch::multicore::Task* > nonblockingTasks;
+  //std::priority_queue< tarch::multicore::Task* >   nonblockingTasks;
+
+  std::priority_queue<
+    tarch::multicore::Task*,
+    std::vector<tarch::multicore::Task*>,
+    tarch::multicore::TaskComparison
+  > nonblockingTasks;
 }
+
 
 bool tarch::multicore::processPendingTasks(int maxTasks) {
   assertion(maxTasks>=0);
@@ -80,6 +89,8 @@ void tarch::multicore::spawnTask(Task*  job) {
 
 
 /**
+ * Process a set of tasks and wait for their completion
+ *
  * I originally thought we could just work with parallel fors. However, this
  * does not work, as we don't want to spawn our own parallel region here. We
  * expect the overarching main loop to be a parallel region. This main things
@@ -89,15 +100,65 @@ void tarch::multicore::spawnTask(Task*  job) {
  * environment, OpenMP will complain. It won't work, as we operate within
  * single. So I rely here on explicit tasking.
  *
- * <h2> Task group </h2>
+ * For the explicit tasking version, I have a three different implementation
+ * variants.
+ *
+ * <h2> Vanilla version </h2>
+ *
+ * This vanilla version is the slowest one. However, it is the one I'd
+ * personally prefer. It should launch the n tasks. If one of them
+ * finishes early, it should try to process further tasks.
+ *
+ *
+ * <h2> Explicit-split version </h2>
  *
  * If I do not handle the last task explicitly on the master, I ran into the
  * situation that I had n tasks in tasks, but OpenMP used n+1 threads with the
- * master not doing any work. This severely limited scalability.
+ * master not doing any work. This severely limited scalability. What likely
+ * happens is that OpenMP spawns an empy root task with n+1 children. By the
+ * time the root task becomes active, the n children are already stolen. This
+ * means the producer thread is left out with the root task.
+ *
+ * <h2> Background task processing </h2>
+ *
+ * I found it advantageous to process background tasks here if there
+ * are background tasks. This doesn't make the code faster in all
+ * cases, but usually is a good choice. So what happens is as follows:
+ * If there are background tasks, then the n tasks are spawned as separate
+ * threads, and we run a background tasks in parallel. If there are no
+ * background tasks, we fall back to the vanilla version.
+ *
+ * <h2> The while loop over runs </h2>
+ *
+ * Peano's tasks return a bool that says whether a task should run.
+ * If tasks are part of a task set for this routine, they should not
+ * return true or return true only a fixed number of times. Therefore,
+ * the while loop does not produce a deadlock.
  */
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
+  //
+  // ===============
+  // Vanilla version
+  // ===============
+/*
+  #pragma omp taskgroup
+  {
+    for (int i=0; i<tasks.size(); i++) {
+      #pragma omp task
+      {
+        while (tasks[i]->run()) {}
+        delete tasks[i];
+      }
+    }
+  }
+*/
+
+  // ======================
+  // Explicit split version
+  // ======================
+/*
   if (not tasks.empty()) {
     #pragma omp taskgroup
     {
@@ -108,6 +169,27 @@ void tarch::multicore::spawnAndWait(
           delete tasks[i];
         }
       }
+      while (tasks[0]->run()) {}
+      delete tasks[0];
+    }
+  }
+*/
+
+  // =======================
+  // Background taks version
+  // =======================
+  if (not tasks.empty()) {
+    #pragma omp taskgroup
+    {
+      for (int i=1; i<tasks.size(); i++) {
+        #pragma omp task
+        {
+          while (tasks[i]->run()) {}
+          delete tasks[i];
+        }
+      }
+      processPendingTasks(0);
+
       while (tasks[0]->run()) {}
       delete tasks[0];
     }

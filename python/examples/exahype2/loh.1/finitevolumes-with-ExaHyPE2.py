@@ -65,7 +65,8 @@ project.add_solver(
     unknowns       = 3+6+3+1, # 13, vel(3) + stress(6) + material parameters(3) + diffuse interface(1)  
     time_step_size = 0.01, 
     flux           = True, 
-    ncp            = True) )
+    ncp            = True,
+    use_gpu        = True) )
 
 
 #build_mode = peano4.output.CompileMode.Asserts

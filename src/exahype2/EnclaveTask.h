@@ -52,7 +52,7 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
 
   public:
     /**
-     * I expect taskNumber of
+     * Create plain enclave task.
      */
     EnclaveTask(
       const ::peano4::datamanagement::CellMarker&    marker,
