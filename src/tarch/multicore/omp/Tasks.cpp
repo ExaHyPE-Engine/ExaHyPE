@@ -11,7 +11,6 @@
 #include "tarch/logging/Statistics.h"
 
 
-
 #if defined(OpenMPManualTaskPriorityImplementation)
 namespace {
   // @todo Doesn't use the priorities as I define them but uses the pointer addresses
@@ -180,7 +179,7 @@ void tarch::multicore::spawnAndWait(
 ) {
   #pragma omp taskgroup
   {
-    for (int i=1; i<tasks.size(); i++) {
+    for (int i=0; i<tasks.size(); i++) {
       #pragma omp task priority( tasks[i]->getPriority() )
       {
         while (tasks[i]->run()) {}
