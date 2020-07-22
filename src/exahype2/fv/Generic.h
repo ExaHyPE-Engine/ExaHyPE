@@ -33,6 +33,16 @@ namespace exahype2 {
       int    haloSize
     );
 
+    namespace gpu {
+      void copyPatch(
+        double QinWithHalo[],
+        double QOutWithoutHalo[],
+        int    unknowns,
+        int    numberOfVolumesPerAxisInPatch,
+        int    haloSize
+      );
+    }
+
     /**
      * Is a face loop-based implementation of a split 1d Riemann.
      *

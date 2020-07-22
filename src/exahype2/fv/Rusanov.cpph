@@ -1,0 +1,55 @@
+
+template <typename Flux, typename Eigenvalues>
+void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
+        Flux                                         flux,
+        Eigenvalues                                  eigenvalues,
+        const tarch::la::Vector<Dimensions,double>&  patchCentre,
+        const tarch::la::Vector<Dimensions,double>&  patchSize,
+        double                                       t,
+        double                                       dt,
+        int                                          numberOfVolumesPerAxisInPatch,
+        int                                          unknowns,
+        double                                       Qin[],
+        double                                       Qout[]
+) {
+  ::exahype2::fv::applyRusanovToPatch_FaceLoops(
+    flux,
+    eigenvalues,
+    patchCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfVolumesPerAxisInPatch,
+    unknowns,
+    Qin, Qout
+  );
+}
+
+
+template <typename Flux, typename NCP, typename Eigenvalues>
+void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
+  Flux                                         flux,
+  NCP                                          nonconservativeProduct,
+  Eigenvalues                                  eigenvalues,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  double                                       t,
+  double                                       dt,
+  int                                          numberOfVolumesPerAxisInPatch,
+  int                                          unknowns,
+  double                                       Qin[],
+  double                                       Qout[]
+) {
+  ::exahype2::fv::applyRusanovToPatch_FaceLoops(
+    flux,
+	nonconservativeProduct,
+    eigenvalues,
+    patchCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfVolumesPerAxisInPatch,
+    unknowns,
+    Qin, Qout
+  );
+}

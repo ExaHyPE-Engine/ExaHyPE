@@ -18,17 +18,22 @@ class AbstractGenericRusanovFV( FV ):
   __None         = "<none>"
 
   def __init__(self, name, patch_size, unknowns, flux, ncp, plot_grid_properties):
+    """
+    
+      flux: Bool
+        Use a flux term
+      
+      ncp: Bool
+        Use a non-conversative product    
+        
+    """
     super(AbstractGenericRusanovFV,self).__init__(name, patch_size, 1, unknowns, plot_grid_properties)
     
-    if flux and not ncp:
-      self.HandleCellTemplate = self.HandleCellTemplate_Flux
-    #elif not flux and ncp:
-    #  self.HandleCellTemplate = self.HandleCellTemplate_NCP
-    elif flux and ncp:
-      self.HandleCellTemplate = self.HandleCellTemplate_Flux_NCP
-    else:
-      print( "ERROR: Combination of PDE terms not supported" )
-      
+    self._flux  = flux
+    self._ncp   = ncp
+    
+    self.HandleCellTemplate = self.construct_HandleCellTemplate()
+         
     if flux:
       self._flux_implementation        = self.__User_Defined
     else:
@@ -43,6 +48,26 @@ class AbstractGenericRusanovFV( FV ):
     self._boundary_conditions_implementation        = self.__User_Defined
     self._refinement_criterion_implementation       = self.__User_Defined
     self._initial_conditions_implementation         = self.__User_Defined
+
+
+  def construct_HandleCellTemplate(self, namespace="::exahype2::fv::" ):
+    """
+    
+      Analyses which PDE terms the user wants to use and returns the 
+      corresponding cell template. This template is usually stored 
+      within self.HandleCellTemplate but you might want to do other
+      stuff with it
+      
+    """
+    if self._flux and not self._ncp:
+      return namespace + self.HandleCellTemplate_Flux
+    #elif not flux and ncp:
+    #  self.HandleCellTemplate = self.HandleCellTemplate_NCP
+    elif self._flux and self._ncp:
+      return namespace + self.HandleCellTemplate_Flux_NCP
+    else:
+      print( "ERROR: Combination of PDE terms not supported" )
+
   
   def set_implementation(self,flux=__None,ncp=__None,eigenvalues=__User_Defined,boundary_conditions=__User_Defined,refinement_criterion=__User_Defined,initial_conditions=__User_Defined):
     self._flux_implementation        = flux
@@ -120,7 +145,7 @@ class AbstractGenericRusanovFV( FV ):
 """
 
 
-  HandleCellTemplate_Flux = """::exahype2::fv::applyRusanovToPatch_FaceLoops(
+  HandleCellTemplate_Flux = """applyRusanovToPatch_FaceLoops(
     [&](
       double                                       Q[],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -155,7 +180,7 @@ class AbstractGenericRusanovFV( FV ):
 """
 
 
-  HandleCellTemplate_Flux_NCP = """::exahype2::fv::applyRusanovToPatch_FaceLoops(
+  HandleCellTemplate_Flux_NCP = """applyRusanovToPatch_FaceLoops(
     [&](
       double                                       Q[],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -467,9 +492,13 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     
-    task_based_implementation_primary_iteration = """
+
+        
+
+    if self._use_gpu:        
+      task_based_implementation_primary_iteration = """
     static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
-      ::exahype2::fv::copyPatch(
+      ::exahype2::fv::gpu::copyPatch(
         reconstructedPatch,
         originalPatch,
         {NUMBER_OF_UNKNOWNS},
@@ -477,13 +506,10 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
         {HALO_SIZE}
       );
       
-      """ + self.HandleCellTemplate + """  
+      """ + self.construct_HandleCellTemplate( namespace="::exahype2::fv::gpu::" ) + """  
     }};
-"""    
-        
 
-    if self._use_gpu:        
-      task_based_implementation_primary_iteration += """
+
     ::exahype2::EnclaveGPUTask* task = new ::exahype2::EnclaveGPUTask(
         marker,
         reconstructedPatch,
@@ -496,7 +522,20 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     );
 """
     else:    
-      task_based_implementation_primary_iteration += """
+      task_based_implementation_primary_iteration = """
+    static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
+      ::exahype2::fv::copyPatch(
+        reconstructedPatch,
+        originalPatch,
+        {NUMBER_OF_UNKNOWNS},
+        {NUMBER_OF_VOLUMES_PER_AXIS},
+        {HALO_SIZE}
+      );
+      
+      """ + self.construct_HandleCellTemplate( namespace="::exahype2::fv::" ) + """  
+    }};
+
+
     ::exahype2::EnclaveTask* task = new ::exahype2::EnclaveTask(
         marker,
         reconstructedPatch,

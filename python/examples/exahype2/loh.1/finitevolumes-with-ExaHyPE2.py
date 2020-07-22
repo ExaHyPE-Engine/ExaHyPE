@@ -66,7 +66,7 @@ project.add_solver(
     time_step_size = 0.01, 
     flux           = True, 
     ncp            = True,
-    use_gpu        = True) )
+    use_gpu        = False) )
 
 
 #build_mode = peano4.output.CompileMode.Asserts
