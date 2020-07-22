@@ -532,7 +532,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
         {HALO_SIZE}
       );
       
-      """ + self.construct_HandleCellTemplate( namespace="::exahype2::fv::gpu::" ) + """  
+      """ + self.construct_HandleCellTemplate( namespace="::exahype2::fv::" ) + """  
     }};
 
 
