@@ -1,19 +1,28 @@
-
 template <typename Flux, typename Eigenvalues>
 void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
-        Flux                                         flux,
-        Eigenvalues                                  eigenvalues,
-        const tarch::la::Vector<Dimensions,double>&  patchCentre,
-        const tarch::la::Vector<Dimensions,double>&  patchSize,
-        double                                       t,
-        double                                       dt,
-        int                                          numberOfVolumesPerAxisInPatch,
-        int                                          unknowns,
-        double                                       Qin[],
-        double                                       Qout[]
+  Flux                                         flux,
+  Eigenvalues                                  eigenvalues,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  double                                       t,
+  double                                       dt,
+  int                                          numberOfVolumesPerAxisInPatch,
+  int                                          unknowns,
+  double                                       Qin[],
+  double                                       Qout[]
 ) {
   ::exahype2::fv::applyRusanovToPatch_FaceLoops(
     flux,
+	[] (
+	  double                                       Q[],
+	  double                                       gradQ[][Dimensions],
+	  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+	  const tarch::la::Vector<Dimensions,double>&  volumeH,
+	  double                                       t,
+	  double                                       dt,
+	  int                                          normal,
+	  double                                       BgradQ[]
+	) -> void {},
     eigenvalues,
     patchCentre,
     patchSize,
@@ -40,16 +49,64 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   double                                       Qin[],
   double                                       Qout[]
 ) {
-  ::exahype2::fv::applyRusanovToPatch_FaceLoops(
-    flux,
-	nonconservativeProduct,
-    eigenvalues,
-    patchCentre,
-    patchSize,
-    t,
-    dt,
-    numberOfVolumesPerAxisInPatch,
-    unknowns,
-    Qin, Qout
+  static tarch::logging::Log _log( "exahype2::fv::gpu" );
+  logTraceInWith6Arguments( "applyRusanovToPatch_FaceLoops(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
+
+  #if Dimensions==2
+  applySplit1DRiemannToPatch_Overlap1AoS2d(
+    [&](
+      double                                       QL[],
+      double                                       QR[],
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       dx,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      double                                       FL[],
+      double                                       FR[]
+    ) -> void {
+      internal::splitRusanov1d(
+        flux, nonconservativeProduct, eigenvalues,
+        QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+      );
+    },
+		patchCentre,
+		patchSize,
+		t,
+		dt,
+		numberOfVolumesPerAxisInPatch,
+		unknowns,
+		Qin,
+		Qout
   );
+  #else
+  applySplit1DRiemannToPatch_Overlap1AoS3d(
+    [&](
+      double                                       QL[],
+      double                                       QR[],
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       dx,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      double                                       FL[],
+      double                                       FR[]
+    ) -> void {
+      internal::splitRusanov1d(
+        flux, nonconservativeProduct, eigenvalues,
+		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+     );
+    },
+	patchCentre,
+	patchSize,
+	t,
+	dt,
+	numberOfVolumesPerAxisInPatch,
+	unknowns,
+	Qin,
+	Qout
+  );
+  #endif
+
+  logTraceOutWith6Arguments( "applyRusanovToPatch_FaceLoops(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 }

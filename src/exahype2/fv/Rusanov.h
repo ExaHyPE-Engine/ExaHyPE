@@ -130,6 +130,81 @@ namespace exahype2 {
         double                                       Qout[]
       );
     }
+
+    namespace internal {
+      void splitRusanov1d(
+        std::function< void(
+              double                                       Q[],
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  volumeH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal,
+              double                                       F[]
+        ) >   flux,
+        std::function< void(
+              double                                       Q[],
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  volumeH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal,
+              double                                       lambdas[]
+        ) >   eigenvalues,
+        double QL[],
+        double QR[],
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        int                                          unknowns,
+        double                                       FL[],
+        double                                       FR[]
+      );
+
+
+      void splitRusanov1d(
+          std::function< void(
+                  double                                       Q[],
+                  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+                  const tarch::la::Vector<Dimensions,double>&  volumeH,
+                  double                                       t,
+                  double                                       dt,
+                  int                                          normal,
+                  double                                       F[]
+          ) >   flux,
+          std::function< void(
+              double                                       Q[],
+              double                                       gradQ[][Dimensions],
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  volumeH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal,
+              double                                       BgradQ[]
+            ) >   nonconservativeProduct,
+          std::function< void(
+                  double                                       Q[],
+                  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+                  const tarch::la::Vector<Dimensions,double>&  volumeH,
+                  double                                       t,
+                  double                                       dt,
+                  int                                          normal,
+                  double                                       lambdas[]
+          ) >   eigenvalues,
+          double QL[],
+          double QR[],
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       dx,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          int                                          unknowns,
+          double                                       FL[],
+          double                                       FR[]
+      );
+    }
   }
 }
 
