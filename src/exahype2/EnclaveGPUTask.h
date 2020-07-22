@@ -52,7 +52,10 @@ class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
 
   public:
     /**
-     * I expect taskNumber of
+     * Construct a task that can run on the GPU
+     *
+     * But it doesn't have to to run there. It is up to the task to decide whether
+     * to offload or not.
      */
     EnclaveGPUTask(
       const ::peano4::datamanagement::CellMarker&    marker,

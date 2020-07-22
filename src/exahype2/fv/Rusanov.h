@@ -118,7 +118,7 @@ namespace exahype2 {
       template <typename Flux, typename NCP, typename Eigenvalues>
       void applyRusanovToPatch_FaceLoops(
         Flux                                         flux,
-		NCP                                          nonconservativeProduct,
+        NCP                                          nonconservativeProduct,
         Eigenvalues                                  eigenvalues,
         const tarch::la::Vector<Dimensions,double>&  patchCentre,
         const tarch::la::Vector<Dimensions,double>&  patchSize,
