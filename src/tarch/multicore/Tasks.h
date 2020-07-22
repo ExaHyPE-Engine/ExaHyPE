@@ -62,6 +62,19 @@ namespace tarch {
         virtual void prefetch();
     };
 
+
+    /**
+     * Helper class if you wanna administer tasks with in a queue
+     *
+     * It is a convenient class as it works both with real objects or
+     * with pointers.
+     */
+    class TaskComparison {
+      public:
+        bool operator() (const Task& lhs, const Task& rhs) const;
+        bool operator() (Task* lhs, Task* rhs) const;
+    };
+
     /**
      * Frequently used implementation for job with a functor.
      */
@@ -126,6 +139,10 @@ namespace tarch {
     );
   }
 }
+
+
+bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs );
+
 
 #endif
 

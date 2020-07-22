@@ -177,14 +177,15 @@ be read by humans easily.
 To select this logger, compile with
 \texttt{-DUseLogService=NVTXLogger}.
 
-This logger writes the one json file per rank. The format conforms to Google
-Chrome's tracing format, i.e.~you can open the file in Google Chrome by typing
-in the URL \texttt{chrome:///tracing} and loading in the file in the GUI that
-pops up.
-As the format is prescribed, there are no opportunities to configure the output.
-While the majority of all output data goes into these Chrome files, warnings,
-errors and info messages are also dumped to the terminal in a format which can
-be read by humans easily.
+This logger forwards all trace commands to NVIDIA's profiling/tracing library. 
+
+
+\subsection{ITAC logger}
+
+To select this logger, compile with
+\texttt{-DUseLogService=ITACLogger}.
+
+This logger forwards all trace commands to Intel's profiling/tracing library. 
 
 
 

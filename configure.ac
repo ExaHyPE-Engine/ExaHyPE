@@ -268,6 +268,24 @@ fi
 
 
 #
+# Intel toolchain
+#
+AC_ARG_WITH(intel,
+  AC_HELP_STRING([--with-intel], [build with the Intel SDK [default=no]]),
+  [ AC_MSG_CHECKING(for intel)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);                                intel=false ;;
+      *)     AC_MSG_RESULT(build with support for the Intel SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);  intel=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for intel); AC_MSG_RESULT(no); intel=false ])
+
+if test "$with_intel" = "yes"; then
+  AC_DEFINE([UseIntel], [1], [UseIntel])
+  AC_CHECK_HEADERS([VT.h],[],[AC_MSG_ERROR([header <VT.h> not found])])
+fi
+
+
+#
 # ExaHypE2
 #
 AC_ARG_ENABLE(exahype,

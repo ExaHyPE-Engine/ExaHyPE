@@ -7,6 +7,21 @@
 #include "multicore.h"
 
 
+bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs ) {
+  return lhs.getPriority() < rhs.getPriority();
+}
+
+
+bool tarch::multicore::TaskComparison::operator() (const Task& lhs, const Task& rhs) const {
+  return lhs < rhs;
+}
+
+
+bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
+  return *lhs < *rhs;
+}
+
+
 tarch::multicore::Task::Task( int priority ):
   _priority( priority ) {
 }

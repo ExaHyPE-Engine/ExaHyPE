@@ -66,6 +66,14 @@ sbatch example-scripts/Hamilton-10-nodes.slurm-script
 sbatch example-scripts/Hamilton-12-nodes.slurm-script
 sbatch example-scripts/Hamilton-14-nodes.slurm-script
 sbatch example-scripts/Hamilton-16-nodes.slurm-script
+sbatch example-scripts/Hamilton-20-nodes.slurm-script
+sbatch example-scripts/Hamilton-24-nodes.slurm-script
+sbatch example-scripts/Hamilton-28-nodes.slurm-script
+sbatch example-scripts/Hamilton-32-nodes.slurm-script
+sbatch example-scripts/Hamilton-40-nodes.slurm-script
+sbatch example-scripts/Hamilton-48-nodes.slurm-script
+sbatch example-scripts/Hamilton-56-nodes.slurm-script
+sbatch example-scripts/Hamilton-64-nodes.slurm-script
 
 
 ## Postprocessing ##
@@ -83,9 +91,29 @@ python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="0.0
 
 This is an example script if you want to find out which ratio for trees per core is the best one:
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --group-measurements=4 --log --pattern="baseline-h-0.05|baseline-h-0.02|baseline-h-0.01|baseline-h-0.01|0.1-h-0.05|0.1-h-0.02|0.1-h-0.01|0.1-h-0.005|0.5-h-0.05|0.5-h-0.02|0.5-h-0.01|0.5-h-0.005|0.7-h-0.05|0.7-h-0.02|0.7-h-0.01|0.7-h-0.005|0.9-h-0.05|0.9-h-0.02|0.9-h-0.01|0.9-h-0.005|0.99-h-0.05|0.99-h-0.02|0.99-h-0.01|0.99-h-0.005" results-Hamilton.tar.gz
+python3 ../../../../exahype2/postprocessing/plot-scaling.py --log results-Hamilton-distributed-memory.tar.gz
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="baseline-h-0.05|baseline-h-0.02|baseline-h-0.01|baseline-h-0.01|0.7-h-0.05|0.7-h-0.02|0.7-h-0.01|0.7-h-0.005" results-Hamilton.tar.gz
+python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="baseline-h-0.05|0.99-h-0.05|0.7-h-0.05|0.5-h-0.05|0.1-h-0.05" results-Hamilton.tar.gz
+
+python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="baseline-h-0.02|0.99-h-0.02|0.7-h-0.02|0.5-h-0.02|0.1-h-0.02" results-Hamilton.tar.gz
+
+python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="baseline-h-0.01|0.99-h-0.01|0.7-h-0.01|0.5-h-0.01|0.1-h-0.01" results-Hamilton.tar.gz
+
+python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="0.99-h-0.005|0.7-h-0.005|0.5-h-0.005|0.1-h-0.005" results-Hamilton.tar.gz
+
+python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="0.99-h-0.002|0.7-h-0.002|0.5-h-0.002|0.1-h-0.002" results-Hamilton.tar.gz
+
+python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="0.99-h-0.001|0.7-h-0.001|0.5-h-0.001|0.1-h-0.001" results-Hamilton.tar.gz
+
+
+python3 ../../../../exahype2/postprocessing/plot-scaling.py --group-measurements=4 --log --pattern="baseline-h-0.05|baseline-h-0.02|baseline-h-0.01|baseline-h-0.005|0.1-h-0.05|0.1-h-0.02|0.1-h-0.01|0.1-h-0.005|0.5-h-0.05|0.5-h-0.02|0.5-h-0.01|0.5-h-0.005|0.7-h-0.05|0.7-h-0.02|0.7-h-0.01|0.7-h-0.005|0.9-h-0.05|0.9-h-0.02|0.9-h-0.01|0.9-h-0.005|0.99-h-0.05|0.99-h-0.02|0.99-h-0.01|0.99-h-0.005" results-Hamilton.tar.gz
+
+
+
+python3 ../../../../exahype2/postprocessing/plot-scaling.py --group-measurements=4 --log --pattern="0.1-h-0.05|0.1-h-0.02|0.1-h-0.01|0.1-h-0.005|0.5-h-0.05|0.5-h-0.02|0.5-h-0.01|0.5-h-0.005|0.7-h-0.05|0.7-h-0.02|0.7-h-0.01|0.7-h-0.005|0.9-h-0.05|0.9-h-0.02|0.9-h-0.01|0.9-h-0.005|0.99-h-0.05|0.99-h-0.02|0.99-h-0.01|0.99-h-0.005" results-Hamilton.tar.gz
+
+
+
 
 ### Detailed analysis ###
 Unpack the archive and run 

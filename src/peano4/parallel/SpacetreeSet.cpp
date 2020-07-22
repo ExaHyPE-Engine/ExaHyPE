@@ -528,36 +528,39 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   // I use this boolean flag from time to time to debug the code.
   const bool runSequentially = false;
 
-  logDebug( "traverse(TraversalObserver&)", "kick off primary tree sweeps: " << primaryTasks.size() << " task(s)" );
+  logTraceInWith1Argument( "traverse(TraversalObserver&)-primary", primaryTasks.size() );
   if ( not primaryTasks.empty() ) {
     static int multitasking = peano4::parallel::Tasks::getLocationIdentifier( "peano4::parallel::SpacetreeSet::traverse-1" );
     peano4::parallel::Tasks runs( primaryTasks,
       runSequentially ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
       multitasking,true);
   }
+  logTraceOut( "traverse(TraversalObserver&)-primary" );
 
   logDebug( "traverse(TraversalObserver&)", "primary tasks (traversals) complete, trigger split data stream if required" );
   streamDataFromSplittingTreesToNewTrees(observer);
   logDebug( "traverse(TraversalObserver&)", "exchange vertical data if required" );
   exchangeVerticalDataBetweenTrees(observer);
 
-  logDebug( "traverse(TraversalObserver&)", "kick off secondary tree sweeps: " << secondaryTasks.size() << " task(s)" );
+  logTraceInWith1Argument( "traverse(TraversalObserver&)-secondary", secondaryTasks.size() );
   if ( not secondaryTasks.empty() ) {
     static int multitasking = peano4::parallel::Tasks::getLocationIdentifier( "peano4::parallel::SpacetreeSet::traverse-2" );
     peano4::parallel::Tasks runs( secondaryTasks,
       runSequentially ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
       multitasking,true);
   }
+  logTraceOut( "traverse(TraversalObserver&)-secondary" );
 
   exchangeVerticalDataBetweenTrees(observer);
 
-  logDebug( "traverse(TraversalObserver&)", "kick off tertiary tree sweeps: " << tertiaryTasks.size() << " task(s)" );
+  logTraceInWith1Argument( "traverse(TraversalObserver&)-tertiary", tertiaryTasks.size() );
   if ( not tertiaryTasks.empty() ) {
     static int multitasking = peano4::parallel::Tasks::getLocationIdentifier( "peano4::parallel::SpacetreeSet::traverse-3" );
     peano4::parallel::Tasks runs( tertiaryTasks,
       runSequentially ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
       multitasking,true);
   }
+  logTraceOut( "traverse(TraversalObserver&)-tertiary" );
 
   // Ensure that there's a consumer task around. Well, at least one.
   tarch::multicore::processPendingTasks(0);

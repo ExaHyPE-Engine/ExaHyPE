@@ -65,7 +65,8 @@ project.add_solver(
     unknowns       = 3+6+3+1, # 13, vel(3) + stress(6) + material parameters(3) + diffuse interface(1)  
     time_step_size = 0.01, 
     flux           = True, 
-    ncp            = True) )
+    ncp            = True,
+    use_gpu        = True) )
 
 
 #build_mode = peano4.output.CompileMode.Asserts
@@ -105,7 +106,8 @@ peano4_project.output.makefile.set_mode(build_mode)
 peano4_project.generate( peano4.output.Overwrite.Default )
 
 peano4_project.build( 
-  make_clean_first = True 
+  make_clean_first = True,
+  number_of_parallel_builds = 1
 )
 success = peano4_project.run( ["--threads", "4"] )
 

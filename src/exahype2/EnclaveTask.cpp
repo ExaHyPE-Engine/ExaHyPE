@@ -35,7 +35,7 @@ bool exahype2::EnclaveTask::run() {
   _functor(_inputValues,_outputValues,_marker);
   delete[] _inputValues;
 
-  EnclaveBookkeeping::getInstance().finishedTask(this);
+  EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);
   logTraceOut( "run()" );
   return false;
 }
