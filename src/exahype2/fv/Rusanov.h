@@ -56,6 +56,9 @@ namespace exahype2 {
     );
 
 
+    /**
+     * This variant of Rusanov does support non-conversative (ncp) products
+     */
     void applyRusanovToPatch_FaceLoops(
       std::function< void(
         double                                       Q[],
@@ -94,6 +97,23 @@ namespace exahype2 {
       double                                       Qin[],
       double                                       Qout[]
     );
+
+
+    namespace gpu {
+      template <typename Flux, typename Eigenvalues>
+      void applyRusanovToPatch_FaceLoops(
+        Flux                                         flux,
+        Eigenvalues                                  eigenvalues,
+        const tarch::la::Vector<Dimensions,double>&  patchCentre,
+        const tarch::la::Vector<Dimensions,double>&  patchSize,
+        double                                       t,
+        double                                       dt,
+        int                                          numberOfVolumesPerAxisInPatch,
+        int                                          unknowns,
+        double                                       Qin[],
+        double                                       Qout[]
+      );
+    }
   }
 }
 
