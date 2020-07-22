@@ -21,11 +21,6 @@ std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::CellM
 
 /**
  *
- * <h2> All in header policy </h2>
- *
- * The all-in-the-header policy here seems to be weird and it is actually not nice.
- * However, we have to be able to serialise the marker to offload it to the GPU.
- * Therefore,
  */
 struct peano4::datamanagement::CellMarker {
   private:
@@ -46,13 +41,9 @@ struct peano4::datamanagement::CellMarker {
     /**
      * The x coordinate of a cell is its centre.
      */
-    inline tarch::la::Vector<Dimensions,double>  x() const {
-      return _centre;
-    }
+    tarch::la::Vector<Dimensions,double>  x() const;
 
-    inline tarch::la::Vector<Dimensions,double>  h() const {
-      return _h;
-    }
+    tarch::la::Vector<Dimensions,double>  h() const;
 
     std::string toString() const;
 

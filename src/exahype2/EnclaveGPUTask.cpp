@@ -20,6 +20,10 @@ exahype2::EnclaveGPUTask::EnclaveGPUTask(
   _functor(functor),
   _taskNumber(EnclaveBookkeeping::getInstance().reserveTaskNumber()) {
   logTraceIn( "EnclaveGPUTask(...)" );
+
+  // @todo
+  // Priority stimmt net!
+
   logTraceOut( "EnclaveGPUTask(...)" );
 }
 
@@ -33,10 +37,7 @@ bool exahype2::EnclaveGPUTask::run() {
   logTraceIn( "run()" );
   _outputValues = new double[_numberOfResultValues];
 
-  #pragma omp target
-  {
-    _functor(_inputValues,_outputValues,_marker);
-  }
+  _functor(_inputValues,_outputValues,_marker);
   delete[] _inputValues;
 
   EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);

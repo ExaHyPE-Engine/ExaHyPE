@@ -39,6 +39,16 @@ bool peano4::datamanagement::CellMarker::isLocal() const {
 }
 
 
+tarch::la::Vector<Dimensions,double>  peano4::datamanagement::CellMarker::x() const {
+  return _centre;
+}
+
+
+tarch::la::Vector<Dimensions,double>  peano4::datamanagement::CellMarker::h() const {
+  return _h;
+}
+
+
 std::string peano4::datamanagement::CellMarker::toString() const {
   std::ostringstream msg;
   msg << "(x=" << _centre << ",h=" << _h << ",refined=" << _isRefined << ")";
