@@ -12,7 +12,17 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
         double                                       Qin[],
         double                                       Qout[]
 ) {
-
+  ::exahype2::fv::applyRusanovToPatch_FaceLoops(
+    flux,
+    eigenvalues,
+    patchCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfVolumesPerAxisInPatch,
+    unknowns,
+    Qin, Qout
+  );
 }
 
 
@@ -30,5 +40,16 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   double                                       Qin[],
   double                                       Qout[]
 ) {
-
+  ::exahype2::fv::applyRusanovToPatch_FaceLoops(
+    flux,
+	nonconservativeProduct,
+    eigenvalues,
+    patchCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfVolumesPerAxisInPatch,
+    unknowns,
+    Qin, Qout
+  );
 }

@@ -36,6 +36,24 @@ void exahype2::fv::copyPatch(
 }
 
 
+void exahype2::fv::gpu::copyPatch(
+  double QinWithHalo[],
+  double QOutWithoutHalo[],
+  int    unknowns,
+  int    numberOfVolumesPerAxisInPatch,
+  int    haloSize
+) {
+  dfor(k,numberOfVolumesPerAxisInPatch) {
+    tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
+    int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
+    int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
+    for (int i=0; i<unknowns; i++) {
+      QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
+    }
+  }
+}
+
+
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
       std::function< void(
         double                                       QL[],
