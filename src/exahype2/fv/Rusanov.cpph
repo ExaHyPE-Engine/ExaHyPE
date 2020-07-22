@@ -1,3 +1,6 @@
+#include "tarch/logging/Log.h"
+
+
 template <typename Flux, typename Eigenvalues>
 void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   Flux                                         flux,
