@@ -55,7 +55,7 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   static tarch::logging::Log _log( "exahype2::fv::gpu" );
   logTraceInWith6Arguments( "applyRusanovToPatch_FaceLoops(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
-  #pragma omp target
+  #pragma omp target map(to:patchCentre,patchSize,t,dt,numberOfVolumesPerAxisInPatch,unknowns,Qin) map(from:Qout)
   {
   #if Dimensions==2
   applySplit1DRiemannToPatch_Overlap1AoS2d(
