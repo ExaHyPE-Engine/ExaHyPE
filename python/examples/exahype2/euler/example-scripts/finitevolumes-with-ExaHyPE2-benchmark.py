@@ -59,12 +59,13 @@ project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEncla
   patch_size, 
   unknowns, time_step_size,
   flux = True,
-  ncp  = False
+  ncp  = False,
+  use_gpu = True
 ))
 
 
 
-dimensions = 3
+dimensions = 2
 build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Asserts
 
