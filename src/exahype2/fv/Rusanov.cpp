@@ -12,6 +12,7 @@
 /**
  * 1d Riemann accepting a flux and eigenvalue function.
  */
+#pragma openmp declare target to (QL, QR, x, dx, t, dt, normal, unknowns, FL, FR)
 void exahype2::fv::internal::splitRusanov1d(
     std::function< void(
             double                                       Q[],
@@ -69,11 +70,13 @@ void exahype2::fv::internal::splitRusanov1d(
       FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
     }
 };
+#pragma openmp end declare 
 
 
 /**
  * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
  */
+#pragma openmp declare target to (QL, QR, x, dx, t, dt, normal, unknowns, FL, FR)
 void exahype2::fv::internal::splitRusanov1d(
     std::function< void(
             double                                       Q[],
@@ -153,6 +156,7 @@ void exahype2::fv::internal::splitRusanov1d(
       FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
     }
 };
+#pragma openmp end declare 
 
 
 void exahype2::fv::applyRusanovToPatch_FaceLoops(
