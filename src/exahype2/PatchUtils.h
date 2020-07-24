@@ -29,6 +29,20 @@ namespace exahype2 {
     const tarch::la::Vector<Dimensions,int>&     index
   );
 
+  /**
+   * With GCC 10, it was impossible to return/copy the vector class. We 
+   * almost never need it however, as we work with cubes. This specialisation
+   * thus does the job.
+   *
+   * @see getVolumeSize()
+   */
+  #pragma omp declare target
+  double  getVolumeLength(
+    const tarch::la::Vector<Dimensions,double>&  h,
+    int                                          numberOfVolumesPerAxisInPatch
+  );
+  #pragma omp end declare target
+
   tarch::la::Vector<Dimensions,double>  getVolumeSize(
     const tarch::la::Vector<Dimensions,double>&  h,
     int                                          numberOfVolumesPerAxisInPatch
