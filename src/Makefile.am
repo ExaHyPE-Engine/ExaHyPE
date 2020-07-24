@@ -84,6 +84,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/la/tests/VectorTest.cpp \
  tarch/la/ScalarOperations.cpp \
  tarch/la/Scalar.cpp \
+ tarch/la/Vector.cpp \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/Core.cpp \
  tarch/multicore/Lock.cpp \
