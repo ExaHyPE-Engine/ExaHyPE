@@ -132,7 +132,7 @@ namespace exahype2 {
     }
 
     namespace internal {
-      #pragma openmp declare target to (QL, QR, x, dx, t, dt, normal, unknowns, FL, FR)
+      #pragma omp declare target
       void splitRusanov1d(
         std::function< void(
               double                                       Q[],
@@ -163,9 +163,10 @@ namespace exahype2 {
         double                                       FL[],
         double                                       FR[]
       );
-      #pragma openmp end declare target
+      #pragma omp end declare target
 
-      #pragma openmp declare target to (QL, QR, x, dx, t, dt, normal, unknowns, FL, FR)
+      //#pragma omp declare target to (QL, QR, x, dx, t, dt, normal, unknowns, FL, FR)
+      #pragma omp declare target
       void splitRusanov1d(
           std::function< void(
                   double                                       Q[],
@@ -206,7 +207,7 @@ namespace exahype2 {
           double                                       FL[],
           double                                       FR[]
       );
-      #pragma openmp end declare target
+      #pragma omp end declare target
     }
   }
 }

@@ -70,8 +70,9 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
     double numericalFluxL[unknowns]; // helper out variable
     double numericalFluxR[unknowns]; // helper out variable
 
-    for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
-      for (int x=0; x<=numberOfVolumesPerAxisInPatch; x++) {
+    #pragma omp parallel for
+    for (int x=0; x<=numberOfVolumesPerAxisInPatch; x++) {
+      for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
         const int leftVoxelInPreimage  =  x
                                        + (y+1) * (2 + numberOfVolumesPerAxisInPatch);
         const int rightVoxelInPreimage =  x+1
@@ -119,8 +120,9 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
       }
     }
 
-    for (int y=0; y<=numberOfVolumesPerAxisInPatch; y++) {
-      for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+    #pragma omp parallel for
+    for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+      for (int y=0; y<=numberOfVolumesPerAxisInPatch; y++) {
         const int lowerVoxelInPreimage =  x+1
                                        +  y * (2 + numberOfVolumesPerAxisInPatch);
         const int upperVoxelInPreimage =  x+1
