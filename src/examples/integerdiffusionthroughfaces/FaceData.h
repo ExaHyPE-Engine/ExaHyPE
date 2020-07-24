@@ -30,12 +30,12 @@ struct examples::integerdiffusionthroughfaces::FaceData {
   std::string toString() const {
 	return std::string("(")
          #if PeanoDebug>0
-		 + x.toString() + std::string(",")
-	     + h.toString() + std::string(",")
+         + ::toString(x) + std::string(",")
+         + ::toString(h) + std::string(",")
          #endif
          + std::to_string(value) + std::string(",")
          + std::to_string(oldValue)
-		 + std::string(")");
+	 + std::string(")");
   }
 };
 
