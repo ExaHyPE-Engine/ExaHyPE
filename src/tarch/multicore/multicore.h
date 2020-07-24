@@ -17,6 +17,12 @@
 #endif
 
 
+#if defined(SharedOMP)
+  #define GPUOffloading
+#endif
+
+
+
 #ifndef _TARCH_MULTICORE_MULTICORE_H_
 #define _TARCH_MULTICORE_MULTICORE_H_
 
