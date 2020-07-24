@@ -293,6 +293,6 @@ Scalar tarch::la::min(
 
 template<int Size, typename Scalar>
 std::ostream& operator<< (std::ostream & os, const tarch::la::Vector<Size,Scalar> & vector) {
-  os << vector.toString();
+  os << ::toString(vector);
   return os;
 }
