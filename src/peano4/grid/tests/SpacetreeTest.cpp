@@ -65,7 +65,7 @@ void peano4::grid::tests::SpacetreeTest::testCreateLeaveCellTraversalEvent() {
     vertices[kScalar].setAdjacentRanks( tarch::la::Vector<TwoPowerD,int>(peano4::grid::Spacetree::InvalidRank) );
     vertices[kScalar].setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(true);
     vertices[kScalar].setIsAntecessorOfRefinedVertexInCurrentTreeSweep(true);
-    vertices[kScalar].setX(k.convertScalar<double>());
+    vertices[kScalar].setX(tarch::la::convertScalar<double>(k));
     vertices[kScalar].setLevel(0);
   }
 

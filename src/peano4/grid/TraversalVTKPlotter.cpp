@@ -127,7 +127,7 @@ void peano4::grid::TraversalVTKPlotter::plotCell(
   dfor2(k)
       assertion( _vertexWriter!=nullptr );
       vertexIndices[kScalar] = _vertexWriter->plotVertex(
-        event.getX() + tarch::la::multiplyComponents( k.convertScalar<double>(), event.getH() ) - event.getH() * 0.5
+        event.getX() + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(k), event.getH() ) - event.getH() * 0.5
       );
   enddforx
 
