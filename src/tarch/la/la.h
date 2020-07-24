@@ -1,3 +1,7 @@
+#include "tarch/compiler/CompilerSpecificSettings.h"
+#include "tarch/multicore/multicore.h"
+
+
 namespace tarch {
   /**
 
