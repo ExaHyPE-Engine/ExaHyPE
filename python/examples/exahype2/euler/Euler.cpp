@@ -61,6 +61,25 @@ void examples::exahype2::euler::Euler::eigenvalues(
 ) {
   assertion(normal>=0);
   assertion(normal<Dimensions);
+  eigenvalues(Q,faceCentre,volumeH,t,normal,lambda);
+  nonCriticalAssertion2( lambda[0]==lambda[0], faceCentre, normal );
+  nonCriticalAssertion2( lambda[1]==lambda[1], faceCentre, normal );
+  nonCriticalAssertion2( lambda[2]==lambda[2], faceCentre, normal );
+  nonCriticalAssertion2( lambda[3]==lambda[3], faceCentre, normal );
+  nonCriticalAssertion2( lambda[4]==lambda[4], faceCentre, normal );
+}
+
+
+
+void examples::exahype2::euler::Euler::eigenvalues(
+  double                                       Q[5],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double                                       lambda[5],
+  int device
+) {
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -70,7 +89,6 @@ void examples::exahype2::euler::Euler::eigenvalues(
   #endif
 
   const double u_n = Q[normal + 1] * irho;
-  nonCriticalAssertion10( gamma * p * irho>=0.0, gamma, p, irho, faceCentre, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
   const double c   = std::sqrt(gamma * p * irho);
 
   lambda[0]  = u_n - c;
@@ -78,24 +96,6 @@ void examples::exahype2::euler::Euler::eigenvalues(
   lambda[2]  = u_n;
   lambda[3]  = u_n;
   lambda[4]  = u_n + c;
-
-  nonCriticalAssertion4( lambda[0]==lambda[0], u_n, c, faceCentre, normal );
-  nonCriticalAssertion4( lambda[1]==lambda[1], u_n, c, faceCentre, normal );
-  nonCriticalAssertion4( lambda[2]==lambda[2], u_n, c, faceCentre, normal );
-  nonCriticalAssertion4( lambda[3]==lambda[3], u_n, c, faceCentre, normal );
-  nonCriticalAssertion4( lambda[4]==lambda[4], u_n, c, faceCentre, normal );
-
-  #ifdef WeUsedSymPy
-  // Please ignore this part. This is just to demonstrate/validate that the
-  // SymPy generator yields the right result.
-  double validateLambda[5];
-  AbstractEuler::eigenvalues( Q, faceCentre, volumeH, t, normal, validateLambda );
-  assertionNumericalEquals10( lambda[0], validateLambda[0], lambda[0], validateLambda[0], lambda[1], validateLambda[1], lambda[2], validateLambda[2], lambda[3], validateLambda[3], lambda[4], validateLambda[4] );
-  assertionNumericalEquals10( lambda[1], validateLambda[1], lambda[0], validateLambda[0], lambda[1], validateLambda[1], lambda[2], validateLambda[2], lambda[3], validateLambda[3], lambda[4], validateLambda[4] );
-  assertionNumericalEquals10( lambda[2], validateLambda[2], lambda[0], validateLambda[0], lambda[1], validateLambda[1], lambda[2], validateLambda[2], lambda[3], validateLambda[3], lambda[4], validateLambda[4] );
-  assertionNumericalEquals10( lambda[3], validateLambda[3], lambda[0], validateLambda[0], lambda[1], validateLambda[1], lambda[2], validateLambda[2], lambda[3], validateLambda[3], lambda[4], validateLambda[4] );
-  assertionNumericalEquals10( lambda[4], validateLambda[4], lambda[0], validateLambda[0], lambda[1], validateLambda[1], lambda[2], validateLambda[2], lambda[3], validateLambda[3], lambda[4], validateLambda[4] );
-  #endif
 }
 
 
@@ -129,6 +129,27 @@ void examples::exahype2::euler::Euler::flux(
   //
   assertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
 
+  flux(Q,faceCentre, volumeH, t, normal, F, 0);
+
+  nonCriticalAssertion( F[0]==F[0] );
+  nonCriticalAssertion( F[1]==F[1] );
+  nonCriticalAssertion( F[2]==F[2] );
+  nonCriticalAssertion( F[3]==F[3] );
+  nonCriticalAssertion( F[4]==F[4] );
+
+  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+}
+
+
+void examples::exahype2::euler::Euler::flux(
+  double                                       Q[5],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double                                       F[5],
+  int device
+) {
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -166,26 +187,6 @@ void examples::exahype2::euler::Euler::flux(
         }
         break;
   }
-
-  nonCriticalAssertion( F[0]==F[0] );
-  nonCriticalAssertion( F[1]==F[1] );
-  nonCriticalAssertion( F[2]==F[2] );
-  nonCriticalAssertion( F[3]==F[3] );
-  nonCriticalAssertion( F[4]==F[4] );
-
-  #ifdef WeUsedSymPy
-  // Please ignore this part. This is just to demonstrate/validate that the
-  // SymPy generator yields the right result.
-  double validateFlux[5];
-  AbstractEuler::flux( Q, faceCentre, volumeH, t, normal, validateFlux );
-  assertionNumericalEquals11( F[0], validateFlux[0], F[0], validateFlux[0], F[1], validateFlux[1], F[2], validateFlux[2], F[3], validateFlux[3], F[4], validateFlux[4], normal  );
-  assertionNumericalEquals11( F[1], validateFlux[1], F[0], validateFlux[0], F[1], validateFlux[1], F[2], validateFlux[2], F[3], validateFlux[3], F[4], validateFlux[4], normal  );
-  assertionNumericalEquals11( F[2], validateFlux[2], F[0], validateFlux[0], F[1], validateFlux[1], F[2], validateFlux[2], F[3], validateFlux[3], F[4], validateFlux[4], normal  );
-  assertionNumericalEquals11( F[3], validateFlux[3], F[0], validateFlux[0], F[1], validateFlux[1], F[2], validateFlux[2], F[3], validateFlux[3], F[4], validateFlux[4], normal  );
-  assertionNumericalEquals11( F[4], validateFlux[4], F[0], validateFlux[0], F[1], validateFlux[1], F[2], validateFlux[2], F[3], validateFlux[3], F[4], validateFlux[4], normal );
-  #endif
-
-  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
 
 

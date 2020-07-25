@@ -21,8 +21,13 @@ exahype2::EnclaveGPUTask::EnclaveGPUTask(
   _taskNumber(EnclaveBookkeeping::getInstance().reserveTaskNumber()) {
   logTraceIn( "EnclaveGPUTask(...)" );
 
-  // @todo
-  // Priority stimmt net!
+  //
+  // This version does offload to the GPU, but does so sequentially
+  //
+  _outputValues = new double[_numberOfResultValues];
+  _functor(_inputValues,_outputValues,_marker);
+  delete[] _inputValues;
+
 
   logTraceOut( "EnclaveGPUTask(...)" );
 }
@@ -35,10 +40,13 @@ int exahype2::EnclaveGPUTask::getTaskNumber() const {
 
 bool exahype2::EnclaveGPUTask::run() {
   logTraceIn( "run()" );
-  _outputValues = new double[_numberOfResultValues];
 
-  _functor(_inputValues,_outputValues,_marker);
-  delete[] _inputValues;
+  //
+  // This is the version I'd likely wanna have
+  //
+  // _outputValues = new double[_numberOfResultValues];
+  // _functor(_inputValues,_outputValues,_marker);
+  // delete[] _inputValues;
 
   EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);
   logTraceOut( "run()" );

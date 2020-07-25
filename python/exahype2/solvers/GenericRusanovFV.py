@@ -50,7 +50,7 @@ class AbstractGenericRusanovFV( FV ):
     self._initial_conditions_implementation         = self.__User_Defined
 
 
-  def construct_HandleCellTemplate(self, namespace="::exahype2::fv::" ):
+  def construct_HandleCellTemplate(self, use_gpu=False):
     """
     
       Analyses which PDE terms the user wants to use and returns the 
@@ -59,12 +59,18 @@ class AbstractGenericRusanovFV( FV ):
       stuff with it
       
     """
+    namespace = "::exahype2::fv::" 
+    additional_device_parameter = ""
+    if use_gpu: 
+      namespace = "::exahype2::fv::gpu::"
+      additional_device_parameter = ",1"
+
     if self._flux and not self._ncp:
-      return namespace + self.HandleCellTemplate_Flux
+      return namespace + self.HandleCellTemplate_Flux.replace( "{ADDITIONAL_DEVICE_PARAMETER}", additional_device_parameter )
     #elif not flux and ncp:
     #  self.HandleCellTemplate = self.HandleCellTemplate_NCP
     elif self._flux and self._ncp:
-      return namespace + self.HandleCellTemplate_Flux_NCP
+      return namespace + self.HandleCellTemplate_Flux_NCP.replace( "{ADDITIONAL_DEVICE_PARAMETER}", additional_device_parameter )
     else:
       print( "ERROR: Combination of PDE terms not supported" )
 
@@ -155,7 +161,7 @@ class AbstractGenericRusanovFV( FV ):
       int                                          normal,
       double                                       F[]
     ) -> void {{
-      {SOLVER_INSTANCE}.flux( Q, faceCentre, volumeH, t, normal, F );
+      {SOLVER_INSTANCE}.flux( Q, faceCentre, volumeH, t, normal, F {ADDITIONAL_DEVICE_PARAMETER} );
     }},
     [&](
       double                                       Q[],
@@ -166,7 +172,7 @@ class AbstractGenericRusanovFV( FV ):
       int                                          normal,
       double                                       lambdas[]
     ) -> void {{
-      {SOLVER_INSTANCE}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas );
+      {SOLVER_INSTANCE}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas {ADDITIONAL_DEVICE_PARAMETER} );
     }},
     marker.x(),
     marker.h(),
@@ -190,7 +196,7 @@ class AbstractGenericRusanovFV( FV ):
       int                                          normal,
       double                                       F[]
     ) -> void {{
-      {SOLVER_INSTANCE}.flux( Q, faceCentre, volumeH, t, normal, F );
+      {SOLVER_INSTANCE}.flux( Q, faceCentre, volumeH, t, normal, F {ADDITIONAL_DEVICE_PARAMETER} );
     }},
     [&](
       double Q[],
@@ -202,7 +208,7 @@ class AbstractGenericRusanovFV( FV ):
       int                                          normal,
       double BgradQ[]
     ) -> void {{
-      {SOLVER_INSTANCE}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+      {SOLVER_INSTANCE}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ {ADDITIONAL_DEVICE_PARAMETER} );
     }},
     [&](
       double                                       Q[],
@@ -213,7 +219,7 @@ class AbstractGenericRusanovFV( FV ):
       int                                          normal,
       double                                       lambdas[]
     ) -> void {{
-      {SOLVER_INSTANCE}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas );
+      {SOLVER_INSTANCE}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas {ADDITIONAL_DEVICE_PARAMETER} );
     }},
     marker.x(),
     marker.h(),
@@ -492,11 +498,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     
-
-        
-
-    if self._use_gpu:        
-      task_based_implementation_primary_iteration = """
+    task_based_implementation_primary_iteration = """
     static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
       ::exahype2::fv::gpu::copyPatch(
         reconstructedPatch,
@@ -506,10 +508,12 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
         {HALO_SIZE}
       );
       
-      """ + self.construct_HandleCellTemplate( namespace="::exahype2::fv::gpu::" ) + """  
+      """ + self.construct_HandleCellTemplate( self._use_gpu ) + """  
     }};
+"""    
 
-
+    if self._use_gpu:
+      task_based_implementation_primary_iteration += """
     ::exahype2::EnclaveGPUTask* task = new ::exahype2::EnclaveGPUTask(
         marker,
         reconstructedPatch,
@@ -523,19 +527,6 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 """
     else:    
       task_based_implementation_primary_iteration = """
-    static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
-      ::exahype2::fv::copyPatch(
-        reconstructedPatch,
-        originalPatch,
-        {NUMBER_OF_UNKNOWNS},
-        {NUMBER_OF_VOLUMES_PER_AXIS},
-        {HALO_SIZE}
-      );
-      
-      """ + self.construct_HandleCellTemplate( namespace="::exahype2::fv::" ) + """  
-    }};
-
-
     ::exahype2::EnclaveTask* task = new ::exahype2::EnclaveTask(
         marker,
         reconstructedPatch,
