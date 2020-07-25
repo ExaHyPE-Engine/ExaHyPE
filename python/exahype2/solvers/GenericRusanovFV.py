@@ -63,7 +63,7 @@ class AbstractGenericRusanovFV( FV ):
     additional_device_parameter = ""
     if use_gpu: 
       namespace = "::exahype2::fv::gpu::"
-      additional_device_parameter = ",1"
+      additional_device_parameter = ",tarch::multicore::TargetDevice::MayRunOnGPU"
 
     if self._flux and not self._ncp:
       return namespace + self.HandleCellTemplate_Flux.replace( "{ADDITIONAL_DEVICE_PARAMETER}", additional_device_parameter )

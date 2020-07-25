@@ -211,6 +211,30 @@ struct tarch::la::Vector {
 #endif
 
 
+#include <sstream>
+
+
+/**
+ * Conceptually, this belong into the cpph file. However, I decided to wrap the
+ * whole cpph file into a target instruction, so it may not stay there.
+ */
+template<int Size, typename Scalar>
+std::string toString( const tarch::la::Vector<Size,Scalar>&  vector ) {
+  std::ostringstream os;
+  os << "[";
+  for ( int i=0; i < Size; i++ ) {
+    os << vector(i);
+    if ( i + 1 < Size ) {
+      os << ",";
+    }
+  }
+  os << "]";
+  return os.str();
+}
+
+
+
+
 /**
  * Explicit instantiation speeds up the translation process 
  * significantly. However, I did encounter numerous problems

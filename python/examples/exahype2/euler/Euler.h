@@ -72,7 +72,10 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
     ) override;
     
 
-    
+
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     static void flux(
       double                                       Q[5],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -93,7 +96,9 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
       double                                       lambda[5],
       tarch::multicore::TargetDevice
     );
-
+     #if defined(GPUOffloading)
+     #pragma omp end declare target
+     #endif
 };
 
 
