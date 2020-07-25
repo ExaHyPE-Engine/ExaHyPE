@@ -256,7 +256,7 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
     adjacentRanks( TwoPowerD-1-kScalar ) = 0;
     vertices[kScalar] = createVertex(
       isFirstTraversal ? GridVertex::State::Refining : GridVertex::State::Refined,
-      _root.getX() + k.convertScalar<double>(),
+      _root.getX() + tarch::la::convertScalar<double>(k),
       0,
       adjacentRanks,
       false
@@ -966,7 +966,7 @@ void peano4::grid::Spacetree::loadVertices(
 
     const tarch::la::Vector<Dimensions,double> x = fineGridStatesState.getX()
       + tarch::la::multiplyComponents(
-          convertToIntegerVector(vertexIndex).convertScalar<double>(),
+          tarch::la::convertScalar<double>( convertToIntegerVector(vertexIndex) ),
           fineGridStatesState.getH()
         );
 
@@ -1086,9 +1086,9 @@ void peano4::grid::Spacetree::storeVertices(
 
     const tarch::la::Vector<Dimensions,double> x = fineGridStatesState.getX()
       + tarch::la::multiplyComponents(
-        convertToIntegerVector(vertexIndex).convertScalar<double>(),
-		    fineGridStatesState.getH()
-	    );
+          tarch::la::convertScalar<double>( convertToIntegerVector(vertexIndex) ),
+          fineGridStatesState.getH()
+        );
 
     const int   stackNumber = PeanoCurve::getVertexWriteStackNumber(fineGridStatesState,vertexIndex);
     VertexType  type        = getVertexType(coarseGridVertices,vertexPositionWithinPatch);

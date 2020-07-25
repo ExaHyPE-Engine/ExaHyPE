@@ -59,12 +59,13 @@ project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEncla
   patch_size, 
   unknowns, time_step_size,
   flux = True,
-  ncp  = False
+  ncp  = False,
+  use_gpu = True
 ))
 
 
 
-dimensions = 3
+dimensions = 2
 build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Asserts
 
@@ -92,5 +93,5 @@ peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
 peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
 peano4_project.output.makefile.set_mode(build_mode)
-peano4_project.build(make_clean_first=True)
+peano4_project.build(make_clean_first=True,number_of_parallel_builds=12)
 

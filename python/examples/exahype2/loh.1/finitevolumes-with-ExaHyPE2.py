@@ -69,8 +69,8 @@ project.add_solver(
     use_gpu        = False) )
 
 
-#build_mode = peano4.output.CompileMode.Asserts
-build_mode = peano4.output.CompileMode.Release
+build_mode = peano4.output.CompileMode.Asserts
+#build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Trace
 
 

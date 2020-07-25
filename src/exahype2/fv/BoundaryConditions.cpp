@@ -52,7 +52,7 @@ void exahype2::fv::applyBoundaryConditions(
   dfore(volume,numberOfVolumesPerAxisInPatch,faceNumber % Dimensions,0) {
     tarch::la::Vector<Dimensions,int> insideVolume  = volume;
     tarch::la::Vector<Dimensions,int> outsideVolume = volume;
-    tarch::la::Vector<Dimensions,double> x          = faceOffset + tarch::la::multiplyComponents( volume.convertScalar<double>()+tarch::la::Vector<Dimensions,double>(0.5), volumeH);
+    tarch::la::Vector<Dimensions,double> x          = faceOffset + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(volume)+tarch::la::Vector<Dimensions,double>(0.5), volumeH);
 
     x(faceNumber%Dimensions) -= 0.5 * volumeH(faceNumber%Dimensions);
 

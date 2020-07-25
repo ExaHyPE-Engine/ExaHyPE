@@ -2,8 +2,8 @@ template<int SizeLhs, int SizeRhs, typename Scalar>
 tarch::la::Vector<SizeLhs,Scalar> tarch::la::slice(const tarch::la::Vector<SizeRhs,Scalar>& vector, int fromIndex, int stride) {
   tarch::la::Vector<SizeLhs,Scalar> result;
 
-  assertion5(fromIndex>=0,fromIndex, SizeLhs, SizeRhs, stride, vector.toString());
-  assertion5(fromIndex+(SizeLhs-1)*stride<SizeRhs,fromIndex, SizeLhs, SizeRhs, stride, vector.toString());
+  assertion5(fromIndex>=0,fromIndex, SizeLhs, SizeRhs, stride, toString(vector));
+  assertion5(fromIndex+(SizeLhs-1)*stride<SizeRhs,fromIndex, SizeLhs, SizeRhs, stride, toString(vector));
 
   #ifdef CompilerICC
   #pragma ivdep
@@ -23,8 +23,8 @@ void tarch::la::slice(
   int                                       fromIndexInToVector,
   int                                       strideInToVector
 ) {
-  assertion6(fromIndexInToVector>=0, SizeLhs, SizeRhs, toVector.toString(), fromVector.toString(), fromIndexInToVector, strideInToVector);
-  assertion6(fromIndexInToVector+(SizeRhs-1)*strideInToVector<SizeLhs, SizeLhs, SizeRhs, toVector.toString(), fromVector.toString(), fromIndexInToVector, strideInToVector);
+  assertion6(fromIndexInToVector>=0, SizeLhs, SizeRhs, toString(toVector), toString(fromVector), fromIndexInToVector, strideInToVector);
+  assertion6(fromIndexInToVector+(SizeRhs-1)*strideInToVector<SizeLhs, SizeLhs, SizeRhs, toString(toVector), toString(fromVector), fromIndexInToVector, strideInToVector);
 
   #ifdef CompilerICC
   #pragma ivdep

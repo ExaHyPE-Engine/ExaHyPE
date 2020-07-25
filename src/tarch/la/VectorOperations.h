@@ -9,6 +9,16 @@
 #include <cmath>
 
 
+
+
+/**
+ * Forward declaration
+ */
+template<int Size, typename Scalar>
+std::string toString(const tarch::la::Vector<Size,Scalar>& vector);
+
+
+
 namespace tarch {
   namespace la {
 

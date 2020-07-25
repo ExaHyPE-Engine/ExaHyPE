@@ -118,7 +118,7 @@ namespace exahype2 {
       template <typename Flux, typename NCP, typename Eigenvalues>
       void applyRusanovToPatch_FaceLoops(
         Flux                                         flux,
-		NCP                                          nonconservativeProduct,
+        NCP                                          nonconservativeProduct,
         Eigenvalues                                  eigenvalues,
         const tarch::la::Vector<Dimensions,double>&  patchCentre,
         const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -129,6 +129,124 @@ namespace exahype2 {
         double                                       Qin[],
         double                                       Qout[]
       );
+    }
+
+    namespace internal {
+      /**
+       * 1d Riemann accepting a flux and eigenvalue function.
+       */
+      void splitRusanov1d(
+        std::function< void(
+              double                                       Q[],
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  volumeH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal,
+              double                                       F[]
+        ) >   flux,
+        std::function< void(
+              double                                       Q[],
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  volumeH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal,
+              double                                       lambdas[]
+        ) >   eigenvalues,
+        double QL[],
+        double QR[],
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        int                                          unknowns,
+        double                                       FL[],
+        double                                       FR[]
+      );
+
+      /**
+       * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
+       */
+      void splitRusanov1d(
+          std::function< void(
+                  double                                       Q[],
+                  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+                  const tarch::la::Vector<Dimensions,double>&  volumeH,
+                  double                                       t,
+                  double                                       dt,
+                  int                                          normal,
+                  double                                       F[]
+          ) >   flux,
+          std::function< void(
+              double                                       Q[],
+              double                                       gradQ[][Dimensions],
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  volumeH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal,
+              double                                       BgradQ[]
+            ) >   nonconservativeProduct,
+          std::function< void(
+                  double                                       Q[],
+                  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+                  const tarch::la::Vector<Dimensions,double>&  volumeH,
+                  double                                       t,
+                  double                                       dt,
+                  int                                          normal,
+                  double                                       lambdas[]
+          ) >   eigenvalues, 
+          double QL[],
+          double QR[],
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       dx,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          int                                          unknowns,
+          double                                       FL[],
+          double                                       FR[]
+      );
+    }
+
+    namespace gpu {
+	    // @todo docu: Would like to have it in the cpp file. Docu in 
+	    // report that lambdas improves template thing and now we are 
+	    // back
+	    //
+	    // Big summary: Codes becomes uglier as all ends up in headerfiles
+      /**
+	     * Do this one only for the most generic variant. Doesn't matter, 
+	     * as it is a template, so compiler will filter out.
+	     *
+	     *
+	     * @todo Tons of docu that solver routines have to be stateless
+	     * different to original
+       */
+      #if defined(GPUOffloading)
+      #pragma omp declare target
+      #endif
+      template< typename Flux, typename NCP, typename Eigenvalues>
+      void splitRusanov1d(
+        Flux flux,
+        NCP  nonconservativeProduct,
+        Eigenvalues eigenvalues,
+        double QL[],
+        double QR[],
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        int                                          unknowns,
+        double                                       FL[],
+        double                                       FR[]
+      );
+      #if defined(GPUOffloading)
+      #pragma omp end declare target
+      #endif
     }
   }
 }

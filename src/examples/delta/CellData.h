@@ -58,8 +58,8 @@ struct examples::delta::CellData {
   std::string toString() const {
     return std::string("(")
          #if PeanoDebug>0
-         + x.toString() + std::string(",")
-         + h.toString() + std::string(",")
+         + ::toString(x) + std::string(",")
+         + ::toString(h) + std::string(",")
          #endif
          + std::string(")");
   }

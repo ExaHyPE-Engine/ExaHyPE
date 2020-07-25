@@ -158,7 +158,7 @@ void examples::integerdiffusionthroughfaces::VTUCellDataPlotter::plotCell(
   dfor2(k)
     assertion( _vertexWriter!=nullptr );
     vertexIndices[kScalar] = _vertexWriter->plotVertex(
-      center + tarch::la::multiplyComponents( k.convertScalar<double>(), h ) - h * 0.5
+      center + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(k), h ) - h * 0.5
     );
   enddforx
 

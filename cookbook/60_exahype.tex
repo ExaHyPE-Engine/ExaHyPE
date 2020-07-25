@@ -381,6 +381,29 @@ This section is under construction.
 \end{remark} 
 
 
+\section{GPU support}
+
+To add GPU support (via OpenMP 5), you have to do a couple of steps.
+First, your solver has to provide a couple of additional routines. 
+I propose that you include
+\begin{code}
+#include "tarch/multicore/multicore.h"
+\end{code} 
+
+\noindent
+and protect all modifications from hereon with 
+\begin{code}
+#ifdef 
+\end{code}
+
+
+\begin{itemize}
+  \item There have to be side-effect and state-free variants of your core
+  numerics routines (such as fluxes and eigenvalues).
+  \item These additional variants accept one more argument
+\end{itemize} 
+
+
 
 \section{Modelling the fluxes and Riemann solvers with SymPy}
 
@@ -477,6 +500,7 @@ have a look into projects like EinsteinPy or galgebra which provide tools for
 astrophysics or geometric algebra, respectively.
 As we rely on SymPy and expose all the SymPy expressions, they are compatible
 with \ExaHyPE.
+
 
 
 
