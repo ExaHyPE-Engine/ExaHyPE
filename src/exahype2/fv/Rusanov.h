@@ -132,7 +132,9 @@ namespace exahype2 {
     }
 
     namespace internal {
-      #pragma omp declare target
+      /**
+       * 1d Riemann accepting a flux and eigenvalue function.
+       */
       void splitRusanov1d(
         std::function< void(
               double                                       Q[],
@@ -163,10 +165,10 @@ namespace exahype2 {
         double                                       FL[],
         double                                       FR[]
       );
-      #pragma omp end declare target
 
-      //#pragma omp declare target to (QL, QR, x, dx, t, dt, normal, unknowns, FL, FR)
-      #pragma omp declare target
+      /**
+       * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
+       */
       void splitRusanov1d(
           std::function< void(
                   double                                       Q[],
@@ -195,7 +197,7 @@ namespace exahype2 {
                   double                                       dt,
                   int                                          normal,
                   double                                       lambdas[]
-          ) >   eigenvalues,
+          ) >   eigenvalues, 
           double QL[],
           double QR[],
           const tarch::la::Vector<Dimensions,double>&  x,
@@ -206,6 +208,39 @@ namespace exahype2 {
           int                                          unknowns,
           double                                       FL[],
           double                                       FR[]
+      );
+    }
+
+    namespace gpu {
+	    // @todo docu: Would like to have it in the cpp file. Docu in 
+	    // report that lambdas improves template thing and now we are 
+	    // back
+	    //
+	    // Big summary: Codes becomes uglier as all ends up in headerfiles
+      /**
+	     * Do this one only for the most generic variant. Doesn't matter, 
+	     * as it is a template, so compiler will filter out.
+	     *
+	     *
+	     * @todo Tons of docu that solver routines have to be stateless
+	     * different to original
+       */
+      #pragma omp declare target
+      template< typename Flux, typename NCP, typename Eigenvalues>
+      void splitRusanov1d(
+        Flux flux,
+        NCP  nonconservativeProduct,
+        Eigenvalues eigenvalues,
+        double QL[],
+        double QR[],
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        int                                          unknowns,
+        double                                       FL[],
+        double                                       FR[]
       );
       #pragma omp end declare target
     }
