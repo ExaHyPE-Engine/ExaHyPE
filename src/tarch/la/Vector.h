@@ -5,6 +5,15 @@
 
 
 
+#include "tarch/Assertions.h"
+#include "tarch/la/la.h"
+
+
+#include <string>
+#include <bitset>
+#include <initializer_list>
+
+
 namespace tarch {
   namespace la {
     template<int Size, typename Scalar>
@@ -16,11 +25,13 @@ namespace tarch {
 }
 
 
-#include "tarch/la/la.h"
-
-
-#include <bitset>
-#include <initializer_list>
+/**
+ * Pipes the elements of a vector into a std::string and returns the string.
+ *
+ * Not a member of the class as I otherwise can't translate it for GPUs.
+ */
+template<int Size, typename Scalar>
+std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
 
 
 /**
@@ -57,7 +68,9 @@ namespace tarch {
  *
  * 
  */
+#ifdef GPUOffloading
 #pragma omp declare target
+#endif
 template<int Size, typename Scalar>
 struct tarch::la::Vector {
   private:
@@ -116,9 +129,9 @@ struct tarch::la::Vector {
       #endif
       {
         #if !defined(GPUOffloading)
-        assertion3 ( index >= 0, index, Size, toString() );
-        assertion4 ( index < Size, index, Size, toString(), "you may not take the indexth entry from a vector with only Size components" );
-	#endif
+        assertion3 ( index >= 0, index, Size, ::toString(*this) );
+        assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
+        #endif
         return _values[index];
       }
 
@@ -134,9 +147,9 @@ struct tarch::la::Vector {
       #endif
       {
         #if !defined(GPUOffloading)
-        assertion3 ( index >= 0, index, Size, toString() );
-        assertion3 ( index < Size, index, Size, toString() );
-	#endif
+        assertion3 ( index >= 0, index, Size, toString(*this) );
+        assertion3 ( index < Size, index, Size, toString(*this) );
+        #endif
         return _values[index];
       }
 
@@ -151,8 +164,8 @@ struct tarch::la::Vector {
       #endif
       {
         #if !defined(GPUOffloading)
-        assertion3 ( index >= 0, index, Size, toString() );
-        assertion3 ( index < Size, index, Size, toString() );
+        assertion3 ( index >= 0, index, Size, toString(*this) );
+        assertion3 ( index < Size, index, Size, toString(*this) );
         #endif
         return _values[index];
       }
@@ -168,8 +181,8 @@ struct tarch::la::Vector {
      #endif
      {
        #if !defined(GPUOffloading)
-       assertion3 ( index >= 0, index, Size, toString() );
-       assertion3 ( index < Size, index, Size, toString() );
+       assertion3 ( index >= 0, index, Size, toString(*this) );
+       assertion3 ( index < Size, index, Size, toString(*this) );
        #endif
        return _values[index];
      }
@@ -193,7 +206,9 @@ struct tarch::la::Vector {
 #include "tarch/la/Vector.cpph"
 
 
+#ifdef GPUOffloading
 #pragma omp end declare target
+#endif
 
 
 /**
@@ -212,28 +227,6 @@ namespace tarch {
   }
 }
 #endif
-
-
-#include <sstream>
-
-/**
- * Pipes the elements of a vector into a std::string and returns the string.
- *
- * Not a member of the class as I otherwise can't translate it for GPUs.
- */
-template<int Size, typename Scalar>
-std::string toString( const tarch::la::Vector<Size,Scalar>&  vector ) {
-  std::ostringstream os;
-  os << "[";
-  for ( int i=0; i < Size; i++ ) {
-    os << vector(i);
-    if ( i + 1 < Size ) {
-      os << ",";
-    }
-  }
-  os << "]";
-  return os.str();
-}
 
 
 

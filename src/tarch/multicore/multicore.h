@@ -17,7 +17,7 @@
 #endif
 
 
-#if defined(SharedOMP)
+#if defined(SharedOMP) and !defined(noGPUOffloading)
   #define GPUOffloading
 #endif
 
@@ -182,6 +182,11 @@ and
      const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
      const std::string ConsumerTaskCountStatisticsIdentifier( "tarch::multicore::consumer-tasks");
      const std::string TasksPerConsumerRunStatisticsIdentifier( "tarch::multicore::tasks-per-consumer-run");
+
+     enum class TargetDevice {
+       MayRunOnGPU
+     };
+
   }
 }
 

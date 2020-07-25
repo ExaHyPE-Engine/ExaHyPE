@@ -458,8 +458,10 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     # resides on the output/input stream. In the subsequent primary sweep, we thus have
     # to stream in all data again.
     #
-    self._patch.generator.store_persistent_condition  = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Primary"
-    self._patch.generator.load_persistent_condition   = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Secondary"
+    #self._patch.generator.store_persistent_condition  = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Primary"
+    #self._patch.generator.load_persistent_condition   = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Secondary"
+    self._patch.generator.store_persistent_condition  = "marker.isSkeletonCell() or marker.isEnclaveCell()"
+    self._patch.generator.load_persistent_condition   = "marker.isSkeletonCell() or marker.isEnclaveCell()"
     self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """
     
     self._use_gpu = use_gpu 
@@ -526,7 +528,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     );
 """
     else:    
-      task_based_implementation_primary_iteration = """
+      task_based_implementation_primary_iteration += """
     ::exahype2::EnclaveTask* task = new ::exahype2::EnclaveTask(
         marker,
         reconstructedPatch,

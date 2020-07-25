@@ -124,8 +124,10 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   // @todo Docu: Pointer muessen explizit rumkopiert werden -> manual serialisatino
   #if Dimensions==2
   double patchCentreData[] = {patchCentre(0), patchCentre(1)};
-  double patchSizeData[]   = {patchSize(0),   patchSize(1)}; 
+  double patchSizeData[]   = {patchSize(0),   patchSize(1)};
+  #if defined(GPUOffloading)
   #pragma omp target map(to:patchCentreData,patchSizeData,t,dt,numberOfVolumesPerAxisInPatch,unknowns,Qin[0:unknowns*(numberOfVolumesPerAxisInPatch+2)*(numberOfVolumesPerAxisInPatch+2)]) map(from:Qout[0:unknowns*(numberOfVolumesPerAxisInPatch)*(numberOfVolumesPerAxisInPatch)])
+  #endif
   {
     tarch::la::Vector<2,double>  patchCentre(patchCentreData);
     tarch::la::Vector<2,double>  patchSize(patchSizeData);

@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "tarch/la/Vector.h"
+#include "tarch/multicore/multicore.h"
 
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
@@ -36,12 +37,16 @@ namespace exahype2 {
    *
    * @see getVolumeSize()
    */
+  #if defined(GPUOffloading)
   #pragma omp declare target
+  #endif
   double  getVolumeLength(
     const tarch::la::Vector<Dimensions,double>&  h,
     int                                          numberOfVolumesPerAxisInPatch
   );
+  #if defined(GPUOffloading)
   #pragma omp end declare target
+  #endif
 
   tarch::la::Vector<Dimensions,double>  getVolumeSize(
     const tarch::la::Vector<Dimensions,double>&  h,

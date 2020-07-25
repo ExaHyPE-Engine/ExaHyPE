@@ -61,7 +61,7 @@ void examples::exahype2::euler::Euler::eigenvalues(
 ) {
   assertion(normal>=0);
   assertion(normal<Dimensions);
-  eigenvalues(Q,faceCentre,volumeH,t,normal,lambda);
+  eigenvalues(Q,faceCentre,volumeH,t,normal,lambda,tarch::multicore::TargetDevice::MayRunOnGPU);
   nonCriticalAssertion2( lambda[0]==lambda[0], faceCentre, normal );
   nonCriticalAssertion2( lambda[1]==lambda[1], faceCentre, normal );
   nonCriticalAssertion2( lambda[2]==lambda[2], faceCentre, normal );
@@ -78,7 +78,7 @@ void examples::exahype2::euler::Euler::eigenvalues(
   double                                       t,
   int                                          normal,
   double                                       lambda[5],
-  int device
+  tarch::multicore::TargetDevice
 ) {
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -129,7 +129,7 @@ void examples::exahype2::euler::Euler::flux(
   //
   assertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
 
-  flux(Q,faceCentre, volumeH, t, normal, F, 0);
+  flux(Q,faceCentre, volumeH, t, normal, F, tarch::multicore::TargetDevice::MayRunOnGPU);
 
   nonCriticalAssertion( F[0]==F[0] );
   nonCriticalAssertion( F[1]==F[1] );
@@ -148,7 +148,7 @@ void examples::exahype2::euler::Euler::flux(
   double                                       t,
   int                                          normal,
   double                                       F[5],
-  int device
+  tarch::multicore::TargetDevice
 ) {
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];

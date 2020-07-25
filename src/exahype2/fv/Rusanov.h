@@ -225,7 +225,9 @@ namespace exahype2 {
 	     * @todo Tons of docu that solver routines have to be stateless
 	     * different to original
        */
+      #if defined(GPUOffloading)
       #pragma omp declare target
+      #endif
       template< typename Flux, typename NCP, typename Eigenvalues>
       void splitRusanov1d(
         Flux flux,
@@ -242,7 +244,9 @@ namespace exahype2 {
         double                                       FL[],
         double                                       FR[]
       );
+      #if defined(GPUOffloading)
       #pragma omp end declare target
+      #endif
     }
   }
 }

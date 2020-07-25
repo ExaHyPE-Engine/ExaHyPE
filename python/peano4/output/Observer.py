@@ -574,6 +574,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       inCellStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       or
       inCellStack==peano4::grid::TraversalObserver::NoData
+      or
+      not {full_qualified_type}::loadPersistently(marker)
     ) {{
       data.setDebugX( marker.x() );
       data.setDebugH( marker.h() );
