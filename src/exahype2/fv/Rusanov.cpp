@@ -9,10 +9,6 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
-/**
- * 1d Riemann accepting a flux and eigenvalue function.
- */
-//#pragma omp declare target to (QL, QR, x, dx, t, dt, normal, unknowns, FL, FR)
 void exahype2::fv::internal::splitRusanov1d(
     std::function< void(
             double                                       Q[],
@@ -43,10 +39,8 @@ void exahype2::fv::internal::splitRusanov1d(
     double                                       FL[],
     double                                       FR[]
   ) {
-    #if !defined(GPUOffloading)
     assertion(normal>=0);
     assertion(normal<Dimensions);
-    #endif
 
     double fluxFL[unknowns];
     double fluxFR[unknowns];
@@ -58,16 +52,12 @@ void exahype2::fv::internal::splitRusanov1d(
 
     eigenvalues(QL,x,dx,t,dt,normal,lambdas);
     for (int unknown=0; unknown<unknowns; unknown++) {
-      #if !defined(GPUOffloading)
       nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      #endif
       lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
     }
     eigenvalues(QR,x,dx,t,dt,normal,lambdas);
     for (int unknown=0; unknown<unknowns; unknown++) {
-      #if !defined(GPUOffloading)
       nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      #endif
       lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
     }
 
@@ -76,13 +66,8 @@ void exahype2::fv::internal::splitRusanov1d(
       FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
     }
 };
-//#pragma omp end declare 
 
 
-/**
- * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
- */
-//#pragma omp declare target to (QL, QR, x, dx, t, dt, normal, unknowns, FL, FR)
 void exahype2::fv::internal::splitRusanov1d(
     std::function< void(
             double                                       Q[],
@@ -122,11 +107,9 @@ void exahype2::fv::internal::splitRusanov1d(
     int                                          unknowns,
     double                                       FL[],
     double                                       FR[]
-  ) {
-    #if !defined(GPUOffloading)
+) {
     assertion(normal>=0);
     assertion(normal<Dimensions);
-    #endif
 
     double fluxFL[unknowns];
     double fluxFR[unknowns];
@@ -150,16 +133,12 @@ void exahype2::fv::internal::splitRusanov1d(
 
     eigenvalues(QL,x,dx,t,dt,normal,lambdas);
     for (int unknown=0; unknown<unknowns; unknown++) {
-      #if !defined(GPUOffloading)
       nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      #endif
       lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
     }
     eigenvalues(QR,x,dx,t,dt,normal,lambdas);
     for (int unknown=0; unknown<unknowns; unknown++) {
-      #if !defined(GPUOffloading)
       nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      #endif
       lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
     }
 
@@ -168,7 +147,6 @@ void exahype2::fv::internal::splitRusanov1d(
       FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
     }
 };
-//#pragma omp end declare 
 
 
 void exahype2::fv::applyRusanovToPatch_FaceLoops(
