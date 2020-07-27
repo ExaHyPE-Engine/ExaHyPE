@@ -52,7 +52,7 @@ project.add_solver(
 
 
 
-dimensions = 3
+dimensions = 2
 #build_mode = peano4.output.CompileMode.Release
 build_mode = peano4.output.CompileMode.Trace
 
