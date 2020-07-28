@@ -6,6 +6,15 @@
 
 #include "tarch/la/Scalar.h"
 
+#ifndef NAN
+#define NAN 0.0/0.0
+#endif
+
+#ifndef INFINITY
+#define INFINITY 1.0/0.0
+#endif
+
+
 #include <complex>
 
 
