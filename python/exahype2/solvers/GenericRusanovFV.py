@@ -66,7 +66,20 @@ class AbstractGenericRusanovFV( FV ):
       additional_device_parameter = ",tarch::multicore::TargetDevice::MayRunOnGPU"
 
     if self._flux and not self._ncp:
-      return namespace + self.HandleCellTemplate_Flux.replace( "{ADDITIONAL_DEVICE_PARAMETER}", additional_device_parameter )
+      additional_gpu_code = """  
+      tarch::la::Vector<Dimensions, double> x;
+      x[0] = x0;
+      x[1] = x1;
+
+      tarch::la::Vector<Dimensions, double> h;
+      h[0] = h0;
+      h[1] = h1;
+      """
+      if use_gpu:
+        return namespace  + additional_gpu_code + self.HandleCellTemplate_Flux.replace( "{ADDITIONAL_DEVICE_PARAMETER}", additional_device_parameter )
+      else:
+        return namespace  + self.HandleCellTemplate_Flux.replace( "{ADDITIONAL_DEVICE_PARAMETER}", additional_device_parameter )
+        
     #elif not flux and ncp:
     #  self.HandleCellTemplate = self.HandleCellTemplate_NCP
     elif self._flux and self._ncp:
@@ -174,9 +187,9 @@ class AbstractGenericRusanovFV( FV ):
     ) -> void {{
       {SOLVER_INSTANCE}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas {ADDITIONAL_DEVICE_PARAMETER} );
     }},
-    marker.x(),
-    marker.h(),
-    {SOLVER_INSTANCE}.getMinTimeStamp(),
+    x,
+    h,
+    minTimestamp, //Todo: {SOLVER_INSTANCE}.getMinTimeStamp(),
     {TIME_STEP_SIZE}, 
     {NUMBER_OF_VOLUMES_PER_AXIS},
     {NUMBER_OF_UNKNOWNS},
@@ -221,9 +234,9 @@ class AbstractGenericRusanovFV( FV ):
     ) -> void {{
       {SOLVER_INSTANCE}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas {ADDITIONAL_DEVICE_PARAMETER} );
     }},
-    marker.x(),
-    marker.h(),
-    {SOLVER_INSTANCE}.getMinTimeStamp(),
+    x,
+    h,
+    minTimestamp,
     {TIME_STEP_SIZE}, 
     {NUMBER_OF_VOLUMES_PER_AXIS},
     {NUMBER_OF_UNKNOWNS},
@@ -500,22 +513,40 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     
-    task_based_implementation_primary_iteration = """
+    if self._use_gpu:
+
+      task_based_implementation_primary_iteration =     """
     static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
-      ::exahype2::fv::gpu::copyPatch(
+    
+    double minTimestamp = InstanceOfEuler.getMinTimeStamp(); //Todo: use right time stamp, time stamp might change if task is executed too late
+    
+    //todo: implement for 3D
+    double x0 =  marker.x()[0];
+    double x1 =  marker.x()[1];
+    double h0 =  marker.h()[0];
+    double h1 =  marker.h()[1];
+    
+    #pragma omp target map(to:reconstructedPatch[0:{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}]) map(tofrom:originalPatch[0:{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}])
+    {{ 
+    tarch::la::Vector<Dimensions, double> x;
+    x[0] = x0;
+    x[1] = x1;
+
+    tarch::la::Vector<Dimensions, double> h;
+    h[0] = h0;
+    h[1] = h1;
+
+    ::exahype2::fv::gpu::copyPatch(
         reconstructedPatch,
         originalPatch,
         {NUMBER_OF_UNKNOWNS},
         {NUMBER_OF_VOLUMES_PER_AXIS},
         {HALO_SIZE}
       );
-      
-      """ + self.construct_HandleCellTemplate( self._use_gpu ) + """  
+      """ + self.construct_HandleCellTemplate( self._use_gpu ) + """
+    }}
     }};
-"""    
-
-    if self._use_gpu:
-      task_based_implementation_primary_iteration += """
+      
     ::exahype2::EnclaveGPUTask* task = new ::exahype2::EnclaveGPUTask(
         marker,
         reconstructedPatch,
@@ -528,7 +559,14 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     );
 """
     else:    
-      task_based_implementation_primary_iteration += """
+      task_based_implementation_primary_iteration = """
+    static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
+      tarch::la::Vector<Dimensions, double> x = marker.x();
+      tarch::la::Vector<Dimensions, double> h = marker.h();
+      
+      """ + self.construct_HandleCellTemplate( self._use_gpu ) + """
+    }};
+
     ::exahype2::EnclaveTask* task = new ::exahype2::EnclaveTask(
         marker,
         reconstructedPatch,
@@ -540,7 +578,6 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
         taskBody        
     );
 """
-
 
     task_based_implementation_primary_iteration += """
     peano4::parallel::Tasks spawn( 

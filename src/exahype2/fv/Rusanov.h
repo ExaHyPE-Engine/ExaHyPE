@@ -100,6 +100,9 @@ namespace exahype2 {
 
 
     namespace gpu {
+      #if defined(GPUOffloading)
+      #pragma omp declare target
+      #endif
       template <typename Flux, typename Eigenvalues>
       void applyRusanovToPatch_FaceLoops(
         Flux                                         flux,
@@ -129,6 +132,9 @@ namespace exahype2 {
         double                                       Qin[],
         double                                       Qout[]
       );
+       #if defined(GPUOffloading)
+       #pragma omp end declare target
+       #endif
     }
 
     namespace internal {

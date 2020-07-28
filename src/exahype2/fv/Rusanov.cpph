@@ -102,8 +102,6 @@ void exahype2::fv::gpu::splitRusanov1d(
     }
 }
 
-
-
 template <typename Flux, typename NCP, typename Eigenvalues>
 void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   Flux                                         flux,
@@ -118,17 +116,9 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   double                                       Qin[],
   double                                       Qout[]
 ) {
-  static tarch::logging::Log _log( "exahype2::fv::gpu" );
-  logTraceInWith6Arguments( "applyRusanovToPatch_FaceLoops(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
-  // @todo Docu: Pointer muessen explizit rumkopiert werden -> manual serialisatino
   #if Dimensions==2
-  double patchCentreData[] = {patchCentre(0), patchCentre(1)};
-  double patchSizeData[]   = {patchSize(0),   patchSize(1)};
   {
-    tarch::la::Vector<2,double>  patchCentre(patchCentreData);
-    tarch::la::Vector<2,double>  patchSize(patchSizeData);
-
     double volumeH = ::exahype2::getVolumeLength(patchSize, numberOfVolumesPerAxisInPatch);
 
     double numericalFluxL[unknowns]; // helper out variable
@@ -253,5 +243,4 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   );
   #endif
 
-  logTraceOutWith6Arguments( "applyRusanovToPatch_FaceLoops(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 }
