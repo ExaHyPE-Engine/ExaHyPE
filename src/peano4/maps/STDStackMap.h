@@ -5,7 +5,7 @@
 
 
 #include "maps.h"
-
+#include "tarch/multicore/Lock.h"
 
 #include <map>
 

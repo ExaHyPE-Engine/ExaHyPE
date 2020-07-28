@@ -33,7 +33,7 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 patch_size     = 7
 unknowns       = 5
 time_step_size = 0.000001
-volume_max     = 0.03
+volume_max     = 0.01
 
 #
 # Still the same solver, but this time we use named arguments. This is the way
@@ -52,7 +52,7 @@ project.add_solver(
 
 
 
-dimensions = 3
+dimensions = 2
 #build_mode = peano4.output.CompileMode.Release
 build_mode = peano4.output.CompileMode.Trace
 

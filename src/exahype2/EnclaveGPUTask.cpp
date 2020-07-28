@@ -24,9 +24,9 @@ exahype2::EnclaveGPUTask::EnclaveGPUTask(
   //
   // This version does offload to the GPU, but does so sequentially
   //
-  _outputValues = new double[_numberOfResultValues];
-  _functor(_inputValues,_outputValues,_marker);
-  delete[] _inputValues;
+  //_outputValues = new double[_numberOfResultValues];
+ // _functor(_inputValues,_outputValues,_marker);
+ // delete[] _inputValues;
 
 
   logTraceOut( "EnclaveGPUTask(...)" );
@@ -44,9 +44,9 @@ bool exahype2::EnclaveGPUTask::run() {
   //
   // This is the version I'd likely wanna have
   //
-  // _outputValues = new double[_numberOfResultValues];
-  // _functor(_inputValues,_outputValues,_marker);
-  // delete[] _inputValues;
+   _outputValues = new double[_numberOfResultValues];
+   _functor(_inputValues,_outputValues,_marker);
+   delete[] _inputValues;
 
   EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);
   logTraceOut( "run()" );
