@@ -10,7 +10,8 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import exahype2.grid.EnclaveLabels
 
 from .FV import FV
-from multiprocessing.heap import Heap
+
+import jinja2
 
 
 class AbstractGenericRusanovFV( FV ):
@@ -31,8 +32,13 @@ class AbstractGenericRusanovFV( FV ):
     
     self._flux  = flux
     self._ncp   = ncp
-    
-    self.HandleCellTemplate = self.construct_HandleCellTemplate()
+
+    if self._flux and not self._ncp:
+      self.HandleCellTemplate = self.HandleCellTemplate_Flux
+    elif self._flux and self._ncp:
+      self.HandleCellTemplate = self.HandleCellTemplate_Flux_NCP
+    else:
+      print( "Error: No handle cell template available for this combination of PDE terms" )
          
     if flux:
       self._flux_implementation        = self.__User_Defined
@@ -48,44 +54,6 @@ class AbstractGenericRusanovFV( FV ):
     self._boundary_conditions_implementation        = self.__User_Defined
     self._refinement_criterion_implementation       = self.__User_Defined
     self._initial_conditions_implementation         = self.__User_Defined
-
-
-  def construct_HandleCellTemplate(self, use_gpu=False):
-    """
-    
-      Analyses which PDE terms the user wants to use and returns the 
-      corresponding cell template. This template is usually stored 
-      within self.HandleCellTemplate but you might want to do other
-      stuff with it
-      
-    """
-    namespace = "::exahype2::fv::" 
-    additional_device_parameter = ""
-    if use_gpu: 
-      namespace = "::exahype2::fv::gpu::"
-      additional_device_parameter = ",tarch::multicore::TargetDevice::MayRunOnGPU"
-
-    if self._flux and not self._ncp:
-      additional_gpu_code = """  
-      tarch::la::Vector<Dimensions, double> x;
-      x[0] = x0;
-      x[1] = x1;
-
-      tarch::la::Vector<Dimensions, double> h;
-      h[0] = h0;
-      h[1] = h1;
-      """
-      if use_gpu:
-        return namespace  + additional_gpu_code + self.HandleCellTemplate_Flux.replace( "{ADDITIONAL_DEVICE_PARAMETER}", additional_device_parameter )
-      else:
-        return namespace  + self.HandleCellTemplate_Flux.replace( "{ADDITIONAL_DEVICE_PARAMETER}", additional_device_parameter )
-        
-    #elif not flux and ncp:
-    #  self.HandleCellTemplate = self.HandleCellTemplate_NCP
-    elif self._flux and self._ncp:
-      return namespace + self.HandleCellTemplate_Flux_NCP.replace( "{ADDITIONAL_DEVICE_PARAMETER}", additional_device_parameter )
-    else:
-      print( "ERROR: Combination of PDE terms not supported" )
 
   
   def set_implementation(self,flux=__None,ncp=__None,eigenvalues=__User_Defined,boundary_conditions=__User_Defined,refinement_criterion=__User_Defined,initial_conditions=__User_Defined):
@@ -164,86 +132,129 @@ class AbstractGenericRusanovFV( FV ):
 """
 
 
-  HandleCellTemplate_Flux = """applyRusanovToPatch_FaceLoops(
-    [&](
-      double                                       Q[],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double                                       F[]
-    ) -> void {{
-      {SOLVER_INSTANCE}.flux( Q, faceCentre, volumeH, t, normal, F {ADDITIONAL_DEVICE_PARAMETER} );
-    }},
-    [&](
-      double                                       Q[],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double                                       lambdas[]
-    ) -> void {{
-      {SOLVER_INSTANCE}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas {ADDITIONAL_DEVICE_PARAMETER} );
-    }},
-    x,
-    h,
-    minTimestamp, //Todo: {SOLVER_INSTANCE}.getMinTimeStamp(),
-    {TIME_STEP_SIZE}, 
-    {NUMBER_OF_VOLUMES_PER_AXIS},
-    {NUMBER_OF_UNKNOWNS},
-    reconstructedPatch,
-    originalPatch
-  );
-"""
+  HandleCellTemplate_Flux = jinja2.Template( """
+    {% if use_gpu %}
+    ::exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
+    {% else %}
+    ::exahype2::fv::applyRusanovToPatch_FaceLoops(
+    {% endif %}
+      [&](
+        double                                       Q[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       F[]
+      ) -> void {
+        {% if use_gpu %}
+        {{SOLVER_INSTANCE}}::flux( Q, faceCentre, volumeH, t, normal, F, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {% else %}
+        {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+        {% endif %}
+      },
+      [&](
+        double                                       Q[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       lambdas[]
+      ) -> void {
+        {% if use_gpu %}
+        {{SOLVER_INSTANCE}}::eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {% else %}
+        {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas );
+        {% endif %}
+      },
+      {% if use_gpu %}
+      x,
+      h,
+      minTimeStamp, //Todo: {SOLVER_INSTANCE}.getMinTimeStamp(),
+      {% else %}
+      marker.x(),
+      marker.h(),
+      {{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      {% endif %}
+      {{TIME_STEP_SIZE}}, 
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      reconstructedPatch,
+      originalPatch
+    );
+""")
 
 
-  HandleCellTemplate_Flux_NCP = """applyRusanovToPatch_FaceLoops(
-    [&](
-      double                                       Q[],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double                                       F[]
-    ) -> void {{
-      {SOLVER_INSTANCE}.flux( Q, faceCentre, volumeH, t, normal, F {ADDITIONAL_DEVICE_PARAMETER} );
-    }},
-    [&](
-      double Q[],
-      double gradQ[][Dimensions],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double BgradQ[]
-    ) -> void {{
-      {SOLVER_INSTANCE}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ {ADDITIONAL_DEVICE_PARAMETER} );
-    }},
-    [&](
-      double                                       Q[],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double                                       lambdas[]
-    ) -> void {{
-      {SOLVER_INSTANCE}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas {ADDITIONAL_DEVICE_PARAMETER} );
-    }},
-    x,
-    h,
-    minTimestamp,
-    {TIME_STEP_SIZE}, 
-    {NUMBER_OF_VOLUMES_PER_AXIS},
-    {NUMBER_OF_UNKNOWNS},
-    reconstructedPatch,
-    originalPatch
+  HandleCellTemplate_Flux_NCP = jinja2.Template( """
+    {% if use_gpu %}
+    ::exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
+    {% else %}
+    ::exahype2::fv::applyRusanovToPatch_FaceLoops(
+    {% endif %}
+      [&](
+        double                                       Q[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       F[]
+      ) -> void {
+        {% if use_gpu %}
+        {{SOLVER_INSTANCE}}::flux( Q, faceCentre, volumeH, t, normal, F, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {% else %}
+        {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+        {% endif %}
+      },
+      [&](
+        double Q[],
+        double gradQ[][Dimensions],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double BgradQ[]
+      ) -> void {
+        {% if use_gpu %}
+        {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {% else %}
+        {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+        {% endif %}
+      },
+      [&](
+        double                                       Q[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       lambdas[]
+      ) -> void {
+        {% if use_gpu %}
+        {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {% else %}
+        {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas);
+        {% endif %}
+      },
+      {% if use_gpu %}
+      x,
+      h,
+      minTimeStamp, //Todo: {SOLVER_INSTANCE}.getMinTimeStamp(),
+      {% else %}
+      marker.x(),
+      marker.h(),
+      {{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      {% endif %}
+      {{TIME_STEP_SIZE}}, 
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      reconstructedPatch,
+      originalPatch
   );
-"""
+""")
+  
 
   def add_entries_to_text_replacement_dictionary(self,d):
     """
@@ -513,38 +524,42 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     
-    if self._use_gpu:
-
-      task_based_implementation_primary_iteration =     """
-    static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
+    d[ use_gpu ] = self._use_gpu
+   
     
-    double minTimestamp = InstanceOfEuler.getMinTimeStamp(); //Todo: use right time stamp, time stamp might change if task is executed too late
-    
-    //todo: implement for 3D
-    double x0 =  marker.x()[0];
-    double x1 =  marker.x()[1];
-    double h0 =  marker.h()[0];
-    double h1 =  marker.h()[1];
+    #  task_based_implementation_primary_iteration =     """
+    #static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
+    # 
+    # double minTimestamp = InstanceOfEuler.getMinTimeStamp(); //Todo: use right time stamp, time stamp might change if task is executed too late
+    # 
+    #//todo: implement for 3D
+    #double x0 =  marker.x()[0];
+    #double x1 =  marker.x()[1];
+    # double h0 =  marker.h()[0];
+    # double h1 =  marker.h()[1];
     
     #pragma omp target map(to:reconstructedPatch[0:{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}]) map(tofrom:originalPatch[0:{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}])
-    {{ 
-    tarch::la::Vector<Dimensions, double> x;
-    x[0] = x0;
-    x[1] = x1;
+    #{{ 
+    #tarch::la::Vector<Dimensions, double> x;
+    #x[0] = x0;
+    #x[1] = x1;
 
-    tarch::la::Vector<Dimensions, double> h;
-    h[0] = h0;
-    h[1] = h1;
+    #tarch::la::Vector<Dimensions, double> h;
+    #h[0] = h0;
+    #h[1] = h1;
 
-    ::exahype2::fv::gpu::copyPatch(
-        reconstructedPatch,
-        originalPatch,
-        {NUMBER_OF_UNKNOWNS},
-        {NUMBER_OF_VOLUMES_PER_AXIS},
-        {HALO_SIZE}
-      );
-      """ + self.construct_HandleCellTemplate( self._use_gpu ) + """
-    }}
+    #::exahype2::fv::gpu::copyPatch(
+    #    reconstructedPatch,
+    #    originalPatch,
+    #    {NUMBER_OF_UNKNOWNS},
+    #    {NUMBER_OF_VOLUMES_PER_AXIS},
+    #    {HALO_SIZE}
+    #  );
+
+    if self._use_gpu:
+      task_based_implementation_primary_iteration = """
+    static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
+      """ + self.HandleCellTemplate.render(d) + """
     }};
       
     ::exahype2::EnclaveGPUTask* task = new ::exahype2::EnclaveGPUTask(
@@ -561,10 +576,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     else:    
       task_based_implementation_primary_iteration = """
     static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
-      tarch::la::Vector<Dimensions, double> x = marker.x();
-      tarch::la::Vector<Dimensions, double> h = marker.h();
-      
-      """ + self.construct_HandleCellTemplate( self._use_gpu ) + """
+      """ + self.HandleCellTemplate.render(d) + """
     }};
 
     ::exahype2::EnclaveTask* task = new ::exahype2::EnclaveTask(
