@@ -2,6 +2,10 @@
 #include "EnclaveBookkeeping.h"
 
 
+#include "tarch/multicore/Core.h"
+
+#include <algorithm>
+
 
 tarch::logging::Log  exahype2::EnclaveGPUTask::_log( "exahype2::EnclaveGPUTask" );
 
@@ -10,7 +14,8 @@ exahype2::EnclaveGPUTask::EnclaveGPUTask(
   const ::peano4::datamanagement::CellMarker&    marker,
   double*                                        inputValues,
   int                                            numberOfResultValues,
-  std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                        functor
+  std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                        functor,
+  bool                                           inputDataCreatedOnDevice
 ):
   tarch::multicore::Task(0),
   _marker(marker),
@@ -18,16 +23,11 @@ exahype2::EnclaveGPUTask::EnclaveGPUTask(
   _outputValues(nullptr),
   _numberOfResultValues(numberOfResultValues),
   _functor(functor),
-  _taskNumber(EnclaveBookkeeping::getInstance().reserveTaskNumber()) {
+  _taskNumber(EnclaveBookkeeping::getInstance().reserveTaskNumber()),
+  _inputDataCreatedOnDevice(inputDataCreatedOnDevice) {
   logTraceIn( "EnclaveGPUTask(...)" );
 
-  //
-  // This version does offload to the GPU, but does so sequentially
-  //
-  _outputValues = new double[_numberOfResultValues];
-  _functor(_inputValues,_outputValues,_marker);
-  delete[] _inputValues;
-
+  _outputValues = tarch::multicore::allocateMemoryOnAccelerator(_numberOfResultValues);
 
   logTraceOut( "EnclaveGPUTask(...)" );
 }
@@ -41,14 +41,20 @@ int exahype2::EnclaveGPUTask::getTaskNumber() const {
 bool exahype2::EnclaveGPUTask::run() {
   logTraceIn( "run()" );
 
-  //
-  // This is the version I'd likely wanna have
-  //
-  // _outputValues = new double[_numberOfResultValues];
-  // _functor(_inputValues,_outputValues,_marker);
-  // delete[] _inputValues;
+  _functor(_inputValues,_outputValues,_marker);
 
-  EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);
+  if (_inputDataCreatedOnDevice) {
+    tarch::multicore::freeMemoryOnAccelerator(_inputValues);
+  }
+  else {
+    delete[] _inputValues;
+  }
+
+  double* outputValuesOnHost = new double[_numberOfResultValues];
+  std::copy_n( _outputValues, _numberOfResultValues, outputValuesOnHost );
+  tarch::multicore::freeMemoryOnAccelerator(_outputValues);
+
+  EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,outputValuesOnHost);
   logTraceOut( "run()" );
   return false;
 }

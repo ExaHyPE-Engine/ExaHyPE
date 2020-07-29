@@ -43,7 +43,7 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 #
 # Add the Finite Volumes solver
 #
-patch_size     = 13
+patch_size     = 5
 #patch_size     = 3
 unknowns       = 5
 time_step_size = 0.0001

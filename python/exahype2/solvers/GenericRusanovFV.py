@@ -593,20 +593,27 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
         {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
         #endif
         [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
+          ::exahype2::fv::copyPatch(
+            reconstructedPatch,
+            originalPatch,
+            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_VOLUMES_PER_AXIS}},
+            {{HALO_SIZE}}
+          );
+          
           """).render(d) + self.HandleCellTemplate.render(d) + """
         }
     );
 """
 
     task_based_implementation_primary_iteration += """
+    fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( task->getTaskNumber() );
     peano4::parallel::Tasks spawn( 
         task,
         peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
         //peano4::parallel::Tasks::TaskType::Sequential,
         peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFV" )
-    );
-      
-    fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( task->getTaskNumber() );
+    );      
     """ 
         
     task_based_implementation_secondary_iteration = """
@@ -617,6 +624,12 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
       fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
 """    
 
+    memory_allocation_mode = None
+    if self._use_gpu:
+      memory_allocation_mode = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorMemory
+    else:
+      memory_allocation_mode = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Heap
+      
     reconstruct_patch_and_apply_FV_kernel = peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
       self._patch,
       self._patch_overlap,
@@ -628,8 +641,9 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 #include "exahype2/NonCriticalAssertions.h" 
 #include "exahype2/fv/Generic.h" 
 #include "peano4/parallel/Tasks.h" 
+#include "tarch/multicore/Core.h" 
 """,
-      True
+      memory_allocation_mode
     )
     reconstruct_patch_and_apply_FV_kernel.additional_includes += """
 #include "exahype2/EnclaveBookkeeping.h"

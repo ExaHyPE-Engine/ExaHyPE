@@ -14,7 +14,7 @@
 #include "tarch/multicore/Core.h"
 
 double* tarch::multicore::allocateMemoryOnAccelerator(int size) {
-  data = new double[size];
+ return new double[size];
 }
 
 

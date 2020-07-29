@@ -19,23 +19,33 @@ namespace exahype2 {
 
 
 /**
- * Please study the enclave task in tandem with the EnclaveBookkeeping. Enclave
- * tasks use the bookkeeping to register themselves (obtain a task number). The
- * bookkeeping thus is aware which enclave tasks are outstanding still. Once an
- * enclave task terminates, it registers itself again with the bookkeeping -
- * this time as finished, so anybody can grab the outcome.
+ * An enclave task which runs on a GPU
  *
- * Enclave tasks per se are application generic. They are given an array of
- * values, they are told how big the output data has to be, and they are also
- * given a functor which tells them what to run on the outcome. They don't know
- * anything about the functor's semantics.
+ * Please study the enclave task before. This routine differs in a few ways
  *
- * <h2> Object lifecycle </h2>
+ * - I assume that the functor internally invokes a GPU kernel
+ * - Therefore, I do not create the output on the CPU but on the accelerator
+ * - After the kernel has terminated, I copy the result from the accelerator
+ *   data into a local buffer which I hand over to the bookkeeping.
  *
- * Tasks are automatically destroyed when we make their run() method return false.
- * As a consequence, I cannot simply take the task, run it, and then store the
- * task object into the enclave bookkeeping. I can only store the created output
- * memory, but will loose all of my task-specific data.
+ * <h2> Asynchronous kernels </h2>
+ *
+ * The GPU tasks are not asynchronous, i.e. I think it blocks the main CPU
+ * while the GPU runs. The following slides might provide a clue how to
+ * circumnavigate this one:
+ *
+ * https://on-demand.gputechconf.com/gtc/2018/presentation/s8344-openmp-on-gpus-first-experiences-and-best-practices.pdf
+ *
+ * If you really wanna have totally asynchronous work, you might consider to
+ * make your kernels
+ *
+ * - nowait
+ * - depend out on some output data
+ * - yield
+ * - add an explicit OpenMP target update from with a depends clause
+ *
+ * A good OpenMP runtime system however should manage this automatically as long
+ * as enough tasks remain available on the host.
  */
 class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
   private:
@@ -49,6 +59,7 @@ class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
     int                                          _numberOfResultValues;
     std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                      _functor;
     const int                                    _taskNumber;
+    const bool                                   _inputDataCreatedOnDevice;
 
   public:
     /**
@@ -61,7 +72,8 @@ class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
       const ::peano4::datamanagement::CellMarker&    marker,
       double*                                        inputValues,
       int                                            numberOfResultValues,
-      std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                        functor
+      std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                        functor,
+	  bool                                           inputDataCreatedOnDevice = true
     );
 
     EnclaveGPUTask(const EnclaveGPUTask& other) = delete;
@@ -76,6 +88,18 @@ class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
      */
     int getTaskNumber() const;
 
+    /**
+     *
+     *
+     * - Delete the input data. We know that the compute kernel has terminated,
+     *   so it is safe to kill this memory region. We only have to take into
+     *   account whether this has been allocated on the host or the device.
+     * - Create memory on the heap on the host and copy the content of
+     *   _outputValues (on the accelerator) over to this heap buffer.
+     * - Free _outputValues on the device.
+     * - Hand the newly created heap chunk on the host over to the
+     *   bookkeeping.
+     */
     bool run() override;
 
     /**

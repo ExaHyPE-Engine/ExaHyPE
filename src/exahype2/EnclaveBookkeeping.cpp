@@ -39,6 +39,7 @@ void exahype2::EnclaveBookkeeping::dumpStatistics() {
 
 
 void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination) {
+  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double)", "fetch results of task " << number );
   tarch::multicore::Lock finishedTasksLock( _finishedTasksSemaphore );
   bool isContained = _finishedTasks.count( number );
   finishedTasksLock.free();
@@ -72,12 +73,11 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
 }
 
 
-// Muss net konsekutiv sein
 int  exahype2::EnclaveBookkeeping::reserveTaskNumber() {
   tarch::multicore::Lock lock( _activeTasksSemaphore );
   int result = _activeTaskNumbers.size();
   while (_activeTaskNumbers.count( result )>0) {
-    result++;
+    result+=23;
   }
   _activeTaskNumbers.insert( result );
   logDebug( "reserveTaskNumber()", "return " << result << " at a total task number count of " << _activeTaskNumbers.size() );
@@ -86,7 +86,7 @@ int  exahype2::EnclaveBookkeeping::reserveTaskNumber() {
 
 
 void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResultValues, double* data) {
-  logDebug( "reserveTaskNumber()", "task " << taskNumber << " has terminated. Bookkeep results" );
+  logDebug( "finishedTask()", "task " << taskNumber << " has terminated. Bookkeep results" );
 
   tarch::multicore::Lock lockFinishedTasks( _finishedTasksSemaphore );
   assertionEquals( _finishedTasks.count(taskNumber),0 );
