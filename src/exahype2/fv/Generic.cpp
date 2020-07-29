@@ -51,6 +51,37 @@ void exahype2::fv::gpu::copyPatch(
       QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
     }
   }
+
+  #if Dimensions==2
+  int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
+  int destinationSerialised = 0;
+  for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
+    for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+      for (int i=0; i<unknowns; i++) {
+        QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
+      }
+      sourceSerialised++;
+      destinationSerialised++;
+    }
+    destinationSerialised += 2*haloSize;
+  }
+  #else
+  int sourceSerialised      = (numberOfVolumesPerAxisInPatch+haloSize*2)*(numberOfVolumesPerAxisInPatch+haloSize*2) + numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
+  int destinationSerialised = 0;
+  for (int z=0; z<numberOfVolumesPerAxisInPatch; z++) {
+    for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
+      for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+        for (int i=0; i<unknowns; i++) {
+          QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
+        }
+        sourceSerialised++;
+        destinationSerialised++;
+      }
+      destinationSerialised += 2*haloSize;
+    }
+    destinationSerialised += 2*haloSize+2*(numberOfVolumesPerAxisInPatch+haloSize*2);
+  }
+  #endif
 }
 
 

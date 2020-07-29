@@ -549,9 +549,9 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
           #endif
           double minTimeStamp = {{SOLVER_INSTANCE}}.getMinTimeStamp();
 
-          #if Dimensions==2
+          #if Dimensions==2 and defined(GPUOffloading)
           #pragma omp target map(to:reconstructedPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}}]) map(tofrom:originalPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}}])
-          #else
+          #elif defined(GPUOffloading)
           #pragma omp target map(to:reconstructedPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}}]) map(tofrom:originalPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}}])
           #endif
           {
