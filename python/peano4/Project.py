@@ -10,6 +10,8 @@ import peano4.runner
 
 import subprocess
 import sys
+import multiprocessing
+import gc
 
 
 class Project (object):
@@ -55,7 +57,7 @@ class Project (object):
     self.constants  = peano4.output.Constants(self)
 
     
-  def generate(self, overwrite=peano4.output.Overwrite.Default):
+  def generate(self, overwrite=peano4.output.Overwrite.Default, throw_away_data_after_generation=False):
     """
     Generate all code. If you add stuff to your project after a 
     build, you have to (re-)generate the code. If you compile only
@@ -65,6 +67,14 @@ class Project (object):
     
     It is important that I reset the output. Otherwise, two 
     subsequent generate calls enrich the output twice.
+    
+    throw_away_data_after_generation: Bool
+      The Peano 4 memory footprint can become quite substantial 
+      effectively reducing the translation capabilities (as compilers
+      tend to require a lot of memory, too). So pass in True if you 
+      want the script to throw away the data structures (and run a 
+      garbage collection) after all files have been generated.
+      
     """
     print( "generate all code ..." )
     self.is_generated = True
@@ -80,9 +90,18 @@ class Project (object):
     self.constants.generate(overwrite, self.directory)
 
     print( "generation complete" )
+    
+    if throw_away_data_after_generation:
+      self.datamodel = None
+      self.solversteps = None
+      self.output      = None
+      
+      gc.collect()
+      
+      print( "threw away all data and ran garbage collection" )
 
-          
-  def build(self, make_clean_first=True, additional_libraries = [], number_of_parallel_builds = 4):
+      
+  def build(self, make_clean_first=True, additional_libraries = [], number_of_parallel_builds = -1):
     """
       Invokes the underlying make/C build mechanism on the project. 
       We invoke the make command via a subprocess. That's it.
@@ -92,9 +111,13 @@ class Project (object):
         This is mapped onto make -jnumber_of_parallel_builds, i.e. it 
         determines how many parallel make instances the code spawns.
         Usually, a lot of the generated code is quite lengthy. Therefore
-        compile time can be high.
+        compile time can be high. If you pass something smaller or equal
+        to zero, it will use the core count as guideline how to compile.
         
     """
+    if number_of_parallel_builds<=0:
+        number_of_parallel_builds = multiprocessing.cpu_count()
+        
     if not self.is_generated:
       self.generate();
 

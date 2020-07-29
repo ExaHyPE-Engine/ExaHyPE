@@ -91,7 +91,10 @@ below:
   build without multithreading, but a \texttt{--with-multithreading=cpp}, e.g.,
   makes \Peano\  use the C++ threading model. Please consult \texttt{--help} for
   details. Note: To use OpenMP multithreading, you will need a compiler which
-  supports OpenMP 5.0 (e.g - GCC 9.x).
+  supports OpenMP 5.0 (e.g - GCC 9.x)\footnote{\Peano\ realises its GPGPU
+  offloading via OpenMP, too. Some compilers struggle to translate these GPGPU
+  instructions. In this case, please configure with the CXXFLAG
+  \texttt{-DnoGPUOffloading}.}.
    \\
   \texttt{--with-mpi} & Enable the MPI version of \Peano. You have to tell the
   build environment however which compile command to use. Please note that

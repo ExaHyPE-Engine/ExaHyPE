@@ -11,6 +11,8 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 import exahype2.grid.AMROnPatch
 
+import jinja2
+
 from abc import abstractmethod
 
 
@@ -124,9 +126,11 @@ class FV(object):
     return ""
 
 
+  """ @todo Make Jinja2 template """
   AdjustCellTemplate = ""
   
   
+  """ @todo Make Jinja2 template """
   _AMRTemplate = ""
 
 
@@ -178,11 +182,14 @@ class FV(object):
     #))
     pass
   
-
+  """ @todo Make Jinja2 template """
   HandleBoundaryTemplate = ""
 
 
-  HandleCellTemplate = ""
+  """ 
+   This is a Jinja 2 template 
+  """
+  HandleCellTemplate = jinja2.Template( "" )
  
  
   def add_actions_to_perform_time_step(self, step):
@@ -195,7 +202,7 @@ class FV(object):
     step.add_action_set( peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
       self._patch,
       self._patch_overlap,
-      self.HandleCellTemplate.format(**d),
+      self.HandleCellTemplate.render(**d),
       self.HandleBoundaryTemplate.format(**d),
       self._guard_update_cell,
       self._guard_touch_face_first_time_in_time_step,
@@ -280,6 +287,7 @@ class FV(object):
     d["NUMBER_OF_VOLUMES_PER_AXIS"] = self._patch.dim[0]
     d["HALO_SIZE"]                  = int(self._patch_overlap.dim[0]/2)
     d["SOLVER_INSTANCE"]            = self.get_name_of_global_instance()
+    d["SOLVER_NAME"]                = self._name
     d["UNKNOWN_IDENTIFIER"]         = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]         = self._patch.no_of_unknowns
     if self._patch_overlap.dim[0]/2!=1:
