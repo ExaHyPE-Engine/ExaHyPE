@@ -13,6 +13,15 @@
 
 #include "tarch/multicore/Core.h"
 
+double* tarch::multicore::allocateMemoryOnAccelerator(int size) {
+  data = new double[size];
+}
+
+
+void tarch::multicore::freeMemoryOnAccelerator(double* data) {
+  delete[] data;
+}
+
 
 tarch::multicore::Core::Core() {
 }

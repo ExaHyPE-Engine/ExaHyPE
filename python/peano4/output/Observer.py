@@ -553,7 +553,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
     
     const int inCellStack  = event.getCellData();
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
-    logDebug("enterCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
+    logDebug("enterCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack << "(" << {full_qualified_type}::loadPersistently(marker) << ")" );
     
     peano4::datamanagement::CellMarker  marker(event);
     
@@ -717,12 +717,16 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
     const int outCellStack  = event.getCellData();
     logDebug("leaveCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
 
-     auto view = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( 1 );
+    peano4::datamanagement::CellMarker  marker(event);
+
+    auto view = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->popBlock( 1 );
 
     if (
       outCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       and
       outCellStack!=peano4::grid::TraversalObserver::NoData
+      and
+      {full_qualified_type}::storePersistently(marker)
     ) {{
       DataRepository::_{logical_type_name}Stack.getForPush( DataRepository::DataKey(_spacetreeId,outCellStack))->push( view.get(0) );
     }}
@@ -802,6 +806,8 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
       int outFaceStack         = event.getFaceDataTo(i);
       logDebug("leaveCell(...)", "pos-" << inFaceStackPosition << "->face stack " << outFaceStack );
       
+      peano4::datamanagement::FaceMarker  marker(event,inFaceStackPosition);
+
       {full_qualified_type} data = view.get(inFaceStackPosition);
       
       if (
@@ -810,6 +816,8 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
         outFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
         outFaceStack!=peano4::grid::TraversalObserver::NoData
+        and
+        {full_qualified_type}::storePersistently(marker)
       ) {{
         DataRepository::_{logical_type_name}Stack.getForPush( DataRepository::DataKey(_spacetreeId,outFaceStack))->push(data);
       }}
@@ -884,6 +892,8 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
       int outVertexStack         = event.getVertexDataTo(i);
       logDebug("leaveCell(...)", "pos-" << inVertexStackPosition << "->vertex stack " << outVertexStack );
       
+      peano4::datamanagement::VertexMarker  marker(event,inVertexStackPosition);
+
       {full_qualified_type} data = view.get(inVertexStackPosition);
   
       if (
@@ -892,6 +902,8 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
         outVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity
         and
         outVertexStack!=peano4::grid::TraversalObserver::NoData
+        and
+        {full_qualified_type}::storePersistently(marker)
       ) {{
         DataRepository::_{logical_type_name}Stack.getForPush(DataRepository::DataKey(_spacetreeId,outVertexStack))->push(data);
       }}

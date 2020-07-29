@@ -15,6 +15,26 @@
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
+
+double* tarch::multicore::allocateMemoryOnAccelerator(int size) {
+  #if defined(GPUOffloading)
+  double* data;
+  cudaMallocManaged(&data, size*sizeof(double), cudaMemAttachGlobal);
+  #else
+  data = new double[size];
+  #endif
+}
+
+
+void tarch::multicore::freeMemoryOnAccelerator(double* data) {
+  #if defined(GPUOffloading)
+  cudaFree(data);
+  #else
+  delete[] data;
+  #endif
+}
+
+
 tarch::multicore::Core::Core() {
 }
 

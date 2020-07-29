@@ -10,6 +10,9 @@
 
 namespace tarch {
   namespace multicore {
+    double* allocateMemoryOnAccelerator(int size);
+    void freeMemoryOnAccelerator(double* data);
+
     class Core;
   }
 }

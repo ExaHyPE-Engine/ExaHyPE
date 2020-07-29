@@ -3,6 +3,29 @@
 from peano4.solversteps.ActionSet import ActionSet
 
 
+from enum import Enum
+
+class ReconstructedArrayMemoryLocation(Enum):
+  """
+   All arrays are held on the call stack. Might not work with PGI compilers or 
+   Clang, but it does work with GCC and Intel. This mode is the preferred one,
+   as all memory frees are implicitly done.
+  """
+  CallStack = 0,
+  """
+   Create data on the heap. Done via a plain new. You have to delete the 
+   reconstructed data yourself.
+  """
+  Heap = 1,
+  """
+   Create data on the heap for an accelerator. It relies on the tarch::allocateMemoryOnAccelerator
+   routine and you have to use this one again to free it.
+  """
+  AcceleratorMemory = 2
+
+
+
+
 class ReconstructPatchAndApplyFunctor(ActionSet):
   """
   This class assumes that you have NxNxN patch within your block. It also assumes that 
@@ -19,7 +42,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap,functor_implementation,touch_face_first_time_functor,guard_cell_operation,guard_face_operation,additional_includes,on_heap_with_manual_delete=False):
+  def __init__(self,patch,patch_overlap,functor_implementation,touch_face_first_time_functor,guard_cell_operation,guard_face_operation,additional_includes,reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.CallStack):
     """
 
   patch: peano4.datamodel.Patch
@@ -29,19 +52,6 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     Consult remark above about how the dimensions of this overlap 
     patch have to match
      
-  on_heap_with_manual_delete: bool
-  
-  reconstruction_array_allocation: string
-    If this argument is STACK, then we create all reconstructed data on 
-    the call stack. In this case, the data is automatically destroyed 
-    after we have processed the reconstructed data. If you add in HEAP,
-    then the data is created on the heap and it is not(!) freeded. The
-    user has to free all data manually within the functor_implementation.
-    If it is anything but these two identifiers, then I assume it is a 
-    function call which returns a double pointer to the array, i.e. I 
-    assume the allocation is a string which creates memory and someone
-    else cares about freeing it again.
-  
   <h2> Functor_implementation </h2> 
   
   The functor implementation is a plain C/C++ 
@@ -97,7 +107,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.d[ "GUARD_CELL_OPERATION" ]                 = guard_cell_operation
     self.d[ "GUARD_FACE_OPERATION" ]                 = guard_face_operation
 
-    if on_heap_with_manual_delete:
+    if reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
     double* reconstructedPatch = new double[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
@@ -105,7 +115,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     double* reconstructedPatch = new double[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """    
-    else:
+    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.CallStack:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
     double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
@@ -113,6 +123,17 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """    
+    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorMemory:
+      self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
+    double* reconstructedPatch;
+    #if Dimensions==2
+    reconstructedPatch = ::tarch::multicore::allocateMemoryOnAccelerator(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """);
+    #elif Dimensions==3
+    reconstructedPatch = ::tarch::multicore::allocateMemoryOnAccelerator(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """);
+    #endif
+"""    
+    else:  
+      printf( "Error: memory allocation mode for patch reconstruction not known")
 
     self.additional_includes                         = additional_includes
     self.additional_attributes                       = ""
