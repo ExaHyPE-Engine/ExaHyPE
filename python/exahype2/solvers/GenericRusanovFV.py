@@ -148,7 +148,7 @@ class AbstractGenericRusanovFV( FV ):
         double                                       F[]
       ) -> void {
         {% if use_gpu %}
-        {{SOLVER_INSTANCE}}::flux( Q, faceCentre, volumeH, t, normal, F, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
         {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
         {% endif %}
@@ -163,7 +163,7 @@ class AbstractGenericRusanovFV( FV ):
         double                                       lambdas[]
       ) -> void {
         {% if use_gpu %}
-        {{SOLVER_INSTANCE}}::eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {{SOLVER_NAME}}::eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
         {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas );
         {% endif %}
@@ -171,7 +171,7 @@ class AbstractGenericRusanovFV( FV ):
       {% if use_gpu %}
       x,
       h,
-      minTimeStamp, //Todo: {SOLVER_INSTANCE}.getMinTimeStamp(),
+      minTimeStamp, 
       {% else %}
       marker.x(),
       marker.h(),
@@ -202,7 +202,7 @@ class AbstractGenericRusanovFV( FV ):
         double                                       F[]
       ) -> void {
         {% if use_gpu %}
-        {{SOLVER_INSTANCE}}::flux( Q, faceCentre, volumeH, t, normal, F, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
         {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
         {% endif %}
@@ -218,7 +218,7 @@ class AbstractGenericRusanovFV( FV ):
         double BgradQ[]
       ) -> void {
         {% if use_gpu %}
-        {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {{SOLVER_NAME}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
         {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
         {% endif %}
@@ -233,7 +233,7 @@ class AbstractGenericRusanovFV( FV ):
         double                                       lambdas[]
       ) -> void {
         {% if use_gpu %}
-        {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {{SOLVER_NAME}}::eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
         {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas);
         {% endif %}
@@ -524,70 +524,79 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = self._patch.no_of_unknowns * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) * (self._patch_overlap.dim[0] + self._patch.dim[0]) 
     
-    d[ use_gpu ] = self._use_gpu
+    d[ "use_gpu" ] = self._use_gpu
    
-    
-    #  task_based_implementation_primary_iteration =     """
-    #static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
-    # 
-    # double minTimestamp = InstanceOfEuler.getMinTimeStamp(); //Todo: use right time stamp, time stamp might change if task is executed too late
-    # 
-    #//todo: implement for 3D
-    #double x0 =  marker.x()[0];
-    #double x1 =  marker.x()[1];
-    # double h0 =  marker.h()[0];
-    # double h1 =  marker.h()[1];
-    
-    #pragma omp target map(to:reconstructedPatch[0:{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}]) map(tofrom:originalPatch[0:{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}])
-    #{{ 
-    #tarch::la::Vector<Dimensions, double> x;
-    #x[0] = x0;
-    #x[1] = x1;
-
-    #tarch::la::Vector<Dimensions, double> h;
-    #h[0] = h0;
-    #h[1] = h1;
-
-    #::exahype2::fv::gpu::copyPatch(
-    #    reconstructedPatch,
-    #    originalPatch,
-    #    {NUMBER_OF_UNKNOWNS},
-    #    {NUMBER_OF_VOLUMES_PER_AXIS},
-    #    {HALO_SIZE}
-    #  );
-
     if self._use_gpu:
-      task_based_implementation_primary_iteration = """
-    static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
-      """ + self.HandleCellTemplate.render(d) + """
-    }};
-      
+      task_based_implementation_primary_iteration = jinja2.Template( """
     ::exahype2::EnclaveGPUTask* task = new ::exahype2::EnclaveGPUTask(
         marker,
         reconstructedPatch,
         #if Dimensions==2
-        {NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D},
+        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
         #else
-        {NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D},
+        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
         #endif
-        taskBody        
+        [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
+          // explicit serialisation, as neither the marker nor the user solver
+          // are mappable
+          double x0 =  marker.x()(0);
+          double h0 =  marker.h()(0);
+          double x1 =  marker.x()(1);
+          double h1 =  marker.h()(1);
+          #if Dimensions==3
+          double x2 =  marker.x()(2);
+          double h2 =  marker.h()(2);
+          #endif
+          double minTimeStamp = {{SOLVER_INSTANCE}}.getMinTimeStamp();
+
+          #if Dimensions==2
+          #pragma omp target map(to:reconstructedPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}}]) map(tofrom:originalPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}}])
+          #else
+          #pragma omp target map(to:reconstructedPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}}]) map(tofrom:originalPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}}])
+          #endif
+          {
+            // avoid fancy constructors and create system manually
+            tarch::la::Vector<Dimensions, double> x;
+            x(0) = x0;
+            x(1) = x1;
+            #if Dimensions==3
+            x(2) = x2;
+            #endif
+
+            tarch::la::Vector<Dimensions, double> h;
+            h(0) = h0;
+            h(1) = h1;
+            #if Dimensions==3
+            h(2) = h2;
+            #endif
+
+            ::exahype2::fv::gpu::copyPatch(
+              reconstructedPatch,
+              originalPatch,
+              {{NUMBER_OF_UNKNOWNS}},
+              {{NUMBER_OF_VOLUMES_PER_AXIS}},
+              {{HALO_SIZE}}
+            );
+        
+          """).render(d) + self.HandleCellTemplate.render(d) + """
+          
+          }
+        }
     );
 """
     else:    
-      task_based_implementation_primary_iteration = """
-    static auto taskBody = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {{
-      """ + self.HandleCellTemplate.render(d) + """
-    }};
-
+      task_based_implementation_primary_iteration = jinja2.Template( """
     ::exahype2::EnclaveTask* task = new ::exahype2::EnclaveTask(
         marker,
         reconstructedPatch,
         #if Dimensions==2
-        {NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D},
+        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
         #else
-        {NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D},
+        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
         #endif
-        taskBody        
+        [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
+          """).render(d) + self.HandleCellTemplate.render(d) + """
+        }
     );
 """
 
@@ -601,7 +610,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
       
     fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( task->getTaskNumber() );
     """ 
-    
+        
     task_based_implementation_secondary_iteration = """
       const int taskNumber = fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.getSemaphoreNumber();
       if ( taskNumber>=0 ) {
@@ -613,7 +622,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     reconstruct_patch_and_apply_FV_kernel = peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
       self._patch,
       self._patch_overlap,
-      task_based_implementation_primary_iteration.format(**d),
+      task_based_implementation_primary_iteration,
       "",
       "marker.isEnclaveCell() and not marker.isRefined() and " + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + """::SolverState::Primary""",
       "false",

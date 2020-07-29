@@ -287,6 +287,7 @@ class FV(object):
     d["NUMBER_OF_VOLUMES_PER_AXIS"] = self._patch.dim[0]
     d["HALO_SIZE"]                  = int(self._patch_overlap.dim[0]/2)
     d["SOLVER_INSTANCE"]            = self.get_name_of_global_instance()
+    d["SOLVER_NAME"]                = self._name
     d["UNKNOWN_IDENTIFIER"]         = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]         = self._patch.no_of_unknowns
     if self._patch_overlap.dim[0]/2!=1:

@@ -1,5 +1,8 @@
+#include "tarch/Assertions.h"
 #include "tarch/logging/Log.h"
-#include "../PatchUtils.h"
+#include "exahype2/fv/Generic.h"
+#include "exahype2/PatchUtils.h"
+#include "exahype2/NonCriticalAssertions.h"
 
 
 template <typename Flux, typename Eigenvalues>
