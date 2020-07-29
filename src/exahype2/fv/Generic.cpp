@@ -43,6 +43,9 @@ void exahype2::fv::gpu::copyPatch(
   int    numberOfVolumesPerAxisInPatch,
   int    haloSize
 ) {
+/*
+  Doesn't work with offloading, so I implemented it manually
+
   dfor(k,numberOfVolumesPerAxisInPatch) {
     tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
     int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
@@ -51,6 +54,7 @@ void exahype2::fv::gpu::copyPatch(
       QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
     }
   }
+*/
 
   #if Dimensions==2
   int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;

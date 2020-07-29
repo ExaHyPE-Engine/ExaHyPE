@@ -34,7 +34,7 @@ namespace exahype2 {
     );
 
     namespace gpu {
-      #if !defined(GPUOffloading)
+      #if defined(GPUOffloading)
       #pragma omp declare target
       #endif
       void copyPatch(
@@ -44,7 +44,7 @@ namespace exahype2 {
         int    numberOfVolumesPerAxisInPatch,
         int    haloSize
       );
-      #if !defined(GPUOffloading)
+      #if defined(GPUOffloading)
       #pragma omp end declare target
       #endif
     }
