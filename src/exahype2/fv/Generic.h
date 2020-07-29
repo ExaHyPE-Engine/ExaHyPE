@@ -34,6 +34,9 @@ namespace exahype2 {
     );
 
     namespace gpu {
+      #if !defined(GPUOffloading)
+      #pragma omp declare target
+      #endif
       void copyPatch(
         double QinWithHalo[],
         double QOutWithoutHalo[],
@@ -41,6 +44,9 @@ namespace exahype2 {
         int    numberOfVolumesPerAxisInPatch,
         int    haloSize
       );
+      #if !defined(GPUOffloading)
+      #pragma omp end declare target
+      #endif
     }
 
     /**
