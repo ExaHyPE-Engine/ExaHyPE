@@ -1,16 +1,16 @@
-#include "EnclaveGPUTask.h"
 #include "EnclaveBookkeeping.h"
 
 
 #include "tarch/multicore/Core.h"
 
 #include <algorithm>
+#include "EnclaveOpenMPGPUTask.h"
 
 
-tarch::logging::Log  exahype2::EnclaveGPUTask::_log( "exahype2::EnclaveGPUTask" );
+tarch::logging::Log  exahype2::EnclaveOpenMPGPUTask::_log( "exahype2::EnclaveOpenMPGPUTask" );
 
 
-exahype2::EnclaveGPUTask::EnclaveGPUTask(
+exahype2::EnclaveOpenMPGPUTask::EnclaveOpenMPGPUTask(
   const ::peano4::datamanagement::CellMarker&    marker,
   double*                                        inputValues,
   int                                            numberOfResultValues,
@@ -25,47 +25,55 @@ exahype2::EnclaveGPUTask::EnclaveGPUTask(
   _functor(functor),
   _taskNumber(EnclaveBookkeeping::getInstance().reserveTaskNumber()),
   _inputDataCreatedOnDevice(inputDataCreatedOnDevice) {
-  logTraceIn( "EnclaveGPUTask(...)" );
+  logTraceIn( "EnclaveOpenMPGPUTask(...)" );
 
   _outputValues = tarch::multicore::allocateMemoryOnAccelerator(_numberOfResultValues);
 
-  logTraceOut( "EnclaveGPUTask(...)" );
+  logTraceOut( "EnclaveOpenMPGPUTask(...)" );
 }
 
 
-int exahype2::EnclaveGPUTask::getTaskNumber() const {
+int exahype2::EnclaveOpenMPGPUTask::getTaskNumber() const {
   return _taskNumber;
 }
 
 
-bool exahype2::EnclaveGPUTask::run() {
+bool exahype2::EnclaveOpenMPGPUTask::run() {
   logTraceIn( "run()" );
 
-
-//  omp_event_t gpu_event;
-//#pragma omp
+  int*  dependencyMarker = new int;
 
   _functor(_inputValues,_outputValues,_marker);
 
-  if (_inputDataCreatedOnDevice) {
-    tarch::multicore::freeMemoryOnAccelerator(_inputValues);
-  }
-  else {
-    delete[] _inputValues;
-  }
+  #if defined(GPUOffloading)
+  #pragma omp task depend(in:dependencyMarker)
+  #endif
+  {
+    if (_inputDataCreatedOnDevice) {
+      tarch::multicore::freeMemoryOnAccelerator(_inputValues);
+    }
+    else {
+      delete[] _inputValues;
+    }
 
-//  double* outputValuesOnHost = new double[_numberOfResultValues];
-//  std::copy_n( _outputValues, _numberOfResultValues, outputValuesOnHost );
-//  tarch::multicore::freeMemoryOnAccelerator(_outputValues);
+    double* outputValuesOnHost = new double[_numberOfResultValues];
+    std::copy_n( _outputValues, _numberOfResultValues, outputValuesOnHost );
+    tarch::multicore::freeMemoryOnAccelerator(_outputValues);
 
-//  EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,outputValuesOnHost);
-  EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);
+    EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,outputValuesOnHost);
+  }
+  #if defined(GPUOffloading)
+  #pragma omp taskwait
+  #endif
+
+  delete dependencyMarker;
+
   logTraceOut( "run()" );
   return false;
 }
 
 
-void exahype2::EnclaveGPUTask::prefetch() {
+void exahype2::EnclaveOpenMPGPUTask::prefetch() {
   logTraceIn( "prefetch()" );
   logTraceOut( "prefetch()" );
 }

@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_ENCLAVE_GPU_TASK_H_
-#define _EXAHYPE2_ENCLAVE_GPU_TASK_H_
+#ifndef _EXAHYPE2_ENCLAVE_OPENMP_GPU_TASK_H_
+#define _EXAHYPE2_ENCLAVE_OPENMP_GPU_TASK_H_
 
 
 #include "peano4/datamanagement/CellMarker.h"
@@ -12,7 +12,7 @@
 
 
 namespace exahype2 {
-  class EnclaveGPUTask;
+  class EnclaveOpenMPGPUTask;
   class EnclaveBookkeeping;
 }
 
@@ -29,37 +29,44 @@ namespace exahype2 {
  *   data into a local buffer which I hand over to the bookkeeping.
  *
  */
-class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
-  private:
-    friend class EnclaveBookkeeping;
-
-    static tarch::logging::Log                   _log;
-
-    const ::peano4::datamanagement::CellMarker   _marker;
-    double*                                      _inputValues;
-    double*                                      _outputValues;
-    int                                          _numberOfResultValues;
-    std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                      _functor;
-    const int                                    _taskNumber;
-    const bool                                   _inputDataCreatedOnDevice;
-
+class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
   public:
+	/**
+	 * This functor represents what happens in a cell. It accepts the input
+	 * data which is passed into the enclave task, and it is given also the
+	 * output data which is a local array the enclave task creates. The latter
+	 * will eventually be bookkept once the enclave task has terminated, though
+	 * this particular implementation can create output as a device array. In
+	 * this case, it will copy output over into a host memory region which is
+	 * then given the bookkeeping.
+	 *
+	 * We had quite some issues with declaring the marker as GPU offloadable.
+	 * In principle, it should not be a major issue to get it there, but the
+	 * marker has some routines which extract marker properties from other
+	 * Peano classes. To port them or to extract them would be cumbersome. As
+	 * a consequence, the functor might have to copy elements from the marker
+	 * manually into scalars before it enters a target region.
+	 *
+	 * The functor is responsible to access the target! See run() for requirements.
+	 */
+	typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >  Functor;
+
     /**
      * Construct a task that can run on the GPU
      *
      * But it doesn't have to to run there. It is up to the task to decide whether
      * to offload or not.
      */
-    EnclaveGPUTask(
+    EnclaveOpenMPGPUTask(
       const ::peano4::datamanagement::CellMarker&    marker,
       double*                                        inputValues,
       int                                            numberOfResultValues,
-      std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                        functor,
+	  Functor                                        functor,
 	  bool                                           inputDataCreatedOnDevice = true
     );
 
-    EnclaveGPUTask(const EnclaveGPUTask& other) = delete;
-    EnclaveGPUTask(const EnclaveGPUTask&& other) = delete;
+    EnclaveOpenMPGPUTask(const EnclaveOpenMPGPUTask& other) = delete;
+    EnclaveOpenMPGPUTask(const EnclaveOpenMPGPUTask&& other) = delete;
 
     /**
      * Every task grabs a unique task number. You will want to memorise this
@@ -85,13 +92,13 @@ class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
      *
      * https://www.openmp.org/wp-content/uploads/openmp-examples-4.5.0.pdf
      *
+     * See Section 4.7.1.
      *
+     * The important thing is that your task has to have the clause
      *
-     * Here's the steps:
+     * #pragma omp task depend(out:dependencyMarker)
      *
-     * We create an instance of omp_event_t called gpu_event within run()
-     * - Wrap the functor execution within
-     *
+     * If you wanna further make it asynchronous, please add a nowait to your target
      *
      * <h2> Bookkeeping </h2>
      *
@@ -110,6 +117,20 @@ class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
      * nop
      */
     void prefetch() override;
+
+  private:
+    friend class EnclaveBookkeeping;
+
+    static tarch::logging::Log                   _log;
+
+    const ::peano4::datamanagement::CellMarker   _marker;
+    double*                                      _inputValues;
+    double*                                      _outputValues;
+    int                                          _numberOfResultValues;
+    Functor                                      _functor;
+    const int                                    _taskNumber;
+    const bool                                   _inputDataCreatedOnDevice;
+
 };
 
 

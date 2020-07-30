@@ -526,7 +526,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
    
     if self._use_gpu:
       task_based_implementation_primary_iteration = jinja2.Template( """
-    ::exahype2::EnclaveGPUTask* task = new ::exahype2::EnclaveGPUTask(
+    ::exahype2::EnclaveOpenMPGPUTask* task = new ::exahype2::EnclaveOpenMPGPUTask(
         marker,
         reconstructedPatch,
         #if Dimensions==2
@@ -548,9 +548,9 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
           double minTimeStamp = {{SOLVER_INSTANCE}}.getMinTimeStamp();
 
           #if Dimensions==2 and defined(GPUOffloading)
-          #pragma omp target map(to:reconstructedPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}}]) map(tofrom:originalPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}}])
+          #pragma omp target map(to:reconstructedPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D}}]) map(tofrom:originalPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}}]) depend(out:dependencyMarker) nowait
           #elif defined(GPUOffloading)
-          #pragma omp target map(to:reconstructedPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}}]) map(tofrom:originalPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}}])
+          #pragma omp target map(to:reconstructedPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D}}]) map(tofrom:originalPatch[0:{{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}}]) depend(out:dependencyMarker) nowait
           #endif
           {
             // avoid fancy constructors and create system manually
@@ -649,7 +649,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     reconstruct_patch_and_apply_FV_kernel.additional_includes += """
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "exahype2/EnclaveGPUTask.h"
+#include "exahype2/EnclaveOpenMPGPUTask.h"
 """    
 
     roll_over_enclave_task_results = peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
@@ -659,7 +659,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
       self._get_default_includes() + self.get_user_includes() + """
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "exahype2/EnclaveGPUTask.h"
+#include "exahype2/EnclaveOpenMPGPUTask.h"
 """    
     )
 
