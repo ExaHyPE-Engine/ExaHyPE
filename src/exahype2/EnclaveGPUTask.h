@@ -28,24 +28,6 @@ namespace exahype2 {
  * - After the kernel has terminated, I copy the result from the accelerator
  *   data into a local buffer which I hand over to the bookkeeping.
  *
- * <h2> Asynchronous kernels </h2>
- *
- * The GPU tasks are not asynchronous, i.e. I think it blocks the main CPU
- * while the GPU runs. The following slides might provide a clue how to
- * circumnavigate this one:
- *
- * https://on-demand.gputechconf.com/gtc/2018/presentation/s8344-openmp-on-gpus-first-experiences-and-best-practices.pdf
- *
- * If you really wanna have totally asynchronous work, you might consider to
- * make your kernels
- *
- * - nowait
- * - depend out on some output data
- * - yield
- * - add an explicit OpenMP target update from with a depends clause
- *
- * A good OpenMP runtime system however should manage this automatically as long
- * as enough tasks remain available on the host.
  */
 class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
   private:
@@ -89,7 +71,29 @@ class exahype2::EnclaveGPUTask: public tarch::multicore::Task {
     int getTaskNumber() const;
 
     /**
+     * Run the actual functor
      *
+     * This operation consists of two big items: The kernel invocation (compute
+     * phase) and the clean-up/bookkeeping step.
+     *
+     * <h2> Asynchronous kernels </h2>
+     *
+     * Asynchronous kernel invocation is implemented via OpenMP events and
+     * subtasks. The pattern is inspired by Michael Klemm's talk with the
+     * subtitle "or: Pretty Cool & New OpenMP Stuff). Maybe a better example
+     * is however the OpenMP standard
+     *
+     * https://www.openmp.org/wp-content/uploads/openmp-examples-4.5.0.pdf
+     *
+     *
+     *
+     * Here's the steps:
+     *
+     * We create an instance of omp_event_t called gpu_event within run()
+     * - Wrap the functor execution within
+     *
+     *
+     * <h2> Bookkeeping </h2>
      *
      * - Delete the input data. We know that the compute kernel has terminated,
      *   so it is safe to kill this memory region. We only have to take into

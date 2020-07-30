@@ -59,50 +59,59 @@ void exahype2::fv::gpu::splitRusanov1d(
         double                                       FL[],
         double                                       FR[]
 )  {
-   #if !defined(GPUOffloading)
-   assertion(normal>=0);
-   assertion(normal<Dimensions);
-   #endif
+  #if !defined(GPUOffloading)
+  assertion(normal>=0);
+  assertion(normal<Dimensions);
+  #endif
 
-   double fluxFL[unknowns];
-   double fluxFR[unknowns];
-   flux(QL,x,dx,t,dt,normal,fluxFL);
-   flux(QR,x,dx,t,dt,normal,fluxFR);
+  double fluxFL[unknowns];
+  double fluxFR[unknowns];
+  flux(QL,x,dx,t,dt,normal,fluxFL);
+  flux(QR,x,dx,t,dt,normal,fluxFR);
 
-    double Qaverage[unknowns];
-    double gradQ[unknowns][Dimensions];
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      for (int d=0; d<Dimensions; d++) {
-        gradQ[unknown][d] = 0.0;
-      }
-      Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
-      gradQ[unknown][normal] = QR[unknown] - QL[unknown];
-    }
-    double fluxnonconservativeProduct[unknowns];
-    nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
+  double Qaverage[unknowns];
+   double gradQ[unknowns][Dimensions];
+   for (int unknown=0; unknown<unknowns; unknown++) {
+     for (int d=0; d<Dimensions; d++) {
+       gradQ[unknown][d] = 0.0;
+     }
+     Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
+     gradQ[unknown][normal] = QR[unknown] - QL[unknown];
+   }
+   double fluxnonconservativeProduct[unknowns];
+   // It is important that we initialise these guys with 0, as
+   // ncp might nop and we hence might add garbage
+   for (int i=0; i<unknowns; i++) {
+	 fluxnonconservativeProduct[i] = 0.0;
+   }
+   nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
 
-    double lambdas[unknowns];
-    double lambdaMax = 0.0;
+   double lambdas[unknowns];
+   double lambdaMax = 0.0;
 
-    eigenvalues(QL,x,dx,t,dt,normal,lambdas);
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      #if !defined(GPUOffloading)
-      nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      #endif
-      lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
-    }
-    eigenvalues(QR,x,dx,t,dt,normal,lambdas);
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      #if !defined(GPUOffloading)
-      nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      #endif
-      lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
-    }
+   eigenvalues(QL,x,dx,t,dt,normal,lambdas);
+   for (int unknown=0; unknown<unknowns; unknown++) {
+     #if !defined(GPUOffloading)
+     nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
+     #endif
+     lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
+   }
+   eigenvalues(QR,x,dx,t,dt,normal,lambdas);
+   for (int unknown=0; unknown<unknowns; unknown++) {
+     #if !defined(GPUOffloading)
+     nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
+     #endif
+     lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
+   }
 
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) - 0.5 * fluxnonconservativeProduct[unknown];
-      FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
-    }
+   for (int unknown=0; unknown<unknowns; unknown++) {
+     FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) - 0.5 * fluxnonconservativeProduct[unknown];
+     FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
+     #if !defined(GPUOffloading)
+     nonCriticalAssertion6(FL[unknown]==FL[unknown], fluxFL[unknown], fluxFR[unknown], lambdaMax, QR[unknown], QL[unknown], fluxnonconservativeProduct[unknown]);
+     nonCriticalAssertion6(FR[unknown]==FR[unknown], fluxFL[unknown], fluxFR[unknown], lambdaMax, QR[unknown], QL[unknown], fluxnonconservativeProduct[unknown]);
+     #endif
+   }
 }
 
 template <typename Flux, typename NCP, typename Eigenvalues>
@@ -122,14 +131,14 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
   #if Dimensions==2
   {
-    double volumeH = ::exahype2::getVolumeLength(patchSize, numberOfVolumesPerAxisInPatch);
-
-    double numericalFluxL[unknowns]; // helper out variable
-    double numericalFluxR[unknowns]; // helper out variable
+    const double volumeH = ::exahype2::getVolumeLength(patchSize, numberOfVolumesPerAxisInPatch);
 
     #pragma omp parallel for
     for (int x=0; x<=numberOfVolumesPerAxisInPatch; x++) {
       for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
+   	    double numericalFluxL[unknowns]; // helper out variable
+   	    double numericalFluxR[unknowns]; // helper out variable
+
         const int leftVoxelInPreimage  =  x
                                        + (y+1) * (2 + numberOfVolumesPerAxisInPatch);
         const int rightVoxelInPreimage =  x+1
@@ -169,9 +178,15 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
         for (int unknown=0; unknown<unknowns; unknown++) {
           if (x>0) {
             Qout[ leftVoxelInImage*unknowns+unknown ] -= dt / volumeH * numericalFluxL[unknown];
+            #if !defined(GPUOffloading)
+            nonCriticalAssertion4(Qout[ leftVoxelInImage*unknowns+unknown ]==Qout[ leftVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxL[unknown], unknown);
+            #endif
           }
           if (x<numberOfVolumesPerAxisInPatch) {
             Qout[ rightVoxelInImage*unknowns+unknown ] += dt / volumeH * numericalFluxR[unknown];
+            #if !defined(GPUOffloading)
+            nonCriticalAssertion4(Qout[ rightVoxelInImage*unknowns+unknown ]==Qout[ rightVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxR[unknown], unknown);
+            #endif
           }
         }
       }
@@ -180,6 +195,9 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
     #pragma omp parallel for
     for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
       for (int y=0; y<=numberOfVolumesPerAxisInPatch; y++) {
+   	    double numericalFluxL[unknowns]; // helper out variable
+   	    double numericalFluxR[unknowns]; // helper out variable
+
         const int lowerVoxelInPreimage =  x+1
                                        +  y * (2 + numberOfVolumesPerAxisInPatch);
         const int upperVoxelInPreimage =  x+1
@@ -209,9 +227,15 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
         for (int unknown=0; unknown<unknowns; unknown++) {
           if (y>0) {
             Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH * numericalFluxL[unknown];
+            #if !defined(GPUOffloading)
+            nonCriticalAssertion4(Qout[ lowerVoxelInImage*unknowns+unknown ]==Qout[ lowerVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxL[unknown], unknown);
+            #endif
           }
           if (y<numberOfVolumesPerAxisInPatch) {
             Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH * numericalFluxR[unknown];
+            #if !defined(GPUOffloading)
+            nonCriticalAssertion4(Qout[ upperVoxelInImage*unknowns+unknown ]==Qout[ upperVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxR[unknown], unknown);
+            #endif
           }
         }
       }

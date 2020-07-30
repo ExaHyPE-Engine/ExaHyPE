@@ -41,6 +41,10 @@ int exahype2::EnclaveGPUTask::getTaskNumber() const {
 bool exahype2::EnclaveGPUTask::run() {
   logTraceIn( "run()" );
 
+
+//  omp_event_t gpu_event;
+//#pragma omp
+
   _functor(_inputValues,_outputValues,_marker);
 
   if (_inputDataCreatedOnDevice) {
@@ -50,11 +54,12 @@ bool exahype2::EnclaveGPUTask::run() {
     delete[] _inputValues;
   }
 
-  double* outputValuesOnHost = new double[_numberOfResultValues];
-  std::copy_n( _outputValues, _numberOfResultValues, outputValuesOnHost );
-  tarch::multicore::freeMemoryOnAccelerator(_outputValues);
+//  double* outputValuesOnHost = new double[_numberOfResultValues];
+//  std::copy_n( _outputValues, _numberOfResultValues, outputValuesOnHost );
+//  tarch::multicore::freeMemoryOnAccelerator(_outputValues);
 
-  EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,outputValuesOnHost);
+//  EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,outputValuesOnHost);
+  EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);
   logTraceOut( "run()" );
   return false;
 }

@@ -43,31 +43,19 @@ void exahype2::fv::gpu::copyPatch(
   int    numberOfVolumesPerAxisInPatch,
   int    haloSize
 ) {
-/*
-  Doesn't work with offloading, so I implemented it manually
-
-  dfor(k,numberOfVolumesPerAxisInPatch) {
-    tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
-    int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
-    int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
-    for (int i=0; i<unknowns; i++) {
-      QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
-    }
-  }
-*/
-
   #if Dimensions==2
   int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
   int destinationSerialised = 0;
   for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
     for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+      std::cout << sourceSerialised << "->" << destinationSerialised << " ";
       for (int i=0; i<unknowns; i++) {
         QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
       }
       sourceSerialised++;
       destinationSerialised++;
     }
-    destinationSerialised += 2*haloSize;
+    sourceSerialised += 2*haloSize;
   }
   #else
   int sourceSerialised      = (numberOfVolumesPerAxisInPatch+haloSize*2)*(numberOfVolumesPerAxisInPatch+haloSize*2) + numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
@@ -81,9 +69,9 @@ void exahype2::fv::gpu::copyPatch(
         sourceSerialised++;
         destinationSerialised++;
       }
-      destinationSerialised += 2*haloSize;
+      sourceSerialised += 2*haloSize;
     }
-    destinationSerialised += 2*haloSize+2*(numberOfVolumesPerAxisInPatch+haloSize*2);
+    sourceSerialised += 2*haloSize+2*(numberOfVolumesPerAxisInPatch+haloSize*2);
   }
   #endif
 }

@@ -62,6 +62,7 @@ void examples::exahype2::euler::Euler::eigenvalues(
   assertion(normal>=0);
   assertion(normal<Dimensions);
   eigenvalues(Q,faceCentre,volumeH,t,normal,lambda,tarch::multicore::TargetDevice::MayRunOnGPU);
+
   nonCriticalAssertion2( lambda[0]==lambda[0], faceCentre, normal );
   nonCriticalAssertion2( lambda[1]==lambda[1], faceCentre, normal );
   nonCriticalAssertion2( lambda[2]==lambda[2], faceCentre, normal );
