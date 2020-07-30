@@ -384,24 +384,67 @@ This section is under construction.
 \section{GPU support}
 
 To add GPU support (via OpenMP 5), you have to do a couple of steps.
-First, your solver has to provide a couple of additional routines. 
-I propose that you include
+First, your environment has to be compiled with OpenMP, and I strongly recommend
+that you also add \texttt{--with-nvidia} to have support for their tools.
+Check that \texttt{-DnoGPUOffloading} is \emph{not} set within the compile
+flags and translate your code.
+
+Next, ensure that you use an \ExaHyPE\ solver which has support for GPUs. 
+The enclave solvers typically are your solvers of choice.
+Solvers that provide GPU support have a flag \texttt{use\_gpu} in their
+constructor which is unset by default. 
+Set it to \texttt{True} and rerun the toolkit.
+
+\begin{definition}{Solvers with GPU support}
+ A solver can use GPUs if and only if can provide all of its PDE terms
+ including the eigenvalue computations (so the functions \texttt{flux},
+ \texttt{eigenvalues}, \texttt{nonconservativeProducts}, \ldots) as stateless
+ functions without side-effects, i.e.~functions that can be written down as
+ static and do not need (or even alter) any attribute of the solver class.
+\end{definition}
+
+\noindent
+If you solver does not fit to this class, it is not a fit for GPUs.
+If it fits, then please create two versions of the eigenvalue function and all
+of the PDE term functions (such as the flux computations) in your solver.
+Keep the original one, and add a second one which is 
+
+\begin{itemize}
+  \item static and 
+  \item accepts an additional flag of type \texttt{
+  tarch::multicore::TargetDevice}.
+\end{itemize}
+
+\noindent
+You will need to include 
 \begin{code}
 #include "tarch/multicore/multicore.h"
 \end{code} 
 
 \noindent
-and protect all modifications from hereon with 
+explicitly. Very often, the standard flux and eigenvalue routines can invoke the
+static variants and you can thus eliminate redundancies.
+Please note that solvers with GPU support still can have states in their PDE
+terms, i.e.~alter solver variables.
+But they can do so only for cells which we call skeletons (see the paper by
+Charrier et al.~on enclave tasking).
+
+
+Finally, add
 \begin{code}
-#ifdef 
-\end{code}
+#if defined(GPUOffloading)
+#pragma omp declare target
+#endif
+
+my new static function variants
+
+#if defined(GPUOffloading)
+#pragma omp end declare target
+#endif
+\end{code} 
 
 
-\begin{itemize}
-  \item There have to be side-effect and state-free variants of your core
-  numerics routines (such as fluxes and eigenvalues).
-  \item These additional variants accept one more argument
-\end{itemize} 
+
 
 
 
