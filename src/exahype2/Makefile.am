@@ -10,7 +10,7 @@ endif
 ExaHyPE2Sources = \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
-  EnclaveGPUTask.cpp \
+  EnclaveOpenMPGPUTask.cpp \
   NonCriticalAssertions.cpp \
   PatchUtils.cpp \
   RefinementControl.cpp \

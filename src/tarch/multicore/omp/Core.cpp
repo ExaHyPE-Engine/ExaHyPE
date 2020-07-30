@@ -21,7 +21,7 @@ double* tarch::multicore::allocateMemoryOnAccelerator(int size) {
   double* data;
   cudaMallocManaged(&data, size*sizeof(double), cudaMemAttachGlobal);
   #else
-  data = new double[size];
+  return new double[size];
   #endif
 }
 

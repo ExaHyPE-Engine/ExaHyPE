@@ -34,6 +34,12 @@ namespace exahype2 {
     );
 
     namespace gpu {
+      /**
+       * This is a GPU version of the copy operator. It differs from the
+       * default version as it writes out all loops explicitly has nested
+       * loops. This became necessary as we can't use the d-dimensional
+       * for macros in GPU code unfortunately.
+       */
       #if defined(GPUOffloading)
       #pragma omp declare target
       #endif

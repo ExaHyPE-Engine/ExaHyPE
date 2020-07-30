@@ -54,16 +54,20 @@ class exahype2::EnclaveBookkeeping {
     /**
      * Usually called directly by EnclaveTask.
      *
-     * This routine runs over the
+     * This routine has to return a number which is currently not in use.
+     * There is however no need for the delivered task numbers to be
+     * consecutive. Therefore, I use the size of the existing task set as
+     * a guideline for a task number to search for. If this initial guess
+     * is already handed out, I increase the counter by a prime number and
+     * try the new number again - until I've finally found a task which is
+     * not yet processed.
      */
     int reserveTaskNumber();
 
     /**
      * Usually called directly by EnclaveTask.
      *
-     * It is important that this routine does not yet release the active task.
-     * The task remains active until its results are picked up by the
-     * application through waitForTaskToTerminateAndCopyResultOver().
+     * Once this routine is called, the ownership of data goes
      */
     void finishedTask(int taskNumber, int numberOfResultValues, double* data);
 };
