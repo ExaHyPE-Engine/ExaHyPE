@@ -52,7 +52,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConcurrentBackgroundTasks, int maxNumberOfConcurrentBandwidthBoundTasks ) {
   if (numberOfThreads!=UseDefaultNumberOfThreads) {
     if ( omp_get_max_threads()!=numberOfThreads ) {
-      logWarning( "configure(int,int,int)", "number of threads configured (" << numberOfThreads << ") does not match system thread level of " << omp_get_num_threads() << ". OpenMP may ignore manual thread count reset");
+      logWarning( "configure(int,int,int)", "number of threads configured (" << numberOfThreads << ") does not match system thread level of " << omp_get_max_threads() << ". OpenMP may ignore manual thread count reset");
     }
 
     omp_set_num_threads(numberOfThreads);
