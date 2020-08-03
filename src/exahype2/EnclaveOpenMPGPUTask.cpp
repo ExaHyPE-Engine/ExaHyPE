@@ -27,7 +27,7 @@ exahype2::EnclaveOpenMPGPUTask::EnclaveOpenMPGPUTask(
   _inputDataCreatedOnDevice(inputDataCreatedOnDevice) {
   logTraceIn( "EnclaveOpenMPGPUTask(...)" );
 
-  _outputValues = tarch::multicore::allocateMemoryOnAccelerator(_numberOfResultValues);
+  _outputValues = tarch::multicore::allocateMemory(_numberOfResultValues,tarch::multicore::MemoryLocation::Accelerator);
 
   logTraceOut( "EnclaveOpenMPGPUTask(...)" );
 }

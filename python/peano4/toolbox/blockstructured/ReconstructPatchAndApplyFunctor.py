@@ -127,9 +127,9 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     double* reconstructedPatch;
     #if Dimensions==2
-    reconstructedPatch = ::tarch::multicore::allocateMemoryOnAccelerator(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """);
+    reconstructedPatch = ::tarch::multicore::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::multicore::MemoryLocation::Accelerator);
     #elif Dimensions==3
-    reconstructedPatch = ::tarch::multicore::allocateMemoryOnAccelerator(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """);
+    reconstructedPatch = ::tarch::multicore::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::multicore::MemoryLocation::Accelerator);
     #endif
 """    
     else:  
