@@ -50,7 +50,7 @@ bool exahype2::EnclaveOpenMPGPUTask::run() {
   #endif
   {
     if (_inputDataCreatedOnDevice) {
-      tarch::multicore::freeMemoryOnAccelerator(_inputValues);
+      tarch::multicore::freeMemory(_inputValues,tarch::multicore::MemoryLocation::Accelerator);
     }
     else {
       delete[] _inputValues;
@@ -58,7 +58,7 @@ bool exahype2::EnclaveOpenMPGPUTask::run() {
 
     double* outputValuesOnHost = new double[_numberOfResultValues];
     std::copy_n( _outputValues, _numberOfResultValues, outputValuesOnHost );
-    tarch::multicore::freeMemoryOnAccelerator(_outputValues);
+    tarch::multicore::freeMemory(_outputValues,tarch::multicore::MemoryLocation::Accelerator);
 
     EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,outputValuesOnHost);
   }

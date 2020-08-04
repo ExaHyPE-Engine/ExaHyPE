@@ -10,7 +10,7 @@
 
 namespace tarch {
   namespace multicore {
-    class enum MemoryLocation {
+    enum class MemoryLocation {
       Heap,
 	  Accelerator
     };

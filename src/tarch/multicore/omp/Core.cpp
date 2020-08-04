@@ -17,22 +17,37 @@ tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 double* tarch::multicore::allocateMemory(int size, MemoryLocation location) {
-  #if defined(GPUOffloading)
-  double* data;
-  cudaMallocManaged(&data, size*sizeof(double), cudaMemAttachGlobal);
-  #else
-
-  return new double[size];
-  #endif
+  double* result;
+  switch (location) {
+    case MemoryLocation::Heap:
+      result = new double[size];
+      break;
+    case MemoryLocation::Accelerator:
+      #if defined(GPUOffloading)
+      cudaMallocManaged(&result, size*sizeof(double), cudaMemAttachGlobal);
+      #else
+      // #pragma omp allocate ()
+      result = new double[size];
+      #endif
+      break;
+  }
+  return result;
 }
 
 
 void tarch::multicore::freeMemory(double* data, MemoryLocation location) {
-  #if defined(GPUOffloading)
-  cudaFree(data);
-  #else
-  delete[] data;
-  #endif
+  switch (location) {
+    case MemoryLocation::Heap:
+      delete[] data;
+      break;
+    case MemoryLocation::Accelerator:
+      #if defined(GPUOffloading)
+      cudaFree(data);
+      #else
+      delete[] data;
+      #endif
+      break;
+  }
 }
 
 
