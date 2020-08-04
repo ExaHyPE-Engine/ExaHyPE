@@ -44,19 +44,23 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
   ) {
     int  destinationStack = peano4::grid::PeanoCurve::getOutputStackNumber( getInstance().getSpacetree(worker)._root );
 
-    if ( stackContainer.getForPush(worker,destinationStack)->empty() ) {
+    if (
+      not stackContainer.holdsStack( master, sourceStack )
+      or
+      not stackContainer.getForPush(worker,destinationStack)->empty()
+	) {
+      logDebug(
+        "copyDataFromSplittingTreesToNewTrees()",
+        "target stack " << destinationStack << " of tree " << worker << " is already full or source stack is empty, so skip copying"
+      );
+    }
+    else {
       logDebug(
         "copyDataFromSplittingTreesToNewTrees()",
         "copy stack " << sourceStack << " from tree " << master << " into stack " << destinationStack << " from tree " << worker <<
         " with a stack size of " << stackContainer.getForPush(master,sourceStack)->size()
       );
-      stackContainer.getForPush(worker,destinationStack)->clone( *stackContainer.getForPush(master,sourceStack) );
-    }
-    else {
-      logDebug(
-        "copyDataFromSplittingTreesToNewTrees()",
-        "target stack " << destinationStack << " of tree " << worker << " is already full, so skip copying"
-      );
+      stackContainer.getForPush(worker,destinationStack)->clone( *stackContainer.getForPop(master,sourceStack) );
     }
   }
   else if ( sourceRank==tarch::mpi::Rank::getInstance().getRank() ) {
