@@ -12,6 +12,15 @@
 
 #include <omp.h>
 
+#include "config.h"
+
+
+#if defined(UseAMD)
+#include "hip/hip_runtime.h"
+#include "hip/hip_runtime_api.h"
+#endif
+
+
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
@@ -25,8 +34,12 @@ double* tarch::multicore::allocateMemory(int size, MemoryLocation location) {
       result = new double[size];
       break;
     case MemoryLocation::Accelerator:
-      #if defined(GPUOffloading)
+      #if defined(GPUOffloading) and defined(UseNVIDIA)
       cudaMallocManaged(&result, size*sizeof(double), cudaMemAttachGlobal);
+      #elif defined(GPUOffloading) and defined(UseAMD)
+      result = new double[size];
+      // AMD does not (yet) support managed memory
+      // hipMallocManaged(&result, size*sizeof(double));
       #else
       // #pragma omp allocate ()
       result = new double[size];
@@ -43,8 +56,12 @@ void tarch::multicore::freeMemory(double* data, MemoryLocation location) {
       delete[] data;
       break;
     case MemoryLocation::Accelerator:
-      #if defined(GPUOffloading)
+      #if defined(GPUOffloading) and defined(UseNVIDIA)
       cudaFree(data);
+      #elif defined(GPUOffloading) and defined(UseAMD)
+      // See remark on managed memory above
+      // hipFree(data);
+      delete[] data;
       #else
       delete[] data;
       #endif
