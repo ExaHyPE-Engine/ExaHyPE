@@ -155,6 +155,10 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     enum class StrategyStep {
       Wait,
       SpreadEquallyOverAllRanks,
+	  /**
+	   * You have to be careful with this one. You should only decompose in a
+	   * way that you don't exceed the local load. See finishStep().
+	   */
       SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning
@@ -310,6 +314,14 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * rush.
      */
     void updateState();
+
+    /**
+     * This is part of the action SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning.
+     *
+     * @param cellsPerCore I think I could reconstruct these guys manually, but
+     *          I have this value available when I call the function anyway.
+     */
+    int getNumberOfSplitsOnLocalRank(int numberOfLocalUnrefinedCells, int cellsPerCore) const;
 
     #ifdef Parallel
     MPI_Request*    _globalSumRequest;
