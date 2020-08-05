@@ -21,7 +21,7 @@ class ProjectPatchOntoFaces(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap):
+  def __init__(self,patch,patch_overlap,guard,additional_includes):
     self.d = {}
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
@@ -38,6 +38,9 @@ class ProjectPatchOntoFaces(ActionSet):
     self.d[ "OVERLAP" ]            = str(patch_overlap.dim[0]/2)
     self.d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + patch_overlap.name
     self.d[ "CELL_ACCESSOR" ]      = "fineGridCell" + patch.name
+    self.d[ "GUARD" ]                                        = guard
+    
+    self.additional_includes = additional_includes
 
 
   def get_constructor_body(self):
@@ -61,7 +64,6 @@ class ProjectPatchOntoFaces(ActionSet):
 
 
   __Template_TouchCellFirstTime = """
-  logTraceIn( "touchCellFirstTime(...)" );
   auto serialisePatchIndex = [](tarch::la::Vector<Dimensions,int> overlapCell, int normal) {{
     int base   = 1;
     int result = 0;
@@ -77,41 +79,43 @@ class ProjectPatchOntoFaces(ActionSet):
     return result;
   }};
   
-  for(int d=0; d<Dimensions; d++) {{
-    /**
-     * d-loop over all dimensions except d. The vector k's entry d is set
-     * to 0. We start with the left/bottom face, i.e. the one closer to the 
-     * coordinate system's origin.
-     */
-    dfore(k,{DOFS_PER_AXIS},d,0) {{
-      for (int i=0; i<{OVERLAP}; i++) {{
-        tarch::la::Vector<Dimensions,int> patchCell   = k;
-        tarch::la::Vector<Dimensions,int> overlapCell = k;
-        patchCell(d)   = i;
-        overlapCell(d) = i+{OVERLAP};
-        
-        int patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
-        int overlapCellSerialised = serialisePatchIndex(overlapCell,d);
-        for (int j=0; j<{UNKNOWNS}; j++) {{
-          {FACES_ACCESSOR}(d).value[overlapCellSerialised*{UNKNOWNS}+j] = 
-            {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j];
+  if ( {GUARD} ) {{
+    logTraceIn( "touchCellLastTime(...)" );
+  
+    for(int d=0; d<Dimensions; d++) {{
+      /**
+       * d-loop over all dimensions except d. The vector k's entry d is set
+       * to 0. We start with the left/bottom face, i.e. the one closer to the 
+       * coordinate system's origin.
+       */
+      dfore(k,{DOFS_PER_AXIS},d,0) {{
+        for (int i=0; i<{OVERLAP}; i++) {{
+          tarch::la::Vector<Dimensions,int> patchCell   = k;
+          tarch::la::Vector<Dimensions,int> overlapCell = k;
+          patchCell(d)   = i;
+          overlapCell(d) = i+{OVERLAP};
+          
+          int patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
+          int overlapCellSerialised = serialisePatchIndex(overlapCell,d);
+          for (int j=0; j<{UNKNOWNS}; j++) {{
+            {FACES_ACCESSOR}(d).value[overlapCellSerialised*{UNKNOWNS}+j] = 
+              {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j];
+          }}
+  
+          patchCell(d)   = i+{DOFS_PER_AXIS}-{OVERLAP};
+          overlapCell(d) = i;
+          
+          patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
+          overlapCellSerialised = serialisePatchIndex(overlapCell,d);
+          for (int j=0; j<{UNKNOWNS}; j++) {{
+            {FACES_ACCESSOR}(d+Dimensions).value[overlapCellSerialised*{UNKNOWNS}+j] = 
+              {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j];
+          }}
         }}
-        //std::cout << patchCell << " -> face " << (d) << ": " << overlapCell << "  (" << patchCellSerialised << " -> " << overlapCellSerialised << ")" << std::endl;
-
-        patchCell(d)   = i+{DOFS_PER_AXIS}-{OVERLAP};
-        overlapCell(d) = i;
-        
-        patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
-        overlapCellSerialised = serialisePatchIndex(overlapCell,d);
-        for (int j=0; j<{UNKNOWNS}; j++) {{
-          {FACES_ACCESSOR}(d+Dimensions).value[overlapCellSerialised*{UNKNOWNS}+j] = 
-            {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j];
-        }}
-        //std::cout << patchCell << " -> face " << (d+Dimensions) << ": " << overlapCell << "  (" << patchCellSerialised << " -> " << overlapCellSerialised << ")" << std::endl;
       }}
     }}
+    logTraceOut( "touchCellLastTime(...)" );
   }}
-  logTraceOut( "touchCellFirstTime(...)" );
 """
 
 
@@ -130,4 +134,4 @@ class ProjectPatchOntoFaces(ActionSet):
   def get_includes(self):
     return """
 #include "peano4/utils/Loop.h"
-"""
+""" + self.additional_includes

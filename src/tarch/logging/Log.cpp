@@ -11,6 +11,16 @@
 #include "tarch/logging/ChromeTraceFileLogger.h"
 
 
+#if UsedLogService==ChromeTraceFileLogger
+#include "ChromeTraceFileLogger.h"
+#endif
+
+#if UsedLogService==NVTXLogger
+#include "NVTXLogger.h"
+#endif
+
+
+
 /**
  * For the machine name. If it doesn't work, switch it off in the file
  * CompilerSpecificSettings.h.
@@ -40,7 +50,7 @@ tarch::logging::Log::~Log() {
 #if PeanoDebug>=4
 void tarch::logging::Log::debug(const std::string& methodName, const std::string& message) {
   if (LogFilter::getInstance().writeDebug( _className )) {
-    UsedLogService::getInstance().debug(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().debug(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
   }
 }
 #endif
@@ -48,32 +58,32 @@ void tarch::logging::Log::debug(const std::string& methodName, const std::string
 
 void tarch::logging::Log::info(const std::string& methodName, const std::string& message) {
   if (LogFilter::getInstance().writeInfo( _className )) {
-    UsedLogService::getInstance().info(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().info(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
   }
 }
 
 
 void tarch::logging::Log::warning(const std::string& methodName, const std::string& message) {
-  UsedLogService::getInstance().warning(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+  UseLogService::getInstance().warning(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
 }
 
 
 void tarch::logging::Log::error(const std::string& methodName, const std::string& message) {
-  UsedLogService::getInstance().error(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+  UseLogService::getInstance().error(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
 }
 
 
 #if PeanoDebug>=1
 void tarch::logging::Log::traceIn(const std::string& methodName, const std::string& message) {
   if (LogFilter::getInstance().writeTrace( _className )) {
-    UsedLogService::getInstance().traceIn(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().traceIn(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
   }
 }
 
 
 void tarch::logging::Log::traceOut(const std::string& methodName, const std::string& message) {
   if (LogFilter::getInstance().writeTrace( _className )) {
-    UsedLogService::getInstance().traceOut(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
+    UseLogService::getInstance().traceOut(getTimeStamp(),tarch::mpi::Rank::getInstance().getRank(),tarch::multicore::Core::getInstance().getCoreNumber(),getTraceInformation(methodName),message);
   }
 }
 #else
@@ -87,7 +97,7 @@ void tarch::logging::Log::traceOut(const std::string& methodName, const std::str
 
 
 void tarch::logging::Log::indent( bool indent, const std::string& trace, const std::string& message ) const {
-  UsedLogService::getInstance().indent( indent, trace, message );
+  UseLogService::getInstance().indent( indent, trace, message );
 }
 
 
@@ -124,78 +134,16 @@ std::string tarch::logging::Log::getMachineInformation() {
 
 
 void tarch::logging::Log::flushBeforeAssertion() {
-  UsedLogService::getInstance().close();
+  UseLogService::getInstance().close();
 }
 
 
 long int tarch::logging::Log::getTimeStamp() const {
-/*
-  #ifdef SharedOMP
-    double currentTS       = omp_get_wtime();
-    return currentTS - _startupTime;
-  #elif defined(SharedTBB)
-    tbb::tick_count currentTS       = tbb::tick_count::now();
-    return (currentTS - _startupTime).seconds();
-  #elif defined(__APPLE__)
-    static mach_timebase_info_data_t s_timebase_info;
-    if (s_timebase_info.denom == 0) mach_timebase_info(&s_timebase_info);
-    return (double)((mach_absolute_time() - _startupTime) * (s_timebase_info.numer) / s_timebase_info.denom) * 1e-09;
-*/
-/*
-  #if defined(CompilerHasTimespec)
-    struct timespec ts;
-    if( clock_gettime(CLOCK_REALTIME, &ts) == 0 ) {
-       const double currentTS = (double)ts.tv_sec + (double)ts.tv_nsec * 1e-09;
-       return currentTS - _startupTime;
-    }
-    else {
-      return 0;
-    }
-  #else
-    return 0;
-  #endif
-*/
   std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
   long int result = std::chrono::duration_cast<std::chrono::nanoseconds>(now - _startupTime).count();
   assertion1(result>=0,result);
   return result;
 }
-
-/*
-std::string tarch::logging::Log::getTimeStampHumanReadable() const {
-  // calender time: create struct and get time from system
-  time_t* timeStamp = new time_t();
-  assertion( timeStamp!=NULL );
-  time(timeStamp);
-
-  // Break down time into hour, seconds, ...
-  // Note that time is only a substructure of timeStamp. Therefore the pointer
-  // to time may not be deleted.
-  tm*     time      = localtime(timeStamp);
-  assertion( time!=NULL );
-
-  std::ostringstream message;
-
-  // write all information
-  if (time->tm_hour<10) {
-    message << "0";
-  }
-  message << time->tm_hour << ":";
-
-  if (time->tm_min<10) {
-    message << "0";
-  }
-  message << time->tm_min << ":";
-
-  if (time->tm_sec<10) {
-    message << "0";
-  }
-  message << time->tm_sec;
-
-  delete timeStamp;
-
-  return message.str();
-}*/
 
 
 std::string tarch::logging::Log::getTraceInformation( const std::string& methodName ) const {

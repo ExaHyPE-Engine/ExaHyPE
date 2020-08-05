@@ -72,6 +72,9 @@ struct peano4::grid::GridVertex {
     static void sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag );
 #endif
+
+
+
     
 
     #ifdef Parallel

@@ -39,7 +39,7 @@ struct peano4::grid::GridTraversalEvent {
 
 
     GridTraversalEvent() {}
-    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __isRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather);
+    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __isRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexInsideDomain, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
 
     tarch::la::Vector<Dimensions,double>   getX() const;
     void   setX(const tarch::la::Vector<Dimensions,double>& value);
@@ -66,6 +66,11 @@ struct peano4::grid::GridTraversalEvent {
     void   flipIsFaceLocal(int index);
     bool   getIsCellLocal() const;
     void   setIsCellLocal(bool value);
+    std::bitset<TwoPowerD>   getIsVertexInsideDomain() const;
+    void   setIsVertexInsideDomain(const std::bitset<TwoPowerD>&  value);
+    bool   getIsVertexInsideDomain(int index) const;
+    void   setIsVertexInsideDomain(int index, bool value);
+    void   flipIsVertexInsideDomain(int index);
     tarch::la::Vector<TwoPowerD,int>   getVertexDataFrom() const;
     void   setVertexDataFrom(const tarch::la::Vector<TwoPowerD,int>& value);
     int   getVertexDataFrom(int index) const;
@@ -88,6 +93,10 @@ struct peano4::grid::GridTraversalEvent {
     void   setRelativePositionToFather(const tarch::la::Vector<Dimensions,int>& value);
     int   getRelativePositionToFather(int index) const;
     void   setRelativePositionToFather(int index, int value);
+    int   getInvokingSpacetree() const;
+    void   setInvokingSpacetree(int value);
+    int   getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() const;
+    void   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(int value);
 
 
 
@@ -95,6 +104,9 @@ struct peano4::grid::GridTraversalEvent {
     static void sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag );
 #endif
+
+
+
     
 
     #ifdef Parallel
@@ -141,12 +153,15 @@ struct peano4::grid::GridTraversalEvent {
     std::bitset<TwoPowerD>   _isVertexLocal;
     std::bitset<TwoTimesD>   _isFaceLocal;
     bool   _isCellLocal;
+    std::bitset<TwoPowerD>   _isVertexInsideDomain;
     tarch::la::Vector<TwoPowerD,int>   _vertexDataFrom;
     tarch::la::Vector<TwoPowerD,int>   _vertexDataTo;
     tarch::la::Vector<TwoTimesD,int>   _faceDataFrom;
     tarch::la::Vector<TwoTimesD,int>   _faceDataTo;
     int   _cellData;
     tarch::la::Vector<Dimensions,int>   _relativePositionToFather;
+    int   _invokingSpacetree;
+    int   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
 
 
 

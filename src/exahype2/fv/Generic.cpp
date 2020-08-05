@@ -4,6 +4,8 @@
 
 #include "../PatchUtils.h"
 
+#include "peano4/utils/Loop.h"
+
 
 std::string exahype2::fv::plotVolume(
     double Q[],
@@ -14,6 +16,65 @@ std::string exahype2::fv::plotVolume(
   result += ")";
   return result;
 };
+
+
+void exahype2::fv::copyPatch(
+  double QinWithHalo[],
+  double QOutWithoutHalo[],
+  int    unknowns,
+  int    numberOfVolumesPerAxisInPatch,
+  int    haloSize
+) {
+  dfor(k,numberOfVolumesPerAxisInPatch) {
+    tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
+    int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
+    int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
+    for (int i=0; i<unknowns; i++) {
+      QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
+    }
+  }
+}
+
+
+void exahype2::fv::gpu::copyPatch(
+  double QinWithHalo[],
+  double QOutWithoutHalo[],
+  int    unknowns,
+  int    numberOfVolumesPerAxisInPatch,
+  int    haloSize
+) {
+  #if Dimensions==2
+  int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
+  int destinationSerialised = 0;
+  for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
+    for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+      std::cout << sourceSerialised << "->" << destinationSerialised << " ";
+      for (int i=0; i<unknowns; i++) {
+        QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
+      }
+      sourceSerialised++;
+      destinationSerialised++;
+    }
+    sourceSerialised += 2*haloSize;
+  }
+  #else
+  int sourceSerialised      = (numberOfVolumesPerAxisInPatch+haloSize*2)*(numberOfVolumesPerAxisInPatch+haloSize*2) + numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
+  int destinationSerialised = 0;
+  for (int z=0; z<numberOfVolumesPerAxisInPatch; z++) {
+    for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
+      for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+        for (int i=0; i<unknowns; i++) {
+          QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
+        }
+        sourceSerialised++;
+        destinationSerialised++;
+      }
+      sourceSerialised += 2*haloSize;
+    }
+    sourceSerialised += 2*haloSize+2*(numberOfVolumesPerAxisInPatch+haloSize*2);
+  }
+  #endif
+}
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(

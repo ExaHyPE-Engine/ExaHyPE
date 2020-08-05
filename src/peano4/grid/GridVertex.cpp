@@ -162,12 +162,12 @@ void peano4::grid::GridVertex::sendAndPollDanglingMessages(const peano4::grid::G
   peano4::grid::GridVertex::send(
     message, destination, tag,
     [&]() {
-      int  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      int  timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+      auto  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
       bool triggeredTimeoutWarning = false;
       if (
         tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (clock()>timeOutWarning) &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
         (!triggeredTimeoutWarning)
       ) {
         tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridVertex", "sendAndPollDanglingMessages()",destination, tag );
@@ -175,7 +175,7 @@ void peano4::grid::GridVertex::sendAndPollDanglingMessages(const peano4::grid::G
       }
       if (
         tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (clock()>timeOutShutdown)
+        (std::chrono::system_clock::now()>timeOutShutdown)
       ) {
         tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridVertex", "sendAndPollDanglingMessages()", destination, tag );
       }
@@ -190,12 +190,12 @@ void peano4::grid::GridVertex::receiveAndPollDanglingMessages(peano4::grid::Grid
   peano4::grid::GridVertex::receive(
     message, source, tag,
     [&]() {
-      int  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      int  timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
       bool triggeredTimeoutWarning = false;
       if (
         tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (clock()>timeOutWarning) &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
         (!triggeredTimeoutWarning)
       ) {
         tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::grid::GridVertex", "receiveAndPollDanglingMessages()", source, tag );
@@ -203,7 +203,7 @@ void peano4::grid::GridVertex::receiveAndPollDanglingMessages(peano4::grid::Grid
       }
       if (
         tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (clock()>timeOutShutdown)
+        (std::chrono::system_clock::now()>timeOutShutdown)
       ) {
         tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::grid::GridVertex", "receiveAndPollDanglingMessages()", source, tag );
       }

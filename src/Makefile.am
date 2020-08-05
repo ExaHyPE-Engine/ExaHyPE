@@ -84,11 +84,12 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/la/tests/VectorTest.cpp \
  tarch/la/ScalarOperations.cpp \
  tarch/la/Scalar.cpp \
- tarch/multicore/RecursiveLock.cpp \
- tarch/multicore/Core.cpp \
+ tarch/la/Vector.cpp \
  tarch/multicore/BooleanSemaphore.cpp \
- tarch/multicore/RecursiveSemaphore.cpp \
+ tarch/multicore/Core.cpp \
  tarch/multicore/Lock.cpp \
+ tarch/multicore/RecursiveLock.cpp \
+ tarch/multicore/RecursiveSemaphore.cpp \
  tarch/multicore/Tasks.cpp \
  tarch/multicore/cpp/Core.cpp \
  tarch/multicore/cpp/Tasks.cpp \
@@ -144,7 +145,9 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/logging/ChromeTraceFileLogger.cpp \
  tarch/logging/Log.cpp \
  tarch/logging/LogFilterFileReader.cpp \
+ tarch/logging/NVTXLogger.cpp \
  tarch/logging/LogFilter.cpp \
+ tarch/logging/Statistics.cpp \
  tarch/timing/Watch.cpp \
  tarch/timing/Measurement.cpp \
  tarch/timing/GlidingAverageMeasurement.cpp \

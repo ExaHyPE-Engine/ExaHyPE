@@ -26,6 +26,7 @@ namespace tarch {
     class Log;
     class CommandLineLogger;
     class ChromeTraceFileLogger;
+    class NVTXLogger;
   }
 }
 
@@ -435,7 +436,7 @@ namespace tarch {
  *
  * \section  Log output format
  *
- * You can switch the log output format by setting -DUsedLogService=xxx. At
+ * You can switch the log output format by setting -DUseLogService=xxx. At
  * the moment, I support two different formats for xxx:
  *
  * - CommandLineLogger       This is the default.
@@ -445,9 +446,8 @@ namespace tarch {
  */
 class tarch::logging::Log {
   private:
-    #if !defined(UsedLogService)
-    typedef CommandLineLogger     UsedLogService;
-//    typedef ChromeTraceFileLogger     UsedLogService;
+    #if !defined(UseLogService)
+    typedef CommandLineLogger     UseLogService;
     #endif
 
     /**

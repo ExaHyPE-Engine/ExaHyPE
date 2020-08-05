@@ -1,5 +1,6 @@
-\chapter{The visualisation toolkit (VTK) and integrated IO}
-\label{chapter:vtk}
+\chapter{Postprocessing: The visualisation toolkit, IO and \Peano\
+scripts}
+\label{chapter:postprocessing}
 
 \section{Installing \Peano\ with VTK support}
 Installing VTK support can be challenging. 
@@ -259,3 +260,57 @@ results---it depends on your visualisation algorithms.
 % 
 % #input()
 % 
+
+\section{Useful scripts}
+
+For many of \Peano's features, I offer Python/matplotlib postprocessing scripts
+to translate the terminal output into graphs.
+These scripts can be a reasonable starting point for more sophisticated graphs
+(in papers, e.g.).
+
+
+\paragraph{Load balancing toolbox.}
+%
+%
+%
+In the \texttt{loadbalancing} toolbox, you find a script \linebreak
+\texttt{plot-load-distribution.py} which yields 
+plots over the data distribution.
+
+\begin{center}
+  \includegraphics[width=0.7\textwidth]{80_postprocessing/shared-memory.pdf}
+\end{center}
+
+\noindent
+The script works for shared and distributed memory and gives you a scatter plot
+over the load distribution.
+Above, you see an (outdated) screenshot of the type of plots---the up-to-date
+version should have a legend that is easier to digest.
+
+
+\paragraph{\ExaHyPE\ postprocessing.}
+%
+%
+%
+\ExaHyPE\ has a tailored postprocessing module in its Python API. It yields
+graphs alike the one below.
+The likely most interesting feature is that it works on archives of data dumps
+and thus keeps the disk space usage (and disk accesses) down.
+
+
+\begin{center}
+  \includegraphics[width=0.7\textwidth]{80_postprocessing/distributed-memory-single-experiment.pdf}
+\end{center}
+
+\noindent
+There's a couple of parameters to pass to this script to control what exactly is
+presented:
+
+\begin{itemize}
+  \item Are you interested in both the grid construction and the solution time?
+  \item Do you want the script to take the whole simulation time into account or
+  only the last time step?
+  \item \ldots
+\end{itemize}
+
+

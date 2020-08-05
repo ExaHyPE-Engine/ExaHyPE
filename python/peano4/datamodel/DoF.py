@@ -1,9 +1,16 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from enum import Enum
+from enum import IntEnum
 
 
-class DoFAssociation(Enum):
+class DoFAssociation(IntEnum):
+  """
+  
+   Superclass has to be IntEnum, as I use this one within Jinja2 templates
+   where I struggled to compare against enum variants. I however can always
+   compare against integers.
+  
+  """
   Undef  = 0
   Vertex = 1
   Face   = 2

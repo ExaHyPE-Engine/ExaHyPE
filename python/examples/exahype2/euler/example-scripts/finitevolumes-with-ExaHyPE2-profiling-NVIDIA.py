@@ -17,21 +17,8 @@ import os
 import peano4
 import peano4.datamodel
 import peano4.solversteps
-import peano4.output
-import peano4.visualisation
-import peano4.toolbox.blockstructured
-
 
 import exahype2
-
-
-#
-# Lets first clean up all plot files, so we don't get a mismatch
-#
-output_files = [ f for f in os.listdir(".") if f.endswith(".peano-patch-file") or f.endswith(".vtu") or f.endswith( ".out") ]
-for f in output_files:
-  os.remove(f)
-
 
 #
 # Create a project and configure it to end up in a subnamespace (and thus
@@ -43,26 +30,32 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 #
 # Add the Finite Volumes solver
 #
-patch_size     = 13
+patch_size     = 7
 unknowns       = 5
 time_step_size = 0.000001
+volume_max     = 0.01
 
 #
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+project.add_solver(  
+  #exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
+  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
   "Euler", 
   patch_size, 
   unknowns, time_step_size,
   flux = True,
-  ncp  = False
+  ncp  = False,
+  use_gpu = True
 ))
 
 
 
-dimensions = 3
-build_mode = peano4.output.CompileMode.Release
+dimensions = 2
+#build_mode = peano4.output.CompileMode.Release
+build_mode = peano4.output.CompileMode.Trace
+
 #build_mode = peano4.output.CompileMode.Asserts
 
 
@@ -72,8 +65,8 @@ build_mode = peano4.output.CompileMode.Release
 #
 project.set_global_simulation_parameters(
   dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
-  time_step_size * 20,           # end time
-  0.0, 0                         # snapshots
+  time_step_size * 10,           # end time
+  0.0, 0                          # snapshots
 )
 
 
@@ -83,11 +76,11 @@ project.set_global_simulation_parameters(
 #
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
 
-
 peano4_project = project.generate_Peano4_project()
+peano4_project.constants.export( "MaxHOfVolume", volume_max )
 peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
 peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
 peano4_project.output.makefile.set_mode(build_mode)
-peano4_project.build()
+peano4_project.build(make_clean_first=True)
 

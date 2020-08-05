@@ -123,19 +123,17 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       Dimensions,"{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::CreateNew
     );
-    tarch::mpi::Rank::getInstance().barrier();
+    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
   }}
   else if ( _treeNumber==0 ) {{
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
       Dimensions,"{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet
     );
-    tarch::mpi::Rank::getInstance().barrier();
+    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
   }}
   else {{
-    tarch::mpi::Rank::getInstance().barrier();
-    static tarch::mpi::BooleanSemaphore globalSempahore( "{FILENAME}" );
-    tarch::mpi::Lock lock(globalSempahore);
+    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
       Dimensions,"{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::DontChange
@@ -171,4 +169,5 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/mpi/Lock.h"
 #include "peano4/utils/Loop.h"
+#include "peano4/parallel/SpacetreeSet.h"
 """

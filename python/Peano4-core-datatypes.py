@@ -152,6 +152,8 @@ grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexL
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceLocal",   "TwoTimesD" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isCellLocal"                ) )
 
+grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexInsideDomain", "TwoPowerD" ) )
+
 # @todo Should be char array likely with -4 to 9
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "vertexDataFrom", "TwoPowerD" ) )
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "vertexDataTo", "TwoPowerD" ) )
@@ -161,6 +163,9 @@ grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "faceDat
 grid_traversal_event.add_attribute( dastgen2.attributes.Integer( "cellData" ) )
 
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "relativePositionToFather", "Dimensions" ) )
+
+grid_traversal_event.add_attribute( dastgen2.attributes.Integer( "invokingSpacetree" ) )
+grid_traversal_event.add_attribute( dastgen2.attributes.Integer( "invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing" ) )
 
 grid_traversal_event.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
 grid_traversal_event.add_aspect( dastgen2.aspects.MPI() )

@@ -1,4 +1,6 @@
+#if !defined(GPUOffloading)
 #include "tarch/Assertions.h"
+#endif
 
 
 template<int Size, typename Scalar>
@@ -37,7 +39,10 @@ template<int Size, typename Scalar>
 tarch::la::Vector<Size,Scalar>&  tarch::la::Vector<Size,Scalar>::operator= (
   const Vector<Size,Scalar>&  toAssign
 ) {
+  #if !defined(GPUOffloading)
   assertion(this != &toAssign);
+  #endif
+
   #ifdef CompilerICC
   #pragma ivdep
   #endif
@@ -53,7 +58,10 @@ tarch::la::Vector<Size,Scalar>::Vector (
   const Vector<Size,Scalar>& toCopy
 ):
   _values() {
+  #if !defined(GPUOffloading)
   assertion(this != &toCopy);
+  #endif
+ 
   #ifdef CompilerICC
   #pragma ivdep
   #endif
@@ -61,6 +69,7 @@ tarch::la::Vector<Size,Scalar>::Vector (
     _values[i] = toCopy._values[i];
   }
 }
+
 
 
 template<int Size, typename Scalar>
@@ -80,27 +89,12 @@ int tarch::la::Vector<Size,Scalar>::size() const {
 }
 
 
-template<int Size, typename Scalar>
-std::string tarch::la::Vector<Size,Scalar>::toString() const {
-  std::ostringstream os;
-  os << "[";
-  for ( int i=0; i < Size; i++ ) {
-    os << _values[i];
-    if ( i + 1 < Size ) {
-      os << ",";
-    }
-  }
-  os << "]";
-  return os.str();
-}
-
-
-template<int Size, typename Scalar>
-template <typename NewScalarType>
-tarch::la::Vector<Size,NewScalarType> tarch::la::Vector<Size,Scalar>::convertScalar() const {
+template <typename NewScalarType, int Size, typename Scalar>
+tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::Vector<Size,Scalar>&  vector) {
   tarch::la::Vector<Size,NewScalarType> result;
   for ( int i=0; i < Size; i++ ) {
-    result[i] = _values[i];
+    result(i) = vector(i);
   }
   return result;
 }
+

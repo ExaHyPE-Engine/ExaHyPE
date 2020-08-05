@@ -25,6 +25,36 @@ namespace exahype2 {
       int    unknowns
     );
 
+    void copyPatch(
+      double QinWithHalo[],
+      double QOutWithoutHalo[],
+      int    unknowns,
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSize
+    );
+
+    namespace gpu {
+      /**
+       * This is a GPU version of the copy operator. It differs from the
+       * default version as it writes out all loops explicitly has nested
+       * loops. This became necessary as we can't use the d-dimensional
+       * for macros in GPU code unfortunately.
+       */
+      #if defined(GPUOffloading)
+      #pragma omp declare target
+      #endif
+      void copyPatch(
+        double QinWithHalo[],
+        double QOutWithoutHalo[],
+        int    unknowns,
+        int    numberOfVolumesPerAxisInPatch,
+        int    haloSize
+      );
+      #if defined(GPUOffloading)
+      #pragma omp end declare target
+      #endif
+    }
+
     /**
      * Is a face loop-based implementation of a split 1d Riemann.
      *

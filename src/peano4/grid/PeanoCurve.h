@@ -63,17 +63,18 @@ class peano4::grid::PeanoCurve {
     #endif
     static constexpr int NumberOfPeriodicBoundaryConditionStacks = 2*NumberOfPeriodicBoundaryConditionOutputStacks;
 
-/**
- * Standard (serial) number of stacks required per spacetree
- *
- * We need an input and an output stack. Then we need the 2d temporary
- * stacks. Finally, we need another stack to represent the call stack.
- * Inside the spacetree, this one is not required - we use the real
- * call stack of the recursive formulation - but if we manage the call
- * stack explicitly, i.e. through grid traversal events, then we have
- * also to manage the stack explicitly.
- */
+    /**
+     * Standard (serial) number of stacks required per spacetree
+     *
+     * We need an input and an output stack. Then we need the 2d temporary
+     * stacks. Finally, we need another stack to represent the call stack.
+     * Inside the spacetree, this one is not required - we use the real
+     * call stack of the recursive formulation - but if we manage the call
+     * stack explicitly, i.e. through grid traversal events, then we have
+     * also to manage the stack explicitly.
+     */
     static constexpr int MaxNumberOfStacksPerSpacetreeInstance = NumberOfBaseStacks + Dimensions*2 + NumberOfPeriodicBoundaryConditionStacks;
+
     static bool isTraversePositiveAlongAxis(
       const AutomatonState&  state,
       int                    axis
@@ -172,6 +173,7 @@ class peano4::grid::PeanoCurve {
     static int getCellWriteStackNumber(const AutomatonState& state);
 
     static bool isInOutStack( int number );
+    static bool isTemporaryStack( int number );
 
     static int getInputStackNumber(const AutomatonState& state);
     static int getOutputStackNumber(const AutomatonState& state);

@@ -13,6 +13,15 @@
 
 #include "tarch/multicore/Core.h"
 
+double* tarch::multicore::allocateMemory(int size, MemoryLocation location) {
+ return new double[size];
+}
+
+
+void tarch::multicore::freeMemory(double* data, MemoryLocation location) {
+  delete[] data;
+}
+
 
 tarch::multicore::Core::Core() {
 }

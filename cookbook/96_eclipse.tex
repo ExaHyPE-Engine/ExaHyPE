@@ -1,7 +1,7 @@
 \chapter{Configuring Peano4 in Eclipse}
 
 
-You can integrate Peano4 straightforwardly into Eclipse. For this, please clone
+You can integrate \Peano\ straightforwardly into Eclipse. For this, please clone
 the repository locally, and invoke
 
 \begin{code}
@@ -19,7 +19,7 @@ i.e.~if you have not cloned the raw repository, you can omit these steps.
 
 \section{Integrating the C++ core as project}
 
-This step is required if and only if you want to develop core Peano4 routines.
+This step is required if and only if you want to develop core \Peano\ routines.
 If you have no intention to do this, you can simple run configure and make on
 your git clone and then skip this section. 
 Otherwise, open the Eclipse GUI and run the following steps:
@@ -34,8 +34,8 @@ Otherwise, open the Eclipse GUI and run the following steps:
 \end{itemize}
 
 \noindent
-Somee Eclipse wizards tend to overwrite Peano's configure.ac file. If this is the 
-case, replace the files through
+Somee Eclipse wizards tend to overwrite Peano's \texttt{configure.ac} file. If
+this is the case, replace the files through
 
 \begin{code}
 git restore  configure.ac
@@ -45,6 +45,26 @@ git restore  src/Makefile.am
 
 \noindent
 and clean the project in Eclipse.
+
+
+\section{Setting environment variables}
+
+Most module environments on supercomputers provide you with variables such as
+\texttt{TBB\_SHLIB} to link automatically to the right libraries.
+Most development machines running Eclipse will lack such an environment.
+Therefore, you will have to link manually. 
+For TBB, add for examples
+
+\begin{code}
+ LDFLAGS = $TBBROOT/lib/intel64/gcc4.8
+\end{code}
+
+assuming that you use the Intel setup scripts (see page
+\pageref{label:supercomputer:Intel-scripts}) which define \texttt{TBBROOT}.
+
+
+
+
 
 
 

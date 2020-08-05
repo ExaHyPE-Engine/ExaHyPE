@@ -346,104 +346,104 @@ tarch::la::Vector<ThreePowerD,std::complex<double> > toolbox::finiteelements::ge
 
   #if Dimensions==2
   result =  scaling(0) * h(1)/h(0) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DLaplaceStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             + scaling(1) * h(0)/h(1) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DLaplaceStencil()
-            ).convertScalar< std::complex<double> >();
+            ));
   #elif Dimensions==3
   result =  scaling(0) * h(1)*h(2)/h(0) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DLaplaceStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             + scaling(1) * h(0)*h(2)/h(1) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DLaplaceStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             + scaling(2) * h(0)*h(1)/h(2) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DLaplaceStencil()
-            ).convertScalar< std::complex<double> >();
+            ));
   #elif defined(Dim4)
   result =  scaling(0) * h(1)*h(2)*h(3)/h(0) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DLaplaceStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             + scaling(1) * h(0)*h(2)*h(3)/h(1) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DLaplaceStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             + scaling(2) * h(0)*h(1)*h(3)/h(2) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DLaplaceStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             + scaling(2) * h(0)*h(1)*h(2)/h(3) *
-              toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DLaplaceStencil()
-            ).convertScalar< std::complex<double> >();
+            ));
   #elif defined(Dim5)
   result =  scaling(0) * h(1)*h(2)*h(3)*h(4)/h(0) *
-          toolbox::finiteelements::stencilProduct(
+          tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
             toolbox::finiteelements::get1DLaplaceStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil()
-          ).convertScalar< std::complex<double> >()
+          ))
           + scaling(1) * h(0)*h(2)*h(3)*h(4)/h(1) *
-          toolbox::finiteelements::stencilProduct(
+          tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DLaplaceStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil()
-          ).convertScalar< std::complex<double> >()
+          ))
           + scaling(2) * h(0)*h(1)*h(3)*h(4)/h(2) *
-          toolbox::finiteelements::stencilProduct(
+          tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DLaplaceStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil()
-          ).convertScalar< std::complex<double> >()
+          ))
           + scaling(2) * h(0)*h(1)*h(2)*h(4)/h(3) *
-            toolbox::finiteelements::stencilProduct(
+          tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DLaplaceStencil(),
             toolbox::finiteelements::get1DMassStencil()
-          ).convertScalar< std::complex<double> >();
+          ))
           + scaling(2) * h(0)*h(1)*h(2)*h(3)/h(4) *
-            toolbox::finiteelements::stencilProduct(
+          tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DLaplaceStencil()
-          ).convertScalar< std::complex<double> >();
+          ));
   #else
   assertionMsg( false, "dimension not supported" );
   #endif
@@ -459,34 +459,34 @@ tarch::la::Vector<ThreePowerD,std::complex<double> > toolbox::finiteelements::ge
 
   #if Dimensions==2
   result =  scaling(0) * h(1)/h(0) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DLaplaceStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             + scaling(1) * h(0)/h(1) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DLaplaceStencil()
-            ).convertScalar< std::complex<double> >();
+            ));
   #elif Dimensions==3
   result =  scaling(0) * h(1)*h(2)/h(0) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DLaplaceStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             + scaling(1) * h(0)*h(2)/h(1) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DLaplaceStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             + scaling(2) * h(0)*h(1)/h(2) *
-            toolbox::finiteelements::stencilProduct(
+            tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DLaplaceStencil()
-            ).convertScalar< std::complex<double> >();
+            ));
   #else
   assertionMsg( false, "dimension not supported" );
   #endif
@@ -641,17 +641,17 @@ tarch::la::Vector<ThreePowerD,std::complex<double> > toolbox::finiteelements::ge
   tarch::la::Vector<ThreePowerD,std::complex<double> > result;
 
   #if Dimensions==2
-  result =  toolbox::finiteelements::stencilProduct(
+  result =  tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >()
+            ))
             * h(0) * h(1);
   #elif Dimensions==3
-  result =  toolbox::finiteelements::stencilProduct(
+  result =  tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil()
-            ).convertScalar< std::complex<double> >() * h(0) * h(1) * h(2);
+            )) * h(0) * h(1) * h(2);
   #else
     assertionMsg( false, "dimension not supported" );
   #endif
@@ -666,16 +666,16 @@ tarch::la::Vector<ThreePowerD,std::complex<double> > toolbox::finiteelements::ge
   tarch::la::Vector<ThreePowerD,std::complex<double> > result;
 
   #if Dimensions==2
-  result =  ( h(0) * h(1)* toolbox::finiteelements::stencilProduct(
+  result = tarch::la::convertScalar< std::complex<double> > ( h(0) * h(1)* toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
-              toolbox::finiteelements::get1DMassStencil() )
-             ).convertScalar< std::complex<double> >();
+              toolbox::finiteelements::get1DMassStencil()
+             ));
   #elif Dimensions==3
-  result =  ( h(0) * h(1) * h(2) * toolbox::finiteelements::stencilProduct(
+  result =  tarch::la::convertScalar< std::complex<double> >( h(0) * h(1) * h(2) * toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil(),
-              toolbox::finiteelements::get1DMassStencil() )
-              ).convertScalar< std::complex<double> >();
+              toolbox::finiteelements::get1DMassStencil()
+              ));
   #else
     assertionMsg( false, "dimension not supported" );
   #endif
@@ -690,31 +690,31 @@ tarch::la::Vector<ThreePowerD,std::complex<double> > toolbox::finiteelements::ge
   tarch::la::Vector<ThreePowerD,std::complex<double> > result;
 
   #if Dimensions==2
-  result =  h(0) * h(1)* (  toolbox::finiteelements::stencilProduct(
+  result =  h(0) * h(1)* ( tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil() )
-             ).convertScalar< std::complex<double> >();
+             ));
   #elif Dimensions==3
-  result =  h(0) * h(1) * h(2) * ( toolbox::finiteelements::stencilProduct(
+  result =  h(0) * h(1) * h(2) * ( tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil(),
               toolbox::finiteelements::get1DMassStencil() )
-              ).convertScalar< std::complex<double> >();
+              ));
   #elif defined(Dim4)
-  result =  h(0) * h(1) * h(2) * h(3) * ( toolbox::finiteelements::stencilProduct(
+  result =  h(0) * h(1) * h(2) * h(3) * ( tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil() )
-            ).convertScalar< std::complex<double> >();
+            ));
   #elif defined(Dim5)
-  result =  h(0) * h(1) * h(2) * h(3) * h(4) * ( toolbox::finiteelements::stencilProduct(
+  result =  h(0) * h(1) * h(2) * h(3) * h(4) * ( tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil(),
             toolbox::finiteelements::get1DMassStencil() )
-            ).convertScalar< std::complex<double> >();
+            ));
   #else
     assertionMsg( false, "dimension not supported" );
   #endif
@@ -751,34 +751,34 @@ tarch::la::Vector<ThreePowerD,std::complex<double> > toolbox::finiteelements::ge
   tarch::la::Vector<ThreePowerD,std::complex<double> > result;
 
   #if Dimensions==2
-  result =  toolbox::finiteelements::stencilProduct(
+  result =  tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DIdentity(),
               toolbox::finiteelements::get1DIdentity()
-            ).convertScalar< std::complex<double> >()
+            ))
             * h(0) * h(1);
   #elif Dimensions==3
-  result =  toolbox::finiteelements::stencilProduct(
+  result =  tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
               toolbox::finiteelements::get1DIdentity(),
               toolbox::finiteelements::get1DIdentity(),
               toolbox::finiteelements::get1DIdentity()
-              ).convertScalar< std::complex<double> >()
+              ))
             * h(0) * h(1) * h(2);
   #elif defined(Dim4)
-  result =  toolbox::finiteelements::stencilProduct(
+  result =  tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
             toolbox::finiteelements::get1DIdentity(),
             toolbox::finiteelements::get1DIdentity(),
             toolbox::finiteelements::get1DIdentity(),
             toolbox::finiteelements::get1DIdentity()
-            ).convertScalar< std::complex<double> >()
+            ))
           * h(0) * h(1) * h(2) * h(3);
   #elif defined(Dim4)
-  result =  toolbox::finiteelements::stencilProduct(
+  result =  tarch::la::convertScalar< std::complex<double> >( toolbox::finiteelements::stencilProduct(
             toolbox::finiteelements::get1DIdentity(),
             toolbox::finiteelements::get1DIdentity(),
             toolbox::finiteelements::get1DIdentity(),
             toolbox::finiteelements::get1DIdentity(),
             toolbox::finiteelements::get1DIdentity()
-            ).convertScalar< std::complex<double> >()
+            ))
           * h(0) * h(1) * h(2) * h(3) * h(4);
   #else
   assertionMsg( false, "dimension not supported" );
@@ -863,7 +863,7 @@ toolbox::finiteelements::ElementWiseAssemblyMatrix toolbox::finiteelements::getP
   dfor( subVolume, integrationPointsPerAxis ) {
     tarch::la::Vector<Dimensions,double> x =
       cellCentre - h/2.0 +
-	  tarch::la::multiplyComponents(subVolume.convertScalar<double>()+0.5, h/static_cast<double>(integrationPointsPerAxis));
+	  tarch::la::multiplyComponents( tarch::la::convertScalar<double>( subVolume )+0.5, h/static_cast<double>(integrationPointsPerAxis));
 
     double epsilonScaling = epsilon(x) * tarch::la::volume(h) / h(0) / h(0);
 

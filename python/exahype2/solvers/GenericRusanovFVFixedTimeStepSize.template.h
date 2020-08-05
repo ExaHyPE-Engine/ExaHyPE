@@ -6,65 +6,87 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _{INCLUDE_GUARD}_
-#define _{INCLUDE_GUARD}_
+#ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
+#define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
 
 
-#include "Abstract{CLASSNAME}.h"
+#include "Abstract{{CLASSNAME}}.h"
 
 #include "tarch/logging/Log.h"
 
+{% for item in NAMESPACE -%}
+  namespace {{ item }} {
 
-{OPEN_NAMESPACE}
-  class {CLASSNAME};
-{CLOSE_NAMESPACE}
+{%- endfor %}
+  class {{CLASSNAME}};
+
+{% for item in NAMESPACE -%}
+  }
+{%- endfor %}
 
 
-class {FULL_QUALIFIED_CLASSNAME}: public Abstract{CLASSNAME} {{
+
+class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
   private:
     static tarch::logging::Log   _log;
 
   public:
-    /**
-     * @param Q Vector of unknowns
-     * @param x Position of unknowns (finite volume centre)
-     * @param h Mesh size of finite volume
-     * @param t Time
-     */
     ::exahype2::RefinementCommand refinementCriterion(
-      double Q[{NUMBER_OF_UNKNOWNS}],
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
-      double                                       t
-    ) override;
-
-    void adjustSolution(
-      double Q[{NUMBER_OF_UNKNOWNS}],
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
-    ) override;
+    ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
 
-    void eigenvalues(
-      double                                       Q[{NUMBER_OF_UNKNOWNS}],
+    void adjustSolution(
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t
+    ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
+
+    virtual void eigenvalues(
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal,
-      double                                       lambda[{NUMBER_OF_UNKNOWNS}]
-    ) override;
+      double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
+    ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
 
-    void boundaryConditions(
-      double                                       Qinside[{NUMBER_OF_UNKNOWNS}],
-      double                                       Qoutside[{NUMBER_OF_UNKNOWNS}],
+    virtual void boundaryConditions(
+      double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal
-    ) override;
+    ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
 
-{FLUX_FUNCTIONS_DECLARATIONS}
-}};
+
+    {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+    void flux(
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double                                       F[{{NUMBER_OF_UNKNOWNS}}]
+    ) override;
+    {% endif %}
+
+    {% if NCP_IMPLEMENTATION=="<user-defined>" %}
+    void nonconservativeProduct(
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}][Dimensions],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double                                       BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+    ) override;
+    {% endif %}
+};
 
 
 #endif

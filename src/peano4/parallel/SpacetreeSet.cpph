@@ -10,7 +10,6 @@ template <class Container>
 void peano4::parallel::SpacetreeSet::streamDataFromJoiningTreeToMasterTree(
   Container& stackContainer, int master, int worker
 ) {
-
 }
 
 
@@ -36,6 +35,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
   logTraceInWith2Arguments( "streamDataFromSplittingTreeToNewTree(...)", master, worker );
   const int sourceRank      = Node::getInstance().getRank( master );
   const int destinationRank = Node::getInstance().getRank( worker );
+  const int sourceStack     = Node::getOutputStackNumberForVerticalDataExchange(worker);
 
   if (
     sourceRank==tarch::mpi::Rank::getInstance().getRank()
@@ -43,44 +43,44 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
     destinationRank==tarch::mpi::Rank::getInstance().getRank()
   ) {
     int  destinationStack = peano4::grid::PeanoCurve::getOutputStackNumber( getInstance().getSpacetree(worker)._root );
-    if ( stackContainer.getForPush(worker,destinationStack)->empty() ) {
-      const int sourceStack      = peano4::grid::PeanoCurve::getInputStackNumber( getInstance().getSpacetree(master)._root );
-      logDebug(
-        "copyDataFromSplittingTreesToNewTrees()",
-        "copy stack " << sourceStack << " from tree " << master << " into stack " << destinationStack << " from tree " << worker
-      );
-      stackContainer.getForPush(worker,destinationStack)->clone( *stackContainer.getForPush(master,sourceStack) );
 
+    if (
+      not stackContainer.holdsStack( master, sourceStack )
+      or
+      not stackContainer.getForPush(worker,destinationStack)->empty()
+	) {
       logDebug(
         "copyDataFromSplittingTreesToNewTrees()",
-        "size of stack " << destinationStack << " on tree " << master << ": " << stackContainer.getForPush(master,destinationStack)->size()
+        "target stack " << destinationStack << " of tree " << worker << " is already full or source stack is empty, so skip copying"
       );
     }
     else {
       logDebug(
         "copyDataFromSplittingTreesToNewTrees()",
-        "target stack " << destinationStack << " of tree " << worker << " is already full, so skip copying"
+        "copy stack " << sourceStack << " from tree " << master << " into stack " << destinationStack << " from tree " << worker <<
+        " with a stack size of " << stackContainer.getForPush(master,sourceStack)->size()
       );
+      stackContainer.getForPush(worker,destinationStack)->clone( *stackContainer.getForPop(master,sourceStack) );
     }
   }
   else if ( sourceRank==tarch::mpi::Rank::getInstance().getRank() ) {
+    // send stuff to the new worker via MPI
     #ifdef Parallel
     const int tag            = peano4::parallel::Node::getInstance().getGridDataExchangeTag(master, worker, peano4::parallel::Node::ExchangeMode::VerticalData);
-    const int sourceStack    = peano4::grid::PeanoCurve::getInputStackNumber( getInstance().getSpacetree(master)._root );
-    const int messageSize    = stackContainer.getForPop(master,sourceStack)->size();
-    const int temporaryStack = Node::getOutputStackNumberForVerticalDataExchange(worker);
+    const int messageSize    = 
+      stackContainer.holdsStack( master, sourceStack ) ?
+      stackContainer.getForPop(master,sourceStack)->size() : 0;
 
     logDebug(
       "copyDataFromSplittingTreesToNewTrees()",
-      "send stack " << sourceStack << " (copied temporarily into " << temporaryStack << ") from tree " << master << " on rank " << sourceRank << " through tag " << tag <<
+      "send stack " << sourceStack << " from tree " << master << " on rank " << sourceRank << " through tag " << tag <<
       " to tree " << worker << " on rank " << destinationRank << ". size=" << messageSize
     );
     tarch::mpi::IntegerMessage message( messageSize );
     tarch::mpi::IntegerMessage::send(message, destinationRank, tag, tarch::mpi::Rank::getInstance().getCommunicator());
 
     if (messageSize>0) {
-      stackContainer.getForPush(master,temporaryStack)->clone( *stackContainer.getForPop(master,sourceStack) );
-      stackContainer.getForPush(master,temporaryStack)->startSend(
+      stackContainer.getForPush(master,sourceStack)->startSend(
         destinationRank, tag
       );
     }
@@ -216,10 +216,10 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
   // ----------------------
   std::set< peano4::maps::StackKey > keys = stackContainer.getKeys();
 
-  clock_t      timeOutWarning   = -1;
-  clock_t      timeOutShutdown  = -1;
-  bool         triggeredTimeoutWarning = false;
-  bool         allSendReceivesFinished = false;
+  auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+  auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+  bool triggeredTimeoutWarning = false;
+  bool allSendReceivesFinished = false;
 
   while (not allSendReceivesFinished) {
     allSendReceivesFinished = true;
@@ -230,27 +230,11 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
       }
     }
 
-    if (timeOutWarning==-1)   timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-    if (timeOutShutdown==-1)  timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp() + (tarch::mpi::Rank::getInstance().isGlobalMaster() ? 30 : 0);
     if (
       tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-      (clock()>timeOutWarning) &&
+      (std::chrono::system_clock::now()>timeOutWarning) &&
       (!triggeredTimeoutWarning)
     ) {
-      for (auto& sourceStackKey: keys) {
-        if (
-          sourceStackKey.first==spacetreeId
-          and
-          not stackContainer.getForPush(sourceStackKey)->tryToFinishSendOrReceive()
-        ) {
-          logError(
-            "finishAllOutstandingSendsAndReceives(...)",
-            "failed to send/receive content of stack no " << sourceStackKey.first << " x " << sourceStackKey.second << ": " <<
-            stackContainer.getForPush(sourceStackKey)->toString()
-          );
-        }
-      }
-
       tarch::mpi::Rank::getInstance().writeTimeOutWarning(
         "peano4::parallel::SpacetreeSet",
         "finishAllOutstandingSendsAndReceives(...)", spacetreeId, -1, -1
@@ -259,7 +243,7 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
     }
     if (
       tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-      (clock()>timeOutShutdown)
+      (std::chrono::system_clock::now()>timeOutShutdown)
     ) {
       tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut(
         "peano4::parallel::SpacetreeSet",

@@ -2,7 +2,7 @@
 
 There are two ways to obtain \Peano: 
 You can either download one of the archives we provide on the webpage, or you
-can work directly against a repository clone.
+can work directly against a repository clone (recommended).
 If you work with the archive, type in a 
 \begin{code}
 tar -xzvf myarchive.tar.gz
@@ -11,7 +11,7 @@ in the directory where you've stored your downloaded file.
 
 
 If you work with the git archive, you have to clone this archive first. 
-I grant access to \Peano\  free of charge.
+I grant access to \Peano\  free of charge and the repository is public.
 However, I ask users to sign up for the software if they indend to push
 modifications to the code (which I very much appreciate\footnote{\Peano's
 guidebook (the file you currently read) is hosted within \Peano's git
@@ -24,7 +24,7 @@ If you do not indend to modify the \Peano\ core code base, you can just clone
 the code anomymously.
 
 \begin{code}
-git clone https://gitlab.lrz.de/your-login/Peano.git
+git clone https://gitlab.lrz.de/hpcsoftware/Peano.git
 cd Peano
 git checkout p4
 \end{code}
@@ -91,7 +91,10 @@ below:
   build without multithreading, but a \texttt{--with-multithreading=cpp}, e.g.,
   makes \Peano\  use the C++ threading model. Please consult \texttt{--help} for
   details. Note: To use OpenMP multithreading, you will need a compiler which
-  supports OpenMP 5.0 (e.g - GCC 9.x).
+  supports OpenMP 5.0 (e.g - GCC 9.x)\footnote{\Peano\ realises its GPGPU
+  offloading via OpenMP, too. Some compilers struggle to translate these GPGPU
+  instructions. In this case, please configure with the CXXFLAG
+  \texttt{-DnoGPUOffloading}.}.
    \\
   \texttt{--with-mpi} & Enable the MPI version of \Peano. You have to tell the
   build environment however which compile command to use. Please note that
@@ -105,13 +108,21 @@ below:
   However, \Peano\ comes along with some command line conversion tools that can convert its tailored data
   dumps into VTK, and they do rely on the VTK libraries. With this flag, you
   tell \Peano\ to build these tools.
-  The VTK installation is sometimes not easy (and you might have to provide additional parameters depending on your installation). I dedicate Chapter \ref{chapter:vtk} on VTK.
+  The VTK installation is sometimes not easy (and you might have to provide additional parameters depending on your installation). I dedicate Chapter \ref{chapter:postprocessing} on VTK.
    \\
   \texttt{--with-hdf5} & Make \Peano\  support HDF5 output. Not stable at the
   moment.
    \\
   \texttt{--with-delta} & Configure \Peano\  such that the geometry library
   $\Delta $ is used. Not stable at the moment.
+   \\
+  \texttt{--with-nvidia} & Build against the NVIDIA NVTX SDK such that NVIDIA
+  specific logging/tracing becomes available. Ensure that your CXXFLAGS set the
+  right include path\footnote{It is
+  \texttt{CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/}
+  on my system, e.g.}.
+  This is optional.
+   \\
  \end{tabular}
 \end{center}
 
@@ -189,6 +200,9 @@ i.e.~you can both assess a valid build plus a working MPI environment.
 \section{Python configuration}
 
 \Peano\ is developed with Python 3. Python 2 is not supported. 
+
+
+\subsection{Python paths}
 To make any Python example pass, you have to set the Python paths.
 There are multiple ways to do so.
 
@@ -225,6 +239,37 @@ library accept additional search paths), or you can again use the
  As long as you run through environment variables or the \Peano\ routines to
  specify paths, your makefiles also will continue to work that way. 
 \end{remark}
+
+
+\subsection{Python packages}
+
+\Peano\ currently relies on the following Python packages/projects:
+
+
+\begin{center}
+ \begin{tabular}{lp{6cm}ll}\\
+   Package & Description & Ubuntu & OpenSUSE \\
+   \hline
+   jinja2 & For all the templated glue code. & 
+    \texttt{python3-jinja2} &
+    \texttt{} 
+    \\
+   sympy & For the symbolic modelling of partial differential equations
+    (predominantly in \ExaHyPE). &
+    \texttt{python3-sympy} &
+    \texttt{python3-sympy} 
+ \end{tabular}
+\end{center}
+
+
+\noindent
+The table above specifies the corresponding packages in our two main
+distributions for which we test \Peano. 
+They can be installed via \texttt{zypper install} (SUSE) or \texttt{apt-get
+install} (Ubuntu), respectively.
+Alternatively, you might want to use Python's \texttt{pip}.
+
+
 
 
 

@@ -1,0 +1,273 @@
+#include "tarch/Assertions.h"
+#include "tarch/logging/Log.h"
+#include "exahype2/fv/Generic.h"
+#include "exahype2/PatchUtils.h"
+#include "exahype2/NonCriticalAssertions.h"
+
+
+template <typename Flux, typename Eigenvalues>
+void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
+  Flux                                         flux,
+  Eigenvalues                                  eigenvalues,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  double                                       t,
+  double                                       dt,
+  int                                          numberOfVolumesPerAxisInPatch,
+  int                                          unknowns,
+  double                                       Qin[],
+  double                                       Qout[]
+) {
+  ::exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
+    flux,
+	[] (
+	  double                                       Q[],
+	  double                                       gradQ[][Dimensions],
+	  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+	  const tarch::la::Vector<Dimensions,double>&  volumeH,
+	  double                                       t,
+	  double                                       dt,
+	  int                                          normal,
+	  double                                       BgradQ[]
+	) -> void {},
+    eigenvalues,
+    patchCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfVolumesPerAxisInPatch,
+    unknowns,
+    Qin, Qout
+  );
+}
+
+
+
+template< typename Flux, typename NCP, typename Eigenvalues>
+void exahype2::fv::gpu::splitRusanov1d(
+        Flux flux,
+        NCP  nonconservativeProduct,
+        Eigenvalues eigenvalues,
+        double QL[],
+        double QR[],
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        int                                          unknowns,
+        double                                       FL[],
+        double                                       FR[]
+)  {
+  #if !defined(GPUOffloading)
+  assertion(normal>=0);
+  assertion(normal<Dimensions);
+  #endif
+
+  double fluxFL[unknowns];
+  double fluxFR[unknowns];
+  flux(QL,x,dx,t,dt,normal,fluxFL);
+  flux(QR,x,dx,t,dt,normal,fluxFR);
+
+  double Qaverage[unknowns];
+   double gradQ[unknowns][Dimensions];
+   for (int unknown=0; unknown<unknowns; unknown++) {
+     for (int d=0; d<Dimensions; d++) {
+       gradQ[unknown][d] = 0.0;
+     }
+     Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
+     gradQ[unknown][normal] = QR[unknown] - QL[unknown];
+   }
+   double fluxnonconservativeProduct[unknowns];
+   // It is important that we initialise these guys with 0, as
+   // ncp might nop and we hence might add garbage
+   for (int i=0; i<unknowns; i++) {
+	 fluxnonconservativeProduct[i] = 0.0;
+   }
+   nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
+
+   double lambdas[unknowns];
+   double lambdaMax = 0.0;
+
+   eigenvalues(QL,x,dx,t,dt,normal,lambdas);
+   for (int unknown=0; unknown<unknowns; unknown++) {
+     #if !defined(GPUOffloading)
+     nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
+     #endif
+     lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
+   }
+   eigenvalues(QR,x,dx,t,dt,normal,lambdas);
+   for (int unknown=0; unknown<unknowns; unknown++) {
+     #if !defined(GPUOffloading)
+     nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
+     #endif
+     lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
+   }
+
+   for (int unknown=0; unknown<unknowns; unknown++) {
+     FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) - 0.5 * fluxnonconservativeProduct[unknown];
+     FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
+     #if !defined(GPUOffloading)
+     nonCriticalAssertion6(FL[unknown]==FL[unknown], fluxFL[unknown], fluxFR[unknown], lambdaMax, QR[unknown], QL[unknown], fluxnonconservativeProduct[unknown]);
+     nonCriticalAssertion6(FR[unknown]==FR[unknown], fluxFL[unknown], fluxFR[unknown], lambdaMax, QR[unknown], QL[unknown], fluxnonconservativeProduct[unknown]);
+     #endif
+   }
+}
+
+template <typename Flux, typename NCP, typename Eigenvalues>
+void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
+  Flux                                         flux,
+  NCP                                          nonconservativeProduct,
+  Eigenvalues                                  eigenvalues,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  double                                       t,
+  double                                       dt,
+  int                                          numberOfVolumesPerAxisInPatch,
+  int                                          unknowns,
+  double                                       Qin[],
+  double                                       Qout[]
+) {
+
+  #if Dimensions==2
+  {
+    const double volumeH = ::exahype2::getVolumeLength(patchSize, numberOfVolumesPerAxisInPatch);
+
+    #pragma omp parallel for
+    for (int x=0; x<=numberOfVolumesPerAxisInPatch; x++) {
+      for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
+   	    double numericalFluxL[unknowns]; // helper out variable
+   	    double numericalFluxR[unknowns]; // helper out variable
+
+        const int leftVoxelInPreimage  =  x
+                                       + (y+1) * (2 + numberOfVolumesPerAxisInPatch);
+        const int rightVoxelInPreimage =  x+1
+                                       + (y+1) * (2 + numberOfVolumesPerAxisInPatch);
+
+        const int leftVoxelInImage     = x-1
+                                       + y * numberOfVolumesPerAxisInPatch;
+        const int rightVoxelInImage    = x
+                                       + y * numberOfVolumesPerAxisInPatch;
+  
+        // This line gives
+        //
+        // during IPA pass: cp
+        // lto1: internal compiler error: Segmentation fault
+        //
+        // so I have to replace it by a manual construction of the vector 
+        // circumnavigating the copy constructor.
+        //
+        // tarch::la::Vector<Dimensions,double> volumeX = patchCentre - 0.5 * patchSize;
+
+        tarch::la::Vector<Dimensions,double> volumeX;
+        volumeX(0) = patchCentre(0) - 0.5 * patchSize(0);
+        volumeX(1) = patchCentre(1) - 0.5 * patchSize(1);
+
+        volumeX(0) += x * volumeH;
+        volumeX(1) += (y+0.5) * volumeH;
+
+        gpu::splitRusanov1d(
+          flux, nonconservativeProduct, eigenvalues,
+          Qin + leftVoxelInPreimage*unknowns,   // QL
+          Qin + rightVoxelInPreimage*unknowns,  // QR
+          volumeX, volumeH, t, dt, 0, //  last argument = normal
+          unknowns,
+          numericalFluxL, numericalFluxR
+        );
+
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          if (x>0) {
+            Qout[ leftVoxelInImage*unknowns+unknown ] -= dt / volumeH * numericalFluxL[unknown];
+            #if !defined(GPUOffloading)
+            nonCriticalAssertion4(Qout[ leftVoxelInImage*unknowns+unknown ]==Qout[ leftVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxL[unknown], unknown);
+            #endif
+          }
+          if (x<numberOfVolumesPerAxisInPatch) {
+            Qout[ rightVoxelInImage*unknowns+unknown ] += dt / volumeH * numericalFluxR[unknown];
+            #if !defined(GPUOffloading)
+            nonCriticalAssertion4(Qout[ rightVoxelInImage*unknowns+unknown ]==Qout[ rightVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxR[unknown], unknown);
+            #endif
+          }
+        }
+      }
+    }
+
+    #pragma omp parallel for
+    for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+      for (int y=0; y<=numberOfVolumesPerAxisInPatch; y++) {
+   	    double numericalFluxL[unknowns]; // helper out variable
+   	    double numericalFluxR[unknowns]; // helper out variable
+
+        const int lowerVoxelInPreimage =  x+1
+                                       +  y * (2 + numberOfVolumesPerAxisInPatch);
+        const int upperVoxelInPreimage =  x+1
+                                       + (y+1) * (2 + numberOfVolumesPerAxisInPatch);
+   
+        const int lowerVoxelInImage    = x
+                                       + (y-1) * numberOfVolumesPerAxisInPatch;
+        const int upperVoxelInImage    = x
+                                       + y * numberOfVolumesPerAxisInPatch;
+
+        tarch::la::Vector<Dimensions,double> volumeX; 
+        volumeX(0) = patchCentre(0) - 0.5 * patchSize(0);
+        volumeX(1) = patchCentre(1) - 0.5 * patchSize(1);
+
+        volumeX(0) += (x+0.5) * volumeH;
+        volumeX(1) += y * volumeH;
+ 
+        gpu::splitRusanov1d(
+          flux, nonconservativeProduct, eigenvalues,
+          Qin + lowerVoxelInPreimage*unknowns,
+          Qin + upperVoxelInPreimage*unknowns,
+          volumeX, volumeH, t, dt, 1, //  last argument = normala
+          unknowns,
+          numericalFluxL, numericalFluxR
+        );
+  
+        for (int unknown=0; unknown<unknowns; unknown++) {
+          if (y>0) {
+            Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH * numericalFluxL[unknown];
+            #if !defined(GPUOffloading)
+            nonCriticalAssertion4(Qout[ lowerVoxelInImage*unknowns+unknown ]==Qout[ lowerVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxL[unknown], unknown);
+            #endif
+          }
+          if (y<numberOfVolumesPerAxisInPatch) {
+            Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH * numericalFluxR[unknown];
+            #if !defined(GPUOffloading)
+            nonCriticalAssertion4(Qout[ upperVoxelInImage*unknowns+unknown ]==Qout[ upperVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxR[unknown], unknown);
+            #endif
+          }
+        }
+      }
+    }
+  }
+  #else
+  applySplit1DRiemannToPatch_Overlap1AoS3d(
+    [&](
+      double                                       QL[],
+      double                                       QR[],
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       dx,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      double                                       FL[],
+      double                                       FR[]
+    ) -> void {
+      internal::splitRusanov1d(
+        flux, nonconservativeProduct, eigenvalues,
+		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+     );
+    },
+	patchCentre,
+	patchSize,
+	t,
+	dt,
+	numberOfVolumesPerAxisInPatch,
+	unknowns,
+	Qin,
+	Qout
+  );
+  #endif
+
+}

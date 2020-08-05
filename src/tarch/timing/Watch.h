@@ -116,7 +116,7 @@ class tarch::timing::Watch {
      *
      * @see stopTimer()
      */
-    void startTimer();
+    void start();
 
 
     /**
@@ -124,7 +124,7 @@ class tarch::timing::Watch {
      * the stop does not reset the start time. Please note that all the getters
      * return meaningful results if and only if you call stopTimer().
      */
-    void stopTimer();
+    void stop();
 
 
     /**

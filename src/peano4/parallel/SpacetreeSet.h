@@ -46,6 +46,11 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     std::vector<peano4::parallel::TreeManagementMessage>   _unansweredMessages;
 
     /**
+     * @see orderedBarrier()
+     */
+    std::map< std::string, bool >                          _hasPassedOrderedBarrier;
+
+    /**
      * Each task triggers the traversal of one specific spacetree. After
      * that, we might directly trigger the data exchanges. Yet, this is not a
      * good idea as other tasks might linger in the background not have sent
@@ -144,6 +149,10 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * the code will temporarily create an observer for the master and then ask this
      * observer to trigger the data exchange.
      *
+     * We have to trigger the routine multiple times, to ensure we catch both the
+     * on-rank and the between-rank case. As a consequence, we may only stream if the
+     * destination stack is still empty.
+     *
      * <h2> On-rank realisation </h2>
      *
      * If source and destination rank are the same, a tree splits up into two trees
@@ -207,6 +216,9 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      */
     int     _answerMessageTag;
 
+    /**
+     * These are the local spacetrees.
+     */
     std::list< peano4::grid::Spacetree >  _spacetrees;
 
     /**
@@ -262,17 +274,25 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     void deleteAllStacks( peano4::grid::TraversalObserver&  observer, int spacetreeId );
 
     /**
+     * Copy the data from a splitting tree onto its new workers
+     *
      * When we split a tree, we realise this split in two grid sweeps where the second
      * sweep breaks up the traversal into three logical substeps. In the first sweep, the
      * splitting master tells everybody around that it will split. No split is done though.
      * In the second sweep, the master still takes all data that's meant to be for the new
      * worker, and it sends out boundary data where it shares a boundary with the worker.
      *
-     * After that, it copies its whole tree data over to the new worker. This is what
+     * After that, it copies its tree data over to the new worker. This is what
      * this routine is for. Copying means that it is there in the right order, but it
      * also means that the new worker hasn't had time to send out its boundary data in
      * return for the stuff it will receive in the next iteration. Therefore, the new
      * worker will do two additional grid traversal after this copying has terminated.
+     *
+     * Streaming/copying here means two different things: We treat user and grid (vertex)
+     * data differently.
+     *
+     *
+     * <h2> Vertex grid data </h2>
      *
      * The copying of the whole tree data is literally a copying of the output stack of
      * the master. It happens after the master has finished its joining traversal.
@@ -285,6 +305,21 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * (MPI receive) and on the source rank (MPI send). For a single-node split, the
      * second invocation degenerates to nop automatically. See streamDataFromSplittingTreeToNewTree()
      * which implements a simple emptyness check.
+     *
+     * <h2> User data </h2>
+     *
+     * While it makes sense to copy the whole vertex data, i.e. the whole tree structure,
+     * to the new worker, this approach is not good for the new worker. Coyping the
+     * whole tree means the worker knows all the stuff about connectivity et al and then
+     * successively can coarsen those mesh parts that it si not interested in. When I
+     * had a first prototype up that also copied all user data, I alway ran out of
+     * memory. Therefore, user data is copied only for local elements. We may assume
+     * that the code has already copied all outgoing data into the right stack. We "just"
+     * have to copy this very stack over.
+     *
+     * See the routine peano4::grid::Spacetree::sendUserData() for an explanation how
+     * user data is effectively streamed out.
+     *
      *
      * @see streamDataFromSplittingTreeToNewTree()
      */
@@ -634,6 +669,18 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * @return Set of ids of local spacetrees
      */
     std::set<int> getLocalSpacetrees() const;
+
+    /**
+     * Try to order the thread execution to some degree.
+     *
+     * This routine is used by some plotters and other routines. It basically works
+     * as follows:
+     *
+     * - The first thread that hits the barrier in a set traversal synchronises with
+     *   all other ranks. All other local threads have to wait meanwhile.
+     * - After that, the other ranks are allowed to pass one by one.
+     */
+    void orderedBarrier( const std::string& identifier );
 };
 
 

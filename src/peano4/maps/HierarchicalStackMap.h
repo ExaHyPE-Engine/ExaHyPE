@@ -21,10 +21,6 @@ namespace peano4 {
   }
 }
 
-// @todo Dokumentieren, warum ich denke, dass man das nicht braucht
-// Also ich glaube jetzt doch, dass man das braucht
-// -> noe, das war's wohl net
-#define UseSemaphoreInHierarchicalStackMap
 
 
 /**
@@ -41,21 +37,18 @@ namespace peano4 {
 template <typename T>
 class peano4::maps::HierarchicalStackMap {
   private:
-	/**
-	 * Data of one tree.
-	 */
-	struct TreeData {
+    /**
+     * Data of one tree.
+     */
+    struct TreeData {
       std::map< int, T* >                 _stackNumberToData;
-      #ifdef UseSemaphoreInHierarchicalStackMap
-      tarch::multicore::BooleanSemaphore  _semaphore;
-      #endif
-	};
+    };
 
-	/**
-	 * A vector of maps. I hold one entry per local spacetree, i.e.
-	 * map all global ids onto local indices.
-	 */
-	std::vector< TreeData >            _data;
+    /**
+     * A vector of maps. I hold one entry per local spacetree, i.e.
+     * map all global ids onto local indices.
+     */
+    std::vector< TreeData >            _data;
 
     /**
      * This routine is not thread-safe, i.e. if you need it thread-safe then
@@ -67,6 +60,11 @@ class peano4::maps::HierarchicalStackMap {
     ~HierarchicalStackMap();
 
     bool empty(int treeId, int stackId) const;
+
+    /**
+     * @see STDStackMap::clear()
+     */
+    void clear();
 
     /**
      * Get the stack belonging to a tree.
@@ -100,7 +98,10 @@ class peano4::maps::HierarchicalStackMap {
      */
     std::set<StackKey>  getKeys();
 
-    void garbageCollection();
+    /**
+     * @see STDStackMap::garbageCollection(int)
+     */
+    void garbageCollection(int spacetree);
 
     /**
      * For debugging/assertions.
@@ -161,9 +162,6 @@ T* peano4::maps::HierarchicalStackMap<T>::getForPush(const StackKey& key) {
   const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(key.first);
   assertion3(localTreeId>=0,localTreeId,key.first,key.second);
   assertion4(localTreeId<_data.size(),localTreeId,_data.size(),key.first,key.second);
-  #ifdef UseSemaphoreInHierarchicalStackMap
-  tarch::multicore::Lock lock(_data[localTreeId]._semaphore);
-  #endif
   createStack(localTreeId,key.second);
   assertion4( _data[localTreeId]._stackNumberToData[key.second] != nullptr, localTreeId, key.first, key.second, tarch::mpi::Rank::getInstance().getRank() );
   return _data[localTreeId]._stackNumberToData[key.second];
@@ -204,9 +202,6 @@ template <typename T>
 std::set<peano4::maps::StackKey>  peano4::maps::HierarchicalStackMap<T>::getKeys() {
   std::set<peano4::maps::StackKey> result;
   for (int i=0; i<_data.size(); i++) {
-    #ifdef UseSemaphoreInHierarchicalStackMap
-    tarch::multicore::Lock lock(_data[i]._semaphore);
-    #endif
     for (auto& pp: _data[i]._stackNumberToData) {
       result.insert( peano4::maps::StackKey( peano4::parallel::Node::getInstance().getGlobalTreeId(i),pp.first) );
     }
@@ -232,7 +227,22 @@ peano4::maps::HierarchicalStackMap<T>::HierarchicalStackMap():
 
 
 template <typename T>
-void peano4::maps::HierarchicalStackMap<T>::garbageCollection() {
+void peano4::maps::HierarchicalStackMap<T>::garbageCollection(int spacetree) {
+  for (auto& p: _data[spacetree]._stackNumberToData) {
+    if (
+      p.second->empty()
+      and
+      not peano4::parallel::Node::isStorageStackNumber(p.first)
+    ) {
+      delete p.second;
+      p.second = new T();
+    }
+  }
+}
+
+
+template <typename T>
+void peano4::maps::HierarchicalStackMap<T>::clear() {
   for (auto& p: _data) {
     for (auto& pp: p._stackNumberToData) {
       if (pp.second->empty()) {

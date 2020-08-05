@@ -19,4 +19,10 @@ trace  tarch                               -1     black
 trace  peano4                              -1     black
 trace  examples                            -1     black
 trace  exahype2                            -1     black
+trace  toolbox                             -1     black
 
+
+# info  peano4::grid                  -1     black
+trace examples::exahype2::euler::Euler                   -1   black
+trace examples::exahype2::euler::observers::PlotSolution -1   black
+trace exahype2::RefinementControl                        -1   black

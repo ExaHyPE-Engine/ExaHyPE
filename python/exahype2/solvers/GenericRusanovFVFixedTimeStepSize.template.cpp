@@ -1,12 +1,12 @@
-#include "{CLASSNAME}.h"
+#include "{{CLASSNAME}}.h"
 
 
 tarch::logging::Log   {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME}" );
 
 
 
-::exahype2::RefinementCommand {FULL_QUALIFIED_CLASSNAME}::refinementCriterion(
-  double Q[{NUMBER_OF_UNKNOWNS}],
+::exahype2::RefinementCommand {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}::refinementCriterion(
+  double Q[{{NUMBER_OF_UNKNOWNS}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
@@ -21,8 +21,8 @@ tarch::logging::Log   {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNA
 }}
 
 
-void {FULL_QUALIFIED_CLASSNAME}::adjustSolution(
-  double Q[{NUMBER_OF_UNKNOWNS}],
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}::adjustSolution(
+  double Q[{{NUMBER_OF_UNKNOWNS}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
@@ -39,13 +39,13 @@ void {FULL_QUALIFIED_CLASSNAME}::adjustSolution(
 
 
 
-void {FULL_QUALIFIED_CLASSNAME}::eigenvalues(
-  double                                       Q[{NUMBER_OF_UNKNOWNS}],
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}::eigenvalues(
+  double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double                                       lambda[{NUMBER_OF_UNKNOWNS}]
+  double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
 ) {{
   logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
   // @todo implement
@@ -54,8 +54,8 @@ void {FULL_QUALIFIED_CLASSNAME}::eigenvalues(
 
 
 void {FULL_QUALIFIED_CLASSNAME}::boundaryConditions(
-  double                                       Qinside[{NUMBER_OF_UNKNOWNS}],
-  double                                       Qoutside[{NUMBER_OF_UNKNOWNS}],
+  double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}],
+  double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

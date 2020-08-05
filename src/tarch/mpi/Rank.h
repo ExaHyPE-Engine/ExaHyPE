@@ -93,9 +93,9 @@ class tarch::mpi::Rank {
     /**
      * How long shall the application wait until it writes a time-out warning
      */
-    clock_t _timeOutWarning;
+    std::chrono::seconds _timeOutWarning;
 
-    clock_t _deadlockTimeOut;
+    std::chrono::seconds _deadlockTimeOut;
 
     bool    _areTimeoutsEnabled;
 
@@ -160,7 +160,6 @@ class tarch::mpi::Rank {
      * barrier and give the user the opportunity to tell me what do while
      * I wait to be allowed to pass the barrier.
      *
-     *
      * The most common pattern how to use the barrier in Peano 4 is to pass
      * the following functor to the barrier as argument:
      *
@@ -171,6 +170,14 @@ class tarch::mpi::Rank {
 }
 
       </pre>
+     *
+     * Please note that this barrier remains an MPI barrier. It does not act
+     * as barrier between multiple threads. In particular: if you use this
+     * barrer in a multithreaded code, then each thread will launch a barrier
+     * on its own. If the number of threads/tasks per rank differs, deadlocks
+     * might arise. Anyway, it is not a good idea to use this within a
+     * multithreaded part of your code.
+     *
      *
      * @param waitor is my functor that should be called while we wait. By
      *   default, it is empty, i.e. barrier degenerates to a blocking barrier
@@ -345,11 +352,11 @@ class tarch::mpi::Rank {
      *   MPI_Iprobe( source, CommunicationTag, Rank::getInstance().getCommunicator(), &flag, &status );
      *
      *   while (!flag) {
-     *     if ( Rank::getInstance().isTimeOutWarningEnabled() && (clock()>timeOutWarning) && (!triggeredTimeoutWarning)) {
+     *     if ( Rank::getInstance().isTimeOutWarningEnabled() && (std::chrono::system_clock::now()>timeOutWarning) && (!triggeredTimeoutWarning)) {
      *       Rank::getInstance().writeTimeOutWarning( "parallel::SendReceiveBuffer", "receiveAllMessages()", source );
      *       triggeredTimeoutWarning = true;
      *     }
-     *     if ( Rank::getInstance().isTimeOutDeadlockEnabled() && (clock()>timeOutShutdown)) {
+     *     if ( Rank::getInstance().isTimeOutDeadlockEnabled() && (std::chrono::system_clock::now()>timeOutShutdown)) {
      *       Rank::getInstance().triggerDeadlockTimeOut( "parallel::SendReceiveBuffer", "receiveAllMessages()", source );
      *     }
      *     MPI_Iprobe( source, CommunicationTag, Rank::getInstance().getCommunicator(), &flag, &status );
@@ -359,13 +366,13 @@ class tarch::mpi::Rank {
      * @return Time stamp when next warning should be written if no message has
      *         been received meanwhile.
      */
-    std::clock_t getDeadlockWarningTimeStamp() const;
+    std::chrono::system_clock::time_point getDeadlockWarningTimeStamp() const;
 
     /**
      * @return Time stamp when next application should terminate because of a
      *         time out if no message has been received meanwhile.
      */
-    std::clock_t getDeadlockTimeOutTimeStamp() const;
+    std::chrono::system_clock::time_point getDeadlockTimeOutTimeStamp() const;
 
     bool isTimeOutDeadlockEnabled() const;
     bool isTimeOutWarningEnabled() const;
@@ -379,7 +386,7 @@ class tarch::mpi::Rank {
      * warning that it is likely that it ran into a deadlock. If you pass 0,
      * that switches off this feature.
      */
-    void setTimeOutWarning( const std::clock_t & value );
+    void setTimeOutWarning( int valueInSeconds );
 
     /**
      * Set deadlock time out
@@ -388,7 +395,7 @@ class tarch::mpi::Rank {
      * and shutdown the whole application with an error report. If you pass 0,
      * that switches off this feature.
      */
-    void setDeadlockTimeOut( const std::clock_t & value );
+    void setDeadlockTimeOut( int valueInSeconds );
 
     #ifdef Parallel
     /**

@@ -90,9 +90,9 @@ void tarch::la::tests::VectorTest::testAssignment() {
   validateEquals (vector[2], 3);
 
   vector = {1, 2, 3};
-  validateEqualsWithParams1(vector[0], 1, vector.toString());
-  validateEqualsWithParams1(vector[1], 2, vector.toString());
-  validateEqualsWithParams1(vector[2], 3, vector.toString());
+  validateEqualsWithParams1(vector[0], 1, toString(vector));
+  validateEqualsWithParams1(vector[1], 2, toString(vector));
+  validateEqualsWithParams1(vector[2], 3, toString(vector));
 //
 //
 //  // Assign a scalar to all vector
@@ -192,9 +192,9 @@ void tarch::la::tests::VectorTest:: testVectorScalarOperations() {
   validateEquals (vector[2], 2);
 
   vector = vector - 1;
-  validateEqualsWithParams1(vector[0], 1, vector.toString());
-  validateEqualsWithParams1(vector[1], 1, vector.toString());
-  validateEqualsWithParams1(vector[2], 1, vector.toString());
+  validateEqualsWithParams1(vector[0], 1, toString(vector));
+  validateEqualsWithParams1(vector[1], 1, toString(vector));
+  validateEqualsWithParams1(vector[2], 1, toString(vector));
 }
 
 
@@ -314,7 +314,7 @@ void tarch::la::tests::VectorTest::testWrappedVector() {
   Vector<3,int> vector = {2, 3, 4};
   Vector<6,int> longVector(1);
   slice(longVector,vector,3);
-  validateEqualsWithParams1(longVector[0], 1, longVector.toString() );
+  validateEqualsWithParams1(longVector[0], 1, toString(longVector) );
   validateEquals (longVector[1], 1);
   validateEquals (longVector[2], 1);
   validateEquals (longVector[3], 2);

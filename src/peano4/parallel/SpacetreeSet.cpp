@@ -45,6 +45,7 @@ void peano4::parallel::SpacetreeSet::init(
   _answerMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - answer message", Node::MaxSpacetreesPerRank);
   tarch::services::ServiceRepository::getInstance().addService( this, "peano4::parallel::SpacetreeSet" );
 
+  #ifdef Parallel
   assertion4(
     (peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees()==1 and tarch::mpi::Rank::getInstance().getRank()==0)
     or
@@ -52,6 +53,7 @@ void peano4::parallel::SpacetreeSet::init(
     peano4::parallel::Node::getInstance().getNumberOfRegisteredTrees(),
     offset, width, tarch::mpi::Rank::getInstance().getRank()
   );
+  #endif
 
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     peano4::grid::Spacetree spacetree( offset, width, periodicBC );
@@ -105,7 +107,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
             p = _unansweredMessages.erase(p);
           }
           else {
-            logInfo( "answerMessages()", "can't answer as I'm in the wrong state" );
+            logDebug( "answerMessages()", "can't answer as I'm in the wrong state" );
             p++;
           }
         }
@@ -382,6 +384,10 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(pean
 
   for (auto& parent: _spacetrees) {
     for (auto& worker: parent._hasSplit) {
+      const int temporaryOutStackForVertices = Node::getOutputStackNumberForVerticalDataExchange(worker);
+      const int sourceStackForVertices       = peano4::grid::PeanoCurve::getInputStackNumber( parent._root );
+      peano4::grid::Spacetree::_vertexStack.getForPush(parent._id,temporaryOutStackForVertices)->clone( *peano4::grid::Spacetree::_vertexStack.getForPop(parent._id,sourceStackForVertices) );
+
       streamDataFromSplittingTreeToNewTree( peano4::grid::Spacetree::_vertexStack, parent._id, worker);
 
       createObserverCloneIfRequired(observer,parent._id);
@@ -468,6 +474,8 @@ void peano4::parallel::SpacetreeSet::deleteClonedObservers() {
 void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& observer) {
   logTraceIn( "traverse(TraversalObserver&)" );
 
+  _hasPassedOrderedBarrier.clear();
+
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     peano4::parallel::Node::getInstance().continueToRun();
   }
@@ -520,36 +528,42 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   // I use this boolean flag from time to time to debug the code.
   const bool runSequentially = false;
 
-  logDebug( "traverse(TraversalObserver&)", "kick off primary tree sweeps: " << primaryTasks.size() << " task(s)" );
+  logTraceInWith1Argument( "traverse(TraversalObserver&)-primary", primaryTasks.size() );
   if ( not primaryTasks.empty() ) {
     static int multitasking = peano4::parallel::Tasks::getLocationIdentifier( "peano4::parallel::SpacetreeSet::traverse-1" );
     peano4::parallel::Tasks runs( primaryTasks,
       runSequentially ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
       multitasking,true);
   }
+  logTraceOut( "traverse(TraversalObserver&)-primary" );
 
   logDebug( "traverse(TraversalObserver&)", "primary tasks (traversals) complete, trigger split data stream if required" );
   streamDataFromSplittingTreesToNewTrees(observer);
   logDebug( "traverse(TraversalObserver&)", "exchange vertical data if required" );
   exchangeVerticalDataBetweenTrees(observer);
 
-  logDebug( "traverse(TraversalObserver&)", "kick off secondary tree sweeps: " << secondaryTasks.size() << " task(s)" );
+  logTraceInWith1Argument( "traverse(TraversalObserver&)-secondary", secondaryTasks.size() );
   if ( not secondaryTasks.empty() ) {
     static int multitasking = peano4::parallel::Tasks::getLocationIdentifier( "peano4::parallel::SpacetreeSet::traverse-2" );
     peano4::parallel::Tasks runs( secondaryTasks,
       runSequentially ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
       multitasking,true);
   }
+  logTraceOut( "traverse(TraversalObserver&)-secondary" );
 
   exchangeVerticalDataBetweenTrees(observer);
 
-  logDebug( "traverse(TraversalObserver&)", "kick off tertiary tree sweeps: " << tertiaryTasks.size() << " task(s)" );
+  logTraceInWith1Argument( "traverse(TraversalObserver&)-tertiary", tertiaryTasks.size() );
   if ( not tertiaryTasks.empty() ) {
     static int multitasking = peano4::parallel::Tasks::getLocationIdentifier( "peano4::parallel::SpacetreeSet::traverse-3" );
     peano4::parallel::Tasks runs( tertiaryTasks,
       runSequentially ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
       multitasking,true);
   }
+  logTraceOut( "traverse(TraversalObserver&)-tertiary" );
+
+  // Ensure that there's a consumer task around. Well, at least one.
+  tarch::multicore::processPendingTasks(0);
 
   exchangeHorizontalDataBetweenTrees(observer);
 
@@ -631,9 +645,11 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
           and
           getSpacetree(p->_masterId).mayJoinWithWorker()
         ) {
-          logInfo( "traverse(Observer)", "join tree " << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId << " resides on same rank and can't coarsen" );
-          p->joinWithMaster();
-          getSpacetree(p->_masterId).joinWithWorker(p->_id);
+          // @todo erste Meldung info
+          logError( "traverse(Observer)", "join tree " << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId << " resides on same rank and can't coarsen" );
+          logError( "traverse(Observer)", "not implemented yet");
+          //p->joinWithMaster();
+          //getSpacetree(p->_masterId).joinWithWorker(p->_id);
         }
         else {
           logDebug( "traverse(Observer)", "tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master" );
@@ -641,7 +657,9 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
       }
       else {
         // @todo: Aber nur, wenn es noch andere Baeume auf diesem Rank gibt
+        // @todo erste Meldung info
         logError( "cleanUpTrees(...)", "I should merge tree " << p->_id << " to reduce synchronisation: " << p->toString() );
+        logError( "traverse(Observer)", "not implemented yet");
       }
     }
     p++;
@@ -715,15 +733,14 @@ bool peano4::parallel::SpacetreeSet::split(int treeId, int cells, int targetRank
 
     if (tarch::mpi::Rank::getInstance().getRank()!=targetRank) {
       #ifdef Parallel
-      // debug
-      logInfo( "split(int,int,int)", "request new tree on rank " << targetRank );
+      logDebug( "split(int,int,int)", "request new tree on rank " << targetRank );
       peano4::parallel::TreeManagementMessage requestMessage;
       requestMessage.setMasterSpacetreeId(treeId);
       requestMessage.setWorkerSpacetreeId(-1);
       requestMessage.setAction( peano4::parallel::TreeManagementMessage::Action::RequestNewRemoteTree );
       TreeManagementMessage::sendAndPollDanglingMessages(requestMessage, targetRank, _requestMessageTag);
 
-      logInfo( "split(int,int,int)", "message " << requestMessage.toString() << " sent - wait for answer" );
+      logDebug( "split(int,int,int)", "message " << requestMessage.toString() << " sent - wait for answer" );
 
       peano4::parallel::TreeManagementMessage answerMessage;
       TreeManagementMessage::receiveAndPollDanglingMessages(answerMessage, targetRank, getAnswerTag(treeId));
@@ -781,5 +798,33 @@ const peano4::grid::Spacetree&  peano4::parallel::SpacetreeSet::getSpacetree(int
   }
   assertion3( false, "no spacetree found", id, tarch::mpi::Rank::getInstance().getRank() );
   return *_spacetrees.begin(); // just here to avoid warning
+}
+
+
+void peano4::parallel::SpacetreeSet::orderedBarrier(const std::string& identifier) {
+  logTraceIn( "orderedBarrier()" );
+
+  static tarch::multicore::BooleanSemaphore  semaphore;
+
+  {
+    tarch::multicore::Lock lock(semaphore);
+    if ( _hasPassedOrderedBarrier.count( identifier) == 0 ) {
+      _hasPassedOrderedBarrier.insert( std::pair<std::string,bool>(identifier,false) );
+    }
+  }
+
+  {
+    tarch::multicore::Lock lock(semaphore);
+    if ( not _hasPassedOrderedBarrier.at( identifier) ) {
+      tarch::mpi::Rank::getInstance().barrier(
+        [&]() -> void {
+          tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+        }
+      );
+      _hasPassedOrderedBarrier[ identifier ] = true;
+    }
+  }
+
+  logTraceOut( "orderedBarrier()" );
 }
 

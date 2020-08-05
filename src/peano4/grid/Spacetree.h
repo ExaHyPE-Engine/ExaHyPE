@@ -69,6 +69,8 @@ class peano4::grid::Spacetree {
      */
     std::bitset<TwoPowerD> areVerticesLocal(GridVertex  vertices[TwoPowerD]) const;
 
+    std::bitset<TwoPowerD> areVerticesInsideDomain(GridVertex  vertices[TwoPowerD]) const;
+
     /**
      * Identifies for the @f$ 2 \cdot d @f$ faces whether they are local or not.
      *
@@ -306,8 +308,8 @@ class peano4::grid::Spacetree {
      */
     std::set< int >      _joining;
 
-    typedef peano4::maps::STDStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
-    //typedef peano4::maps::HierarchicalStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
+    //typedef peano4::maps::STDStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
+    typedef peano4::maps::HierarchicalStackMap< peano4::stacks::GridVertexStack >   GridVertexStackMap;
 
     static GridVertexStackMap  _vertexStack;
 
@@ -342,7 +344,7 @@ class peano4::grid::Spacetree {
      * - a grid entity is local
      * - this predicate holds for rank
      *
-     * @see getAdjacentDomainIds()
+     * @see getNeighbourTrees()
      */
     bool doesRankIndexIdentifyHorizontalDataExchange(int rank, bool calledByReceivingProcess) const;
 
@@ -410,48 +412,6 @@ class peano4::grid::Spacetree {
       bool          splittingIsConsideredLocal,
       bool          joiningIsConsideredLocal
     ) const;
-
-    /**
-     * Return pair for fine grid and coarse grid face, i.e. you are told whether the
-     * fine grid face is local and if the coarser grid entities have been local, too.
-     * Hanging faces are never local.
-     *
-     * Don't call this routine for a hanging vertex.
-     */
-//    std::pair<bool,bool> isSpacetreeFaceLocal(
-//      GridVertex                                   coarseGridVertices[TwoPowerD],
-//      GridVertex                                   fineGridVertices[TwoPowerD],
-//      const tarch::la::Vector<Dimensions,int>&     relativePositionOfCellToFather,
-//      int                                          faceNumber
-//    ) const;
-
-    /**
-     * Return pair for fine grid and coarse grid vertex, i.e. you are told whether the
-     * fine grid vertex is local and if the coarser grid entities have been local, too.
-     *
-     * Don't call this routine for a hanging vertex.
-     *
-     * @image html Spacetree_isSpacetreeVertexLocalInVerticalCommunicationContext.png
-     *
-     * If the fine grid vertex coincides spatially with a coarse vertex, then the father
-     * flag is set if the tree is a member of the father flag. We look at all adjacency
-     * entries.
-     */
-//    std::pair<bool,bool> isSpacetreeVertexLocalInVerticalCommunicationContext(
-//      GridVertex                                   coarseGridVertices[TwoPowerD],
-//      GridVertex                                   fineGridVertices[TwoPowerD],
-//      const tarch::la::Vector<Dimensions,int>&     relativePositionOfCellToFather,
-//	  const std::bitset<Dimensions>&               vertexNumber
-//    ) const;
-
-    /**
-     * Helper routine for other operation
-     */
-//    bool isSpacetreeCoarseVertexLocalInVerticalCommunicationContext(
-//      GridVertex                                   coarseGridVertices[TwoPowerD],
-//      const tarch::la::Vector<Dimensions,int>&     relativePositionOfVertexToFather,
-//      std::bitset<TwoPowerD>                       fatherMask
-//    ) const;
 
     /**
      * We run over the @f$ 2^d @f$ adjacent vertices of the cell and look at
@@ -614,6 +574,35 @@ class peano4::grid::Spacetree {
     /**
      * Create description of an enter cell traversal.
      *
+     * <h2> Identifying NoData entries </h2>
+     *
+     * The routine sets entries in the load instruction manually from "take from the
+     * in stream" to NoData if the entry refers to a remote grid entity. That is, if
+     * a face for example is not local, then we should not move it over the streams.
+     * After the fork, we should throw it away.
+     *
+     * Throughout a fork, grid elements remain local on the master. We still call all
+     * events there while we are splitting. After that, we have to get rid of the
+     * data. This gives us two opportunities: We can either throw away data after
+     * the splitting traversal or we can throw it away one iteration later. There is
+     * however not really a decision to be made: We send out data (stream) after we
+     * have piped data to hte output stream. That is, we still have to write all user
+     * data to the output stream throughout the splitting traversal even if this data
+     * will become remote afterwards. It is the output stream from where the spacetree
+     * will pick data and stream it over. So we have to use the iteration after
+     * splitting to get rid of data. Getting rid means simply: load it but do not
+     * store it anymore. It helps us in this context that data streams are
+     * monotoneous. We throw away stuff but we never re-create stuff (cmp joining
+     * below which poses an exception).
+     *
+     * So, when we decide whether to load data, we first of all check whether a grid
+     * entity is local. If so, we have to load it from the input stream. If it is
+     * not local, we have to check whether a rank that is contained within _hasSplit
+     * is contained. If this is the case, we still load the data despite the fact
+     * that we might not run any routine on them.
+     *
+     * @todo Joining is not discussed or implemented yet.
+     *
      * @param createEnterCellTraversalEvent Piped through to createGenericCellTraversalEvent().
      */
     GridTraversalEvent createEnterCellTraversalEvent(
@@ -645,6 +634,14 @@ class peano4::grid::Spacetree {
      * with set local flags, as they feed into the boundary data exchange.
      * But for enterCell and leaveCell, we need copies without these flags.
      * Pruned copies.
+     *
+     * <h2> Rationale </h2>
+     *
+     * I originally thought about having the pruning mechanism as a part of
+     * createEnterCellTraversalEvent() or createLeaveCellTraversalEvent(). This
+     * does not work however, as the data exchange et al need the real inside/
+     * outside flag whereas a pruned version of the event might disable all of
+     * these flags to effectively switch off the invocation of user events.
      */
     GridTraversalEvent createPrunedCellTraversalEvent( const GridTraversalEvent& event ) const;
 
@@ -659,8 +656,7 @@ class peano4::grid::Spacetree {
      * of the indices within the event. So no fancy arithmetics is required here
      * anymore.
      */
-    void receiveAndMergeUserDataAtHorizontalBoundary(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
-    void receiveAndMergeUserDataAtVerticalBoundary(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
+    void receiveAndMergeUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
 
     /**
      *
@@ -674,8 +670,7 @@ class peano4::grid::Spacetree {
      * access these elements directly. We just have to be careful that top() equals actually
      * a top(0), so picking the Nth element requires us to call top(N-1).
      */
-    void sendUserDataAtHorizontalBoundary(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
-    void sendUserDataAtVerticalBoundary(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
+    void sendUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
 
 
     /**
@@ -928,7 +923,7 @@ class peano4::grid::Spacetree {
      * The operation returns the empty set if a vertex is not local.
      * It also returns the empty set if a vertex is hanging.
      */
-    std::set<int>  getAdjacentDomainIds( const GridVertex& vertex, bool calledByReceivingProcess ) const;
+    std::set<int>  getNeighbourTrees( const GridVertex& vertex, bool calledByReceivingProcess ) const;
 
     /**
      * Get the ids of the surround ids of a face.
@@ -949,7 +944,14 @@ class peano4::grid::Spacetree {
      *
      * @return -1  (TraversalObserver::NoData) if there's no neighbour or face is not local.
      */
-    int  getAdjacentDomainIds( GridVertex vertex[TwoPowerD], int faceNumber, bool calledByReceivingProcess ) const;
+    int  getNeighbourTrees( GridVertex vertex[TwoPowerD], int faceNumber, bool calledByReceivingProcess ) const;
+
+    /**
+     * @see getNeighbourTrees()
+     */
+    tarch::la::Vector< TwoPowerD, int >  getAdjacentRanksOfFace( GridVertex vertex[TwoPowerD], int faceNumber, bool calledByReceivingProcess ) const;
+
+
 
     /**
      * This one is to be invoked if and only if a vertex goes to the in/out
@@ -965,27 +967,7 @@ class peano4::grid::Spacetree {
      * As this routine is called from within updateVertexBeforeStore(), we
      * may assume that this is not an empty tree run.
      */
-    void sendGridVertexAtHorizontalBoundary( const GridVertex& vertex );
-
-    /**
-     * Stream out the vertex to the master or the worker if the vertex is
-     * positioned along a vertical tree cut
-     *
-     * Besides the vertical data exchange, this routine also resets all
-     * adjacency information if there are joining vertices. We assume that
-     * the thing is called very late throughout the game - actually just
-     * before a vertex is stored. So now is the time to remove all adjacency
-     * information that points to a former subtree which is just joining.
-     * As we alter adjacency entries, the routine has to be called before
-     * we pipe stuff to the output stack. Furthermore, the argument may
-     * not be const.
-     *
-     * As we modify only the adjacency information, you have to call this
-     * operation before you trigger the horizontal data exchange. Otherwise
-     * neighbours might think that this tree will split.
-     */
-    void sendGridVertexAtVerticalBoundary( GridVertex& vertex );
-
+    void sendGridVertex( const GridVertex& vertex );
 
     /**
      * Manage the data exchange after a vertex is loaded for the first time
@@ -1055,7 +1037,7 @@ class peano4::grid::Spacetree {
      * <h2> Context </h2>
      *
      * The routine is called by updateVertexAfterLoad(). The counterpart of the
-     * routine is sendGridVertexAtHorizontalBoundary(). However, as my sends are literally
+     * routine is sendGridVertex(). However, as my sends are literally
      * just memcopies, sends are way simpler than this routine. The operation
      * affects solely the grid's vertices. It does not interfere with any user
      * data. In principle, this follows my pattern that the grid has to be there

@@ -4,6 +4,10 @@
 
 #include "config.h"
 
+
+#include <string>
+
+
 #if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP)
   #define SharedMemoryParallelisation
 #endif
@@ -13,6 +17,14 @@
 #endif
 
 
+#if defined(SharedOMP) and !defined(noGPUOffloading)
+  #define GPUOffloading
+#endif
+
+
+
+#ifndef _TARCH_MULTICORE_MULTICORE_H_
+#define _TARCH_MULTICORE_MULTICORE_H_
 
 namespace tarch {
 
@@ -141,9 +153,46 @@ and
  drain. The consumer tasks now go down one by one, free cores, and thus allow
  the Peano 4 core to grab more of the physical threads again.
 
+  <h2> OpenMP backend </h2>
+
+ If you want to use the OpenMP backend, you have to embed your whole main loop
+ within an
+
+ <pre>
+#pragma omp parallel
+#pragma omp single
+{
+ </pre>
+
+ environment. Furthermore, you will have to use
+
+ <pre>
+  export OMP_NESTED=true
+ </pre>
+
+ as we rely heavily on nested parallelism.
 
  */
   namespace multicore {
+     /**
+      * @see file Tasks.h
+      */
+     void yield();
+
+     const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
+     const std::string ConsumerTaskCountStatisticsIdentifier( "tarch::multicore::consumer-tasks");
+     const std::string TasksPerConsumerRunStatisticsIdentifier( "tarch::multicore::tasks-per-consumer-run");
+
+     #if defined(GPUOffloading)
+     #pragma omp declare target
+     #endif
+     enum class TargetDevice {
+       MayRunOnGPU
+     };
+     #if defined(GPUOffloading)
+     #pragma omp end declare target
+     #endif
   }
 }
 
+#endif

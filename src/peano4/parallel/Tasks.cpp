@@ -30,17 +30,28 @@ bool peano4::parallel::Tasks::taskForLocationShouldBeIssuedAsTask( int location,
 }
 
 
-int peano4::parallel::Tasks::getPriority( TaskType type ) const {
-  const int DefaultPriority = 256;
+int peano4::parallel::Tasks::getPriority( TaskType type ) {
+  const int DefaultPriority = 65536;
+
+  static int LIFOCounter = 0;
 
   switch (type) {
     case TaskType::Task:
       return DefaultPriority;
     case TaskType::HighPriority:
       return DefaultPriority * 2;
-    case TaskType::LowPriority:
+    case TaskType::LowPriorityLIFO:
+      {
+        if (tarch::multicore::getNumberOfPendingTasks()<32) {
+          LIFOCounter = 0;
+        }
+        LIFOCounter++;
+        return DefaultPriority / 2 + LIFOCounter;
+      }
+    case TaskType::LowPriorityFIFO:
       return DefaultPriority / 2;
     case TaskType::Sequential:
+      assertionMsg( false, "you should not ask for a priority for a sequential task" );
       return DefaultPriority;
   }
   return -1;
@@ -50,14 +61,12 @@ int peano4::parallel::Tasks::getPriority( TaskType type ) const {
 peano4::parallel::Tasks::Tasks(
   std::function<bool ()>  function,
   TaskType                type,
-  int                     location,
-  bool                    waitForCompletion
+  int                     location
 ):
   Tasks(
     new tarch::multicore::TaskWithCopyOfFunctor(function),
     type,
-    location,
-    waitForCompletion
+    location
   ) {
 }
 
@@ -65,10 +74,10 @@ peano4::parallel::Tasks::Tasks(
 peano4::parallel::Tasks::Tasks(
   tarch::multicore::Task*  task,
   TaskType                 type,
-  int                      location,
-  bool                     waitForCompletion
+  int                      location
 ) {
-  const bool parallelise = not waitForCompletion and taskForLocationShouldBeIssuedAsTask( location, 1 );
+  const bool parallelise = type!=TaskType::Sequential
+                       and taskForLocationShouldBeIssuedAsTask( location, 1 );
 
   if (parallelise) {
     task->setPriority( getPriority(type) );

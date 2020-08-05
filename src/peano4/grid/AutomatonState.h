@@ -69,6 +69,9 @@ struct peano4::grid::AutomatonState {
     static void sendAndPollDanglingMessages(const peano4::grid::AutomatonState& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(peano4::grid::AutomatonState& message, int source, int tag );
 #endif
+
+
+
     
 
     #ifdef Parallel

@@ -215,6 +215,12 @@ class peano4::stacks::STDVectorStack {
           return &(_stack->_data[_baseElement+index]);
         }
 
+        T& get(int index) {
+          assertion2( index>=0, index, _size );
+          assertion2( index<_size, index, _size );
+          return _stack->_data[_baseElement+index];
+        }
+
         #if PeanoDebug>=1
         T get(int index) const {
           assertion2( index>=0, index, _size );

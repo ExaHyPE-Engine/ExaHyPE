@@ -47,17 +47,38 @@ class MPI(object):
     static void sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag );
 #endif
+
+
+
     """
     
     if self._dof_association==DoFAssociation.Vertex:
       result += """
-void mergeHorizontally(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
+    void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
+    
+    static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
+    static bool send(const peano4::datamanagement::VertexMarker& marker);
+    static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
+    static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
 """ 
     elif self._dof_association==DoFAssociation.Face:
       result += """
-void mergeHorizontally(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
+    void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
+
+    static bool receiveAndMerge(const peano4::datamanagement::FaceMarker& marker);
+    static bool send(const peano4::datamanagement::FaceMarker& marker);
+    static bool storePersistently(const peano4::datamanagement::FaceMarker& marker);
+    static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
 """ 
     elif self._dof_association==DoFAssociation.Cell:
+      result += """
+    void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker);
+
+    static bool receiveAndMerge(const peano4::datamanagement::CellMarker& marker);
+    static bool send(const peano4::datamanagement::CellMarker& marker);
+    static bool storePersistently(const peano4::datamanagement::CellMarker& marker);
+    static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
+""" 
       pass
     elif self._dof_association==DoFAssociation.Generic:
       pass
@@ -74,12 +95,12 @@ void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + fu
   """ + full_qualified_name + """::send(
     message, destination, tag,
     [&]() {
-      int  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      int  timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+      auto  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
       bool triggeredTimeoutWarning = false;
       if (
         tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (clock()>timeOutWarning) &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
         (!triggeredTimeoutWarning)
       ) {
         tarch::mpi::Rank::getInstance().writeTimeOutWarning( """ + "\"" + full_qualified_name + "\"" + """, "sendAndPollDanglingMessages()",destination, tag );
@@ -87,7 +108,7 @@ void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + fu
       }
       if (
         tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (clock()>timeOutShutdown)
+        (std::chrono::system_clock::now()>timeOutShutdown)
       ) {
         tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( """ + "\"" + full_qualified_name + "\"" + """, "sendAndPollDanglingMessages()", destination, tag );
       }
@@ -102,12 +123,12 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
   """ + full_qualified_name + """::receive(
     message, source, tag,
     [&]() {
-      int  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      int  timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
       bool triggeredTimeoutWarning = false;
       if (
         tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (clock()>timeOutWarning) &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
         (!triggeredTimeoutWarning)
       ) {
         tarch::mpi::Rank::getInstance().writeTimeOutWarning( """ + "\"" + full_qualified_name + "\"" + """, "receiveAndPollDanglingMessages()", source, tag );
@@ -115,7 +136,7 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
       }
       if (
         tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (clock()>timeOutShutdown)
+        (std::chrono::system_clock::now()>timeOutShutdown)
       ) {
         tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( """ + "\"" + full_qualified_name + "\"" + """, "receiveAndPollDanglingMessages()", source, tag );
       }
@@ -130,16 +151,81 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
 
     if self._dof_association==DoFAssociation.Vertex:
       result += """
-void """ + full_qualified_name + "::mergeHorizontally(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
 }
+
+
+bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::send(const peano4::datamanagement::VertexMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
+  return true;
+}
+
+
 """ 
     elif self._dof_association==DoFAssociation.Face:
       result += """
-void """ + full_qualified_name + "::mergeHorizontally(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+}
+
+
+bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::send(const peano4::datamanagement::FaceMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
+  return true;
 }
 """ 
     elif self._dof_association==DoFAssociation.Cell:
-      pass
+      result += """
+void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker) {
+}
+
+
+bool """ + full_qualified_name + """::receiveAndMerge(const peano4::datamanagement::CellMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::send(const peano4::datamanagement::CellMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::storePersistently(const peano4::datamanagement::CellMarker& marker) {
+  return true;
+}
+
+
+bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagement::CellMarker& marker) {
+  return true;
+}
+"""      
     elif self._dof_association==DoFAssociation.Generic:
       pass
     else:

@@ -1,12 +1,19 @@
 #include "VertexMarker.h"
 
 
+std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::VertexMarker& marker ) {
+  out << marker.toString();
+  return out;
+}
+
+
 peano4::datamanagement::VertexMarker::VertexMarker(
-  const peano4::grid::GridTraversalEvent&   event
+  const peano4::grid::GridTraversalEvent&   event,
+  int                                       select
 ):
   _cellCentre(event.getX()),
   _h(event.getH()),
-  _select(0) {
+  _select(select) {
   for (int i=0; i<TwoPowerD; i++) {
     _isRefined[i]  = event.getIsRefined(i);
     _isLocal[i]    = event.getIsVertexLocal(i);

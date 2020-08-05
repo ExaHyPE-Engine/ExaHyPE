@@ -381,6 +381,169 @@ This section is under construction.
 \end{remark} 
 
 
+\section{GPU support}
+
+To add GPU support (via OpenMP 5), you have to do a couple of steps.
+First, your environment has to be compiled with OpenMP, and I strongly recommend
+that you also add \texttt{--with-nvidia} to have support for their tools.
+Check that \texttt{-DnoGPUOffloading} is \emph{not} set within the compile
+flags and translate your code.
+
+Next, ensure that you use an \ExaHyPE\ solver which has support for GPUs. 
+The enclave solvers typically are your solvers of choice.
+Solvers that provide GPU support have a flag \texttt{use\_gpu} in their
+constructor which is unset by default. 
+Set it to \texttt{True} and rerun the toolkit.
+
+\begin{definition}{Solvers with GPU support}
+ A solver can use GPUs if and only if can provide all of its PDE terms
+ including the eigenvalue computations (so the functions \texttt{flux},
+ \texttt{eigenvalues}, \texttt{nonconservativeProducts}, \ldots) as stateless
+ functions without side-effects, i.e.~functions that can be written down as
+ static and do not need (or even alter) any attribute of the solver class.
+\end{definition}
+
+\noindent
+If you solver does not fit to this class, it is not a fit for GPUs.
+If it fits, then please create two versions of the eigenvalue function and all
+of the PDE term functions (such as the flux computations) in your solver.
+Keep the original one, and add a second one which is 
+
+\begin{itemize}
+  \item static and 
+  \item accepts an additional flag of type \texttt{
+  tarch::multicore::TargetDevice}.
+\end{itemize}
+
+\noindent
+You will need to include 
+\begin{code}
+#include "tarch/multicore/multicore.h"
+\end{code} 
+
+\noindent
+explicitly. Very often, the standard flux and eigenvalue routines can invoke the
+static variants and you can thus eliminate redundancies.
+Please note that solvers with GPU support still can have states in their PDE
+terms, i.e.~alter solver variables.
+But they can do so only for cells which we call skeletons (see the paper by
+Charrier et al.~on enclave tasking).
+
+
+Finally, add
+\begin{code}
+#if defined(GPUOffloading)
+#pragma omp declare target
+#endif
+
+my new static function variants
+
+#if defined(GPUOffloading)
+#pragma omp end declare target
+#endif
+\end{code} 
+
+
+
+
+
+
+\section{Modelling the fluxes and Riemann solvers with SymPy}
+
+You can model your fluxes, Riemann solvers and so forth with SymPy, 
+i.e.~through symbolic formulations.
+For this, you have to install the computer algebra system on your
+system.
+The computer algebra extension to specify solver ingredients is held within the
+\ExaHyPE\ subpackage \texttt{exahype2.sympy}.
+
+
+I provide a couple of classes to model PDEs in different formulations and are
+held within the subpackage \texttt{peano4.solvers.sympy}.
+They wrap around SymPy's symbolic expressions, and thus allow users to work with
+these expressions directly.
+On top of that they offer some code generation which again wraps SymPy's code
+generation plus then adds all the glue to integrate this code generation into a
+\Peano\ solver.
+
+
+The Euler equations modelled via this interface then add the following code
+snippet to the Python script that models \Peano:
+
+\begin{code}
+import sympy
+import exahype2.solvers.sympy.FirstOrderConservativePDEFormulation
+
+
+#
+# Create a new instance of symbolic ExaHyPE PDE interface.
+#
+pde = exahype2.solvers.sympy.FirstOrderConservativePDEFormulation(unknowns = 5,dimensions = 3)
+
+#
+# Give entries in input vector symbolic names. We first declare some
+# helpers/constants. Then we tell the solver how we would like to name the Q 
+# entries
+#
+gamma = sympy.symbols( "gamma")
+rho   = pde.name_Q_entry( 0, "rho" )
+j     = pde.name_Q_entries( 1, 3, "j" )
+E     = pde.name_Q_entry( 4, "E" )
+
+#
+# Finally, define the equation system
+#
+p = (gamma - 1 ) * (E-1/2 * exahype2.solvers.sympy.dot(j,j) / rho)
+
+pde.F[0,:]   = j
+pde.F[1:4,:] = 1/rho * exahype2.solvers.sympy.outer(j,j) + p * sympy.eye(3)
+pde.F[4,:]   = 1/rho * j * (E+p)
+
+c = sympy.sqrt( gamma * p /rho )
+pde.eigenvalue[0] = [ j[0]/rho - c, j[1]/rho - c, j[2]/rho - c ]
+pde.eigenvalue[1] = [ j[0]/rho, j[1]/rho, j[2]/rho ]
+pde.eigenvalue[2] = [ j[0]/rho, j[1]/rho, j[2]/rho ]
+pde.eigenvalue[3] = [ j[0]/rho, j[1]/rho, j[2]/rho ]
+pde.eigenvalue[4] = [ j[0]/rho + c, j[1]/rho + c, j[2]/rho + c ]
+
+pde.substitute_expression( gamma, 1.4 )
+\end{code}
+
+
+\noindent
+A simple
+\begin{code}
+ print( pde )
+\end{code}
+demonstrates what we have modelled.
+This \texttt{pde} object here can create C++ code that we can plug directly into
+the respective \Peano\ routines.
+
+
+Key for economic modelling now however is the usage of the FV solver's
+\texttt{set\_implementation} routine:
+\begin{code}
+my_solver.set_implementation( \
+  flux=pde.implementation_of_flux(),eigenvalues=pde.implementation_of_eigenvalues())
+\end{code}
+
+\noindent
+With this call, the modelled PDE goes, via code generation, directly into the
+\ExaHyPE\ solver. When we remodel the PDE, everything is updated automatically.
+
+
+If you study the interface of \texttt{set\_implementation}, you will notice that
+you can also model boundary or initial conditions this way.
+In this example, we however only modelled flux and eigenvalues.
+The remaining callbacks remain plain C++.
+
+
+For further resources, please visit SymPy's homepage, and maybe you also want to
+have a look into projects like EinsteinPy or galgebra which provide tools for
+astrophysics or geometric algebra, respectively.
+As we rely on SymPy and expose all the SymPy expressions, they are compatible
+with \ExaHyPE.
+
 
 
 
@@ -400,56 +563,50 @@ The grant number is EP/V00154X/1.
 
 
 \section{Ghoddess DG solvers}
-
-We also do provide an interface to Ghoddess DG solvers.
-Ghoddess solvers use a classic DG formulation with explicit time stepping.
-Their big USP within \ExaHyPE\ is they rely on a quasi-symbolic formulation and
-thus facilitate even fast prototyping.
-
+% 
+% We also do provide an interface to Ghoddess DG solvers.
+% Ghoddess solvers use a classic DG formulation with explicit time stepping.
+% Their big USP within \ExaHyPE\ is they rely on a quasi-symbolic formulation and
+% thus facilitate even fast prototyping.
+% 
 \begin{remark}
- Add copyright et al here.
+  This yet has to be written.
 \end{remark}
+ 
+% \subsection{Preparation}
+% 
+% We first install Ghoddess:
+% 
+% \begin{remark}
+%  Add instructions here.
+% \end{remark}
+% 
+% 
+% \subsection{Using the Ghoddess solver}
+% 
+% From hereon, our description follows the Finite Volume example from Section
+% \ref{section:exahype:fv}, i.e.~we only highlight where we do things differently.
+% Besides our \ExaHyPE\ modules, we first include the ghoddess subpackage which is
+% not by default included:
+% 
+% \begin{code}
+% import os
+% import peano4
+% import exahype2
+% import exahype2.ghoddess
+% \end{code} 
+% 
+% From hereon, we create the Ghoddess solver and add it to the project:
+% 
+% \begin{code}
+% project = exahype2.Project( ["examples", "exahype2", "advection"], "ghoddess", "." )
+% order          = 23
+% unknowns       = 5
+% time_step_size = 0.0001
+% project.add_solver(  exahype2.ghoddess.RusanovLegendreWithFixedTimeStepSize(
+%   "Advection", order, unknowns, 0.0001) )
+% \end{code}
 
-\subsection{Preparation}
-
-We first install Ghoddess:
-
-\begin{remark}
- Add instructions here.
-\end{remark}
-
-
-\subsection{Using the Ghoddess solver}
-
-From hereon, our description follows the Finite Volume example from Section
-\ref{section:exahype:fv}, i.e.~we only highlight where we do things differently.
-Besides our \ExaHyPE\ modules, we first include the ghoddess subpackage which is
-not by default included:
-
-\begin{code}
-import os
-import peano4
-import exahype2
-import exahype2.ghoddess
-\end{code} 
-
-From hereon, we create the Ghoddess solver and add it to the project:
-
-\begin{code}
-project = exahype2.Project( ["examples", "exahype2", "advection"], "ghoddess", "." )
-order          = 23
-unknowns       = 5
-time_step_size = 0.0001
-project.add_solver(  exahype2.ghoddess.RusanovLegendreWithFixedTimeStepSize(
-  "Advection", order, unknowns, 0.0001) )
-\end{code}
-
-
-\subsection{Using the Ghoddess solver}
-
-\begin{remark}
- This part has yet to be written. Have no clue how we do this.
-\end{remark}
 
 
 \section{Introducing a new numerical scheme}

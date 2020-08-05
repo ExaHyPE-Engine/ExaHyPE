@@ -4,6 +4,7 @@
 
 #include <sstream>
 #include <cstdlib>
+#include <chrono>
 
 #include "Rank.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
@@ -113,7 +114,7 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
 ) {
   std::ostringstream out;
   out << "operation " << className << "::" << methodName << " on node "
-      << getRank() << " had to wait more than " << _deadlockTimeOut
+      << getRank() << " had to wait more than " << std::to_string(_deadlockTimeOut.count())
       << " seconds for " << numberOfExpectedMessages
       << " message(s) from node " << communicationPartnerRank << " with tag " << tag
       << ". Timeout. " << comment;
@@ -135,14 +136,14 @@ void tarch::mpi::Rank::writeTimeOutWarning(
   logWarning(
     "writeTimeOutWarning(...)",
     "operation " << className << "::" << methodName << " on node "
-    << getRank() << " had to wait more than " << _timeOutWarning
+    << getRank() << " had to wait more than " << std::to_string(_timeOutWarning.count())
     << " seconds for " << numberOfExpectedMessages
     << " message(s) from node " << communicationPartnerRank << " with tag " << tag
   );
-  if (_deadlockTimeOut>0) {
+  if (_deadlockTimeOut>std::chrono::seconds(0)) {
     logWarning(
       "writeTimeOutWarning(...)",
-  	  "application will terminate after " << _deadlockTimeOut << " seconds because of a deadlock"
+  	  "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
 	  );
   }
   else {
@@ -154,29 +155,23 @@ void tarch::mpi::Rank::writeTimeOutWarning(
 }
 
 
-clock_t tarch::mpi::Rank::getDeadlockWarningTimeStamp() const {
-  clock_t result = clock() + _timeOutWarning * CLOCKS_PER_SEC;
-  assertion4( result>=0, result, clock(), _timeOutWarning, CLOCKS_PER_SEC);
-
-  return result;
+std::chrono::system_clock::time_point tarch::mpi::Rank::getDeadlockWarningTimeStamp() const {
+  return std::chrono::system_clock::now() + _timeOutWarning;
 }
 
 
-clock_t tarch::mpi::Rank::getDeadlockTimeOutTimeStamp() const {
-  clock_t result = clock() + _deadlockTimeOut * CLOCKS_PER_SEC;
-  assertion4( result>=0, result, clock(), _timeOutWarning, CLOCKS_PER_SEC);
-
-  return result;
+std::chrono::system_clock::time_point tarch::mpi::Rank::getDeadlockTimeOutTimeStamp() const {
+  return std::chrono::system_clock::now() + _deadlockTimeOut;
 }
 
 
 bool tarch::mpi::Rank::isTimeOutDeadlockEnabled() const {
-  return _areTimeoutsEnabled and _deadlockTimeOut > 0;
+  return _areTimeoutsEnabled and _deadlockTimeOut > std::chrono::seconds(0);
 }
 
 
 bool tarch::mpi::Rank::isTimeOutWarningEnabled() const {
-  return _areTimeoutsEnabled and _timeOutWarning > 0;
+  return _areTimeoutsEnabled and _timeOutWarning > std::chrono::seconds(0);
 }
 
 
@@ -269,17 +264,19 @@ void tarch::mpi::Rank::barrier(std::function<void()> waitor) {
   #ifdef Parallel
   logTraceIn( "barrier()" );
 
+  if (getNumberOfRanks()>1) {
+
   MPI_Request request;
   MPI_Ibarrier( getCommunicator(), &request );
 
-  int  timeOutWarning          = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-  int  timeOutShutdown         = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+  auto timeOutWarning          = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+  auto timeOutShutdown         = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
   bool triggeredTimeoutWarning = false;
   int flag                     = 0;
   while (not flag) {
     if (
       tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-      (clock()>timeOutWarning) &&
+      (std::chrono::system_clock::now()>timeOutWarning) &&
       (!triggeredTimeoutWarning)
     ) {
       tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::Rank", "barrier()", -1, -1 );
@@ -287,12 +284,15 @@ void tarch::mpi::Rank::barrier(std::function<void()> waitor) {
     }
     if (
       tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-      (clock()>timeOutShutdown)
+      (std::chrono::system_clock::now()>timeOutShutdown)
     ) {
       tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::Rank", "barrier()", -1, -1 );
     }
     waitor();
+    tarch::multicore::yield();
     MPI_Test( &request, &flag, MPI_STATUS_IGNORE );
+  }
+
   }
 
   logTraceOut( "barrier()" );
@@ -454,15 +454,15 @@ int tarch::mpi::Rank::getNumberOfRanks() const {
 }
 
 
-void tarch::mpi::Rank::setTimeOutWarning( const clock_t & value ) {
+void tarch::mpi::Rank::setTimeOutWarning( int value ) {
   assertion( value>=0 );
-  _timeOutWarning = value;
+  _timeOutWarning = std::chrono::seconds(value);
 }
 
 
-void tarch::mpi::Rank::setDeadlockTimeOut( const clock_t & value ) {
+void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
   assertion( value>=0 );
-  _deadlockTimeOut = value;
+  _deadlockTimeOut = std::chrono::seconds(value);
 }
 
 

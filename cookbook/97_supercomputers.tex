@@ -87,14 +87,18 @@ module load slurm_setup
  module unload gcc/8.2.0
  module load gcc/9.3.0
  # for legacy DaStGen
- module load java/1.8.0
+ # module load java/1.8.0
  setenv CXX mpicxx
- setenv CXXFLAGS "-I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include"
+ setenv CXXFLAGS "-DLogService=ITACLogger -I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include"
  setenv LDFLAGS "-L/ddn/apps/Cluster-Apps/intel/2019.5/tbb/lib/intel64/gcc4.7 -ltbb"
- ./configure --with-multithreading=tbb --with-mpi=mpicxx
+ ./configure --with-multithreading=tbb --with-mpi=mpiicpc
  make clean
  make -j
 \end{code}
+
+
+
+% ./configure --with-multithreading=omp --with-intel
 
 
 \begin{remark}
@@ -109,6 +113,30 @@ The Java module is again required if and only if you use the legacy DaStGen
 feature to model data structures.
 If you decide to use the C++ multithreading, you can leave out the TBB-specific
 settings.
+
+
+For Intel's ITAC, we have to load the itac module and reconfigure:
+\begin{code}
+module itac/2020.2
+setenv CXXFLAGS "-DLogService=ITACLogger -I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include -I"$ITAC_HOME"/itac_2020/intel64/include"
+./configure ... --with-intel 
+\end{code}
+
+
+
+\section{COSMA/DINE (Durham Intelligent NIC Environment)}
+
+
+Log into the first DINE node as by documentation (\texttt{ssh -X b101}) and run
+
+\begin{code}
+module load intel_comp/2020-update1
+module load intel_mpi/2020
+module unload python/2.7.15
+module load python/3.6.5
+./configure --with-multithreading=omp --with-mpi=mpiicpc
+\end{code}
+
 
 
 \section{Local workstations}
@@ -138,6 +166,7 @@ source /opt/intel/bin/iccvars.sh intel64
 source /opt/intel/itac/2020.0.015/bin/itacvars.sh
 source /opt/intel/impi/2019.6.166/intel64/bin/mpivars.sh
 \end{code}
+\label{label:supercomputer:Intel-scripts}
 
 
 If I wanna use the Fortran/MHD stuff, I need an additional

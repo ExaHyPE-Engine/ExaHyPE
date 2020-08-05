@@ -78,7 +78,7 @@ void examples::delta::InitData::createCell(
   int currentEntry = 0;
   // @todo gleich Parallel
   dfor(i,CellData::DoFsPerAxis) {
-    tarch::la::Vector<Dimensions,double> x = center + offset + tarch::la::multiplyComponents(i.convertScalar<double>(),patchH);
+    tarch::la::Vector<Dimensions,double> x = center + offset + tarch::la::multiplyComponents(tarch::la::convertScalar<double>(i),patchH);
 
     #if Dimensions==3
     std::vector<::delta::ContactPoint> contactPoints =

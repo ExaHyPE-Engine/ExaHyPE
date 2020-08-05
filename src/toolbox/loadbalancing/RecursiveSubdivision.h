@@ -116,12 +116,28 @@ namespace toolbox {
  */
 class toolbox::loadbalancing::RecursiveSubdivision {
   public:
-    RecursiveSubdivision(double percentageOfCoresThatShouldInTheoryGetAtLeastOneCell=0.8);
+    /**
+     * @param ratioOfCoresThatShouldInTheoryGetAtLeastOneCell Pass in something between 0 
+     *           and 1 (though bigger than 1 might work, too)
+     */
+    RecursiveSubdivision(double ratioOfCoresThatShouldInTheoryGetAtLeastOneCell=0.8);
     ~RecursiveSubdivision();
 
     /**
      * Triggers actual load balancing data exchange, triggers reblaancing, and
      * dumps statistics.
+     *
+     * <h2> Spread equally </h2>
+     * This step is usually called early throughout the grid construction. At
+     * this point, we want to bring in ranks as soon as possible. However, it
+     * is very unlikely that the grid at that point will allow us to balance
+     * properly. We will likely have something like 27 cells for 8 ranks. With
+     * integer arithmetics, we would now get 3 cells per rank with the
+     * remainder of cells remaining on rank 0. This is not a big issue for
+     * small meshes, but for large meshes even a tiny overloading of rank 0 can
+     * result in an out-of-memory situation. I therefore have this module
+     * increment within the for loop such that module imbalances are at least
+     * spread out.
      */
     void finishStep();
     void finishSimulation();
@@ -140,7 +156,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
       Wait,
       SpreadEquallyOverAllRanks,
       SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning
+      SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
+      SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning
     };
 
     static std::string toString( StrategyStep step );
@@ -160,32 +177,35 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     static tarch::logging::Log  _log;
 
-    const double _PercentageOfCoresThatShouldInTheoryGetAtLeastOneCell;
+    const double _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell;
 
     std::map< int, int>    _blacklist;
 
     bool _hasSpreadOutOverAllRanks;
 
     /**
-     * Status variable required to compute good load balancing. I started off with an
-     * integer, but then - in theory - an integer could be too small. Furthermore, MPI
-     * seems not to support MINLOC with integers.
+     * Status variable required to compute good load balancing. 
      */
-    double _localNumberOfInnerUnrefinedCell;
+    int _localNumberOfInnerUnrefinedCell;
 
     /**
      * Status variable required to compute good load balancing
      */
-    double _globalNumberOfInnerUnrefinedCell;
+    int _globalNumberOfInnerUnrefinedCells;
+    bool _globalNumberOfInnerUnrefinedCellsHasGrownSinceLastSnapshot;
 
     int _lightestRank;
 
-    int   _totalNumberOfSplits;
-
     enum class StrategyState {
       Standard,
-      CoolDown,
-      PostponedDecisionDueToLackOfCells
+      WaitForRoundRobinToken,
+	  /**
+	   * Could mean that we don't have enough cells yet or we are not aware of
+	   * enough cells yet as we have just split or did not run long enough.
+	   */
+      PostponedDecisionDueToLackOfCells,
+      Stagnation,
+	  RecoverAfterAggressiveSplit
     };
 
     static std::string toString( StrategyState state );
@@ -195,13 +215,13 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     void updateGlobalView();
 
     /**
-     * Determine the maximum spacetree size
+     * Determine the (optimal) maximum spacetree size
      *
      * The maximum size in principle is the total number of cells divided by
      * all possible spacetrees. The latter is in principle the number of ranks
      * times the number of cores (p), though we allow users to diminish this number
-     * slightly due to _PercentageOfCoresThatShouldInTheoryGetAtLeastOneCell. I
-     * call this one @f$ \alpha @f$ below. So we have in principle the situation
+     * slightly due to _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell. I
+     * call this one @f$ \alpha @f$ below. So we have the situation
      * that the maximum spacetree size
      *
      * @f$
@@ -213,14 +233,23 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * number of cells might be 399. Such situations arise with AMR but also
      * throughout the top-down grid construction. In this case, we'd end up with
      * a remaining partition of 10 which is not what we want. Therefore I make the
-     * equation above subject to the constraint
+     * equation above subject to the constraint that the remainder of the
+     * partition should not be smaller than the new subpartition. If we would run
+     * into this situation, then I do a simple bipartition.
      *
-     * @f$
-       n_{\text{local}} - n_{\text{max}} \geq n_{\text{max}}
-       @f$
+     * <h2> Delay of build-up/analysis </h2>
      *
-     * with an as small k as possible. I determine this k iteratively. We see that
-     * the constraint is trivially preserved for the default parameter.
+     * Our analysis of an optimal spacetree size depends on the local attribute
+     * _globalNumberOfInnerUnrefinedCells. This one is determined after each
+     * traversal, i.e. it runs risk to lag behind the by one iteration.
+     * Therefore, I do use some historic data: If
+     * _globalNumberOfInnerUnrefinedCells hasn't grown over the last two
+     * iterations, then I'm kind of confident that it gives us a good idea of
+     * what the overall spacetree looks like. Otherwise, I assume that the
+     * number of cells has grown by a factor of @f$ 3^d @f$, i.e. I assume that
+     * we had a regular refinement step.
+     *
+     * @see _globalNumberOfInnerUnrefinedCells
      */
     int getMaximumSpacetreeSize(int localSize = std::numeric_limits<int>::max()) const;
 
@@ -244,6 +273,11 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     int getIdOfHeaviestLocalSpacetree() const;
 
+    /**
+     * @return -1 if there is no local tree yet
+     */
+    int getWeightOfHeaviestLocalSpacetree() const;
+
     bool doesBiggestLocalSpactreeViolateOptimalityCondition() const;
 
     void updateBlacklist();
@@ -254,7 +288,26 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     void triggerSplit( int sourceTree, int numberOfCells, int targetRank );
 
     /**
-     * Postpone never lasts longer than one step
+     *
+     * <h2> Init has-spread-over-all-ranks flag </h2>
+     *
+     * By the time we construct the load balancing, we often haven't
+     * initialised the MPI environment properly yet. At least, I don't want
+     * to rely on this. Therefore, I set _hasSpreadOutOverAllRanks to false
+     * by default, and then make updateGlobalView() set it to true for the
+     * non-0 rank. The 0-rank case is covered anyway.
+     *
+     * <h2> Round-robin balancing </h2>
+     *
+     * I test my load balancing typically first with a rather regular grid.
+     * What happens here is that the grid is decomposed and one or two ranks
+     * are slightly ``too light''. All the others identify a rank to which
+     * they could outsource cells and then all outsource to the same ranks
+     * at the same time. To avoid this, I introduce a round-robin token such
+     * that only one rank at a time does balance in-between ranks (the other
+     * types of lb are not affected). This way, it cannot happen that a high
+     * number of ranks all outsource cells to the same ''victim'' in one
+     * rush.
      */
     void updateState();
 
@@ -262,14 +315,32 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     MPI_Request*    _globalSumRequest;
     MPI_Request*    _globalLightestRankRequest;
 
+    /**
+     * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
+     * in some MPI implementations if we use them for integers.
+     */
     struct ReductionBuffer {
-      double _localUnrefinedCells;
-      int    _rank;
+      double   _localUnrefinedCells;
+      int      _rank;
     };
 
-    double          _globalNumberOfInnerUnrefinedCellBuffer;
-    ReductionBuffer _lightestRankBuffer;
+    int             _globalNumberOfInnerUnrefinedCellsBufferIn;
+    ReductionBuffer _lightestRankBufferIn;
+    ReductionBuffer _lightestRankBufferOut;
     #endif
+
+    /**
+     * @see updateState()
+     */
+    int _roundRobinToken;
+
+    /**
+     * If _roundRobinToken is smaller than or equal to this threshold, then the
+     * rank is allowed to load balance.
+     */
+    int _roundRobinThreshold;
+
+    int _maxTreeWeightAtLastSplit;
 };
 
 

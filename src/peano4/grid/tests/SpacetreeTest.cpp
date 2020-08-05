@@ -65,7 +65,7 @@ void peano4::grid::tests::SpacetreeTest::testCreateLeaveCellTraversalEvent() {
     vertices[kScalar].setAdjacentRanks( tarch::la::Vector<TwoPowerD,int>(peano4::grid::Spacetree::InvalidRank) );
     vertices[kScalar].setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(true);
     vertices[kScalar].setIsAntecessorOfRefinedVertexInCurrentTreeSweep(true);
-    vertices[kScalar].setX(k.convertScalar<double>());
+    vertices[kScalar].setX(tarch::la::convertScalar<double>(k));
     vertices[kScalar].setLevel(0);
   }
 
@@ -346,16 +346,16 @@ void peano4::grid::tests::SpacetreeTest::testGetAdjacentDomainIds() {
   vertex.toString():(state=Unrefined,adjacentRanks=[1,1,1,1],backupOfAdjacentRanks=[1,1,1,1],hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep=0,isAntecessorOfRefinedVertexInCurrentTreeSweep=0,numberOfAdjacentRefinedLocalCells=0,         x=[0.814815,0.481481],level=3),splittingIsConsideredLocal:1,joiningIsConsideredLocal:1 (file:peano4/grid/Spacetree.cpp,line:95)
 */
 
-  int result = tree.getAdjacentDomainIds( fineGridVertices, 0, true );
+  int result = tree.getNeighbourTrees( fineGridVertices, 0, true );
   validateEquals( result, -1 );
 
-  result = tree.getAdjacentDomainIds( fineGridVertices, 1, true );
+  result = tree.getNeighbourTrees( fineGridVertices, 1, true );
   validateEquals( result, -1 );
 
-  result = tree.getAdjacentDomainIds( fineGridVertices, 2, true );
+  result = tree.getNeighbourTrees( fineGridVertices, 2, true );
   validateEquals( result, -1 );
 
-  result = tree.getAdjacentDomainIds( fineGridVertices, 3, true );
+  result = tree.getNeighbourTrees( fineGridVertices, 3, true );
   validateEquals( result, -1 );
   #endif
 }

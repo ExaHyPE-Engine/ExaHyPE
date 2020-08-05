@@ -41,12 +41,12 @@ void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::I
   tarch::mpi::IntegerMessage::send(
     message, destination, tag,
     [&]() {
-      int  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      int  timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+      auto  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
       bool triggeredTimeoutWarning = false;
       if (
         tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (clock()>timeOutWarning) &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
         (!triggeredTimeoutWarning)
       ) {
         tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()",destination, tag );
@@ -54,7 +54,7 @@ void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::I
       }
       if (
         tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (clock()>timeOutShutdown)
+        (std::chrono::system_clock::now()>timeOutShutdown)
       ) {
         tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "sendAndPollDanglingMessages()", destination, tag );
       }
@@ -69,12 +69,12 @@ void tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(tarch::mpi::Inte
   tarch::mpi::IntegerMessage::receive(
     message, source, tag,
     [&]() {
-      int  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
-      int  timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
       bool triggeredTimeoutWarning = false;
       if (
         tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
-        (clock()>timeOutWarning) &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
         (!triggeredTimeoutWarning)
       ) {
         tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
@@ -82,7 +82,7 @@ void tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(tarch::mpi::Inte
       }
       if (
         tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
-        (clock()>timeOutShutdown)
+        (std::chrono::system_clock::now()>timeOutShutdown)
       ) {
         tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::IntegerMessage", "receiveAndPollDanglingMessages()", source, tag );
       }

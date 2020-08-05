@@ -7,4 +7,5 @@ from .MPI                             import get_face_overlap_merge_implementati
 from .PlotPatchesInPeanoBlockFormat   import PlotPatchesInPeanoBlockFormat
 from .ProjectPatchOntoFaces           import ProjectPatchOntoFaces
 from .ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+from .ReconstructPatchAndApplyFunctor import ReconstructedArrayMemoryLocation
 

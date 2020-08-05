@@ -50,6 +50,7 @@ time_step_size = 0.0001
 project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize("Euler", patch_size, unknowns, 0.0001) )
 
 
+
 dimensions = 2
 build_mode = peano4.output.CompileMode.Asserts
 
@@ -72,6 +73,7 @@ else:
 
 
 peano4_project = project.generate_Peano4_project()
+peano4_project.constants.export( "MaxHOfVolume", 0.1 )
 peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
 peano4_project.output.makefile.set_mode(build_mode)

@@ -133,15 +133,14 @@ int tarch::timing::Measurement::getNumberOfMeasurements() const {
 
 std::string tarch::timing::Measurement::toString() const {
   std::ostringstream msg;
-  msg << "(";
+  msg << "(avg=";
   if (_numberOfMeasurements>0) {
     msg << getValue();
   }
   else {
     msg << "nan";
   }
-  msg << ",#"     << _numberOfMeasurements
-      << ",eps="  << _accuracy
+  msg << ",#measurements="  << _numberOfMeasurements
       << ",max="  << _max << "(value #" << (static_cast<int>(_maxMeasurement)) << ")"
       << ",min="  << _min << "(value #" << (static_cast<int>(_minMeasurement)) << ")";
 
@@ -151,10 +150,18 @@ std::string tarch::timing::Measurement::toString() const {
         << ",std-deviation=" << getStandardDeviation();
   }
 
-  msg << ")";
-  if (!_isAccurateValue) {
-    msg << " [not a valid averaged value yet]";
+  if ( _accuracy>0.0 ) {
+	msg << ",eps=" << _accuracy;
+	if (!_isAccurateValue) {
+      msg << " [not a valid averaged value yet]";
+    }
+	else {
+      msg << " [converged]";
+	}
   }
+
+  msg << ")";
+
   return msg.str();
 }
 

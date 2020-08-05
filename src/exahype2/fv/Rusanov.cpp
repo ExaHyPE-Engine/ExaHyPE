@@ -9,11 +9,7 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
-namespace {
-  /**
-   * 1d Riemann accepting a flux and eigenvalue function.
-   */
-  void splitRusanov1d(
+void exahype2::fv::internal::splitRusanov1d(
     std::function< void(
             double                                       Q[],
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -69,13 +65,10 @@ namespace {
       FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
       FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
     }
-  };
+};
 
 
-  /**
-   * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
-   */
-  void splitRusanov1d(
+void exahype2::fv::internal::splitRusanov1d(
     std::function< void(
             double                                       Q[],
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -88,6 +81,11 @@ namespace {
     std::function< void(
         double                                       Q[],
         double                                       gradQ[][Dimensions],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
         double                                       BgradQ[]
       ) >   nonconservativeProduct,
     std::function< void(
@@ -109,7 +107,7 @@ namespace {
     int                                          unknowns,
     double                                       FL[],
     double                                       FR[]
-  ) {
+) {
     assertion(normal>=0);
     assertion(normal<Dimensions);
 
@@ -128,7 +126,7 @@ namespace {
       gradQ[unknown][normal] = QR[unknown] - QL[unknown];
     }
     double fluxnonconservativeProduct[unknowns];
-    nonconservativeProduct(Qaverage,gradQ,fluxnonconservativeProduct);
+    nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
 
     double lambdas[unknowns];
     double lambdaMax = 0.0;
@@ -148,8 +146,7 @@ namespace {
       FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) - 0.5 * fluxnonconservativeProduct[unknown];
       FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
     }
-  };
-}
+};
 
 
 void exahype2::fv::applyRusanovToPatch_FaceLoops(
@@ -196,7 +193,7 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
       double                                       FL[],
       double                                       FR[]
     ) -> void {
-	  splitRusanov1d(
+	  internal::splitRusanov1d(
         flux, eigenvalues,
 		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
       );
@@ -223,7 +220,7 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
       double                                       FL[],
       double                                       FR[]
     ) -> void {
-	  splitRusanov1d(
+	  internal::splitRusanov1d(
         flux, eigenvalues,
 		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
       );
@@ -256,6 +253,11 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
   std::function< void(
         double                                       Q[],
         double                                       gradQ[][Dimensions],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
         double                                       BgradQ[]
   ) >   nonconservativeProduct,
   std::function< void(
@@ -292,7 +294,7 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
       double                                       FL[],
       double                                       FR[]
     ) -> void {
-	  splitRusanov1d(
+	  internal::splitRusanov1d(
         flux, nonconservativeProduct, eigenvalues,
 		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
       );
@@ -319,7 +321,7 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
       double                                       FL[],
       double                                       FR[]
     ) -> void {
-	  splitRusanov1d(
+	  internal::splitRusanov1d(
         flux, nonconservativeProduct, eigenvalues,
 		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
       );
