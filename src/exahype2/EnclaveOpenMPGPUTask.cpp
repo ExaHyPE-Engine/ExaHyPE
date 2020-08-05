@@ -43,6 +43,9 @@ bool exahype2::EnclaveOpenMPGPUTask::run() {
 
   int*  dependencyMarker = new int;
 
+  #if defined(GPUOffloading)
+  #pragma omp task depend(out:dependencyMarker)
+  #endif
   _functor(_inputValues,_outputValues,_marker);
 
   #if defined(GPUOffloading)
