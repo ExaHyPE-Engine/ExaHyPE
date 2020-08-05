@@ -28,6 +28,8 @@ namespace examples {
  */
 class examples::delta::Mapping {
   public:
+    virtual ~Mapping() {}
+
     /**
      * This operation is called once per thread, i.e. each rank holds
      * only one instance of a mapping. As each thread calls this

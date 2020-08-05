@@ -91,9 +91,9 @@ class PlotGridInPeanoBlockFormat(ActionSet):
   assertion( _dataWriter!=nullptr );
   
   double markerData[] = {{
-    marker.isRefined(),
-    marker.isLocal(),
-    marker.isEnclaveCell()
+    marker.isRefined() ? 1.0 : 0.0,
+    marker.isLocal() ? 1.0 : 0.0,
+    marker.isEnclaveCell() ? 1.0 : 0.0
   }};
  _dataWriter->plotCell(indices,markerData);
 """

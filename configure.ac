@@ -268,6 +268,24 @@ fi
 
 
 #
+# NVIDIA toolchain
+#
+AC_ARG_WITH(amd,
+  AC_HELP_STRING([--with-amd], [build with the AMD GPU environment (HIP) [default=no]]),
+  [ AC_MSG_CHECKING(for amd)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);                                amd=false ;;
+      *)     AC_MSG_RESULT(build with support for the AMD SDK (HIP) - please ensure that CXXFLAGS and LDFLAGS are properly set);  amd=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for amd); AC_MSG_RESULT(no); amd=false ])
+
+if test "$with_amd" = "yes"; then
+  AC_DEFINE([UseAMD], [1], [UseAMD])
+  AC_CHECK_HEADERS([hip/hip_runtime.h],[],[AC_MSG_ERROR([header <hip/hip_runtime.h> not found])])
+fi
+
+
+#
 # Intel toolchain
 #
 AC_ARG_WITH(intel,

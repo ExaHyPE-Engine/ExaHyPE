@@ -29,7 +29,9 @@ namespace examples {
  */
 class examples::integerdiffusionthroughfaces::Mapping {
   public:
-	typedef peano4::datamanagement::FaceEnumerator<FaceData>  Faces;
+    virtual ~Mapping() {}
+
+    typedef peano4::datamanagement::FaceEnumerator<FaceData>  Faces;
 
 	/**
 	 * This operation is called once per thread, i.e. each rank holds
