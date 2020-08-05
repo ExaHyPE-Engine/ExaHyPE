@@ -68,6 +68,10 @@ struct peano4::datamanagement::VertexMarker {
 
     bool isLocal() const;
     bool isLocal(int i) const;
+
+    // @todo
+    // Dann darf ich nicht verfeinern. Bruach ich in ExaHyPE z.B.
+    // isAdjacentToEnclaveCell
 };
 
 

@@ -541,7 +541,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
       const std::bitset<Dimensions>&               periodicBC = 0
     );
 
-    void shutdown();
+    void shutdown() override;
 
     /**
      * Invoke traverse on all spacetrees in parallel.

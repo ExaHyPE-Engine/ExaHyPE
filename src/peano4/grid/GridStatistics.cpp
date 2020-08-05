@@ -101,16 +101,6 @@ void   peano4::grid::GridStatistics::setCoarseningHasBeenVetoed(bool value) {
 
 
 
-bool peano4::grid::GridStatistics::receiveAndMerge() {
-  return true;
-}
-
-
-bool peano4::grid::GridStatistics::send() {
-  return true;
-}
-    
-    
 #ifdef Parallel
 void peano4::grid::GridStatistics::sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag ) {
   peano4::grid::GridStatistics::send(

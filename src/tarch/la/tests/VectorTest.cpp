@@ -253,7 +253,7 @@ void tarch::la::tests::VectorTest:: testVectorVectorOperations() {
   validate (! allGreater(vec0,vec1));
   validate (! firstGreater(vec0,vec1));
 
-  vec0 = 2.0, 2.0, 3.0;
+  vec0 = {2.0, 2.0, 3.0};
   validate (! equals(vec0,vec1));
   validate (oneGreater(vec0,vec1));
   validate (oneGreaterEquals(vec0,vec1));

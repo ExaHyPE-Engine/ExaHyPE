@@ -74,8 +74,6 @@ struct peano4::grid::GridVertex {
 #endif
 
 
-    static bool receiveAndMerge();
-    static bool send();
 
     
 

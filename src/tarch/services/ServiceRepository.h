@@ -77,7 +77,7 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * (unexpected message arrival). But it can also be something else such as
      * the handling of left-ofter tasks.
      */
-    virtual void receiveDanglingMessages();
+    void receiveDanglingMessages() override;
 
     /**
      * @return List of registered services separated by whitespaces

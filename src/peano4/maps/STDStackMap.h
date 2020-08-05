@@ -112,6 +112,8 @@ class peano4::maps::STDStackMap {
 };
 
 
+#include "tarch/multicore/Lock.h"
+
 
 template <typename T>
 tarch::logging::Log  peano4::maps::STDStackMap<T>::_log( "peano4::maps::STDStackMap<T>" );

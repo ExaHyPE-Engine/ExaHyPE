@@ -54,8 +54,6 @@ struct peano4::parallel::TreeEntry {
 #endif
 
 
-    static bool receiveAndMerge();
-    static bool send();
 
     
 

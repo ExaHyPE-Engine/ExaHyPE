@@ -66,8 +66,6 @@ struct peano4::grid::GridControlEvent {
 #endif
 
 
-    static bool receiveAndMerge();
-    static bool send();
 
     
 

@@ -26,6 +26,8 @@ namespace tarch {
       public:
         Task( int priority=0 );
 
+	virtual ~Task() {}
+
         int getPriority() const;
         void setPriority( int priority );
 

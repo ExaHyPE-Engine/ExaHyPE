@@ -192,6 +192,9 @@ void step() {{
         observers::finishTimeStep();
       }}
       break;
+    case observers::StepRepository::Steps::Undef:
+      assertion(false);
+      break;
   }}
 }}
 

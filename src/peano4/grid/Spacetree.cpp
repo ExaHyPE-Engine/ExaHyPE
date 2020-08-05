@@ -324,9 +324,10 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
       case SpacetreeState::Joining:
         _spacetreeState = SpacetreeState::Joined;
         break;
-	    case SpacetreeState::Running:
-	      break;
-	  }
+      case SpacetreeState::Running:
+      case SpacetreeState::Joined:
+        break;
+    }
     logDebug( "traverse(TraversalObserver)", "switched tree " << _id << " into " << toString(_spacetreeState) );
   }
 
@@ -603,34 +604,34 @@ peano4::grid::Spacetree::VertexType peano4::grid::Spacetree::getVertexType(
 
   VertexType result = lhs;
   if (
-    lhs==VertexType::New and rhs==VertexType::Hanging or lhs==VertexType::Hanging and rhs==VertexType::New
+    (lhs==VertexType::New and rhs==VertexType::Hanging) or (lhs==VertexType::Hanging and rhs==VertexType::New)
   ) {
-	result = VertexType::New;
+    result = VertexType::New;
   }
   if (
-    lhs==VertexType::New and rhs==VertexType::Persistent or lhs==VertexType::Persistent and rhs==VertexType::New
+    (lhs==VertexType::New and rhs==VertexType::Persistent) or (lhs==VertexType::Persistent and rhs==VertexType::New)
   ) {
-	result = VertexType::Persistent;
+    result = VertexType::Persistent;
   }
   if (
-    lhs==VertexType::New and rhs==VertexType::Delete or lhs==VertexType::Delete and rhs==VertexType::New
+    (lhs==VertexType::New and rhs==VertexType::Delete) or (lhs==VertexType::Delete and rhs==VertexType::New)
   ) {
-	result = VertexType::Persistent;
+    result = VertexType::Persistent;
   }
   if (
-    lhs==VertexType::Hanging and rhs==VertexType::Persistent or lhs==VertexType::Persistent and rhs==VertexType::Hanging
+    (lhs==VertexType::Hanging and rhs==VertexType::Persistent) or (lhs==VertexType::Persistent and rhs==VertexType::Hanging)
   ) {
-	result = VertexType::Persistent;
+    result = VertexType::Persistent;
   }
   if (
-    lhs==VertexType::Hanging and rhs==VertexType::Delete or lhs==VertexType::Delete and rhs==VertexType::Hanging
+    (lhs==VertexType::Hanging and rhs==VertexType::Delete) or (lhs==VertexType::Delete and rhs==VertexType::Hanging)
   ) {
-	result = VertexType::Delete;
+    result = VertexType::Delete;
   }
   if (
-    lhs==VertexType::Persistent and rhs==VertexType::Delete or lhs==VertexType::Delete and rhs==VertexType::Persistent
+    (lhs==VertexType::Persistent and rhs==VertexType::Delete) or (lhs==VertexType::Delete and rhs==VertexType::Persistent)
   ) {
-	result = VertexType::Persistent;
+    result = VertexType::Persistent;
   }
 
   logTraceOutWith1Argument( "getVertexType(...)", toString(result) );
@@ -1734,6 +1735,15 @@ peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createGenericCellTrave
   event.setIsVertexLocal( areVerticesLocal(fineGridVertices) );
 
   event.setIsVertexInsideDomain( areVerticesInsideDomain(fineGridVertices) );
+
+  event.setInvokingSpacetree( _id );
+  event.setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
+    _spacetreeState == SpacetreeState::Running and
+	_joinTriggered.empty() and
+	_joining.empty() and
+	_splitTriggered.empty() and
+	_splitting.empty()
+  );
 
   logTraceOut( "createGenericCellTraversalEvent(...)" );
   return event;

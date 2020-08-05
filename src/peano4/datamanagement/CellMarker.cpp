@@ -1,6 +1,7 @@
 #include "CellMarker.h"
 
 #include "peano4/grid/TraversalObserver.h"
+#include "peano4/parallel/SpacetreeSet.h"
 #include "peano4/utils/Globals.h"
 
 
@@ -20,7 +21,8 @@ peano4::datamanagement::CellMarker::CellMarker(
   _isLocal(event.getIsCellLocal()),
   _areAllVerticesRefined( event.getIsRefined().all() ),
   _isOneVertexHanging( false ),
-  _areAllVerticesInsideDomain( event.getIsVertexInsideDomain().all() )
+  _areAllVerticesInsideDomain( event.getIsVertexInsideDomain().all() ),
+  _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() )
 {
   for (int i=0; i<TwoPowerD; i++) {
     _isOneVertexHanging |= event.getVertexDataTo(i)  ==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
@@ -80,5 +82,5 @@ bool peano4::datamanagement::CellMarker::isEnclaveCell() const {
 
 
 bool peano4::datamanagement::CellMarker::isSkeletonCell() const {
-  return not _areAllVerticesInsideDomain or _isOneVertexHanging or not (_areAllVerticesRefined or not _isRefined);
+  return not _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing or not _areAllVerticesInsideDomain or _isOneVertexHanging or not (_areAllVerticesRefined or not _isRefined);
 }
