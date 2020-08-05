@@ -191,15 +191,21 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     /**
      * Status variable required to compute good load balancing
      */
-    int _globalNumberOfInnerUnrefinedCell;
+    int _globalNumberOfInnerUnrefinedCells;
+    bool _globalNumberOfInnerUnrefinedCellsHasGrownSinceLastSnapshot;
 
     int _lightestRank;
 
     enum class StrategyState {
       Standard,
       WaitForRoundRobinToken,
+	  /**
+	   * Could mean that we don't have enough cells yet or we are not aware of
+	   * enough cells yet as we have just split or did not run long enough.
+	   */
       PostponedDecisionDueToLackOfCells,
-      Stagnation
+      Stagnation,
+	  RecoverAfterAggressiveSplit
     };
 
     static std::string toString( StrategyState state );
@@ -209,13 +215,13 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     void updateGlobalView();
 
     /**
-     * Determine the maximum spacetree size
+     * Determine the (optimal) maximum spacetree size
      *
      * The maximum size in principle is the total number of cells divided by
      * all possible spacetrees. The latter is in principle the number of ranks
      * times the number of cores (p), though we allow users to diminish this number
      * slightly due to _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell. I
-     * call this one @f$ \alpha @f$ below. So we have in principle the situation
+     * call this one @f$ \alpha @f$ below. So we have the situation
      * that the maximum spacetree size
      *
      * @f$
@@ -227,14 +233,23 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * number of cells might be 399. Such situations arise with AMR but also
      * throughout the top-down grid construction. In this case, we'd end up with
      * a remaining partition of 10 which is not what we want. Therefore I make the
-     * equation above subject to the constraint
+     * equation above subject to the constraint that the remainder of the
+     * partition should not be smaller than the new subpartition. If we would run
+     * into this situation, then I do a simple bipartition.
      *
-     * @f$
-       n_{\text{local}} - n_{\text{max}} \geq n_{\text{max}}
-       @f$
+     * <h2> Delay of build-up/analysis </h2>
      *
-     * with an as small k as possible. I determine this k iteratively. We see that
-     * the constraint is trivially preserved for the default parameter.
+     * Our analysis of an optimal spacetree size depends on the local attribute
+     * _globalNumberOfInnerUnrefinedCells. This one is determined after each
+     * traversal, i.e. it runs risk to lag behind the by one iteration.
+     * Therefore, I do use some historic data: If
+     * _globalNumberOfInnerUnrefinedCells hasn't grown over the last two
+     * iterations, then I'm kind of confident that it gives us a good idea of
+     * what the overall spacetree looks like. Otherwise, I assume that the
+     * number of cells has grown by a factor of @f$ 3^d @f$, i.e. I assume that
+     * we had a regular refinement step.
+     *
+     * @see _globalNumberOfInnerUnrefinedCells
      */
     int getMaximumSpacetreeSize(int localSize = std::numeric_limits<int>::max()) const;
 
@@ -309,7 +324,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
       int      _rank;
     };
 
-    int             _globalNumberOfInnerUnrefinedCellBufferIn;
+    int             _globalNumberOfInnerUnrefinedCellsBufferIn;
     ReductionBuffer _lightestRankBufferIn;
     ReductionBuffer _lightestRankBufferOut;
     #endif

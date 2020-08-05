@@ -16,22 +16,40 @@ tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 
-double* tarch::multicore::allocateMemoryOnAccelerator(int size) {
-  #if defined(GPUOffloading)
-  double* data;
-  cudaMallocManaged(&data, size*sizeof(double), cudaMemAttachGlobal);
-  #else
-  return new double[size];
-  #endif
+double* tarch::multicore::allocateMemory(int size, MemoryLocation location) {
+  double* result;
+  switch (location) {
+    case MemoryLocation::Heap:
+      //#pragma omp allocate(result) allocator(allocator) memspace(memspace) memtraits(optimized=latency)
+      //#pragma omp allocate(result) memtraits(optimized=latency)
+      result = new double[size];
+      break;
+    case MemoryLocation::Accelerator:
+      #if defined(GPUOffloading)
+      cudaMallocManaged(&result, size*sizeof(double), cudaMemAttachGlobal);
+      #else
+      // #pragma omp allocate ()
+      result = new double[size];
+      #endif
+      break;
+  }
+  return result;
 }
 
 
-void tarch::multicore::freeMemoryOnAccelerator(double* data) {
-  #if defined(GPUOffloading)
-  cudaFree(data);
-  #else
-  delete[] data;
-  #endif
+void tarch::multicore::freeMemory(double* data, MemoryLocation location) {
+  switch (location) {
+    case MemoryLocation::Heap:
+      delete[] data;
+      break;
+    case MemoryLocation::Accelerator:
+      #if defined(GPUOffloading)
+      cudaFree(data);
+      #else
+      delete[] data;
+      #endif
+      break;
+  }
 }
 
 
@@ -52,7 +70,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConcurrentBackgroundTasks, int maxNumberOfConcurrentBandwidthBoundTasks ) {
   if (numberOfThreads!=UseDefaultNumberOfThreads) {
     if ( omp_get_max_threads()!=numberOfThreads ) {
-      logWarning( "configure(int,int,int)", "number of threads configured (" << numberOfThreads << ") does not match system thread level of " << omp_get_num_threads() << ". OpenMP may ignore manual thread count reset");
+      logWarning( "configure(int,int,int)", "number of threads configured (" << numberOfThreads << ") does not match system thread level of " << omp_get_max_threads() << ". OpenMP may ignore manual thread count reset");
     }
 
     omp_set_num_threads(numberOfThreads);
