@@ -163,7 +163,7 @@ int toolbox::loadbalancing::RecursiveSubdivision::getMaximumSpacetreeSize(int lo
   }
 
   if (localSize - partitionSize < partitionSize ) {
-    partitionSize = 0.5 * (localSize,partitionSize);
+    partitionSize = 0.5 * localSize;
   }
   int roundedResult = std::max(  static_cast<int>(std::round(partitionSize)),  1 );
   logTraceOutWith1Argument( "getMaximumSpacetreeSize(int)", roundedResult );
@@ -203,7 +203,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
   _roundRobinToken++;
   _roundRobinToken = _roundRobinToken % tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-  if (
+  if ( _state==StrategyState::RecoverAfterAggressiveSplit ) {
+    _state = StrategyState::PostponedDecisionDueToLackOfCells;
+  }
+  else if (
     _localNumberOfInnerUnrefinedCell
     <
     std::max( 
@@ -311,6 +314,8 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString( StrategyStat
       return "postponed-due-to-lack-of-cells";
     case StrategyState::Stagnation:
       return "stagnation";
+    case StrategyState::RecoverAfterAggressiveSplit:
+      return "recover-after-aggressive-split";
   }
   return "<undef>";
 }
@@ -374,6 +379,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
             triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());
           }
         }
+
+        _state = StrategyState::RecoverAfterAggressiveSplit;
       }
       break;
     case StrategyStep::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning:

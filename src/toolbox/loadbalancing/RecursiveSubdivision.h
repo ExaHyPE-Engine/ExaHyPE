@@ -199,8 +199,13 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     enum class StrategyState {
       Standard,
       WaitForRoundRobinToken,
+	  /**
+	   * Could mean that we don't have enough cells yet or we are not aware of
+	   * enough cells yet as we have just split or did not run long enough.
+	   */
       PostponedDecisionDueToLackOfCells,
-      Stagnation
+      Stagnation,
+	  RecoverAfterAggressiveSplit
     };
 
     static std::string toString( StrategyState state );
@@ -230,7 +235,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * a remaining partition of 10 which is not what we want. Therefore I make the
      * equation above subject to the constraint that the remainder of the
      * partition should not be smaller than the new subpartition. If we would run
-     * into this situation, then I take the average in-between.
+     * into this situation, then I do a simple bipartition.
      *
      * <h2> Delay of build-up/analysis </h2>
      *
@@ -240,8 +245,9 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * Therefore, I do use some historic data: If
      * _globalNumberOfInnerUnrefinedCells hasn't grown over the last two
      * iterations, then I'm kind of confident that it gives us a good idea of
-     * what the overall spacetree looks like.
-     *
+     * what the overall spacetree looks like. Otherwise, I assume that the
+     * number of cells has grown by a factor of @f$ 3^d @f$, i.e. I assume that
+     * we had a regular refinement step.
      *
      * @see _globalNumberOfInnerUnrefinedCells
      */
