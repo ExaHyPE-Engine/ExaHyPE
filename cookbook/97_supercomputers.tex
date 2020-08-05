@@ -77,7 +77,12 @@ module load slurm_setup
 
 \begin{code}
 ./configure --enable-exahype CXX="clang++" LDFLAGS="-lm" 
+./configure --enable-exahype --with-multithreading=omp CXX="clang++ -DnoGPUOffloading" LDFLAGS="-lm"
+./configure --enable-exahype --with-multithreading=omp \
+  CXX="hipcc" LDFLAGS="-lm -fopenmp" --with-amd
 \end{code}
+
+
 
 
 \section{Hamilton}
