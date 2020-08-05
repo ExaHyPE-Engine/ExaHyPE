@@ -69,7 +69,7 @@ class BackupPatchOverlap(ActionSet):
           }}
         }}
       }}
-      logTraceOut( "--backup patch overlap--(...)" );
+      logTraceOut( "--backup patch overlap from {FACES_ACCESSOR_IN} into {FACES_ACCESSOR_OUT}--(...)" );
     }}
 """
 
