@@ -12,7 +12,7 @@
 
 
 
-#if defined(LayeredOMPRuntime)
+#if defined(LayeredMultitaskingRuntime)
 namespace {
   std::priority_queue<
     tarch::multicore::Task*,

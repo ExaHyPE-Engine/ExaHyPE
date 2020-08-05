@@ -72,7 +72,7 @@ and
  codes work with these classes. Each type/function has an implementation within
  src/multicore. This implementation is a dummy that ensures that all code works
  properly without any multithreading support. Subdirectories hold alternative
- implementations which are enabled once the user selects a certain multithreading
+ implementations (backends) which are enabled once the user selects a certain multithreading
  implementation variant, i.e. depending on the ifdefs set, one of the
  subdirectories is used. Some implementations introduce further headers, but user
  code is never supposed to work against functions or classes held within

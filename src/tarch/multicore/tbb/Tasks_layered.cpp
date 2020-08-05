@@ -7,7 +7,7 @@
 #include "tarch/logging/Statistics.h"
 
 
-#ifdef SharedTBB
+#if defined(SharedTBB) and defined(LayeredMultitaskingRuntime)
 
 #if !defined(noTBBPrefetchesJobData) and !defined(TBBPrefetchesJobData)
   #define TBBPrefetchesJobData
@@ -289,7 +289,7 @@ int tarch::multicore::getNumberOfPendingTasks() {
 }
 
 
-void tarch::multicore::tbb::shutdownConsumerTasks() {
+void tarch::multicore::tbb::shutdownTaskEnvironment() {
   static tarch::logging::Log _log( "tarch::multicore::tbb" );
   logTraceInWith1Argument( "shutdownConsumerTasks()", numberOfConsumerTasks.fetch_and_add(0) );
 
