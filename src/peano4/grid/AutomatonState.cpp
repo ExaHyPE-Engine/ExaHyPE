@@ -146,16 +146,6 @@ void   peano4::grid::AutomatonState::setAccessNumber(int index, int value) {
 
 
 
-bool peano4::grid::AutomatonState::receiveAndMerge() {
-  return true;
-}
-
-
-bool peano4::grid::AutomatonState::send() {
-  return true;
-}
-    
-    
 #ifdef Parallel
 void peano4::grid::AutomatonState::sendAndPollDanglingMessages(const peano4::grid::AutomatonState& message, int destination, int tag ) {
   peano4::grid::AutomatonState::send(

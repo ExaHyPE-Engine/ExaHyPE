@@ -1735,6 +1735,15 @@ peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createGenericCellTrave
 
   event.setIsVertexInsideDomain( areVerticesInsideDomain(fineGridVertices) );
 
+  event.setInvokingSpacetree( _id );
+  event.setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
+    _spacetreeState == SpacetreeState::Running and
+	_joinTriggered.empty() and
+	_joining.empty() and
+	_splitTriggered.empty() and
+	_splitting.empty()
+  );
+
   logTraceOut( "createGenericCellTraversalEvent(...)" );
   return event;
 }

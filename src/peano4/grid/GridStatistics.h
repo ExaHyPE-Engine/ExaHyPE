@@ -62,8 +62,6 @@ struct peano4::grid::GridStatistics {
 #endif
 
 
-    static bool receiveAndMerge();
-    static bool send();
 
     
 

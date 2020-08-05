@@ -105,16 +105,6 @@ void   peano4::grid::GridControlEvent::setH(int index, double value) {
 
 
 
-bool peano4::grid::GridControlEvent::receiveAndMerge() {
-  return true;
-}
-
-
-bool peano4::grid::GridControlEvent::send() {
-  return true;
-}
-    
-    
 #ifdef Parallel
 void peano4::grid::GridControlEvent::sendAndPollDanglingMessages(const peano4::grid::GridControlEvent& message, int destination, int tag ) {
   peano4::grid::GridControlEvent::send(

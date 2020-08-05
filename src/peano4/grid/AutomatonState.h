@@ -71,8 +71,6 @@ struct peano4::grid::AutomatonState {
 #endif
 
 
-    static bool receiveAndMerge();
-    static bool send();
 
     
 

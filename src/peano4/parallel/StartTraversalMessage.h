@@ -52,8 +52,6 @@ struct peano4::parallel::StartTraversalMessage {
 #endif
 
 
-    static bool receiveAndMerge();
-    static bool send();
 
     
 

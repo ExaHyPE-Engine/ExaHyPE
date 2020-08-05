@@ -52,8 +52,6 @@ struct tarch::mpi::IntegerMessage {
 #endif
 
 
-    static bool receiveAndMerge();
-    static bool send();
 
     
 

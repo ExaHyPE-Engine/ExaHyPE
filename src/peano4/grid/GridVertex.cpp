@@ -157,16 +157,6 @@ void   peano4::grid::GridVertex::setLevel(int value) {
 
 
 
-bool peano4::grid::GridVertex::receiveAndMerge() {
-  return true;
-}
-
-
-bool peano4::grid::GridVertex::send() {
-  return true;
-}
-    
-    
 #ifdef Parallel
 void peano4::grid::GridVertex::sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag ) {
   peano4::grid::GridVertex::send(

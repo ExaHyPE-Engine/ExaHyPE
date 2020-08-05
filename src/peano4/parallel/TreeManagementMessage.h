@@ -58,8 +58,6 @@ struct peano4::parallel::TreeManagementMessage {
 #endif
 
 
-    static bool receiveAndMerge();
-    static bool send();
 
     
 

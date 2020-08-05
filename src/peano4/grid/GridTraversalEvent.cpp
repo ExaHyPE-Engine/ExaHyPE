@@ -7,7 +7,7 @@
 
 
 
-peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __isRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexInsideDomain, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather):
+peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __isRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexInsideDomain, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing):
     _x(__x)
   , _h(__h)
   , _isRefined(__isRefined)
@@ -21,6 +21,8 @@ peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimension
   , _faceDataTo(__faceDataTo)
   , _cellData(__cellData)
   , _relativePositionToFather(__relativePositionToFather)
+  , _invokingSpacetree(__invokingSpacetree)
+  , _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(__invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing)
   {}
 
 
@@ -53,6 +55,10 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << "cellData=" << _cellData;
   out << ","; 
   out << "relativePositionToFather=" << _relativePositionToFather;
+  out << ","; 
+  out << "invokingSpacetree=" << _invokingSpacetree;
+  out << ","; 
+  out << "invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing=" << _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
   out << ")";
   return out.str();
 }
@@ -318,20 +324,30 @@ void   peano4::grid::GridTraversalEvent::setRelativePositionToFather(int index, 
 }
 
 
-
-
-
-
-bool peano4::grid::GridTraversalEvent::receiveAndMerge() {
-  return true;
+int   peano4::grid::GridTraversalEvent::getInvokingSpacetree() const {
+  return _invokingSpacetree;
 }
 
 
-bool peano4::grid::GridTraversalEvent::send() {
-  return true;
+void   peano4::grid::GridTraversalEvent::setInvokingSpacetree(int value) {
+  _invokingSpacetree = value;
 }
-    
-    
+
+
+int   peano4::grid::GridTraversalEvent::getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() const {
+  return _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
+}
+
+
+void   peano4::grid::GridTraversalEvent::setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(int value) {
+  _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing = value;
+}
+
+
+
+
+
+
 #ifdef Parallel
 void peano4::grid::GridTraversalEvent::sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag ) {
   peano4::grid::GridTraversalEvent::send(
@@ -401,11 +417,11 @@ int peano4::grid::GridTraversalEvent::getSenderRank() const {
 void peano4::grid::GridTraversalEvent::initDatatype() {
   peano4::grid::GridTraversalEvent  instances[2];
     
-  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_BYTE, MPI_UNSIGNED_LONG, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT };
+  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_BYTE, MPI_UNSIGNED_LONG, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT };
     
-  int blocklen[] = { Dimensions, Dimensions, 1, 1, 1, 1, 1, TwoPowerD, TwoPowerD, TwoTimesD, TwoTimesD, 1, Dimensions };
+  int blocklen[] = { Dimensions, Dimensions, 1, 1, 1, 1, 1, TwoPowerD, TwoPowerD, TwoTimesD, TwoTimesD, 1, Dimensions, 1, 1 };
 
-  const int NumberOfAttributes = 13;
+  const int NumberOfAttributes = 15;
     
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
@@ -438,6 +454,10 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   MPI_Get_address( &(instances[0]._cellData), &disp[currentAddress] );
   currentAddress++;
   MPI_Get_address( &(instances[0]._relativePositionToFather.data()[0]), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._invokingSpacetree), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing), &disp[currentAddress] );
   currentAddress++;
 
   MPI_Aint offset = disp[0] - baseFirstInstance;
