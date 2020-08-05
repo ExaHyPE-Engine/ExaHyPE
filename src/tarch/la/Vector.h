@@ -234,6 +234,16 @@ std::string toString( const tarch::la::Vector<Size,Scalar>&  vector ) {
 
 
 
+template <typename NewScalarType, int Size, typename Scalar>
+tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::Vector<Size,Scalar>&  vector) {
+  tarch::la::Vector<Size,NewScalarType> result;
+  for ( int i=0; i < Size; i++ ) {
+    result(i) = vector(i);
+  }
+  return result;
+}
+
+
 
 /**
  * Explicit instantiation speeds up the translation process 
