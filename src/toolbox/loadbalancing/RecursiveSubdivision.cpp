@@ -21,7 +21,8 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double ratioO
   _blacklist(),
   _hasSpreadOutOverAllRanks( false ),
   _localNumberOfInnerUnrefinedCell( 0 ),
-  _globalNumberOfInnerUnrefinedCell( 0 ),
+  _globalNumberOfInnerUnrefinedCells( 0 ),
+  _globalNumberOfInnerUnrefinedCellsHasGrownSinceLastSnapshot( true ),
   _state( StrategyState::Standard ),
   _roundRobinToken(0),
   _roundRobinThreshold(1),
@@ -29,7 +30,7 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double ratioO
   #ifdef Parallel
   _globalSumRequest          = nullptr;
   _globalLightestRankRequest = nullptr;
-  _globalNumberOfInnerUnrefinedCellBufferIn = 1;
+  _globalNumberOfInnerUnrefinedCellsBufferIn = 1;
   _lightestRankBufferIn._rank               = tarch::mpi::Rank::getInstance().getRank();
   #endif
 }
@@ -79,7 +80,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
 
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1) {
-    _globalNumberOfInnerUnrefinedCell = _localNumberOfInnerUnrefinedCell;
+    _globalNumberOfInnerUnrefinedCellsHasGrownSinceLastSnapshot = _globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCell;
+    _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCell;
     _lightestRank                     = 0;
   }
   else {
@@ -90,29 +92,30 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
     }
 
     // rollover
-    _globalNumberOfInnerUnrefinedCell = static_cast<int>( std::round(_globalNumberOfInnerUnrefinedCellBufferIn) );
+    _globalNumberOfInnerUnrefinedCellsHasGrownSinceLastSnapshot = _globalNumberOfInnerUnrefinedCells < static_cast<int>( std::round(_globalNumberOfInnerUnrefinedCellsBufferIn) );
+    _globalNumberOfInnerUnrefinedCells = static_cast<int>( std::round(_globalNumberOfInnerUnrefinedCellsBufferIn) );
     _lightestRank                     = _lightestRankBufferIn._rank;
 
 
     if (
-      _globalNumberOfInnerUnrefinedCell <= _localNumberOfInnerUnrefinedCell
+      _globalNumberOfInnerUnrefinedCells <= _localNumberOfInnerUnrefinedCell
       and
       not _hasSpreadOutOverAllRanks
     ) {
       logInfo(
         "updateGlobalView()",
         "global number of cells lags behind local one. Use local number of cells (" << _localNumberOfInnerUnrefinedCell <<
-        ") instead of global count of " << _globalNumberOfInnerUnrefinedCell << " to guide partitioning"
+        ") instead of global count of " << _globalNumberOfInnerUnrefinedCells << " to guide partitioning"
       );
-      _globalNumberOfInnerUnrefinedCell = _localNumberOfInnerUnrefinedCell;
+      _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCell;
       _lightestRank                     = tarch::mpi::Rank::getInstance().getRank();
     }
-    else if (_globalNumberOfInnerUnrefinedCell <= _localNumberOfInnerUnrefinedCell ) {
-      _globalNumberOfInnerUnrefinedCell = _localNumberOfInnerUnrefinedCell * tarch::mpi::Rank::getInstance().getNumberOfRanks();
+    else if (_globalNumberOfInnerUnrefinedCells <= _localNumberOfInnerUnrefinedCell ) {
+      _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCell * tarch::mpi::Rank::getInstance().getNumberOfRanks();
       logInfo(
         "updateGlobalView()",
         "global number of cells lags behind local one. Code has spread over ranks already. Therefore, assume that we use global data from previous time step. Extrapolate " << _localNumberOfInnerUnrefinedCell 
-        << " to guide partitioning. Assume it equals " << _globalNumberOfInnerUnrefinedCell
+        << " to guide partitioning. Assume it equals " << _globalNumberOfInnerUnrefinedCells
       );
       _lightestRank                     = tarch::mpi::Rank::getInstance().getRank();
     }
@@ -126,7 +129,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
 
     MPI_Iallreduce(
       &_localNumberOfInnerUnrefinedCell,            // send
-      &_globalNumberOfInnerUnrefinedCellBufferIn,   // receive
+      &_globalNumberOfInnerUnrefinedCellsBufferIn,   // receive
       1,             // count
       MPI_INT,
       MPI_SUM,
@@ -152,12 +155,18 @@ int toolbox::loadbalancing::RecursiveSubdivision::getMaximumSpacetreeSize(int lo
 		      * tarch::mpi::Rank::getInstance().getNumberOfRanks()
     	              * tarch::multicore::Core::getInstance().getNumberOfThreads();
 
-  logTraceInWith3Arguments( "getMaximumSpacetreeSize(int)", localSize, _globalNumberOfInnerUnrefinedCell, alphaP );
+  logTraceInWith3Arguments( "getMaximumSpacetreeSize(int)", localSize, _globalNumberOfInnerUnrefinedCells, alphaP );
 
-  double partitionSize = _globalNumberOfInnerUnrefinedCell / alphaP;
-  double result = std::min( partitionSize, localSize - partitionSize);
-  int roundedResult = std::max(  static_cast<int>(std::round(result)),  1 );
-  logTraceOutWith1Argument( "getMaximumSpacetreeSize(int)", result );
+  double partitionSize = _globalNumberOfInnerUnrefinedCells / alphaP;
+  if (_globalNumberOfInnerUnrefinedCellsHasGrownSinceLastSnapshot) {
+    partitionSize *= ThreePowerD;
+  }
+
+  if (localSize - partitionSize < partitionSize ) {
+    partitionSize = 0.5 * (localSize,partitionSize);
+  }
+  int roundedResult = std::max(  static_cast<int>(std::round(partitionSize)),  1 );
+  logTraceOutWith1Argument( "getMaximumSpacetreeSize(int)", roundedResult );
   return roundedResult;
 }
 
@@ -326,7 +335,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
   #endif
   logInfo(
     "finishStep()",
-    toString( step ) << " in state " << toString( _state ) << " (global cell count=" << _globalNumberOfInnerUnrefinedCell <<
+    toString( step ) << " in state " << toString( _state ) << " (global cell count=" << _globalNumberOfInnerUnrefinedCells <<
     ", heaviest local tree=" << getIdOfHeaviestLocalSpacetree() << ", heaviest local weight=" << getWeightOfHeaviestLocalSpacetree() << 
     ",lightest-rank=" << _lightestRank << ",max-tree-size=" << getMaximumSpacetreeSize() << ",has-spread=" <<
 	_hasSpreadOutOverAllRanks << ",round-robin-token=" << _roundRobinToken << ",round-robin-threshold=" << 
@@ -339,13 +348,13 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
       break;
     case StrategyStep::SpreadEquallyOverAllRanks:
       {
-        int cellsPerRank = std::max( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCell / tarch::mpi::Rank::getInstance().getNumberOfRanks())), 1);
+        int cellsPerRank = std::max( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks())), 1);
 
         _hasSpreadOutOverAllRanks = true;
 
         for (int targetRank=1; targetRank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); targetRank++ ) {
           int thisRanksCells = cellsPerRank;
-          if (static_cast<int>(_globalNumberOfInnerUnrefinedCell) % tarch::mpi::Rank::getInstance().getNumberOfRanks() >= targetRank) {
+          if (static_cast<int>(_globalNumberOfInnerUnrefinedCells) % tarch::mpi::Rank::getInstance().getNumberOfRanks() >= targetRank) {
             thisRanksCells++;
           }
           triggerSplit(0, thisRanksCells, targetRank);
