@@ -209,6 +209,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
   else if (
     _localNumberOfInnerUnrefinedCell
     <
+    (_globalNumberOfInnerUnrefinedCellsHasGrownSinceLastSnapshot ? ThreePowerD : 1) * 
     std::max( 
       static_cast<int>( std::round(_RatioOfCoresThatShouldInTheoryGetAtLeastOneCell * tarch::multicore::Core::getInstance().getNumberOfThreads() )),
       tarch::mpi::Rank::getInstance().getNumberOfRanks()
@@ -372,7 +373,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
         if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
           int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
           int cellsPerCore      = getMaximumSpacetreeSize(numberOfLocalUnrefinedCellsOfHeaviestSpacetree);
-          int numberOfSplits    = std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/cellsPerCore, tarch::multicore::Core::getInstance().getNumberOfThreads()-1);
+          int numberOfSplits    = std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/cellsPerCore-1, tarch::multicore::Core::getInstance().getNumberOfThreads()-1);
           logInfo( "finishStep()", "insufficient number of cores occupied on this rank, so split " << cellsPerCore << " cells iteratively (" << numberOfSplits << " splits) from tree " << heaviestSpacetree << " on local rank (hosts " << numberOfLocalUnrefinedCellsOfHeaviestSpacetree << " unrefined cells; cell count is still growing=" << _globalNumberOfInnerUnrefinedCellsHasGrownSinceLastSnapshot << ")" );
 
           for (int i=0; i<numberOfSplits; i++) {
