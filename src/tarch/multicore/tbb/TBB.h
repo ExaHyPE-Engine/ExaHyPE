@@ -17,7 +17,7 @@ namespace tarch {
       /**
        * I implement this guy in Tasks.cpp
        */
-      void shutdownConsumerTasks();
+      void shutdownTaskEnvironment();
     }
   }
 }

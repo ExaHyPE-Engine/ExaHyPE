@@ -26,6 +26,18 @@ namespace {
 }
 
 
+
+
+double* tarch::multicore::allocateMemory(int size, MemoryLocation location) {
+  return new double[size];
+}
+
+
+void tarch::multicore::freeMemory(double* data, MemoryLocation location) {
+  delete[] data;
+}
+
+
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
@@ -80,7 +92,7 @@ void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConc
 
 void tarch::multicore::Core::shutdown() {
   logTraceIn( "shutdown()" );
-  tarch::multicore::tbb::shutdownConsumerTasks();
+  tarch::multicore::tbb::shutdownTaskEnvironment();
 
   if (__globalThreadCountControl!=nullptr) {
     delete __globalThreadCountControl;

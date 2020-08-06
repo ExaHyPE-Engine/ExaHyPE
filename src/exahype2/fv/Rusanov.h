@@ -7,6 +7,7 @@
 
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
+#include "tarch/multicore/multicore.h"
 
 
 #include <functional>
