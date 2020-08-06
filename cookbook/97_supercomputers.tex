@@ -87,27 +87,45 @@ Simple clang++ should translate the code for the host:
 ./configure --enable-exahype --with-multithreading=omp CXX="clang++ CXXFLAGS="-DnoGPUOffloading" LDFLAGS="-lm"
 \end{code}
 
-The HIP compiler is not yet able to offload computations to the GPU:
-\begin{code}
-./configure --enable-exahype --with-multithreading=omp CXX="clang++" \
-  CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr" \
-  LDFLAGS="-lm"
-\end{code}
+% The HIP compiler is not yet able to offload computations to the GPU:
+% \begin{code}
+% ./configure --enable-exahype --with-multithreading=omp CXX="clang++" \
+%   CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr" \
+%   LDFLAGS="-lm"
+% \end{code}
 
-If I use the clang compiler from rocl, the stuff does not yet work:
+% If I use the clang compiler from rocl, the stuff does not yet work:
+% \begin{code}
+% ./configure --enable-exahype --with-multithreading=omp \
+%  CXX="/opt/rocm-3.5.0/aomp/bin/clang++" \
+%  CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr -I/opt/rocm-3.5.0/aomp/include/ -fopenmp" \
+%  LDFLAGS="-lm -fopenmp"
+% \end{code}
+
+
+\noindent
+Therefore, we rely on the fact that ROCM is installed at \texttt{/opt/rocm} and
+configure as follows:
+
 \begin{code}
 ./configure --enable-exahype --with-multithreading=omp \
- CXX="/opt/rocm-3.5.0/aomp/bin/clang++" \
- CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr -I/opt/rocm-3.5.0/aomp/include/ -fopenmp" \
+ CXX="/opt/rocm/aomp/bin/clang++" \
+ CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906" \
  LDFLAGS="-lm -fopenmp"
 \end{code}
 
 
-./configure --enable-exahype --with-multithreading=omp \
- CXX="/opt/rocm-3.5.0/aomp/bin/clang++" \
- CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --hip-device-lib-path=/opt/rocm-3.5.1/lib" \
- LDFLAGS="-lm -fopenmp"
+% ./configure --enable-exahype --with-multithreading=omp \
+%  CXX="/opt/rocm/aomp/bin/clang" \
+%  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906" \
+%  LDFLAGS="-lm -fopenmp"
 
+
+
+% ./configure --enable-exahype --with-multithreading=omp \
+%  CXX="/opt/rocm/aomp/bin/clang++" \
+%  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --hip-device-lib-path=/opt/rocm-3.5.1/lib" \
+%  LDFLAGS="-lm -fopenmp"
 
 
 

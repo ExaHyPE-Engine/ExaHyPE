@@ -93,31 +93,61 @@ and
  objects. As they rely on the semaphore implementations, they are generic and work
  for any backend.
 
+ <h3> Logical task model </h3>
+
  Peano models all of its interna as tasks. Each Peano 4 task is a subclass of
- tarch::multicore::Task. Peano's task are different from plain old OpenMP or TBB
- tasks as they have priorities and a prefetch operation, i.e. a wake-up routine
- that is called before a task is actually executed. They also can reschedule
- themselves. Obviously, most task backends do offer all of these features
- anyway, but in Peano 4 this is hidden from the user. The user or Peano 4 core,
+ tarch::multicore::Task. Peano's task are an abstraction from OpenMP or TBB which
+ is rather puristic: Besides a run() routine which can ask the task system to rerun
+ the task - this is a built-in yield() mechanism - they have priorities and a
+ prefetch() operation, i.e. a wake-up routine that should be called before a task
+ is actually executed yet is optional. Obviously, most task backends do offer all
+ of these features directly, i.e. we can map 1:1, but in Peano 4 this is hidden from
+ the user. Our idea is that we can swap backends in and out.
+
+
+ The user or Peano 4 core,
  respectively, create Peano 4 tasks and spawn them through tarch::multicore::spawnTask(),
  e.g. It is up to the backend to map these spawn routines and the task classes
  onto a particular implementation/runtime.
 
  Peano 4 has two types of spawn mechanisms: spawn-and-wait and spawn (and forget).
  Forget tasks typically aren't real "do them at one point and then forget them"
- tasks. Typically, they do meaningful stuff and then set some semaphore or similar.
- The main code spawns them, and then eventually waits for them to complete. While
+ tasks, so this nomenclature is not watertight. Typically, they do meaningful
+ stuff and then set some semaphore or similar. The spawn-and-forget means that they
+ are not immediately due, i.e. do not induce algorithmic latency. Therefore, I
+ should better call them background tasks or similar.
+
+ The main code spawns these background tasks, and it then eventually waits for them to complete. While
  it waits, it will/should call tarch::multicore::processPendingTasks() until the
- particular task it waits for has completed. There's no way to process a particular
- task upon demand.
+ particular task it waits for has completed. I do not offer a way to process a
+ particular task upon demand. So the overall vision is: background task should go
+ into some kind of workpool and backfill idle cores. In the ideal case, they are
+ done by the time we need their outcome (which is at a later point - more critical
+ tasks are scheduled via a classic tree-dependency thing), but if they are not I
+ will call processPendingTasks() and thus give the runtime the opportunity to
+ catch up.
 
- @image html multicore_architecture.png
+ <h3> Native backends </h3>
+
+ I provide a couple of native backends where the Peano's task architecture is mapped
+ 1:1 onto the backend. At the moment, these are
+
+ - TBB
+ - OpenMP
+
+ You find the implementations in the respective directories. The files are called
+ Tasks_plain.cpp. They are very simple and thus should be digestable without further
+ comments. For C++ threads, I do not offer a plain implementation at the moment, but
+ do offer solely a variant with its own tasking runtime layer (see below).
 
 
- <h2> Generic multicore backend realisation </h2>
+ <h3> Backends with additional runtime layer </h3>
 
- It is obviously up to the particular backend how to realise the Peano 4 tasking.
- However, some general patterns have proven of value. Some of them are inspired
+  @image html multicore_architecture.png
+
+ On some platforms and code generations, it has proven of value to add an additional
+ runtime (layer) on top of the backend. These layers do exist for TBB and OpenMP, e.g.,
+ and all follow the same general patterns. The patterns in turn are inspired
  by Intel's TBB, some of them result from papers we've written, for which we had
  to pimp the scheduling. The discussion how to realise the tasking mainly focuses
  on what happens if the user spawns a task and immediately returns. All tasking
@@ -153,6 +183,10 @@ and
  drain. The consumer tasks now go down one by one, free cores, and thus allow
  the Peano 4 core to grab more of the physical threads again.
 
+ The additional runtime layer is activated through the compiler switch -DLayeredMultitaskingRuntime.
+ You find the implementations in the respective directories. The files are called
+ Tasks_layered.cpp.
+
   <h2> OpenMP backend </h2>
 
  If you want to use the OpenMP backend, you have to embed your whole main loop
@@ -170,7 +204,7 @@ and
   export OMP_NESTED=true
  </pre>
 
- as we rely heavily on nested parallelism.
+ on some systems, as we rely heavily on nested parallelism.
 
  */
   namespace multicore {

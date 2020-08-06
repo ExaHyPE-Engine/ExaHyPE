@@ -92,11 +92,12 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/RecursiveSemaphore.cpp \
  tarch/multicore/Tasks.cpp \
  tarch/multicore/cpp/Core.cpp \
- tarch/multicore/cpp/Tasks.cpp \
+ tarch/multicore/cpp/Tasks_layered.cpp \
  tarch/multicore/cpp/BooleanSemaphore.cpp \
  tarch/multicore/cpp/RecursiveSemaphore.cpp \
  tarch/multicore/omp/Core.cpp \
- tarch/multicore/omp/Tasks.cpp \
+ tarch/multicore/omp/Tasks_plain.cpp \
+ tarch/multicore/omp/Tasks_layered.cpp \
  tarch/multicore/omp/OMP.cpp \
  tarch/multicore/omp/BooleanSemaphore.cpp \
  tarch/multicore/omp/RecursiveSemaphore.cpp \
