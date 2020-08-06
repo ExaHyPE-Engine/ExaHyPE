@@ -217,7 +217,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
   ) {
     _state = StrategyState::PostponedDecisionDueToLackOfCells;
   }
-  else if (_maxTreeWeightAtLastSplit == getWeightOfHeaviestLocalSpacetree()) {
+  else if (_maxTreeWeightAtLastSplit <= getWeightOfHeaviestLocalSpacetree()) {
     _state = StrategyState::Stagnation;
   }
   else if (_roundRobinToken>_roundRobinThreshold) {
