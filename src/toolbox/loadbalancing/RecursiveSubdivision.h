@@ -54,7 +54,8 @@ namespace toolbox {
  *
  * We wait and do nothing. After all, this might be the first step of the grid
  * construction, so we are well-advised to wait for a few iterations to get
- * an idea what the final grid will look like.
+ * an idea what the final grid will look like and in particular to get enough
+ * cells so we can keep all threads/ranks busy.
  *
  * <h3> Phase 2: We have not yet used all ranks </h3>
  *
@@ -64,6 +65,17 @@ namespace toolbox {
  *
  * <h3> Phase 3: Get reasonably many cores into the game </h3>
  *
+ * We'd like to occupy a lot of cores (subject to _RatioOfCresThatShould.
+ * At this point, we however have to be careful already: We should trigger
+ * this step asap. At the same time, we might already be in a situation where
+ * the per-rank mesh is pretty detailed, i.e. too many forks in one rush might
+ * be too ambitious.
+ *
+ * This phase still is rank-local, i.e. I do not spread between ranks.
+ * Consequently, I should not overdecompose. It might be reasonable to wait
+ * with further splits and to balance later on a case-by-case base such that
+ * we can deploy cells to other ranks, too. This throttling is implemented via
+ * getNumberOfSplitsOnLocalRank().
  *
  * <h3> Phase 4: Load balancing between the ranks (dynamic) </h3>
  *
@@ -196,7 +208,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * Status variable required to compute good load balancing
      */
     int _globalNumberOfInnerUnrefinedCells;
-    bool _globalNumberOfInnerUnrefinedCellsHasGrownSinceLastSnapshot;
 
     int _lightestRank;
 
@@ -241,18 +252,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * partition should not be smaller than the new subpartition. If we would run
      * into this situation, then I do a simple bipartition.
      *
-     * <h2> Delay of build-up/analysis </h2>
-     *
-     * Our analysis of an optimal spacetree size depends on the local attribute
-     * _globalNumberOfInnerUnrefinedCells. This one is determined after each
-     * traversal, i.e. it runs risk to lag behind the by one iteration.
-     * Therefore, I do use some historic data: If
-     * _globalNumberOfInnerUnrefinedCells hasn't grown over the last two
-     * iterations, then I'm kind of confident that it gives us a good idea of
-     * what the overall spacetree looks like. Otherwise, I assume that the
-     * number of cells has grown by a factor of @f$ 3^d @f$, i.e. I assume that
-     * we had a regular refinement step.
-     *
      * @see _globalNumberOfInnerUnrefinedCells
      */
     int getMaximumSpacetreeSize(int localSize = std::numeric_limits<int>::max()) const;
@@ -268,8 +267,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * can be split. See peano4::grid::Spacetree::isCellSplitCandidate()
      * for a discussion which cells can be split and which can't. As
      * not all cells can't be given away, not all trees can be split up.
-     *
-     * A more sophisticated version of the code thus
      *
      * @return NoHeaviestTreeAvailable If there are no local trees or
      *   if the heaviest tree is on the blacklist, i.e. we have to

@@ -489,8 +489,8 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     self._use_gpu = use_gpu 
 
 
-  def add_actions_to_create_grid(self, step):
-    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).add_actions_to_create_grid(step)
+  def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
+    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).add_actions_to_create_grid(step,evaluate_refinement_criterion)
     step.add_action_set( exahype2.grid.EnclaveLabels( self._name ) )
     
 

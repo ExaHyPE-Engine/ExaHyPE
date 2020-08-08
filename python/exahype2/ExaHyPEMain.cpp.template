@@ -44,10 +44,11 @@ tarch::timing::Measurement   plotMeasurement;
  * @return continues to run
  */
 bool selectNextAlgorithmicStep() {{
-  static bool   gridConstructed   = false;
-  static double nextPlotTimeStamp = FirstPlotTimeStamp;
-  static bool   haveJustWrittenSnapshot = false;
+  static bool   gridConstructed                   = false;
+  static double nextPlotTimeStamp                 = FirstPlotTimeStamp;
+  static bool   haveJustWrittenSnapshot           = false;
   static bool   haveReceivedNoncriticialAssertion = false;
+  static int    gridConstructionCounter           = 0;
 
   bool          continueToSolve   = true;
   
@@ -71,12 +72,22 @@ bool selectNextAlgorithmicStep() {{
       assertionNumericalEquals( observers::getMinTimeStamp(), 0.0 );
       gridConstructed = true;
     }}
+    #ifdef SharedMemoryParallelisation
+    else if (gridConstructionCounter==3) {{
+      logInfo( "selectNextAlgorithmicStep()", "throttle grid construction manually to allow load balancing to catch up" );
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGridButPostponeRefinement )
+      );
+      gridConstructionCounter=0;
+    }}
+    #endif
     else {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGrid )
       );
     }}
     continueToSolve = true;
+    gridConstructionCounter++;
   }}
   else {{
     if ( observers::getMinTimeStamp()>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 ) {{
