@@ -1,6 +1,7 @@
 #include "tarch/Assertions.h"
 
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/Tasks.h"
 
 #if defined(SharedOMP) and !defined(LayeredMultitaskingRuntime)
 

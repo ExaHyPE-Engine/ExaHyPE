@@ -14,6 +14,10 @@
 
 #include "config.h"
 
+#if defined(UseNVIDIA)
+#include <cuda_runtime_api.h>
+#include <cuda.h>
+#endif
 
 #if defined(UseAMD)
 #include "hip/hip_runtime.h"
@@ -35,7 +39,7 @@ double* tarch::multicore::allocateMemory(int size, MemoryLocation location) {
       break;
     case MemoryLocation::Accelerator:
       #if defined(GPUOffloading) and defined(UseNVIDIA)
-      cudaMallocManaged(&result, size*sizeof(double), cudaMemAttachGlobal);
+      cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
       #elif defined(GPUOffloading) and defined(UseAMD)
       result = new double[size];
       // AMD does not (yet) support managed memory
