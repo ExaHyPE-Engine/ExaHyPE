@@ -17,6 +17,7 @@
 #include "observers/StepRepository.h"
 #include "observers/SolverRepository.h"
 #include "observers/CreateGrid.h"
+#include "observers/CreateGridButPostponeRefinement.h"
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
 
@@ -139,6 +140,18 @@ void step() {{
   tarch::timing::Watch  watch( "::", "step()", false );
 
   switch ( stepName ) {{
+    case observers::StepRepository::Steps::CreateGridButPostponeRefinement:
+      {{
+        observers::startGridConstructionStep();
+
+        observers::CreateGridButPostponeRefinement  observer;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        gridConstructionMeasurement.setValue( watch.getCalendarTime() );
+
+        observers::finishGridConstructionStep();
+      }}
+      break;
     case observers::StepRepository::Steps::CreateGrid:
       {{
         observers::startGridConstructionStep();
