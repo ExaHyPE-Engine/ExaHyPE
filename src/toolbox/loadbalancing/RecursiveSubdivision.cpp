@@ -6,6 +6,7 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/tarch.h"
 #include "tarch/multicore/Core.h"
 
 #include "peano4/grid/GridStatistics.h"
@@ -272,7 +273,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
     and
-    static_cast<double>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) < _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell * tarch::multicore::Core::getInstance().getNumberOfThreads() / 2
+    static_cast<double>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) < _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell * tarch::multicore::Core::getInstance().getNumberOfThreads() 
   ) {
     return StrategyStep::SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning;
   }
@@ -325,11 +326,42 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank(i
   int numberOfSplits     = std::min( numberOfLocalUnrefinedCells/cellsPerCore-1, tarch::multicore::Core::getInstance().getNumberOfThreads()-1);
   int maxSizeOfLocalRank = _globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks();
   while ( (numberOfSplits+1)*cellsPerCore > maxSizeOfLocalRank ) {
-	numberOfSplits--;
+    numberOfSplits--;
+  }
+  numberOfSplits  = std::max( numberOfSplits, 1 );
+
+  int worstCaseEstimateForSizeOfSpacetree = ThreePowerD * tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
+  int maxAdditionalSplitsDueToMemory      = tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) / worstCaseEstimateForSizeOfSpacetree;
+
+  if (maxAdditionalSplitsDueToMemory==0) {
+    logInfo( 
+      "getNumberOfSplitsOnLocalRank(...)", 
+       "not sure if additional tree fits on node; in particular if mesh should refine regularly. Split once instead of " << numberOfSplits << 
+       " times (current mem footprint=" << worstCaseEstimateForSizeOfSpacetree << " MBytes, free mem=" <<
+       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " MBytes)" 
+    );
+    numberOfSplits = 1;
+  }
+  else if (maxAdditionalSplitsDueToMemory<numberOfSplits) {
+    logInfo( 
+      "getNumberOfSplitsOnLocalRank(...)", 
+       "not sure if additional trees fit on node. Optimal number of splits is " << numberOfSplits << 
+       ", With current mem footprint of " << worstCaseEstimateForSizeOfSpacetree << " MByte and free memory of " << 
+       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " we manually reduce split count to " << maxAdditionalSplitsDueToMemory << 
+       " as we want to be able to accommodate one more regular mesh refinement step"
+    );
+    numberOfSplits = maxAdditionalSplitsDueToMemory;
+  }
+  else {
+    logInfo(
+      "getNumberOfSplitsOnLocalRank(...)",
+       "there seems to be enough memory available, so split " << numberOfSplits <<
+       " times (current mem footprint=" << worstCaseEstimateForSizeOfSpacetree << " MByte, free memory=" <<
+       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " MByte)"
+    );
   }
 
-  numberOfSplits  = std::max( numberOfSplits, 2 );
-  numberOfSplits /= 2;
+  numberOfSplits  = std::max( numberOfSplits, 1 );
   return numberOfSplits;
 }
 
