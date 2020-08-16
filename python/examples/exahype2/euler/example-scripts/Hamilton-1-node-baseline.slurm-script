@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -t 01:00:00
+#SBATCH -t 10:00:00
 #SBATCH --exclusive
 #SBATCH -p par7.q
 #SBATCH -N 1
@@ -18,10 +18,13 @@ module load gcc/9.3.0
 
 export PYTHONPATH=../../..
 
-for myH in 0.05 0.02 0.01
+for myH in 0.05 0.01 0.005 0.001
 do
-  python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=1 --h=$myH
-  mv peano4 ./peano4-$myH-baseline
+  if [ ! -f "peano4-$myH-$ratio" ]
+  then
+    python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=$ratio --h=$myH
+    mv peano4 ./peano4-$myH-$ratio
+  fi
   mpirun ./peano4-$myH-baseline --threads 1 > Hamilton-baseline-h-$myH.out
 done
 
