@@ -24,27 +24,11 @@ namespace toolbox {
  * This is one of the simplest load balancing strategies one can think about. We
  * try to mimick the behaviour of OpenMP's guided scheduling: We determine the
  * maximum number of unrefined inner cells around and compute an optimal load per
- * core. If we used this tree size, we'd not have any flexibility to move stuff around.
- * So we say that no tree anywhere should be bigger than half of this size. So, in
- * theory, we overbook all of the cores by a factor of two. Whenever a rank decides
- * that it has to split up its tree once more, it deploys the new tree to the rank
- * with the smallest total load (with a slight bias to keep stuff local). The new
- * tree results from classic bipartitioning.
+ * rank. We first spread out over all ranks, and then ensure that there is at least
+ * one tree per core. From thereon, we examine whether we violate the per-rank
+ * load balancing. If a rank does this, it splits its heaviest tree and deploys the
+ * new subtree to the most underbooked rank.
  *
- * If we have N cells in total and run with R ranks, then the algorithm first spreads
- * these cells over the ranks with N/R cells per rank. After that, each rank hosts
- * one spacetree.
- *
- * In an idea world, each core would in this scenario host N/R/C cells. We however set
- * the maximum size of an admissible tree to N/R/C/2.
- *
- * Whenever we run into a situation where not all cores of the local rank are occupied,
- * we cut the local tree into two equally sized pieces and deploy the new tree locally.
- * This way, we flood all local cores.
- *
- * Whenever any local tree violates the magic threshold of N/R/C/2, we split it up into
- * two parts. This time, we deploy the new subtree to the MPI rank with the smallest
- * total load. This way, we balance across MPI ranks.
  *
  * <h2> Implementation remarks </h2>
  *
@@ -65,8 +49,7 @@ namespace toolbox {
  *
  * <h3> Phase 3: Get reasonably many cores into the game </h3>
  *
- * We'd like to occupy a lot of cores (subject to _RatioOfCresThatShould.
- * At this point, we however have to be careful already: We should trigger
+ * We'd like to occupy a lot of cores. We should trigger
  * this step asap. At the same time, we might already be in a situation where
  * the per-rank mesh is pretty detailed, i.e. too many forks in one rush might
  * be too ambitious.
@@ -81,8 +64,9 @@ namespace toolbox {
  *
  * This is the dynamic load balancing phase. Take the biggest tree, check
  * whether it is too heavy and split it. When you split it, search for the
- * rank with the lowest total load.
- *
+ * rank with the lowest total load and get the new subtree there. To avoid
+ * that too many ranks deploy to one rank at the same time, we use kind of
+ * a round-robin token here.
  *
  * <h2> Broad vs. deep trees </h2>
  *
@@ -129,10 +113,11 @@ namespace toolbox {
 class toolbox::loadbalancing::RecursiveSubdivision {
   public:
     /**
-     * @param ratioOfCoresThatShouldInTheoryGetAtLeastOneCell Pass in something between 0 
-     *           and 1 (though bigger than 1 might work, too)
+     * @param targetBalancingRation Ratio which ill-balancing we accept. A ratio of
+     *   almost one means we do not accept any ill-balancing. The smaller the value,
+     *   the more relaxed we are.
      */
-    RecursiveSubdivision(double ratioOfCoresThatShouldInTheoryGetAtLeastOneCell=0.8);
+    RecursiveSubdivision(double targetBalancingRation=0.8);
     ~RecursiveSubdivision();
 
     /**
@@ -167,10 +152,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     enum class StrategyStep {
       Wait,
       SpreadEquallyOverAllRanks,
-	  /**
-	   * You have to be careful with this one. You should only decompose in a
-	   * way that you don't exceed the local load. See finishStep().
-	   */
       SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning
@@ -193,7 +174,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     static tarch::logging::Log  _log;
 
-    const double _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell;
+    const double _TargetBalancingRatio;
 
     std::map< int, int>    _blacklist;
 
@@ -214,13 +195,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     enum class StrategyState {
       Standard,
       WaitForRoundRobinToken,
-	  /**
-	   * Could mean that we don't have enough cells yet or we are not aware of
-	   * enough cells yet as we have just split or did not run long enough.
-	   */
       PostponedDecisionDueToLackOfCells,
-      Stagnation,
-      RecoverAfterAggressiveSplit
+      Stagnation
     };
 
     static std::string toString( StrategyState state );
@@ -228,33 +204,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     StrategyState  _state;
 
     void updateGlobalView();
-
-    /**
-     * Determine the (optimal) maximum spacetree size
-     *
-     * The maximum size in principle is the total number of cells divided by
-     * all possible spacetrees. The latter is in principle the number of ranks
-     * times the number of cores (p), though we allow users to diminish this number
-     * slightly due to _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell. I
-     * call this one @f$ \alpha @f$ below. So we have the situation
-     * that the maximum spacetree size
-     *
-     * @f$
-       n_{\text{max}} = \frac{N_{\text{global}}}{\alpha p} \cdot \frac{1}{k}
-       @f$
-     *
-     * with a natural number k>1. If we follow this approach, we can end up with
-     * situations where we have 400 cells in a local partition, the optimal
-     * number of cells might be 399. Such situations arise with AMR but also
-     * throughout the top-down grid construction. In this case, we'd end up with
-     * a remaining partition of 10 which is not what we want. Therefore I make the
-     * equation above subject to the constraint that the remainder of the
-     * partition should not be smaller than the new subpartition. If we would run
-     * into this situation, then I do a simple bipartition.
-     *
-     * @see _globalNumberOfInnerUnrefinedCells
-     */
-    int getMaximumSpacetreeSize(int localSize = std::numeric_limits<int>::max()) const;
 
     /**
      * Determines the maximum spacetree size a tree should have in the
@@ -279,7 +228,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     int getWeightOfHeaviestLocalSpacetree() const;
 
-    bool doesBiggestLocalSpactreeViolateOptimalityCondition() const;
+    bool doesRankViolateBalancingCondition() const;
 
     void updateBlacklist();
 
@@ -289,7 +238,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     void triggerSplit( int sourceTree, int numberOfCells, int targetRank );
 
     /**
-     *
      * <h2> Init has-spread-over-all-ranks flag </h2>
      *
      * By the time we construct the load balancing, we often haven't
@@ -318,7 +266,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * @param cellsPerCore I think I could reconstruct these guys manually, but
      *          I have this value available when I call the function anyway.
      */
-    int getNumberOfSplitsOnLocalRank(int numberOfLocalUnrefinedCells, int cellsPerCore) const;
+    int getNumberOfSplitsOnLocalRank() const;
 
     #ifdef Parallel
     MPI_Request*    _globalSumRequest;
@@ -342,12 +290,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * @see updateState()
      */
     int _roundRobinToken;
-
-    /**
-     * If _roundRobinToken is smaller than or equal to this threshold, then the
-     * rank is allowed to load balance.
-     */
-    int _roundRobinThreshold;
 
     int _maxTreeWeightAtLastSplit;
     int _lastTreeSplit;

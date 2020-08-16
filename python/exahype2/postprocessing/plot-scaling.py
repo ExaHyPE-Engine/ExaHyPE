@@ -51,10 +51,10 @@ if __name__ == "__main__":
   single_node_time = -1
   max_nodes        = -1
   
-  for current_file_type in different_file_patterns:  
+  for current_file_pattern in different_file_patterns:  
     data_points = []
     for data_file in data_files:
-      if current_file_type in data_file:
+      if current_file_pattern in data_file:
         tar.extract( data_file )
         new_data = exahype2.postprocessing.PerformanceDataPoint(data_file)
         if args.verbose:
@@ -62,6 +62,8 @@ if __name__ == "__main__":
         if new_data.valid:
           data_points.append( new_data ) 
         os.remove( data_file )
+      #elif args.verbose:
+      #  print( "skip file " + data_file + " as it does not fit to pattern " + current_file_pattern )
 
     #if args.grid_construction:
     # -- file type
@@ -71,12 +73,13 @@ if __name__ == "__main__":
     (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.last_iteration, args.max_cores_per_rank )    
     
     if len(x_data)==1:
-      print( "file " + data_file + " hosts only one entry: assume this is the baseline" )
+      print( "data set (pattern " + current_file_pattern + ") hosts only one entry: assume this is the baseline" )
       single_node_time = y_data[0]  
       if not args.plot_efficiency:
         plt.plot( x_data, y_data, ":", color="#000000", label="linear trend" )  
-      
-    max_nodes = max(max_nodes,x_data[-1])
+     
+    if len(x_data)>0:
+      max_nodes = max(max_nodes,x_data[-1])
     
     if args.plot_efficiency:
       normalised_fasted_time = y_data[0] * x_data[0]
@@ -86,7 +89,7 @@ if __name__ == "__main__":
         y_data = [y/float(args.max_cores_per_rank) for y in y_data]
       y_data = [ min(y,1.1) for y in y_data]
       
-    symbol = "-" + Symbols[ different_file_patterns.index(current_file_type) % len(Symbols) ]
+    symbol = "-" + Symbols[ different_file_patterns.index(current_file_pattern) % len(Symbols) ]
     my_markevery = 0.9
 
     my_color = Colors[ color_counter % len(Colors) ]
@@ -94,19 +97,19 @@ if __name__ == "__main__":
 
     add_entry_to_legend = True
     if args.group_measurements>0:
-      add_entry_to_legend = different_file_patterns.index(current_file_type) < args.group_measurements \
-                         or different_file_patterns.index(current_file_type) % args.group_measurements == 0
-      symbol = "-" + Symbols[ different_file_patterns.index(current_file_type) % args.group_measurements ]
-      my_color = Colors[ int(different_file_patterns.index(current_file_type) / args.group_measurements) ]
+      add_entry_to_legend = different_file_patterns.index(current_file_pattern) < args.group_measurements \
+                         or different_file_patterns.index(current_file_pattern) % args.group_measurements == 0
+      symbol = "-" + Symbols[ different_file_patterns.index(current_file_pattern) % args.group_measurements ]
+      my_color = Colors[ int(different_file_patterns.index(current_file_pattern) / args.group_measurements) ]
       
        
     if len(different_file_patterns)==0:
       plt.plot( x_data, y_data, symbol, label="time per time step", markevery=my_markevery )
     elif add_entry_to_legend:
-      if different_file_patterns.index(current_file_type)==0:
-        plt.plot( x_data, y_data, symbol, label="time per time step, " + str(current_file_type), color=my_color, markevery=my_markevery )
+      if different_file_patterns.index(current_file_pattern)==0:
+        plt.plot( x_data, y_data, symbol, label="time per time step, " + str(current_file_pattern), color=my_color, markevery=my_markevery )
       else:
-        plt.plot( x_data, y_data, symbol, label=str(current_file_type), color=my_color, markevery=my_markevery )
+        plt.plot( x_data, y_data, symbol, label=str(current_file_pattern), color=my_color, markevery=my_markevery )
     else:
       plt.plot( x_data, y_data, symbol, color=my_color, markevery=my_markevery )
 
@@ -129,7 +132,7 @@ if __name__ == "__main__":
     plt.yscale( "log" )
   xtics   = [ 1 ]
   xlabels = [ "1" ]
-  while xtics[-1]*2 <= x_data[-1]:
+  while xtics[-1]<max_nodes:
     xtics.append( xtics[-1]*2 )
     xlabels.append( str(xtics[-1]) )
   plt.xticks( xtics, xlabels )
