@@ -26,7 +26,8 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double ratioO
   _state( StrategyState::Standard ),
   _roundRobinToken(0),
   _roundRobinThreshold(1),
-  _maxTreeWeightAtLastSplit( std::numeric_limits<int>::max() ) {
+  _maxTreeWeightAtLastSplit( std::numeric_limits<int>::max() ),
+  _lastTreeSplit(-1)  {
   #ifdef Parallel
   _globalSumRequest          = nullptr;
   _globalLightestRankRequest = nullptr;
@@ -39,11 +40,26 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double ratioO
 std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
   std::ostringstream msg;
 
+  msg << "(state=" << toString( _state ) 
+      << ",global-cell-count=" << _globalNumberOfInnerUnrefinedCells 
+      << ",lightest-rank=" << _lightestRank
+      << ",has-spread=" << _hasSpreadOutOverAllRanks 
+      << ",round-robin-token=" << _roundRobinToken 
+      << ",round-robin-threshold=" << _roundRobinThreshold 
+      << ",ratio=" << _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell 
+      << ",max-tree-weight-at-last-split=" << _maxTreeWeightAtLastSplit
+      << ",last-tree-split=" << _lastTreeSplit; 
+
   std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
   for (auto p: idsOfLocalSpacetrees) {
-    msg << "tree " << p << ": " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()
+    msg << ",tree " << p << ":" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()
 	  << ( _blacklist.count(p)>0 ? " (on blacklist with weight=" + std::to_string(_blacklist.at(p)) + ")" : "" );
   }
+
+  msg << "heaviest-local-tree=" << getIdOfHeaviestLocalSpacetree() << " (analysed)"
+      << ",heaviest-local-weight=" << getWeightOfHeaviestLocalSpacetree() << " (analysed)"
+      << ",max-tree-size=" << getMaximumSpacetreeSize() << " (analysed)"
+      << ")";
 
   return msg.str();
 }
@@ -211,7 +227,11 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
   ) {
     _state = StrategyState::PostponedDecisionDueToLackOfCells;
   }
-  else if (_maxTreeWeightAtLastSplit <= getWeightOfHeaviestLocalSpacetree()) {
+  else if (
+   _maxTreeWeightAtLastSplit == getWeightOfHeaviestLocalSpacetree()
+   and
+   _lastTreeSplit == getIdOfHeaviestLocalSpacetree()
+  ) {
     _state = StrategyState::Stagnation;
   }
   else if (_roundRobinToken>_roundRobinThreshold) {
@@ -375,17 +395,9 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 
   #if PeanoDebug>0
   #else
-  if ( step!=StrategyStep::Wait ) 
+  //if ( step!=StrategyStep::Wait ) 
   #endif
-  logInfo(
-    "finishStep()",
-    toString( step ) << " in state " << toString( _state ) << " (global cell count=" << _globalNumberOfInnerUnrefinedCells <<
-    ", heaviest local tree=" << getIdOfHeaviestLocalSpacetree() << ", heaviest local weight=" << getWeightOfHeaviestLocalSpacetree() << 
-    ",lightest-rank=" << _lightestRank << ",max-tree-size=" << getMaximumSpacetreeSize() << ",has-spread=" <<
-	_hasSpreadOutOverAllRanks << ",round-robin-token=" << _roundRobinToken << ",round-robin-threshold=" << 
-    _roundRobinThreshold << ",ratio=" << _RatioOfCoresThatShouldInTheoryGetAtLeastOneCell << 
-    ",heaviest-tree-when-last-split=" << _maxTreeWeightAtLastSplit << ")"
-  );
+  logInfo( "finishStep()", toString( step ) << " in state " << toString() );
 
   switch ( step ) {
     case StrategyStep::Wait:
@@ -495,6 +507,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
   // Not always known a priori for example when we spread accross all
   // local ranks, then this field might not be yet set.
   if (getWeightOfHeaviestLocalSpacetree()>0) {
-    _maxTreeWeightAtLastSplit = std::min(_maxTreeWeightAtLastSplit,getWeightOfHeaviestLocalSpacetree());
+    _maxTreeWeightAtLastSplit = getWeightOfHeaviestLocalSpacetree();
+    _lastTreeSplit            = sourceTree;
   }
 }

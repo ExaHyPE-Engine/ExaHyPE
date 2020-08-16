@@ -220,7 +220,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 	   */
       PostponedDecisionDueToLackOfCells,
       Stagnation,
-	  RecoverAfterAggressiveSplit
+      RecoverAfterAggressiveSplit
     };
 
     static std::string toString( StrategyState state );
@@ -350,6 +350,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     int _roundRobinThreshold;
 
     int _maxTreeWeightAtLastSplit;
+    int _lastTreeSplit;
 };
 
 
