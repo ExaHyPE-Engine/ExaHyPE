@@ -54,7 +54,7 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
 	  << ( _blacklist.count(p)>0 ? " (on blacklist with weight=" + std::to_string(_blacklist.at(p)) + ")" : "" );
   }
 
-  msg << "heaviest-local-tree=" << getIdOfHeaviestLocalSpacetree() << " (analysed)"
+  msg << ",heaviest-local-tree=" << getIdOfHeaviestLocalSpacetree() << " (analysed)"
       << ",heaviest-local-weight=" << getWeightOfHeaviestLocalSpacetree() << " (analysed)"
       << ")";
 
@@ -186,11 +186,15 @@ bool toolbox::loadbalancing::RecursiveSubdivision::doesRankViolateBalancingCondi
   }
 
   const double threshold = static_cast<double>(_globalNumberOfInnerUnrefinedCells)
-		                 / tarch::mpi::Rank::getInstance().getNumberOfRanks()
-		                 / tarch::multicore::Core::getInstance().getNumberOfThreads()
-						 * _TargetBalancingRatio;
+                         / tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-  return static_cast<double>(localCells) > threshold;
+  bool result = (static_cast<double>(localCells)-threshold) / threshold > _TargetBalancingRatio;
+
+  if (result) {
+    logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have " << localCells << " cell(s) local with a threshold of " << threshold );
+  }
+
+  return result;
 }
 
 
@@ -285,11 +289,13 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     and
     static_cast<double>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) >= tarch::multicore::Core::getInstance().getNumberOfThreads()
     and
-	doesRankViolateBalancingCondition()
+    doesRankViolateBalancingCondition()
     and
-	_state != StrategyState::WaitForRoundRobinToken
+    _state != StrategyState::WaitForRoundRobinToken
   ) {
-    return StrategyStep::SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning;
+    return peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>=tarch::multicore::Core::getInstancen().getNumberOfThreads() 
+         ? StrategyStep::SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning
+         : StrategyStep::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning;
   }
 
   return StrategyStep::Wait;
@@ -366,7 +372,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 
   #if PeanoDebug>0
   #else
-  //if ( step!=StrategyStep::Wait ) 
+  if ( step!=StrategyStep::Wait ) 
   #endif
   logInfo( "finishStep()", toString( step ) << " in state " << toString() );
 

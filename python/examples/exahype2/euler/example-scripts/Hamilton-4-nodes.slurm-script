@@ -3,7 +3,7 @@
 #SBATCH --exclusive
 #SBATCH -p par7.q
 #SBATCH -N 4
-#SBATCH --array=1,5,7,9,99%1
+#SBATCH --array=1,5,7,9%1
 #SBATCH --ntasks-per-node=1
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
@@ -21,7 +21,7 @@ export PYTHONPATH=../../..
 
 ratio=0.$SLURM_ARRAY_TASK_ID
 
-for myH in 0.05 0.01 0.005 0.001 0.0005 0.0001
+for myH in 0.05 0.01 0.005 0.001 0.0005 
 do
   if [ ! -f "peano4-$myH-$ratio" ]
   then
