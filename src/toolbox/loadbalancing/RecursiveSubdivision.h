@@ -182,6 +182,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     std::map< int, int>    _blacklist;
 
     bool _hasSpreadOutOverAllRanks;
+    bool _hasSpreadOutOverAllCores;
 
     /**
      * Status variable required to compute good load balancing. 

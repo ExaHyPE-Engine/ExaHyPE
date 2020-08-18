@@ -21,6 +21,7 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double target
   _TargetBalancingRatio( targetBalancingRatio ),
   _blacklist(),
   _hasSpreadOutOverAllRanks( false ),
+  _hasSpreadOutOverAllCores( false ),
   _localNumberOfInnerUnrefinedCell( 0 ),
   _globalNumberOfInnerUnrefinedCells( 0 ),
   _lightestRank(-1),
@@ -47,7 +48,8 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
   msg << "(state=" << toString( _state ) 
       << ",global-cell-count=" << _globalNumberOfInnerUnrefinedCells 
       << ",lightest-rank=" << _lightestRank
-      << ",has-spread=" << _hasSpreadOutOverAllRanks 
+      << ",has-spread-over-all-ranks=" << _hasSpreadOutOverAllRanks 
+      << ",has-spread-over-all-cores=" << _hasSpreadOutOverAllCores
       << ",round-robin-token=" << _roundRobinToken 
       << ",target-balacing-ratio=" << _TargetBalancingRatio
       << ",max-tree-weight-at-last-split=" << _maxTreeWeightAtLastSplit
@@ -207,11 +209,16 @@ bool toolbox::loadbalancing::RecursiveSubdivision::doesRankViolateBalancingCondi
   const double threshold = static_cast<double>(_globalNumberOfInnerUnrefinedCells)
                          / tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-  bool result = (static_cast<double>(localCells)-threshold) / threshold > _TargetBalancingRatio;
+  const double illbalancing = (static_cast<double>(localCells)-threshold) / threshold;
+  bool result = illbalancing > 1.0 - _TargetBalancingRatio;
 
   if (result) {
     logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have " << localCells << " cell(s) local with a threshold of " << threshold );
   }
+  else {
+    logDebug( "doesRankViolateBalancingCondition()", "rank is balanced as we have " << localCells << " cell(s) local with a threshold of " << threshold << " (ill-balancing=" << illbalancing << ")" );
+  }
+
 
   return result;
 }
@@ -298,6 +305,8 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
     and
     static_cast<double>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) < tarch::multicore::Core::getInstance().getNumberOfThreads()
+    and
+    not _hasSpreadOutOverAllCores
   ) {
     return StrategyStep::SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning;
   }
@@ -305,8 +314,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
 
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
-    and
-    static_cast<double>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) >= tarch::multicore::Core::getInstance().getNumberOfThreads()
     and
     doesRankViolateBalancingCondition()
     and
@@ -346,7 +353,7 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
   int numberOfSplits     = std::max(1,tarch::multicore::Core::getInstance().getNumberOfThreads()-1);
   int maxSizeOfLocalRank = getWeightOfHeaviestLocalSpacetree();
 
-  int worstCaseEstimateForSizeOfSpacetree = ThreePowerD * tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
+  int worstCaseEstimateForSizeOfSpacetree = tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
   int maxAdditionalSplitsDueToMemory      = tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) / worstCaseEstimateForSizeOfSpacetree;
 
   if (maxAdditionalSplitsDueToMemory==0) {
@@ -363,8 +370,7 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
       "getNumberOfSplitsOnLocalRank(...)", 
        "not sure if additional trees fit on node. Optimal number of splits is " << numberOfSplits << 
        ", With current mem footprint of " << worstCaseEstimateForSizeOfSpacetree << " MByte and free memory of " << 
-       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " we manually reduce split count to " << maxAdditionalSplitsDueToMemory << 
-       " as we want to be able to accommodate one more regular mesh refinement step"
+       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " we manually reduce split count to " << maxAdditionalSplitsDueToMemory 
     );
     numberOfSplits = maxAdditionalSplitsDueToMemory;
   }
@@ -426,6 +432,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
           for (int i=0; i<numberOfSplits; i++) {
             triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());
           }
+
+          _hasSpreadOutOverAllCores = true;
         }
       }
       break;
