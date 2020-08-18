@@ -145,6 +145,9 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * elaborate/detailed and not used by default.
      */
     std::string toString() const;
+
+    bool hasSplitRecently() const;
+
   private:
     /**
      * @see getStrategyStep()
@@ -191,6 +194,13 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     int _globalNumberOfInnerUnrefinedCells;
 
     int _lightestRank;
+
+    int _localNumberOfSplits;
+
+    /**
+     * Lags behind global number by one iteration
+     */
+    int _globalNumberOfSplits;
 
     enum class StrategyState {
       Standard,
@@ -271,6 +281,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     #ifdef Parallel
     MPI_Request*    _globalSumRequest;
     MPI_Request*    _globalLightestRankRequest;
+    MPI_Request*    _globalNumberOfSplitsRequest;
 
     /**
      * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
@@ -284,6 +295,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     int             _globalNumberOfInnerUnrefinedCellsBufferIn;
     ReductionBuffer _lightestRankBufferIn;
     ReductionBuffer _lightestRankBufferOut;
+    int             _globalNumberOfSplitsIn;
     #endif
 
     /**
