@@ -22,7 +22,8 @@ for myH in 0.05 0.01 0.005 0.001
 do
   if [ ! -f "peano4-$myH-baseline" ]
   then
-    python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=$ratio --h=$myH
+    rm *-main.*
+    python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=1.0 --h=$myH
     mv peano4 ./peano4-$myH-baseline
   fi
   mpirun ./peano4-$myH-baseline --threads 1 > Hamilton-baseline-h-$myH.out

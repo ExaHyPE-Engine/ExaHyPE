@@ -3,7 +3,7 @@
 #SBATCH --exclusive
 #SBATCH -p par7.q
 #SBATCH -N 8
-#SBATCH --array=1,5,7,9%1
+#SBATCH --array=1,5,7,9,95%1
 #SBATCH --ntasks-per-node=1
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
@@ -25,6 +25,7 @@ for myH in 0.01 0.005 0.001 0.0005 0.0001
 do
   if [ ! -f "peano4-$myH-$ratio" ]
   then
+    rm *-main.*
     python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=$ratio --h=$myH
     mv peano4 ./peano4-$myH-$ratio
   fi
