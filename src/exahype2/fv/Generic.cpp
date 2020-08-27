@@ -48,7 +48,6 @@ void exahype2::fv::gpu::copyPatch(
   int destinationSerialised = 0;
   for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
     for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
-      std::cout << sourceSerialised << "->" << destinationSerialised << " ";
       for (int i=0; i<unknowns; i++) {
         QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
       }
