@@ -27,6 +27,7 @@ if __name__ == "__main__":
   parser.add_argument("--log", dest="log", help="plot with logarithmic axes", action="store_true" )
   parser.add_argument("--plot-efficiency", dest="plot_efficiency", help="Don't plot raw times but efficiency", action="store_true" )
   parser.add_argument("--group-measurements", type=int, default=0, dest="group_measurements", help="Number of consecutive measurements that belong together" )
+  parser.add_argument("--output", dest="output", help="output file prefix (file name extension is added automatically)", default="" )
   args = parser.parse_args()
   
   open_mode = ""  
@@ -138,7 +139,10 @@ if __name__ == "__main__":
   plt.xticks( xtics, xlabels )
   plt.legend()
   filename = args.file.replace( ".tar.gz", "").replace( ".tar", "" )
-  plt.savefig( filename + ".pdf" )
-  plt.savefig( filename + ".png" )
+  output_file_name = args.output
+  if output_file_name=="":
+      output_file_name = filename
+  plt.savefig( output_file_name + ".pdf" )
+  plt.savefig( output_file_name + ".png" )
   
   tar.close()

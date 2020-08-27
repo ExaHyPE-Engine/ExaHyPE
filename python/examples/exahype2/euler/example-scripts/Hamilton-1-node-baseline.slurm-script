@@ -23,7 +23,7 @@ do
   if [ ! -f "peano4-$myH-baseline" ]
   then
     rm *-main.*
-    python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=1.0 --h=$myH
+    python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --load-balancing-quality=1.0 --h=$myH
     mv peano4 ./peano4-$myH-baseline
   fi
   mpirun ./peano4-$myH-baseline --threads 1 > Hamilton-baseline-h-$myH.out

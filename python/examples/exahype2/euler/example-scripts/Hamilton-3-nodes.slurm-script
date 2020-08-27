@@ -26,10 +26,10 @@ do
   if [ ! -f "peano4-$myH-$ratio" ]
   then
     rm *-main.*
-    python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --trees-per-core=$ratio --h=$myH
+    python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --load-balancing-quality=$ratio --h=$myH
     mv peano4 ./peano4-$myH-$ratio
   fi
-  mpirun ./peano4-$myH-$ratio --threads $SLURM_CPUS_ON_NODE > Hamilton-$SLURM_NTASKS-nodes-trees-per-core-$ratio-h-$myH.out
+  mpirun ./peano4-$myH-$ratio --threads $SLURM_CPUS_ON_NODE  --timeout 365 > Hamilton-$SLURM_NTASKS-nodes-load-balancing-quality-$ratio-h-$myH.out
 done
 
 
