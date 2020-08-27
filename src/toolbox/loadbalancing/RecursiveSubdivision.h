@@ -157,7 +157,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
       SpreadEquallyOverAllRanks,
       SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
       SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning
+      SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning,
+      SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning
     };
 
     static std::string toString( StrategyStep step );
@@ -197,6 +198,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     int _lightestRank;
 
     int _localNumberOfSplits;
+    int _localNumberOfSplitsPreviousStep;
 
     /**
      * Lags behind global number by one iteration
@@ -268,6 +270,24 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * types of lb are not affected). This way, it cannot happen that a high
      * number of ranks all outsource cells to the same ''victim'' in one
      * rush.
+     *
+     * <h2> Stagnation </h2>
+     *
+     * Weird things can happen with our greedy approach: We might have three
+     * heavy trees on our rank which all cover regions that cannot be forked
+     * further (as they have already children or cover boundaries or some 
+     * AMR regions). In this case, it might happen that we rotate through: We
+     * ask tree 1 to split, then tree 2, then 3. Once the split of 3 has 
+     * finished (unsuccessfully), 1 has already left the blacklist. We end up
+     * with a cycle.
+     *
+     * Therefore, we increase the time how long a tree stays on the blacklist
+     * everytime the maximum tree weight has not changed. This way, we avoid
+     * the rotations.
+     *
+     * If everybody is on the blacklist, then we have obviously tried to 
+     * split every tree and it did not really work, so we would like to split 
+     * further, but we have run into a stagnation.
      */
     void updateState();
 
@@ -278,6 +298,11 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      *          I have this value available when I call the function anyway.
      */
     int getNumberOfSplitsOnLocalRank() const;
+
+    /**
+     * Ensure enough memory is left-over.
+     */
+    bool canSplitLocally() const;
 
     #ifdef Parallel
     MPI_Request*    _globalSumRequest;
@@ -305,7 +330,14 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     int _roundRobinToken;
 
     int _maxTreeWeightAtLastSplit;
-    int _lastTreeSplit;
+
+    static constexpr int MinBlacklistWeight = 4;
+
+    /**
+     * Encodes the number of iterations we have to wait before we remove a 
+     * split tree from the blacklist again.
+     */
+    int _blacklistWeight;
 };
 
 
