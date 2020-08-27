@@ -50,6 +50,8 @@ bool selectNextAlgorithmicStep() {{
   static bool   haveJustWrittenSnapshot           = false;
   static bool   haveReceivedNoncriticialAssertion = false;
 
+  static bool   addGridSweepWithoutGridRefinementNext = false;
+
   bool          continueToSolve   = true;
   
   if (exahype2::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {{
@@ -64,17 +66,18 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = false;
   }}
   else if (not gridConstructed) {{
-    #ifdef Parallel
-    if (observers::loadBalancer.hasSplitRecently()) {{
+    if (addGridSweepWithoutGridRefinementNext) {{
       logInfo( "selectNextAlgorithmicStep()", "throttle grid construction manually to allow load balancing to catch up" );
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGridButPostponeRefinement )
       );
-      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().setStationarySweeps(0);
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().setStationarySweeps(-2);
     }}
-    else 
-    #endif
-    if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4 ) {{
+    else if ( 
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4
+      and
+      observers::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==observers::StepRepository::Steps::CreateGrid 
+    ) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
       );
@@ -87,6 +90,11 @@ bool selectNextAlgorithmicStep() {{
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGrid )
       );
     }}
+
+    #ifdef Parallel
+    addGridSweepWithoutGridRefinementNext = observers::loadBalancer.hasSplitRecently();
+    #endif
+    
     continueToSolve = true;
   }}
   else {{
