@@ -199,13 +199,15 @@ class Project(object):
     self.__export_constants()
     self.__configure_makefile()
     
-    create_grid       = peano4.solversteps.Step( "CreateGrid", False )
-    init_grid         = peano4.solversteps.Step( "InitGrid", False )
-    plot_solution     = peano4.solversteps.Step( "PlotSolution", False )
-    perform_time_step = peano4.solversteps.Step( "TimeStep", False )
+    create_grid                   = peano4.solversteps.Step( "CreateGrid", False )
+    init_grid                     = peano4.solversteps.Step( "InitGrid", False )
+    create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
+    plot_solution                 = peano4.solversteps.Step( "PlotSolution", False )
+    perform_time_step             = peano4.solversteps.Step( "TimeStep", False )
     
     self._project.solversteps.add_step(create_grid)
     self._project.solversteps.add_step(init_grid)
+    self._project.solversteps.add_step(create_grid_but_postpone_refinement)
     self._project.solversteps.add_step(plot_solution)
     self._project.solversteps.add_step(perform_time_step)
     
@@ -216,9 +218,11 @@ class Project(object):
       solver.add_use_data_statements_to_Peano4_solver_step( plot_solution )
       solver.add_use_data_statements_to_Peano4_solver_step( perform_time_step )
       solver.add_use_data_statements_to_Peano4_solver_step( init_grid )
+      solver.add_use_data_statements_to_Peano4_solver_step( create_grid_but_postpone_refinement )
       
-      solver.add_actions_to_create_grid( create_grid )
-      solver.add_actions_to_create_grid( init_grid )
+      solver.add_actions_to_create_grid( create_grid, evaluate_refinement_criterion=True )
+      solver.add_actions_to_create_grid( init_grid, evaluate_refinement_criterion=False )
+      solver.add_actions_to_create_grid( create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
       solver.add_actions_to_plot_solution( plot_solution )
       solver.add_actions_to_perform_time_step( perform_time_step )
       
@@ -230,12 +234,14 @@ class Project(object):
     self._project.datamodel.add_face(face_label)
     create_grid.use_face(face_label)
     init_grid.use_face(face_label)
+    create_grid_but_postpone_refinement.use_face(face_label)
     plot_solution.use_face(face_label)
     perform_time_step.use_face(face_label)
     
     set_labels_action_set = exahype2.grid.SetLabels()
     create_grid.add_action_set( set_labels_action_set )
     init_grid.add_action_set( set_labels_action_set )
+    create_grid_but_postpone_refinement.add_action_set( set_labels_action_set )
     plot_solution.add_action_set( set_labels_action_set )
     perform_time_step.add_action_set( set_labels_action_set )
     

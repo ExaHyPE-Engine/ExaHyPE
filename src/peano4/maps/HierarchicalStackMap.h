@@ -228,14 +228,16 @@ peano4::maps::HierarchicalStackMap<T>::HierarchicalStackMap():
 
 template <typename T>
 void peano4::maps::HierarchicalStackMap<T>::garbageCollection(int spacetree) {
-  for (auto& p: _data[spacetree]._stackNumberToData) {
-    if (
-      p.second->empty()
-      and
-      not peano4::parallel::Node::isStorageStackNumber(p.first)
-    ) {
-      delete p.second;
-      p.second = new T();
+  if (_data.size()>spacetree) {
+    for (auto& p: _data[spacetree]._stackNumberToData) {
+      if (
+        p.second->empty()
+        and
+        not peano4::parallel::Node::isStorageStackNumber(p.first)
+      ) {
+        delete p.second;
+        p.second = new T();
+      }
     }
   }
 }

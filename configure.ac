@@ -249,58 +249,83 @@ if test "$with_hdf5" = "yes"; then
 fi 
 
 
-#
-# NVIDIA toolchain
-#
-AC_ARG_WITH(nvidia,
-  AC_HELP_STRING([--with-nvidia], [build with the NVIDIA SDK [default=no]]),
-  [ AC_MSG_CHECKING(for nvidia)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);                                nvidia=false ;;
-      *)     AC_MSG_RESULT(build with support for the NVIDIA SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);  nvidia=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for nvidia); AC_MSG_RESULT(no); nvidia=false ])
 
-if test "$with_nvidia" = "yes"; then
+#
+# GPU support
+#
+AC_ARG_ENABLE(gpu,
+  AC_HELP_STRING([--enable-gpu], [build with the GPU support  [default=no,amd,nvidia]]),
+  [ AC_MSG_CHECKING(for gpu)
+    case "${enableval}" in
+      no)        AC_MSG_RESULT(no);                                   gpu=false ;;
+      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support - please ensure that CXXFLAGS and LDFLAGS are properly set and that you configure with OpenMP multithreading);  gpu=nvidia ;;
+      amd)       AC_MSG_RESULT(build with AMD GPU support - please ensure that CXXFLAGS and LDFLAGS are properly set and that you configure with OpenMP multithreading);     gpu=amd ;;
+      *)         AC_MSG_FAILURE([default=no (no gpu)]); gpu=false ;;
+    esac 
+  ],
+  [ AC_MSG_CHECKING(for gpu); AC_MSG_RESULT(no); gpu=false ]
+)
+
+if test "$gpu" == amd; then
+  #AC_DEFINE([UseAMD], [1], [UseAMD])
+  #AC_CHECK_HEADERS([hip/hip_runtime.h],[],[AC_MSG_ERROR([header <hip/hip_runtime.h> not found])])
+  if test "$multithreading" == omp; then
+    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
+  else
+    AC_MSG_FAILURE([AMD GPU support requires OpenMP; reconfigure with omp multithreading]);
+  fi
+fi
+
+if test "$gpu" == nvidia; then
+  if test "$multithreading" == omp; then
+    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
+  else
+    AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
+  fi
+fi
+
+
+
+
+
+
+#
+# Vendor-specific toolchain (logging devices, memory allocation libraries, ...)
+#
+AC_ARG_WITH(toolchain,
+  AC_HELP_STRING([--with-toolchain], [build with vendor-specific toolchain [default=no,intel,nvidia,chrome]]),
+  [ AC_MSG_CHECKING(for toolchain)
+    case "${withval}" in
+      no)        AC_MSG_RESULT(no);                                toolchain=false ;;
+      intel)     AC_MSG_RESULT(build with support for the Intel SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);   toolchain=intel  ;;
+      nvidia)    AC_MSG_RESULT(build with support for the NVIDIA SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);  toolchain=nvidia ;;
+      chrome)    AC_MSG_RESULT(build with logging support for Google Chrome); toolchain=chrome ;;
+      *)         AC_MSG_FAILURE([default=no (no bespoke toolchain)]); toolchain=false ;;
+    esac 
+  ],
+  [ 
+    AC_MSG_CHECKING(for toolchain);
+    AC_MSG_RESULT(no); toolchain=false
+  ]
+)
+
+if test "$toolchain" == intel; then
+  AC_DEFINE([UseIntel], [1], [UseIntel])
+  AC_DEFINE([UseLogService], [ITACLogger], [ITACLogger])
+  AC_CHECK_HEADERS([VT.h],[],[AC_MSG_ERROR([header <VT.h> not found])])
+fi
+
+if test "$toolchain" == nvidia; then
   AC_DEFINE([UseNVIDIA], [1], [UseNVIDIA])
+  AC_DEFINE([UseLogService], [NVTXLogger], [NVTXLogger])
   AC_CHECK_HEADERS([nvToolsExt.h],[],[AC_MSG_ERROR([header <nvToolsExt.h> not found])])
 fi
 
-
-#
-# NVIDIA toolchain
-#
-AC_ARG_WITH(amd,
-  AC_HELP_STRING([--with-amd], [build with the AMD GPU environment (HIP) [default=no]]),
-  [ AC_MSG_CHECKING(for amd)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);                                amd=false ;;
-      *)     AC_MSG_RESULT(build with support for the AMD SDK (HIP) - please ensure that CXXFLAGS and LDFLAGS are properly set);  amd=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for amd); AC_MSG_RESULT(no); amd=false ])
-
-if test "$with_amd" = "yes"; then
-  AC_DEFINE([UseAMD], [1], [UseAMD])
-  AC_CHECK_HEADERS([hip/hip_runtime.h],[],[AC_MSG_ERROR([header <hip/hip_runtime.h> not found])])
+if test "$toolchain" == chrome; then
+  AC_DEFINE([UseLogService], [ChromeTraceFileLogger], [ChromeTraceFileLogger])
 fi
 
 
-#
-# Intel toolchain
-#
-AC_ARG_WITH(intel,
-  AC_HELP_STRING([--with-intel], [build with the Intel SDK [default=no]]),
-  [ AC_MSG_CHECKING(for intel)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);                                intel=false ;;
-      *)     AC_MSG_RESULT(build with support for the Intel SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);  intel=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for intel); AC_MSG_RESULT(no); intel=false ])
-
-if test "$with_intel" = "yes"; then
-  AC_DEFINE([UseIntel], [1], [UseIntel])
-  AC_CHECK_HEADERS([VT.h],[],[AC_MSG_ERROR([header <VT.h> not found])])
-fi
 
 
 #

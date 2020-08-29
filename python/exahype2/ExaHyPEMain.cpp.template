@@ -17,6 +17,7 @@
 #include "observers/StepRepository.h"
 #include "observers/SolverRepository.h"
 #include "observers/CreateGrid.h"
+#include "observers/CreateGridButPostponeRefinement.h"
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
 
@@ -44,10 +45,12 @@ tarch::timing::Measurement   plotMeasurement;
  * @return continues to run
  */
 bool selectNextAlgorithmicStep() {{
-  static bool   gridConstructed   = false;
-  static double nextPlotTimeStamp = FirstPlotTimeStamp;
-  static bool   haveJustWrittenSnapshot = false;
+  static bool   gridConstructed                   = false;
+  static double nextPlotTimeStamp                 = FirstPlotTimeStamp;
+  static bool   haveJustWrittenSnapshot           = false;
   static bool   haveReceivedNoncriticialAssertion = false;
+
+  static bool   addGridSweepWithoutGridRefinementNext = false;
 
   bool          continueToSolve   = true;
   
@@ -63,7 +66,18 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = false;
   }}
   else if (not gridConstructed) {{
-    if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4 ) {{
+    if (addGridSweepWithoutGridRefinementNext) {{
+      logInfo( "selectNextAlgorithmicStep()", "throttle grid construction manually to allow load balancing to catch up" );
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGridButPostponeRefinement )
+      );
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().setStationarySweeps(-2);
+    }}
+    else if ( 
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4
+      and
+      observers::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==observers::StepRepository::Steps::CreateGrid 
+    ) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
       );
@@ -76,6 +90,11 @@ bool selectNextAlgorithmicStep() {{
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGrid )
       );
     }}
+
+    #ifdef Parallel
+    addGridSweepWithoutGridRefinementNext = observers::loadBalancer.hasSplitRecently();
+    #endif
+    
     continueToSolve = true;
   }}
   else {{
@@ -128,6 +147,18 @@ void step() {{
   tarch::timing::Watch  watch( "::", "step()", false );
 
   switch ( stepName ) {{
+    case observers::StepRepository::Steps::CreateGridButPostponeRefinement:
+      {{
+        observers::startGridConstructionStep();
+
+        observers::CreateGridButPostponeRefinement  observer;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        gridConstructionMeasurement.setValue( watch.getCalendarTime() );
+
+        observers::finishGridConstructionStep();
+      }}
+      break;
     case observers::StepRepository::Steps::CreateGrid:
       {{
         observers::startGridConstructionStep();
@@ -197,10 +228,6 @@ void step() {{
       break;
   }}
 }}
-
-
-
-
   
   
 int main(int argc, char** argv) {{

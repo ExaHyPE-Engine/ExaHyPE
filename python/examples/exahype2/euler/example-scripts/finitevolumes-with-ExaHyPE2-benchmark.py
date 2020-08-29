@@ -30,7 +30,7 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("--trees-per-core", dest="trees_per_core", type=float, required=True, help="Target number of trees per core (use 1 without enclaves and something smaller than 1 with enclaves)" )
+parser.add_argument("--load-balancing-quality", dest="load_balancing_quality", type=float, required=True, help="Load balancing quality (something between 0 and 1; 1 is optimal)" )
 parser.add_argument("--h",              dest="h",              type=float, required=True, help="Mesh size" )
 args = parser.parse_args()
 
@@ -60,14 +60,14 @@ project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEncla
   unknowns, time_step_size,
   flux = True,
   ncp  = False,
-  use_gpu = True
+  use_gpu =  False
 ))
 
 
 
 dimensions = 2
 build_mode = peano4.output.CompileMode.Release
-#build_mode = peano4.output.CompileMode.Asserts
+#build_mode = peano4.output.CompileMode.Trace
 
 
 
@@ -85,7 +85,7 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.trees_per_core) + ")" )
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.load_balancing_quality) + ")" )
 
 peano4_project = project.generate_Peano4_project()
 peano4_project.constants.export( "MaxHOfVolume", args.h )

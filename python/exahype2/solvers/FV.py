@@ -134,7 +134,7 @@ class FV(object):
   _AMRTemplate = ""
 
 
-  def add_actions_to_create_grid(self, step):
+  def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
@@ -151,11 +151,12 @@ class FV(object):
       self._guard_adjust_cell,
       self._get_default_includes() + self.get_user_includes()
     ))
-    step.add_action_set( exahype2.grid.AMROnPatch(
-      self._patch,self.AMRTemplate.format(**d),
-      "true", 
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    if evaluate_refinement_criterion:
+      step.add_action_set( exahype2.grid.AMROnPatch(
+        self._patch,self.AMRTemplate.format(**d),
+        "true", 
+        self._get_default_includes() + self.get_user_includes()
+      ))
     pass
   
   
