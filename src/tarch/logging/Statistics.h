@@ -39,7 +39,10 @@ class tarch::logging::Statistics {
     void log( const std::string& identifier, double value, bool disableSampling = false ) {}
     #endif
 
-    void writeToCSV( const std::string& filename = "statistics.csv" );
+    /**
+     * I do append the extension (csv) and a rank identifier myself.
+     */
+    void writeToCSV( std::string  filename = "statistics" );
 
   private:
     static Statistics   _singleton;
