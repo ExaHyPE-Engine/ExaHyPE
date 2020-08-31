@@ -568,8 +568,8 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
             h(2) = h2;
             #endif
 
-            //::exahype2::fv::gpu::copyPatch(
-            ::exahype2::fv::copyPatch(
+            ::exahype2::fv::gpu::copyPatch(
+            //::exahype2::fv::copyPatch(
               reconstructedPatch,
               originalPatch,
               {{NUMBER_OF_UNKNOWNS}},

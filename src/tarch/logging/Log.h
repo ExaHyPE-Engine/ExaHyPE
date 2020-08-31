@@ -19,6 +19,7 @@
 #include <ctime>
 #include <chrono>
 
+#include "config.h"
 
 
 namespace tarch {
@@ -27,6 +28,7 @@ namespace tarch {
     class CommandLineLogger;
     class ChromeTraceFileLogger;
     class NVTXLogger;
+    class ITACLogger;
   }
 }
 
@@ -449,6 +451,7 @@ class tarch::logging::Log {
     #if !defined(UseLogService)
     typedef CommandLineLogger     UseLogService;
     #endif
+
 
     /**
      * Returns the time stamp in nanoseconds.

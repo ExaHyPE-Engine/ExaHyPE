@@ -1,5 +1,6 @@
 #include "Statistics.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/mpi/Rank.h"
 
 #include <fstream>
 
@@ -65,9 +66,15 @@ void tarch::logging::Statistics::log( const std::string& identifier, double valu
 #endif
 
 
-void tarch::logging::Statistics::writeToCSV( const std::string& filename ) {
+void tarch::logging::Statistics::writeToCSV( std::string filename ) {
   #ifdef TrackStatistics
   logDebug( "writeToCSV(string)", "start to dump statistics into file " << filename );
+
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
+    filename += "-rank-" + std::to_string( tarch::mpi::Rank::getInstance().getRank() );
+  }
+
+  filename += ".csv";
 
   std::ofstream file( filename );
   file << "t";

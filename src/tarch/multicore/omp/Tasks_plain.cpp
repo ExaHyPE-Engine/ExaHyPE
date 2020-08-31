@@ -1,6 +1,7 @@
 #include "tarch/Assertions.h"
 #include "../Tasks.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/Tasks.h"
 
 #if defined(SharedOMP) and !defined(LayeredMultitaskingRuntime)
 
@@ -47,12 +48,15 @@ void tarch::multicore::spawnTask(Task*  job) {
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
-  #pragma omp taskloop nogroup priority(StandardPriority)
-  for (int i=0; i<tasks.size(); i++) {
-    while (tasks[i]->run()) {}
-    delete tasks[i];
+  // important, otherwise taskwait synchronises
+  if (not tasks.empty() ) {
+    #pragma omp taskloop nogroup priority(StandardPriority)
+    for (int i=0; i<tasks.size(); i++) {
+      while (tasks[i]->run()) {}
+      delete tasks[i];
+    }
+    #pragma omp taskwait
   }
-  #pragma omp taskwait
 }
 
 
