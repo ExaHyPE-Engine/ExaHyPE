@@ -197,13 +197,20 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     int _lightestRank;
 
+    /**
+     * This is my local accumulator where I keep track of how often I did
+     * split in this iteration. At the end of each iteration, I roll this 
+     * one over into global or send it out. 
+     */
     int _localNumberOfSplits;
-    int _localNumberOfSplitsPreviousStep;
 
     /**
-     * Lags behind global number by one iteration
+     * Lags behind global number by one iteration in an MPI world as data
+     * will arrive with one iteration delay.
      */
     int _globalNumberOfSplits;
+
+    int _numberOfStateUpdatesWithoutAnySplit;
 
     enum class StrategyState {
       Standard,
@@ -322,6 +329,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     ReductionBuffer _lightestRankBufferIn;
     ReductionBuffer _lightestRankBufferOut;
     int             _globalNumberOfSplitsIn;
+    int             _localNumberOfSplitsOut;
     #endif
 
     /**
@@ -338,6 +346,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * split tree from the blacklist again.
      */
     int _blacklistWeight;
+
+    void waitForGlobalStatisticsExchange();
 };
 
 
