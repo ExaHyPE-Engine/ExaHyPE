@@ -94,7 +94,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::waitForGlobalStatisticsExchan
     MPI_Wait( _globalNumberOfSplitsRequest, MPI_STATUS_IGNORE );
 
     if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-      logInfo( "waitForGlobalStatisticsExchange()", "got " << _globalNumberOfSplitsIn );
+      logDebug( "waitForGlobalStatisticsExchange()", "got " << _globalNumberOfSplitsIn );
 
       assertion( _globalNumberOfSplitsIn>=0 );
 
