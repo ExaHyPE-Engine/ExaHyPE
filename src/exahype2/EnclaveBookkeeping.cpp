@@ -6,10 +6,15 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/Tasks.h"
 
+#include "tarch/logging/Statistics.h"
+
 #include <algorithm>
 
 
 tarch::logging::Log  exahype2::EnclaveBookkeeping::_log( "exahype2::EnclaveBookkeeping" );
+
+const std::string exahype2::EnclaveBookkeeping::MemoryAllocationsInLookupTableIdentifier( "exahype2::EnclaveBookkeeping::memory-allocations" );
+const std::string exahype2::EnclaveBookkeeping::LookupMissesIdentifier( "exahype2::EnclaveBookkeeping::lookup-misses" );
 
 
 
@@ -45,6 +50,8 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
   finishedTasksLock.free();
 
   while (not isContained) {
+    ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
+
     bool processedTask = ::tarch::multicore::processPendingTasks(1);
 
     if (not processedTask) {
@@ -90,9 +97,12 @@ void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResu
 
   tarch::multicore::Lock lockFinishedTasks( _finishedTasksSemaphore );
   assertionEquals( _finishedTasks.count(taskNumber),0 );
+  int oldBucketCount = _finishedTasks.bucket_count();
   std::pair<int,double*> newEntry(numberOfResultValues,data);
   _finishedTasks.insert( std::pair<int, std::pair<int,double*> >(taskNumber,newEntry) );
-
+  if (_finishedTasks.bucket_count()>oldBucketCount) {
+    ::tarch::logging::Statistics::getInstance().inc( MemoryAllocationsInLookupTableIdentifier );
+  }
   lockFinishedTasks.free();
 }
 

@@ -112,7 +112,10 @@ class tarch::timing::Watch {
      * (Re)Start the Timer
      *
      * This method starts the timer. Actually, it restarts the time as the
-     * constructor also invokes this operation.
+     * constructor also invokes this operation. You don't have to call start()
+     * after stop(). If you omit another call to start(), you just won't reset
+     * the baseline, i.e. all getXXXTime() calls will still refer to the same
+     * time zero when the Watch has been constructed.
      *
      * @see stopTimer()
      */
@@ -120,12 +123,14 @@ class tarch::timing::Watch {
 
 
     /**
+     * Stop timer
+     *
      * This method stops the timer. You may stop a timer multiple time because
      * the stop does not reset the start time. Please note that all the getters
      * return meaningful results if and only if you call stopTimer().
      */
     void stop();
-
+ 
 
     /**
      * Return CPU Time in Seconds
