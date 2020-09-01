@@ -1,5 +1,6 @@
 #include "Statistics.h"
 #include "tarch/multicore/Lock.h"
+#include "tarch/mpi/Rank.h"
 
 #include <fstream>
 
@@ -18,7 +19,8 @@ tarch::logging::Statistics& tarch::logging::Statistics::getInstance() {
 
 tarch::logging::Statistics::Statistics():
   _minCountInBetweenTwoMeasurements(100),
-  _minTimeInBetweenTwoMeasurements(1.0) {
+  _minTimeInBetweenTwoMeasurements(1.0),
+  _globalWatch( "tarch::logging::Statistics", "Statistics", false) {
 }
 
 
@@ -29,26 +31,30 @@ tarch::logging::Statistics::DataSet::DataSet():
 }
 
 
-double tarch::logging::Statistics::acceptNewData(const std::string& identifier, bool disableSampling) {
+void tarch::logging::Statistics::clear() {
+  _map.clear();
+}
+
+
+bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bool disableSampling) {
   if ( _map.count( identifier )==0 ) {
     _map.insert( std::pair<std::string,DataSet>( identifier, DataSet() ));
   }
 
   _map[identifier]._counter++;
-  bool guard = disableSampling or _map[identifier]._counter>_minCountInBetweenTwoMeasurements;
+  _map[identifier]._watch.stop();
+
+  bool counterGuard = _map[identifier]._counter>_minCountInBetweenTwoMeasurements;
+  bool timerGuard   = _map[identifier]._watch.getCalendarTime() > _minTimeInBetweenTwoMeasurements;
+
+  bool guard = disableSampling or counterGuard or timerGuard;
 
   if (guard) {
-    _map[identifier]._watch.stop();
-    guard  = disableSampling or _map[identifier]._watch.getCalendarTime() > _minTimeInBetweenTwoMeasurements;
-  }
-
-  if (guard) {
-    double result = _map[identifier]._watch.getCalendarTime();
     _map[identifier]._counter = 0;
     _map[identifier]._watch.start();
-    return result;
+    return true;
   }
-  else return 0.0;
+  else return false;
 }
 
 
@@ -56,18 +62,48 @@ double tarch::logging::Statistics::acceptNewData(const std::string& identifier, 
 #ifdef TrackStatistics
 void tarch::logging::Statistics::log( const std::string& identifier, double value, bool disableSampling ) {
   tarch::multicore::Lock lock(_semaphore);
-  double t = acceptNewData(identifier, disableSampling);
-  if (t>0) {
+  if ( acceptNewData(identifier, disableSampling) ) {
+    _globalWatch.stop();
+    double t = _globalWatch.getCalendarTime();
     logDebug( "log(string,double)", identifier << "=" << value );
     _map[identifier]._data.push_back( std::pair<double,double>(t,value) );
+  }
+}
+
+
+void tarch::logging::Statistics::inc( const std::string& identifier, double value, bool disableSampling ) {
+  tarch::multicore::Lock lock(_semaphore);
+
+  _globalWatch.stop();
+  double t = _globalWatch.getCalendarTime();
+
+  if ( _map.count( identifier )==0 ) {
+    _map.insert( std::pair<std::string,DataSet>( identifier, DataSet() ));
+    _map[identifier]._data.push_back( std::pair<double,double>(t,value) );
+    _map[identifier]._data.push_back( std::pair<double,double>(t,value) ); // second one will be updated
+  }
+  else {
+    double newValue = _map[identifier]._data.back().second + value;
+    _map[identifier]._data.back().first  = t;
+    _map[identifier]._data.back().second = newValue;
+
+    if ( acceptNewData(identifier, disableSampling) ) {
+      _map[identifier]._data.push_back( std::pair<double,double>(t,newValue) );
+    }
   }
 }
 #endif
 
 
-void tarch::logging::Statistics::writeToCSV( const std::string& filename ) {
+void tarch::logging::Statistics::writeToCSV( std::string filename ) {
   #ifdef TrackStatistics
   logDebug( "writeToCSV(string)", "start to dump statistics into file " << filename );
+
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
+    filename += "-rank-" + std::to_string( tarch::mpi::Rank::getInstance().getRank() );
+  }
+
+  filename += ".csv";
 
   std::ofstream file( filename );
   file << "t";

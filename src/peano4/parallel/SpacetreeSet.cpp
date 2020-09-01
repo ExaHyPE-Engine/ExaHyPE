@@ -386,7 +386,9 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(pean
     for (auto& worker: parent._hasSplit) {
       const int temporaryOutStackForVertices = Node::getOutputStackNumberForVerticalDataExchange(worker);
       const int sourceStackForVertices       = peano4::grid::PeanoCurve::getInputStackNumber( parent._root );
-      peano4::grid::Spacetree::_vertexStack.getForPush(parent._id,temporaryOutStackForVertices)->clone( *peano4::grid::Spacetree::_vertexStack.getForPop(parent._id,sourceStackForVertices) );
+     // if (peano4::grid::Spacetree::_vertexStack.getForPush(parent._id,temporaryOutStackForVertices)->empty()) {
+        peano4::grid::Spacetree::_vertexStack.getForPush(parent._id,temporaryOutStackForVertices)->clone( *peano4::grid::Spacetree::_vertexStack.getForPop(parent._id,sourceStackForVertices) );
+      //}
 
       streamDataFromSplittingTreeToNewTree( peano4::grid::Spacetree::_vertexStack, parent._id, worker);
 
@@ -610,7 +612,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
       and
       p->getGridStatistics().getNumberOfLocalUnrefinedCells()==0
     )  {
-      logInfo( "traverse(Observer)", "remove empty tree " << p->_id );
+      logInfo( "traverse(Observer)", "remove empty tree " << p->_id << " with master " << p->_masterId);
       deleteAllStacks( observer, p->_id );
       Node::getInstance().deregisterId(p->_id);
 

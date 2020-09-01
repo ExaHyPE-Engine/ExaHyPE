@@ -22,6 +22,12 @@ namespace tarch {
 }
 
 
+/**
+ *
+ * To get the stats right, you might want to invoke the clear() operation 
+ * explicitly when you start up your code. This way, you ensure that the 
+ * internal timer (_globalWatch) is properly initialised.
+ */
 class tarch::logging::Statistics {
   public:
     /**
@@ -35,12 +41,18 @@ class tarch::logging::Statistics {
      */
     #ifdef TrackStatistics
     void log( const std::string& identifier, double value, bool disableSampling = false );
+    void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false );
     #else
     void log( const std::string& identifier, double value, bool disableSampling = false ) {}
+    void inc( const std::string& identifier, double value = 1.0, bool disableSampling = false ) {}
     #endif
 
-    void writeToCSV( const std::string& filename = "statistics.csv" );
+    /**
+     * I do append the extension (csv) and a rank identifier myself.
+     */
+    void writeToCSV( std::string  filename = "statistics" );
 
+    void clear();
   private:
     static Statistics   _singleton;
 
@@ -50,6 +62,8 @@ class tarch::logging::Statistics {
 
     int                   _minCountInBetweenTwoMeasurements;
     double                _minTimeInBetweenTwoMeasurements;
+
+    tarch::timing::Watch  _globalWatch;
 
     struct DataSet {
       tarch::timing::Watch  _watch;
@@ -67,7 +81,7 @@ class tarch::logging::Statistics {
      *
      * @return Something bigger than 0 if new data should be accepted
      */
-    double acceptNewData(const std::string& identifier, bool disableSampling);
+    bool acceptNewData(const std::string& identifier, bool disableSampling);
 };
 
 

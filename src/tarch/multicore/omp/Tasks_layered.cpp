@@ -136,15 +136,14 @@ void tarch::multicore::spawnAndWait(
 ) {
   processPendingTasks(0);
 
-  #pragma omp taskgroup
-  {
+  // important. Otherwise the taskwait synchronises
+  if ( not tasks.empty() ) {
+    #pragma omp taskloop nogroup priority(StandardPriority)
     for (int i=0; i<tasks.size(); i++) {
-      #pragma omp task priority(StandardPriority)
-      {
-        while (tasks[i]->run()) {}
-        delete tasks[i];
-      }
+      while (tasks[i]->run()) {}
+      delete tasks[i];
     }
+    #pragma omp taskwait
   }
 }
 

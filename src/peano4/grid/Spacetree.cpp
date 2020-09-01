@@ -2520,7 +2520,8 @@ bool peano4::grid::Spacetree::maySplit() const {
     and _joinTriggered.empty()
     and _joining.empty()
     and _splitting.empty()
-	and ( _splitTriggered.empty() or _splitTriggered.begin()->second < std::numeric_limits<int>::max() );
+    and _statistics.getNumberOfLocalUnrefinedCells()>0
+    and ( _splitTriggered.empty() or _splitTriggered.begin()->second < std::numeric_limits<int>::max() );
 }
 
 
@@ -2538,7 +2539,7 @@ bool peano4::grid::Spacetree::mayJoinWithMaster() const {
   return
        _spacetreeState==SpacetreeState::Running
 	 and _masterId>=0
-   and _statistics.getStationarySweeps()>NumberOfStationarySweepsToWaitAtLeastTillJoin
+         and _statistics.getStationarySweeps()>NumberOfStationarySweepsToWaitAtLeastTillJoin
 	 and _splitTriggered.empty()
 	 and _splitting.empty()
 	 and _joinTriggered.empty()

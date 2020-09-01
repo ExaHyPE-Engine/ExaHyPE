@@ -9,7 +9,8 @@
 
 
 #include <set>
-#include <map>
+#include <unordered_map>
+#include <string>
 
 
 namespace exahype2 {
@@ -28,6 +29,9 @@ class exahype2::EnclaveBookkeeping {
   private:
     static tarch::logging::Log          _log;
 
+    const static std::string MemoryAllocationsInLookupTableIdentifier;
+    const static std::string LookupMissesIdentifier;
+
     tarch::multicore::BooleanSemaphore  _activeTasksSemaphore;
     tarch::multicore::BooleanSemaphore  _finishedTasksSemaphore;
     std::set<int>                       _activeTaskNumbers;
@@ -36,7 +40,7 @@ class exahype2::EnclaveBookkeeping {
      * Plain map onto ouput array. See lifecycle discussion of EnclaveTask
      * for details.
      */
-    std::map<int, std::pair<int,double*> >       _finishedTasks;
+    std::unordered_map<int, std::pair<int,double*> >       _finishedTasks;
 
     EnclaveBookkeeping() = default;
   public:
