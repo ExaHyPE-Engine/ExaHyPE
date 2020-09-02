@@ -42,6 +42,19 @@ namespace tarch {
    though some of our routines use OpenMP target and thus are developed against
    OpenMP 5.
 
+
+ <h2> Using multithreading (user view) </h2>
+
+ See the guidebook and the configure script's help please. As a summary, it should
+ be sufficient to translate with
+ \code
+ ./configure ... --with-multithreading=xxx
+ \endcode
+
+ You might furthermore want to use particular vendor toolchains or enable GPU
+ support.
+
+
  <h2> Writing your own code with multithreading features </h2>
 
  If you wanna distinguish in your code between multicore and no-multicore variants, 
@@ -60,6 +73,7 @@ and
  implementation chosen. Indeed, Peano 4 itself does not contain any direct
  multithreading library calls. It solely relies on the classes and functions from
  this namespace.
+
 
  <h2> Multicore architecture </h2>
 
@@ -87,6 +101,7 @@ and
  internal synchronisation mechanism. Usually, I use the semaphores through lock
  objects. As they rely on the semaphore implementations, they are generic and work
  for any backend.
+
 
  <h3> Logical task model </h3>
 
@@ -121,6 +136,21 @@ and
  tasks are scheduled via a classic tree-dependency thing), but if they are not I
  will call processPendingTasks() and thus give the runtime the opportunity to
  catch up.
+
+ <h3> Peano's task flow </h3>
+
+ Peano 4 can be read as one big BSP code which spawns additional tasks. That is, the
+ code runs through the mesh with one big parallel for, waits for the for to terminate,
+ and then continues.
+
+ The caveat is that each parallel for might spawn additional tasks.
+ When we wait for the BSP to terminate, these tasks still might linger around (see
+ discussion on spawn mechanisms above).
+ They should backfill the queues when it is appropriate.
+ In one of the subsequent parallel fors, the code will need the outcome of these tasks
+ that have been spawned before.
+ It waits for them and, while it waits, calls processPendingTasks().
+
 
  <h3> Native backends </h3>
 
