@@ -12,6 +12,7 @@
 #include "tarch/la/ScalarOperations.h"
 
 #include "tarch/multicore/multicore.h"
+#include "tarch/mpi/Rank.h"
 
 
 tarch::logging::Log visualisation::input::PeanoTextPatchFileReader::_log( "visualisation::input::PeanoTextPatchFileReader" );
@@ -123,7 +124,7 @@ void visualisation::input::PeanoTextPatchFileReader::parse() {
       }
       if (i==lines.size()) {
         logError( "parse()", "file " << _file << " is corrupt as cell-values for " << variableName << " is not terminated properly. Quit parsing" );
-        exit(-1);
+        tarch::mpi::Rank::abort(-1);
       }
       else {
         parseVariablesDeclaration( _data.size()-1, variableDeclarationLines, variableName, visualisation::data::PeanoDataType::Cell_Values );
@@ -138,7 +139,7 @@ void visualisation::input::PeanoTextPatchFileReader::parse() {
       }
       if (i==lines.size()) {
         logError( "parse()", "file " << _file << " is corrupt as vertex-values for " << variableName << " is not terminated properly. Quit parsing" );
-        exit(-1);
+        tarch::mpi::Rank::abort(-1);
       }
       else {
         parseVariablesDeclaration( _data.size()-1, variableDeclarationLines, variableName, visualisation::data::PeanoDataType::Vertex_Values );
@@ -152,7 +153,7 @@ void visualisation::input::PeanoTextPatchFileReader::parse() {
        logError( "parse()", "error reading data for data set for _dimensions" );
        logError( "parse()", "invalid token: " << tokens[1] );
        logError( "parse()", "have to quit" );
-       exit(-1);
+       tarch::mpi::Rank::abort(-1);
      }
      logDebug( "parse()", "dimensions=" << _dimensions );
     }
@@ -201,7 +202,7 @@ void visualisation::input::PeanoTextPatchFileReader::parseVariablesDeclaration( 
         logError( "parse()", "error reading data for data set for number-of-unknowns" );
         logError( "parse()", "invalid token: " << tokens[1] );
         logError( "parse()", "have to quit" );
-        exit(-1);
+        tarch::mpi::Rank::abort(-1);
       }
 	  }
 	  if (tokens[0]=="number-of-dofs-per-axis") {
@@ -212,7 +213,7 @@ void visualisation::input::PeanoTextPatchFileReader::parseVariablesDeclaration( 
         logError( "parse()", "error reading data for data set for number-of-dofs-per-axis" );
         logError( "parse()", "invalid token: " << tokens[1] );
         logError( "parse()", "have to quit" );
-        exit(-1);
+        tarch::mpi::Rank::abort(-1);
       }
 	  }
 	}
@@ -309,7 +310,7 @@ void visualisation::input::PeanoTextPatchFileReader::parsePatch( int dataSetCoun
           logError( "parsePatch(...)", "error reading data for data set " << dataSetCounter );
           logError( "parsePatch(...)", "invalid token: " << tokens[j+1] );
           logError( "parsePatch(...)", "have to quit" );
-          exit(-1);
+          tarch::mpi::Rank::abort(-1);
         }
       }
     }
@@ -323,7 +324,7 @@ void visualisation::input::PeanoTextPatchFileReader::parsePatch( int dataSetCoun
           logError( "parsePatch(...)", "error reading data for data set " << dataSetCounter );
           logError( "parsePatch(...)", "invalid token: " << tokens[j+1] );
           logError( "parsePatch(...)", "have to quit" );
-          exit(-1);
+          tarch::mpi::Rank::abort(-1);
         }
       }
     }
@@ -392,7 +393,7 @@ void visualisation::input::PeanoTextPatchFileReader::addDataToPatch( int dataSet
       logError( "parsePatch(...)", "error reading data for " << variableName );
       logError( "parsePatch(...)", "invalid value: " << textData[i] );
       logError( "parsePatch(...)", "have to quit" );
-      exit(-1);
+      tarch::mpi::Rank::abort(-1);
     }
   }
 

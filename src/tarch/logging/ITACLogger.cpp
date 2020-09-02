@@ -138,7 +138,7 @@ void tarch::logging::ITACLogger::error(long int timestampNanoseconds, int rank, 
   std::cerr.flush();
 
   close();
-  exit(-1);
+  tarch::mpi::Rank::abort(-1);
 }
 
 

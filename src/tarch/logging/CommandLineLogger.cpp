@@ -238,7 +238,7 @@ void tarch::logging::CommandLineLogger::error(long int timestampNanoseconds, int
     std::cerr.flush();
 
   if (_quitOnError) {
-    exit(-1);
+    tarch::mpi::Rank::abort(-1);
   }
 }
 

@@ -122,7 +122,7 @@ void tarch::mpi::Rank::triggerDeadlockTimeOut(
 
   plotMessageQueues();
 
-  exit(DEADLOCK_EXIT_CODE);
+  abort(DEADLOCK_EXIT_CODE);
 }
 
 
@@ -479,6 +479,6 @@ void tarch::mpi::Rank::abort(int errorCode) {
   #if Parallel
   MPI_Abort(MPI_COMM_WORLD,errorCode);
   #else
-  exit(errorCode);
+  abort();
   #endif
 }
