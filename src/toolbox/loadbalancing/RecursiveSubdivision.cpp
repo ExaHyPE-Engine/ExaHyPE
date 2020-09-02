@@ -262,10 +262,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
   _roundRobinToken++;
   _roundRobinToken = _roundRobinToken % tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-  if ( _maxTreeWeightAtLastSplit == getWeightOfHeaviestLocalSpacetree() and _blacklistWeight < 65536) {
-    _blacklistWeight *= 2;
+  if ( _state == StrategyState::Standard and _maxTreeWeightAtLastSplit == getWeightOfHeaviestLocalSpacetree() and _blacklistWeight < 128) {
+    _blacklistWeight+=2;
   }
-  else if ( _blacklistWeight>MinBlacklistWeight ) {
+  else if ( _state == StrategyState::Standard and _blacklistWeight>MinBlacklistWeight ) {
     _blacklistWeight--;
   }
     
