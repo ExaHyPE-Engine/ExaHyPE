@@ -21,6 +21,7 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/logging/ChromeTraceFileLogger.h"
+#include "tarch/mpi/Rank.h"
 
 
 #include <experimental/filesystem> // or #include <filesystem>
@@ -36,16 +37,16 @@ void createDirectory( const std::string& directory ) {
     !std::experimental::filesystem::is_directory(directory)
     ||
     !std::experimental::filesystem::exists(directory)
-  ) {
-	try {
+ ) {
+    try {
       std::experimental::filesystem::create_directory(directory);
       logInfo( "createDirectory(...)", "created directory " << directory );
-	}
-	catch (std::exception exc) {
+    }
+    catch (std::exception exc) {
       logError( "createDirectory(...)", "failed to create directory " << directory );
       logError( "createDirectory(...)", "error message: " << exc.what() );
-      exit(-1);
-	}
+      tarch::mpi::Rank::abort(-1);
+    }
   }
 }
 

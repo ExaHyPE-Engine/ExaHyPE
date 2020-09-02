@@ -243,7 +243,7 @@ void tarch::logging::ChromeTraceFileLogger::error(   long int timestampMS, int r
     }
 
   if (_quitOnError) {
-    exit(-1);
+    tarch::mpi::Rank::abort(-1);
   }
 }
 
