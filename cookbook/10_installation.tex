@@ -116,13 +116,23 @@ below:
   \texttt{--with-delta} & Configure \Peano\  such that the geometry library
   $\Delta $ is used. Not stable at the moment.
    \\
-  \texttt{--with-nvidia} & Build against the NVIDIA NVTX SDK such that NVIDIA
-  specific logging/tracing becomes available. Ensure that your CXXFLAGS set the
-  right include path\footnote{It is
+  \texttt{--with-toolchain} & Build against a particular vendor toolchain.
+  Currently, I have dedicated support for the NVIDIA NVTX SDK
+  (\texttt{--with-toolchain=nvidia}) providing NVIDIA-specific logging/tracing
+  as well as memory allocation calls---the latter is of use if you use
+  GPUs---and the Intel toolchain (\texttt{--with-toolchain=intel}). The latter
+  in particular links against the ITAC tracing API. I also have support for
+  Google's Chrome browser (\texttt{--with-toolchain=chrome}) which means that
+  traces are written in a way that you can display it in Chrome. Ensure that your CXXFLAGS set the right include path\footnote{It is
   \texttt{CXXFLAGS+=-I/opt/nvidia/nsight-systems/2020.3.1/target-linux-x64/nvtx/include/nvtx3/}
   on my system, e.g.}.
   This is optional.
    \\
+  \texttt{--with-gpu} & Add GPGPU support. Depending on the target, we currently
+  have specialised versions for NVIDIA (\texttt{--with-gpu=nvidia}) and AMD
+  (\texttt{--with-gpu=amd}). For different vendors, you might be required to
+  select particular multithreading models. The AMD and NVIDIA port for example
+  work only with OpenMP.  
  \end{tabular}
 \end{center}
 
