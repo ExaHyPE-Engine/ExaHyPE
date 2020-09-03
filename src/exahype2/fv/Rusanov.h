@@ -118,7 +118,24 @@ namespace exahype2 {
         double                                       Qout[]
       );
 
-
+      /**
+       * <h2> Parallelisation </h2>
+       *
+       * The kernels is a sequence of d nested loops. Each loop can be
+       * parallelised in the same way. I explain it in 2d. The extension
+       * to 3d is straightforward.
+       *
+       * We first loop over the columns. The update of the columns it
+       * embarassingly parallel (parallel for), but every column update
+       * writes into the column left and right of a line. So what we do
+       * is that we split up the outer loop into two loops. One updates
+       * the column tuples (0,1),(2,3),(4,5). The second loop updates
+       * (1,2),(3,4), ... So by splitting up the original loop over the
+       * columns, we have an other loop plus an inner loop running over
+       * all elements of the column which we collapse without any data
+       * races.
+       *
+       */
       template <typename Flux, typename NCP, typename Eigenvalues>
       void applyRusanovToPatch_FaceLoops(
         Flux                                         flux,

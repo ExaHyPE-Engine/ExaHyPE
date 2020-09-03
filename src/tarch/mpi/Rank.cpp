@@ -479,6 +479,6 @@ void tarch::mpi::Rank::abort(int errorCode) {
   #if Parallel
   MPI_Abort(MPI_COMM_WORLD,errorCode);
   #else
-  abort();
+  std::abort();
   #endif
 }
