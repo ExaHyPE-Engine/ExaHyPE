@@ -237,7 +237,6 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
 
   clear( _statistics, _id==0 );
 
-
   if (
     _spacetreeState==SpacetreeState::EmptyRun or _spacetreeState==SpacetreeState::NewFromSplit or _spacetreeState==SpacetreeState::Joining
   ) {
@@ -250,6 +249,7 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
   _splittedCells.clear();
 
   const bool isFirstTraversal = _spacetreeState==SpacetreeState::NewRoot;
+
   GridVertex vertices[TwoPowerD];
   dfor2(k)
     tarch::la::Vector<TwoPowerD,int> adjacentRanks( InvalidRank );
@@ -261,7 +261,7 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
       adjacentRanks,
       false
     );
-    logDebug( "traverse(TraversalObserver)", "create " << vertices[kScalar].toString() );
+    logDebug( "traverse(TraversalObserver)", "create " << vertices[kScalar].toString() << " for tree " << _id );
   enddforx
 
   for (int d=0; d<Dimensions; d++) {
@@ -1659,6 +1659,9 @@ void peano4::grid::Spacetree::descend(
     }
 
     observer.enterCell( createPrunedCellTraversalEvent(enterCellTraversalEvent) );
+
+
+    _statistics.setMinH( tarch::la::min(_statistics.getMinH(),state.getH()) );
 
     //
     // DFS

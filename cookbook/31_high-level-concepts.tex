@@ -1,4 +1,4 @@
-\chapter{Guiding principles}
+\chapter{Guiding principles, high-level concepts and design decisions}
 
 
 \section{Generic structure of a \Peano\  application}
@@ -217,5 +217,20 @@ The following realisation pattern has turned out to be advantageous:
 Irgendwie darf man net 2x traverse aufrufen in meinem Code. Evtl. liegt das aber
 auch am Datenaustausch. Aber ist halt einfach bad smell in meinem Code!
 \end{remark}
+
+ 
+
+\subsection{Global communication}
+
+\Peano\ handles all (multiscale) boundary data transfer and data migration
+within the mesh.
+Everything not tied to the mesh is \emph{not} handled by \Peano.
+That means there's not even a reduction of the grid statistics over MPI.
+We do provide reduction and broadcast features however. 
+If you need these global data, I recommend that you realise all reductions and
+broadcasts in your main rather than inside of the \Peano\ mappers or other
+classes.
+
+
 
  

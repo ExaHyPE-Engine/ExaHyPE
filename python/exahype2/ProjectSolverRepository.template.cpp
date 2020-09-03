@@ -2,15 +2,24 @@
 
 #include <algorithm>
 
+#include "peano4/grid/grid.h"
+#include "peano4/parallel/SpacetreeSet.h"
+
 
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
-
 {%- endfor %}
 
+int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository - statistics exchange tag");
+
+tarch::logging::Log _log( "SolverRepository" );
 
 ::exahype2::RefinementControl  refinementControl;
+
+
+
+peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
 
 {% if LOAD_BALANCER!="" -%}
@@ -118,6 +127,32 @@ void finishGridConstructionStep() {
   {% if LOAD_BALANCER!="" -%}
   loadBalancer.finishStep();
   {% endif %}
+
+  gridStatisticsAfterGridConstruction = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
+  if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
+    for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++ ) {
+      if (rank!=tarch::mpi::Rank::getGlobalMasterRank()) {
+        peano4::grid::GridStatistics rankLocalStats;
+        logDebug( "finishGridConstructionStep()", "receive grid statistics from rank " << rank << " via tag " << statisticsExchangeTag );
+        peano4::grid::GridStatistics::receive(
+          rankLocalStats,
+          rank,
+          statisticsExchangeTag,
+          tarch::mpi::Rank::getInstance().getCommunicator()
+        );
+        gridStatisticsAfterGridConstruction = gridStatisticsAfterGridConstruction + rankLocalStats;
+      }
+    }
+  }
+  else {
+    logDebug( "finishGridConstructionStep()", "send out local statistics " << gridStatisticsAfterGridConstruction.toString() << " to global master via tag " << statisticsExchangeTag );
+    peano4::grid::GridStatistics::send(
+      gridStatisticsAfterGridConstruction,
+      tarch::mpi::Rank::getInstance().getGlobalMasterRank(),
+      statisticsExchangeTag,
+      tarch::mpi::Rank::getInstance().getCommunicator()
+    );
+  }
 }
 
 

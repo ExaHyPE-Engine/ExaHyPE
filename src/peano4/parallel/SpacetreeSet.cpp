@@ -386,9 +386,8 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees(pean
     for (auto& worker: parent._hasSplit) {
       const int temporaryOutStackForVertices = Node::getOutputStackNumberForVerticalDataExchange(worker);
       const int sourceStackForVertices       = peano4::grid::PeanoCurve::getInputStackNumber( parent._root );
-     // if (peano4::grid::Spacetree::_vertexStack.getForPush(parent._id,temporaryOutStackForVertices)->empty()) {
-        peano4::grid::Spacetree::_vertexStack.getForPush(parent._id,temporaryOutStackForVertices)->clone( *peano4::grid::Spacetree::_vertexStack.getForPop(parent._id,sourceStackForVertices) );
-      //}
+      assertion3( peano4::grid::Spacetree::_vertexStack.getForPush(parent._id,temporaryOutStackForVertices)->empty(), parent._id,temporaryOutStackForVertices, sourceStackForVertices);
+      peano4::grid::Spacetree::_vertexStack.getForPush(parent._id,temporaryOutStackForVertices)->clone( *peano4::grid::Spacetree::_vertexStack.getForPop(parent._id,sourceStackForVertices) );
 
       streamDataFromSplittingTreeToNewTree( peano4::grid::Spacetree::_vertexStack, parent._id, worker);
 
@@ -572,10 +571,11 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   _state = SpacetreeSetState::Waiting;
 
   cleanUpTrees(observer);
+
   createNewTrees();
 
   deleteClonedObservers();
- 
+
   logTraceOut( "traverse(TraversalObserver&)" );
 }
 
@@ -605,7 +605,6 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
       deleteAllStacks( observer, p->_id );
       Node::getInstance().deregisterId(p->_id);
       p = _spacetrees.erase(p);
-      p--;
     }
     else if (
       p->mayJoinWithMaster()
@@ -634,7 +633,6 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
       }
 
       p = _spacetrees.erase(p);
-      p--;
     }
     else if (
       p->mayJoinWithMaster()
@@ -685,7 +683,8 @@ peano4::grid::GridStatistics peano4::parallel::SpacetreeSet::getGridStatistics()
       0,  // __numberOfLocalRefinedCells
       0,  // __numberOfRemoteRefinedCells,
       0,  // __stationarySweeps,
-      false
+      false,
+      tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() ) // minH
     );
     logTraceOutWith1Argument( "getGridStatistics()", result.toString() );
     return result;

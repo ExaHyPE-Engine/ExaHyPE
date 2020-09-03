@@ -18,13 +18,9 @@ void peano4::parallel::SpacetreeSet::deleteAllStacks(
   Container& stackContainer,
   int spacetreeId
 ) {
- assertion( Node::getInstance().getRank( spacetreeId ) == tarch::mpi::Rank::getInstance().getRank() );
- std::set< peano4::maps::StackKey > keys = stackContainer.getKeys();
- for (auto& sourceStackKey: keys) {
-   if ( sourceStackKey.first==spacetreeId ) {
-     stackContainer.getForPush(sourceStackKey)->clear();
-   }
- }
+  assertion( Node::getInstance().getRank( spacetreeId ) == tarch::mpi::Rank::getInstance().getRank() );
+  logDebug( "deleteAllStacks()", "delete all stacks of " << spacetreeId );
+  stackContainer.clear(spacetreeId);
 }
 
 
@@ -46,21 +42,32 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
 
     if (
       not stackContainer.holdsStack( master, sourceStack )
-      or
-      not stackContainer.getForPush(worker,destinationStack)->empty()
-	) {
+    ) {
       logDebug(
         "copyDataFromSplittingTreesToNewTrees()",
-        "target stack " << destinationStack << " of tree " << worker << " is already full or source stack is empty, so skip copying"
+        "source stack for target stack " << destinationStack << " is empty, so skip copying"
+      );
+    }
+    else if (
+      not stackContainer.getForPush(worker,destinationStack)->empty()
+    ) {
+      logDebug(
+        "copyDataFromSplittingTreesToNewTrees()",
+        "target stack " << destinationStack << " of tree " << worker << " contains already " << stackContainer.getForPush(worker,destinationStack)->size() << " entries, so skip copying"
       );
     }
     else {
       logDebug(
         "copyDataFromSplittingTreesToNewTrees()",
         "copy stack " << sourceStack << " from tree " << master << " into stack " << destinationStack << " from tree " << worker <<
-        " with a stack size of " << stackContainer.getForPush(master,sourceStack)->size()
+        " with a stack size of " << stackContainer.getForPush(master,sourceStack)->size() << ". Can be done directly as both stacks reside on same machine"
       );
+      assertion4( stackContainer.getForPush(worker,destinationStack)->empty(), master, worker, sourceStack, destinationStack );
       stackContainer.getForPush(worker,destinationStack)->clone( *stackContainer.getForPop(master,sourceStack) );
+    }
+
+    if ( stackContainer.holdsStack( master, sourceStack ) ) {
+      stackContainer.getForPush(master,sourceStack)->clear();
     }
   }
   else if ( sourceRank==tarch::mpi::Rank::getInstance().getRank() ) {
@@ -184,6 +191,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks( Co
          ". Copy " << stackContainer.getForPush(sourceStackKey)->size() << " entries"
       );
 
+      assertion4( stackContainer.getForPush(targetId,targetStack)->empty(), spacetreeId, targetId, sourceStackKey.second, targetStack );
       stackContainer.getForPush(targetId,targetStack)->clone( *stackContainer.getForPop(sourceStackKey) );
 
       #if PeanoDebug>0
@@ -283,6 +291,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks( Cont
          stackContainer.getForPush(sourceStackKey)->toString()
       );
 
+      assertion3( stackContainer.getForPush(sourceStackKey.first,targetStack)->empty(), sourceStackKey.first, sourceStackKey.second, targetStack );
       stackContainer.getForPush(sourceStackKey.first,targetStack)->clone( *stackContainer.getForPush(sourceStackKey) );
       stackContainer.getForPush(sourceStackKey)->clear();
     }

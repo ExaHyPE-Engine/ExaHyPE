@@ -39,7 +39,7 @@ struct peano4::grid::GridStatistics {
 
 
     GridStatistics() {}
-    GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed);
+    GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, tarch::la::Vector<Dimensions,double>  __minH);
 
     int   getNumberOfLocalUnrefinedCells() const;
     void   setNumberOfLocalUnrefinedCells(int value);
@@ -53,6 +53,10 @@ struct peano4::grid::GridStatistics {
     void   setStationarySweeps(int value);
     bool   getCoarseningHasBeenVetoed() const;
     void   setCoarseningHasBeenVetoed(bool value);
+    tarch::la::Vector<Dimensions,double>   getMinH() const;
+    void   setMinH(const tarch::la::Vector<Dimensions,double>& value);
+    double   getMinH(int index) const;
+    void   setMinH(int index, double value);
 
 
 
@@ -109,6 +113,7 @@ struct peano4::grid::GridStatistics {
     int   _numberOfRemoteRefinedCells;
     int   _stationarySweeps;
     bool   _coarseningHasBeenVetoed;
+    tarch::la::Vector<Dimensions,double>   _minH;
 
 
 

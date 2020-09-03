@@ -8,15 +8,18 @@
 
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/CommandLineLogger.h"
-#include "tarch/logging/ChromeTraceFileLogger.h"
 
 
-#if UsedLogService==ChromeTraceFileLogger
+#if UseLogService==ChromeTraceFileLogger
 #include "ChromeTraceFileLogger.h"
 #endif
 
-#if UsedLogService==NVTXLogger
+#if UseLogService==NVTXLogger
 #include "NVTXLogger.h"
+#endif
+
+#if UseLogService==ITACLogger
+#include "ITACLogger.h"
 #endif
 
 

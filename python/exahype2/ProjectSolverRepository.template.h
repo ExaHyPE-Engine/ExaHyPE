@@ -13,6 +13,7 @@
 
 #include "toolbox/loadbalancing/RecursiveSubdivision.h"
 #include "exahype2/RefinementControl.h"
+#include "peano4/grid/GridStatistics.h"
 
 
 {% for item in SOLVERS -%}
@@ -34,6 +35,8 @@
   {% if LOAD_BALANCER!="" -%}
   extern {{LOAD_BALANCER}}              loadBalancer;
   {% endif -%}
+
+  extern peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
 
   double getMinTimeStamp();
