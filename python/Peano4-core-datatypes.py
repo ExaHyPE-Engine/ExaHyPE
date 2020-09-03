@@ -104,6 +104,8 @@ grid_statistics.add_attribute( dastgen2.attributes.Integer( "numberOfRemoteRefin
 grid_statistics.add_attribute( dastgen2.attributes.Integer( "stationarySweeps" ) )
 
 grid_statistics.add_attribute( dastgen2.attributes.Boolean( "coarseningHasBeenVetoed" ) )
+
+grid_statistics.add_attribute( peano4.dastgen2.Peano4DoubleArray( "minH", "Dimensions" ))
   
 grid_statistics.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
 grid_statistics.add_aspect( dastgen2.aspects.MPI() )
