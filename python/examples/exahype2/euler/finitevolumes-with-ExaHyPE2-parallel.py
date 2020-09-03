@@ -75,13 +75,13 @@ build_mode = peano4.output.CompileMode.Asserts
 if dimensions==2:
   project.set_global_simulation_parameters(
     dimensions,  [0.0,0.0],  [1.0,1.0],
-    0.01,           # end time
+    0.001,           # end time
     0.0, 0.001      # snapshots
   )
 else:
   project.set_global_simulation_parameters(
     dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
-    0.01,           # end time
+    0.001,           # end time
     0.0, 0.001      # snapshots
   )
 
@@ -98,15 +98,15 @@ peano4_project = project.generate_Peano4_project()
 if dimensions==2 and build_mode == peano4.output.CompileMode.Release:
   peano4_project.constants.export( "MaxHOfVolume", 0.001 )
 elif dimensions==2:
-  #peano4_project.constants.export( "MaxHOfVolume", 0.01 )
-  peano4_project.constants.export( "MaxHOfVolume", 0.1 )
+  peano4_project.constants.export( "MaxHOfVolume", 0.01 )
+  #peano4_project.constants.export( "MaxHOfVolume", 0.1 )
   #peano4_project.constants.export( "MaxHOfVolume", 0.2 )
 peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
 peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
 peano4_project.output.makefile.set_mode(build_mode)
 peano4_project.generate( throw_away_data_after_generation=True )
-peano4_project.build( number_of_parallel_builds=1 )
+peano4_project.build()
 
 
 
@@ -117,8 +117,8 @@ peano4_project.build( number_of_parallel_builds=1 )
 #
 if build_mode == peano4.output.CompileMode.Asserts:
   success = True
-  if success:
-    success = peano4_project.run( ["--threads", "1"] )
+  #if success:
+  #  success = peano4_project.run( ["--threads", "1"] )
   if success:
     success = peano4_project.run( ["--threads", "2"] )
   if success:
