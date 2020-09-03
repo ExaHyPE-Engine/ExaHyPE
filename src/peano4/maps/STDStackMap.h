@@ -79,6 +79,17 @@ class peano4::maps::STDStackMap {
      */
     void clear();
 
+    /**
+     * With this clear, I have to manually delete all stacks. It is not enough
+     * to call clear(). Clear() usually only resets the size to zero, and we
+     * then wait for the garbage collection to free the actual memory. This
+     * garbage collection however usually leaves all in/out (lets call them
+     * storage) stacks intact, as it knows that we'll gonna use them in the
+     * next sweep - an assumption that's invalid if we delete a tree and
+     * consequently invoke clear(int).
+     */
+    void clear(int spacetree);
+
     std::string toString() const;
 
     /**
@@ -221,14 +232,17 @@ peano4::maps::STDStackMap<T>::~STDStackMap() {
 
 template <typename T>
 void peano4::maps::STDStackMap<T>::garbageCollection(int spacetree) {
+  const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(spacetree);
   for (auto& p: _data) {
-    if (
-      p.first.first==spacetree
-      and
-      p.second->empty()
-      and
-      not peano4::parallel::Node::isStorageStackNumber(p.first.second)
-    ) {
+    bool isCorrectOwner        = p.first.first==localTreeId;
+    bool isEmptyTemporaryStack = isCorrectOwner
+        and
+        p.second->empty()
+        and
+        not peano4::parallel::Node::isStorageStackNumber(p.first.second);
+
+
+    if ( isEmptyTemporaryStack ) {
       logDebug( "garbageCollection(...)", "remove stack " << p.first.first << "x" << p.first.second << ": " << p.second->toString() );
       delete p.second;
       p.second = new T();
@@ -236,6 +250,20 @@ void peano4::maps::STDStackMap<T>::garbageCollection(int spacetree) {
   }
 }
 
+
+template <typename T>
+void peano4::maps::STDStackMap<T>::clear(int spacetree) {
+  const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(spacetree);
+  for (auto& p: _data) {
+    if (
+      p.first.first==localTreeId
+    ) {
+      logDebug( "garbageCollection(...)", "remove stack " << p.first.first << "x" << p.first.second << ": " << p.second->toString() );
+      delete p.second;
+      p.second = new T();
+    }
+  }
+}
 
 #endif
 

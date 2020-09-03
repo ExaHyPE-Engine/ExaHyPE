@@ -66,6 +66,8 @@ class peano4::maps::HierarchicalStackMap {
      */
     void clear();
 
+    void clear(int spacetree);
+
     /**
      * Get the stack belonging to a tree.
      *
@@ -119,8 +121,8 @@ void peano4::maps::HierarchicalStackMap<T>::createStack(int localTreeNumber, int
     _data[localTreeNumber]._stackNumberToData.insert(
       std::pair< int, T* >(
         stackNumber,
-		new T()
-	  )
+        new T()
+      )
     );
   }
 }
@@ -213,9 +215,9 @@ std::set<peano4::maps::StackKey>  peano4::maps::HierarchicalStackMap<T>::getKeys
 template <typename T>
 peano4::maps::HierarchicalStackMap<T>::~HierarchicalStackMap() {
   for (auto& p: _data) {
-	for (auto& pp: p._stackNumberToData) {
-	  delete pp.second;
-	}
+    for (auto& pp: p._stackNumberToData) {
+      delete pp.second;
+    }
   }
 }
 
@@ -228,8 +230,9 @@ peano4::maps::HierarchicalStackMap<T>::HierarchicalStackMap():
 
 template <typename T>
 void peano4::maps::HierarchicalStackMap<T>::garbageCollection(int spacetree) {
-  if (_data.size()>spacetree) {
-    for (auto& p: _data[spacetree]._stackNumberToData) {
+  const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(spacetree);
+  if (_data.size()>localTreeId) {
+    for (auto& p: _data[localTreeId]._stackNumberToData) {
       if (
         p.second->empty()
         and
@@ -255,4 +258,21 @@ void peano4::maps::HierarchicalStackMap<T>::clear() {
   }
 }
 
+
+template <typename T>
+void peano4::maps::HierarchicalStackMap<T>::clear(int spacetree) {
+  // @todo Ist auf STD Map nicht nachgezogen
+  const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(spacetree);
+  std::cout << "in (b.1)" << std::endl;
+  if (_data.size()>localTreeId) {
+    std::cout << "in (b.2): " << _data[localTreeId]._stackNumberToData.size() << std::endl;
+    for (auto& p: _data[localTreeId]._stackNumberToData) {
+      std::cout << "delete stack " << p.first << " of tree " << spacetree << " (local id=" << localTreeId << ")" << std::endl;
+      delete p.second;
+      p.second = new T();
+    }
+    std::cout << "out (b.2)" << std::endl;
+  }
+  std::cout << "out (b.1)" << std::endl;
+}
 #endif
