@@ -175,6 +175,42 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * in a parallel sense. It has to be idempotent, as I indeed have to call it twice
      * in a distributed memory environment: I have to call it on the receiver side and
      * on the sender side.
+     *
+     * <h2> Data ownership </h2>
+     *
+     * The routine solely accesses vertical/stream stacks, i.e. checks
+     * getOutputStackNumberForVerticalDataExchange(). That is, we assume that all data
+     * are ready to be streamed out. For user data, the spacetree's
+     * peano4::grid::Spacetree::sendUserData() will deposit all outgoing user data in
+     * the respective output buffers. That is, by the time we hit
+     * streamDataFromSplittingTreeToNewTree(), all user data is already in a (temporary)
+     * output stream. For the actual tree data, we have to deposit it there manually.
+     * This happens in
+     * peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees().
+     *
+     *
+     * If we send out data via MPI, I assume that the data resides within a bespoke
+     * buffer. tryToFinishSendOrReceive() after all clears the buffer once it has gone
+     * out. So it is kind of safe to deposit data in a temporary buffer once. The send
+     * implicitly will clear it. After that, the garbage collection will eventually
+     * really free the underlying memory.
+     *
+     * If the target tree and the destination tree reside on the same rank, this routine
+     * does a plain copy-over. In this case, we have to delete the (temporary) stack that
+     * is used to stream out stuff after the copy. Otherwise, it will be dead memory in
+     * the code. Even worse, should the source tree later on stream once again to the
+     * same tree - as the tree meanwhile has degenerated or fused back into the master
+     * code - then we get a memory corruption as you can't clone into an existing stack.
+     *
+     * In peano4::parallel::SpacetreeSet::streamDataFromSplittingTreesToNewTrees() we
+     * might copy data multiple times if we immediately erase it after the clone.
+     * Therefore, I check per call (the function is called twice) whether the target
+     * buffer is empty. If so, I copy over. In any case, teh source buffer is deleted
+     * if it is not empty - even though I have not cloned it in the second step. This
+     * is kind of a hack, but no better one comes to my mind. The whole discussion is
+     * not relevant for inter-rank communication as we know that the buffer won't
+     * be deleted before the data has not been sent out - which is only once for the
+     * whole cycle.
      */
     template <class Container>
     static void streamDataFromSplittingTreeToNewTree( Container& stackContainer, int master, int worker );
@@ -288,38 +324,20 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * return for the stuff it will receive in the next iteration. Therefore, the new
      * worker will do two additional grid traversal after this copying has terminated.
      *
-     * Streaming/copying here means two different things: We treat user and grid (vertex)
-     * data differently.
-     *
-     *
      * <h2> Vertex grid data </h2>
      *
      * The copying of the whole tree data is literally a copying of the output stack of
-     * the master. It happens after the master has finished its joining traversal.
+     * the master. It happens after the master has finished its splitting traversal.
      * peano4::grid::Spacetree::traverse() does invert the traversal direction in an
      * epilogue automatically. Therefore, by the time we hit this routine, we have to
-     * copy over the input stack.
+     * copy over the input stack - it is already in the right order for the "counter"-
+     * traversal.
      *
      * We always have to invoke the data exchange for both the master and the worker, i.e.
      * we call it twice. This way, we invoke the data exchange on the destination rank
      * (MPI receive) and on the source rank (MPI send). For a single-node split, the
      * second invocation degenerates to nop automatically. See streamDataFromSplittingTreeToNewTree()
      * which implements a simple emptyness check.
-     *
-     * <h2> User data </h2>
-     *
-     * While it makes sense to copy the whole vertex data, i.e. the whole tree structure,
-     * to the new worker, this approach is not good for the new worker. Coyping the
-     * whole tree means the worker knows all the stuff about connectivity et al and then
-     * successively can coarsen those mesh parts that it si not interested in. When I
-     * had a first prototype up that also copied all user data, I alway ran out of
-     * memory. Therefore, user data is copied only for local elements. We may assume
-     * that the code has already copied all outgoing data into the right stack. We "just"
-     * have to copy this very stack over.
-     *
-     * See the routine peano4::grid::Spacetree::sendUserData() for an explanation how
-     * user data is effectively streamed out.
-     *
      *
      * @see streamDataFromSplittingTreeToNewTree()
      */
