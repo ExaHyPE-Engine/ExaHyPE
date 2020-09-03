@@ -683,7 +683,8 @@ peano4::grid::GridStatistics peano4::parallel::SpacetreeSet::getGridStatistics()
       0,  // __numberOfLocalRefinedCells
       0,  // __numberOfRemoteRefinedCells,
       0,  // __stationarySweeps,
-      false
+      false,
+      tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() ) // minH
     );
     logTraceOutWith1Argument( "getGridStatistics()", result.toString() );
     return result;
