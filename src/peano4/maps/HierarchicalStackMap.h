@@ -261,18 +261,12 @@ void peano4::maps::HierarchicalStackMap<T>::clear() {
 
 template <typename T>
 void peano4::maps::HierarchicalStackMap<T>::clear(int spacetree) {
-  // @todo Ist auf STD Map nicht nachgezogen
   const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(spacetree);
-  std::cout << "in (b.1)" << std::endl;
   if (_data.size()>localTreeId) {
-    std::cout << "in (b.2): " << _data[localTreeId]._stackNumberToData.size() << std::endl;
     for (auto& p: _data[localTreeId]._stackNumberToData) {
-      std::cout << "delete stack " << p.first << " of tree " << spacetree << " (local id=" << localTreeId << ")" << std::endl;
       delete p.second;
       p.second = new T();
     }
-    std::cout << "out (b.2)" << std::endl;
   }
-  std::cout << "out (b.1)" << std::endl;
 }
 #endif

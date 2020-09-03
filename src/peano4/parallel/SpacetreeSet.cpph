@@ -57,8 +57,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
       );
     }
     else {
-      // @todo Debug
-      logInfo(
+      logDebug(
         "copyDataFromSplittingTreesToNewTrees()",
         "copy stack " << sourceStack << " from tree " << master << " into stack " << destinationStack << " from tree " << worker <<
         " with a stack size of " << stackContainer.getForPush(master,sourceStack)->size() << ". Can be done directly as both stacks reside on same machine"
