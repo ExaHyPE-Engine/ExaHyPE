@@ -408,7 +408,9 @@ class tarch::mpi::Rank {
 
     /**
      * A proper abort in an MPI context has to use MPI_Abort. Otherwise, only the
-     * current rank goes down.
+     * current rank goes down. Without MPI, I have to call abort(). With an exit()
+     * call, I found that the TBB runtime for example tends to hang as it tries to
+     * tidy up. I don't want any tidying up. I want termination.
      */
     static void abort(int errorCode);
 };
