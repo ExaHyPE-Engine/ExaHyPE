@@ -179,6 +179,16 @@ tarch::logging::LogFilter::getInstance().printFilterListToCout();
   not get any error reports. If you do, we have had serious problems as some of
   Peano's classes use \texttt{MPI\_C\_BOOL} or \texttt{MPI\_CXX\_BOOL}. They
   seem not be supported properly.
+  \item \textbf{I get a timeout but \Peano\ claims that there are still
+  messages in the MPI queue. How do I know what certain MPI messages tags
+  mean?} All tags used in \Peano\ are registered through the operation 
+  \texttt{tarch::mpi::Rank::reserveFreeTag}. If you translate with any positive
+  value of \texttt{PeanoDebug} (the trace, debug and assert library variants of
+  \Peano\ do so, e.g.) then you get a list of tag semantics at startup. These
+  lists are the same as the ones you use in release mode, i.e.~when this
+  information is not dumped. Please note that the info goes straight to cout,
+  i.e.~you can't filter it. That's because the tag allocation usually happens
+  before our logging landscape is up and configured properly.
   \item To be continued \dots
 \end{itemize}
 
