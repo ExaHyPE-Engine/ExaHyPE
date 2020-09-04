@@ -50,8 +50,6 @@ bool selectNextAlgorithmicStep() {{
   static bool   haveJustWrittenSnapshot                     = false;
   static bool   haveReceivedNoncriticialAssertion           = false;
   static bool   addGridSweepWithoutGridRefinementNext       = false;
-  static int    numberOfIterationsWithoutFurtherRefinement  = 0;
-  static tarch::la::Vector<Dimensions,double>  minH   = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
 
   bool          continueToSolve   = true;
   
@@ -67,23 +65,14 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = false;
   }}
   else if (not gridConstructed) {{
-    if ( tarch::la::allSmallerEquals( minH, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) ) {{
-      numberOfIterationsWithoutFurtherRefinement++;
-    }}
-    else {{
-      numberOfIterationsWithoutFurtherRefinement = 0;
-    }}
-    minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
-    
     if (addGridSweepWithoutGridRefinementNext) {{
       logInfo( "selectNextAlgorithmicStep()", "throttle grid construction manually to allow load balancing to catch up" );
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGridButPostponeRefinement )
       );
-      numberOfIterationsWithoutFurtherRefinement = 0;
     }}
     else if ( 
-      numberOfIterationsWithoutFurtherRefinement>=3
+      tarch::la::allSmallerEquals( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH(), MaxH )  
       and
       observers::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==observers::StepRepository::Steps::CreateGrid 
     ) {{
