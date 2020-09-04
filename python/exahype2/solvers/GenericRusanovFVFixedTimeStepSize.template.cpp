@@ -13,9 +13,11 @@ tarch::logging::Log   {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNA
 ) {{
   logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  if (tarch::la::equals(t,0.0) and tarch::la::max(h)>1.0/3.0 ) {{
+
+  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {{
     result = ::exahype2::RefinementCommand::Refine;
   }}
+
   logTraceOutWith1Argument( "refinementCriterion(...)", toString(result) );
   return result;
 }}

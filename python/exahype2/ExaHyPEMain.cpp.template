@@ -72,11 +72,23 @@ bool selectNextAlgorithmicStep() {{
       );
     }}
     else if ( 
-      tarch::la::allSmallerEquals( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH(), MaxH )  
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4
       and
       observers::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==observers::StepRepository::Steps::CreateGrid 
     ) {{
-      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << minH << " reached" );
+      logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for a while, so continue with solve"  );
+      
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
+      );
+
+      assertionNumericalEquals( observers::getMinTimeStamp(), 0.0 );
+      gridConstructed = true;
+    }}
+    else if ( 
+      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < observers::getMinMeshSize()
+    ) {{
+      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << observers::getMinMeshSize() << " reached" );
       
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )

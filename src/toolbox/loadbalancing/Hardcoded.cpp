@@ -79,3 +79,7 @@ void toolbox::loadbalancing::Hardcoded::dumpStatistics() {
 void toolbox::loadbalancing::Hardcoded::finishSimulation() {
 }
 
+
+bool toolbox::loadbalancing::Hardcoded::hasSplitRecently() const {
+  return not _splits.empty();
+}

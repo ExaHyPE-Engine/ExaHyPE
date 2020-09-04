@@ -16,10 +16,18 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
   logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
+    if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {{
+    result = ::exahype2::RefinementCommand::Refine;
+  }}
+
+
+
+  /*
   if (tarch::la::equals(t,0.0) and tarch::la::max(h)>MaxHOfVolume) {
     result = ::exahype2::RefinementCommand::Refine;
     logDebug( "refinementCriterion(...)", "refine as mesh width is only " << tarch::la::max(h) << " as compared to " << MaxHOfVolume );
   }
+  */
 
   logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;

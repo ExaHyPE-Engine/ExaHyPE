@@ -11,6 +11,7 @@
 
 
 
+#include "toolbox/loadbalancing/NoLoadBalancing.h"
 #include "toolbox/loadbalancing/RecursiveSubdivision.h"
 #include "exahype2/RefinementControl.h"
 #include "peano4/grid/GridStatistics.h"
@@ -34,6 +35,8 @@
 
   {% if LOAD_BALANCER!="" -%}
   extern {{LOAD_BALANCER}}              loadBalancer;
+  {% else -%}
+  extern toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
   {% endif -%}
 
   extern peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
@@ -43,6 +46,8 @@
   double getMaxTimeStamp();
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
+  double getMinMeshSize();
+  double getMaxMeshSize();
 
   void startGridConstructionStep();
   void startGridInitialisationStep();

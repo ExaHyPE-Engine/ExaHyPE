@@ -57,6 +57,9 @@ class toolbox::loadbalancing::Hardcoded {
      * I need the stats here mainly for debugging purposes.
      */
     void dumpStatistics();
+
+    bool hasSplitRecently() const;
+
   private:
     static tarch::logging::Log  _log;
 

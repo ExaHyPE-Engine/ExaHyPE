@@ -12,7 +12,9 @@
 
 #
 # We import Peano4 as project. If this step fails, ensure that your environment
-# variable PYTHONPATH points to Peano4's python directory.
+# variable PYTHONPATH points to Peano4's python directory. Typically, I do
+#
+# export PYTHONPATH=../../../python
 #
 import os
 import peano4
@@ -74,7 +76,7 @@ else:
 
 peano4_project = project.generate_Peano4_project()
 peano4_project.constants.export( "MaxHOfVolume", 0.1 )
-peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
+peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
 peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
 peano4_project.output.makefile.set_mode(build_mode)
 peano4_project.generate(peano4.output.Overwrite.Default)
@@ -84,6 +86,6 @@ success = peano4_project.run( [] )
 
 if success:
   convert = peano4.visualisation.Convert( "solutionEuler", True )
-  convert.set_visualisation_tools_path( "../../../../src/visualisation" )
+  convert.set_visualisation_tools_path( "../../../src/visualisation" )
   convert.extract_fine_grid()
   convert.convert_to_vtk()
