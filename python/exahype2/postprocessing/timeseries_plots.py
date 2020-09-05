@@ -9,9 +9,10 @@ def plot_time_per_time_step(performance_data):
   
   if len(performance_data.plotting_time_stamp)>0:
     max_time_per_time_step = max(performance_data.get_time_per_time_step())
+    min_time_per_time_step = min(performance_data.get_time_per_time_step())
     for i in performance_data.plotting_time_stamp:
-      plt.plot( [i,i], [0,max_time_per_time_step], "--", color="#000000"  )
-    plt.plot( [performance_data.plotting_time_stamp[0],performance_data.plotting_time_stamp[0]], [0,max_time_per_time_step], "--", color="#000000", label="plot"  )
+      plt.plot( [i,i], [min_time_per_time_step,max_time_per_time_step], "--", color="#000000"  )
+    plt.plot( [performance_data.plotting_time_stamp[0],performance_data.plotting_time_stamp[0]], [min_time_per_time_step,max_time_per_time_step], "--", color="#000000", label="plot"  )
     
   plt.xlabel( "Simulation time [t]=s" )
   plt.ylabel( "Time per step [t]=s" )

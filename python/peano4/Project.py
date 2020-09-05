@@ -73,7 +73,11 @@ class Project (object):
       effectively reducing the translation capabilities (as compilers
       tend to require a lot of memory, too). So pass in True if you 
       want the script to throw away the data structures (and run a 
-      garbage collection) after all files have been generated.
+      garbage collection) after all files have been generated. Please
+      note that it invalidates both this object (and maybe another 
+      object that you've used to generate the present one - such as 
+      ExaHyPE). It really strips everything down to the stuff you 
+      absolutely need to translate and run the code.
       
     """
     print( "generate all code ..." )
