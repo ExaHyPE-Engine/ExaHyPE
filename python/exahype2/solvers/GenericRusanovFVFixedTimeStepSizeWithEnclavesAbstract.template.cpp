@@ -5,8 +5,20 @@
 {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}():
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
   _timeStamp(0.0),
-  _solverState(SolverState::GridConstruction)
+  _solverState(SolverState::GridConstruction),
+  _maxH({{MAX_H}}),
+  _minH({{MIN_H}})
   {
+}
+
+
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMinMeshSize() const {
+  return _minH;
+}
+
+
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMaxMeshSize() const {
+  return _maxH;
 }
 
 

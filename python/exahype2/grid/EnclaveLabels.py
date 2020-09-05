@@ -4,7 +4,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import dastgen2
 import peano4.datamodel.DaStGen2
-from numpy.dual import solve
+
 
 def create_enclave_cell_label(solver_name):
   """

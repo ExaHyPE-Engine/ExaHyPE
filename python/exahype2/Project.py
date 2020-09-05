@@ -136,8 +136,13 @@ class Project(object):
   def add_solver(self,solver):
     self._solvers.append( solver )
 
+  
+  def remove_all_solvers(self):
+    self._solvers = []
+    
 
   def __export_constants(self):
+    self._project.constants.clear()
     offset_string = "{" + str(self._domain_offset[0])
     size_string   = "{" + str(self._domain_size[0])
     for i in range(1,self._dimensions):
@@ -227,12 +232,14 @@ class Project(object):
     plot_solution                 = peano4.solversteps.Step( "PlotSolution", False )
     perform_time_step             = peano4.solversteps.Step( "TimeStep", False )
     
+    self._project.cleanup()
+    
     self._project.solversteps.add_step(create_grid)
     self._project.solversteps.add_step(init_grid)
     self._project.solversteps.add_step(create_grid_but_postpone_refinement)
     self._project.solversteps.add_step(plot_solution)
     self._project.solversteps.add_step(perform_time_step)
-    
+   
     for solver in self._solvers:
       solver.add_to_Peano4_datamodel( self._project.datamodel )
       

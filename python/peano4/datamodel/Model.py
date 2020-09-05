@@ -12,17 +12,21 @@ class Model(object):
     self.namespace   = namespace
     self.generator   = ModelToDataRepository(self)
 
+
   def add_cell(self,submodel):
     submodel.configure(self.namespace, DoFAssociation.Cell)
     self.cell_data.append(submodel)
+
 
   def add_face(self,submodel):
     submodel.configure(self.namespace, DoFAssociation.Face)
     self.face_data.append(submodel)
 
+
   def add_vertex(self,submodel):
     submodel.configure(self.namespace, DoFAssociation.Vertex)
     self.vertex_data.append(submodel)
+
 
   def construct_output(self,output):
     for i in self.cell_data:
@@ -33,6 +37,12 @@ class Model(object):
       i.generator.construct_output(output)
     self.generator.construct_output(output)
 
+
+  def clear(self):
+    self.cell_data   = []
+    self.face_data   = []
+    self.vertex_data = []
+    
 
 
 

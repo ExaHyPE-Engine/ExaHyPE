@@ -26,10 +26,10 @@ class Constants(object):
   """
   default_overwrite = True
    
+   
   def __init__(self,project):
     self.defines = []
     self.d = {}
-    
     self.d[ "ADD_CONSTANTS" ]            = ""
 
     self.d[ "OPEN_NAMESPACE" ]           = ""
@@ -43,6 +43,8 @@ class Constants(object):
 
     self.d[ "INCLUDE_GUARD" ] = self.d[ "INCLUDE_GUARD" ].upper()
     
+    
+    
   def export( self, name, value ):
     """
       Tell the C++ code underlying the project that a certain variable with a 
@@ -54,7 +56,11 @@ class Constants(object):
     new_entry = "constexpr auto " + str(name) + " = " + str(value) + ";"
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
-
+  
+  
+  def clear(self):
+    self.d[ "ADD_CONSTANTS" ]            = ""
+    pass
 
   def export_boolean( self, name, value ):
     new_entry = "constexpr bool " + name + " = "

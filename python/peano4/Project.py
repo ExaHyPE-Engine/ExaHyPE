@@ -14,6 +14,7 @@ import multiprocessing
 import gc
 
 
+
 class Project (object):
   """ 
   Represents a Peano 4 project.
@@ -55,6 +56,17 @@ class Project (object):
     self.build_was_successful = False
     
     self.constants  = peano4.output.Constants(self)
+
+
+  def cleanup(self):
+    """
+      This routine has to be called after you've generated your code.
+    """
+    self.is_generated = False
+    self.is_built     = False
+    
+    self.datamodel.clear()       
+    self.solversteps.clear()
 
     
   def generate(self, overwrite=peano4.output.Overwrite.Default, throw_away_data_after_generation=False):

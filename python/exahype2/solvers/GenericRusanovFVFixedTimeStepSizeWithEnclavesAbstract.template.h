@@ -162,12 +162,17 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
      {% endif %}
 
+    double getMaxMeshSize() const;
+    double getMinMeshSize() const;
   protected:
     const int  _NumberOfFiniteVolumesPerAxisPerPatch;
 
     double     _timeStamp;
 
     SolverState  _solverState;
+
+    double     _maxH;
+    double     _minH;
 };
 
 

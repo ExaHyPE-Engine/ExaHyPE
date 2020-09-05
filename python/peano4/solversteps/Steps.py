@@ -15,12 +15,19 @@ class Steps(object):
     self._namespace   = project.namespace
     self.generator = StepsToStepRepository(self)
     
+    
   def add_step(self,step):
     step.set_project(self._project)
     self._steps.append(step)
+    
     
   def construct_output(self,output):
     for step in self._steps:
       step.construct_output(output)
     self.generator.construct_output(output)
+    
+
+  def clear(self):
+    self._steps = []
+    self.generator = StepsToStepRepository(self)
       
