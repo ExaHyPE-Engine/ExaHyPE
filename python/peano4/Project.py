@@ -101,7 +101,7 @@ class Project (object):
       print( "threw away all data and ran garbage collection" )
 
       
-  def build(self, make_clean_first=True, additional_libraries = [], number_of_parallel_builds = -1):
+  def build(self, make_clean_first=True, number_of_parallel_builds = -1, additional_libraries = []):
     """
       Invokes the underlying make/C build mechanism on the project. 
       We invoke the make command via a subprocess. That's it.
@@ -131,7 +131,7 @@ class Project (object):
         print( "clean failed (" + str(e) + ") - continue anyway" )
 
     if not self.is_built:
-      print( "start to compile ..." )
+      print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + "..." )
       try:
         subprocess.check_call(["make", "-j"+str(number_of_parallel_builds)])
         print( "compile complete" )
@@ -145,7 +145,7 @@ class Project (object):
       print( "can not build as code generation has not been successful" )
   
   
-  def run(self, args, prefix=None):
+  def run(self, args, prefix=None, pipefile=None, rebuild_if_required=True):
     """
     Runs the code. args should be a list of strings or the empty list.
     prefix is an array, too. A typical invocation looks alike
@@ -154,12 +154,14 @@ class Project (object):
     
     The operation returns True if the run had been successful
 
+    pipefile: string or None
+
     """
     result = False
-    if not self.is_built and not self.self.build_was_successful:
+    if rebuild_if_required and not self.is_built and not self.build_was_successful:
       self.build()
       
-    if self.is_built and self.build_was_successful:
+    if not rebuild_if_required or (self.is_built and self.build_was_successful):
       print( "run application ..." )
 
       invocation  = []
@@ -167,8 +169,13 @@ class Project (object):
         invocation += prefix
       invocation += [ "./peano4" ]
       invocation += args
+
       try:
-        subprocess.check_call( invocation )
+        if pipefile==None:
+          subprocess.check_call( invocation )
+        else:
+          subprocess.check_call( invocation, stdout=open( pipefile, "w" ) )
+          
         print( "run complete" )
         result = True
       except Exception as e:

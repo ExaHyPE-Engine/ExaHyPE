@@ -76,7 +76,7 @@ bool selectNextAlgorithmicStep() {{
       and
       observers::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==observers::StepRepository::Steps::CreateGrid 
     ) {{
-      logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for a while, so continue with solve"  );
+      logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for a while, so continue with solve. Finest mesh resolution is" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()  );
       
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
