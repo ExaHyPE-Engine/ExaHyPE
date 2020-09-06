@@ -15,7 +15,9 @@ import jinja2
 
 
 class AbstractGenericRusanovFV( FV ):
-  __User_Defined = "<user-defined>"
+  User_Defined_Implementation = "<user-defined>"
+  Empty_Implementation = "<empty>"
+
   __None         = "<none>"
 
   def __init__(self, name, patch_size, unknowns, min_h, max_h, flux, ncp, plot_grid_properties):
@@ -41,22 +43,28 @@ class AbstractGenericRusanovFV( FV ):
       print( "Error: No handle cell template available for this combination of PDE terms" )
          
     if flux:
-      self._flux_implementation        = self.__User_Defined
+      self._flux_implementation        = self.User_Defined_Implementation
     else:
       self._flux_implementation        = self.__None
 
     if ncp:
-      self._ncp_implementation         = self.__User_Defined
+      self._ncp_implementation         = self.User_Defined_Implementation
     else:
       self._ncp_implementation         = self.__None
       
-    self._eigenvalues_implementation                = self.__User_Defined
-    self._boundary_conditions_implementation        = self.__User_Defined
-    self._refinement_criterion_implementation       = self.__User_Defined
-    self._initial_conditions_implementation         = self.__User_Defined
+    self._eigenvalues_implementation                = self.User_Defined_Implementation
+    self._boundary_conditions_implementation        = self.User_Defined_Implementation
+    self._refinement_criterion_implementation       = self.User_Defined_Implementation
+    self._initial_conditions_implementation         = self.User_Defined_Implementation
 
   
-  def set_implementation(self,flux=__None,ncp=__None,eigenvalues=__User_Defined,boundary_conditions=__User_Defined,refinement_criterion=__User_Defined,initial_conditions=__User_Defined):
+  def set_implementation(self,flux=User_Defined_Implementation,ncp=__None,eigenvalues=User_Defined_Implementation,boundary_conditions=User_Defined_Implementation,refinement_criterion=User_Defined_Implementation,initial_conditions=User_Defined_Implementation):
+    """
+      If you pass in User_Defined, then the generator will create C++ stubs 
+      that you have to befill manually. If you pass in Empty_Implementation, it 
+      will create nop, i.e. no implementation or defaults. Any other string
+      is copied 1:1 into the implementation. 
+    """
     self._flux_implementation        = flux
     self._ncp_implementation         = ncp
     self._eigenvalues_implementation = eigenvalues
@@ -272,9 +280,6 @@ class AbstractGenericRusanovFV( FV ):
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
 
 
-
-
-
 class GenericRusanovFVFixedTimeStepSize( AbstractGenericRusanovFV ):
   def __init__(self, name, patch_size, unknowns, min_h, max_h, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
     """
@@ -283,9 +288,6 @@ class GenericRusanovFVFixedTimeStepSize( AbstractGenericRusanovFV ):
     super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, min_h, max_h, flux, ncp, plot_grid_properties)
     self._time_step_size              = time_step_size
     pass
-
-
-
    
 
 class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):

@@ -27,6 +27,10 @@ class PerformanceData(object):
     self.total_time_stepping_time = 0
     self.total_plotting_time      = 0
 
+    self.total_construction_steps  = 0
+    self.total_time_stepping_steps = 0
+    self.total_plotting_steps      = 0
+
     self._start_time_step_time_stamp = []
     self.plotting_time_stamp  = []
 
@@ -141,20 +145,25 @@ class PerformanceData(object):
         if "initial grid construction:" in line:
           match = re.findall( r"\d+\.\d+s", line)
           self.total_construction_time  = float( match[0].split( "s" )[0] )
-          if verbose:
-            print( "grid construction lasts " + str(self.total_construction_time) )
+          match = re.findall( r"measurements=\d+", line)
+          self.total_construction_steps  = int( match[0].split( "=" )[1] )
+          print( "grid construction lasts " + str(self.total_construction_time) + " over " + str(self.total_construction_steps) + " steps")
+            
         
         if "time stepping:" in line:
           match = re.findall( r"\d+\.\d+s", line)
           self.total_time_stepping_time  = float( match[0].split( "s" )[0] )
-          if verbose:
-            print( "time stepping lasts " + str(self.total_time_stepping_time) )
+          match = re.findall( r"measurements=\d+", line)
+          self.total_time_stepping_steps  = int( match[0].split( "=" )[1] )
+          print( "time stepping lasts " + str(self.total_time_stepping_time) + " over " + str(self.total_time_stepping_steps) + " steps" )
+        
         
         if "plotting:" in line:
           match = re.findall( r"\d+\.\d+s", line)
           self.total_plotting_time  = float( match[0].split( "s" )[0] )
-          if verbose:
-            print( "plotting lasts " + str(self.total_plotting_time) )
+          match = re.findall( r"measurements=\d+", line)
+          self.total_plotting_steps  = int( match[0].split( "=" )[1] )
+          print( "plotting lasts " + str(self.total_plotting_time) + " over " + str(self.total_plotting_steps) + " steps" )
         
           
     except Exc as ex:

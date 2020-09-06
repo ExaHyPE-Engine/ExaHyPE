@@ -1,70 +1,77 @@
 #include "{{CLASSNAME}}.h"
 
 
-tarch::logging::Log   {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME}" );
+tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::_log( "{FULL_QUALIFIED_CLASSNAME}" );
 
 
 
-::exahype2::RefinementCommand {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}::refinementCriterion(
+{% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
+::exahype2::RefinementCommand {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::refinementCriterion(
   double Q[{{NUMBER_OF_UNKNOWNS}}],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
-) {{
-  logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
+) {
+  logTraceInWith3Arguments( "refinementCriterion(...)", volumeX, volumeH, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {{
+  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
     result = ::exahype2::RefinementCommand::Refine;
-  }}
+  }
 
   logTraceOutWith1Argument( "refinementCriterion(...)", toString(result) );
   return result;
-}}
+}
+{% endif %}
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}::adjustSolution(
+{% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::adjustSolution(
   double Q[{{NUMBER_OF_UNKNOWNS}}],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
-) {{
-  logTraceInWith3Arguments( "adjustSolution(...)", x, h, t );
-  if (tarch::la::equals(t,0.0) ) {{
+) {
+  logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
+  if (tarch::la::equals(t,0.0) ) {
     // initial conditions
-  }}
-  else {{
+  }
+  else {
     // other stuff
-  }}
+  }
   logTraceOut( "adjustSolution(...)" );
-}}
+}
+{% endif %}
 
 
-
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}::eigenvalues(
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::eigenvalues(
   double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
   double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
-) {{
+) {
   logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
   // @todo implement
   logTraceOut( "eigenvalues(...)" );
-}}
+}
+{% endif %}
 
 
-void {FULL_QUALIFIED_CLASSNAME}::boundaryConditions(
+{% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundaryConditions(
   double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}],
   double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
-) {{
+) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
   // @todo implement
   logTraceOut( "boundaryConditions(...)" );
-}}
+}
+{% endif %}
 

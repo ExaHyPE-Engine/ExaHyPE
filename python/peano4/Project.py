@@ -147,7 +147,7 @@ class Project (object):
         print( "clean failed (" + str(e) + ") - continue anyway" )
 
     if not self.is_built:
-      print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + "..." )
+      print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
       try:
         subprocess.check_call(["make", "-j"+str(number_of_parallel_builds)])
         print( "compile complete" )

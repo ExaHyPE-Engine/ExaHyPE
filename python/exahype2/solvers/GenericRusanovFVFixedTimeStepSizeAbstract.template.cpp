@@ -110,7 +110,17 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
 ) {
+  {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+
+  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
+    result = ::exahype2::RefinementCommand::Refine;
+  }
+
+  return result;
+  {% else %}
   {{REFINEMENT_CRITERION_IMPLEMENTATION}}
+  {% endif %}
 }
 {% endif %}
 
@@ -122,8 +132,9 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::adjustS
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
 ) {
-  {{INITIAL_CONDITIONS_IMPLEMENTATION}}
-}
+  if (tarch::la::equals(t,0.0) ) {
+    {{INITIAL_CONDITIONS_IMPLEMENTATION}}
+  }
 }
 {% endif %}
 
