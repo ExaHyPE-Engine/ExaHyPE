@@ -157,11 +157,10 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
         // during IPA pass: cp
         // lto1: internal compiler error: Segmentation fault
         //
-        // so I have to replace it by a manual construction of the vector 
+        // so I have to replace it by a manual construction of the vector
         // circumnavigating the copy constructor.
         //
         // tarch::la::Vector<Dimensions,double> volumeX = patchCentre - 0.5 * patchSize;
-
         tarch::la::Vector<Dimensions,double> volumeX;
         volumeX(0) = patchCentre(0) - 0.5 * patchSize(0);
         volumeX(1) = patchCentre(1) - 0.5 * patchSize(1);
@@ -248,32 +247,190 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
     }
   }
   #else
-  applySplit1DRiemannToPatch_Overlap1AoS3d(
-    [&](
-      double                                       QL[],
-      double                                       QR[],
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       dx,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double                                       FL[],
-      double                                       FR[]
-    ) -> void {
-      internal::splitRusanov1d(
+
+  double patchCentreData[] = {patchCentre(0), patchCentre(1), patchCentre(2)};
+  double patchSizeData[]   = {patchSize(0),   patchSize(1),   patchSize(2)};
+  tarch::la::Vector<Dimensions,double> volumeHTmp = exahype2::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
+  double volumeHData[] = {volumeHTmp(0), volumeHTmp(1), volumeHTmp(2)};
+  //Not sure if the following is required:
+  //#pragma omp target map(to:volumeHData,patchCentreData,patchSizeData,t,dt,numberOfVolumesPerAxisInPatch,unknowns,Qin[0:unknowns*(numberOfVolumesPerAxisInPatch+2)*(numberOfVolumesPerAxisInPatch+2)*(numberOfVolumesPerAxisInPatch+2)]) map(from:Qout[0:unknowns*(numberOfVolumesPerAxisInPatch)*(numberOfVolumesPerAxisInPatch)*(numberOfVolumesPerAxisInPatch)])
+  #if defined(GPUOffloading)
+  #pragma omp target map(to:volumeHData,patchCentreData,patchSizeData,t,dt,numberOfVolumesPerAxisInPatch,unknowns,Qin) map(from:Qout)
+  #endif
+  {
+    tarch::la::Vector<3,double>  patchCentre(patchCentreData);
+    tarch::la::Vector<3,double>  patchSize(patchSizeData);
+    tarch::la::Vector<3,double> volumeH(volumeHData);
+
+    double numericalFluxL[unknowns]; // helper out variable
+    double numericalFluxR[unknowns]; // helper out variable
+
+    #pragma omp parallel for
+    for (int z=0; z<numberOfVolumesPerAxisInPatch; z++)
+    for (int y=0; y<numberOfVolumesPerAxisInPatch; y++)
+    for (int x=0; x<=numberOfVolumesPerAxisInPatch; x++) {
+      const int leftVoxelInPreimage  =  x
+                                     + (y+1) * (2 + numberOfVolumesPerAxisInPatch)
+                                     + (z+1) * (2 + numberOfVolumesPerAxisInPatch) * (2 + numberOfVolumesPerAxisInPatch);
+      const int rightVoxelInPreimage =  x+1
+                                     + (y+1) * (2 + numberOfVolumesPerAxisInPatch)
+                                     + (z+1) * (2 + numberOfVolumesPerAxisInPatch) * (2 + numberOfVolumesPerAxisInPatch);
+
+      const int leftVoxelInImage     = x-1
+                                     + y * numberOfVolumesPerAxisInPatch
+                                     + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+      const int rightVoxelInImage    = x
+                                     + y * numberOfVolumesPerAxisInPatch
+                                     + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+
+      // This line gives
+      //
+      // during IPA pass: cp
+      // lto1: internal compiler error: Segmentation fault
+      //
+      // so I have to replace it by a manual construction of the vector
+      // circumnavigating the copy constructor.
+      //
+      // tarch::la::Vector<Dimensions,double> volumeX = patchCentre - 0.5 * patchSize;
+      tarch::la::Vector<Dimensions,double> volumeX;
+      volumeX(0) = patchCentre(0) - 0.5 * patchSize(0);
+      volumeX(1) = patchCentre(1) - 0.5 * patchSize(1);
+      volumeX(2) = patchCentre(2) - 0.5 * patchSize(2);
+
+      volumeX(0) += x * volumeH(0);
+      volumeX(1) += (y+0.5) * volumeH(1);
+      volumeX(2) += (z+0.5) * volumeH(2);
+
+      gpu::splitRusanov1d(
         flux, nonconservativeProduct, eigenvalues,
-		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
-     );
-    },
-	patchCentre,
-	patchSize,
-	t,
-	dt,
-	numberOfVolumesPerAxisInPatch,
-	unknowns,
-	Qin,
-	Qout
-  );
+        Qin + leftVoxelInPreimage*unknowns,   // QL
+        Qin + rightVoxelInPreimage*unknowns,  // QR
+        volumeX, volumeH(0), t, dt, 0, //  last argument = normal
+        unknowns,
+        numericalFluxL, numericalFluxR
+      );
+
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        if (x>0) {
+          Qout[ leftVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+        }
+        if (x<numberOfVolumesPerAxisInPatch) {
+          Qout[ rightVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+        }
+      }
+    }
+
+    #pragma omp parallel for
+    for (int z=0; z<numberOfVolumesPerAxisInPatch; z++)
+    for (int y=0; y<=numberOfVolumesPerAxisInPatch; y++)
+    for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+      const int lowerVoxelInPreimage =  x+1
+                                     +  y * (2 + numberOfVolumesPerAxisInPatch)
+                                     + (z+1) * (2 + numberOfVolumesPerAxisInPatch) * (2 + numberOfVolumesPerAxisInPatch);
+      const int upperVoxelInPreimage =  x+1
+                                     + (y+1) * (2 + numberOfVolumesPerAxisInPatch)
+                                     + (z+1) * (2 + numberOfVolumesPerAxisInPatch) * (2 + numberOfVolumesPerAxisInPatch);
+
+      const int lowerVoxelInImage    = x
+                                     + (y-1) * numberOfVolumesPerAxisInPatch
+                                     + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+      const int upperVoxelInImage    = x
+                                     + y * numberOfVolumesPerAxisInPatch
+                                     + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+
+
+      // This line gives
+      //
+      // during IPA pass: cp
+      // lto1: internal compiler error: Segmentation fault
+      //
+      // so I have to replace it by a manual construction of the vector
+      // circumnavigating the copy constructor.
+      //
+      // tarch::la::Vector<Dimensions,double> volumeX = patchCentre - 0.5 * patchSize;
+      tarch::la::Vector<Dimensions,double> volumeX;
+      volumeX(0) = patchCentre(0) - 0.5 * patchSize(0);
+      volumeX(1) = patchCentre(1) - 0.5 * patchSize(1);
+      volumeX(2) = patchCentre(2) - 0.5 * patchSize(2);
+
+      volumeX(0) += (x+0.5) * volumeH(0);
+      volumeX(1) += y * volumeH(1);
+      volumeX(2) += (z+0.5) * volumeH(2);
+
+      gpu::splitRusanov1d(
+        flux, nonconservativeProduct, eigenvalues,
+        Qin + lowerVoxelInPreimage*unknowns,
+        Qin + upperVoxelInPreimage*unknowns,
+        volumeX, volumeH(0), t, dt, 1, //  last argument = normal
+        unknowns,
+        numericalFluxL, numericalFluxR
+      );
+
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        if (y>0) {
+          Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+        }
+        if (y<numberOfVolumesPerAxisInPatch) {
+          Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+        }
+      }
+    }
+
+    #pragma omp parallel for
+    for (int z=0; z<=numberOfVolumesPerAxisInPatch; z++)
+    for (int y=0; y<numberOfVolumesPerAxisInPatch; y++)
+    for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
+      const int lowerVoxelInPreimage =  x+1
+                                     + (y+1) * (2 + numberOfVolumesPerAxisInPatch)
+                                     +  z * (2 + numberOfVolumesPerAxisInPatch) * (2 + numberOfVolumesPerAxisInPatch);
+      const int upperVoxelInPreimage =  x+1
+                                     + (y+1) * (2 + numberOfVolumesPerAxisInPatch)
+                                     + (z+1) * (2 + numberOfVolumesPerAxisInPatch) * (2 + numberOfVolumesPerAxisInPatch);
+
+      const int lowerVoxelInImage    = x
+                                     + y * numberOfVolumesPerAxisInPatch
+                                     + (z-1) * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+      const int upperVoxelInImage    = x
+                                     + y * numberOfVolumesPerAxisInPatch
+                                     + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+
+      // This line gives
+      //
+      // during IPA pass: cp
+      // lto1: internal compiler error: Segmentation fault
+      //
+      // so I have to replace it by a manual construction of the vector
+      // circumnavigating the copy constructor.
+      //
+      // tarch::la::Vector<Dimensions,double> volumeX = patchCentre - 0.5 * patchSize;
+      tarch::la::Vector<Dimensions,double> volumeX;
+      volumeX(0) = patchCentre(0) - 0.5 * patchSize(0);
+      volumeX(1) = patchCentre(1) - 0.5 * patchSize(1);
+      volumeX(2) = patchCentre(2) - 0.5 * patchSize(2);
+
+      volumeX(0) += (x+0.5) * volumeH(0);
+      volumeX(1) += (y+0.5) * volumeH(1);
+      volumeX(2) += z * volumeH(2);
+
+      gpu::splitRusanov1d(
+        flux, nonconservativeProduct, eigenvalues,
+        Qin + lowerVoxelInPreimage*unknowns,
+        Qin + upperVoxelInPreimage*unknowns,
+        volumeX, volumeH(0), t, dt, 2, //  last argument = normal
+        unknowns,
+        numericalFluxL, numericalFluxR
+      );
+
+      for (int unknown=0; unknown<unknowns; unknown++) {
+        if (z>0) {
+          Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+        }
+        if (z<numberOfVolumesPerAxisInPatch) {
+          Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+        }
+      }
+    }
+  }
   #endif
 
 }
