@@ -20,7 +20,8 @@ module load vtune/2020.1
 
 
 export OMP_NUM_THREADS=14 
-export PYTHONPATH=../../..
+export PYTHONPATH=../../../python
+
 
 python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py 0.02
 mv peano4 peano4-profile

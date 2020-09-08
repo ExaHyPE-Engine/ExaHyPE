@@ -35,7 +35,7 @@ class FV(object):
   traversal an action in theory could be active.
   
   """
-  def __init__(self, name, patch_size, overlap, unknowns, plot_grid_properties):
+  def __init__(self, name, patch_size, overlap, unknowns, min_h, max_h, plot_grid_properties):
     """
     
       namespace: [string]
@@ -62,7 +62,12 @@ class FV(object):
     self._guard_update_cell  = "true"
     self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary()"
 
+    self._min_h                = min_h
+    self._max_h                = max_h 
     self._plot_grid_properties = plot_grid_properties
+    
+    if min_h>max_h:
+       print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
     pass
   
   
@@ -299,4 +304,6 @@ class FV(object):
     d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
     d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
+    d[ "MAX_H"] = self._min_h
+    d[ "MIN_H"] = self._max_h
  

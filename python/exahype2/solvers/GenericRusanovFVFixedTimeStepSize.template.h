@@ -31,20 +31,27 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     static tarch::logging::Log   _log;
 
   public:
+    {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
     ::exahype2::RefinementCommand refinementCriterion(
       double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
-    ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
+    ) override;
+    {% endif %}
 
+
+    {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     void adjustSolution(
       double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
-    ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
+    )  override;
+    {% endif %}
 
+
+    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     virtual void eigenvalues(
       double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -52,8 +59,11 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       double                                       t,
       int                                          normal,
       double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
-    ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
+    ) override;
+    {% endif %}
 
+
+    {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void boundaryConditions(
       double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}],
       double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}],
@@ -61,7 +71,8 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal
-    ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
+    )  override;
+    {% endif %}
 
 
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}

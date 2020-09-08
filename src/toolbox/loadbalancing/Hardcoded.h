@@ -57,6 +57,14 @@ class toolbox::loadbalancing::Hardcoded {
      * I need the stats here mainly for debugging purposes.
      */
     void dumpStatistics();
+
+    bool hasSplitRecently() const;
+
+    /**
+     * Switch on/off.
+     */
+    void enable(bool);
+
   private:
     static tarch::logging::Log  _log;
 
@@ -75,7 +83,8 @@ class toolbox::loadbalancing::Hardcoded {
      * Time stamp might be the slightly wrong wording. It is actually grid iteration
      * or finishStep() calls.
      */
-    int                    _currentTimeStamp;
+    int    _currentTimeStamp;
+    bool   _enabled;
 };
 
 

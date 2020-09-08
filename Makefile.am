@@ -1,3 +1,3 @@
 SUBDIRS = src
-TESTS = src/examples/unittests/UnitTests2d src/examples/unittests/UnitTests3d
+TESTS = src/unittests/UnitTests2d src/unittests/UnitTests3d
 

@@ -4,18 +4,6 @@ from peano4.solversteps.ActionSet import ActionSet
 
 import dastgen2
 import peano4.datamodel.DaStGen2
-from numpy.dual import solve
-
-def create_enclave_cell_label(solver_name):
-  """
-  
-   solver_name: string
-     Name of the solver
-     
-  """
-  result = peano4.datamodel.DaStGen2( EnclaveLabels.get_attribute_name( solver_name ) )
-  result.data.add_attribute( dastgen2.attributes.Integer("SemaphoreNumber") )
-  return result
 
 
 class EnclaveLabels(ActionSet):
@@ -73,3 +61,16 @@ class EnclaveLabels(ActionSet):
 #include "exahype2/EnclaveBookkeeping.h"
 """    
 
+
+
+
+def create_enclave_cell_label(solver_name):
+  """
+  
+   solver_name: string
+     Name of the solver
+     
+  """
+  result = peano4.datamodel.DaStGen2( EnclaveLabels.get_attribute_name( solver_name ) )
+  result.data.add_attribute( dastgen2.attributes.Integer("SemaphoreNumber") )
+  return result

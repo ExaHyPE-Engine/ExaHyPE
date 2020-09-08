@@ -24,7 +24,11 @@ peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
 {% if LOAD_BALANCER!="" -%}
 {{LOAD_BALANCER}}              loadBalancer{{LOAD_BALANCER_ARGUMENTS}};
+{% else -%}
+toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
 {% endif -%}
+
+
 
 {% for item in SOLVERS -%}
 {{ item[0] }} {{ item[1] }};
@@ -35,7 +39,7 @@ peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 double getMinTimeStamp() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-  result = std::min( result, {{ item[1] }}.getMinTimeStamp() );
+    result = std::min( result, {{ item[1] }}.getMinTimeStamp() );
   {%- endfor %}
   return result;
 }
@@ -44,7 +48,25 @@ double getMinTimeStamp() {
 double getMaxTimeStamp() {
   double result = 0.0;
   {% for item in SOLVERS -%}
-  result = std::max( result, {{ item[1] }}.getMaxTimeStamp() );
+    result = std::max( result, {{ item[1] }}.getMaxTimeStamp() );
+  {%- endfor %}
+  return result;
+}
+
+
+double getMinMeshSize() {
+  double result = std::numeric_limits<double>::max();
+  {% for item in SOLVERS -%}
+    result = std::min( result, {{ item[1] }}.getMinMeshSize() );
+  {%- endfor %}
+  return result;
+}
+
+
+double getMaxMeshSize() {
+  double result = 0.0;
+  {% for item in SOLVERS -%}
+    result = std::max( result, {{ item[1] }}.getMaxMeshSize() );
   {%- endfor %}
   return result;
 }
@@ -53,7 +75,7 @@ double getMaxTimeStamp() {
 double getMinTimeStepSize() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-  result = std::min( result, {{ item[1] }}.getMinTimeStepSize() );
+    result = std::min( result, {{ item[1] }}.getMinTimeStepSize() );
   {%- endfor %}
   return result;
 }
@@ -112,9 +134,7 @@ void finishTimeStep() {
   {%- endfor %}
 
   refinementControl.finishStep();
-  {% if LOAD_BALANCER!="" -%}
   loadBalancer.finishStep();
-  {% endif %}
 }
 
 
@@ -124,9 +144,7 @@ void finishGridConstructionStep() {
   {%- endfor %}
 
   refinementControl.finishStep();
-  {% if LOAD_BALANCER!="" -%}
   loadBalancer.finishStep();
-  {% endif %}
 
   gridStatisticsAfterGridConstruction = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics();
   if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {

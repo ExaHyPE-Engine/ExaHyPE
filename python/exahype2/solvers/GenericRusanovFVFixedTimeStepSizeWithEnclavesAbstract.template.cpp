@@ -1,12 +1,26 @@
 #include "{{CLASSNAME}}.h"
 
 
+tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}::_log( "{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}" );
+
 
 {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}():
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
   _timeStamp(0.0),
-  _solverState(SolverState::GridConstruction)
+  _solverState(SolverState::GridConstruction),
+  _maxH({{MAX_H}}),
+  _minH({{MIN_H}})
   {
+}
+
+
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMinMeshSize() const {
+  return _minH;
+}
+
+
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMaxMeshSize() const {
+  return _maxH;
 }
 
 
@@ -68,6 +82,9 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startTi
   else {
     _solverState = SolverState::Primary;
   }
+
+  // @todo Debug
+  logInfo( "startTimeStep(...)", "new state is " << toString(_solverState) );
 }
 
 
@@ -131,7 +148,17 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
 ) {
+  {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+
+  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {
+    result = ::exahype2::RefinementCommand::Refine;
+  }
+
+  return result;
+  {% else %}
   {{REFINEMENT_CRITERION_IMPLEMENTATION}}
+  {% endif %}
 }
 {% endif %}
 
@@ -143,8 +170,9 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::adjustS
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
 ) {
-  {{INITIAL_CONDITIONS_IMPLEMENTATION}}
-}
+  if (tarch::la::equals(t,0.0) ) {
+    {{INITIAL_CONDITIONS_IMPLEMENTATION}}
+  }
 }
 {% endif %}
 

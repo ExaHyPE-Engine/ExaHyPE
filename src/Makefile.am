@@ -8,8 +8,8 @@ AUTOMAKE_OPTIONS = subdir-objects
 #
 SUBDIRS = . \
           toolbox/finiteelements toolbox/multiprecision toolbox/loadbalancing \
-          examples/unittests examples/grid examples/integerdiffusionthroughfaces examples/delta examples/regulargridupscaling \
-          visualisation exahype2
+          unittests \
+          convert exahype2
 
 
 #
@@ -145,6 +145,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/mpi/tests/StringTest.cpp \
  tarch/logging/CommandLineLogger.cpp \
  tarch/logging/ChromeTraceFileLogger.cpp \
+ tarch/logging/ITACLogger.cpp \
  tarch/logging/Log.cpp \
  tarch/logging/LogFilterFileReader.cpp \
  tarch/logging/NVTXLogger.cpp \

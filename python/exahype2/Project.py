@@ -40,6 +40,8 @@ class Project(object):
     self._time_in_between_plots   = 0.1
     self._load_balancer_name      = ""
     self._load_balancer_arguments = ""
+    self._Peano_src_directory = "."
+    self._build_mode          = peano4.output.CompileMode.Asserts
     
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
@@ -66,9 +68,21 @@ class Project(object):
   LibraryTrace   = "_trace"
   LibraryAsserts = "_asserts"
     
-   
+    
+  def set_Peano4_installation(self, src_path, mode ):
+    """
+      src_path: string
+        Path (relative or absolute) to the src directory of Peano. This path 
+        should hold both the headers (in subdirectories) and all the static
+        libraries.
+        
+      mode: peano4.output.CompileMode
+    """
+    self._Peano_src_directory = src_path
+    self._build_mode          = mode
 
-  def get_library_postfix( self, mode, dimensions=-1 ):
+
+  def __get_library_postfix( self ):
     """
     
     Libraries in ExaHyPE 2 always end with 2d_debug or 3d_trace. This 
@@ -84,38 +98,51 @@ class Project(object):
     
     """
     result = ""
-    if dimensions!=None:
-      if dimensions<=0:
-        dimensions = self._dimensions
-      result += str(dimensions) + "d"
+    result += str(self._dimensions) + "d"
 
-    if mode==peano4.output.CompileMode.Debug:
+    if self._build_mode==peano4.output.CompileMode.Debug:
         result += self.LibraryDebug
-    if mode==peano4.output.CompileMode.Trace:
+    if self._build_mode==peano4.output.CompileMode.Trace:
         result += self.LibraryTrace
-    if mode==peano4.output.CompileMode.Asserts:
+    if self._build_mode==peano4.output.CompileMode.Asserts:
         result += self.LibraryAsserts
-    if mode==peano4.output.CompileMode.Release:
+    if self._build_mode==peano4.output.CompileMode.Release:
         result += self.LibraryRelease
     return result
 
 
-  def get_core_library( self, mode ):
+  def __get_ExaHyPE_library( self ):
     """
 
-    Returns the Core Peano library against which to link
+    Returns the core ExaHyPE library against which to link
          
     mode is from peano4.output.CompileMode
     
     """
-    return "ExaHyPE2Core" + self.get_library_postfix(mode)
+    return "ExaHyPE2Core" + self.__get_library_postfix()
+
+
+  def __get_load_balancing_library( self ):
+    """
+
+    Returns the core ExaHyPE library against which to link
+         
+    mode is from peano4.output.CompileMode
+    
+    """
+    return "ToolboxLoadBalancing" + self.__get_library_postfix()
 
 
   def add_solver(self,solver):
     self._solvers.append( solver )
 
+  
+  def remove_all_solvers(self):
+    self._solvers = []
+    
 
   def __export_constants(self):
+    self._project.constants.clear()
     offset_string = "{" + str(self._domain_offset[0])
     size_string   = "{" + str(self._domain_size[0])
     for i in range(1,self._dimensions):
@@ -205,12 +232,14 @@ class Project(object):
     plot_solution                 = peano4.solversteps.Step( "PlotSolution", False )
     perform_time_step             = peano4.solversteps.Step( "TimeStep", False )
     
+    self._project.cleanup()
+    
     self._project.solversteps.add_step(create_grid)
     self._project.solversteps.add_step(init_grid)
     self._project.solversteps.add_step(create_grid_but_postpone_refinement)
     self._project.solversteps.add_step(plot_solution)
     self._project.solversteps.add_step(perform_time_step)
-    
+   
     for solver in self._solvers:
       solver.add_to_Peano4_datamodel( self._project.datamodel )
       
@@ -246,6 +275,12 @@ class Project(object):
     perform_time_step.add_action_set( set_labels_action_set )
     
     self._project.main = exahype2.ExaHyPEMain(self._project)
+
+    # maybe use ..
+    self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
+    self._project.output.makefile.add_library( self.__get_ExaHyPE_library(),        self._Peano_src_directory + "/src/exahype2" )
+    self._project.output.makefile.add_library( self.__get_load_balancing_library(), self._Peano_src_directory + "/src/toolbox/loadbalancing" )
+    self._project.output.makefile.set_mode(self._build_mode)
 
     return self._project
 

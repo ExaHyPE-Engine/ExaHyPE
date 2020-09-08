@@ -31,7 +31,7 @@ def get_ranks_and_threads( filename ):
 #
 # @todo Wir sollten nach Ranks unterscheiden und fuer jeden Rank einmal plotten (mit anderer Farbe)
 #
-def parse_file( filename, rank ):
+def parse_file( filename, rank, verbose ):
   """
     Returns tuple of (x_data,y_data_local,y_data_remote)
     
@@ -40,7 +40,8 @@ def parse_file( filename, rank ):
 
 
     filename File to parse (what a surprise)
-    rank     Rank number of extract data for (can be -1 if you run serially)
+    rank: int
+      Rank number of extract data for (can be -1 if you run serially)
     
   """
   file = open( filename, "r" )
@@ -56,9 +57,11 @@ def parse_file( filename, rank ):
       x_data.append( float( line.strip().split(" ")[0] ) )
       y_data_local.append( [] )
       y_data_remote.append( [] )
-      for entry in line.split( "(#")[1:-1]:
-        y_data_local[-1].append( float(entry.split(":")[1].split("/")[0]) )
-        y_data_remote[-1].append( float(entry.split("/")[1].split(")")[0]) )
+      for entry in line.split( "(#")[1:]:
+        local_data  = entry.split(":")[1].split("/")[0]
+        remote_data = entry.split("/")[1].split(")")[0]
+        y_data_local[-1].append( float(local_data) )
+        y_data_remote[-1].append( float(remote_data) )
   return ( x_data, y_data_local, y_data_remote )
 
 
@@ -82,20 +85,9 @@ def local_optimal_average( x_data, y_data_local, cores ):
       y_data = y_data[0:-1]
   return (pruned_x_data,y_data)
    
-
-if __name__ == "__main__":
-  parser = argparse.ArgumentParser(description='Peano 4 load balancing plotter')
-  parser.add_argument("file",   help="filename of the file to parse (should be a text file)")
-  parser.add_argument("-v", "--verbose", help="increase output verbosity", default=False)
-  parser.add_argument("-rc", "--remote-cells", dest="plot_remote_cells", help="plot remote cells, too", default=False)
-  parser.add_argument("-sum", "--sum-per-rank", dest="sum_per_rank", help="sum up cells per rank", default=False)
-  args = parser.parse_args()
-
-  plt.clf()
-
-  (ranks,threads) = get_ranks_and_threads( args.file )
-
-
+   
+def plot( filename, verbose, plot_remote_cells, sum_per_rank ):
+  (ranks,threads) = get_ranks_and_threads( filename )
   #
   # Should be one colour per rank
   #
@@ -112,17 +104,21 @@ if __name__ == "__main__":
   for rank in Ranks:
     x_data_sum = []
     y_data_sum = []  
-    if args.verbose:
+    if verbose:
       print( "parse data of rank " + str(rank) )
-    ( x_data, y_data_local, y_data_remote ) = parse_file( args.file, rank )
+    ( x_data, y_data_local, y_data_remote ) = parse_file( filename, rank, verbose )
     for i in range(0,len(x_data)):
       x_data_sum.append( x_data[i] )
       y_data_sum.append( 0.0 )
       one_snapshot_x_data = [ x_data[i] for j in y_data_local[i]]
       if len(y_data_local[i])>0:
-        my_alpha       = 0.1+1.0/len(y_data_local[i])
+        my_alpha       = 0.1+(1.0-0.1)/len(y_data_local[i])
       for j in y_data_local[i]:
         y_data_sum[-1] += j/len(x_data)
+        
+      if verbose:
+        print( "plot " + str(one_snapshot_x_data) + " x " + str(y_data_local[i]) + " with symbol/colour/alpha " + str(symbol_counter) + "/" + str(colour_counter) + "/" + str(my_alpha) )
+        
       if i==0 and rank>=0:
         plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha, label="Rank " + str(rank) )  
       elif i==0:
@@ -130,9 +126,9 @@ if __name__ == "__main__":
       else:
         plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha)
           
-      if rank==0 and i==0 and args.plot_remote_cells:
+      if rank==0 and i==0 and plot_remote_cells:
         plt.scatter(one_snapshot_x_data, y_data_remote[i], marker=Symbols[symbol_counter], color=Colours[colour_counter], alpha=my_alpha, facecolors='none', label="remote cells")
-      elif args.plot_remote_cells:
+      elif plot_remote_cells:
         plt.scatter(one_snapshot_x_data, y_data_remote[i], marker=Symbols[symbol_counter], color=Colours[colour_counter], alpha=my_alpha, facecolors='none')
     
     sum_symbol = "-"
@@ -140,7 +136,7 @@ if __name__ == "__main__":
       sum_symbol = "--"
     if rank<len(Colours):
       sum_symbol = ":"
-    if args.sum_per_rank: 
+    if sum_per_rank: 
       plt.plot(x_data_sum, y_data_sum, sum_symbol, color=Colours[colour_counter] )
       
     symbol_counter += 1
@@ -154,11 +150,66 @@ if __name__ == "__main__":
 
   plt.xlabel( "time" )
   plt.ylabel( "cells per tree" )
-  plt.yscale( "log", basey=2 )
+  plt.yscale( "log", base=2 )
   #bottom, top = plt.ylim()
   plt.ylim( bottom=9 )
   #plt.yscale( "log" )
   plt.legend()
+
+
+
+ 
+def plot_trees_per_rank( filename, verbose ):
+  (ranks,threads) = get_ranks_and_threads( filename )
+  #
+  # Should be one colour per rank
+  #
+  Colours = [ "#0000ff", "#00ff00", "#ff0000", "#00ffff", "#ff00ff", "#ffff00", "#aaaaaa" ]
+  Symbols = [ "o",       "s",       "<",       ">",       "^",       "v",       "x"       ]
+
+  Ranks   = range(0,ranks)
+  if ranks<=1: 
+    Ranks = [-1]
+  
+  symbol_counter = 0
+  colour_counter = 0
+  my_alpha       = 0.1
+  for rank in Ranks:
+    if verbose:
+      print( "parse data of rank " + str(rank) )
+    ( x_data, y_data_local, y_data_remote ) = parse_file( filename, rank, verbose )
+
+    y_data = []
+    for snapshot in y_data_local:
+      y_data.append( len(snapshot) )
+    plt.plot(x_data, y_data, marker=Symbols[symbol_counter], color=Colours[colour_counter] )     
+    
+
+    symbol_counter += 1
+    colour_counter += 1
+    if symbol_counter>=len(Symbols):
+      symbol_counter = 0
+      colour_counter += 1
+
+    if colour_counter>=len(Colours):
+      colour_counter = 0
+
+  plt.xlabel( "time" )
+  plt.ylabel( "trees per rank" )
+
+
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser(description='Peano 4 load balancing plotter')
+  parser.add_argument("file",   help="filename of the file to parse (should be a text file)")
+  parser.add_argument("-v", "--verbose", help="increase output verbosity", default=False)
+  parser.add_argument("-rc", "--remote-cells", dest="plot_remote_cells", help="plot remote cells, too", default=False)
+  parser.add_argument("-sum", "--sum-per-rank", dest="sum_per_rank", help="sum up cells per rank", default=False)
+  args = parser.parse_args()
+
+  plt.clf()
+  
+  plot(args.file, args.verbose, args.plot_remote_cells, args.sum_per_rank )
+
   plt.savefig( args.file + ".pdf" )
   plt.savefig( args.file + ".png" )
   
