@@ -196,6 +196,24 @@ module load python/3.6.5
 \end{code}
 
 
+On COSMA 7, I have successfully worked with the following toolchain:
+
+
+\begin{code}
+module load oneAPI/2021.1.8
+module load intel_comp/2020-update2
+module load itac/2021.1-beta08
+module unload python
+module load python/intelpython3
+export PYTHONPATH=../../../python
+
+./configure CXXFLAGS=-I${VT_ROOT}/include --enable-exahype --with-mpi=mpiicpc
+--with-multithreading=omp --with-toolchain=intel
+\end{code}
+
+
+
+
 
 \section{Local workstations}
 
