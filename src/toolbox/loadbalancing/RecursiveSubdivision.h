@@ -148,6 +148,10 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     bool hasSplitRecently() const;
 
+    /**
+     * Switch on/off.
+     */
+    void enable(bool);
   private:
     /**
      * @see getStrategyStep()
@@ -222,6 +226,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     static std::string toString( StrategyState state );
 
     StrategyState  _state;
+
+    bool  _enabled;
 
     void updateGlobalView();
 
@@ -315,6 +321,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     MPI_Request*    _globalSumRequest;
     MPI_Request*    _globalLightestRankRequest;
     MPI_Request*    _globalNumberOfSplitsRequest;
+    MPI_Request*    _numberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffRequest;
 
     /**
      * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
@@ -330,6 +337,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     ReductionBuffer _lightestRankBufferOut;
     int             _globalNumberOfSplitsIn;
     int             _localNumberOfSplitsOut;
+    int             _numberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffIn;
+    int             _numberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffOut;
     #endif
 
     /**
@@ -346,6 +355,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * split tree from the blacklist again.
      */
     int _blacklistWeight;
+
+    int  _numberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff;
 
     void waitForGlobalStatisticsExchange();
 };

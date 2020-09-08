@@ -26,3 +26,7 @@ void toolbox::loadbalancing::NoLoadBalancing::finishSimulation() {
 bool toolbox::loadbalancing::NoLoadBalancing::hasSplitRecently() const {
   return false;
 }
+
+
+void toolbox::loadbalancing::NoLoadBalancing::enable(bool value) {
+}

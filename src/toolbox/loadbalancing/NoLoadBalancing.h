@@ -35,6 +35,8 @@ class toolbox::loadbalancing::NoLoadBalancing {
     void dumpStatistics();
 
     bool hasSplitRecently() const;
+
+    void enable(bool);
 };
 
 
