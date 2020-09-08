@@ -164,7 +164,10 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
 
     double getMaxMeshSize() const;
     double getMinMeshSize() const;
+
   protected:
+    static tarch::logging::Log  _log;
+
     const int  _NumberOfFiniteVolumesPerAxisPerPatch;
 
     double     _timeStamp;

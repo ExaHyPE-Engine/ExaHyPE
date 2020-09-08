@@ -1,6 +1,8 @@
 #include "{{CLASSNAME}}.h"
 
 
+tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}::_log( "{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}" );
+
 
 {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}():
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
@@ -80,6 +82,9 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startTi
   else {
     _solverState = SolverState::Primary;
   }
+
+  // @todo Debug
+  logInfo( "startTimeStep(...)", "new state is " << toString(_solverState) );
 }
 
 
