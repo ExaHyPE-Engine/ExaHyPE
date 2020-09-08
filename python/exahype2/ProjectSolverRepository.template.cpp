@@ -39,7 +39,7 @@ toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
 double getMinTimeStamp() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-  result = std::min( result, {{ item[1] }}.getMinTimeStamp() );
+    result = std::min( result, {{ item[1] }}.getMinTimeStamp() );
   {%- endfor %}
   return result;
 }
@@ -48,7 +48,7 @@ double getMinTimeStamp() {
 double getMaxTimeStamp() {
   double result = 0.0;
   {% for item in SOLVERS -%}
-  result = std::max( result, {{ item[1] }}.getMaxTimeStamp() );
+    result = std::max( result, {{ item[1] }}.getMaxTimeStamp() );
   {%- endfor %}
   return result;
 }
@@ -57,7 +57,7 @@ double getMaxTimeStamp() {
 double getMinMeshSize() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-    result = std::min( result, {{ item[1] }}.getMinTimeStamp() );
+    result = std::min( result, {{ item[1] }}.getMinMeshSize() );
   {%- endfor %}
   return result;
 }
@@ -75,7 +75,7 @@ double getMaxMeshSize() {
 double getMinTimeStepSize() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-  result = std::min( result, {{ item[1] }}.getMinTimeStepSize() );
+    result = std::min( result, {{ item[1] }}.getMinTimeStepSize() );
   {%- endfor %}
   return result;
 }
