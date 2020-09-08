@@ -321,7 +321,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     MPI_Request*    _globalSumRequest;
     MPI_Request*    _globalLightestRankRequest;
     MPI_Request*    _globalNumberOfSplitsRequest;
-    MPI_Request*    _numberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffRequest;
+    MPI_Request*    _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffRequest;
 
     /**
      * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
@@ -337,8 +337,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     ReductionBuffer _lightestRankBufferOut;
     int             _globalNumberOfSplitsIn;
     int             _localNumberOfSplitsOut;
-    int             _numberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffIn;
-    int             _numberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffOut;
     #endif
 
     /**
@@ -356,7 +354,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     int _blacklistWeight;
 
-    int  _numberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff;
+    int  _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff;
+    int  _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff;
 
     void waitForGlobalStatisticsExchange();
 };
