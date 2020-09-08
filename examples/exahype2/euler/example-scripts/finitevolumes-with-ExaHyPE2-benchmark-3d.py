@@ -13,24 +13,15 @@
 # We import Peano4 as project. If this step fails, ensure that your environment
 # variable PYTHONPATH points to Peano4's python directory.
 #
+import argparse
 import os
 import peano4
-import peano4.datamodel
-import peano4.solversteps
-import peano4.output
-import peano4.visualisation
-import peano4.toolbox.blockstructured
-
 
 import exahype2
 
 
-import argparse
-
-
-
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("--trees-per-core", dest="trees_per_core", type=float, required=True, help="Target number of trees per core (use 1 without enclaves and something smaller than 1 with enclaves)" )
+parser.add_argument("--load-balancing-quality", dest="load_balancing_quality", type=float, required=True, help="Load balancing quality (something between 0 and 1; 1 is optimal)" )
 parser.add_argument("--h",              dest="h",              type=float, required=True, help="Mesh size" )
 args = parser.parse_args()
 
@@ -48,6 +39,8 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 patch_size     = 7
 unknowns       = 5
 time_step_size = 0.000001
+min_h          = args.h
+max_h          = args.h
 
 #
 # Still the same solver, but this time we use named arguments. This is the way
@@ -57,7 +50,9 @@ time_step_size = 0.000001
 project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
   "Euler", 
   patch_size, 
-  unknowns, time_step_size,
+  unknowns,
+  min_h, max_h,
+  time_step_size,
   flux = True,
   ncp  = False,
   use_gpu = True
@@ -85,13 +80,9 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.trees_per_core) + ")" )
-
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.load_balancing_quality) + ")" )
+project.set_Peano4_installation("../../../..", build_mode)
 peano4_project = project.generate_Peano4_project()
-peano4_project.constants.export( "MaxHOfVolume", args.h )
-peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
-peano4_project.output.makefile.add_library( project.get_core_library(build_mode), "../../../../src/exahype2" )
-peano4_project.output.makefile.add_library( "ToolboxLoadBalancing" + project.get_library_postfix(build_mode), "../../../../src/toolbox/loadbalancing" )
-peano4_project.output.makefile.set_mode(build_mode)
+peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
 peano4_project.build(make_clean_first=True,number_of_parallel_builds=12)
 
