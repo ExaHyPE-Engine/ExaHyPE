@@ -13,6 +13,13 @@
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
 
 module purge
+module load oneAPI/2021.1.8
+module load intel_comp/2020-update2
+module load itac/2021.1-beta08
+module unload python
+module load python/intelpython3
+export PYTHONPATH=../../../python
+
 
 mpirun -np $SLURM_NTASKS ./peano4
 
