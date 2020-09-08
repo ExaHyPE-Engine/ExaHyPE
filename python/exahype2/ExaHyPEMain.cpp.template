@@ -46,6 +46,7 @@ tarch::timing::Measurement   plotMeasurement;
  */
 bool selectNextAlgorithmicStep() {{
   static bool   gridConstructed                             = false;
+  static bool   gridInitialised                             = false;
   static double nextPlotTimeStamp                           = FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
   static bool   haveReceivedNoncriticialAssertion           = false;
@@ -57,45 +58,47 @@ bool selectNextAlgorithmicStep() {{
     peano4::parallel::Node::getInstance().setNextProgramStep(
       observers::StepRepository::toProgramStep( observers::StepRepository::Steps::PlotSolution )
     );
-    continueToSolve = true;
     haveReceivedNoncriticialAssertion = true;
     logError( "selectNextAlgorithmicStep()", "non-critical assertion has been triggered in code. Dump final state and terminate" );
   }}
   else if (exahype2::hasNonCriticalAssertionBeenViolated()) {{
     continueToSolve = false;
   }}
+  else if (gridConstructed and not gridInitialised) {{
+      gridInitialised = true;
+ 
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
+      );
+
+    assertionNumericalEquals( observers::getMinTimeStamp(), 0.0 );
+  }}
   else if (not gridConstructed) {{
+    if (
+      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= observers::getMinMeshSize()
+    ) {{
+      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << observers::getMinMeshSize() << " reached" );
+      gridConstructed = true;
+      addGridSweepWithoutGridRefinementNext = false;
+    }}
+    else if (
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4
+      and
+      observers::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==observers::StepRepository::Steps::CreateGrid
+    ) {{
+      logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for a while, so continue with solve. Finest mesh resolution is " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()  );
+      gridConstructed = true;
+      addGridSweepWithoutGridRefinementNext = false;
+    }}
+    else {{
+      // @todo Debug
+      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() << " does not yet meet mesh requirements of " << observers::getMinMeshSize() );
+    }}
+
     if (addGridSweepWithoutGridRefinementNext) {{
-      logInfo( "selectNextAlgorithmicStep()", "throttle grid construction manually to allow load balancing to catch up" );
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGridButPostponeRefinement )
       );
-    }}
-    else if ( 
-      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4
-      and
-      observers::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==observers::StepRepository::Steps::CreateGrid 
-    ) {{
-      logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for a while, so continue with solve. Finest mesh resolution is" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()  );
-      
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
-      );
-
-      assertionNumericalEquals( observers::getMinTimeStamp(), 0.0 );
-      gridConstructed = true;
-    }}
-    else if ( 
-      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < observers::getMinMeshSize()
-    ) {{
-      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << observers::getMinMeshSize() << " reached" );
-      
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
-      );
-
-      assertionNumericalEquals( observers::getMinTimeStamp(), 0.0 );
-      gridConstructed = true;
     }}
     else {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -185,6 +188,10 @@ void step() {{
       break;
     case observers::StepRepository::Steps::InitGrid:
       {{
+        #ifdef Parallel
+        observers::loadBalancer.enable(false);
+        #endif
+    
         observers::startGridInitialisationStep();
         
         observers::CreateGrid  observer;
