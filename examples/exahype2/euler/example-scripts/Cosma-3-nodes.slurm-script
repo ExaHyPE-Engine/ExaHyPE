@@ -1,0 +1,18 @@
+#!/bin/bash -l
+#SBATCH --ntasks 3
+#SBAtCH -N 3
+#SBATCH -J Euler-3
+#SBATCH  -o standard_output_file.%J.out
+#SBATCH  -e standard_error_file.%J.err
+#SBATCH  -p cosma7
+##SBATCH  -A dr009
+#SBATCH -A intelhack
+#SBATCH  --exclusive
+#SBATCH -t 00:20:00
+#SBATCH --mail-type=END
+#SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
+
+module purge
+
+mpirun -np $SLURM_NTASKS ./peano4
+
