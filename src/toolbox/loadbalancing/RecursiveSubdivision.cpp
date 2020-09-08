@@ -43,7 +43,6 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double target
   _lightestRankBufferIn._rank                = tarch::mpi::Rank::getInstance().getRank();
   _globalNumberOfSplitsIn                    = 0;
   _localNumberOfSplitsOut                    = 0;
-  _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffIn = 0;
   #endif
 }
 
@@ -63,8 +62,8 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
       << ",number-of-state-updated-without-any-split=" << _numberOfStateUpdatesWithoutAnySplit
       << ",global-number-of-splits=" << _globalNumberOfSplits
       << ",local-number-of-splits=" << _localNumberOfSplits
-	  << ",local-number-of-unsuccessful-splits-as-load-balancing-had-been-turned-off=" << _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffOut
-	  << ",global-number-of-unsuccessful-splits-as-load-balancing-had-been-turned-off=" << _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffOut;
+      << ",local-number-of-unsuccessful-splits-as-load-balancing-had-been-turned-off=" << _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff
+      << ",global-number-of-unsuccessful-splits-as-load-balancing-had-been-turned-off=" << _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff;
 
   std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
   for (auto p: idsOfLocalSpacetrees) {
