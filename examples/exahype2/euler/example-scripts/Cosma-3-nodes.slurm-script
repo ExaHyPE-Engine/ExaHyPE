@@ -1,14 +1,13 @@
 #!/bin/bash -l
-#SBATCH --ntasks 3
-#SBAtCH -N 3
+#SBATCH --ntasks=3
+#SBATCH --nodes=3
 #SBATCH -J Euler-3
-#SBATCH  -o standard_output_file.%J.out
-#SBATCH  -e standard_error_file.%J.err
+#SBATCH  -o Euler-3.%J.out
+#SBATCH  -e Euler-3.%J.err
 #SBATCH  -p cosma7
-##SBATCH  -A dr009
-#SBATCH -A intelhack
+#SBATCH  -A dr009
 #SBATCH  --exclusive
-#SBATCH -t 00:20:00
+#SBATCH -t 01:00:00
 #SBATCH --mail-type=END
 #SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
 
