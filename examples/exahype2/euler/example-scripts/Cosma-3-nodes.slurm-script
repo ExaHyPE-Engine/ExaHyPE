@@ -1,0 +1,24 @@
+#!/bin/bash -l
+#SBATCH --ntasks=3
+#SBATCH --nodes=3
+#SBATCH -J Euler-3
+#SBATCH  -o Euler-3.%J.out
+#SBATCH  -e Euler-3.%J.err
+#SBATCH  -p cosma7
+#SBATCH  -A dr009
+#SBATCH  --exclusive
+#SBATCH -t 01:00:00
+#SBATCH --mail-type=END
+#SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
+
+module purge
+module load oneAPI/2021.1.8
+module load intel_comp/2020-update2
+module load itac/2021.1-beta08
+module unload python
+module load python/intelpython3
+export PYTHONPATH=../../../python
+
+
+mpirun -np $SLURM_NTASKS ./peano4
+
