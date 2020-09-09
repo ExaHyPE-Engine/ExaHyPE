@@ -83,8 +83,7 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startTi
     _solverState = SolverState::Primary;
   }
 
-  // @todo Debug
-  logInfo( "startTimeStep(...)", "new state is " << toString(_solverState) );
+  logDebug( "startTimeStep(...)", "new state is " << toString(_solverState) );
 }
 
 
