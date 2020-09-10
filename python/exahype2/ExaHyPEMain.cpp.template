@@ -51,6 +51,8 @@ bool selectNextAlgorithmicStep() {{
   static bool   haveJustWrittenSnapshot                     = false;
   static bool   haveReceivedNoncriticialAssertion           = false;
   static bool   addGridSweepWithoutGridRefinementNext       = false;
+  static int    iterationsWithoutGridRefinement             = 0;
+  static int    iterationsWithGridRefinement                = 0;
 
   bool          continueToSolve   = true;
   
@@ -65,11 +67,11 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = false;
   }}
   else if (gridConstructed and not gridInitialised) {{
-      gridInitialised = true;
+    gridInitialised = true;
  
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
-      );
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
+    );
 
     assertionNumericalEquals( observers::getMinTimeStamp(), 0.0 );
   }}
@@ -99,15 +101,26 @@ bool selectNextAlgorithmicStep() {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGridButPostponeRefinement )
       );
+      iterationsWithoutGridRefinement++;
     }}
     else {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGrid )
       );
+      iterationsWithGridRefinement++;
     }}
 
+    const int MaxIterationsWithoutGridRefinement = ThreePowerD;
+    if (iterationsWithoutGridRefinement>MaxIterationsWithoutGridRefinement) {{
+      iterationsWithoutGridRefinement = 0;
+    }}
+
+    // @todo Debug
+    logInfo( "selectNextAlgorithmicStep()", "number of iterations with/without refinement=" << iterationsWithGridRefinement << "/" << iterationsWithoutGridRefinement );
+
+    // Need at least two standard iterations
     #ifdef Parallel
-    addGridSweepWithoutGridRefinementNext = observers::loadBalancer.hasSplitRecently();
+    addGridSweepWithoutGridRefinementNext = observers::loadBalancer.hasSplitRecently() and iterationsWithoutGridRefinement<=MaxIterationsWithoutGridRefinement-iterationsWithGridRefinement;
     #endif
     
     continueToSolve = true;
