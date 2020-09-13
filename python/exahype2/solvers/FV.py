@@ -57,7 +57,7 @@ class FV(object):
 
     self._guard_copy_new_face_data_into_face_data = "true"
     self._guard_adjust_cell  = "true"
-    self._guard_AMR          = "true"
+    self._guard_AMR          = "not marker.isRefined()"
     self._guard_project_patch_onto_faces = "true"
     self._guard_update_cell  = "true"
     self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary()"
@@ -159,7 +159,7 @@ class FV(object):
     if evaluate_refinement_criterion:
       step.add_action_set( exahype2.grid.AMROnPatch(
         self._patch,self.AMRTemplate.format(**d),
-        "true", 
+        "not marker.isRefined()", 
         self._get_default_includes() + self.get_user_includes()
       ))
     pass

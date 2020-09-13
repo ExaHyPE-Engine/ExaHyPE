@@ -63,6 +63,9 @@ class Project(object):
     self._load_balancer_arguments = load_balancer_arguments
     
     
+  """
+   The standard extensions that I use for both Peano and ExaHyPE.
+  """
   LibraryDebug   = "_debug"
   LibraryRelease = ""
   LibraryTrace   = "_trace"
@@ -211,26 +214,33 @@ class Project(object):
      Build the Peano4 project, i.e. all the action sets et al that you require
      to run this ExaHyPE2 application. 
      
-     
-     You will have to add the ExaHyPE2 library later on manually. I would like 
-     to do this here, but most codes first want to parse the config file before
-     they add the library. And, obviously, you still have to make the choice 
-     which variant of the library (release, trace, debug, ...) you want to use.
-
-     So most codes invoke something alike
+     To get all the pathes right, please invoke set_Peano4_installation() prior
+     to this call.
      
      
-     on the result of this routine.     
+     !!! create_grid
+     
+     
+     !!! create_grid_but_postpone_refinement
+     
+     The same as create_grid, but this traversal type does not evaluate the AMR 
+     criteria. The rationale is that a create_grid call might add quite a lot
+     of mesh elements and consequently require some rebalancing. This is 
+     expensive memory- and time-wisely and might trigger follow-up rebalancing.
+     If we ran the next mesh refinement immediately afterwards, we would likely
+     run out of memory at one point and the mesh construction would last 
+     forever. With create_grid_but_postpone_refinement, we give the main code
+     the opportunity to insert a few "empty"ish traversals in-between.
      
     """
     self.__export_constants()
     self.__configure_makefile()
     
-    create_grid                   = peano4.solversteps.Step( "CreateGrid", False )
-    init_grid                     = peano4.solversteps.Step( "InitGrid", False )
+    create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
+    init_grid                           = peano4.solversteps.Step( "InitGrid", False )
     create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
-    plot_solution                 = peano4.solversteps.Step( "PlotSolution", False )
-    perform_time_step             = peano4.solversteps.Step( "TimeStep", False )
+    plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
+    perform_time_step                   = peano4.solversteps.Step( "TimeStep", False )
     
     self._project.cleanup()
     
@@ -249,8 +259,8 @@ class Project(object):
       solver.add_use_data_statements_to_Peano4_solver_step( init_grid )
       solver.add_use_data_statements_to_Peano4_solver_step( create_grid_but_postpone_refinement )
       
-      solver.add_actions_to_create_grid( create_grid, evaluate_refinement_criterion=True )
-      solver.add_actions_to_create_grid( init_grid, evaluate_refinement_criterion=False )
+      solver.add_actions_to_create_grid( create_grid,                         evaluate_refinement_criterion=True  )
+      solver.add_actions_to_create_grid( init_grid,                           evaluate_refinement_criterion=False )
       solver.add_actions_to_create_grid( create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
       solver.add_actions_to_plot_solution( plot_solution )
       solver.add_actions_to_perform_time_step( perform_time_step )
