@@ -42,6 +42,27 @@ tarch::timing::Measurement   plotMeasurement;
 
 
 /**
+ *
+ * <h2> Control of the parallel grid construction </h2>
+ *
+ * We realise a very simplistic parallel grid construction strategy: When I run
+ * the grid creation, I allow refinement if no rebalancing has happened, and I 
+ * stop the grid construction as soon as I've met the minimal mesh width. 
+ * Otherwise, I use refinement. There's exceptions to this:
+ *
+ * - Every @K = f$ 3^d @f$ iterations, I run a refinement even if I rebalance. It 
+ *   might happen that rebalancing is extremely slow or not successful on one 
+ *   rank, making another drop in, and so forth. So I use K, as 
+ *   there are at most that many splits possible due to a grid refinement.
+ *   K might be chosen slightly smaller (see code).
+ * - In each step, I identify whether I've changed the minimal mesh. If not, 
+ *   I increment a counter. If this counter is $3K$, I know that the mesh 
+ *   refinement would have had the opportunity to refine the grid three times.
+ *   It hasn't done so. So I can assume that the minimal mesh size not yet 
+ *   yet reached, but the mesh refinement criteria don't need that minimal mesh
+ *   (yet). Such effects arise for smooth boundary conditions, e.g., that 
+ *   create shocks later on, i.e. they arise for non-linear PDEs.
+ * 
  * @return continues to run
  */
 bool selectNextAlgorithmicStep() {{
@@ -51,6 +72,9 @@ bool selectNextAlgorithmicStep() {{
   static bool   haveJustWrittenSnapshot                     = false;
   static bool   haveReceivedNoncriticialAssertion           = false;
   static bool   addGridSweepWithoutGridRefinementNext       = false;
+  static int    iterationsWithoutGridRefinement             = 0;
+  static int    iterationsWithGridRefinementSinceLastRefinement  = 0;
+  static tarch::la::Vector<Dimensions,double> minH               = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
 
   bool          continueToSolve   = true;
   
@@ -65,11 +89,11 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = false;
   }}
   else if (gridConstructed and not gridInitialised) {{
-      gridInitialised = true;
+    gridInitialised = true;
  
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
-      );
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
+    );
 
     assertionNumericalEquals( observers::getMinTimeStamp(), 0.0 );
   }}
@@ -85,31 +109,56 @@ bool selectNextAlgorithmicStep() {{
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4
       and
       observers::StepRepository::toStepEnum( peano4::parallel::Node::getInstance().getCurrentProgramStep() )==observers::StepRepository::Steps::CreateGrid
+      and 
+      iterationsWithGridRefinementSinceLastRefinement>3
     ) {{
       logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for a while, so continue with solve. Finest mesh resolution is " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH()  );
       gridConstructed = true;
       addGridSweepWithoutGridRefinementNext = false;
     }}
     else {{
-      // @todo Debug
-      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() << " does not yet meet mesh requirements of " << observers::getMinMeshSize() );
+      logDebug( "selectNextAlgorithmicStep()", "finest mesh resolution of " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() << " does not yet meet mesh requirements of " << observers::getMinMeshSize() );
     }}
 
     if (addGridSweepWithoutGridRefinementNext) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGridButPostponeRefinement )
       );
+      iterationsWithoutGridRefinement++;
     }}
     else {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGrid )
       );
+      iterationsWithoutGridRefinement = 0;
     }}
 
-    #ifdef Parallel
-    addGridSweepWithoutGridRefinementNext = observers::loadBalancer.hasSplitRecently();
-    #endif
-    
+    const int MaxIterationsWithoutGridRefinement = ThreePowerD;
+    if ( tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < tarch::la::max( minH ) ) {{
+      minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
+      logDebug( "selectNextAlgorithmicStep()", "mesh has refined, so reset minH=" << minH << " and postpone further refinement" );
+      iterationsWithGridRefinementSinceLastRefinement = 0;
+      addGridSweepWithoutGridRefinementNext           = true;
+    }}
+    else {{
+      if (not addGridSweepWithoutGridRefinementNext) iterationsWithGridRefinementSinceLastRefinement++;
+
+      #ifdef Parallel
+      if (observers::loadBalancer.hasSplitRecently() and iterationsWithoutGridRefinement<MaxIterationsWithoutGridRefinement) {{
+        logInfo( "selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement" );
+        addGridSweepWithoutGridRefinementNext = true;
+      }} 
+      else if (observers::loadBalancer.hasSplitRecently() and iterationsWithoutGridRefinement>=MaxIterationsWithoutGridRefinement) {{
+        logInfo( "selectNextAlgorithmicStep()", "mesh has rebalanced recently but I've done so many iterations without refinement that I insert one refinement next" );
+        addGridSweepWithoutGridRefinementNext = false;
+      }}
+      else {{
+        logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so refine mesh further in next sweep" );
+        addGridSweepWithoutGridRefinementNext = false;
+      }}
+      #endif
+    }}
+
     continueToSolve = true;
   }}
   else {{

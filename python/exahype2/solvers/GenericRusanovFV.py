@@ -451,8 +451,8 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
 #include "peano4/utils/Loop.h" 
 """ 
 
-    self._guard_AMR = " observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction or " \
-                    + "(observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary and marker.isSkeletonCell() )"
+    self._guard_AMR = "(observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction and not marker.isRefined()) or " \
+                    + "(observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary and marker.isSkeletonCell() and not marker.isRefined())"
     
     
     #
