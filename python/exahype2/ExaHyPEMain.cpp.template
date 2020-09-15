@@ -101,7 +101,7 @@ bool selectNextAlgorithmicStep() {{
     if (
       tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= observers::getMinMeshSize()
     ) {{
-      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << observers::getMinMeshSize() << " reached" );
+      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << observers::getMinMeshSize() << " reached with h_min=" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() );
       gridConstructed = true;
       addGridSweepWithoutGridRefinementNext = false;
     }}

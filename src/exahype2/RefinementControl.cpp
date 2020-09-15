@@ -97,7 +97,9 @@ void exahype2::RefinementControl::addCommand(
 
 
 void exahype2::RefinementControl::finishStep() {
-  logInfo( "finishStep()", "roll over " << _newEvents.size() << " events" );
+  if (not _newEvents.empty()) {
+    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/coarsening instructions" );
+  }
   _committedEvents.insert( _committedEvents.end(), _newEvents.begin(), _newEvents.end() );
   _newEvents.clear();
 }
