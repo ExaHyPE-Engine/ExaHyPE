@@ -244,6 +244,9 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
   }
   else {
     _gridControlEvents = merge( observer.getGridControlEvents() );
+    if (not _gridControlEvents.empty()) {
+      logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control event(s)" );
+    }
   }
 
   _splittedCells.clear();
@@ -1488,7 +1491,7 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
 
     assertion1(
       _spacetreeState!=SpacetreeState::EmptyRun and _spacetreeState!=SpacetreeState::NewFromSplit and _spacetreeState!=SpacetreeState::Joining,
-	  toString()
+      toString()
     );
 
     bool mayChangeGrid = true;
@@ -1519,8 +1522,8 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
           and
           p.getRefinementControl()==GridControlEvent::RefinementControl::Refine
           and
- 	      tarch::la::allGreaterEquals( state.getH(), p.getH() )
-	    ) {
+          tarch::la::allGreaterEquals( state.getH(), p.getH() )
+        ) {
           erase  = false;
           refine = true;
         }
@@ -1541,13 +1544,23 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
     }
 
     if (refine) {
+      // @todo Nur beim Debug rein
+      bool haveTriggeredRefinementForAtLeastOneVertex = false;
       for (int i=0; i<TwoPowerD; i++) {
         if (
           isVertexAdjacentToLocalSpacetree( fineGridVertices[i], true, true )
           and
-	      fineGridVertices[i].getState()==GridVertex::State::Unrefined
+          fineGridVertices[i].getState()==GridVertex::State::Unrefined
         ) {
           fineGridVertices[i].setState( GridVertex::State::RefinementTriggered );
+          haveTriggeredRefinementForAtLeastOneVertex = true;
+        }
+      }
+      if (not haveTriggeredRefinementForAtLeastOneVertex) {
+        logDebug( "evaluate...", "wanted to refine cell " << state.toString() << " but no vertex is refinable" );
+        // @todo raus
+        for (int i=0; i<TwoPowerD; i++) {
+          logDebug( "evaluate...", "  - vertex " << fineGridVertices[i].toString() );
         }
       }
     }
@@ -1661,7 +1674,7 @@ void peano4::grid::Spacetree::descend(
     observer.enterCell( createPrunedCellTraversalEvent(enterCellTraversalEvent) );
 
 
-    _statistics.setMinH( tarch::la::min(_statistics.getMinH(),state.getH()) );
+    _statistics.setMinH( tarch::la::min(_statistics.getMinH(),1.0/3.0 * state.getH()) );
 
     //
     // DFS

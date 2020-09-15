@@ -91,26 +91,31 @@ python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="0.0
 
 This is an example script if you want to find out which ratio for trees per core is the best one:
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --log results-Hamilton-distributed-memory.tar.gz
+export PYTHONPATH=../../../../python
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="baseline-h-0.05|0.99-h-0.05|0.7-h-0.05|0.5-h-0.05|0.1-h-0.05" results-Hamilton.tar.gz
+rm *.pdf *.png
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="baseline-h-0.02|0.99-h-0.02|0.7-h-0.02|0.5-h-0.02|0.1-h-0.02" results-Hamilton.tar.gz
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log results-Hamilton-distributed-memory.tar.gz
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="baseline-h-0.01|0.99-h-0.01|0.7-h-0.01|0.5-h-0.01|0.1-h-0.01" results-Hamilton.tar.gz
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="baseline-h-0.05|0.95-h-0.05|0.95-h-0.05|0.7-h-0.05|0.5-h-0.05|0.1-h-0.05" results-Hamilton.tar.gz --output=h-0.05
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="0.99-h-0.005|0.7-h-0.005|0.5-h-0.005|0.1-h-0.005" results-Hamilton.tar.gz
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="baseline-h-0.01|0.95-h-0.01|0.9-h-0.01|0.7-h-0.01|0.5-h-0.01|0.1-h-0.01" results-Hamilton.tar.gz --output=h-0.01
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="0.99-h-0.002|0.7-h-0.002|0.5-h-0.002|0.1-h-0.002" results-Hamilton.tar.gz
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.95-h-0.005|0.9-h-0.005|0.7-h-0.005|0.5-h-0.005|0.1-h-0.005" results-Hamilton.tar.gz --output=h-0.005
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --log --pattern="0.99-h-0.001|0.7-h-0.001|0.5-h-0.001|0.1-h-0.001" results-Hamilton.tar.gz
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.95-h-0.001|0.9-h-0.001|0.7-h-0.001|0.5-h-0.001|0.1-h-0.001" results-Hamilton.tar.gz --output=h-0.001
+
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.1-h-0.05|0.1-h-0.01|0.1-h-0.005|0.1-h-0.001" results-Hamilton.tar.gz --output=lb-0.1
+
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.5-h-0.05|0.5-h-0.01|0.5-h-0.005|0.5-h-0.001" results-Hamilton.tar.gz --output=lb-0.5
+
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.7-h-0.05|0.7-h-0.01|0.7-h-0.005|0.7-h-0.001" results-Hamilton.tar.gz --output=lb-0.7
+
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.9-h-0.05|0.9-h-0.01|0.9-h-0.005|0.9-h-0.001" results-Hamilton.tar.gz --output=lb-0.9
+
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.95-h-0.05|0.95-h-0.01|0.95-h-0.005|0.95-h-0.001" results-Hamilton.tar.gz --output=lb-0.95
 
 
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --group-measurements=4 --log --pattern="baseline-h-0.05|baseline-h-0.02|baseline-h-0.01|baseline-h-0.005|0.1-h-0.05|0.1-h-0.02|0.1-h-0.01|0.1-h-0.005|0.5-h-0.05|0.5-h-0.02|0.5-h-0.01|0.5-h-0.005|0.7-h-0.05|0.7-h-0.02|0.7-h-0.01|0.7-h-0.005|0.9-h-0.05|0.9-h-0.02|0.9-h-0.01|0.9-h-0.005|0.99-h-0.05|0.99-h-0.02|0.99-h-0.01|0.99-h-0.005" results-Hamilton.tar.gz
-
-
-
-python3 ../../../../exahype2/postprocessing/plot-scaling.py --group-measurements=4 --log --pattern="0.1-h-0.05|0.1-h-0.02|0.1-h-0.01|0.1-h-0.005|0.5-h-0.05|0.5-h-0.02|0.5-h-0.01|0.5-h-0.005|0.7-h-0.05|0.7-h-0.02|0.7-h-0.01|0.7-h-0.005|0.9-h-0.05|0.9-h-0.02|0.9-h-0.01|0.9-h-0.005|0.99-h-0.05|0.99-h-0.02|0.99-h-0.01|0.99-h-0.005" results-Hamilton.tar.gz
 
 
 

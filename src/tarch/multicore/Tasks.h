@@ -14,6 +14,11 @@ namespace tarch {
     /**
      * Tells task/thread to yield, i.e. to allow other tasks/threads to run.
      * Typically to be used within busy-waiting/polling loops.
+     *
+     * yield() has to be called very very carefully on the user side. If you wait
+     * for task outcomes from low priority tasks, e.g., do not call yield
+     * immediately. Call processPendingTasks(). It is only if this routine tells
+     * you that no background tasks are available anymore that you should yield.
      */
     void yield();
 

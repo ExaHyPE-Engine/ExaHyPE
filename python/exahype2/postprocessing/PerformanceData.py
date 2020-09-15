@@ -4,7 +4,7 @@ from fileinput import filename
 
 
 import re
-
+import traceback
 
 
 
@@ -22,6 +22,7 @@ class PerformanceData(object):
     self._threads              = 1
     self._ranks                = 1
     self._cores_per_node       = 1
+    self._h                    = 1.0
     
     self.total_construction_time  = 0
     self.total_time_stepping_time = 0
@@ -78,14 +79,14 @@ class PerformanceData(object):
   def __str__(self, *args, **kwargs):
       return "(ranks=" + str(self._ranks) + ",threads=" + str(self._threads) + \
              ",#time-steps=" + str(self._number_of_time_steps) + \
-             ",#cells=" + str(self._total_cell_count) + \
-             ",start-time=" + str(self._start_time_stepping) + \
-             ",end-time=" + str(self._end_time_stepping) + \
-             ",start-last-time-step=" + str(self._start_last_time_step) + \
+             ",grid-construction=" + str(self.total_construction_time)  + "s/" + str(self.total_construction_steps) + \
+             ",time-stepping="     + str(self.total_time_stepping_time) + "s/" + str(self.total_time_stepping_steps) + \
+             ",plotting="          + str(self.total_plotting_time)      + "s/" + str(self.total_plotting_steps) + \
              ",valid=" + str(self.valid) + \
              ")"
 
-  def __extract_time_stamp_from_run_call(self,line):             
+
+  def __extract_time_stamp_from_run_call(self,line):   
     result = 0
     if self._parse_machine_time_format:
       try:
@@ -101,9 +102,11 @@ class PerformanceData(object):
 
 
   def parse(self,verbose):
-    
     file       = open(self._file_name, "r")
     self.valid = True
+
+    print( "parse " + self._file_name )
+
     try:
       for line in file:
         if "tarch::multicore::Core::configure(...)" in line:
@@ -141,33 +144,42 @@ class PerformanceData(object):
         if "run" in line and "TimeStep" in line and "rank:0" in line:
           self._number_of_time_steps += 1
 
+
+        if "finest mesh resolution of" in line:
+          token = line.split( "h_min=[" )[1].split(",")[0]
+          self._h = float(token)
+          print( "h_min=" + str(self._h) )
+          
+
+        search_pattern = r"\d+\.\d+s"
         
-        if "initial grid construction:" in line:
-          match = re.findall( r"\d+\.\d+s", line)
+        if "initial grid construction:" in line and not "#measurements=0" in line:
+          match = re.findall( search_pattern, line)
           self.total_construction_time  = float( match[0].split( "s" )[0] )
           match = re.findall( r"measurements=\d+", line)
           self.total_construction_steps  = int( match[0].split( "=" )[1] )
           print( "grid construction lasts " + str(self.total_construction_time) + " over " + str(self.total_construction_steps) + " steps")
             
         
-        if "time stepping:" in line:
-          match = re.findall( r"\d+\.\d+s", line)
+        if "time stepping:" in line and not "#measurements=0" in line:
+          match = re.findall( search_pattern, line)
           self.total_time_stepping_time  = float( match[0].split( "s" )[0] )
           match = re.findall( r"measurements=\d+", line)
           self.total_time_stepping_steps  = int( match[0].split( "=" )[1] )
           print( "time stepping lasts " + str(self.total_time_stepping_time) + " over " + str(self.total_time_stepping_steps) + " steps" )
         
         
-        if "plotting:" in line:
-          match = re.findall( r"\d+\.\d+s", line)
+        if "plotting:" in line and not "#measurements=0" in line:
+          match = re.findall( search_pattern, line)
           self.total_plotting_time  = float( match[0].split( "s" )[0] )
           match = re.findall( r"measurements=\d+", line)
           self.total_plotting_steps  = int( match[0].split( "=" )[1] )
           print( "plotting lasts " + str(self.total_plotting_time) + " over " + str(self.total_plotting_steps) + " steps" )
         
           
-    except Exc as ex:
+    except Exception as ex:
       print( "parsing failed: " + str(ex))
+      print(traceback.format_exc())
       self.valid = False
     
     if self._number_of_time_steps<=0:
@@ -191,6 +203,21 @@ class PerformanceData(object):
     result = result[0:-1]
     return result
 
+
+  def normalised_time_of_last_time_step(self):
+    """
+      Time of last time step normalised (multiplied) with h^d 
+    """
+    raw_data = self._end_time_stepping - self._start_last_time_step
+    return raw_data * self._h**self._d
+
+
+  def normalised_time_per_time_step(self):
+    """
+      Time of last time step normalised (multiplied) with h^d 
+    """
+    raw_data = self.total_time_stepping_time / self.total_time_stepping_steps
+    return raw_data * self._h**self._d
 
       
 def extract_grid_construction_times(performance_data_points):
@@ -223,19 +250,21 @@ def extract_times_per_step(performance_data_points,show_data_for_last_time_step,
   y_data = []
     
   for point in performance_data_points:
-    x_value = point._ranks
-    if max_cores_per_rank>0:
-      x_value += 0.5*point._threads/max_cores_per_rank
-    insert_at_position = 0
-    while insert_at_position<len(x_data) and x_data[insert_at_position]<x_value:
-      insert_at_position += 1
-    x_data.insert( insert_at_position, x_value )
-    raw_data = 0
-    if show_data_for_last_time_step:
-      raw_data = point._end_time_stepping - point._start_last_time_step
-    else:
-      raw_data = (point._end_time_stepping - point._start_time_stepping)/point._number_of_time_steps
-    y_data.insert( insert_at_position, raw_data/point._total_cell_count )
+    if point.total_time_stepping_steps>0:
+      x_value = point._ranks
+      if max_cores_per_rank>0:
+        x_value += 0.5*point._threads/max_cores_per_rank
+      insert_at_position = 0
+      while insert_at_position<len(x_data) and x_data[insert_at_position]<x_value:
+        insert_at_position += 1
+      x_data.insert( insert_at_position, x_value )
+      raw_data = 0
+      if show_data_for_last_time_step:
+        raw_data = point.normalised_time_of_last_time_step()
+      else:
+        raw_data = point.normalised_time_per_time_step()
+      
+      y_data.insert( insert_at_position, raw_data )
     
   return (x_data,y_data)
 

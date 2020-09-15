@@ -188,16 +188,74 @@ setenv CXXFLAGS "-DLogService=ITACLogger -I/ddn/apps/Cluster-Apps/intel/2019.5/t
 Log into the first DINE node as by documentation (\texttt{ssh -X b101}) and run
 
 \begin{code}
-module load intel_comp/2020-update1
-module load intel_mpi/2020
+module load intel_comp/2020-update2
+module load intel_mpi/2020-update2
 module unload python/2.7.15
 module load python/3.6.5
 ./configure --with-multithreading=omp --with-mpi=mpiicpc
 \end{code}
 
 
+On COSMA 7, I have successfully worked with the following toolchain:
+
+
+\begin{code}
+module load oneAPI/2021.1.8
+module load intel_comp/2020-update2
+module load itac/2021.1-beta08
+module unload python
+module load python/intelpython3
+export PYTHONPATH=../../../python
+
+./configure CXXFLAGS=-I${VT_ROOT}/include --enable-exahype --with-mpi=mpiicpc --with-multithreading=omp --with-toolchain=intel
+\end{code}
+
+
+\noindent
+With TBB, I had to fall back to the manual/minimalist tools:
+\begin{code}
+module load intel_comp/2020-update2
+module load intel_mpi/2020-update2
+module unload python
+module load python/intelpython3
+export PYTHONPATH=../../../python
+
+./configure LDFLAGS="-L${TBBROOT}/lib/intel64/gcc4.8 -ltbb_debug" --enable-exahype --with-mpi=mpiicpc --with-multithreading=tbb
+\end{code}
+
+
+
+No success so far with the OneAPI environment:
+\begin{code}
+module load oneAPI/2021.1.8-all
+./configure --enable-exahype --with-mpi=mpiicpc --with-multithreading=tbb --with-toolchain=intel \
+ CXXFLAGS="-I${VT_ROOT}/include -I/cosma/local/intel/oneAPI_2021.1.8/tbb/2021.1-beta08/include" \
+ LDFLAGS="-L${VT_LIB_DIR} ${VT_ADD_LIBS}" 
+
+\end{code}
+
+
+I have not been able to see any difference with the ucx module. It seems that
+we've well hidden most of the exchange.
+
+
+
+
+Sollte nur oneapi sein, nciht das all
+
+
+
+
+% ./configure CXXFLAGS=-I${VT_ROOT}/include LDFLAGS="-L${TBBROOT} -ltbb_debug" --enable-exahype --with-mpi=mpiicpc --with-multithreading=tbb --with-toolchain=intel
+
+
+
+
+
+
 
 \section{Local workstations}
+
 
 
 If you don't have a proper module file, you might have to configure your environment manually to use TBB:

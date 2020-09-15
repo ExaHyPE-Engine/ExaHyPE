@@ -47,13 +47,15 @@ exahype2::RefinementControl::RefinementControl(double tolerance):
 
 void exahype2::RefinementControl::clear() {
   logDebug( "clear()", "clear list of control events" );
-  _events.clear();
+  _newEvents.clear();
 }
 
 
-std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControl::getGridControlEvents() const {
-  logDebug( "getGridControlEvents()", "return " << _validEventsFromPreviousSweeps.size() << " grid control events" );
-  return _validEventsFromPreviousSweeps;
+std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControl::getGridControlEvents() {
+  logDebug( "getGridControlEvents()", "return " << _committedEvents.size() << " grid control events" );
+  std::vector< peano4::grid::GridControlEvent > result = _committedEvents;
+  _committedEvents.clear();
+  return result;
 }
 
 
@@ -63,7 +65,7 @@ void exahype2::RefinementControl::addCommand(
   exahype2::RefinementCommand                  command,
   bool                                         invokedByGridConstruction
 ) {
-  logTraceInWith4Arguments( "addCommand()", x, h, toString(command), invokedByGridConstruction );
+  logTraceInWith4Arguments( "addCommand()", x, h, ::toString(command), invokedByGridConstruction );
   switch (command) {
     case ::exahype2::RefinementCommand::Refine:
       {
@@ -78,8 +80,8 @@ void exahype2::RefinementControl::addCommand(
         );
         assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
         assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
-        _events.push_back( newEvent );
-        logDebug( "addCommend()", "added refinement for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _events.size() << " instructions)" );
+        _newEvents.push_back( newEvent );
+        logDebug( "addCommend()", "added refinement for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
       }
       break;
     case ::exahype2::RefinementCommand::Keep:
@@ -90,18 +92,30 @@ void exahype2::RefinementControl::addCommand(
       }
       break;
   }
-  logTraceOutWith1Argument( "addCommand()", _events.size() );
+  logTraceOutWith1Argument( "addCommand()", _newEvents.size() );
 }
 
 
 void exahype2::RefinementControl::finishStep() {
-  _validEventsFromPreviousSweeps = _events;
-  // _validEventsFromPreviousSweeps.insert( _validEventsFromPreviousSweeps.end(), _events.begin(), _events.end() );
-  _events.clear();
+  if (not _newEvents.empty()) {
+    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/coarsening instructions" );
+  }
+  _committedEvents.insert( _committedEvents.end(), _newEvents.begin(), _newEvents.end() );
+  _newEvents.clear();
 }
 
 
 void exahype2::RefinementControl::merge( const RefinementControl& control ) {
   tarch::multicore::Lock lock(_semaphore);
-  _events.insert( _events.end(), control._events.begin(), control._events.end() );
+  _newEvents.insert( _newEvents.end(), control._newEvents.begin(), control._newEvents.end() );
+}
+
+
+std::string exahype2::RefinementControl::toString() const {
+  std::ostringstream msg;
+  msg << "("
+      << "#new-events=" << _newEvents.size()
+      << ",#committed-events=" << _committedEvents.size()
+      << ")";
+  return msg.str();
 }

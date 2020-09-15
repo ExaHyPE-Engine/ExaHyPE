@@ -272,7 +272,6 @@ bool toolbox::loadbalancing::RecursiveSubdivision::doesRankViolateBalancingCondi
     logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (local cells=" << localCells << ", threshold=" << threshold << ", balancing-ratio=" << _TargetBalancingRatio << ")" );
   }
 
-
   return result;
 }
 
@@ -359,8 +358,9 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     return StrategyStep::SpreadEquallyOverAllRanks;
   }
 
+  const bool rankViolatesBalancingCondition = doesRankViolateBalancingCondition();
 
-  if (not canSplitLocally() and doesRankViolateBalancingCondition()) {
+  if (not canSplitLocally() and rankViolatesBalancingCondition) {
     logInfo( 
       "getStrategyStep()", 
       "cannot load balance further as memory available is too small" <<
@@ -386,7 +386,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
     and
-    doesRankViolateBalancingCondition()
+    rankViolatesBalancingCondition
     and
     _state != StrategyState::WaitForRoundRobinToken
     and
@@ -401,7 +401,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
     and
-    not doesRankViolateBalancingCondition()
+    not rankViolatesBalancingCondition
     and
     _state != StrategyState::WaitForRoundRobinToken
     and
