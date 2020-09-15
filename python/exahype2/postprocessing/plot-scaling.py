@@ -57,9 +57,7 @@ if __name__ == "__main__":
     for data_file in data_files:
       if current_file_pattern in data_file:
         tar.extract( data_file )
-        new_data = exahype2.postprocessing.PerformanceData(data_file)
-        if args.verbose:
-          print( "parsed " + data_file + ": " + str(new_data) )
+        new_data = exahype2.postprocessing.PerformanceData(data_file, args.verbose)
         if new_data.valid:
           data_points.append( new_data ) 
         os.remove( data_file )
