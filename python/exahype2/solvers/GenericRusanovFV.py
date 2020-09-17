@@ -20,7 +20,7 @@ class AbstractGenericRusanovFV( FV ):
 
   __None         = "<none>"
 
-  def __init__(self, name, patch_size, unknowns, min_h, max_h, flux, ncp, plot_grid_properties):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties):
     """
     
       flux: Bool
@@ -30,7 +30,7 @@ class AbstractGenericRusanovFV( FV ):
         Use a non-conversative product    
         
     """
-    super(AbstractGenericRusanovFV,self).__init__(name, patch_size, 1, unknowns, min_h, max_h, plot_grid_properties)
+    super(AbstractGenericRusanovFV,self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
     
     self._flux  = flux
     self._ncp   = ncp
@@ -281,11 +281,11 @@ class AbstractGenericRusanovFV( FV ):
 
 
 class GenericRusanovFVFixedTimeStepSize( AbstractGenericRusanovFV ):
-  def __init__(self, name, patch_size, unknowns, min_h, max_h, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
     """
       Instantiate a generic FV scheme with an overlap of 1.
     """
-    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, min_h, max_h, flux, ncp, plot_grid_properties)
+    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
     self._time_step_size              = time_step_size
     pass
    
@@ -406,11 +406,11 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     add the marker to the cell which holds the semaphore/cell number.
     
   """
-  def __init__(self, name, patch_size, unknowns, min_h, max_h, time_step_size, flux=True, ncp=False, plot_grid_properties=False, use_gpu=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=True, ncp=False, plot_grid_properties=False, use_gpu=False):
     """
       Instantiate a generic FV scheme with an overlap of 1.
     """
-    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).__init__(name, patch_size, unknowns, min_h, max_h, flux, ncp, plot_grid_properties)
+    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
 
     self._time_step_size              = time_step_size
 
