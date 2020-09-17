@@ -33,7 +33,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
   public:
     {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
     ::exahype2::RefinementCommand refinementCriterion(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
@@ -43,7 +43,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     void adjustSolution(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
@@ -53,7 +53,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
     virtual void eigenvalues(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -65,8 +65,8 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void boundaryConditions(
-      double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}],
-      double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -77,7 +77,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -88,8 +88,8 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     void nonconservativeProduct(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
-      double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}][Dimensions],
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
