@@ -9,14 +9,14 @@
 #include "tarch/Assertions.h"
 
 
-tarch::logging::Log  visualisation::data::DataSet::_log( "visualisation::data::DataSet" );
+tarch::logging::Log  convert::data::DataSet::_log( "convert::data::DataSet" );
 
 
-visualisation::data::DataSet::DataSet() {
+convert::data::DataSet::DataSet() {
 }
 
 
-void visualisation::data::DataSet::free() {
+void convert::data::DataSet::free() {
   for (auto& p: data) {
 	logDebug( "free()", "free data set " << p.first.name );
 	for (auto& pp: p.second) {
@@ -26,10 +26,10 @@ void visualisation::data::DataSet::free() {
 }
 
 
-std::vector<visualisation::data::PatchData> visualisation::data::DataSet::getData( const Variable& selector ) const {
+std::vector<convert::data::PatchData> convert::data::DataSet::getData( const Variable& selector ) const {
   if ( data.count(selector)==0) {
     logError( "createReaders(...)", "no data set with identifier " << selector.name );
-	return std::vector<visualisation::data::PatchData>();
+	return std::vector<convert::data::PatchData>();
   }
   else {
     return data.at(selector);
@@ -37,7 +37,7 @@ std::vector<visualisation::data::PatchData> visualisation::data::DataSet::getDat
 }
 
 
-void visualisation::data::DataSet::merge(const DataSet& other) {
+void convert::data::DataSet::merge(const DataSet& other) {
   for (const auto& p: other.data) {
 	if ( data.count(p.first)==0 ) {
       data.insert( std::pair< Variable, std::vector<PatchData> >(
@@ -53,8 +53,8 @@ void visualisation::data::DataSet::merge(const DataSet& other) {
 }
 
 
-std::vector<visualisation::data::Variable>  visualisation::data::DataSet::getVariables() const {
-  std::vector<visualisation::data::Variable> result;
+std::vector<convert::data::Variable>  convert::data::DataSet::getVariables() const {
+  std::vector<convert::data::Variable> result;
   for (auto p: data) {
 	result.push_back(p.first);
   }
@@ -62,7 +62,7 @@ std::vector<visualisation::data::Variable>  visualisation::data::DataSet::getVar
 }
 
 
-bool visualisation::data::DataSet::hasVariable( const std::string& name ) const {
+bool convert::data::DataSet::hasVariable( const std::string& name ) const {
   for (auto& p: data) {
  	if (p.first.name==name) {
   	  return true;
@@ -72,8 +72,8 @@ bool visualisation::data::DataSet::hasVariable( const std::string& name ) const 
 }
 
 
-visualisation::data::Variable visualisation::data::DataSet::getVariable( const std::string& name ) const {
-  const visualisation::data::Variable* result;
+convert::data::Variable convert::data::DataSet::getVariable( const std::string& name ) const {
+  const convert::data::Variable* result;
   for (auto& p: data) {
  	if (p.first.name==name) {
   	  result = &(p.first);
@@ -83,10 +83,10 @@ visualisation::data::Variable visualisation::data::DataSet::getVariable( const s
 }
 
 
-void visualisation::data::DataSet::add( Variable variable, const std::vector<PatchData>& patchData ) {
+void convert::data::DataSet::add( Variable variable, const std::vector<PatchData>& patchData ) {
   assertion( data.count(variable)==0 );
 
-  data.insert( std::pair< visualisation::data::Variable, std::vector<visualisation::data::PatchData> >(
+  data.insert( std::pair< convert::data::Variable, std::vector<convert::data::PatchData> >(
 	variable, patchData
   ));
 }

@@ -4,19 +4,19 @@
 #include <list>
 
 #include "../config.h"
-#include "visualisation/input/PeanoTextPatchFileReader.h"
+#include "convert/input/PeanoTextPatchFileReader.h"
 
 #include "tarch/Assertions.h"
 
 #include "PeanoWriter.h"
 
 
-tarch::logging::Log  visualisation::output::PeanoWriter::_log( "visualisation::output::PeanoWriter" );
-const std::string    visualisation::output::PeanoWriter::_FileExtension( ".peano-patch-file" );
-const std::string    visualisation::output::PeanoWriter::_Header( "# \n# Peano patch file\n# Version 0.2\n# Written by Peano's visualisation/conversion tool\n#\nformat ASCII\n" ) ;
+tarch::logging::Log  convert::output::PeanoWriter::_log( "convert::output::PeanoWriter" );
+const std::string    convert::output::PeanoWriter::_FileExtension( ".peano-patch-file" );
+const std::string    convert::output::PeanoWriter::_Header( "# \n# Peano patch file\n# Version 0.2\n# Written by Peano's visualisation/conversion tool\n#\nformat ASCII\n" ) ;
 
 
-visualisation::output::PeanoWriter::PeanoWriter(const std::string&  directory, const std::string& outputFileWithoutExtension):
+convert::output::PeanoWriter::PeanoWriter(const std::string&  directory, const std::string& outputFileWithoutExtension):
   _outputFileWithoutExtension(outputFileWithoutExtension),
   _directory(directory),
   _metaFile(directory + "/" + outputFileWithoutExtension+_FileExtension) {
@@ -24,13 +24,13 @@ visualisation::output::PeanoWriter::PeanoWriter(const std::string&  directory, c
 }
 
 
-visualisation::output::PeanoWriter::~PeanoWriter() {
+convert::output::PeanoWriter::~PeanoWriter() {
   _metaFile.close();
 }
 
 
 /*
-void visualisation::output::PeanoWriter::writeFile(const visualisation::data::DataSet& data, const std::string& selector) {
+void convert::output::PeanoWriter::writeFile(const convert::data::DataSet& data, const std::string& selector) {
   for( int timeStep = 0; timeStep<metaFile.getNumberOfDataSets(); timeStep++ ) {
     _metaFile << "begin dataset" << std::endl;
 
@@ -62,7 +62,7 @@ void visualisation::output::PeanoWriter::writeFile(const visualisation::data::Da
 }
 
 
-void visualisation::output::PeanoWriter::writeFile(const PeanoMetaFile&  metaFile, const std::string& selector) {
+void convert::output::PeanoWriter::writeFile(const PeanoMetaFile&  metaFile, const std::string& selector) {
   for( int timeStep = 0; timeStep<metaFile.getNumberOfDataSets(); timeStep++ ) {
 	std::vector<PeanoPatch*> p = metaFile.getData( timeStep, selector );
 
@@ -89,7 +89,7 @@ void visualisation::output::PeanoWriter::writeFile(const PeanoMetaFile&  metaFil
 */
 
 
-void visualisation::output::PeanoWriter::writeFile(const std::vector<visualisation::data::DataSet> dataSet) {
+void convert::output::PeanoWriter::writeFile(const std::vector<convert::data::DataSet> dataSet) {
   const int numberOfDataSets = dataSet.size();
   #pragma omp parallel for
   for (int i=0; i<numberOfDataSets; i++) {
@@ -115,13 +115,13 @@ void visualisation::output::PeanoWriter::writeFile(const std::vector<visualisati
 }
 
 
-void visualisation::output::PeanoWriter::writeFile(const visualisation::data::DataSet& dataSet) {
+void convert::output::PeanoWriter::writeFile(const convert::data::DataSet& dataSet) {
   std::string outputFileName = _directory + "/" + _outputFileWithoutExtension + _FileExtension;
   writeFile( dataSet, outputFileName );
 }
 
 
-void visualisation::output::PeanoWriter::writeFile(const visualisation::data::DataSet& dataSet, const std::string& filename) {
+void convert::output::PeanoWriter::writeFile(const convert::data::DataSet& dataSet, const std::string& filename) {
   std::ofstream  file( filename );
   logInfo( "writeFile(...)", "start to write to file " << filename );
 
@@ -131,7 +131,7 @@ void visualisation::output::PeanoWriter::writeFile(const visualisation::data::Da
     file << "dimensions " << dataSet.getVariables()[0].dimensions << std::endl << std::endl;
   }
 
-  std::list< visualisation::data::PatchData > allPatches;
+  std::list< convert::data::PatchData > allPatches;
   for (auto p: dataSet.getVariables()) {
     writeVariableDeclaration(p,file);
     auto newData = dataSet.getData(p);
@@ -139,11 +139,11 @@ void visualisation::output::PeanoWriter::writeFile(const visualisation::data::Da
   }
 
   while (not allPatches.empty()) {
-    visualisation::data::PatchData currentPatch = allPatches.back();
+    convert::data::PatchData currentPatch = allPatches.back();
 
     // remove patch from all patches
     for (
-      std::list< visualisation::data::PatchData >::iterator p = allPatches.begin();
+      std::list< convert::data::PatchData >::iterator p = allPatches.begin();
       p != allPatches.end();
     ) {
       if (p->samePatch(currentPatch)) {
@@ -182,9 +182,9 @@ void visualisation::output::PeanoWriter::writeFile(const visualisation::data::Da
 }
 
 
-void visualisation::output::PeanoWriter::writePatchData(const visualisation::data::Variable& variable, const visualisation::data::PatchData& p, std::ofstream& file ) {
+void convert::output::PeanoWriter::writePatchData(const convert::data::Variable& variable, const convert::data::PatchData& p, std::ofstream& file ) {
     file << "  begin ";
-    if ( variable.type==visualisation::data::PeanoDataType::Cell_Values) {
+    if ( variable.type==convert::data::PeanoDataType::Cell_Values) {
       file << "cell-values ";
     }
     else {
@@ -197,7 +197,7 @@ void visualisation::output::PeanoWriter::writePatchData(const visualisation::dat
     }
     file << std::endl;
     file << "  end ";
-    if ( variable.type==visualisation::data::PeanoDataType::Cell_Values) {
+    if ( variable.type==convert::data::PeanoDataType::Cell_Values) {
       file << "cell-values ";
     }
     else {
@@ -207,7 +207,7 @@ void visualisation::output::PeanoWriter::writePatchData(const visualisation::dat
 }
 
 
-void visualisation::output::PeanoWriter::writeFile(const visualisation::data::Variable& variable, const std::vector<visualisation::data::PatchData>& patches) {
+void convert::output::PeanoWriter::writeFile(const convert::data::Variable& variable, const std::vector<convert::data::PatchData>& patches) {
   std::string outputFileName = _directory + "/" + _outputFileWithoutExtension + _FileExtension;
   std::ofstream  file( outputFileName );
   logInfo( "writeFile(...)", "write to file " << outputFileName );
@@ -238,9 +238,9 @@ void visualisation::output::PeanoWriter::writeFile(const visualisation::data::Va
 }
 
 
-void visualisation::output::PeanoWriter::writeVariableDeclaration(const visualisation::data::Variable& variable, std::ofstream& file) {
+void convert::output::PeanoWriter::writeVariableDeclaration(const convert::data::Variable& variable, std::ofstream& file) {
   file << "begin ";
-  if ( variable.type==visualisation::data::PeanoDataType::Cell_Values) {
+  if ( variable.type==convert::data::PeanoDataType::Cell_Values) {
     file << "cell-values ";
   }
   else {
@@ -250,7 +250,7 @@ void visualisation::output::PeanoWriter::writeVariableDeclaration(const visualis
   file << "  number-of-dofs-per-axis " << variable.dofsPerAxis << std::endl;
   file << "  number-of-unknowns      " << variable.unknowns << std::endl;
   file << "end ";
-  if ( variable.type==visualisation::data::PeanoDataType::Cell_Values) {
+  if ( variable.type==convert::data::PeanoDataType::Cell_Values) {
     file << "cell-values ";
   }
   else {

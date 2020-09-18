@@ -1,8 +1,8 @@
 #include "SeparateResolutions.h"
 
 
-#include "visualisation/data/Variable.h"
-#include "visualisation/data/DataSet.h"
+#include "convert/data/Variable.h"
+#include "convert/data/DataSet.h"
 
 
 #include "tarch/la/VectorCompare.h"
@@ -11,14 +11,14 @@
 #include <map>
 
 
-tarch::logging::Log visualisation::filter::SeparateResolutions::_log( "visualisation::filter::SeparateResolutions" );
+tarch::logging::Log convert::filter::SeparateResolutions::_log( "convert::filter::SeparateResolutions" );
 
 
-void visualisation::filter::SeparateResolutions::apply( visualisation::data::DataSet& dataSet, visualisation::data::Variable& inputVariable, std::string targetSelectorName ) {
-  std::vector<visualisation::data::PatchData> inputData = dataSet.getData( inputVariable );
+void convert::filter::SeparateResolutions::apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) {
+  std::vector<convert::data::PatchData> inputData = dataSet.getData( inputVariable );
 
-  std::map<tarch::la::Vector<3,double>, visualisation::data::Variable, tarch::la::VectorCompare<3>  >  targetVariables;
-  std::map<visualisation::data::Variable, std::vector<visualisation::data::PatchData> >                targetPatchData;
+  std::map<tarch::la::Vector<3,double>, convert::data::Variable, tarch::la::VectorCompare<3>  >  targetVariables;
+  std::map<convert::data::Variable, std::vector<convert::data::PatchData> >                targetPatchData;
 
   logInfo( "apply(...)", "decompose input data set " << inputVariable.name << " into its resolutions" );
   for (auto& p: inputData) {
@@ -28,17 +28,17 @@ void visualisation::filter::SeparateResolutions::apply( visualisation::data::Dat
     }
 
     if ( targetVariables.count(key)==0 ) {
-      visualisation::data::Variable  targetVariable(
+      convert::data::Variable  targetVariable(
         targetSelectorName + "-" + std::to_string(key(0)),
 		inputVariable.dofsPerAxis, inputVariable.unknowns, inputVariable.type, inputVariable.dimensions
       );
       logInfo( "apply(...)", "create new data set for resolution " << key );
-      targetVariables.insert( std::pair< tarch::la::Vector<3,double>, visualisation::data::Variable >(key,targetVariable) );
-      targetPatchData.insert( std::pair< visualisation::data::Variable, std::vector<visualisation::data::PatchData> >(targetVariable,std::vector<visualisation::data::PatchData>()) );
+      targetVariables.insert( std::pair< tarch::la::Vector<3,double>, convert::data::Variable >(key,targetVariable) );
+      targetPatchData.insert( std::pair< convert::data::Variable, std::vector<convert::data::PatchData> >(targetVariable,std::vector<convert::data::PatchData>()) );
     }
 
-    const visualisation::data::Variable targetVariable = targetVariables.at(key);
-    visualisation::data::PatchData newPatch(
+    const convert::data::Variable targetVariable = targetVariables.at(key);
+    convert::data::PatchData newPatch(
       inputVariable.dimensions,
       p.offset,
       p.size,

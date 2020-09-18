@@ -1,8 +1,8 @@
 #include "ConvertTreeIdIntoDataField.h"
 
 
-#include "visualisation/data/Variable.h"
-#include "visualisation/data/DataSet.h"
+#include "convert/data/Variable.h"
+#include "convert/data/DataSet.h"
 
 
 #include "tarch/la/VectorCompare.h"
@@ -11,21 +11,21 @@
 #include <map>
 
 
-tarch::logging::Log visualisation::filter::ConvertTreeIdIntoDataField::_log( "visualisation::filter::ConvertTreeIdIntoDataField" );
+tarch::logging::Log convert::filter::ConvertTreeIdIntoDataField::_log( "convert::filter::ConvertTreeIdIntoDataField" );
 
 
-visualisation::filter::ConvertTreeIdIntoDataField::ConvertTreeIdIntoDataField() {
+convert::filter::ConvertTreeIdIntoDataField::ConvertTreeIdIntoDataField() {
 }
 
 
-void visualisation::filter::ConvertTreeIdIntoDataField::apply( visualisation::data::DataSet& dataSet, visualisation::data::Variable& inputVariable, std::string targetSelectorName ) {
-  visualisation::data::Variable  targetVariable( targetSelectorName, inputVariable.dofsPerAxis, 1, inputVariable.type, inputVariable.dimensions );
+void convert::filter::ConvertTreeIdIntoDataField::apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) {
+  convert::data::Variable  targetVariable( targetSelectorName, inputVariable.dofsPerAxis, 1, inputVariable.type, inputVariable.dimensions );
 
-  std::vector<visualisation::data::PatchData> inputData = dataSet.getData( inputVariable );
-  std::vector<visualisation::data::PatchData> targetData;
+  std::vector<convert::data::PatchData> inputData = dataSet.getData( inputVariable );
+  std::vector<convert::data::PatchData> targetData;
 
   for (auto& p: inputData) {
-    visualisation::data::PatchData newPatch(
+    convert::data::PatchData newPatch(
       inputVariable.dimensions,
       p.offset,
       p.size,

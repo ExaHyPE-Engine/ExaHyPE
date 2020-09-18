@@ -1,27 +1,27 @@
 #include "Intersection.h"
 
 
-#include "visualisation/data/Variable.h"
-#include "visualisation/data/DataSet.h"
+#include "convert/data/Variable.h"
+#include "convert/data/DataSet.h"
 
 
 #include "tarch/la/Vector.h"
 #include "tarch/la/VectorOperations.h"
 
 
-tarch::logging::Log  visualisation::filter::Intersection::_log( "visualisation::filter::Intersection" );
+tarch::logging::Log  convert::filter::Intersection::_log( "convert::filter::Intersection" );
 
 
-visualisation::filter::Intersection::Intersection( Strategy strategy ):
+convert::filter::Intersection::Intersection( Strategy strategy ):
   _strategy(strategy) {
 }
 
 
-void visualisation::filter::Intersection::apply( visualisation::data::DataSet& dataSet, visualisation::data::Variable& inputVariable, std::string targetSelectorName ) {
-  visualisation::data::Variable  targetVariable( targetSelectorName, inputVariable.dofsPerAxis, inputVariable.unknowns, inputVariable.type, inputVariable.dimensions );
+void convert::filter::Intersection::apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) {
+  convert::data::Variable  targetVariable( targetSelectorName, inputVariable.dofsPerAxis, inputVariable.unknowns, inputVariable.type, inputVariable.dimensions );
 
-  std::vector<visualisation::data::PatchData> inputData = dataSet.getData( inputVariable );
-  std::vector<visualisation::data::PatchData> targetData;
+  std::vector<convert::data::PatchData> inputData = dataSet.getData( inputVariable );
+  std::vector<convert::data::PatchData> targetData;
 
   for (auto p: inputData) {
     bool memberOfFineGrid = true;
@@ -41,7 +41,7 @@ void visualisation::filter::Intersection::apply( visualisation::data::DataSet& d
     }
 
     if (memberOfFineGrid) {
-      visualisation::data::PatchData newPatch(
+      convert::data::PatchData newPatch(
         inputVariable.dimensions,
         p.offset,
         p.size,

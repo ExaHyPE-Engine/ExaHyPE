@@ -1,10 +1,10 @@
-#ifndef _VISUALISATION_DATA_VARIABLE_H_
-#define _VISUALISATION_DATA_VARIABLE_H_
+#ifndef _CONVERT_DATA_VARIABLE_H_
+#define _CONVERT_DATA_VARIABLE_H_
 
 #include <string>
 
 
-namespace visualisation {
+namespace convert {
   namespace data {
     enum class PeanoDataType {Cell_Values, Vertex_Values};
     class Variable;
@@ -16,7 +16,7 @@ namespace visualisation {
  * Represents one variable that is subsequently attached to the patches of a
  * file.
  */
-class visualisation::data::Variable {
+class convert::data::Variable {
   public:
 	Variable(std::string name_, int dofsPerAxis_, int unknowns_, PeanoDataType type_, int dimensions_);
 
@@ -41,8 +41,8 @@ class visualisation::data::Variable {
 	int mappings;
 	double* mapping;
 */
-	bool operator<( const visualisation::data::Variable& rhs ) const;
-	bool operator==( const visualisation::data::Variable& rhs ) const;
+	bool operator<( const convert::data::Variable& rhs ) const;
+	bool operator==( const convert::data::Variable& rhs ) const;
 
 	/**
 	 * This is getTotalNumberOfDofsPerPatch() times the number of unknowns per dof.

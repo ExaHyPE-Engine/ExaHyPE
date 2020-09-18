@@ -1,5 +1,5 @@
-#ifndef _VISUALISATION_DATA_PATCH_DATA_H_
-#define _VISUALISATION_DATA_PATCH_DATA_H_
+#ifndef _CONVERT_DATA_PATCH_DATA_H_
+#define _CONVERT_DATA_PATCH_DATA_H_
 
 #include <string>
 #include <iostream>
@@ -9,7 +9,7 @@
 #include "Variable.h"
 
 
-namespace visualisation {
+namespace convert {
   namespace data {
     class PatchData;
   }
@@ -23,7 +23,7 @@ namespace visualisation {
  * A patch is a square or cube in the domain. It can hold variables which have
  * been identified before via a Variable entry.
  */
-class visualisation::data::PatchData {
+class convert::data::PatchData {
   public:
     PatchData(int dimensions, double* offset_, double* size_, int dofsPerAxis, int unknownsPerDoF, int originTree);
 

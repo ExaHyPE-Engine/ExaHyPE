@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "../config.h"
-#include "visualisation/input/PeanoTextPatchFileReader.h"
+#include "convert/input/PeanoTextPatchFileReader.h"
 
 #include "VTUWriter.h"
 
@@ -31,10 +31,10 @@
 #endif
 
 
-tarch::logging::Log  visualisation::output::VTUWriter::_log( "PeanoConverter" );
+tarch::logging::Log  convert::output::VTUWriter::_log( "PeanoConverter" );
 
 
-visualisation::output::VTUWriter::VTUWriter(const std::string&  directory, const std::string& outputFileWithoutExtension):
+convert::output::VTUWriter::VTUWriter(const std::string&  directory, const std::string& outputFileWithoutExtension):
   _outputFileWithoutExtension(outputFileWithoutExtension),
   _directory(directory) {
 
@@ -47,7 +47,7 @@ visualisation::output::VTUWriter::VTUWriter(const std::string&  directory, const
 }
 
 
-visualisation::output::VTUWriter::~VTUWriter() {
+convert::output::VTUWriter::~VTUWriter() {
 /*
   _pvdFile << "</Collection>" << std::endl
 	       << "</VTKFile>" << std::endl;
@@ -57,7 +57,7 @@ visualisation::output::VTUWriter::~VTUWriter() {
 
 
 #ifdef UseVTK
-vtkSmartPointer<vtkDoubleArray> visualisation::output::VTUWriter::getMetaDataForOnePatch(const visualisation::data::Variable& variable, const visualisation::data::PatchData& data) {
+vtkSmartPointer<vtkDoubleArray> convert::output::VTUWriter::getMetaDataForOnePatch(const convert::data::Variable& variable, const convert::data::PatchData& data) {
   vtkSmartPointer<vtkDoubleArray> variableArray = vtkSmartPointer<vtkDoubleArray>::New();
   variableArray->SetNumberOfComponents( 1 );
   variableArray->SetName("source-file");
@@ -70,7 +70,7 @@ vtkSmartPointer<vtkDoubleArray> visualisation::output::VTUWriter::getMetaDataFor
 }
 
 
-vtkSmartPointer<vtkDoubleArray> visualisation::output::VTUWriter::getVTUDataForOnePatch(const visualisation::data::Variable& variable, const visualisation::data::PatchData& data) {
+vtkSmartPointer<vtkDoubleArray> convert::output::VTUWriter::getVTUDataForOnePatch(const convert::data::Variable& variable, const convert::data::PatchData& data) {
   vtkSmartPointer<vtkDoubleArray> variableArray = vtkSmartPointer<vtkDoubleArray>::New();
   variableArray->SetNumberOfComponents( variable.unknowns );
   variableArray->SetName(variable.name.c_str());
@@ -86,7 +86,7 @@ vtkSmartPointer<vtkDoubleArray> visualisation::output::VTUWriter::getVTUDataForO
 }
 
 
-vtkSmartPointer<vtkImageData> visualisation::output::VTUWriter::toImageData(const visualisation::data::Variable& variable, const visualisation::data::PatchData& patchData) {
+vtkSmartPointer<vtkImageData> convert::output::VTUWriter::toImageData(const convert::data::Variable& variable, const convert::data::PatchData& patchData) {
   vtkSmartPointer<vtkImageData> imageData = vtkSmartPointer<vtkImageData>::New();
 
   //get the data from the patch in to arrays
@@ -107,11 +107,11 @@ vtkSmartPointer<vtkImageData> visualisation::output::VTUWriter::toImageData(cons
   vtkSmartPointer<vtkDoubleArray> variableArray = getVTUDataForOnePatch(variable,patchData);
   vtkSmartPointer<vtkDoubleArray> metaDataArray = getMetaDataForOnePatch(variable,patchData);
 
-  if(variable.type == visualisation::data::PeanoDataType::Cell_Values) {
+  if(variable.type == convert::data::PeanoDataType::Cell_Values) {
     imageData->GetCellData()->AddArray(variableArray);
     imageData->GetCellData()->AddArray(metaDataArray);
   }
-  else if(variable.type == visualisation::data::PeanoDataType::Vertex_Values) {
+  else if(variable.type == convert::data::PeanoDataType::Vertex_Values) {
     imageData->GetPointData()->AddArray(variableArray);
     imageData->GetPointData()->AddArray(metaDataArray);
   }
@@ -120,7 +120,7 @@ vtkSmartPointer<vtkImageData> visualisation::output::VTUWriter::toImageData(cons
 }
 
 
-vtkSmartPointer<vtkUnstructuredGrid> visualisation::output::VTUWriter::toUnstructuredGrid(const visualisation::data::Variable& variable, const visualisation::data::PatchData& patchData) {
+vtkSmartPointer<vtkUnstructuredGrid> convert::output::VTUWriter::toUnstructuredGrid(const convert::data::Variable& variable, const convert::data::PatchData& patchData) {
   vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
 
 /*
@@ -208,10 +208,10 @@ vtkSmartPointer<vtkUnstructuredGrid> visualisation::output::VTUWriter::toUnstruc
   }
 
   vtkSmartPointer<vtkDoubleArray> variableArray = getVTUDataForOnePatch(variable,patchData);
-  if (variable.type == visualisation::data::PeanoDataType::Cell_Values) {
+  if (variable.type == convert::data::PeanoDataType::Cell_Values) {
     grid->GetCellData()->AddArray(variableArray);
   }
-  else if(variable.type == visualisation::data::PeanoDataType::Vertex_Values) {
+  else if(variable.type == convert::data::PeanoDataType::Vertex_Values) {
     grid->GetPointData()->AddArray(variableArray);
   }
 
@@ -220,12 +220,12 @@ vtkSmartPointer<vtkUnstructuredGrid> visualisation::output::VTUWriter::toUnstruc
 #endif
 
 
-int visualisation::output::VTUWriter::xyzToIndex(int x, int y, int z, int verticesPerAxis) {
+int convert::output::VTUWriter::xyzToIndex(int x, int y, int z, int verticesPerAxis) {
   return x + y*verticesPerAxis + z*verticesPerAxis*verticesPerAxis;
 }
 
 
-void visualisation::output::VTUWriter::writeFile(const visualisation::data::Variable& variable, const std::vector<visualisation::data::PatchData>& patchData) {
+void convert::output::VTUWriter::writeFile(const convert::data::Variable& variable, const std::vector<convert::data::PatchData>& patchData) {
   #ifdef UseVTK
   vtkSmartPointer<vtkAppendFilter> appendFilter = vtkSmartPointer<vtkAppendFilter>::New();
   for (auto p: patchData) {
@@ -258,12 +258,12 @@ void visualisation::output::VTUWriter::writeFile(const visualisation::data::Vari
 
 /*
 
-void visualisation::output::VTUWriter::writeFile(const std::string& outputFileWithoutExtention, const std::vector<PeanoPatch*>& patches) {
+void convert::output::VTUWriter::writeFile(const std::string& outputFileWithoutExtention, const std::vector<PeanoPatch*>& patches) {
   #ifdef UseVTK
   if (!patches.empty()) {
      std::string outFile = outputFileWithoutExtention + "." + writer->GetDefaultFileExtension();
 
-    vtkSmartPointer<vtkUnstructuredGrid> outputGrid = visualisation::output::VTUWriter::combine( patches );
+    vtkSmartPointer<vtkUnstructuredGrid> outputGrid = convert::output::VTUWriter::combine( patches );
 
     writer->SetFileName(outFile.c_str());
     writer->SetCompressorTypeToZLib();
@@ -281,7 +281,7 @@ void visualisation::output::VTUWriter::writeFile(const std::string& outputFileWi
 
 
 #ifdef UseVTK
-vtkSmartPointer<vtkUnstructuredGrid> visualisation::output::VTUWriter::combine(const std::vector<PeanoPatch*>& patches){
+vtkSmartPointer<vtkUnstructuredGrid> convert::output::VTUWriter::combine(const std::vector<PeanoPatch*>& patches){
   vtkSmartPointer<vtkAppendFilter> appendFilter = vtkSmartPointer<vtkAppendFilter>::New();
   for(uint i = 0; i < patches.size(); i++) {
     PeanoPatch* patch = patches.at(i);
@@ -303,7 +303,7 @@ vtkSmartPointer<vtkUnstructuredGrid> visualisation::output::VTUWriter::combine(c
 
 
 /*
-PeanoPatch* visualisation::output::VTUWriter::subSample(std::vector<PeanoReader*> &readers, int x, int y, int z) {
+PeanoPatch* convert::output::VTUWriter::subSample(std::vector<PeanoReader*> &readers, int x, int y, int z) {
 	std::vector<PeanoPatch*> patches;
 
 	double xMax, yMax, zMax, xMin, yMin, zMin;

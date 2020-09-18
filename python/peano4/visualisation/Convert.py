@@ -9,20 +9,30 @@ class Convert(object):
     Convert is a file which wraps around one Peano block file output. Output can 
     be a whole data set or simply one data file.
     
-    silent Tell the convert tool to shut up. Doesn't omit all outputs though, as 
-      the Python wrapper still write some stats
+    file_name: String
+      String of input file. Please do not add .peano-patch-file here.
+    
+    verbose: Boolean
+      Tell the convert tool to dump a lot of data or almost none at all
   """
   
-  def __init__(self,file_name, silent = False):
+  def __init__(self,file_name, verbose = False):
     self.visualisation_tools_path = "."
     self.file_name       = file_name
     self.extension       = ".peano-patch-file"
     self.output_path     = "."
     self.mpi_prefix      = ""
-    self.silent          = silent
+    self.verbose          = verbose
 
 
   def set_input_file_name(self,file_name):
+    """
+      You can use this routine to rest the file name that you have passed via
+      the constructor. 
+    
+      file_name: string
+        
+    """
     self.file_name = file_name
 
 
@@ -61,11 +71,13 @@ class Convert(object):
 
 
   def __get_selectors(self):
-    if not self.silent:
+    if self.verbose:
       print( "inspect file " + self.file_name + " ... " )
     convert_result = ""
     result = []
     invocation = self.__invoke() + [ "inspect", self.file_name + self.extension ]
+    if self.verbose:
+      print( "invoke " + str(invocation) )
     try:
       convert_result = subprocess.check_output(invocation)
       for line in convert_result.decode("utf-8").splitlines(False):
@@ -77,7 +89,7 @@ class Convert(object):
           new_entry = line.split("variable")[-1].strip()
           result.append( new_entry ) 
       result = set(result)
-      if not self.silent:
+      if self.verbose:
         print( "found selectors " + str(result) )
     except Exception as e:
       print( "failed to inspect (" + str(e) + ") with " + str(invocation) )  
@@ -101,7 +113,7 @@ class Convert(object):
           selector + "-fine-grid"
         ]
       try:
-        if self.silent:
+        if self.verbose:
           subprocess.check_call(invocation, stdout=subprocess.PIPE)
         else:
           subprocess.check_call(invocation)
@@ -130,7 +142,7 @@ class Convert(object):
           selector + "-domain-decomposition"
         ]
       try:
-        if self.silent:
+        if self.verbose:
           subprocess.check_call(invocation, stdout=subprocess.PIPE)
         else:
           subprocess.check_call(invocation)
@@ -155,7 +167,7 @@ class Convert(object):
           "vtu"
         ]
       try:
-        if self.silent:
+        if self.verbose:
           subprocess.check_call(invocation, stdout=subprocess.PIPE)
         else:
           subprocess.check_call(invocation)

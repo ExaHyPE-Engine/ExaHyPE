@@ -3,7 +3,7 @@
 #include "tarch/la/ScalarOperations.h"
 
 
-visualisation::data::Variable::Variable(std::string name_, int dofsPerAxis_, int unknowns_, PeanoDataType type_, int dimensions_):
+convert::data::Variable::Variable(std::string name_, int dofsPerAxis_, int unknowns_, PeanoDataType type_, int dimensions_):
   name(name_),
   dofsPerAxis(dofsPerAxis_),
   unknowns(unknowns_),
@@ -14,27 +14,27 @@ visualisation::data::Variable::Variable(std::string name_, int dofsPerAxis_, int
 }
 
 
-bool visualisation::data::Variable::operator<( const visualisation::data::Variable& rhs ) const {
+bool convert::data::Variable::operator<( const convert::data::Variable& rhs ) const {
   return name<rhs.name;
 }
 
 
-bool visualisation::data::Variable::operator==( const visualisation::data::Variable& rhs ) const {
+bool convert::data::Variable::operator==( const convert::data::Variable& rhs ) const {
   return name==rhs.name;
 }
 
 
-int visualisation::data::Variable::getTotalNumberOfQuantitiesPerPatch() const {
+int convert::data::Variable::getTotalNumberOfQuantitiesPerPatch() const {
   return unknowns * getTotalNumberOfDofsPerPatch();
 }
 
 
-int visualisation::data::Variable::getTotalNumberOfDofsPerPatch() const {
+int convert::data::Variable::getTotalNumberOfDofsPerPatch() const {
   return tarch::la::aPowI(dimensions,dofsPerAxis);
 }
 
 
-int visualisation::data::Variable::getVerticesPerAxisInCartesianMesh() const {
+int convert::data::Variable::getVerticesPerAxisInCartesianMesh() const {
   if (type==PeanoDataType::Cell_Values) {
 	return dofsPerAxis+1;
   }
@@ -44,23 +44,23 @@ int visualisation::data::Variable::getVerticesPerAxisInCartesianMesh() const {
 }
 
 
-int visualisation::data::Variable::getTotalNumberOfVerticesInCartesianMesh() const {
+int convert::data::Variable::getTotalNumberOfVerticesInCartesianMesh() const {
   return tarch::la::aPowI(dimensions,getVerticesPerAxisInCartesianMesh());
 }
 
 
-int visualisation::data::Variable::getTotalNumberOfCellsInCartesianMesh() const {
+int convert::data::Variable::getTotalNumberOfCellsInCartesianMesh() const {
   return tarch::la::aPowI(dimensions,getVerticesPerAxisInCartesianMesh()-1);
 }
 
 
-std::string visualisation::data::Variable::toString() const {
+std::string convert::data::Variable::toString() const {
   std::ostringstream msg;
 
   msg << "(name:" << name
 	  << ",dofs-per-axis:" << dofsPerAxis
       << ",unknowns:" << unknowns
-	  << ",type:" << (type==visualisation::data::PeanoDataType::Cell_Values ? "cell-values" : "vertex-values" )
+	  << ",type:" << (type==convert::data::PeanoDataType::Cell_Values ? "cell-values" : "vertex-values" )
       << ",dim:" << dimensions
 	  << ")";
 
