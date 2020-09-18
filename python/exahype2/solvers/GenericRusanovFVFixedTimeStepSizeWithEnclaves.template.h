@@ -45,13 +45,12 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       double                                       t
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
 
-    virtual void eigenvalues(
+    virtual double maxEigenvalue(
       double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
-      int                                          normal,
-      double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
+      int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %} override{% endif %};
 
     virtual void boundaryConditions(

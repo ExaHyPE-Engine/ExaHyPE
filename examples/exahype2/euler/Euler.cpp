@@ -59,34 +59,26 @@ void examples::exahype2::euler::Euler::adjustSolution(
 
 
 
-void examples::exahype2::euler::Euler::eigenvalues(
+double examples::exahype2::euler::Euler::maxEigenvalue(
   double                                       Q[5],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
-  int                                          normal,
-  double                                       lambda[5]
+  int                                          normal
 ) {
   assertion(normal>=0);
   assertion(normal<Dimensions);
-  eigenvalues(Q,faceCentre,volumeH,t,normal,lambda,tarch::multicore::TargetDevice::MayRunOnGPU);
-
-  nonCriticalAssertion2( lambda[0]==lambda[0], faceCentre, normal );
-  nonCriticalAssertion2( lambda[1]==lambda[1], faceCentre, normal );
-  nonCriticalAssertion2( lambda[2]==lambda[2], faceCentre, normal );
-  nonCriticalAssertion2( lambda[3]==lambda[3], faceCentre, normal );
-  nonCriticalAssertion2( lambda[4]==lambda[4], faceCentre, normal );
+  return maxEigenvalue(Q,faceCentre,volumeH,t,normal,tarch::multicore::TargetDevice::MayRunOnGPU);
 }
 
 
 
-void examples::exahype2::euler::Euler::eigenvalues(
+double examples::exahype2::euler::Euler::maxEigenvalue(
   double                                       Q[5],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double                                       lambda[5],
   tarch::multicore::TargetDevice
 ) {
   constexpr double gamma = 1.4;
@@ -100,11 +92,15 @@ void examples::exahype2::euler::Euler::eigenvalues(
   const double u_n = Q[normal + 1] * irho;
   const double c   = std::sqrt(gamma * p * irho);
 
+  double lambda[5];
+
   lambda[0]  = u_n - c;
   lambda[1]  = u_n;
   lambda[2]  = u_n;
   lambda[3]  = u_n;
   lambda[4]  = u_n + c;
+
+  return std::max(lambda[0],lambda[4]);
 }
 
 

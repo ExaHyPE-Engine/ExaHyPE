@@ -51,6 +51,8 @@ It is relatively straightforward to use \ExaHyPE\ within \Peano:
 
 \begin{itemize}
   \item Configure your code with the flag \texttt{--enable-exahype}.
+  \item ExaHyPE further requires some toolboxes, so you also have to add
+  \texttt{--enable-loadbalancing-toolbox}.
   \item Recompile your code. This should give you a couple of
   \texttt{ExaHyPE2Core} libraries in the respective subdirectories.
   \item Ensure that \texttt{python/exahype} is in your Python search path.
@@ -79,245 +81,48 @@ then assembles the application.
 \section{Minimalistic Finite Volumes for the Euler equations}
 \label{section:exahype:fv}
 
-We provide a complete Finite Volume implementation of a plain Euler solver
-realised with \ExaHyPE. 
-This solver relies on a Rusanov flux and can, with only a few lines, be
-changed into an ADER-DG scheme later.
-Indeed, it can be used by an ADER-DG scheme as a limiter later on.
-All example data can be found within the directory
-\texttt{python/examples/exahype2/finitevolumes}.
+I wrote a very simple Finite Volume implementation of a plain Euler solver to
+explain the fundamental ideas behind \ExaHyPE.
+It is a Jupyter notebook and hosts details explanations.
+It also explores different ways how to model the solver, i.e.~I compare
+C++-based vs.~symbolic models for all PDE terms.
+You can start it via
 
-
-\subsection{Preparation}
-
-Our centrel Euler script first includes a couple of tools that we need to work
-with \ExaHyPE:
 
 \begin{code}
-import peano4
-import peano4.datamodel
-import peano4.solversteps
-import peano4.output
-import peano4.visualisation
-import peano4.toolbox.blockstructured
-
-import exahype2
-\end{code} 
-
-
-\noindent
-Different to a \Peano\ application, we now do create an \ExaHyPE\ project
-instance
-\begin{code}
-project = exahype2.Project( ["examples", "exahype2", "finitevolumes"], "finitevolumes", "." )
-\end{code}
-\noindent
-which is assigned a subnamespace, a project name and an output path.
-
-
-Next, we add the Finite Volumes solver to the project. 
-This step also specifies the number of unknowns and the patch sizes that we want
-to use:
-\begin{code}
-patch_size = 25
-unknowns   = 5
-project.add_finite_volumes_solver("Euler", patch_size, unknowns, 0.0001)
-\end{code}
-\noindent
-The solver is called \texttt{Euler}.
-
-
-Once this minimalist \ExaHyPE\ project is done, we ask it to generate a \Peano\
-project for us, let this project parse our configure script's outcome (so that
-we use the same compiler settings and other options), and we also tell \Peano\
-where to find our \ExaHyPE\ libraries.
-Please note that \Peano\ builds these libraries in different variants
-(production runs, tracing or debugging flavours, \ldots).
-Select the right one:
-
-\begin{code}
-peano4_project = project.generate_Peano4_project()
-peano4_project.output.makefile.parse_configure_script_outcome( "../../../.." )
-peano4_project.output.makefile.add_library( "ExaHyPE2Core2d_debug", "../../../../src/exahype2" )
-peano4_project.generate(peano4.output.Overwrite.Default)
-peano4_project.build()
+cd examples/exahype2/euler
+export PYTHONPATH=../../../python
+jupyter notebook
 \end{code}
 
 
 \noindent
-To run this code---won't work as we lack the actual Physics in the
-implementations---type in
-\begin{code}
-success = peano4_project.run( [] )
-\end{code}
-within the Python workbench. 
-Alternatively, you can build/run the code directly from the command line. 
-
-\begin{definition}
- \Peano\ and, hence, \ExaHyPE\ provide the Python API to model the application. 
- Under the hood, they rely on a plain makefile and generate a stand-alone C++
- application without Python-dependencies.
- So once you've created your application, nothing stops you from dropping the
- Python front-end. 
- Once you've built you application, you don't need Python anymore (within your
- Slurm script, e.g.).
-\end{definition}
+All calls from this notebook can obviously also be made from a plain Python
+script. 
+Alternatively, you can execute the notebook via \texttt{ipython3}.
 
 
-
-\subsection{Implementing the Euler solver}
-
-The run of \ExaHyPE\ so far has given us a lot of glue code (which we will
-never touch) and three files in the main directory:
-\texttt{AbstractEuler.h}, \texttt{Euler.h} and \texttt{Euler.cpp}.
-
-\begin{definition}
-  In \ExaHyPE's native mode, i.e.~without further packages such as Ghoddess or
-  ClawPack, I always create two classes per solver: an abstract superclass and
-  the actual implementation class.
-  The latter has to implement all routines from the abstract superclass which
-  are not yet defined.
-  For some of the routines, I provide empty glue code with a todo remark. 
-  For most of them, just open the (abstract) header file, browse through the
-  code and create implementations in the subclass manually.
-\end{definition}
-
-\noindent
-It is the last one that we have to alter to inject our domain knowledge,
-i.e.~the PDE\footnote{If you regenerate your \ExaHyPE\ code later on, it will
-overwrite the Abstract\ldots solver classes, but it will never modify your
-actual solver instances. So if signatures change, your implementation won't
-get lost.}.
-In our introductory example, there are three routines that require our
-attention.
-The first one is \texttt{adjustSolution}.
-We can use this routine to overwrite the solution at any time and, hence, to
-inject boundary conditions or stimuli into the domain.
-It is also this routine that allows us to realise initial conditions:
-\begin{code}
-void examples::exahype2::finitevolumes::Euler::adjustSolution(
-  double Q[5],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  const tarch::la::Vector<Dimensions,double>&  t
-) {
-  if (tarch::la::equals(t,0.0) ) {
-    // initial conditions
-    bool isInTheCentre = ( tarch::la::norm2( x-tarch::la::Vector<Dimensions,double>(0.5) ) < 0.05 );
-    Q[0] = 1.0;  // rho
-    Q[1] = 0;    // velocities
-    Q[2] = 0;
-    Q[3] = 0;
-    Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
-  }
-}
-\end{code}
-
-
-\noindent
-As second and third step, we have to write our actual flux and eigenvalue
-functions as we need them for Rusanov:
-
-\attachfile[icon=Paperclip,description=Download code snippet,author=Peano 4]
-{60_exahype/Euler-eigenvalues.cpp}
-
-\begin{code}
-void examples::exahype2::finitevolumes::Euler::eigenvalues(
-  double                                       Q[5],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  const tarch::la::Vector<Dimensions,double>&  t,
-  int                                          normal,
-  double                                       lambda[5]
-) {
-  [...]
-}
-\end{code}
-
-
-
-\attachfile[icon=Paperclip,description=Download code snippet,author=Peano 4]
-{60_exahype/Euler-flux.cpp}
-
-
-\begin{code}
-void examples::exahype2::finitevolumes::Euler::flux(
-  double                                       Q[5],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  const tarch::la::Vector<Dimensions,double>&  t,
-  int                                          normal,
-  double                                       F[5]
-) {
-  [...]
-}
-\end{code}
-
-
-\noindent
-There are quite a lot of assertions in the code in the repository that you might
-want to skip (and I didn't paste them in here).
-I found them useful when I wrote \ExaHyPE\ in the first place.
-With these implementations in place, you can finally type in \texttt{make} in
-the project directory and rerun the code.
-Alternatively, just re-execute the whole Python script.
-You'll get your first wave equation solver
-
-Some simple boundary conditions close the system:
-
-\begin{code}
-void examples::exahype2::finitevolumes::Euler::boundaryConditions(
-  double                                       Qinside[5],
-  double                                       Qoutside[5],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  const tarch::la::Vector<Dimensions,double>&  t,
-  int                                          normal
-) {
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = Qinside[1];
-  Qoutside[2] = Qinside[2];
-  Qoutside[3] = Qinside[3];
-  Qoutside[4] = Qinside[4];
-}
-\end{code}
-
-
-
-\subsection{Configuring the overall run}
-
-\ExaHyPE's Python interface gives you the opportunity to specify exactly which
-domain you want to use, how often to plot, and when to shut down the simulation.
-For a first trial, we set the parameters as follows:
-\begin{code}
-project.set_global_simulation_parameters(
-  2,         # Dimensions
-  [0.0,0.0], # Offset of computational domain
-  [1.0,1.0], # Size of computational domain
-  0.2,       # Terminal time, i.e. we simulate from 0 to 0.2
-  0.0,       # First snapshot of solution is done after grid construction, i.e. at time 0
-  0.001      # We then plot every 0.001 time units
-)
-\end{code}
-\noindent
-This is all. We now can run the code.
-
-
-\subsubsection{IO and logging}
+\section{IO and logging}
 
 
 \ExaHyPE\ codes by default yield snapshots in \Peano's block format. 
 If you have configured \Peano\ with VTK support, you can directly convert it
-into VTK and visualise through Paraview or VisIt, e.g.:
+into VTK and visualise through Paraview or VisIt. 
+For this, I provide a command line tool as discussed in Chapter
+\ref{chapter:postprocessing}.
+
+
+There's also a VTK wrapper around the command line tool:
+
 \begin{code}
-if success:
-  convert = peano4.visualisation.Convert( "solutionEuler" )
-  convert.set_visualisation_tools_path( "../../../../src/visualisation" )
-  convert.extract_fine_grid()
-  convert.convert_to_vtk()
+convert = peano4.visualisation.Convert( "solution-Euler" )
+convert.set_visualisation_tools_path( "../../../../src/visualisation" )
+convert.extract_fine_grid()
+convert.convert_to_vtk()
 \end{code}
 
 
+\noindent
 \ExaHyPE\ searches for a text file \texttt{exahype.log-filter} in the working
 directory.
 If no such file is found (or the file is corrupted), then it will use some
@@ -330,7 +135,7 @@ The syntax of log filter files is discussed in Section
 
 
 
-\subsection{Running on a parallel computer}
+\section{Running on a parallel computer}
 
 To run \ExaHyPE\ in parallel, you have to build \Peano\ with support for
 multithreading and/or MPI.
@@ -364,32 +169,44 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
 \end{code}
 
 \noindent
-on your \ExaHyPE\ project. You can add  
+on your \ExaHyPE\ project. 
 
 
-\paragraph{Task decomposition}
-\ExaHyPE\ realises an additional task decomposition working on top of the domain
-decomposition. 
-This task decomposition is shared memory, only.
-That is, you can use task decomposition without domain decomposition, but then
-you won't benefit from multiple nodes.
-You can however always use domain decomposition without task
-decomposition---though it should be slower in most cases.
+\paragraph{Task parallelism}
 
-\begin{remark}
-This section is under construction.
-\end{remark} 
+Some \ExaHyPE\ solvers add further task parallelism to this decomposition. 
+In general, the enclave solvers tend to perform better on massively parallel
+systems.
+
+
+% \paragraph{Task decomposition}
+% \ExaHyPE\ realises an additional task decomposition working on top of the domain
+% decomposition. 
+% This task decomposition is shared memory, only.
+% That is, you can use task decomposition without domain decomposition, but then
+% you won't benefit from multiple nodes.
+% You can however always use domain decomposition without task
+% decomposition---though it should be slower in most cases.
+% 
+% \begin{remark}
+% This section is under construction.
+% \end{remark} 
 
 
 \section{GPU support}
 
-To add GPU support (via OpenMP 5), you have to do a couple of steps.
+To add GPU support (via OpenMP 5), you have to do a couple of steps
+and you have to check first whether your solver of choice supports
+GPUs. 
+Not all solvers are suited for a GPU.
+Next, you have to run through a couple of steps:
+
+
 First, your environment has to be compiled with OpenMP, and I strongly recommend
 that you also add \texttt{--with-nvidia} to have support for their tools.
 Check that \texttt{-DnoGPUOffloading} is \emph{not} set within the compile
 flags and translate your code.
-
-Next, ensure that you use an \ExaHyPE\ solver which has support for GPUs. 
+Second, ensure that you use an \ExaHyPE\ solver which has support for GPUs. 
 The enclave solvers typically are your solvers of choice.
 Solvers that provide GPU support have a flag \texttt{use\_gpu} in their
 constructor which is unset by default. 
@@ -562,51 +379,17 @@ The grant number is EP/V00154X/1.
 
 
 
-\section{Ghoddess DG solvers}
-% 
-% We also do provide an interface to Ghoddess DG solvers.
-% Ghoddess solvers use a classic DG formulation with explicit time stepping.
-% Their big USP within \ExaHyPE\ is they rely on a quasi-symbolic formulation and
-% thus facilitate even fast prototyping.
-% 
-\begin{remark}
-  This yet has to be written.
-\end{remark}
- 
-% \subsection{Preparation}
-% 
-% We first install Ghoddess:
-% 
+% \section{Ghoddess DG solvers}
+% % 
+% % We also do provide an interface to Ghoddess DG solvers.
+% % Ghoddess solvers use a classic DG formulation with explicit time stepping.
+% % Their big USP within \ExaHyPE\ is they rely on a quasi-symbolic formulation and
+% % thus facilitate even fast prototyping.
+% % 
 % \begin{remark}
-%  Add instructions here.
+%   This yet has to be written.
 % \end{remark}
-% 
-% 
-% \subsection{Using the Ghoddess solver}
-% 
-% From hereon, our description follows the Finite Volume example from Section
-% \ref{section:exahype:fv}, i.e.~we only highlight where we do things differently.
-% Besides our \ExaHyPE\ modules, we first include the ghoddess subpackage which is
-% not by default included:
-% 
-% \begin{code}
-% import os
-% import peano4
-% import exahype2
-% import exahype2.ghoddess
-% \end{code} 
-% 
-% From hereon, we create the Ghoddess solver and add it to the project:
-% 
-% \begin{code}
-% project = exahype2.Project( ["examples", "exahype2", "advection"], "ghoddess", "." )
-% order          = 23
-% unknowns       = 5
-% time_step_size = 0.0001
-% project.add_solver(  exahype2.ghoddess.RusanovLegendreWithFixedTimeStepSize(
-%   "Advection", order, unknowns, 0.0001) )
-% \end{code}
-
+ 
 
 
 \section{Introducing a new numerical scheme}

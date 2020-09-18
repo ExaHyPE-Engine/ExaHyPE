@@ -19,15 +19,14 @@ void exahype2::fv::internal::splitRusanov1d(
             int                                          normal,
             double                                       F[]
     ) >   flux,
-    std::function< void(
+    std::function< double(
             double                                       Q[],
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
             double                                       dt,
-            int                                          normal,
-            double                                       lambdas[]
-    ) >   eigenvalues,
+            int                                          normal
+    ) >   maxEigenvalue,
     double QL[],
     double QR[],
     const tarch::la::Vector<Dimensions,double>&  x,
@@ -36,6 +35,7 @@ void exahype2::fv::internal::splitRusanov1d(
     double                                       dt,
     int                                          normal,
     int                                          unknowns,
+    int                                          auxiliaryVariables,
     double                                       FL[],
     double                                       FR[]
   ) {
@@ -47,19 +47,9 @@ void exahype2::fv::internal::splitRusanov1d(
     flux(QL,x,dx,t,dt,normal,fluxFL);
     flux(QR,x,dx,t,dt,normal,fluxFR);
 
-    double lambdas[unknowns];
-    double lambdaMax = 0.0;
-
-    eigenvalues(QL,x,dx,t,dt,normal,lambdas);
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
-    }
-    eigenvalues(QR,x,dx,t,dt,normal,lambdas);
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
-    }
+    double lambdaMaxL = maxEigenvalue(QL,x,dx,t,dt,normal);
+    double lambdaMaxR = maxEigenvalue(QR,x,dx,t,dt,normal);
+    double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
     for (int unknown=0; unknown<unknowns; unknown++) {
       FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
@@ -105,6 +95,7 @@ void exahype2::fv::internal::splitRusanov1d(
     double                                       dt,
     int                                          normal,
     int                                          unknowns,
+    int                                          auxiliaryVariables,
     double                                       FL[],
     double                                       FR[]
 ) {

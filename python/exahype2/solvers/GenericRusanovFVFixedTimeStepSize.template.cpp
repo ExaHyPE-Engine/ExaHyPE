@@ -45,12 +45,11 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::adjustS
 
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::eigenvalues(
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEigenvalue(
   double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
-  int                                          normal,
   double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );

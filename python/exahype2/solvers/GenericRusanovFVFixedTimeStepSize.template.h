@@ -52,13 +52,12 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
 
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    virtual void eigenvalues(
+    virtual double maxEigenvalue(
       double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
-      int                                          normal,
-      double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
+      int                                          normal
     ) override;
     {% endif %}
 

@@ -37,7 +37,7 @@ namespace exahype2 {
         int                                          normal,
         double                                       F[]
       ) >   flux,
-      std::function< void(
+      std::function< double(
         double                                       Q[],
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -45,13 +45,14 @@ namespace exahype2 {
         double                                       dt,
         int                                          normal,
         double                                       lambdas[]
-      ) >   eigenvalues,
+      ) >   maxEigenvalue,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
       double                                       t,
       double                                       dt,
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
+      int                                          auxiliaryVariables,
       double                                       Qin[],
       double                                       Qout[]
     );
@@ -80,7 +81,7 @@ namespace exahype2 {
         int                                          normal,
         double                                       BgradQ[]
       ) >   nonconservativeProduct,
-      std::function< void(
+      std::function< double(
         double                                       Q[],
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -88,13 +89,14 @@ namespace exahype2 {
         double                                       dt,
         int                                          normal,
         double                                       lambdas[]
-      ) >   eigenvalues,
+      ) >   maxEigenvalue,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
       double                                       t,
       double                                       dt,
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
+      int                                          auxiliaryVariables,
       double                                       Qin[],
       double                                       Qout[]
     );
@@ -104,10 +106,10 @@ namespace exahype2 {
       #if defined(GPUOffloading)
       #pragma omp declare target
       #endif
-      template <typename Flux, typename Eigenvalues>
+      template <typename Flux, typename MaxEigenvalue>
       void applyRusanovToPatch_FaceLoops(
         Flux                                         flux,
-        Eigenvalues                                  eigenvalues,
+        MaxEigenvalue                                maxEigenvalue,
         const tarch::la::Vector<Dimensions,double>&  patchCentre,
         const tarch::la::Vector<Dimensions,double>&  patchSize,
         double                                       t,
@@ -265,6 +267,7 @@ namespace exahype2 {
         double                                       dt,
         int                                          normal,
         int                                          unknowns,
+        int                                          auxiliaryVariables,
         double                                       FL[],
         double                                       FR[]
       );

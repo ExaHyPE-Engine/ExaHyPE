@@ -39,17 +39,16 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}::adjustSolution(
 
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}::eigenvalues(
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}::maxEigenvalue(
   double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
-  int                                          normal,
-  double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
+  int                                          normal
 ) {{
-  logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
+  logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
   // @todo implement
-  logTraceOut( "eigenvalues(...)" );
+  logTraceOut( "maxEigenvalue(...)" );
 }}
 
 

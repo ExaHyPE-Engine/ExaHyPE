@@ -167,13 +167,12 @@ class AbstractGenericRusanovFV( FV ):
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
-        int                                          normal,
-        double                                       lambdas[]
-      ) -> void {
+        int                                          normal
+      ) -> double {
         {% if use_gpu %}
-        {{SOLVER_NAME}}::eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
+        return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
-        {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas );
+        return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal );
         {% endif %}
       },
       {% if use_gpu %}
@@ -237,13 +236,12 @@ class AbstractGenericRusanovFV( FV ):
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
-        int                                          normal,
-        double                                       lambdas[]
+        int                                          normal
       ) -> void {
         {% if use_gpu %}
-        {{SOLVER_NAME}}::eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
+        return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
-        {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas);
+        return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal, lambdas);
         {% endif %}
       },
       {% if use_gpu %}

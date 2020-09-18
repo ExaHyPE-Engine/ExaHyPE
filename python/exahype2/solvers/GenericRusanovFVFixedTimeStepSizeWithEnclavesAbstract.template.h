@@ -79,17 +79,15 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
 
     /**
-     * Determine eigenvalues over Jacobian in a given point with solution values
-     * (states) Q. All parameters are in besides lambda which is the output
-     * vector.
+     * Determine max eigenvalue over Jacobian in a given point with solution values
+     * (states) Q. All parameters are in.
      */
-    virtual void eigenvalues(
+    virtual double maxEigenvalue(
       double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
-      int                                          normal,
-      double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
+      int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
 
     /**
