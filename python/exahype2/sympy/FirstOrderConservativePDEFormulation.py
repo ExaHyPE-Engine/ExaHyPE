@@ -125,17 +125,6 @@ class FirstOrderConservativePDEFormulation:
     return result
 
 
-  def find_max_eigenvalues(self):
-    """
-      I use alpha as lambda is already a keyword
-    """
-    alpha     = sympy.symarray( "alpha", self.unknowns )
-    #direction = sympy.symarray( "x",     self.dimensions )
-    direction = sympy.symbols( "direction" )
-    equation = sympy.diff( self.F[0,0], direction ) + sympy.diff( self.F[0,1], direction ) + sympy.diff( self.F[0,2], direction ) - alpha * sympy.diff( self.Q[0], direction )      
-    print( str(equation) )
-
-
   def substitute_expression(self,expression,new_expression):
     """
     
@@ -176,7 +165,10 @@ class FirstOrderConservativePDEFormulation:
 
   def implementation_of_eigenvalues(self, invoke_evalf_before_output = False):
     """
-      Return implementation for flux along one coordinate axis (d) as C code.
+      Return eigenvalues
+      
+      This yields a set of eigenvalues, i.e. one per unknown. For many solvers such as 
+      Rusanov, you need only one.
       
       d: int
         The axis along which we wanna have the eigenvalues
@@ -199,6 +191,31 @@ class FirstOrderConservativePDEFormulation:
       result += "  break;\n"
     result += "}\n"
     return result
+  
+  
+
+  def implementation_of_max_eigenvalue(self, invoke_evalf_before_output = False):
+    """
+      Return maximum eigenvalue
+    """
+    result  = self.__implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
+    result += "double lambda[" + str(self.unknowns) + "];\n"
+    result += "switch (normal) {\n"
+    for d in range(0,self.dimensions):
+      result += "  case " + str(d) + ":\n"
+      for i in range(0,self.unknowns):
+        if invoke_evalf_before_output:
+          result += sympy.printing.cxxcode( self.eigenvalue[i,d].evalf(), assign_to="lambda[" + str(i) + "]" )
+        else:
+          result += "lambda[" + str(i) + "] = " + sympy.printing.cxxcode( self.eigenvalue[i,d] ) + ";"
+        result += "\n"
+      result += "  break;\n"
+    result += "}\n"
+    result += "double result = 0.0;\n"
+    for i in range(0,self.unknowns):
+      result += "result = std::max( result, lambda[" + str(i)+ "] );\n"
+    result += "return result;\n"
+    return result  
   
   
   def implementation_of_homogeneous_Neumann_BC(self):

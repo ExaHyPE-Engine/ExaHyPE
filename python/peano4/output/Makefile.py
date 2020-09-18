@@ -66,7 +66,7 @@ class Makefile(object):
     """
     if library_path!="":
       self.d["LIBS"] = "-L" + library_path + " " + self.d["LIBS"]
-    self.d["LIBS"] += " -l" + library_name
+    self.d["LIBS"] += " -l" + library_name + " "
 
 
   def set_mode( self, mode ):
@@ -114,7 +114,7 @@ class Makefile(object):
     
     
   def set_linker_flags(self,value):
-    self.d["LDFLAGS"]       = value
+    self.d["LDFLAGS"]       = value + " "
 
 
   def parse_configure_script_outcome(self,directory):
