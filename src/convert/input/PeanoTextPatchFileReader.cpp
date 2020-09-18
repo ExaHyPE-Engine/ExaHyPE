@@ -15,20 +15,20 @@
 #include "tarch/mpi/Rank.h"
 
 
-tarch::logging::Log visualisation::input::PeanoTextPatchFileReader::_log( "visualisation::input::PeanoTextPatchFileReader" );
+tarch::logging::Log convert::input::PeanoTextPatchFileReader::_log( "convert::input::PeanoTextPatchFileReader" );
 
 
-visualisation::input::PeanoTextPatchFileReader::PeanoTextPatchFileReader(const std::string &file):
+convert::input::PeanoTextPatchFileReader::PeanoTextPatchFileReader(const std::string &file):
   _dimensions(-1),
   _file(file) {
 }
 
 
-visualisation::input::PeanoTextPatchFileReader::~PeanoTextPatchFileReader() {
+convert::input::PeanoTextPatchFileReader::~PeanoTextPatchFileReader() {
 }
 
 
-int visualisation::input::PeanoTextPatchFileReader::extractTreeNumberFromFileName() const {
+int convert::input::PeanoTextPatchFileReader::extractTreeNumberFromFileName() const {
   int result = -1;
   const std::string prefix    = "tree";
   const std::string separator = "-";
@@ -43,7 +43,7 @@ int visualisation::input::PeanoTextPatchFileReader::extractTreeNumberFromFileNam
 }
 
 
-void visualisation::input::PeanoTextPatchFileReader::parse() {
+void convert::input::PeanoTextPatchFileReader::parse() {
   logInfo( "parse()", "reading file " << _file );
 
   bool isFirstDataSet = true;
@@ -51,7 +51,7 @@ void visualisation::input::PeanoTextPatchFileReader::parse() {
   std::vector< PeanoTextPatchFileReader > subReaders;
 
   // Push in default guy
-  _data.push_back( visualisation::data::DataSet() );
+  _data.push_back( convert::data::DataSet() );
 
   std::ifstream ifs(_file);
   std::vector<std::string> lines;
@@ -81,7 +81,7 @@ void visualisation::input::PeanoTextPatchFileReader::parse() {
         isFirstDataSet = false;
 	    }
 	    else {
-        _data.push_back( visualisation::data::DataSet() );
+        _data.push_back( convert::data::DataSet() );
       }
     }
     else if ( tokens[0]=="end" and tokens[1]=="dataset" ) { //new snapshot
@@ -89,7 +89,7 @@ void visualisation::input::PeanoTextPatchFileReader::parse() {
       #pragma omp parallel for
       for (int i=0; i<NumberOfSubreaders; i++) {
         subReaders[i].parse();
-        std::vector< visualisation::data::DataSet >  subData = subReaders[i].getData();
+        std::vector< convert::data::DataSet >  subData = subReaders[i].getData();
 
         if ( subData.size()>1 ) {
           logError( "parse()", "included dataset seems to hold more than one dataset, i.e. seems to be series of datasets again. This is not supported" );
@@ -127,7 +127,7 @@ void visualisation::input::PeanoTextPatchFileReader::parse() {
         tarch::mpi::Rank::abort(-1);
       }
       else {
-        parseVariablesDeclaration( _data.size()-1, variableDeclarationLines, variableName, visualisation::data::PeanoDataType::Cell_Values );
+        parseVariablesDeclaration( _data.size()-1, variableDeclarationLines, variableName, convert::data::PeanoDataType::Cell_Values );
       }
     }
     else if ( tokens[0]=="begin" and tokens[1]=="vertex-values" ) { //define a vertex variable
@@ -142,7 +142,7 @@ void visualisation::input::PeanoTextPatchFileReader::parse() {
         tarch::mpi::Rank::abort(-1);
       }
       else {
-        parseVariablesDeclaration( _data.size()-1, variableDeclarationLines, variableName, visualisation::data::PeanoDataType::Vertex_Values );
+        parseVariablesDeclaration( _data.size()-1, variableDeclarationLines, variableName, convert::data::PeanoDataType::Vertex_Values );
       }
     }
     else if ( tokens[0]=="dimensions" ) {
@@ -188,7 +188,7 @@ void visualisation::input::PeanoTextPatchFileReader::parse() {
 }
 
 
-void visualisation::input::PeanoTextPatchFileReader::parseVariablesDeclaration( int dataSetCounter, const std::vector<std::string>& description, const std::string&  variableName, visualisation::data::PeanoDataType type ) {
+void convert::input::PeanoTextPatchFileReader::parseVariablesDeclaration( int dataSetCounter, const std::vector<std::string>& description, const std::string&  variableName, convert::data::PeanoDataType type ) {
   //get mapping
   int numberOfUnknowns = -1;
   int numberOfDofs     = -1;
@@ -262,9 +262,9 @@ void visualisation::input::PeanoTextPatchFileReader::parseVariablesDeclaration( 
   }
   else {
     _data[dataSetCounter].data.insert(
-      std::pair<visualisation::data::Variable, std::vector<visualisation::data::PatchData>>(
-        visualisation::data::Variable( variableName, numberOfDofs, numberOfUnknowns, type, _dimensions ),
-        std::vector<visualisation::data::PatchData>()
+      std::pair<convert::data::Variable, std::vector<convert::data::PatchData>>(
+        convert::data::Variable( variableName, numberOfDofs, numberOfUnknowns, type, _dimensions ),
+        std::vector<convert::data::PatchData>()
 	    )
 	  );
   }
@@ -272,7 +272,7 @@ void visualisation::input::PeanoTextPatchFileReader::parseVariablesDeclaration( 
 
 
 /*
-double* visualisation::input::PeanoTextPatchFileReader::parseMapping( const std::vector<std::string>& patchDescription ) {
+double* convert::input::PeanoTextPatchFileReader::parseMapping( const std::vector<std::string>& patchDescription ) {
   std::vector<double> data;
   for (auto p: patchDescription) {
     std::vector<std::string> tokens = Parser::tokenise(p);
@@ -289,7 +289,7 @@ double* visualisation::input::PeanoTextPatchFileReader::parseMapping( const std:
 */
 
 
-void visualisation::input::PeanoTextPatchFileReader::parsePatch( int dataSetCounter, int treeNumber, const std::vector<std::string>& text ) {
+void convert::input::PeanoTextPatchFileReader::parsePatch( int dataSetCounter, int treeNumber, const std::vector<std::string>& text ) {
   assertion( _dimensions==2 or _dimensions==3 );
 
   logDebug( "parsePatch(...)", "create patch described by " << text.size() << " lines" );
@@ -368,7 +368,7 @@ void visualisation::input::PeanoTextPatchFileReader::parsePatch( int dataSetCoun
 }
 
 
-void visualisation::input::PeanoTextPatchFileReader::addDataToPatch( int dataSetCounter, const std::string& variableName, double* offset, double* size, int treeNumber, const std::vector< std::string >& textData ) {
+void convert::input::PeanoTextPatchFileReader::addDataToPatch( int dataSetCounter, const std::string& variableName, double* offset, double* size, int treeNumber, const std::vector< std::string >& textData ) {
   logDebug( "parsePatch(...)", "set data of variable " << variableName << " (parse " << textData.size() << " entries)");
 
   if (!_data[dataSetCounter].hasVariable(variableName)) {
@@ -376,7 +376,7 @@ void visualisation::input::PeanoTextPatchFileReader::addDataToPatch( int dataSet
     return;
   }
 
-  const visualisation::data::Variable  key = _data[dataSetCounter].getVariable(variableName);
+  const convert::data::Variable  key = _data[dataSetCounter].getVariable(variableName);
 
   const int expectedDataEntries = key.getTotalNumberOfQuantitiesPerPatch();
   if ( textData.size()!=expectedDataEntries ) {
@@ -384,7 +384,7 @@ void visualisation::input::PeanoTextPatchFileReader::addDataToPatch( int dataSet
     return;
   }
 
-  visualisation::data::PatchData newEntry(_dimensions, offset, size, key.dofsPerAxis, key.unknowns, treeNumber);
+  convert::data::PatchData newEntry(_dimensions, offset, size, key.dofsPerAxis, key.unknowns, treeNumber);
   for (int i=0; i<expectedDataEntries; i++) {
     try {
       newEntry.data[i] = std::stod(textData[i]);
@@ -402,6 +402,6 @@ void visualisation::input::PeanoTextPatchFileReader::addDataToPatch( int dataSet
 
 
 
-std::vector< visualisation::data::DataSet >  visualisation::input::PeanoTextPatchFileReader::getData() const {
+std::vector< convert::data::DataSet >  convert::input::PeanoTextPatchFileReader::getData() const {
   return _data;
 }

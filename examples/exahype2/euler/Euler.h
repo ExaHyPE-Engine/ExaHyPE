@@ -42,13 +42,12 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
       double                                       t
     )  override;
 
-    virtual void eigenvalues(
+    virtual double maxEigenvalue(
       double                                       Q[5],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
-      int                                          normal,
-      double                                       lambda[5]
+      int                                          normal
     )  override;
 
     virtual void boundaryConditions(
@@ -76,6 +75,16 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
     #if defined(GPUOffloading)
     #pragma omp declare target
     #endif
+    /**
+     * OK, this seems to be quite some overengineering. For a raw CPU code, it
+     * is. The reason why we need this becomes obvious only when you switch to
+     * GPGPU codes. For the time being, take it as follows: the flux member
+     * function (and the eigenvalue function as well) are totally stateless.
+     * That is, they don't need the object Euler. So I implement them as static
+     * functions (with this additional parameter device which distinguishes the
+     * functions from the object member functions). The normal class member
+     * functions then just delegate to this static counterpart.
+     */
     static void flux(
       double                                       Q[5],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -87,14 +96,13 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
     );
 
 
-    static void eigenvalues(
+    static double maxEigenvalue(
       double                                       Q[5],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal,
-      double                                       lambda[5],
-      tarch::multicore::TargetDevice
+      tarch::multicore::TargetDevice               device
     );
      #if defined(GPUOffloading)
      #pragma omp end declare target

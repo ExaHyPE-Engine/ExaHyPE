@@ -1,5 +1,5 @@
-#ifndef _VISUALISATION_INPUT_PEANO_TEXT_PATCH_FILE_READER_H_
-#define _VISUALISATION_INPUT_PEANO_TEXT_PATCH_FILE_READER_H_
+#ifndef _CONVERT_INPUT_PEANO_TEXT_PATCH_FILE_READER_H_
+#define _CONVERT_INPUT_PEANO_TEXT_PATCH_FILE_READER_H_
 
 
 
@@ -10,14 +10,14 @@
 #include "PatchFileReader.h"
 
 
-#include "visualisation/data/DataSet.h"
-#include "visualisation/data/Variable.h"
+#include "convert/data/DataSet.h"
+#include "convert/data/Variable.h"
 
 
 #include "tarch/logging/Log.h"
 
 
-namespace visualisation {
+namespace convert {
   namespace input {
     class PeanoTextPatchFileReader;
   }
@@ -44,39 +44,39 @@ namespace visualisation {
  *
  * @author Tobias Weinzierl
  */
-class visualisation::input::PeanoTextPatchFileReader: public visualisation::input::PatchFileReader {
+class convert::input::PeanoTextPatchFileReader: public convert::input::PatchFileReader {
   private:
     static tarch::logging::Log _log;
 
     const std::string  _file;
 
     void    parsePatch( int dataSetCounter, int treeNumber, const std::vector<std::string>& patchDescription );
-    void    parseVariablesDeclaration( int dataSetCounter, const std::vector<std::string>& patchDescription, const std::string&  name, visualisation::data::PeanoDataType type );
+    void    parseVariablesDeclaration( int dataSetCounter, const std::vector<std::string>& patchDescription, const std::string&  name, convert::data::PeanoDataType type );
 
     void    addDataToPatch( int dataSetCounter, const std::string& variableName, double* offset, double* size, int treeNumber, const std::vector< std::string >& textData );
 
     int     extractTreeNumberFromFileName() const;
 
     int                                          _dimensions;
-    std::vector< visualisation::data::DataSet >  _data;
+    std::vector< convert::data::DataSet >  _data;
   public:
-	/**
-	 * Read in one file.
-	 *
-	 * \section Parse process
-	 *
-	 * - Load the whole files into a vector called lines, i.e. we load line by line.
-	 * -
-	 */
-	PeanoTextPatchFileReader(const std::string &file);
-	virtual ~PeanoTextPatchFileReader();
+/**
+ * Read in one file.
+ *
+ * \section Parse process
+ *
+ * - Load the whole files into a vector called lines, i.e. we load line by line.
+ * -
+ */
+PeanoTextPatchFileReader(const std::string &file);
+    virtual ~PeanoTextPatchFileReader();
 
-	void parse() override;
+    void parse() override;
 
 	/**
 	 * A file can hold a series of datasets
 	 */
-	std::vector< visualisation::data::DataSet >  getData() const override;
+	std::vector< convert::data::DataSet >  getData() const override;
 };
 
 #endif

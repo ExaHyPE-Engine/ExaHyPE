@@ -1,5 +1,5 @@
-#ifndef _VISUALISATION_DATA_DATA_SET_H_
-#define _VISUALISATION_DATA_DATA_SET_H_
+#ifndef _CONVERT_DATA_DATA_SET_H_
+#define _CONVERT_DATA_DATA_SET_H_
 
 #include <string>
 #include <vector>
@@ -13,7 +13,7 @@
 #include "Variable.h"
 
 
-namespace visualisation {
+namespace convert {
   namespace input {
     class PeanoTextPatchFileReader;
     class PeanoTextMetaFileReader;
@@ -21,7 +21,7 @@ namespace visualisation {
 }
 
 
-namespace visualisation {
+namespace convert {
   namespace data {
     class DataSet;
   }
@@ -32,7 +32,7 @@ namespace visualisation {
  * A dataset is a wrapper around one big map. The map maps instances of Variable
  * onto vectors of DataSet.
  */
-class visualisation::data::DataSet {
+class convert::data::DataSet {
   public:
 	DataSet();
 
@@ -63,8 +63,8 @@ class visualisation::data::DataSet {
 	 */
 	void add( Variable variable, const std::vector<PatchData>& patchData );
   private:
-	friend class visualisation::input::PeanoTextPatchFileReader;
-	friend class visualisation::input::PeanoTextMetaFileReader;
+	friend class convert::input::PeanoTextPatchFileReader;
+	friend class convert::input::PeanoTextMetaFileReader;
 
 	static tarch::logging::Log  _log;
 

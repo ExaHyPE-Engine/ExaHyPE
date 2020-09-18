@@ -8,8 +8,8 @@
 
 
 std::string exahype2::fv::plotVolume(
-    double Q[],
-    int    unknowns
+  double Q[],
+  int    unknowns
 ) {
   std::string result = "(" + std::to_string(Q[0]);
   for (int i=1; i<unknowns; i++) result += "," + std::to_string(Q[i]);
@@ -22,6 +22,7 @@ void exahype2::fv::copyPatch(
   double QinWithHalo[],
   double QOutWithoutHalo[],
   int    unknowns,
+  int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
   int    haloSize
 ) {
@@ -29,8 +30,8 @@ void exahype2::fv::copyPatch(
     tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
     int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
     int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
-    for (int i=0; i<unknowns; i++) {
-      QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
+    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
     }
   }
 }
@@ -40,6 +41,7 @@ void exahype2::fv::gpu::copyPatch(
   double QinWithHalo[],
   double QOutWithoutHalo[],
   int    unknowns,
+  int    auxiliaryVariables,
   int    numberOfVolumesPerAxisInPatch,
   int    haloSize
 ) {
@@ -48,8 +50,8 @@ void exahype2::fv::gpu::copyPatch(
   int destinationSerialised = 0;
   for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
     for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
-      for (int i=0; i<unknowns; i++) {
-        QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
+      for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+        QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
       }
       sourceSerialised++;
       destinationSerialised++;
@@ -62,8 +64,8 @@ void exahype2::fv::gpu::copyPatch(
   for (int z=0; z<numberOfVolumesPerAxisInPatch; z++) {
     for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
       for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
-        for (int i=0; i<unknowns; i++) {
-          QOutWithoutHalo[destinationSerialised*unknowns+i] = QinWithHalo[sourceSerialised*unknowns+i];
+        for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+          QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
         }
         sourceSerialised++;
         destinationSerialised++;
@@ -94,6 +96,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
       double                                       dt,
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
+      int                                          auxiliaryVariables,
       double                                       Qin[],
       double                                       Qout[]
 ) {
@@ -124,8 +127,8 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
     volumeX(1) += (y+0.5) * volumeH(1);
 
     splitRiemannSolve1d(
-      Qin + leftVoxelInPreimage*unknowns,
-      Qin + rightVoxelInPreimage*unknowns,
+      Qin + leftVoxelInPreimage*(unknowns+auxiliaryVariables),
+      Qin + rightVoxelInPreimage*(unknowns+auxiliaryVariables),
       volumeX,volumeH(0), t, dt, 0, //  last argument = normal
       numericalFluxL, numericalFluxR
     );
@@ -157,8 +160,8 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
     volumeX(1) += y * volumeH(1);
 
     splitRiemannSolve1d(
-      Qin + lowerVoxelInPreimage*unknowns,
-      Qin + upperVoxelInPreimage*unknowns,
+      Qin + lowerVoxelInPreimage*(unknowns+auxiliaryVariables),
+      Qin + upperVoxelInPreimage*(unknowns+auxiliaryVariables),
       volumeX, volumeH(0), t, dt, 1, //  last argument = normal
       numericalFluxL, numericalFluxR
     );
@@ -197,6 +200,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
       double                                       dt,
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
+      int                                          auxiliaryVariables,
       double                                       Qin[],
       double                                       Qout[]
 ) {
@@ -233,8 +237,8 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
     volumeX(2) += (z+0.5) * volumeH(2);
 
     splitRiemannSolve1d(
-      Qin + leftVoxelInPreimage*unknowns,
-      Qin + rightVoxelInPreimage*unknowns,
+      Qin + leftVoxelInPreimage*(unknowns+auxiliaryVariables),
+      Qin + rightVoxelInPreimage*(unknowns+auxiliaryVariables),
       volumeX, volumeH(0), t, dt, 0, //  last argument = normal
       numericalFluxL, numericalFluxR
     );
@@ -273,8 +277,8 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
     volumeX(2) += (z+0.5) * volumeH(2);
 
     splitRiemannSolve1d(
-      Qin + lowerVoxelInPreimage*unknowns,
-      Qin + upperVoxelInPreimage*unknowns,
+      Qin + lowerVoxelInPreimage*(unknowns+auxiliaryVariables),
+      Qin + upperVoxelInPreimage*(unknowns+auxiliaryVariables),
       volumeX, volumeH(0), t, dt, 1, //  last argument = normal
       numericalFluxL, numericalFluxR
     );
@@ -313,8 +317,8 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
     volumeX(2) += z * volumeH(2);
 
     splitRiemannSolve1d(
-      Qin + lowerVoxelInPreimage*unknowns,
-      Qin + upperVoxelInPreimage*unknowns,
+      Qin + lowerVoxelInPreimage*(unknowns+auxiliaryVariables),
+      Qin + upperVoxelInPreimage*(unknowns+auxiliaryVariables),
       volumeX, volumeH(0), t, dt, 2, //  last argument = normal
       numericalFluxL, numericalFluxR
     );

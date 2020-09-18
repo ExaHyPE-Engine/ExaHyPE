@@ -1,18 +1,18 @@
-#ifndef _VISUALISATION_FILTER_FILTER_H_
-#define _VISUALISATION_FILTER_FILTER_H_
+#ifndef _CONVERT_FILTER_FILTER_H_
+#define _CONVERT_FILTER_FILTER_H_
 
 
 #include <string>
 
 
-namespace visualisation {
+namespace convert {
   namespace filter {
     class Filter;
   }
 }
 
 
-namespace visualisation {
+namespace convert {
   namespace data {
     class DataSet;
     class Variable;
@@ -20,9 +20,9 @@ namespace visualisation {
 }
 
 
-class visualisation::filter::Filter {
+class convert::filter::Filter {
   public:
-	virtual void apply( visualisation::data::DataSet& dataSet, visualisation::data::Variable& inputVariable, std::string targetSelectorName ) = 0;
+	virtual void apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) = 0;
 };
 
 #endif

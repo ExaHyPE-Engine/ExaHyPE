@@ -1,5 +1,5 @@
-#ifndef _VISUALISATION_OUTPUT_VTU_WRITER_H_
-#define _VISUALISATION_OUTPUT_VTU_WRITER_H_
+#ifndef _CONVERT_OUTPUT_VTU_WRITER_H_
+#define _CONVERT_OUTPUT_VTU_WRITER_H_
 
 #include "Writer.h"
 
@@ -19,7 +19,7 @@
 #include <vector>
 
 
-namespace visualisation {
+namespace convert {
   namespace output {
     class VTUWriter;
   }
@@ -33,12 +33,12 @@ namespace visualisation {
 }
 
 
-class visualisation::output::VTUWriter: public visualisation::output::Writer {
+class convert::output::VTUWriter: public convert::output::Writer {
   public:
 	VTUWriter(const std::string&  directory, const std::string& outputFileWithoutExtention);
 	~VTUWriter();
 
-	void writeFile(const visualisation::data::Variable& variable, const std::vector<visualisation::data::PatchData>& data) override;
+	void writeFile(const convert::data::Variable& variable, const std::vector<convert::data::PatchData>& data) override;
 
 	/**
 	 * Meta file write
@@ -63,22 +63,22 @@ class visualisation::output::VTUWriter: public visualisation::output::Writer {
 	/**
 	 * Convert one patch into a regular grid, i.e. an image.
 	 */
-	static vtkSmartPointer<vtkImageData> toImageData(const visualisation::data::Variable& variable, const visualisation::data::PatchData& data);
+	static vtkSmartPointer<vtkImageData> toImageData(const convert::data::Variable& variable, const convert::data::PatchData& data);
 
 	/**
 	 * Basic routine.
 	 *
 	 * Take an individual patch and convert it into an unstructured grid.
 	 */
-	static vtkSmartPointer<vtkUnstructuredGrid> toUnstructuredGrid(const visualisation::data::Variable& variable, const visualisation::data::PatchData& data);
+	static vtkSmartPointer<vtkUnstructuredGrid> toUnstructuredGrid(const convert::data::Variable& variable, const convert::data::PatchData& data);
 
-    static vtkSmartPointer<vtkDoubleArray> getVTUDataForOnePatch(const visualisation::data::Variable& variable, const visualisation::data::PatchData& data);
+    static vtkSmartPointer<vtkDoubleArray> getVTUDataForOnePatch(const convert::data::Variable& variable, const convert::data::PatchData& data);
 
     /**
      * Creates data for the patch but instead of the patch's data, it writes the given
      * value instead. I need this to visualise the tree association, e.g.
      */
-    static vtkSmartPointer<vtkDoubleArray> getMetaDataForOnePatch(const visualisation::data::Variable& variable, const visualisation::data::PatchData& data);
+    static vtkSmartPointer<vtkDoubleArray> getMetaDataForOnePatch(const convert::data::Variable& variable, const convert::data::PatchData& data);
     #endif
 
 	/**

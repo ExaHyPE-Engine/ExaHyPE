@@ -105,15 +105,17 @@ python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.9
 
 python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.95-h-0.001|0.9-h-0.001|0.7-h-0.001|0.5-h-0.001|0.1-h-0.001" results-Hamilton.tar.gz --output=h-0.001
 
-python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.1-h-0.05|0.1-h-0.01|0.1-h-0.005|0.1-h-0.001" results-Hamilton.tar.gz --output=lb-0.1
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.1-h-0.05|0.1-h-0.01|0.1-h-0.005|0.1-h-0.001|0.1-h-0.0005" results-Hamilton.tar.gz --output=lb-0.1
 
-python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.5-h-0.05|0.5-h-0.01|0.5-h-0.005|0.5-h-0.001" results-Hamilton.tar.gz --output=lb-0.5
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.5-h-0.05|0.5-h-0.01|0.5-h-0.005|0.5-h-0.001|0.5-h-0.0005" results-Hamilton.tar.gz --output=lb-0.5
 
-python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.7-h-0.05|0.7-h-0.01|0.7-h-0.005|0.7-h-0.001" results-Hamilton.tar.gz --output=lb-0.7
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.7-h-0.05|0.7-h-0.01|0.7-h-0.005|0.7-h-0.001|0.7-h-0.0005" results-Hamilton.tar.gz --output=lb-0.7
 
-python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.9-h-0.05|0.9-h-0.01|0.9-h-0.005|0.9-h-0.001" results-Hamilton.tar.gz --output=lb-0.9
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.9-h-0.05|0.9-h-0.01|0.9-h-0.005|0.9-h-0.001|0.9-h-0.0005" results-Hamilton.tar.gz --output=lb-0.9
 
-python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.95-h-0.05|0.95-h-0.01|0.95-h-0.005|0.95-h-0.001" results-Hamilton.tar.gz --output=lb-0.95
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.95-h-0.05|0.95-h-0.01|0.95-h-0.005|0.95-h-0.001|0.95-h-0.0005" results-Hamilton.tar.gz --output=lb-0.95
+
+python3 $PYTHONPATH/exahype2/postprocessing/plot-scaling.py --log --pattern="0.95-h-0.01|0.95-h-0.005|0.95-h-0.001|0.95-h-0.0005" results-Hamilton.tar.gz --output=lb-0.95-small
 
 
 

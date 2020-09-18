@@ -1,26 +1,25 @@
-#ifndef _VISUALISATION_INPUT_PEANO_META_FILE_READER_H_
-#define _VISUALISATION_INPUT_PEANO_META_FILE_READER_H_
+#ifndef _CONVERT_INPUT_PEANO_META_FILE_READER_H_
+#define _CONVERT_INPUT_PEANO_META_FILE_READER_H_
 
 
 
-namespace visualisation {
+namespace convert {
   namespace input {
     class MetaFileReader;
   }
 }
 
 
-namespace visualisation {
+namespace convert {
   namespace data {
     class DataSet;
   }
 }
 
 
-class visualisation::input::MetaFileReader {
+class convert::input::MetaFileReader {
   public:
-	virtual void parse() = 0;
-//	virtual PeanoMetaFile* getFile() = 0;
+    virtual void parse() = 0;
 };
 
 #endif

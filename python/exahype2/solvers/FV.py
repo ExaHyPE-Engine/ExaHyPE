@@ -23,7 +23,7 @@ class FV(object):
   
   We use two overlaps in this case: the standard one and one we call new. In the
   time stepping, we use the new one to project our data to. Then we roll it over
-  at the end of the iteration. This way, we ensure that the one from teh previous
+  at the end of the iteration. This way, we ensure that the one from the previous
   iteration is not overwritten by some adjacent cell halfway through the 
   computation.
   
@@ -35,7 +35,7 @@ class FV(object):
   traversal an action in theory could be active.
   
   """
-  def __init__(self, name, patch_size, overlap, unknowns, min_h, max_h, plot_grid_properties):
+  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
     """
     
       namespace: [string]
@@ -43,28 +43,35 @@ class FV(object):
         ["examples", "exahype2", "finitevolumes"] for example.
     
       enclaves: Boolean
+      
+      unknowns: Integer
+      
+      auxiliary_variables: Integer
   
     """
     self._name  = name
-    self._patch = peano4.datamodel.Patch( (patch_size,patch_size,patch_size), unknowns, self._unknown_identifier() )
-    self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() )
-    self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns, self._unknown_identifier() + "New" )
+    self._patch = peano4.datamodel.Patch( (patch_size,patch_size,patch_size),    unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     
     self._patch_overlap.generator.includes += """
 #include "peano4/utils/Loop.h" 
 """
 
-    self._guard_copy_new_face_data_into_face_data = "true"
-    self._guard_adjust_cell  = "true"
-    self._guard_AMR          = "not marker.isRefined()"
-    self._guard_project_patch_onto_faces = "true"
-    self._guard_update_cell  = "true"
+    self._guard_copy_new_face_data_into_face_data  = "true"
+    self._guard_adjust_cell                        = "true"
+    self._guard_AMR                                = "not marker.isRefined()"
+    self._guard_project_patch_onto_faces           = "true"
+    self._guard_update_cell                        = "true"
     self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary()"
 
     self._min_h                = min_h
     self._max_h                = max_h 
     self._plot_grid_properties = plot_grid_properties
+    
+    self._unknowns             = unknowns
+    self._auxiliary_variables  = auxiliary_variables
     
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
@@ -170,7 +177,7 @@ class FV(object):
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat("solution" + self._name,self._patch, self._unknown_identifier()) )
+    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat("solution-" + self._name,self._patch, self._unknown_identifier()) )
 
     if self._plot_grid_properties:    
         step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid" + self._name,None ))
@@ -290,12 +297,14 @@ class FV(object):
     """
     
     """
-    d["NUMBER_OF_VOLUMES_PER_AXIS"] = self._patch.dim[0]
-    d["HALO_SIZE"]                  = int(self._patch_overlap.dim[0]/2)
-    d["SOLVER_INSTANCE"]            = self.get_name_of_global_instance()
-    d["SOLVER_NAME"]                = self._name
-    d["UNKNOWN_IDENTIFIER"]         = self._unknown_identifier()
-    d["NUMBER_OF_UNKNOWNS"]         = self._patch.no_of_unknowns
+    d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
+    d["HALO_SIZE"]                      = int(self._patch_overlap.dim[0]/2)
+    d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
+    d["SOLVER_NAME"]                    = self._name
+    d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
+    d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
+    d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
+        
     if self._patch_overlap.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"

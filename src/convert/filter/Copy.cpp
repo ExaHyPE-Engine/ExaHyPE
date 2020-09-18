@@ -1,21 +1,21 @@
 #include "Copy.h"
 
 
-#include "visualisation/data/Variable.h"
-#include "visualisation/data/DataSet.h"
+#include "convert/data/Variable.h"
+#include "convert/data/DataSet.h"
 
 
-tarch::logging::Log visualisation::filter::Copy::_log( "visualisation::filter::Copy" );
+tarch::logging::Log convert::filter::Copy::_log( "convert::filter::Copy" );
 
 
-void visualisation::filter::Copy::apply( visualisation::data::DataSet& dataSet, visualisation::data::Variable& inputVariable, std::string targetSelectorName ) {
-  visualisation::data::Variable  targetVariable( targetSelectorName, inputVariable.dofsPerAxis, inputVariable.unknowns, inputVariable.type, inputVariable.dimensions );
+void convert::filter::Copy::apply( convert::data::DataSet& dataSet, convert::data::Variable& inputVariable, std::string targetSelectorName ) {
+  convert::data::Variable  targetVariable( targetSelectorName, inputVariable.dofsPerAxis, inputVariable.unknowns, inputVariable.type, inputVariable.dimensions );
 
-  std::vector<visualisation::data::PatchData> inputData = dataSet.getData( inputVariable );
-  std::vector<visualisation::data::PatchData> targetData;
+  std::vector<convert::data::PatchData> inputData = dataSet.getData( inputVariable );
+  std::vector<convert::data::PatchData> targetData;
 
   for (auto& p: inputData) {
-    visualisation::data::PatchData newPatch(
+    convert::data::PatchData newPatch(
       inputVariable.dimensions,
       p.offset,
       p.size,

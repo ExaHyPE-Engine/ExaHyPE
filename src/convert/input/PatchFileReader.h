@@ -1,8 +1,8 @@
-#ifndef _VISUALISATION_INPUT_PEANO_PATCH_FILE_READER_H_
-#define _VISUALISATION_INPUT_PEANO_PATCH_FILE_READER_H_
+#ifndef _CONVERT_INPUT_PEANO_PATCH_FILE_READER_H_
+#define _CONVERT_INPUT_PEANO_PATCH_FILE_READER_H_
 
 
-namespace visualisation {
+namespace convert {
   namespace input {
     class PatchFileReader;
   }
@@ -12,20 +12,21 @@ namespace visualisation {
 #include <vector>
 
 
-namespace visualisation {
+namespace convert {
   namespace data {
     class DataSet;
   }
 }
 
 
-class visualisation::input::PatchFileReader {
+class convert::input::PatchFileReader {
   public:
-	virtual void parse() = 0;
-	/**
-	 * @return A time series of data sets
-	 */
-	virtual std::vector< visualisation::data::DataSet >  getData() const = 0;
+    virtual void parse() = 0;
+
+    /**
+     * @return A time series of data sets
+     */
+    virtual std::vector< convert::data::DataSet >  getData() const = 0;
 };
 
 #endif

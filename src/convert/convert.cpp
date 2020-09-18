@@ -54,10 +54,10 @@ void createDirectory( const std::string& directory ) {
 void inspect( std::string filename ) {
   static tarch::logging::Log _log( "/" );
 
-  visualisation::input::PeanoTextPatchFileReader reader(filename);
+  convert::input::PeanoTextPatchFileReader reader(filename);
   reader.parse();
 
-  std::vector< visualisation::data::DataSet >  data = reader.getData();
+  std::vector< convert::data::DataSet >  data = reader.getData();
 
   int datasetCounter = 0;
   for (auto& pp: data) {
@@ -65,7 +65,7 @@ void inspect( std::string filename ) {
     datasetCounter++;
     for (auto& p: pp.getVariables()) {
       logInfo( "inspect", "variable " << p.name );
-      logInfo( "inspect", "\ttype\t\t\t" << (p.type==visualisation::data::PeanoDataType::Cell_Values ? "cell values" : "vertex values" ));
+      logInfo( "inspect", "\ttype\t\t\t" << (p.type==convert::data::PeanoDataType::Cell_Values ? "cell values" : "vertex values" ));
       logInfo( "inspect", "\tdofs per axis\t\t" << p.dofsPerAxis );
       logInfo( "inspect", "\tunknowns per dof\t" << p.unknowns );
     }
@@ -89,17 +89,17 @@ std::string getFileNameWithoutExtensionAndWithoutPatch( std::string& file ) {
 }
 
 
-void convertFile( const std::string& outputDirectory, const std::string& truncatedFile, const std::string& format, visualisation::data::Variable variable, const visualisation::data::DataSet& data ) {
+void convertFile( const std::string& outputDirectory, const std::string& truncatedFile, const std::string& format, convert::data::Variable variable, const convert::data::DataSet& data ) {
   static tarch::logging::Log _log( "/" );
 
-  visualisation::output::PeanoWriter::Writer* writer = nullptr;
+  convert::output::PeanoWriter::Writer* writer = nullptr;
 
   const std::string fileWithCorrectSelector = truncatedFile + "-" + variable.name;
   if (format==OutputFormatPeano) {
-    writer = new visualisation::output::PeanoWriter( outputDirectory, fileWithCorrectSelector );
+    writer = new convert::output::PeanoWriter( outputDirectory, fileWithCorrectSelector );
   }
   else if (format==OutputFormatVTU) {
-    writer = new visualisation::output::VTUWriter( outputDirectory, fileWithCorrectSelector );
+    writer = new convert::output::VTUWriter( outputDirectory, fileWithCorrectSelector );
   }
   else {
     logError( "convertFile(...)", "unknown output format " << format );
@@ -117,9 +117,9 @@ void convertFile( std::string filename, const std::string& outputDirectory, cons
 
   createDirectory( outputDirectory );
 
-  visualisation::input::PeanoTextPatchFileReader reader(filename);
+  convert::input::PeanoTextPatchFileReader reader(filename);
   reader.parse();
-  std::vector< visualisation::data::DataSet > data = reader.getData();
+  std::vector< convert::data::DataSet > data = reader.getData();
 
   std::string truncatedFile = getFileNameWithoutExtensionAndWithoutPatch( filename );
   logDebug( "convertFile(...)", "read " << filename << " and write into " << truncatedFile << " in directory " << outputDirectory );
@@ -141,7 +141,7 @@ void convertFile( std::string filename, const std::string& outputDirectory, cons
   else if (data[0].hasVariable(selector)) {
     #pragma omp parallel for
     for (int i=0; i<data.size(); i++) {
-      visualisation::data::Variable variable = data[i].getVariable(selector);
+      convert::data::Variable variable = data[i].getVariable(selector);
       convertFile(
         outputDirectory, truncatedFile + "-" + std::to_string(i), format,
         variable, data[i]
@@ -192,9 +192,9 @@ void applyFilter( std::string filename, std::string outputDirectory, std::string
   std::string truncatedFile = getFileNameWithoutExtensionAndWithoutPatch( filename );
   logInfo( "applyFilter(...)", "writing file " << truncatedFile );
 
-  visualisation::input::PeanoTextPatchFileReader reader(filename);
+  convert::input::PeanoTextPatchFileReader reader(filename);
   reader.parse();
-  std::vector< visualisation::data::DataSet >  data = reader.getData();
+  std::vector< convert::data::DataSet >  data = reader.getData();
 
   if (data.empty()) {
     logError( "applyFilter(...)", "file already contains data set with name " << targetSelector );
@@ -202,7 +202,7 @@ void applyFilter( std::string filename, std::string outputDirectory, std::string
   else if (data[0].hasVariable(selector)) {
     logInfo( "applyFilter(...)", "apply filter to " << data.size() << " file(s)" );
 
-    visualisation::output::PeanoWriter writer( outputDirectory, truncatedFile );
+    convert::output::PeanoWriter writer( outputDirectory, truncatedFile );
 
     const int numberOfDataSets = data.size();
     #pragma omp parallel for
@@ -211,20 +211,20 @@ void applyFilter( std::string filename, std::string outputDirectory, std::string
         logError( "applyFilter(...)", "file already contains data set with name " << targetSelector );
       }
       else {
-        visualisation::data::Variable variable = data[i].getVariable(selector);
+        convert::data::Variable variable = data[i].getVariable(selector);
 
-        visualisation::filter::Filter* filter = nullptr;
+        convert::filter::Filter* filter = nullptr;
         if (filterName==toString(Filter::Copy)) {
-          filter = new visualisation::filter::Copy();
+          filter = new convert::filter::Copy();
         }
         else if (filterName==toString(Filter::ExtractFineGrid)) {
-          filter = new visualisation::filter::Intersection( visualisation::filter::Intersection::Strategy::KeepFinerGrid );
+          filter = new convert::filter::Intersection( convert::filter::Intersection::Strategy::KeepFinerGrid );
         }
         else if (filterName==toString(Filter::PlotDomainDecomposition)) {
-          filter = new visualisation::filter::ConvertTreeIdIntoDataField();
+          filter = new convert::filter::ConvertTreeIdIntoDataField();
         }
         else if (filterName==toString(Filter::SeparateResolutions)) {
-          filter = new visualisation::filter::SeparateResolutions();
+          filter = new convert::filter::SeparateResolutions();
         }
         else if (filterName.compare(toString(Filter::SelectValue))>0) {
     	  std::string rangeToken = filterName.substr( filterName.find(':')+1 );
@@ -232,7 +232,7 @@ void applyFilter( std::string filename, std::string outputDirectory, std::string
     	  std::string toToken    = rangeToken.substr( rangeToken.find(':')+1 );
 
           logDebug( "applyFilter(...)", "use range token " << rangeToken << " split into " << fromToken << " and " << toToken );
-          filter = new visualisation::filter::SelectValue( std::stod(fromToken), std::stod(toToken) );
+          filter = new convert::filter::SelectValue( std::stod(fromToken), std::stod(toToken) );
         }
         else {
           logError( "applyFilter(...)", "unknown filter " << filterName );

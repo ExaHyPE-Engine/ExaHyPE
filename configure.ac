@@ -327,9 +327,62 @@ fi
 
 
 
+#
+# FEM toolbox
+#
+AC_ARG_ENABLE(fem-toolbox,
+  AC_HELP_STRING([--enable-fem-toolbox], [enable FEM toolbox [default=no]]),
+  [ AC_MSG_CHECKING(for fem-toolbox)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    fem_toolbox=false ;;
+      *)     AC_MSG_RESULT(yes);   fem_toolbox=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for fem-toolbox); AC_MSG_RESULT(no); fem_toolbox=false ])
+AM_CONDITIONAL([UseToolboxFiniteElements],[test "$fem-toolbox" != false])
+if test "$fem_toolbox" != false; then
+  AC_DEFINE([UseToolboxFiniteElements], [1], [UseToolboxFiniteElements])
+fi
+
+
 
 #
-# ExaHypE2
+# Multiprecision toolbox
+#
+AC_ARG_ENABLE(multiprecision-toolbox,
+  AC_HELP_STRING([--enable-multiprecision-toolbox], [enable multiprecision toolbox [default=no]]),
+  [ AC_MSG_CHECKING(for multiprecision-toolbox)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    multiprecision_toolbox=false ;;
+      *)     AC_MSG_RESULT(yes);   multiprecision_toolbox=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for multiprecision-toolbox); AC_MSG_RESULT(no); multiprecision_toolbox=false ])
+AM_CONDITIONAL([UseToolboxMultiprecision],[test "$multiprecision-toolbox" != false])
+if test "$multiprecision_toolbox" != false; then
+  AC_DEFINE([UseToolboxMultiprecision], [1], [UseToolboxMultiprecision])
+fi
+
+
+
+#
+# Load balancing toolbox
+#
+AC_ARG_ENABLE(loadbalancing-toolbox,
+  AC_HELP_STRING([--enable-loadbalancing-toolbox], [enable loadbalancing toolbox [default=no]]),
+  [ AC_MSG_CHECKING(for loadbalancing-toolbox)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    loadbalancing_toolbox=false ;;
+      *)     AC_MSG_RESULT(yes);   loadbalancing_toolbox=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for loadbalancing-toolbox); AC_MSG_RESULT(no); loadbalancing_toolbox=false ])
+AM_CONDITIONAL([UseToolboxLoadBalancing],[test "$loadbalancing-toolbox" != false])
+if test "$loadbalancing_toolbox" != false; then
+  AC_DEFINE([UseToolboxLoadBalancing], [1], [UseToolboxLoadBalancing])
+fi
+
+
+
+#
+# ExaHyPE2
 #
 AC_ARG_ENABLE(exahype,
   AC_HELP_STRING([--enable-exahype], [enable ExaHyPE2 [default=no]]),
@@ -341,10 +394,11 @@ AC_ARG_ENABLE(exahype,
   [ AC_MSG_CHECKING(for exahype); AC_MSG_RESULT(no); exahype=false ])
 AM_CONDITIONAL([UseExaHyPE],[test "$exahype" != false])
 if test "$exahype" != false; then
+  if test "$loadbalancing_toolbox" == false; then
+    AC_MSG_ERROR([ExaHyPE2 requires the load balancing toolbox])
+  fi
   AC_DEFINE([UseExaHyPE], [1], [UseExaHyPE])
 fi
-
-
 
 
 

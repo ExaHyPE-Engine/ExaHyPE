@@ -1,7 +1,7 @@
-#ifndef _VISUALISATION_OUTPUT_PEANO_WRITER_H_
-#define _VISUALISATION_OUTPUT_PEANO_WRITER_H_
+#ifndef _CONVERT_OUTPUT_PEANO_WRITER_H_
+#define _CONVERT_OUTPUT_PEANO_WRITER_H_
 
-#include "visualisation/data/Variable.h"
+#include "convert/data/Variable.h"
 
 
 #include "Writer.h"
@@ -15,7 +15,7 @@
 #include "../data/PatchData.h"
 #include "../data/DataSet.h"
 
-namespace visualisation {
+namespace convert {
   namespace output {
     class PeanoWriter;
   }
@@ -29,16 +29,16 @@ namespace visualisation {
 }
 
 
-class visualisation::output::PeanoWriter: public visualisation::output::Writer {
+class convert::output::PeanoWriter: public convert::output::Writer {
   public:
 	PeanoWriter(const std::string&  directory, const std::string& outputFileWithoutExtention);
 	~PeanoWriter();
 
-	void writeFile(const visualisation::data::Variable& variable, const std::vector<visualisation::data::PatchData>& data) override;
-	void writeFile(const visualisation::data::DataSet& dataSet);
-	void writeFile(const std::vector< visualisation::data::DataSet > dataSet);
+	void writeFile(const convert::data::Variable& variable, const std::vector<convert::data::PatchData>& data) override;
+	void writeFile(const convert::data::DataSet& dataSet);
+	void writeFile(const std::vector< convert::data::DataSet > dataSet);
   private:
-	void writeFile(const visualisation::data::DataSet& dataSet, const std::string& filename);
+    void writeFile(const convert::data::DataSet& dataSet, const std::string& filename);
 
 	static tarch::logging::Log  _log;
 
@@ -49,8 +49,8 @@ class visualisation::output::PeanoWriter: public visualisation::output::Writer {
 	const std::string& _directory;
 	std::ofstream      _metaFile;
 
-	void writeVariableDeclaration(const visualisation::data::Variable& variable, std::ofstream& );
-	void writePatchData(const visualisation::data::Variable& variable, const visualisation::data::PatchData& data, std::ofstream&  );
+	void writeVariableDeclaration(const convert::data::Variable& variable, std::ofstream& );
+	void writePatchData(const convert::data::Variable& variable, const convert::data::PatchData& data, std::ofstream&  );
 };
 
 #endif

@@ -20,7 +20,7 @@ class AbstractGenericRusanovFV( FV ):
 
   __None         = "<none>"
 
-  def __init__(self, name, patch_size, unknowns, min_h, max_h, flux, ncp, plot_grid_properties):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties):
     """
     
       flux: Bool
@@ -30,7 +30,7 @@ class AbstractGenericRusanovFV( FV ):
         Use a non-conversative product    
         
     """
-    super(AbstractGenericRusanovFV,self).__init__(name, patch_size, 1, unknowns, min_h, max_h, plot_grid_properties)
+    super(AbstractGenericRusanovFV,self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
     
     self._flux  = flux
     self._ncp   = ncp
@@ -99,7 +99,7 @@ class AbstractGenericRusanovFV( FV ):
       {SOLVER_INSTANCE}.getMinTimeStamp(),
       {TIME_STEP_SIZE},
       {NUMBER_OF_VOLUMES_PER_AXIS},
-      {NUMBER_OF_UNKNOWNS},
+      {NUMBER_OF_UNKNOWNS}+{NUMBER_OF_AUXILIARY_VARIABLES},
       marker.getSelectedFaceNumber(),
       fineGridFace{UNKNOWN_IDENTIFIER}.value
     );
@@ -116,7 +116,7 @@ class AbstractGenericRusanovFV( FV ):
         ::exahype2::getVolumeSize( marker.h(), {NUMBER_OF_VOLUMES_PER_AXIS} ),
         {SOLVER_INSTANCE}.getMinTimeStamp()
       );
-      index += {NUMBER_OF_UNKNOWNS};
+      index += {NUMBER_OF_UNKNOWNS} + {NUMBER_OF_AUXILIARY_VARIABLES};
     }}
   }} 
 """
@@ -133,7 +133,7 @@ class AbstractGenericRusanovFV( FV ):
         ::exahype2::getVolumeSize( marker.h(), {NUMBER_OF_VOLUMES_PER_AXIS} ),
         {SOLVER_INSTANCE}.getMinTimeStamp()
       );
-      index += {NUMBER_OF_UNKNOWNS};
+      index += {NUMBER_OF_UNKNOWNS} + {NUMBER_OF_AUXILIARY_VARIABLES};
     }}
     _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {IS_GRID_CREATION} );
   }} 
@@ -167,13 +167,12 @@ class AbstractGenericRusanovFV( FV ):
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
-        int                                          normal,
-        double                                       lambdas[]
-      ) -> void {
+        int                                          normal
+      ) -> double {
         {% if use_gpu %}
-        {{SOLVER_NAME}}::eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
+        return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
-        {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas );
+        return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal );
         {% endif %}
       },
       {% if use_gpu %}
@@ -188,6 +187,7 @@ class AbstractGenericRusanovFV( FV ):
       {{TIME_STEP_SIZE}}, 
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       reconstructedPatch,
       originalPatch
     );
@@ -237,13 +237,12 @@ class AbstractGenericRusanovFV( FV ):
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
-        int                                          normal,
-        double                                       lambdas[]
-      ) -> void {
+        int                                          normal
+      ) -> double {
         {% if use_gpu %}
-        {{SOLVER_NAME}}::eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
+        return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
-        {{SOLVER_INSTANCE}}.eigenvalues( Q, faceCentre, volumeH, t, normal, lambdas);
+        return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal, lambdas);
         {% endif %}
       },
       {% if use_gpu %}
@@ -258,6 +257,7 @@ class AbstractGenericRusanovFV( FV ):
       {{TIME_STEP_SIZE}}, 
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       reconstructedPatch,
       originalPatch
   );
@@ -281,11 +281,11 @@ class AbstractGenericRusanovFV( FV ):
 
 
 class GenericRusanovFVFixedTimeStepSize( AbstractGenericRusanovFV ):
-  def __init__(self, name, patch_size, unknowns, min_h, max_h, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=True, ncp=False, plot_grid_properties=False):
     """
       Instantiate a generic FV scheme with an overlap of 1.
     """
-    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, min_h, max_h, flux, ncp, plot_grid_properties)
+    super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
     self._time_step_size              = time_step_size
     pass
    
@@ -406,11 +406,11 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     add the marker to the cell which holds the semaphore/cell number.
     
   """
-  def __init__(self, name, patch_size, unknowns, min_h, max_h, time_step_size, flux=True, ncp=False, plot_grid_properties=False, use_gpu=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=True, ncp=False, plot_grid_properties=False, use_gpu=False):
     """
       Instantiate a generic FV scheme with an overlap of 1.
     """
-    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).__init__(name, patch_size, unknowns, min_h, max_h, flux, ncp, plot_grid_properties)
+    super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
 
     self._time_step_size              = time_step_size
 
@@ -576,7 +576,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
             //::exahype2::fv::copyPatch(
               reconstructedPatch,
               originalPatch,
-              {{NUMBER_OF_UNKNOWNS}},
+              {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
               {{NUMBER_OF_VOLUMES_PER_AXIS}},
               {{HALO_SIZE}}
             );
@@ -601,7 +601,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
             originalPatch,
-            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
             {{NUMBER_OF_VOLUMES_PER_AXIS}},
             {{HALO_SIZE}}
           );

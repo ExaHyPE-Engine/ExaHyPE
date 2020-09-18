@@ -177,13 +177,12 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::adjustS
 
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" %}
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::eigenvalues(
-  double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEigenvalue(
+  double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
-  int                                          normal,
-  double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
+  int                                          normal
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
 }
@@ -192,8 +191,8 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::eigenva
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundaryConditions(
-  double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}],
-  double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}],
+  double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -207,7 +206,7 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundar
 {% if FLUX_IMPLEMENTATION!="<none>" %}
 {% if FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::flux(
- double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+ double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
  const tarch::la::Vector<Dimensions,double>&  volumeH,
  double                                       t,
@@ -223,8 +222,8 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::flux(
 {% if NCP_IMPLEMENTATION!="<none>" %}
 {% if NCP_IMPLEMENTATION!="<user-defined>" %}
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::nonconservativeProduct(
-  double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
-  double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}][Dimensions],
+  double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

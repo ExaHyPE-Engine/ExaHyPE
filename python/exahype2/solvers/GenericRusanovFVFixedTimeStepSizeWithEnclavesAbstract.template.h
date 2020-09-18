@@ -59,7 +59,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
      * @param t Time
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
@@ -72,24 +72,22 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
      * in.
      */
     virtual void adjustSolution(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
 
     /**
-     * Determine eigenvalues over Jacobian in a given point with solution values
-     * (states) Q. All parameters are in besides lambda which is the output
-     * vector.
+     * Determine max eigenvalue over Jacobian in a given point with solution values
+     * (states) Q. All parameters are in.
      */
-    virtual void eigenvalues(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+    virtual double maxEigenvalue(
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
-      int                                          normal,
-      double                                       lambda[{{NUMBER_OF_UNKNOWNS}}]
+      int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
 
     /**
@@ -99,8 +97,8 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
      * to the Riemann solver, i.e. flux and eigenvalues.
      */
     virtual void boundaryConditions(
-      double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}],
-      double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}],
+      double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -142,7 +140,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
 
     {% if FLUX_IMPLEMENTATION!="<none>" %}
    virtual void flux(
-     double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+     double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
      const tarch::la::Vector<Dimensions,double>&  faceCentre,
      const tarch::la::Vector<Dimensions,double>&  volumeH,
      double                                       t,
@@ -152,8 +150,8 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
      {% endif %}
      {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
-      double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}][Dimensions],
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
