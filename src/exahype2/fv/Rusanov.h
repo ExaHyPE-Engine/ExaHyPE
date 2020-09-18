@@ -43,8 +43,7 @@ namespace exahype2 {
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
-        int                                          normal,
-        double                                       lambdas[]
+        int                                          normal
       ) >   maxEigenvalue,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
@@ -87,8 +86,7 @@ namespace exahype2 {
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
-        int                                          normal,
-        double                                       lambdas[]
+        int                                          normal
       ) >   maxEigenvalue,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,

@@ -99,7 +99,7 @@ class AbstractGenericRusanovFV( FV ):
       {SOLVER_INSTANCE}.getMinTimeStamp(),
       {TIME_STEP_SIZE},
       {NUMBER_OF_VOLUMES_PER_AXIS},
-      {NUMBER_OF_UNKNOWNS},
+      {NUMBER_OF_UNKNOWNS}+{NUMBER_OF_AUXILIARY_VARIABLES},
       marker.getSelectedFaceNumber(),
       fineGridFace{UNKNOWN_IDENTIFIER}.value
     );
@@ -116,7 +116,7 @@ class AbstractGenericRusanovFV( FV ):
         ::exahype2::getVolumeSize( marker.h(), {NUMBER_OF_VOLUMES_PER_AXIS} ),
         {SOLVER_INSTANCE}.getMinTimeStamp()
       );
-      index += {NUMBER_OF_UNKNOWNS};
+      index += {NUMBER_OF_UNKNOWNS} + {NUMBER_OF_AUXILIARY_VARIABLES};
     }}
   }} 
 """
@@ -133,7 +133,7 @@ class AbstractGenericRusanovFV( FV ):
         ::exahype2::getVolumeSize( marker.h(), {NUMBER_OF_VOLUMES_PER_AXIS} ),
         {SOLVER_INSTANCE}.getMinTimeStamp()
       );
-      index += {NUMBER_OF_UNKNOWNS};
+      index += {NUMBER_OF_UNKNOWNS} + {NUMBER_OF_AUXILIARY_VARIABLES};
     }}
     _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {IS_GRID_CREATION} );
   }} 
@@ -187,6 +187,7 @@ class AbstractGenericRusanovFV( FV ):
       {{TIME_STEP_SIZE}}, 
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       reconstructedPatch,
       originalPatch
     );
@@ -237,9 +238,9 @@ class AbstractGenericRusanovFV( FV ):
         double                                       t,
         double                                       dt,
         int                                          normal
-      ) -> void {
+      ) -> double {
         {% if use_gpu %}
-        return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, lambdas, tarch::multicore::TargetDevice::MayRunOnGPU );
+        return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
         return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal, lambdas);
         {% endif %}
@@ -256,6 +257,7 @@ class AbstractGenericRusanovFV( FV ):
       {{TIME_STEP_SIZE}}, 
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
       reconstructedPatch,
       originalPatch
   );
@@ -574,7 +576,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
             //::exahype2::fv::copyPatch(
               reconstructedPatch,
               originalPatch,
-              {{NUMBER_OF_UNKNOWNS}},
+              {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
               {{NUMBER_OF_VOLUMES_PER_AXIS}},
               {{HALO_SIZE}}
             );
@@ -599,7 +601,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
             originalPatch,
-            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
             {{NUMBER_OF_VOLUMES_PER_AXIS}},
             {{HALO_SIZE}}
           );
