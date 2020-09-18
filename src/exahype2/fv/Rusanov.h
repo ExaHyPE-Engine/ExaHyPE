@@ -114,6 +114,7 @@ namespace exahype2 {
         double                                       dt,
         int                                          numberOfVolumesPerAxisInPatch,
         int                                          unknowns,
+        int                                          auxiliaryVariables,
         double                                       Qin[],
         double                                       Qout[]
       );
@@ -147,6 +148,7 @@ namespace exahype2 {
         double                                       dt,
         int                                          numberOfVolumesPerAxisInPatch,
         int                                          unknowns,
+        int                                          auxiliaryVariables,
         double                                       Qin[],
         double                                       Qout[]
       );
@@ -169,14 +171,13 @@ namespace exahype2 {
               int                                          normal,
               double                                       F[]
         ) >   flux,
-        std::function< void(
+        std::function< double(
               double                                       Q[],
               const tarch::la::Vector<Dimensions,double>&  faceCentre,
               const tarch::la::Vector<Dimensions,double>&  volumeH,
               double                                       t,
               double                                       dt,
-              int                                          normal,
-              double                                       lambdas[]
+              int                                          normal
         ) >   eigenvalues,
         double QL[],
         double QR[],
@@ -213,14 +214,13 @@ namespace exahype2 {
               int                                          normal,
               double                                       BgradQ[]
             ) >   nonconservativeProduct,
-          std::function< void(
+          std::function< double(
                   double                                       Q[],
                   const tarch::la::Vector<Dimensions,double>&  faceCentre,
                   const tarch::la::Vector<Dimensions,double>&  volumeH,
                   double                                       t,
                   double                                       dt,
-                  int                                          normal,
-                  double                                       lambdas[]
+                  int                                          normal
           ) >   eigenvalues, 
           double QL[],
           double QR[],
@@ -265,7 +265,6 @@ namespace exahype2 {
         double                                       dt,
         int                                          normal,
         int                                          unknowns,
-        int                                          auxiliaryVariables,
         double                                       FL[],
         double                                       FR[]
       );

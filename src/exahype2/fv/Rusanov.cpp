@@ -10,35 +10,34 @@
 
 
 void exahype2::fv::internal::splitRusanov1d(
-    std::function< void(
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       F[]
-    ) >   flux,
-    std::function< double(
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-    ) >   maxEigenvalue,
-    double QL[],
-    double QR[],
-    const tarch::la::Vector<Dimensions,double>&  x,
-    double                                       dx,
+  std::function< void(
+    double                                       Q[],
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal,
-    int                                          unknowns,
-    int                                          auxiliaryVariables,
-    double                                       FL[],
-    double                                       FR[]
-  ) {
+    double                                       F[]
+  ) >   flux,
+  std::function< double(
+    double                                       Q[],
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  ) >   maxEigenvalue,
+  double QL[],
+  double QR[],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double                                       dx,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  int                                          unknowns,
+  double                                       FL[],
+  double                                       FR[]
+) {
     assertion(normal>=0);
     assertion(normal<Dimensions);
 
@@ -59,45 +58,43 @@ void exahype2::fv::internal::splitRusanov1d(
 
 
 void exahype2::fv::internal::splitRusanov1d(
-    std::function< void(
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       F[]
-    ) >   flux,
-    std::function< void(
-        double                                       Q[],
-        double                                       gradQ[][Dimensions],
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       BgradQ[]
-      ) >   nonconservativeProduct,
-    std::function< void(
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       lambdas[]
-    ) >   eigenvalues,
-    double QL[],
-    double QR[],
-    const tarch::la::Vector<Dimensions,double>&  x,
-    double                                       dx,
+   std::function< void(
+    double                                       Q[],
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal,
-    int                                          unknowns,
-    int                                          auxiliaryVariables,
-    double                                       FL[],
-    double                                       FR[]
+    double                                       F[]
+  ) >   flux,
+  std::function< void(
+    double                                       Q[],
+    double                                       gradQ[][Dimensions],
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double                                       BgradQ[]
+  ) >   nonconservativeProduct,
+  std::function< double(
+    double                                       Q[],
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  ) >   maxEigenvalue,
+  double QL[],
+  double QR[],
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double                                       dx,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  int                                          unknowns,
+  double                                       FL[],
+  double                                       FR[]
 ) {
     assertion(normal>=0);
     assertion(normal<Dimensions);
@@ -119,24 +116,14 @@ void exahype2::fv::internal::splitRusanov1d(
     double fluxnonconservativeProduct[unknowns];
     nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
 
-    double lambdas[unknowns];
-    double lambdaMax = 0.0;
+    double lambdaMaxL = maxEigenvalue(QL,x,dx,t,dt,normal);
+    double lambdaMaxR = maxEigenvalue(QR,x,dx,t,dt,normal);
+    double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
-    eigenvalues(QL,x,dx,t,dt,normal,lambdas);
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
-    }
-    eigenvalues(QR,x,dx,t,dt,normal,lambdas);
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-      lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
-    }
-
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) - 0.5 * fluxnonconservativeProduct[unknown];
-      FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
-    }
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) - 0.5 * fluxnonconservativeProduct[unknown];
+    FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
+  }
 };
 
 
@@ -150,21 +137,21 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
         int                                          normal,
         double                                       F[]
   ) >   flux,
-  std::function< void(
-        double                                       Q[],
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       lambdas[]
-  ) >   eigenvalues,
+  std::function< double(
+    double                                       Q[],
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  ) >   maxEigenvalue,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   double                                       t,
   double                                       dt,
   int                                          numberOfVolumesPerAxisInPatch,
   int                                          unknowns,
+  int                                          auxiliaryVariables,
   double                                       Qin[],
   double                                       Qout[]
 ) {
@@ -184,19 +171,20 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
       double                                       FL[],
       double                                       FR[]
     ) -> void {
-	  internal::splitRusanov1d(
-        flux, eigenvalues,
-		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+      internal::splitRusanov1d(
+        flux, maxEigenvalue,
+        QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
       );
     },
-	patchCentre,
-	patchSize,
-	t,
-	dt,
-	numberOfVolumesPerAxisInPatch,
-	unknowns,
-	Qin,
-	Qout
+    patchCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfVolumesPerAxisInPatch,
+    unknowns,
+    auxiliaryVariables,
+    Qin,
+    Qout
   );
   #else
   applySplit1DRiemannToPatch_Overlap1AoS3d(
@@ -211,19 +199,20 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
       double                                       FL[],
       double                                       FR[]
     ) -> void {
-	  internal::splitRusanov1d(
-        flux, eigenvalues,
-		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+      internal::splitRusanov1d(
+        flux, maxEigenvalue,
+        QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
       );
     },
-	patchCentre,
-	patchSize,
-	t,
-	dt,
-	numberOfVolumesPerAxisInPatch,
-	unknowns,
-	Qin,
-	Qout
+    patchCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfVolumesPerAxisInPatch,
+    unknowns,
+    auxiliaryVariables,
+    Qin,
+    Qout
   );
   #endif
 
@@ -251,21 +240,21 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
         int                                          normal,
         double                                       BgradQ[]
   ) >   nonconservativeProduct,
-  std::function< void(
+  std::function< double(
         double                                       Q[],
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
-        int                                          normal,
-        double                                       lambdas[]
-  ) >   eigenvalues,
+        int                                          normal
+  ) >   maxEigenvalue,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   double                                       t,
   double                                       dt,
   int                                          numberOfVolumesPerAxisInPatch,
   int                                          unknowns,
+  int                                          auxiliaryVariables,
   double                                       Qin[],
   double                                       Qout[]
 ) {
@@ -285,19 +274,20 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
       double                                       FL[],
       double                                       FR[]
     ) -> void {
-	  internal::splitRusanov1d(
-        flux, nonconservativeProduct, eigenvalues,
-		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+      internal::splitRusanov1d(
+        flux, nonconservativeProduct, maxEigenvalue,
+        QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
       );
     },
-	patchCentre,
-	patchSize,
-	t,
-	dt,
-	numberOfVolumesPerAxisInPatch,
-	unknowns,
-	Qin,
-	Qout
+    patchCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfVolumesPerAxisInPatch,
+    unknowns,
+    auxiliaryVariables,
+    Qin,
+    Qout
   );
   #else
   applySplit1DRiemannToPatch_Overlap1AoS3d(
@@ -312,19 +302,20 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
       double                                       FL[],
       double                                       FR[]
     ) -> void {
-	  internal::splitRusanov1d(
-        flux, nonconservativeProduct, eigenvalues,
-		QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+	    internal::splitRusanov1d(
+        flux, nonconservativeProduct, maxEigenvalue,
+        QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
       );
     },
-	patchCentre,
-	patchSize,
-	t,
-	dt,
-	numberOfVolumesPerAxisInPatch,
-	unknowns,
-	Qin,
-	Qout
+    patchCentre,
+    patchSize,
+    t,
+    dt,
+    numberOfVolumesPerAxisInPatch,
+    unknowns,
+    auxiliaryVariables,
+    Qin,
+    Qout
   );
   #endif
 

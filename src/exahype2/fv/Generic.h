@@ -29,6 +29,7 @@ namespace exahype2 {
       double QinWithHalo[],
       double QOutWithoutHalo[],
       int    unknowns,
+      int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize
     );
@@ -47,6 +48,7 @@ namespace exahype2 {
         double QinWithHalo[],
         double QOutWithoutHalo[],
         int    unknowns,
+        int    auxiliaryVariables,
         int    numberOfVolumesPerAxisInPatch,
         int    haloSize
       );
@@ -86,6 +88,7 @@ namespace exahype2 {
       double                                       dt,
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
+      int                                          auxiliaryVariables,
       double                                       Qin[],
       double                                       Qout[]
     );
@@ -109,6 +112,7 @@ namespace exahype2 {
       double                                       dt,
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
+      int                                          auxiliaryVariables,
       double                                       Qin[],
       double                                       Qout[]
     );

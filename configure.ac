@@ -355,9 +355,9 @@ AC_ARG_ENABLE(multiprecision-toolbox,
       no)    AC_MSG_RESULT(no);    multiprecision_toolbox=false ;;
       *)     AC_MSG_RESULT(yes);   multiprecision_toolbox=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for multiprecision-toolbox); AC_MSG_RESULT(no); loadbalancing_toolbox=false ])
+  [ AC_MSG_CHECKING(for multiprecision-toolbox); AC_MSG_RESULT(no); multiprecision_toolbox=false ])
 AM_CONDITIONAL([UseToolboxMultiprecision],[test "$multiprecision-toolbox" != false])
-if test "$multiprecision" != false; then
+if test "$multiprecision_toolbox" != false; then
   AC_DEFINE([UseToolboxMultiprecision], [1], [UseToolboxMultiprecision])
 fi
 
