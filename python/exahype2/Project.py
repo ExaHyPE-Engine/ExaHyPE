@@ -142,6 +142,7 @@ class Project(object):
   
   def remove_all_solvers(self):
     self._solvers = []
+    self._project.cleanup()
     
 
   def __export_constants(self):
