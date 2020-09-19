@@ -601,7 +601,8 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
             originalPatch,
-            {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_AUXILIARY_VARIABLES}},
             {{NUMBER_OF_VOLUMES_PER_AXIS}},
             {{HALO_SIZE}}
           );
