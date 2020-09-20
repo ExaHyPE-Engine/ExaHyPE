@@ -114,6 +114,7 @@ void exahype2::fv::gpu::splitRusanov1d(
    }
 }
 
+
 template <typename Flux, typename NCP, typename Eigenvalues>
 void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   Flux                                         flux,
@@ -125,6 +126,7 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   double                                       dt,
   int                                          numberOfVolumesPerAxisInPatch,
   int                                          unknowns,
+  int                                          auxiliaryVariables,
   double                                       Qin[],
   double                                       Qout[]
 ) {
@@ -170,8 +172,8 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
         gpu::splitRusanov1d(
           flux, nonconservativeProduct, eigenvalues,
-          Qin + leftVoxelInPreimage*unknowns,   // QL
-          Qin + rightVoxelInPreimage*unknowns,  // QR
+          Qin + leftVoxelInPreimage*(unknowns+auxiliaryVariables),   // QL
+          Qin + rightVoxelInPreimage*(unknowns+auxiliaryVariables),  // QR
           volumeX, volumeH, t, dt, 0, //  last argument = normal
           unknowns,
           numericalFluxL, numericalFluxR
@@ -179,15 +181,15 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
         for (int unknown=0; unknown<unknowns; unknown++) {
           if (x>0) {
-            Qout[ leftVoxelInImage*unknowns+unknown ] -= dt / volumeH * numericalFluxL[unknown];
+            Qout[ leftVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH * numericalFluxL[unknown];
             #if !defined(GPUOffloading)
-            nonCriticalAssertion4(Qout[ leftVoxelInImage*unknowns+unknown ]==Qout[ leftVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxL[unknown], unknown);
+            nonCriticalAssertion4(Qout[ leftVoxelInImage*(unknowns+auxiliaryVariables)+unknown ]==Qout[ leftVoxelInImage*(unknowns+auxiliaryVariables)+unknown ], dt, volumeH, numericalFluxL[unknown], unknown);
             #endif
           }
           if (x<numberOfVolumesPerAxisInPatch) {
-            Qout[ rightVoxelInImage*unknowns+unknown ] += dt / volumeH * numericalFluxR[unknown];
+            Qout[ rightVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH * numericalFluxR[unknown];
             #if !defined(GPUOffloading)
-            nonCriticalAssertion4(Qout[ rightVoxelInImage*unknowns+unknown ]==Qout[ rightVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxR[unknown], unknown);
+            nonCriticalAssertion4(Qout[ rightVoxelInImage*(unknowns+auxiliaryVariables)+unknown ]==Qout[ rightVoxelInImage*(unknowns+auxiliaryVariables)+unknown ], dt, volumeH, numericalFluxR[unknown], unknown);
             #endif
           }
         }
@@ -222,8 +224,8 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
  
         gpu::splitRusanov1d(
           flux, nonconservativeProduct, eigenvalues,
-          Qin + lowerVoxelInPreimage*unknowns,
-          Qin + upperVoxelInPreimage*unknowns,
+          Qin + lowerVoxelInPreimage*(unknowns+auxiliaryVariables),
+          Qin + upperVoxelInPreimage*(unknowns+auxiliaryVariables),
           volumeX, volumeH, t, dt, 1, //  last argument = normala
           unknowns,
           numericalFluxL, numericalFluxR
@@ -231,15 +233,15 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   
         for (int unknown=0; unknown<unknowns; unknown++) {
           if (y>0) {
-            Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH * numericalFluxL[unknown];
+            Qout[ lowerVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH * numericalFluxL[unknown];
             #if !defined(GPUOffloading)
-            nonCriticalAssertion4(Qout[ lowerVoxelInImage*unknowns+unknown ]==Qout[ lowerVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxL[unknown], unknown);
+            nonCriticalAssertion4(Qout[ lowerVoxelInImage*(unknowns+auxiliaryVariables)+unknown ]==Qout[ lowerVoxelInImage*(unknowns+auxiliaryVariables)+unknown ], dt, volumeH, numericalFluxL[unknown], unknown);
             #endif
           }
           if (y<numberOfVolumesPerAxisInPatch) {
-            Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH * numericalFluxR[unknown];
+            Qout[ upperVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH * numericalFluxR[unknown];
             #if !defined(GPUOffloading)
-            nonCriticalAssertion4(Qout[ upperVoxelInImage*unknowns+unknown ]==Qout[ upperVoxelInImage*unknowns+unknown ], dt, volumeH, numericalFluxR[unknown], unknown);
+            nonCriticalAssertion4(Qout[ upperVoxelInImage*(unknowns+auxiliaryVariables)+unknown ]==Qout[ upperVoxelInImage*(unknowns+auxiliaryVariables)+unknown ], dt, volumeH, numericalFluxR[unknown], unknown);
             #endif
           }
         }
@@ -303,8 +305,8 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
       gpu::splitRusanov1d(
         flux, nonconservativeProduct, eigenvalues,
-        Qin + leftVoxelInPreimage*unknowns,   // QL
-        Qin + rightVoxelInPreimage*unknowns,  // QR
+        Qin + leftVoxelInPreimage*(unknowns+auxiliaryVariables),   // QL
+        Qin + rightVoxelInPreimage*(unknowns+auxiliaryVariables),  // QR
         volumeX, volumeH(0), t, dt, 0, //  last argument = normal
         unknowns,
         numericalFluxL, numericalFluxR
@@ -312,10 +314,10 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
       for (int unknown=0; unknown<unknowns; unknown++) {
         if (x>0) {
-          Qout[ leftVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+          Qout[ leftVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
         }
         if (x<numberOfVolumesPerAxisInPatch) {
-          Qout[ rightVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+          Qout[ rightVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
         }
       }
     }
@@ -359,8 +361,8 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
       gpu::splitRusanov1d(
         flux, nonconservativeProduct, eigenvalues,
-        Qin + lowerVoxelInPreimage*unknowns,
-        Qin + upperVoxelInPreimage*unknowns,
+        Qin + lowerVoxelInPreimage*(unknowns+auxiliaryVariables),
+        Qin + upperVoxelInPreimage*(unknowns+auxiliaryVariables),
         volumeX, volumeH(0), t, dt, 1, //  last argument = normal
         unknowns,
         numericalFluxL, numericalFluxR
@@ -368,10 +370,10 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
       for (int unknown=0; unknown<unknowns; unknown++) {
         if (y>0) {
-          Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+          Qout[ lowerVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
         }
         if (y<numberOfVolumesPerAxisInPatch) {
-          Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+          Qout[ upperVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
         }
       }
     }
@@ -414,8 +416,8 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
       gpu::splitRusanov1d(
         flux, nonconservativeProduct, eigenvalues,
-        Qin + lowerVoxelInPreimage*unknowns,
-        Qin + upperVoxelInPreimage*unknowns,
+        Qin + lowerVoxelInPreimage*(unknowns+auxiliaryVariables),
+        Qin + upperVoxelInPreimage*(unknowns+auxiliaryVariables),
         volumeX, volumeH(0), t, dt, 2, //  last argument = normal
         unknowns,
         numericalFluxL, numericalFluxR
@@ -423,10 +425,10 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
       for (int unknown=0; unknown<unknowns; unknown++) {
         if (z>0) {
-          Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+          Qout[ lowerVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
         }
         if (z<numberOfVolumesPerAxisInPatch) {
-          Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+          Qout[ upperVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
         }
       }
     }

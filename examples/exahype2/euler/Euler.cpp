@@ -35,7 +35,7 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 
 
 void examples::exahype2::euler::Euler::adjustSolution(
-  double Q[5],
+  double Q[7],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
@@ -51,6 +51,8 @@ void examples::exahype2::euler::Euler::adjustSolution(
     Q[2] = 0;
     Q[3] = 0;
     Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
+    Q[5] = 0;
+    Q[6] = 0;
   }
   else {
     // other stuff
@@ -196,8 +198,8 @@ void examples::exahype2::euler::Euler::flux(
 
 
 void examples::exahype2::euler::Euler::boundaryConditions(
-  double                                       Qinside[5],
-  double                                       Qoutside[5],
+  double                                       Qinside[7],
+  double                                       Qoutside[7],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -209,6 +211,8 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   Qoutside[2] = Qinside[2];
   Qoutside[3] = Qinside[3];
   Qoutside[4] = Qinside[4];
+  Qoutside[5] = Qinside[5];
+  Qoutside[6] = Qinside[6];
   logTraceOut( "boundaryConditions(...)" );
 }
 
