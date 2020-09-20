@@ -43,11 +43,11 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
 
 
 
-template< typename Flux, typename NCP, typename Eigenvalues>
+template< typename Flux, typename NCP, typename MaxEigenvalue>
 void exahype2::fv::gpu::splitRusanov1d(
         Flux flux,
         NCP  nonconservativeProduct,
-        Eigenvalues eigenvalues,
+        MaxEigenvalue maxEigenvalues,
         double QL[],
         double QR[],
         const tarch::la::Vector<Dimensions,double>&  x,
@@ -56,6 +56,7 @@ void exahype2::fv::gpu::splitRusanov1d(
         double                                       dt,
         int                                          normal,
         int                                          unknowns,
+        int                                          auxiliaryVariables,
         double                                       FL[],
         double                                       FR[]
 )  {
@@ -69,57 +70,43 @@ void exahype2::fv::gpu::splitRusanov1d(
   flux(QL,x,dx,t,dt,normal,fluxFL);
   flux(QR,x,dx,t,dt,normal,fluxFR);
 
-  double Qaverage[unknowns];
-   double gradQ[unknowns][Dimensions];
-   for (int unknown=0; unknown<unknowns; unknown++) {
-     for (int d=0; d<Dimensions; d++) {
-       gradQ[unknown][d] = 0.0;
-     }
-     Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
-     gradQ[unknown][normal] = QR[unknown] - QL[unknown];
-   }
-   double fluxnonconservativeProduct[unknowns];
-   // It is important that we initialise these guys with 0, as
-   // ncp might nop and we hence might add garbage
-   for (int i=0; i<unknowns; i++) {
-	 fluxnonconservativeProduct[i] = 0.0;
-   }
-   nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
+  double Qaverage[unknowns+auxiliaryVariables];
+  double gradQ[unknowns+auxiliaryVariables][Dimensions];
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    for (int d=0; d<Dimensions; d++) {
+      gradQ[unknown][d] = 0.0;
+    }
+    Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
+    gradQ[unknown][normal] = QR[unknown] - QL[unknown];
+  }
+  double fluxnonconservativeProduct[unknowns];
+  // It is important that we initialise these guys with 0, as
+  // ncp might nop and we hence might add garbage
+  for (int i=0; i<unknowns; i++) {
+    fluxnonconservativeProduct[i] = 0.0;
+  }
+  nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
 
-   double lambdas[unknowns];
-   double lambdaMax = 0.0;
+  double lambdaMaxL = MaxEigenvalue(QL,x,dx,t,dt,normal,lambdas);
+  double lambdaMaxR = MaxEigenvalue(QR,x,dx,t,dt,normal,lambdas);
+  double lambdaMax = std::max(lambdaMaxL,lambdaMaxR);
 
-   eigenvalues(QL,x,dx,t,dt,normal,lambdas);
-   for (int unknown=0; unknown<unknowns; unknown++) {
-     #if !defined(GPUOffloading)
-     nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-     #endif
-     lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
-   }
-   eigenvalues(QR,x,dx,t,dt,normal,lambdas);
-   for (int unknown=0; unknown<unknowns; unknown++) {
-     #if !defined(GPUOffloading)
-     nonCriticalAssertion7(lambdas[unknown]==lambdas[unknown],x,dx,t,dt,normal,exahype2::fv::plotVolume(QL,unknowns),exahype2::fv::plotVolume(QR,unknowns));
-     #endif
-     lambdaMax = std::max(lambdaMax,std::abs(lambdas[unknown]));
-   }
-
-   for (int unknown=0; unknown<unknowns; unknown++) {
-     FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) - 0.5 * fluxnonconservativeProduct[unknown];
-     FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
-     #if !defined(GPUOffloading)
-     nonCriticalAssertion6(FL[unknown]==FL[unknown], fluxFL[unknown], fluxFR[unknown], lambdaMax, QR[unknown], QL[unknown], fluxnonconservativeProduct[unknown]);
-     nonCriticalAssertion6(FR[unknown]==FR[unknown], fluxFL[unknown], fluxFR[unknown], lambdaMax, QR[unknown], QL[unknown], fluxnonconservativeProduct[unknown]);
-     #endif
-   }
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) - 0.5 * fluxnonconservativeProduct[unknown];
+    FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
+    #if !defined(GPUOffloading)
+    nonCriticalAssertion6(FL[unknown]==FL[unknown], fluxFL[unknown], fluxFR[unknown], lambdaMax, QR[unknown], QL[unknown], fluxnonconservativeProduct[unknown]);
+    nonCriticalAssertion6(FR[unknown]==FR[unknown], fluxFL[unknown], fluxFR[unknown], lambdaMax, QR[unknown], QL[unknown], fluxnonconservativeProduct[unknown]);
+    #endif
+  }
 }
 
 
-template <typename Flux, typename NCP, typename Eigenvalues>
+template <typename Flux, typename NCP, typename MaxEigenvalue>
 void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
   Flux                                         flux,
   NCP                                          nonconservativeProduct,
-  Eigenvalues                                  eigenvalues,
+  MaxEigenvalue                                maxEigenvalue,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   double                                       t,
@@ -171,7 +158,7 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
         volumeX(1) += (y+0.5) * volumeH;
 
         gpu::splitRusanov1d(
-          flux, nonconservativeProduct, eigenvalues,
+          flux, nonconservativeProduct, maxEigenvalue,
           Qin + leftVoxelInPreimage*(unknowns+auxiliaryVariables),   // QL
           Qin + rightVoxelInPreimage*(unknowns+auxiliaryVariables),  // QR
           volumeX, volumeH, t, dt, 0, //  last argument = normal
@@ -223,7 +210,7 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
         volumeX(1) += y * volumeH;
  
         gpu::splitRusanov1d(
-          flux, nonconservativeProduct, eigenvalues,
+          flux, nonconservativeProduct, maxEigenvalue,
           Qin + lowerVoxelInPreimage*(unknowns+auxiliaryVariables),
           Qin + upperVoxelInPreimage*(unknowns+auxiliaryVariables),
           volumeX, volumeH, t, dt, 1, //  last argument = normala
@@ -304,7 +291,7 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
       volumeX(2) += (z+0.5) * volumeH(2);
 
       gpu::splitRusanov1d(
-        flux, nonconservativeProduct, eigenvalues,
+        flux, nonconservativeProduct, maxEigenvalue,
         Qin + leftVoxelInPreimage*(unknowns+auxiliaryVariables),   // QL
         Qin + rightVoxelInPreimage*(unknowns+auxiliaryVariables),  // QR
         volumeX, volumeH(0), t, dt, 0, //  last argument = normal
@@ -360,7 +347,7 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
       volumeX(2) += (z+0.5) * volumeH(2);
 
       gpu::splitRusanov1d(
-        flux, nonconservativeProduct, eigenvalues,
+        flux, nonconservativeProduct, maxEigenvalue,
         Qin + lowerVoxelInPreimage*(unknowns+auxiliaryVariables),
         Qin + upperVoxelInPreimage*(unknowns+auxiliaryVariables),
         volumeX, volumeH(0), t, dt, 1, //  last argument = normal
@@ -415,7 +402,7 @@ void exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
       volumeX(2) += z * volumeH(2);
 
       gpu::splitRusanov1d(
-        flux, nonconservativeProduct, eigenvalues,
+        flux, nonconservativeProduct, maxEigenvalue,
         Qin + lowerVoxelInPreimage*(unknowns+auxiliaryVariables),
         Qin + upperVoxelInPreimage*(unknowns+auxiliaryVariables),
         volumeX, volumeH(0), t, dt, 2, //  last argument = normal
