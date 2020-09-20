@@ -135,10 +135,10 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
 
     for (int unknown=0; unknown<unknowns; unknown++) {
       if (x>0) {
-        Qout[ leftVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+        Qout[ leftVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
       }
       if (x<numberOfVolumesPerAxisInPatch) {
-        Qout[ rightVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+        Qout[ rightVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
       }
     }
   }
@@ -168,10 +168,10 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
 
     for (int unknown=0; unknown<unknowns; unknown++) {
       if (y>0) {
-        Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+        Qout[ lowerVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
       }
       if (y<numberOfVolumesPerAxisInPatch) {
-        Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+        Qout[ upperVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
       }
     }
   }
@@ -245,10 +245,10 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
 
     for (int unknown=0; unknown<unknowns; unknown++) {
       if (x>0) {
-        Qout[ leftVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+        Qout[ leftVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
       }
       if (x<numberOfVolumesPerAxisInPatch) {
-        Qout[ rightVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+        Qout[ rightVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
       }
     }
   }
@@ -285,10 +285,10 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
 
     for (int unknown=0; unknown<unknowns; unknown++) {
       if (y>0) {
-        Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+        Qout[ lowerVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
       }
       if (y<numberOfVolumesPerAxisInPatch) {
-        Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+        Qout[ upperVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
       }
     }
   }
@@ -325,10 +325,10 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
 
     for (int unknown=0; unknown<unknowns; unknown++) {
       if (z>0) {
-        Qout[ lowerVoxelInImage*unknowns+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
+        Qout[ lowerVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] -= dt / volumeH(0) * numericalFluxL[unknown];
       }
       if (z<numberOfVolumesPerAxisInPatch) {
-        Qout[ upperVoxelInImage*unknowns+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
+        Qout[ upperVoxelInImage*(unknowns+auxiliaryVariables)+unknown ] += dt / volumeH(0) * numericalFluxR[unknown];
       }
     }
   }

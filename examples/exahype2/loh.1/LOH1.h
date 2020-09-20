@@ -17,7 +17,7 @@
 
 namespace examples{
 namespace exahype2{
-namespace finitevolumes{
+namespace loh1{
 
   class LOH1;
 }
@@ -26,7 +26,7 @@ namespace finitevolumes{
 
 
 
-class examples::exahype2::finitevolumes::LOH1: public AbstractLOH1 {
+class examples::exahype2::loh1::LOH1: public examples::exahype2::loh1::AbstractLOH1 {
   private:
     static tarch::logging::Log   _log;
     
@@ -52,27 +52,27 @@ class examples::exahype2::finitevolumes::LOH1: public AbstractLOH1 {
      * @param h Mesh size of finite volume
      * @param t Time
      */
-    ::exahype2::RefinementCommand refinementCriterion(
-      double Q[13],
-      const tarch::la::Vector<Dimensions,double>&  x,
-      const tarch::la::Vector<Dimensions,double>&  h,
-      double                                       t
-    ) override;
-
-    void adjustSolution(
-      double Q[13],
+    virtual ::exahype2::RefinementCommand refinementCriterion(
+      double                                       Q[9+4],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
     ) override;
 
-    void eigenvalues(
+
+    virtual void adjustSolution(
+      double                                       Q[9+4],
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t
+    ) override;
+
+    double maxEigenvalue(
       double                                       Q[13],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
-      int                                          normal,
-      double                                       lambda[13]
+      int                                          normal
     ) override;
 
     void boundaryConditions(
@@ -82,15 +82,6 @@ class examples::exahype2::finitevolumes::LOH1: public AbstractLOH1 {
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal
-    ) override;
-
-    void  flux(
-      double                                       Q[13],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal,
-      double                                       F[13]
     ) override;
 
     void nonconservativeProduct(

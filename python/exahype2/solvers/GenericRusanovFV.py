@@ -37,6 +37,8 @@ class AbstractGenericRusanovFV( FV ):
 
     if self._flux and not self._ncp:
       self.HandleCellTemplate = self.HandleCellTemplate_Flux
+    elif not self._flux and self._ncp:
+      self.HandleCellTemplate = self.HandleCellTemplate_NCP
     elif self._flux and self._ncp:
       self.HandleCellTemplate = self.HandleCellTemplate_Flux_NCP
     else:
@@ -194,6 +196,73 @@ class AbstractGenericRusanovFV( FV ):
 """)
 
 
+  HandleCellTemplate_NCP = jinja2.Template( """
+    {% if use_gpu %}
+    ::exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
+    {% else %}
+    ::exahype2::fv::applyRusanovToPatch_FaceLoops(
+    {% endif %}
+      [&](
+        double                                       Q[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       F[]
+      ) -> void {
+      },
+      [&](
+        double Q[],
+        double gradQ[][Dimensions],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double BgradQ[]
+      ) -> void {
+        {% if use_gpu %}
+        {{SOLVER_NAME}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {% else %}
+        {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+        {% endif %}
+      },
+      [&](
+        double                                       Q[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) -> double {
+        {% if use_gpu %}
+        return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, tarch::multicore::TargetDevice::MayRunOnGPU );
+        {% else %}
+        return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+        {% endif %}
+      },
+      {% if use_gpu %}
+      x,
+      h,
+      minTimeStamp, //Todo: {SOLVER_INSTANCE}.getMinTimeStamp(),
+      {% else %}
+      marker.x(),
+      marker.h(),
+      {{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      {% endif %}
+      {{TIME_STEP_SIZE}}, 
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      reconstructedPatch,
+      originalPatch
+  );
+""")
+  
+
+
+
   HandleCellTemplate_Flux_NCP = jinja2.Template( """
     {% if use_gpu %}
     ::exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
@@ -242,7 +311,7 @@ class AbstractGenericRusanovFV( FV ):
         {% if use_gpu %}
         return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, tarch::multicore::TargetDevice::MayRunOnGPU );
         {% else %}
-        return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal, lambdas);
+        return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
         {% endif %}
       },
       {% if use_gpu %}
@@ -263,7 +332,7 @@ class AbstractGenericRusanovFV( FV ):
   );
 """)
   
-
+  
   def add_entries_to_text_replacement_dictionary(self,d):
     """
     

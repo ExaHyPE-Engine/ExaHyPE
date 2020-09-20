@@ -35,25 +35,26 @@ void exahype2::fv::internal::splitRusanov1d(
   double                                       dt,
   int                                          normal,
   int                                          unknowns,
+  int                                          auxiliaryVariables,
   double                                       FL[],
   double                                       FR[]
 ) {
-    assertion(normal>=0);
-    assertion(normal<Dimensions);
+  assertion(normal>=0);
+  assertion(normal<Dimensions);
 
-    double fluxFL[unknowns];
-    double fluxFR[unknowns];
-    flux(QL,x,dx,t,dt,normal,fluxFL);
-    flux(QR,x,dx,t,dt,normal,fluxFR);
+  double fluxFL[unknowns];
+  double fluxFR[unknowns];
+  flux(QL,x,dx,t,dt,normal,fluxFL);
+  flux(QR,x,dx,t,dt,normal,fluxFR);
 
-    double lambdaMaxL = maxEigenvalue(QL,x,dx,t,dt,normal);
-    double lambdaMaxR = maxEigenvalue(QR,x,dx,t,dt,normal);
-    double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+  double lambdaMaxL = maxEigenvalue(QL,x,dx,t,dt,normal);
+  double lambdaMaxR = maxEigenvalue(QR,x,dx,t,dt,normal);
+  double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
-      FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
-    }
+  for (int unknown=0; unknown<unknowns; unknown++) {
+    FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+    FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+  }
 };
 
 
@@ -93,32 +94,33 @@ void exahype2::fv::internal::splitRusanov1d(
   double                                       dt,
   int                                          normal,
   int                                          unknowns,
+  int                                          auxiliaryVariables,
   double                                       FL[],
   double                                       FR[]
 ) {
-    assertion(normal>=0);
-    assertion(normal<Dimensions);
+  assertion(normal>=0);
+  assertion(normal<Dimensions);
 
-    double fluxFL[unknowns];
-    double fluxFR[unknowns];
-    flux(QL,x,dx,t,dt,normal,fluxFL);
-    flux(QR,x,dx,t,dt,normal,fluxFR);
+  double fluxFL[unknowns];
+  double fluxFR[unknowns];
+  flux(QL,x,dx,t,dt,normal,fluxFL);
+  flux(QR,x,dx,t,dt,normal,fluxFR);
 
-    double Qaverage[unknowns];
-    double gradQ[unknowns][Dimensions];
-    for (int unknown=0; unknown<unknowns; unknown++) {
-      for (int d=0; d<Dimensions; d++) {
-        gradQ[unknown][d] = 0.0;
-      }
-      Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
-      gradQ[unknown][normal] = QR[unknown] - QL[unknown];
+  double Qaverage[unknowns+auxiliaryVariables];
+  double gradQ[unknowns+auxiliaryVariables][Dimensions];
+  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+    for (int d=0; d<Dimensions; d++) {
+      gradQ[unknown][d] = 0.0;
     }
-    double fluxnonconservativeProduct[unknowns];
-    nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
+    Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
+    gradQ[unknown][normal] = QR[unknown] - QL[unknown];
+  }
+  double fluxnonconservativeProduct[unknowns];
+  nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
 
-    double lambdaMaxL = maxEigenvalue(QL,x,dx,t,dt,normal);
-    double lambdaMaxR = maxEigenvalue(QR,x,dx,t,dt,normal);
-    double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+  double lambdaMaxL = maxEigenvalue(QL,x,dx,t,dt,normal);
+  double lambdaMaxR = maxEigenvalue(QR,x,dx,t,dt,normal);
+  double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
   for (int unknown=0; unknown<unknowns; unknown++) {
     FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) - 0.5 * fluxnonconservativeProduct[unknown];
@@ -173,7 +175,7 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
     ) -> void {
       internal::splitRusanov1d(
         flux, maxEigenvalue,
-        QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+        QL, QR, x, dx, t, dt, normal, unknowns, auxiliaryVariables, FL, FR
       );
     },
     patchCentre,
@@ -201,7 +203,7 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
     ) -> void {
       internal::splitRusanov1d(
         flux, maxEigenvalue,
-        QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+        QL, QR, x, dx, t, dt, normal, unknowns, auxiliaryVariables, FL, FR
       );
     },
     patchCentre,
@@ -276,7 +278,7 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
     ) -> void {
       internal::splitRusanov1d(
         flux, nonconservativeProduct, maxEigenvalue,
-        QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+        QL, QR, x, dx, t, dt, normal, unknowns, auxiliaryVariables, FL, FR
       );
     },
     patchCentre,
@@ -304,7 +306,7 @@ void exahype2::fv::applyRusanovToPatch_FaceLoops(
     ) -> void {
 	    internal::splitRusanov1d(
         flux, nonconservativeProduct, maxEigenvalue,
-        QL, QR, x, dx, t, dt, normal, unknowns, FL, FR
+        QL, QR, x, dx, t, dt, normal, unknowns, auxiliaryVariables, FL, FR
       );
     },
     patchCentre,

@@ -63,7 +63,7 @@ class FV(object):
     self._guard_adjust_cell                        = "true"
     self._guard_AMR                                = "not marker.isRefined()"
     self._guard_project_patch_onto_faces           = "true"
-    self._guard_update_cell                        = "true"
+    self._guard_update_cell                        = "not marker.isRefined()"
     self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary()"
 
     self._min_h                = min_h

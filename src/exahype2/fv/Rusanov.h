@@ -137,11 +137,11 @@ namespace exahype2 {
        * races.
        *
        */
-      template <typename Flux, typename NCP, typename Eigenvalues>
+      template <typename Flux, typename NCP, typename MaxEigenvalue>
       void applyRusanovToPatch_FaceLoops(
         Flux                                         flux,
         NCP                                          nonconservativeProduct,
-        Eigenvalues                                  eigenvalues,
+        MaxEigenvalue                                maxEigenvalue,
         const tarch::la::Vector<Dimensions,double>&  patchCentre,
         const tarch::la::Vector<Dimensions,double>&  patchSize,
         double                                       t,
@@ -187,6 +187,7 @@ namespace exahype2 {
         double                                       dt,
         int                                          normal,
         int                                          unknowns,
+        int                                          auxiliaryVariables,
         double                                       FL[],
         double                                       FR[]
       );
@@ -230,6 +231,7 @@ namespace exahype2 {
           double                                       dt,
           int                                          normal,
           int                                          unknowns,
+          int                                          auxiliaryVariables,
           double                                       FL[],
           double                                       FR[]
       );
@@ -252,11 +254,11 @@ namespace exahype2 {
       #if defined(GPUOffloading)
       #pragma omp declare target
       #endif
-      template< typename Flux, typename NCP, typename Eigenvalues>
+      template< typename Flux, typename NCP, typename MaxEigenvalue>
       void splitRusanov1d(
         Flux flux,
         NCP  nonconservativeProduct,
-        Eigenvalues eigenvalues,
+        MaxEigenvalue maxEigenvalue,
         double QL[],
         double QR[],
         const tarch::la::Vector<Dimensions,double>&  x,
@@ -265,6 +267,7 @@ namespace exahype2 {
         double                                       dt,
         int                                          normal,
         int                                          unknowns,
+        int                                          auxiliaryVariables,
         double                                       FL[],
         double                                       FR[]
       );

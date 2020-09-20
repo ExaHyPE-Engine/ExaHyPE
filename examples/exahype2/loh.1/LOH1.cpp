@@ -3,11 +3,11 @@
 #include <algorithm>
 #include <iomanip>
 
-tarch::logging::Log   examples::exahype2::finitevolumes::LOH1::_log( "examples::exahype2::finitevolumes::LOH1" );
+tarch::logging::Log   examples::exahype2::loh1::LOH1::_log( "examples::exahype2::loh1::LOH1" );
 
 
 
-::exahype2::RefinementCommand examples::exahype2::finitevolumes::LOH1::refinementCriterion(
+::exahype2::RefinementCommand examples::exahype2::loh1::LOH1::refinementCriterion(
   double                                       Q[13],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -28,7 +28,7 @@ tarch::logging::Log   examples::exahype2::finitevolumes::LOH1::_log( "examples::
 }
 
 // TODO: No point sources supported
-//void examples::exahype2::finitevolumes::LOH1::prescribeLOH1InitialData(
+//void examples::exahype2::loh1::LOH1::prescribeLOH1InitialData(
 //    const tarch::la::Vector<Dimensions,double>&  x,
 //		double Q[]
 //) {
@@ -45,7 +45,7 @@ tarch::logging::Log   examples::exahype2::finitevolumes::LOH1::_log( "examples::
 //    }
 //}
 
-void examples::exahype2::finitevolumes::LOH1::prescribeGaussianWave(
+void examples::exahype2::loh1::LOH1::prescribeGaussianWave(
     const tarch::la::Vector<Dimensions,double>&  x,
 		double Q[]
 ) {
@@ -81,7 +81,7 @@ void examples::exahype2::finitevolumes::LOH1::prescribeGaussianWave(
 
 
 
-void examples::exahype2::finitevolumes::LOH1::adjustSolution(
+void examples::exahype2::loh1::LOH1::adjustSolution(
   double Q[13],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
@@ -97,31 +97,40 @@ void examples::exahype2::finitevolumes::LOH1::adjustSolution(
   logTraceOut( "adjustSolution(...)" );
 }
 
-void examples::exahype2::finitevolumes::LOH1::eigenvalues(
+
+double examples::exahype2::loh1::LOH1::maxEigenvalue(
   double                                       Q[13],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
-  int                                          normal,
-  double                                       lambda[13]
+  int                                          normal
 ) {
   double cp = Q[s.cp];
   double cs = Q[s.cs];
   
+/*
   lambda[0] = -cp;
   lambda[1] =  cp;
   lambda[2] = -cs;
-  lambda[3] =  cp;
+  lambda[3] =  cp;   I think this is a bug!
   lambda[4] = 0.0;
   lambda[5] = 0.0;
   lambda[6] = 0.0;
   lambda[7] = 0.0;
   lambda[8] = 0.0;
   lambda[9] = 0.0;
+*/
+
+  double result = 0.0;
+  result = std::max( result, -cp );
+  result = std::max( result,  cp );
+  result = std::max( result, -cs );
+  result = std::max( result,  cs );
+  return result;
 }
 
 
-void examples::exahype2::finitevolumes::LOH1::boundaryConditions(
+void examples::exahype2::loh1::LOH1::boundaryConditions(
   double                                       Qinside[13],
   double                                       Qoutside[13],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -155,21 +164,8 @@ void examples::exahype2::finitevolumes::LOH1::boundaryConditions(
   logTraceOut( "boundaryConditions(...)" );
 }
 
-void examples::exahype2::finitevolumes::LOH1::flux(
-  double                                       Q[13],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal,
-  double                                       F[13] ) {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-  
-  // do nothing
 
-  logTraceOut( "flux(...)" );
-}
-
-void examples::exahype2::finitevolumes::LOH1::nonconservativeProduct(
+void examples::exahype2::loh1::LOH1::nonconservativeProduct(
   double                                       Q[13],
   double                                       gradQ[13][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
