@@ -116,10 +116,17 @@ class PerformanceData(object):
             self._d = 2
           if "3d" in line:
             self._d = 3
-          if "tbb" in line or "omp" in line:
+            
+          if "no threading" in line:
+            self._threads = 1
+            self._cores_per_node = 1
+          elif "tbb" in line or "omp" in line:
             self._threads = int( line.split( "threads" )[0].split( "(")[-1] )
             self._cores_per_node = self._threads
-          if "build:" in line or "mpi" in line:
+            
+          if "no mpi" in line:
+            self._ranks = 1
+          elif "mpi" in line:
             self._ranks = int( line.split( "ranks)" )[0].split( "(")[-1] )
 
 
