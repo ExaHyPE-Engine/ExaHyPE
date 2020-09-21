@@ -15,14 +15,11 @@ tarch::logging::Log   examples::exahype2::loh1::LOH1::_log( "examples::exahype2:
 ) {
   logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  #if PeanoDebug>0
-  const double minH = 3.0;
-  #else
-  const double minH = 0.3;
-  #endif
-  if (tarch::la::equals(t,0.0) and tarch::la::max(h)>minH ) {
+
+  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {{
     result = ::exahype2::RefinementCommand::Refine;
-  }
+  }}
+
   logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;
 }

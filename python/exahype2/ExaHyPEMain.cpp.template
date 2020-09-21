@@ -143,7 +143,6 @@ bool selectNextAlgorithmicStep() {{
     else {{
       if (not addGridSweepWithoutGridRefinementNext) iterationsWithGridRefinementSinceLastRefinement++;
 
-      #ifdef Parallel
       if (observers::loadBalancer.hasSplitRecently() and iterationsWithoutGridRefinement<MaxIterationsWithoutGridRefinement) {{
         logInfo( "selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement" );
         addGridSweepWithoutGridRefinementNext = true;
@@ -156,7 +155,6 @@ bool selectNextAlgorithmicStep() {{
         logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so refine mesh further in next sweep" );
         addGridSweepWithoutGridRefinementNext = false;
       }}
-      #endif
     }}
 
     continueToSolve = true;
