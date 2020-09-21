@@ -87,8 +87,8 @@ void exahype2::fv::gpu::splitRusanov1d(
   }
   nonconservativeProduct(Qaverage,gradQ,x,dx,t,dt,normal,fluxnonconservativeProduct);
 
-  double lambdaMaxL = MaxEigenvalue(QL,x,dx,t,dt,normal,lambdas);
-  double lambdaMaxR = MaxEigenvalue(QR,x,dx,t,dt,normal,lambdas);
+  double lambdaMaxL = MaxEigenvalue(QL,x,dx,t,dt,normal);
+  double lambdaMaxR = MaxEigenvalue(QR,x,dx,t,dt,normal);
   double lambdaMax = std::max(lambdaMaxL,lambdaMaxR);
 
   for (int unknown=0; unknown<unknowns; unknown++) {
