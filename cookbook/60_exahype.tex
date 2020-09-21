@@ -50,12 +50,13 @@ document.
 It is relatively straightforward to use \ExaHyPE\ within \Peano:
 
 \begin{itemize}
-  \item Configure your code with the flag \texttt{--enable-exahype}.
-  \item ExaHyPE further requires some toolboxes, so you also have to add
-  \texttt{--enable-loadbalancing-toolbox}.
+  \item Configure \Peano\ with the flags \texttt{--enable-exahype}
+  \texttt{--enable-loadbalancing-toolbox}. These are the two mandatory extensions. You might want to add further options---for VTK and parallelisation, e.g. That is:
+  This configuration allows you to run a basic serial \ExaHyPE\ application and
+  to write some files in the \Peano\ format, but nothing more.
   \item Recompile your code. This should give you a couple of
   \texttt{ExaHyPE2Core} libraries in the respective subdirectories.
-  \item Ensure that \texttt{python/exahype} is in your Python search path.
+  \item Ensure that \texttt{python} subdirectory is in your Python search path.
 \end{itemize}
 
 
@@ -97,9 +98,14 @@ jupyter notebook
 
 
 \noindent
-All calls from this notebook can obviously also be made from a plain Python
-script. 
 Alternatively, you can execute the notebook via \texttt{ipython3}.
+
+
+
+All calls from the notebook can obviously also be made from a plain Python
+script. 
+You find examples for such scripts within the subdirectory
+\texttt{example-scripts}.
 
 
 \section{IO and logging}
