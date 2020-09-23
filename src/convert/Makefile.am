@@ -419,8 +419,8 @@ VTK_REQUIRED_LIBS     =  \
 -lvtkDICOMParser$(VTK_LIBRARY_SUFFIX)                  -lvtkFiltersImaging$(VTK_LIBRARY_SUFFIX)          -lvtkImagingStatistics$(VTK_LIBRARY_SUFFIX)     -lvtkIOExportGL2PS$(VTK_LIBRARY_SUFFIX)       -lvtkIOParallelXML$(VTK_LIBRARY_SUFFIX)  -lvtkloguru$(VTK_LIBRARY_SUFFIX)          -lvtkRenderingCore$(VTK_LIBRARY_SUFFIX)          -lvtkTestingRendering$(VTK_LIBRARY_SUFFIX) \
 -lvtkDomainsChemistry$(VTK_LIBRARY_SUFFIX)             -lvtkFiltersModeling$(VTK_LIBRARY_SUFFIX)         -lvtkGeovisCore$(VTK_LIBRARY_SUFFIX)           -lvtkImagingStencil$(VTK_LIBRARY_SUFFIX)        -lvtkIOExportPDF$(VTK_LIBRARY_SUFFIX)         -lvtkIOPLY$(VTK_LIBRARY_SUFFIX)          -lvtkRenderingFreeType$(VTK_LIBRARY_SUFFIX)      \
 -lvtkFiltersParallel$(VTK_LIBRARY_SUFFIX)         -lvtkInfovisCore$(VTK_LIBRARY_SUFFIX)           -lvtkIOGeometry$(VTK_LIBRARY_SUFFIX)          -lvtkIOSegY$(VTK_LIBRARY_SUFFIX)         -lvtkRenderingGL2PSOpenGL2$(VTK_LIBRARY_SUFFIX)  \
--lvtkexodusII$(VTK_LIBRARY_SUFFIX)                     -lvtkFiltersParallelImaging$(VTK_LIBRARY_SUFFIX)  -lvtkInfovisLayout$(VTK_LIBRARY_SUFFIX)         -lvtkIOImage$(VTK_LIBRARY_SUFFIX)             -lvtkIOSQL$(VTK_LIBRARY_SUFFIX)          -lvtkmetaio$(VTK_LIBRARY_SUFFIX)          -lvtkRenderingImage$(VTK_LIBRARY_SUFFIX)         -lvtkverdict$(VTK_LIBRARY_SUFFIX) \
--lpython3
+-lvtkexodusII$(VTK_LIBRARY_SUFFIX)                     -lvtkFiltersParallelImaging$(VTK_LIBRARY_SUFFIX)  -lvtkInfovisLayout$(VTK_LIBRARY_SUFFIX)         -lvtkIOImage$(VTK_LIBRARY_SUFFIX)             -lvtkIOSQL$(VTK_LIBRARY_SUFFIX)          -lvtkmetaio$(VTK_LIBRARY_SUFFIX)          -lvtkRenderingImage$(VTK_LIBRARY_SUFFIX)         -lvtkverdict$(VTK_LIBRARY_SUFFIX) 
+
 endif
 
 
