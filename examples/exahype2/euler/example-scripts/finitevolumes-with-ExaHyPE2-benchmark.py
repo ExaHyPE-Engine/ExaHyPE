@@ -50,7 +50,7 @@ max_h          = args.h
 project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
   "Euler", 
   patch_size, 
-  unknowns, 
+  unknowns, 0,
   min_h, max_h,
   time_step_size,
   flux = True,
