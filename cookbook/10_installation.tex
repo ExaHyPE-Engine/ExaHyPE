@@ -75,18 +75,30 @@ Change into the project's directory and type in
 \end{code}
 
 
+\noindent
 The \texttt{--help} option should give you some information about the available
 variants of \Peano.
-In principle, a sole \texttt{./configure} call is sufficient, but you might want
-to adopt your build; notably as the default build is serial and does not bring
-along any support for postprocessing.
-While the help output should be reasonable verbose, I summarise key options
-below:
+A sole \texttt{./configure} call gives you the minimalist version of
+\Peano---might be appropriate for a first test.
+
+\begin{remark}
+ I recommend that you start a first test without any additional flavours of
+ \Peano, i.e.~to work with a plain \texttt{./configure} call. Once the tests
+ pass, I recommend that you add further options (IO) and/or parallelisation.
+ Please note that the baseline config is not sufficient for most applications
+ as it is merely a stripped down version of the \Peano\ core.
+ \ExaHyPE\ for example requires you to add \texttt{--enable-exahype} and
+ \texttt{--enable-loadbalancing-toolbox}. 
+ But the bare/minimal version is good for first tests.
+\end{remark}
+
+
+\noindent
+The output of \texttt{./configure --help} should be reasonable verbose, but I
+summarise some key options below:
 
 \begin{center}
- \begin{tabular}{lp{10cm}}
-  \texttt{--prefix=/mypath} & Will install \Peano\  in \texttt{/mypath}.
-   \\
+ \begin{longtable}{lp{10cm}}
   \texttt{--with-multithreading} & Switch on multithreading. By default, we
   build without multithreading, but a \texttt{--with-multithreading=cpp}, e.g.,
   makes \Peano\  use the C++ threading model. Please consult \texttt{--help} for
@@ -132,28 +144,50 @@ below:
   have specialised versions for NVIDIA (\texttt{--with-gpu=nvidia}) and AMD
   (\texttt{--with-gpu=amd}). For different vendors, you might be required to
   select particular multithreading models. The AMD and NVIDIA port for example
-  work only with OpenMP.  
- \end{tabular}
+  work only with OpenMP.
+   \\
+  \texttt{--enable-exahype} & Includes the \ExaHyPE\ core into your build.
+   Requires the load balancing toolbox, too. 
+   \\
+  \texttt{--enable-xxx-toolbox} & \Peano\ is shipped with a couple of toolboxes
+   for various purposes. These are C++ libraries which offer a lot of features.
+   You have to enable/activate them manually. Please note: Not all toolboxes are
+   compatible with all targets. We have experienced issues with the
+   FEM toolbox and some GPGPU systems for example.
+ \end{longtable}
 \end{center}
 
 
-\begin{remark}
- I recommend that you start a first test without any additional flavours of
- \Peano, i.e.~to work with a plain \texttt{./configure} call. Once the tests
- pass, I recommend that you first add IO (VTK) and then parallelisation.
-\end{remark}
 
 
 \noindent
 Compilers, linkers and both compiler and linker flags can be changed by
-resetting the corresponding environment variables \emph{prior} to the configure
-call.
+resetting the corresponding environment variables (such as
+\texttt{CXX} or \texttt{LDFLAGS} or \texttt{CCFLAGS}) \emph{prior} to the
+configure call.
 Alternatively, you can pass the variables to be used to \texttt{configure}
-through arguments. 
+	through arguments (\texttt{./configure CXX=icpc ...}, e.g.). 
 Please consult the \texttt{--help} output for details.
 For some supercomputers that we use frequently, there are recommendations which
 setting to use (Chapter~\ref{chapter:selected-HPC-platforms}).
 
+
+\begin{remark}
+Most Linux tools prefer you to specify a dedicated installation directory via
+\texttt{--prefix}.
+For \Peano, things are slightly different: \Peano\ is a mere engine, i.e.~not
+``useful'' per se.
+It is applications built on top of \Peano\ that become tools that you might
+later want to install/deploy on your system. 
+Therefore, I ship \Peano\ with static libraries only, and most users work with
+the code in the download/installation directory until they have constructed the
+application with the help of \Peano.
+So no need to specify a proper installation directory via \texttt{--prefix}.
+\end{remark}
+
+
+%   \texttt{--prefix=/mypath} & Will install \Peano\  in \texttt{/mypath}.
+%    \\
 
 
 \section{Build}
@@ -162,25 +196,29 @@ Once the configuration has been successful, a simple
 \begin{code}
 make
 \end{code}
-should build the \Peano\ core and some examples.
-
-
+should build the \Peano\ core.
+It also builds some examples and all the extensions and toolboxes you have
+manually enabled.
+All of these go into static libraries.
+The code is not small and you thus might prefer
 \begin{code}
-make install
+make -jx
 \end{code}
-finally will deploy the \Peano\ files in the directory specified via the
-\texttt{prefix} before.
-If you haven't set the prefix, then the default will likely be a system
-directory.
-Unless you have superuser rights, the installation then will fail.
-So I recommend that you install \Peano\ into a local directory specifying it via
-the \texttt{--with-prefix} option.
+with x being the number of parallel builds to use.
 
 
 \begin{remark}
- To develop with \Peano, you don't have to install it. You can instead just skip
- the installation and work in the download directory.
+ Following up on the remark above, 
+ \begin{code}
+make install
+ \end{code}
+ would deploy the \Peano\ files in the directory specified via the
+ \texttt{prefix} before.
+ Most Unix tools want you to install them. 
+ For \Peano, things might be slightly different as it is an engine used to
+ construct tools in the first place. 
 \end{remark}
+
 
 
 
@@ -192,11 +230,29 @@ Once you have compiled \Peano\, I recommend that you run all tests using
 \begin{code}
   make check
 \end{code}
-or to run 2D and 3D tests individually, use
+
+\noindent
+The call launches all of \Peano's unit test, i.e.~all the unit tests for the
+core plus the extensions that you have enabled.
+
+
+\begin{remark}
+ I have written the test target such that it works out-of-the-box for non-MPI
+ calls. If you have configured with \texttt{--with-mpi}, then the unit tests
+ will fail. But this does not mean that the unit tests are broken. It is simply
+ due to the fact that the makefile's test target does not know that you have to
+ use the \texttt{mpirun} prefix.
+ To make a long story short: If you use MPI and you want to run the unit tests,
+ you have to do so manually.
+\end{remark}
+
+
+\noindent
+To run 2D and 3D tests individually, use
 
 \begin{code}
-  src/examples/unittests/UnitTests2d
-  src/examples/unittests/UnitTests3d
+  src/unittests/UnitTests2d
+  src/unittests/UnitTests3d
 \end{code}
 
 \noindent
@@ -204,8 +260,30 @@ You can run these builds with different core counts and also MPI support if you
 have compiled with MPI.
 The executables contain both node correctness tests and MPI ping-pong tests,
 i.e.~you can both assess a valid build plus a working MPI environment.
+If successful, you should always get a message alike
 
+\begin{code}
+Peano 4 (C) www.peano-framework.org 
+build: 2d, with mpi (1 ranks), omp (4 threads), debug level=4
+it is recommended that you run the unit tests with more than one MPI rank, too (file:main.cpp,line:82)
+usage: ././UnitTests2d core-count (use default core count=1 now) (file:main.cpp,line:88)
+running test case collection "tarch.la.tests" ..... ok
+running test case collection "tarch.la" ............. ok
+running test case collection "tarch.mpi.tests" ..... ok
+running test case collection "tarch.mpi" ... ok
+running test case collection "tarch" ... ok
+running test case collection ... ok
+running test case collection "peano4.grid.tests" ....... ok
+running test case collection "peano4.grid" ... ok
+running test case collection "peano4.parallel.tests" ....... ok
+running test case collection "peano4.parallel" ... ok
+running test case collection "peano4" ... ok
+running test case collection ... ok
+\end{code}
 
+\noindent
+Watch out for the last line that tells you whether the overall unit tests passed
+through.
 
 \section{Python configuration}
 
