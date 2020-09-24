@@ -7,19 +7,27 @@ import peano4.datamodel
 import peano4.output.TemplatedHeaderFile
 import peano4.output.TemplatedHeaderImplementationFilePair
 
+<<<<<<< HEAD
 import exahype2.grid.EnclaveLabels
 
+=======
+>>>>>>> 838c6551aa54edd5284a395b939e2ac89a7b21f8
 from .FV import FV
 
 import jinja2
 
 
+<<<<<<< HEAD
 class AbstractGenericRusanovFV( FV ):
+=======
+class PointWiseClawPackFVFixedTimeStepSize( FV ):
+>>>>>>> 838c6551aa54edd5284a395b939e2ac89a7b21f8
   User_Defined_Implementation = "<user-defined>"
   Empty_Implementation = "<empty>"
 
   __None         = "<none>"
 
+<<<<<<< HEAD
   def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties):
     """
     
@@ -332,6 +340,19 @@ class AbstractGenericRusanovFV( FV ):
   );
 """)
   
+=======
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
+    """
+            
+    """
+    super(AbstractGenericRusanovFV,self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+   
+
+  def get_user_includes(self):
+    return """
+"""    
+
+>>>>>>> 838c6551aa54edd5284a395b939e2ac89a7b21f8
   
   def add_entries_to_text_replacement_dictionary(self,d):
     """
@@ -341,6 +362,7 @@ class AbstractGenericRusanovFV( FV ):
     
     """
     d[ "TIME_STEP_SIZE" ]                     = self._time_step_size
+<<<<<<< HEAD
     d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
     d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
     d[ "EIGENVALUES_IMPLEMENTATION"]          = self._eigenvalues_implementation
@@ -753,3 +775,5 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     super(GenericRusanovFVFixedTimeStepSizeWithEnclaves,self).add_use_data_statements_to_Peano4_solver_step(step)
     step.use_cell(self._cell_sempahore_label)
+=======
+>>>>>>> 838c6551aa54edd5284a395b939e2ac89a7b21f8
