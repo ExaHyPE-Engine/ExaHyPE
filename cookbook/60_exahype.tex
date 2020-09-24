@@ -106,9 +106,14 @@ Alternatively, you can execute the notebook via \texttt{ipython3}.
 
 
 \ExaHyPE\ codes by default yield snapshots in \Peano's block format. 
-If you have configured \Peano\ with VTK support, you can directly convert it
-into VTK and visualise through Paraview or VisIt. 
-For this, I provide a command line tool as discussed in Chapter
+That is, there's no distinguished \ExaHyPE\ format.
+
+
+\paragraph{Explicit VTK conversion with command line tool}
+If you have configured \Peano\ with VTK support (\texttt{--with-vtk}), you can
+directly convert \ExaHyPE' output files into VTK and visualise these through
+Paraview or VisIt.
+The command line tool is discussed in Chapter
 \ref{chapter:postprocessing}.
 
 
@@ -122,7 +127,17 @@ convert.convert_to_vtk()
 \end{code}
 
 
-\noindent
+\paragraph{Direct postprocessing within Paraview}
+
+Paraview offers a Python scripting option. 
+Through this scripting interface, you can directly load and manipulate \Peano\
+(and hence \ExaHyPE) outputs. 
+The interface is also discussed in Chapter
+\ref{chapter:postprocessing}.
+
+
+\paragraph{Logging output}
+
 \ExaHyPE\ searches for a text file \texttt{exahype.log-filter} in the working
 directory.
 If no such file is found (or the file is corrupted), then it will use some
@@ -268,20 +283,19 @@ my new static function variants
 \section{Modelling the fluxes and Riemann solvers with SymPy}
 
 You can model your fluxes, Riemann solvers and so forth with SymPy, 
-i.e.~through symbolic formulations.
-For this, you have to install the computer algebra system on your
-system.
-The computer algebra extension to specify solver ingredients is held within the
-\ExaHyPE\ subpackage \texttt{exahype2.sympy}.
+i.e.~through symbolic formulations---as long as you use a generic numerical
+Riemann solver such as Rusanov.
+The \ExaHyPE\ SymPy wrapper is
+held within the \ExaHyPE\ subpackage \texttt{exahype2.sympy}.
 
 
-I provide a couple of classes to model PDEs in different formulations and are
-held within the subpackage \texttt{peano4.solvers.sympy}.
-They wrap around SymPy's symbolic expressions, and thus allow users to work with
-these expressions directly.
-On top of that they offer some code generation which again wraps SymPy's code
-generation plus then adds all the glue to integrate this code generation into a
-\Peano\ solver.
+I provide a couple of classes for different PDE variants that should be
+compatible to particular \ExaHyPE\ Finite Volume and ADER-DG solvers.
+All SymPy classes wrap around SymPy's symbolic expressions, and thus allow users
+to work with these expressions directly.
+Once you have finished you modelling, the wrappers offer some code generation
+which again decorate SymPy's code generation, adds some glue code and can inject
+the generate into a \Peano\ solver.
 
 
 The Euler equations modelled via this interface then add the following code
@@ -328,24 +342,14 @@ pde.substitute_expression( gamma, 1.4 )
 
 
 \noindent
-A simple
-\begin{code}
- print( pde )
-\end{code}
-demonstrates what we have modelled.
 This \texttt{pde} object here can create C++ code that we can plug directly into
-the respective \Peano\ routines.
-
-
-Key for economic modelling now however is the usage of the FV solver's
-\texttt{set\_implementation} routine:
+the respective \Peano\ routines:
 \begin{code}
-my_solver.set_implementation( \
-  flux=pde.implementation_of_flux(),eigenvalues=pde.implementation_of_eigenvalues())
+my_solver.set_implementation( flux=pde.implementation_of_flux(),eigenvalues=...
 \end{code}
 
 \noindent
-With this call, the modelled PDE goes, via code generation, directly into the
+With this call, the modelled PDE feeds, via code generation, directly into the
 \ExaHyPE\ solver. When we remodel the PDE, everything is updated automatically.
 
 
@@ -366,12 +370,20 @@ with \ExaHyPE.
 
 \section{Finite Volumes with ClawPack (ExaClaw)}
 
-ExaClaw is an extension of \ExaHyPE\ (Chapter \ref{chapter:exahype}) which
-offers the ClawPack Riemann solvers within \ExaHyPE.
+ExaClaw is an add-on to \ExaHyPE\ which makes
+the ClawPack Riemann solvers available within \ExaHyPE.
 Its development has been made possible by EPSRC under the Excalibur
 Phase I call.
 The grant number is EP/V00154X/1.
 
+
+
+To use this solver family, clone the repository from
+\url{https://github.com/clawpack/riemann}.
+Furthermore, please ensure that you have configured a Fortran compiler through
+\texttt{configure}, i.e.~that you have set the variable \texttt{FC}.
+If you have a Fortran compiler in the path by default, everything should work
+out-of-the-box.
 
 \begin{remark}
  This solver family is work-in-progress.
@@ -420,98 +432,76 @@ It relies directly on \Peano's patch-based AMR.
 
 
 \begin{itemize}
-  \item Create a new subclass of \texttt{exahype2.solver.FV}. The parent class
-  has to be told with which patch overlaps you work.
-  \item Instantiate this class in your user code when you invoke
-  \texttt{add\_solver} on the \ExaHyPE\ project.
-  \item Overwrite \texttt{get\_user\_includes()} to add all the includes for
-  C/C++ code that you'll eventually need. 
+  \item Create a new subclass of \texttt{exahype2.solver.FV}.
   \item If you class is called \texttt{XYZ}, create four text files:
   \texttt{XYZAbstract.template.h}, \linebreak \texttt{XYZAbstract.template.cpp},
-  \texttt{XYZ.template.h} and \texttt{XYZ.template.cpp}.
+  \texttt{XYZ.template.h} and \texttt{XYZ.template.cpp}. These are Jinja
+  templates, and they define your solver (abstract variants) and provide a
+  template for routines that a user has to fill in.
 \end{itemize}
 
-\noindent
+
+\paragraph{The C classes/templates}
+
 \ExaHyPE's design concept is that each solver yields two types of classes:
 The actual solver and an abstract superclasses. 
 Abstract superclasses are regenerated every time you rerun the Python script.
 Furthermore, they define the whole signature, i.e.~if you alter the signature
 later on, users simply rerun the toolkit. 
-Finally, the abstract superclasses hold default implementations.
+Finally, the abstract superclasses hold default implementations\footnote{Some
+solvers do not expect the user to write any C/Fortran code at all. In this
+case, the solvers nevertheless should create an abstract superclass (now
+holding all functions) and a subclass which is basically empty. This way, we
+are consistent.}.
 
 
 With \Peano, you can create arbitrary abstract superclasses. 
-They have to implement some general \ExaHyPE\ routines, but the number of operations that they have to
-provide is very small.
-I thought about introducing a general \texttt{exahype2::Solver} class, but then
-this class is not really required anywhere as we work with code generation all
-the way through anyway. 
-So the only thing your solver's abstract superclass has to give \ExaHyPE\ is the
-following set of routines:
+They have to implement \texttt{exahype2::Solver} though.
 
-\begin{code}
-  double getMinTimeStamp() const;
-  double getMaxTimeStamp() const;
-  double getMinTimeStepSize() const;
-  double getMaxTimeStepSize() const;
 
-  void startTimeStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-  );
-
-  void finishTimeStep();
-\end{code}
-\noindent
-You can make them virtual if you want to highlight that a user can reimplement
-them. 
-But there's no need for this. 
+\paragraph{The Python code}
 
 
 The core implementation effort clearly has to go into the parts where the actual
 mesh traversal is mapped onto solver calls.
 In \ExaHyPE, this is realised through templates. 
-Any user solver is supposed to define three local variables within its solver
-class:
-\texttt{HandleBoundaryTemplate}, 
-\texttt{CreateCellTemplate}, \texttt{HandleCellTemplate} and
-\texttt{AMRTemplate}.
-There are more, but this is the minimum.
+Any Finite Volume code relies basically on four templates:
 
-
-Within these templates, you have access to a couple of variables, some symbols,
-and you can furthermore specify your own replacement rules:
 \begin{itemize}
-  \item Within each code block, you have access to a variable marker which is of
-  type \texttt{peano4::datamanagement::FaceMarker} or
-  \texttt{peano4::datamanagement::CellMarker}. It allows you to find out more
-  about the face or cell centre, mesh sizes, \ldots, i.e.~it holds all spatial
-  information.
-  \item Within each code block, the constant \texttt{\{SOLVER\_INSTANCE\}} will
-  be replaced by the Python code with an actual instance of your user's solver.
-  \item The constant
-  \texttt{\{NUMBER\_OF\_VOLUMES\_PER\_AXIS\}} will be replaced by the block size
-  specified by the user. It is the attribute you hand through in the
-  constructor.
-  \item The constant
-  \texttt{\{NUMBER\_OF\_UNKNOWNS\}} will be replaced by the argument you pass to
-  the constructor.
-  \item There are more constants. See \linebreak
-  \texttt{peano4.solvers.FV.\_\_init\_dictionary\_with\_default\_parameters} for
-  information.
-  \item You can introduce more symbolds as \texttt{\{XYZ\}} as long as you add
-  them within your routine
-  \texttt{add\_entries\_to\_text\_replacement\_dictionary}.
+  \item \texttt{AMRTemplate} will be called on solver cells to determine whether
+  to refine or erase.
+  \item \texttt{AdjustCellTemplate} will be called to impose initial conditions
+  or interior ones.
+  \item \texttt{HandleBoundaryTemplate} is invoked for boundary faces.
+  \item \texttt{HandleCellTemplate} is the actual Finite Volumes solver
+  invocation.
 \end{itemize}
 
 
 \noindent
+These four strings are Jinja templates. The idea is that particular FV
+subclasses ``overwrite'' (set) them and thus inject their solver behaviour.
+Each handle is guarded by an additional expression (some C++ code evaluating to
+boolean) to switch it on/off.
+There's two more things that are automatically done: patch updates are
+automatically projected onto the faces, and the projected face data is
+automatically rolled over.
+While these things are ``hard-coded'', you still have guards to switch it
+on/off.
+
+
 The template mechanism works similar to aspect-oriented programming, i.e.~it
 simply enables Python to plug some code snippets straight into your the
 generated \ExaHyPE\ code. 
-The interesting thing however is the symbol
+For a list of predefined constants that are available within the templates,
+please consult the routine
+\texttt{\_init\_dictionary\_with\_default\_parameters} which befills a lookup
+table.
+You can, obviously, add more entries within your implementation.
+For this, a solver has to implement
+\texttt{add\_entries\_to\_text\_replacement\_dictionary}.
+Some of the most important preset dictionary entries are:
+
 
 \begin{itemize}
   \item \texttt{fineGridCell\{UNKNOWN\_IDENTIFIER\}.value} which is a double
@@ -547,10 +537,11 @@ The interesting thing however is the symbol
 
 
 \noindent
-I see two different ways how to realise a new solver: 
+I see two different paradigms how to realise a new solver: 
 You can either code your solver directly within the Python templates.
 Alternatively, you can generate some generic glue code within the template and
-forward calls to some predefined C++ or user code.
+forward calls to some C++ which can either stem from a library or be user
+code.
 
 
 Both variants have pros and cons and are valid.
@@ -564,92 +555,92 @@ maybe better to skip that additional level of abstraction.
 
 
 
-\subsection{Ghoddess implementation remarks}
-
-Ghoddess works on triangles which we embed into the squares or cubes,
-respectively, of \ExaHyPE.
-By default, the code employs Gauss-Legendre sample points.
-The data structure used thus read as follows
-(Fig.~\ref{figure:60_exahype:degree-of-freedom-layout:Ghoddess}):
-\begin{itemize}
-  \item The solver embeds a ``patch'' of $N$ polynomial weights into each cell.
-  For order $p=1, d=2$, we have for example $N=6$, for $p=2, d=2$ we have
-  $N=12$.
-  \item Each face carries $2(p+1)^{d-1}$ doubles.
-\end{itemize}
-
-
-\noindent
-The face data holds a left and a right representation of the polynomial along
-the face.
-So it does not really hold degrees of freedom.
-Its degree of freedom are mere projections of the cell solution onto the face.
-
-
-
-\begin{figure}
- \begin{center}
-  \includegraphics[width=0.65\textwidth]{60_exahype/Ghoddess-dof-layout.pdf}
- \end{center}
- \caption{
-  Left: Degree of freedom layout in Ghoddess within a cell.
-  Right: Each face holds additional ``degree of freedoms'' which encode the
-  projection of the cell polynomial onto the face.
-  \label{figure:60_exahype:degree-of-freedom-layout:Ghoddess}
- }
-\end{figure}
-
-The Ghoddess solver itself splits up into four computation kernels:
-
-\begin{enumerate}
-  \item The {\bf projectOntoFace} kernel accepts the $N$ degrees of freedom from
-  the cell and projects the polynomials of the two triangles within the cell
-  onto the faces. It consequently writes $2d \cdot (p+1)^{d-1}$ face DoFs. Once
-  we have traversed the whole mesh, each face ``knows'' its left and right
-  projection.
-  \item The {\bf solveRiemann} kernel takes the $2 \cdot (p+1)^{d-1}$ DoFs on
-  the face, i.e.~the left and right projection, and solves the Riemann problem
-  on the jump. The result is written back into the $2 \cdot (p+1)^{d-1}$ DoFs.
-  In principle, this allows us to have a different outgoing flux for the left
-  and right side of a face.
-  \item The {\bf solveCell} kernel evolves the solution within the triangle
-  pair, i.e.~it evaluates the volumetric integrals of the DG formulation. The
-  name is slightly wrong: Besides the volumetric terms, the kernel also
-  evaluates the face terms arising between the two triangles embedded into the
-  cell. So it is a combination of a cell kernel plus one Riemann solve (in 2d).
-  \item The {\bf projectOntoCell} kernel takes the Riemann solution on the cell
-  faces, i.e.~the output of projectOntoFace, and adds it to the cell solution,
-  i.e.~it adds it to the outcome of solveCell.
-\end{enumerate}
-
-
-\noindent
-Ghoddess' vanilla version indeed traverses the mesh four times per time step.
-This makes it easy/easier to debug the code and to analyse the substeps.
-The work of Charrier et al then automatically fuses the traversals and thus
-reduces the memory accesses and homogenises the computational character over the
-mesh sweeps.
-
-
-The realisation of the four sweeps relies on blockstructured extension of
-\Peano:
-Though the data is logically not Cartesian or block-structured, we model all
-properties as blocks embedded into the mesh.
-
-
-All solvers inherit from \texttt{exahype2.ghoddess.Solver} which is our abstract
-framework.
-Per solver, the Python API will generate one C++ solver class.
-This class has a couple of things to do:
-
-\begin{enumerate}
-  \item It holds all time stepping data. So it knows, for example, what the
-  minimal time stamp at the moment is.
-  \item It serves as a state machine which decides at any point which kernels
-  are to be executed on particular grid entities.
-  \item It holds the application domain-specific routines such as the actual
-  kernel implementations, refinement criteria or data initialisation.
-\end{enumerate}
+% \subsection{Ghoddess implementation remarks}
+% 
+% Ghoddess works on triangles which we embed into the squares or cubes,
+% respectively, of \ExaHyPE.
+% By default, the code employs Gauss-Legendre sample points.
+% The data structure used thus read as follows
+% (Fig.~\ref{figure:60_exahype:degree-of-freedom-layout:Ghoddess}):
+% \begin{itemize}
+%   \item The solver embeds a ``patch'' of $N$ polynomial weights into each cell.
+%   For order $p=1, d=2$, we have for example $N=6$, for $p=2, d=2$ we have
+%   $N=12$.
+%   \item Each face carries $2(p+1)^{d-1}$ doubles.
+% \end{itemize}
+% 
+% 
+% \noindent
+% The face data holds a left and a right representation of the polynomial along
+% the face.
+% So it does not really hold degrees of freedom.
+% Its degree of freedom are mere projections of the cell solution onto the face.
+% 
+% 
+% 
+% \begin{figure}
+%  \begin{center}
+%   \includegraphics[width=0.65\textwidth]{60_exahype/Ghoddess-dof-layout.pdf}
+%  \end{center}
+%  \caption{
+%   Left: Degree of freedom layout in Ghoddess within a cell.
+%   Right: Each face holds additional ``degree of freedoms'' which encode the
+%   projection of the cell polynomial onto the face.
+%   \label{figure:60_exahype:degree-of-freedom-layout:Ghoddess}
+%  }
+% \end{figure}
+% 
+% The Ghoddess solver itself splits up into four computation kernels:
+% 
+% \begin{enumerate}
+%   \item The {\bf projectOntoFace} kernel accepts the $N$ degrees of freedom from
+%   the cell and projects the polynomials of the two triangles within the cell
+%   onto the faces. It consequently writes $2d \cdot (p+1)^{d-1}$ face DoFs. Once
+%   we have traversed the whole mesh, each face ``knows'' its left and right
+%   projection.
+%   \item The {\bf solveRiemann} kernel takes the $2 \cdot (p+1)^{d-1}$ DoFs on
+%   the face, i.e.~the left and right projection, and solves the Riemann problem
+%   on the jump. The result is written back into the $2 \cdot (p+1)^{d-1}$ DoFs.
+%   In principle, this allows us to have a different outgoing flux for the left
+%   and right side of a face.
+%   \item The {\bf solveCell} kernel evolves the solution within the triangle
+%   pair, i.e.~it evaluates the volumetric integrals of the DG formulation. The
+%   name is slightly wrong: Besides the volumetric terms, the kernel also
+%   evaluates the face terms arising between the two triangles embedded into the
+%   cell. So it is a combination of a cell kernel plus one Riemann solve (in 2d).
+%   \item The {\bf projectOntoCell} kernel takes the Riemann solution on the cell
+%   faces, i.e.~the output of projectOntoFace, and adds it to the cell solution,
+%   i.e.~it adds it to the outcome of solveCell.
+% \end{enumerate}
+% 
+% 
+% \noindent
+% Ghoddess' vanilla version indeed traverses the mesh four times per time step.
+% This makes it easy/easier to debug the code and to analyse the substeps.
+% The work of Charrier et al then automatically fuses the traversals and thus
+% reduces the memory accesses and homogenises the computational character over the
+% mesh sweeps.
+% 
+% 
+% The realisation of the four sweeps relies on blockstructured extension of
+% \Peano:
+% Though the data is logically not Cartesian or block-structured, we model all
+% properties as blocks embedded into the mesh.
+% 
+% 
+% All solvers inherit from \texttt{exahype2.ghoddess.Solver} which is our abstract
+% framework.
+% Per solver, the Python API will generate one C++ solver class.
+% This class has a couple of things to do:
+% 
+% \begin{enumerate}
+%   \item It holds all time stepping data. So it knows, for example, what the
+%   minimal time stamp at the moment is.
+%   \item It serves as a state machine which decides at any point which kernels
+%   are to be executed on particular grid entities.
+%   \item It holds the application domain-specific routines such as the actual
+%   kernel implementations, refinement criteria or data initialisation.
+% \end{enumerate}
 
 
 

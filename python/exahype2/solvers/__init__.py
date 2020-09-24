@@ -2,4 +2,5 @@
 # use, please see the copyright notice at www.peano-framework.org
 from exahype2.solvers.GenericRusanovFV    import GenericRusanovFVFixedTimeStepSize
 from exahype2.solvers.GenericRusanovFV    import GenericRusanovFVFixedTimeStepSizeWithEnclaves
+from exahype2.solvers.PointWiseClawPackFV import PointWiseClawPackFVFixedTimeStepSize
 

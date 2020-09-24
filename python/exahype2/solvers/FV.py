@@ -34,6 +34,39 @@ class FV(object):
   default, they all are true, i.e. the actions are triggered in every grid 
   traversal an action in theory could be active.
   
+  
+  name: string
+     A unique name for the solver. This one will be used for all generated 
+     classes. Also the C++ object instance later on will incorporate this 
+     name.
+     
+  patch_size: int
+     Size of the patch in one dimension. All stuff here's dimension-generic.
+     
+  overlap: int
+     That's the size of the halo layer which is half of the overlap with a 
+     neighbour. A value of 1 means that a patch_size x patch_size patch in 
+     2d is surrounded by one additional cell layer. The overlap has to be 
+     bigger or equal to one. It has to be smaller or equal to patch_size.
+     
+  unknowns: int
+     Number of unknowns per Finite Volume voxel.
+     
+  auxiliary_variables: int 
+     Number of auxiliary variables per Finite Volume voxel. Eventually, both
+     unknowns and auxiliary_variables are merged into one big vector if we 
+     work with AoS. But the solver has to be able to distinguish them, as 
+     only the unknowns are subject to a hyperbolic formulation.
+     
+  min_h: double
+  
+  max_h: double
+  
+  plot_grid_properties: Boolean
+     Clarifies whether a dump of the data should be enriched with grid info
+     (such as enclave status flags), too.
+  
+  
   """
   def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
     """
@@ -59,12 +92,15 @@ class FV(object):
 #include "peano4/utils/Loop.h" 
 """
 
+    ##
+    ## Sollte alles auf not marker.isRefined() fuer cells stehen
+    ##
     self._guard_copy_new_face_data_into_face_data  = "true"
     self._guard_adjust_cell                        = "true"
     self._guard_AMR                                = "not marker.isRefined()"
     self._guard_project_patch_onto_faces           = "true"
-    self._guard_update_cell                        = "not marker.isRefined()"
-    self._guard_touch_face_first_time_in_time_step = "fineGridFaceLabel.getBoundary()"
+    self._guard_handle_cell                        = "not marker.isRefined()"
+    self._guard_handle_boundary                    = "fineGridFaceLabel.getBoundary()"
 
     self._min_h                = min_h
     self._max_h                = max_h 
@@ -75,6 +111,12 @@ class FV(object):
     
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
+       
+    self.AdjustCellTemplate     = jinja2.Template( "" )
+    self.AMRTemplate            = jinja2.Template( "" )
+    self.HandleBoundaryTemplate = jinja2.Template( "" )
+    self.HandleCellTemplate     = jinja2.Template( "" )
+       
     pass
   
   
@@ -138,14 +180,6 @@ class FV(object):
     return ""
 
 
-  """ @todo Make Jinja2 template """
-  AdjustCellTemplate = ""
-  
-  
-  """ @todo Make Jinja2 template """
-  _AMRTemplate = ""
-
-
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     d = {}
     self._init_dictionary_with_default_parameters(d)
@@ -194,16 +228,7 @@ class FV(object):
     #  self._get_default_includes() + self.get_user_includes()
     #))
     pass
-  
-  """ @todo Make Jinja2 template """
-  HandleBoundaryTemplate = ""
-
-
-  """ 
-   This is a Jinja 2 template 
-  """
-  HandleCellTemplate = jinja2.Template( "" )
- 
+   
  
   def add_actions_to_perform_time_step(self, step):
     d = {}
@@ -217,8 +242,8 @@ class FV(object):
       self._patch_overlap,
       self.HandleCellTemplate.render(**d),
       self.HandleBoundaryTemplate.format(**d),
-      self._guard_update_cell,
-      self._guard_touch_face_first_time_in_time_step,
+      self._guard_handle_cell,
+      self._guard_handle_boundary,
       self._get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
 """
     )) 

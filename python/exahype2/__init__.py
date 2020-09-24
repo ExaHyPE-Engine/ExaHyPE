@@ -2,8 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers
 import exahype2.grid
-import exahype2.postprocessing
-import exahype2.ghoddess
 
 
 from .ExaHyPEMain import ExaHyPEMain

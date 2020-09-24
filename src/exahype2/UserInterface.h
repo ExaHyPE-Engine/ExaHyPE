@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_uSER_INTERFACE_H_
-#define _EXAHYPE2_uSER_INTERFACE_H_
+#ifndef _EXAHYPE2_USER_INTERFACE_H_
+#define _EXAHYPE2_USER_INTERFACE_H_
 
 
 

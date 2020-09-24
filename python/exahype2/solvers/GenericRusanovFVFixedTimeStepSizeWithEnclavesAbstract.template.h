@@ -11,6 +11,7 @@
 
 
 #include "exahype2/RefinementControl.h"
+#include "exahype2/Solver.h"
 
 #include "tarch/la/Vector.h"
 
@@ -31,7 +32,7 @@
 
 
 
-class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
+class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public ::exahype2::Solver {
   public:
     enum class SolverState {
       GridConstruction,

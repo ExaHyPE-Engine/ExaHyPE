@@ -403,7 +403,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
       a new time step. It is logically called after a time step and
       hence in touch -face-last-time in the secondary traversal.
 
-    _guard_touch_face_first_time_in_time_step: string
+    _guard_handle_boundary: string
       This is a predicate, i.e. identifies in C code when to trigger 
       the underlying activity.
       Updates the boundary. By definition, boundary cells in the domain
@@ -422,7 +422,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
       ensure that data are mapped onto the faces before faces are 
       exchanged with neighbour partitions.
       
-    _guard_update_cell: string
+    _guard_handle_cell: string
       This is a predicate, i.e. identifies in C code when to trigger 
       the underlying activity.
       Actual FV kernel invocation.
@@ -488,7 +488,10 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
     #
     self._guard_copy_new_face_data_into_face_data = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary"
     
-    self._guard_touch_face_first_time_in_time_step = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary and fineGridFaceLabel.getBoundary() or " \
+    ##
+    ## @todo Hier sollte man nur mit dem Default konkatenieren, weil der FV  ja bereits sagt, ob man am Rand ist oder net
+    ##
+    self._guard_handle_boundary = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary and fineGridFaceLabel.getBoundary() or " \
                                                    + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation and fineGridFaceLabel.getBoundary()"
     
     self._guard_project_patch_onto_faces = \
@@ -497,7 +500,7 @@ class GenericRusanovFVFixedTimeStepSizeWithEnclaves( AbstractGenericRusanovFV ):
      "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
      "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )"
 
-    self._guard_update_cell = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary and marker.isSkeletonCell() and not marker.isRefined()"
+    self._guard_handle_cell = self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary and marker.isSkeletonCell() and not marker.isRefined()"
 
     #
     # Exchange patch overlaps
