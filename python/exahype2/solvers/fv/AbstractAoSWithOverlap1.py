@@ -13,6 +13,7 @@ import jinja2
 
 from .PDETerms import PDETerms
 
+from enum import Enum
 
 
 class AbstractAoSWithOverlap1(object):
@@ -132,7 +133,35 @@ class AbstractAoSWithOverlap1(object):
   } 
 """)
      
-  def _get_template_update_cell(self,split_Riemann_solver_function_call,cell_time_stamp="{{SOLVER_INSTANCE}}.getMinTimeStamp()", cell_time_step_size="{{TIME_STEP_SIZE}}"):
+     
+    
+  """
+  
+    This is the straightforward implementation.
+  """
+  CellUpdateImplementation_NestedLoop = """
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+    #endif
+  """
+
+  CellUpdateImplementation_SplitLoop = """
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
+    #endif
+  """
+     
+     
+  def _get_template_update_cell(self,
+    split_Riemann_solver_function_call,
+    cell_time_stamp     = "{{SOLVER_INSTANCE}}.getMinTimeStamp()", 
+    cell_time_step_size = "{{TIME_STEP_SIZE}}",
+    function_call       = CellUpdateImplementation_NestedLoop
+  ):
     """
     
     split_Riemann_solver_function_call: String
@@ -165,19 +194,5 @@ class AbstractAoSWithOverlap1(object):
       originalPatch
   );
 """
-
-    #
-    # Later, I will have to discriminate here a lot. I might for example want
-    # to use
-    #
-    #  ::exahype2::fv::gpu::applyRusanovToPatch_FaceLoops(
-    #
-    function_call = """
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-    #endif
-  """
 
     return jinja2.Template( str(function_call) + str(signature) )  

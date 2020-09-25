@@ -118,8 +118,52 @@ namespace exahype2 {
     );
 
 
+    void applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
+      std::function< void(
+        double                                       QL[],
+        double                                       QR[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       FL[],
+        double                                       FR[]
+      ) >   splitRiemannSolve1d,
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
+      double                                       dt,
+      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      double                                       Qin[],
+      double                                       Qout[]
+    );
 
-    // Da noch ein paar Optimierungen rein
+
+    void applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
+      std::function< void(
+        double                                       QL[],
+        double                                       QR[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       FL[],
+        double                                       FR[]
+      ) >   splitRiemannSolve1d,
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
+      double                                       dt,
+      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      double                                       Qin[],
+      double                                       Qout[]
+    );
   }
 }
 

@@ -9,6 +9,20 @@ import peano4
 
 
 class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
+  """
+  
+    Probably the simplest solver you could think off. There's a few
+    interesting things to try out with this one nevertheless: You 
+    can inject symbolic flux/pde term implementations, or you can 
+    alter the implementation variant of the cell update kernel. The
+    latter can be combined with different dynamic memory allocation 
+    schemes and thus offers quite some opportunities to tweak and 
+    tune things. 
+  
+  """
+    
+  
+  
   RusanovCallWithFluxAndEigenvalues = """
         ::exahype2::fv::splitRusanov1d(
           [] (
@@ -62,25 +76,28 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
     self._template_AMR              = self._get_template_AMR()
     self._template_handle_boundary  = self._get_template_handle_boundary()
     
-    rusanov_call = ""
+    self._rusanov_call = ""
     if flux!=PDETerms.None_Implementation and ncp==PDETerms.None_Implementation:
-      rusanov_call = self.RusanovCallWithFluxAndEigenvalues
+      self._rusanov_call = self.RusanovCallWithFluxAndEigenvalues
     else:
       print( "ERROR: Combination of fluxes/operators not supported" )
-      
-      
-    self._template_update_cell      = self._get_template_update_cell( rusanov_call + """
+          
+    self.set_update_cell_implementation()
+  
+    pass
+  
+  
+  def set_update_cell_implementation(self,
+    function_call   = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop,
+    memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch
+  ):
+    self._template_update_cell      = self._get_template_update_cell( self._rusanov_call + """
           QL, QR, x, dx, t, dt, normal, """ + 
       str(self._unknowns) + """, """ + str(self._auxiliary_variables) + """, FL, FR
         );
 """ )
-  
-  
-    #self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Heap
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch
-
-    pass
-  
+    
   
   def add_entries_to_text_replacement_dictionary(self,d):
     """
