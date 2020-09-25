@@ -82,8 +82,8 @@ class FV(object):
       auxiliary_variables: Integer
   
     """
-    self._name  = name
-    self._patch = peano4.datamodel.Patch( (patch_size,patch_size,patch_size),    unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._name              = name
+    self._patch             = peano4.datamodel.Patch( (patch_size,patch_size,patch_size),    unknowns+auxiliary_variables, self._unknown_identifier() )
     self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() )
     self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
     self._patch_overlap.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
@@ -96,10 +96,10 @@ class FV(object):
     ## Sollte alles auf not marker.isRefined() fuer cells stehen
     ##
     self._guard_copy_new_face_data_into_face_data  = "true"
-    self._guard_adjust_cell                        = "true"
+    self._guard_adjust_cell                        = "not marker.isRefined()"
     self._guard_AMR                                = "not marker.isRefined()"
-    self._guard_project_patch_onto_faces           = "true"
-    self._guard_handle_cell                        = "not marker.isRefined()"
+    self._guard_project_patch_onto_faces           = "not marker.isRefined()"
+    self._guard_update_cell                        = "not marker.isRefined()"
     self._guard_handle_boundary                    = "fineGridFaceLabel.getBoundary()"
 
     self._min_h                = min_h
@@ -111,12 +111,13 @@ class FV(object):
     
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
-       
-    self.AdjustCellTemplate     = jinja2.Template( "" )
-    self.AMRTemplate            = jinja2.Template( "" )
-    self.HandleBoundaryTemplate = jinja2.Template( "" )
-    self.HandleCellTemplate     = jinja2.Template( "" )
-       
+
+    self._template_adjust_cell     = jinja2.Template( "" )
+    self._template_AMR             = jinja2.Template( "" )
+    self._template_handle_boundary = jinja2.Template( "" )
+    self._template_update_cell     = jinja2.Template( "" )
+
+    self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     pass
   
   
@@ -180,26 +181,39 @@ class FV(object):
     return ""
 
 
-  def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
+  def add_actions_to_init_grid(self, step):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     d["IS_GRID_CREATION"] = "true"
-    
+
+    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+      self._patch,self._template_adjust_cell.render(**d),
+      self._guard_adjust_cell,
+      self._get_default_includes() + self.get_user_includes()
+    ))
     step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
       self._patch,
       self._patch_overlap,
       self._guard_project_patch_onto_faces, 
       self._get_default_includes() + self.get_user_includes()
     ))
+    
+
+  def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
+    d = {}
+    self._init_dictionary_with_default_parameters(d)
+    self.add_entries_to_text_replacement_dictionary(d)
+    d["IS_GRID_CREATION"] = "true"
+    
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self.AdjustCellTemplate.format(**d),
+      self._patch,self._template_adjust_cell.render(**d),
       self._guard_adjust_cell,
       self._get_default_includes() + self.get_user_includes()
     ))
     if evaluate_refinement_criterion:
       step.add_action_set( exahype2.grid.AMROnPatch(
-        self._patch,self.AMRTemplate.format(**d),
+        self._patch,self._template_AMR.render(**d),
         "not marker.isRefined()", 
         self._get_default_includes() + self.get_user_includes()
       ))
@@ -221,12 +235,6 @@ class FV(object):
       self._guard_project_patch_onto_faces,
       self._get_default_includes() + self.get_user_includes()
     ))
-    #step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-    #  self._patch,
-    #  self.AdjustCellTemplate.format(**d),
-    #  self._guard_adjust_cell,
-    #  self._get_default_includes() + self.get_user_includes()
-    #))
     pass
    
  
@@ -240,12 +248,13 @@ class FV(object):
     step.add_action_set( peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
       self._patch,
       self._patch_overlap,
-      self.HandleCellTemplate.render(**d),
-      self.HandleBoundaryTemplate.format(**d),
-      self._guard_handle_cell,
+      self._template_update_cell.render(**d),
+      self._template_handle_boundary.render(**d),
+      self._guard_update_cell,
       self._guard_handle_boundary,
       self._get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
-"""
+""",
+      self._reconstructed_array_memory_location
     )) 
     step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
       self._patch,
@@ -254,12 +263,12 @@ class FV(object):
       self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self.AdjustCellTemplate.format(**d),
+      self._patch,self._template_adjust_cell.render(**d),
       self._guard_adjust_cell,
       self._get_default_includes() + self.get_user_includes()
     ))
     step.add_action_set( exahype2.grid.AMROnPatch(
-      self._patch,self.AMRTemplate.format(**d),  
+      self._patch,self._template_AMR.render(**d),  
       self._guard_AMR,
       self._get_default_includes() + self.get_user_includes()
     ))

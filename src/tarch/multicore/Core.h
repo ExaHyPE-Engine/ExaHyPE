@@ -12,7 +12,7 @@ namespace tarch {
   namespace multicore {
     enum class MemoryLocation {
       Heap,
-	  Accelerator
+      Accelerator
     };
     double* allocateMemory(int size, MemoryLocation location = MemoryLocation::Accelerator);
     void freeMemory(double* data, MemoryLocation location);

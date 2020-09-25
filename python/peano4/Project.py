@@ -149,8 +149,13 @@ class Project (object):
     if not self.is_built:
       print( "start to compile with concurrency level of " + str(number_of_parallel_builds) + " ..." )
       try:
-        subprocess.check_call(["make", "-j"+str(number_of_parallel_builds)])
-        print( "compile complete" )
+        result = subprocess.run(["make", "-j"+str(number_of_parallel_builds)], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode==0:
+          print( result.stdout.decode("utf-8") )
+          print( "compile completed successfully" )
+        else:
+          print( result.stderr.decode("utf-8") )
+          print( "compile not successful" )
         self.is_built = True
         self.build_was_successful = True
       except Exception as e:
@@ -173,7 +178,7 @@ class Project (object):
     pipefile: string or None
 
     """
-    result = False
+    success = False
     if rebuild_if_required and not self.is_built and not self.build_was_successful:
       self.build()
       
@@ -187,20 +192,30 @@ class Project (object):
       invocation += args
 
       try:
+        result = None
         if pipefile==None:
-          subprocess.check_call( invocation )
+          result = subprocess.run( invocation, stderr=subprocess.PIPE, stdout=subprocess.PIPE )
         else:
-          subprocess.check_call( invocation, stdout=open( pipefile, "w" ) )
-          
-        print( "run complete" )
-        result = True
+          result = subprocess.run( invocation, stdout=open( pipefile, "w" ), stderr=subprocess.PIPE )
+
+        if result.returncode==0:
+          if pipefile==None:
+            print( result.stdout.decode("utf-8") )
+          if result.stderr!=None:
+            print( result.stderr.decode("utf-8") )
+          print( "run completed without error code, but check for warnings and numerical assertions/errors" )
+        else:
+          print( result.stderr.decode("utf-8") )
+          print( "run failed" )
+
+        success = True
       except Exception as e:
         print( "run of application was not successful: " + str(e) )
         print( "invocation: " + str(invocation) )
     else:
       print( "can not run as code compilation has not been successful" )
   
-    return result
+    return success
       
       
       

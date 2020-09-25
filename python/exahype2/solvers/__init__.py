@@ -1,6 +1,3 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from exahype2.solvers.GenericRusanovFV    import GenericRusanovFVFixedTimeStepSize
-from exahype2.solvers.GenericRusanovFV    import GenericRusanovFVFixedTimeStepSizeWithEnclaves
-from exahype2.solvers.PointWiseClawPackFV import PointWiseClawPackFVFixedTimeStepSize
-
+import exahype2.solvers.fv
