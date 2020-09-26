@@ -3,7 +3,7 @@
 from .PDETerms                                       import PDETerms
 from .AbstractAoSWithOverlap1                        import AbstractAoSWithOverlap1         
 from .GenericRusanovFixedTimeStepSize                import GenericRusanovFixedTimeStepSize
-#from .GenericRusanovFixedTimeStepSizeWithEnclaves    import GenericRusanovFixedTimeStepSizeWithEnclaves
+from .GenericRusanovFixedTimeStepSizeWithEnclaves    import GenericRusanovFixedTimeStepSizeWithEnclaves
 
 #from .PointWiseClawPack                  import PointWiseClawPackFixedTimeStepSize
 

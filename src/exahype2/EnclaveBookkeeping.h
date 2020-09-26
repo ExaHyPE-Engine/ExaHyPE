@@ -72,6 +72,8 @@ class exahype2::EnclaveBookkeeping {
      * Usually called directly by EnclaveTask.
      *
      * Once this routine is called, the ownership of data goes
+     *
+     * @param data Has to be device memory allocated through tarch::multicore::allocateMemory()
      */
     void finishedTask(int taskNumber, int numberOfResultValues, double* data);
 };

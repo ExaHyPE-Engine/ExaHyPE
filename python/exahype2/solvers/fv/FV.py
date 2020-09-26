@@ -18,23 +18,98 @@ from abc import abstractmethod
 
 class FV(object):
   """ 
-  An abstract finite volume solver step sizes that works on patch-based
-  AMR with a halo layer of one.
+    An abstract finite volume solver step sizes that works on patch-based
+    AMR with a halo layer of one.
   
-  We use two overlaps in this case: the standard one and one we call new. In the
-  time stepping, we use the new one to project our data to. Then we roll it over
-  at the end of the iteration. This way, we ensure that the one from the previous
-  iteration is not overwritten by some adjacent cell halfway through the 
-  computation.
-  
-  Attributes
-  -----------
-  
-  The guard variables are used within the templates and switch them on/off. By 
-  default, they all are true, i.e. the actions are triggered in every grid 
-  traversal an action in theory could be active.
+    We use two overlaps in this case: the standard one and one we call new. In the
+    time stepping, we use the new one to project our data to. Then we roll it over
+    at the end of the iteration. This way, we ensure that the one from the previous
+    iteration is not overwritten by some adjacent cell halfway through the 
+    computation.
   
   
+  
+    Attributes:
+  
+    The guard variables are used within the templates and switch them on/off. By 
+    default, they all are true, i.e. the actions are triggered in every grid 
+    traversal an action in theory could be active.
+  
+    
+    _guard_copy_new_face_data_into_face_data: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      The routine triggers the roll-over, i.e. the actual commit of 
+      a new time step. It is logically called after a time step and
+      hence in touch -face-last-time in the secondary traversal.
+
+    _guard_handle_boundary: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      Updates the boundary. By definition, boundary cells in the domain
+      are skeleton cells. Furthermore, the initialiation/setting of 
+      boundary conditions only has to happen once per time step. We 
+      hence trigger this routine for skeletons in the primary sweeps.
+
+    _guard_project_patch_onto_faces: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      This routine guards the mapping of an updated cell content onto a
+      cell's faces. The destination in QNew, i.e. is not "seen" by 
+      others unless the faces' new data are committed. Therefore, I 
+      trigger this routine in the primary sweep for skeleton cells and
+      in the secondary  sweep for enclave cells. The primary calls 
+      ensure that data are mapped onto the faces before faces are 
+      exchanged with neighbour partitions.
+      
+    _guard_handle_cell: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      Actual FV kernel invocation.
+      
+    _patch_overlap.generator.send_condition: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      Send out the faces in the grid initialisation. There's no need to 
+      send out data in other iterations, as all data exchange is 
+      realised through the QNew field. This is different to the plain
+      FV realisation, where data exchange happens through Q: The enclave
+      tasking exchanges QNew and then rolls data over from QNew into Q.
+      The plain FV scheme rolls over QNew into Q and then exchanges the
+      data.
+    
+    _patch_overlap.generator: string
+      See documentation of _patch_overlap.generator.send_condition.
+      
+    _patch_overlap.generator.merge_method_definition: string
+      See documentation of _patch_overlap.generator.send_condition.
+
+    _guard_AMR: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      AMR is active throughout the grid construction. After that, it is
+      only available for skeleton cells.
+    
+    _patch_overlap_new.generator.send_condition: string
+      This is a predicate, i.e. identifies in C code when to trigger 
+      the underlying activity.
+      See discussion of _patch_overlap.generator.send_condition for 
+      details. As we effectively disable the data exchange for Q and
+      instead ask for data exchange of QNew, we have to add merge 
+      operations to QNew.
+      
+    _patch_overlap_new.generator.receive_and_merge_condition: string
+      See _patch_overlap_new.generator.send_condition.
+      
+    _patch_overlap_new.generator.merge_method_definition: string
+      See _patch_overlap_new.generator.send_condition.
+  
+  
+  
+  
+  """
+  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
+    """
   name: string
      A unique name for the solver. This one will be used for all generated 
      classes. Also the C++ object instance later on will incorporate this 
@@ -65,22 +140,7 @@ class FV(object):
   plot_grid_properties: Boolean
      Clarifies whether a dump of the data should be enriched with grid info
      (such as enclave status flags), too.
-  
-  
-  """
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
-    """
-    
-      namespace: [string]
-        Sequence of strings representing the (nested) namespace. Pass in 
-        ["examples", "exahype2", "finitevolumes"] for example.
-    
-      enclaves: Boolean
-      
-      unknowns: Integer
-      
-      auxiliary_variables: Integer
-  
+ 
     """
     self._name              = name
     self._patch             = peano4.datamodel.Patch( (patch_size,patch_size,patch_size),    unknowns+auxiliary_variables, self._unknown_identifier() )
@@ -95,12 +155,12 @@ class FV(object):
     ##
     ## Sollte alles auf not marker.isRefined() fuer cells stehen
     ##
-    self._guard_copy_new_face_data_into_face_data  = "true"
+    self._guard_copy_new_face_data_into_face_data  = "not marker.isRefined()"
     self._guard_adjust_cell                        = "not marker.isRefined()"
     self._guard_AMR                                = "not marker.isRefined()"
     self._guard_project_patch_onto_faces           = "not marker.isRefined()"
     self._guard_update_cell                        = "not marker.isRefined()"
-    self._guard_handle_boundary                    = "fineGridFaceLabel.getBoundary()"
+    self._guard_handle_boundary                    = "not marker.isRefined() and fineGridFaceLabel.getBoundary()"
 
     self._min_h                = min_h
     self._max_h                = max_h 
@@ -185,7 +245,6 @@ class FV(object):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
-    d["IS_GRID_CREATION"] = "true"
 
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
       self._patch,self._template_adjust_cell.render(**d),

@@ -164,6 +164,10 @@ class AbstractAoSWithOverlap1(object):
   ):
     """
     
+    Returns a string that handles the whole cell treatment. You will have to wrap it 
+    into a Jinja2 template if you wanna use it within C++.
+    
+    
     split_Riemann_solver_function_call: String
        A plain function call to invoke the 1d Riemann solver. For the arguments 
        that are available at this point, see below. 
@@ -195,4 +199,4 @@ class AbstractAoSWithOverlap1(object):
   );
 """
 
-    return jinja2.Template( str(function_call) + str(signature) )  
+    return str(function_call) + str(signature)  

@@ -18,6 +18,7 @@
 #include "observers/SolverRepository.h"
 #include "observers/CreateGrid.h"
 #include "observers/CreateGridButPostponeRefinement.h"
+#include "observers/InitGrid.h"
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
 
@@ -241,7 +242,7 @@ void step() {{
     
         observers::startGridInitialisationStep();
         
-        observers::CreateGrid  observer;
+        observers::InitGrid  observer;
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
         watch.stop();
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );

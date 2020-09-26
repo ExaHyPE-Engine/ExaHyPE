@@ -45,6 +45,7 @@ double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMa
 
 
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startGridConstructionStep() {
+  assertion( _solverState == SolverState::GridConstruction );
 }
 
 
@@ -53,7 +54,9 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishG
 
 
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startGridInitialisationStep() {
+  assertion( _solverState == SolverState::GridConstruction );
   _solverState = SolverState::GridInitialisation;
+  logDebug( "startGridInitialisationStep(...)", "new state is " << toString(_solverState) );
 }
 
 

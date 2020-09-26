@@ -7,6 +7,8 @@ from .PDETerms import PDETerms
 
 import peano4
 
+import jinja2
+
 
 class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
   """
@@ -91,12 +93,18 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
     function_call   = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop,
     memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch
   ):
-    self._template_update_cell      = self._get_template_update_cell( self._rusanov_call + """
+    if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack and \
+       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Heap and \
+       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch and \
+       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorMemory:
+      print( "WARNING: Selected memory allocation which does not delete allocated memory!" )
+    
+    self._template_update_cell      = jinja2.Template( self._get_template_update_cell( self._rusanov_call + """
           QL, QR, x, dx, t, dt, normal, """ + 
       str(self._unknowns) + """, """ + str(self._auxiliary_variables) + """, FL, FR
         );
-""" )
-    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch
+""" ))
+    self._reconstructed_array_memory_location = memory_location
     
   
   def add_entries_to_text_replacement_dictionary(self,d):
