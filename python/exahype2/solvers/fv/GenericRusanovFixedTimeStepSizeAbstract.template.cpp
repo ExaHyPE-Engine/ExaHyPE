@@ -59,6 +59,11 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishG
 }
 
 
+{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::SolverState {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getSolverState() const {
+  return _solverState;
+}
+
+
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStamp,
   double globalMaxTimeStamp,

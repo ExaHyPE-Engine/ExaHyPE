@@ -63,7 +63,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     TraversalObserver* clone(int spacetreeId) override;
 
-    std::vector< peano4::grid::GridControlEvent > getGridControlEvents() override;
+    std::vector< peano4::grid::GridControlEvent > getGridControlEvents() const override;
 
     void beginTraversal(
       const tarch::la::Vector<Dimensions,double>&  x,

@@ -57,11 +57,20 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     For the actions, I add a further action which administers the task
     spawning over the enclaves. I plug into the data model routines to 
     add the marker to the cell which holds the semaphore/cell number.      
+    
+    
+    Attributes:
+    
+    _guard_copy_new_face_data_into_face_data: C++ string describing a predicate
+        We should call this one only in touch-face-last-time in the secondary 
+        traversal.
+
       
     """
-    #super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
     AbstractAoSWithOverlap1.__init__(self, flux, ncp)
+
+    # @todo Ein Haufen der Logik kann raus
     
     self._time_step_size = time_step_size
     
@@ -101,6 +110,12 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     self._guard_handle_boundary = self._guard_handle_boundary + " and " + primary_sweep_predicate_for_guard
     
     #
+    # @todo Das sollte im create grid zentral ausgeschaltet sein!
+    #
+    
+    
+    
+    #
     # Exchange new patch data
     #
     # See above: in the enclave version, we do exchange the new time step's information before
@@ -110,12 +125,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     self._patch_overlap_new.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " \
                                                                    + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary"
-    self._patch_overlap_new.generator.includes                    += """
-#include "observers/SolverRepository.h" 
-#include "peano4/utils/Loop.h" 
-""" 
-    self._patch_overlap_new.generator.merge_method_definition      = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
- 
 
     #
     # Exchange patch overlaps
@@ -132,7 +141,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     self._patch_overlap.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" 
     self._patch_overlap.generator.receive_and_merge_condition  = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " \
                                                                + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation"
-    self._patch_overlap.generator.merge_method_definition      = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     self._patch_overlap.generator.includes                    += """
 #include "observers/SolverRepository.h" 
 #include "peano4/utils/Loop.h" 
@@ -251,6 +259,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     pass
   
   
+  # @todo Das sollte man komplett auslagern koennen
   def get_user_includes(self):
     return """
 #include "exahype2/fv/Generic.h"
@@ -262,14 +271,14 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
 #include "peano4/parallel/Tasks.h"
 """    
   
-  
+
+  # @todo Das sollte man komplett auslagern koennen
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     FV.add_actions_to_create_grid(self,step,evaluate_refinement_criterion)
     step.add_action_set( exahype2.grid.EnclaveLabels( self._name ) )
 
 
-    
-
+  # @todo Das sollte man komplett auslagern koennen
   def add_actions_to_perform_time_step(self, step):
     """
       Add enclave aspect to time stepping

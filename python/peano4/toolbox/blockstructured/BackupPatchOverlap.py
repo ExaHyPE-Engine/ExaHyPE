@@ -9,12 +9,18 @@ class BackupPatchOverlap(ActionSet):
   
   This class plugs into the first access to a face and copies the data over
   
-  patch_overlap_in
-  patch_overlap_out
-  invoke_in_touch_first If you set this one to True, then I do the copying
-    in touchFaceFirstTime. Otherwise, I do it in touchFaceLastTime
+  patch_overlap_in: peano4.datamodel.Patch
+     Patch data associated with cell.
+        
+  patch_overlap_out: peano4.datamodel.Patch
+     Patch data associated with faces.
+  
+  invoke_in_touch_first: Boolean
+    If you set this one to True, then I do the copying in touchFaceFirstTime. 
+    Otherwise, I do it in touchFaceLastTime
     
-  guard   Boolean predicate to determine when to invoke this thing. Pass in
+  guard: Boolean 
+    Predicate to determine when to invoke this thing. Pass in
     true if you wanna be it called always
   
   """

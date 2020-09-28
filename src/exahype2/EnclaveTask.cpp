@@ -1,5 +1,6 @@
 #include "EnclaveTask.h"
 #include "EnclaveBookkeeping.h"
+#include "tarch/multicore/Core.h"
 
 
 

@@ -27,7 +27,7 @@ trace examples::exahype2::euler::Euler                   -1   black
 trace examples::exahype2::euler::observers::PlotSolution -1   black
 trace exahype2::RefinementControl                        -1   black
 
-info peano4::grid                          -1     black
+info peano4::grid                          -1     white
 
 
 

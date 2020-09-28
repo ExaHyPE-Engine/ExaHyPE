@@ -28,6 +28,12 @@ class FV(object):
     computation.
   
   
+    Parallelisation:
+    
+    I do equip both Q and NewQ with proper merge routines. However, all merge guards
+    are unset by default. If you need some data exchange, you have to activate
+    them manually.
+  
   
     Attributes:
   
@@ -36,12 +42,13 @@ class FV(object):
     traversal an action in theory could be active.
   
     
-    _guard_copy_new_face_data_into_face_data: string
+    _guard_copy_new_face_data_into_face_data: C++ string describing a predicate
       This is a predicate, i.e. identifies in C code when to trigger 
       the underlying activity.
       The routine triggers the roll-over, i.e. the actual commit of 
-      a new time step. It is logically called after a time step and
-      hence in touch -face-last-time in the secondary traversal.
+      a new time step. It is the final operation per face per grid
+      sweep. 
+      
 
     _guard_handle_boundary: string
       This is a predicate, i.e. identifies in C code when to trigger 
@@ -82,7 +89,10 @@ class FV(object):
       See documentation of _patch_overlap.generator.send_condition.
       
     _patch_overlap.generator.merge_method_definition: string
-      See documentation of _patch_overlap.generator.send_condition.
+      The merge routines are set to the standard patch conditions for
+      both NewQ and Q. However, they are all by default disabled, as 
+      different solvers exchange either Q or NewQ. You have to enable
+      them explicitly if you need a boundary merger.
 
     _guard_AMR: string
       This is a predicate, i.e. identifies in C code when to trigger 
@@ -146,21 +156,29 @@ class FV(object):
     self._patch             = peano4.datamodel.Patch( (patch_size,patch_size,patch_size),    unknowns+auxiliary_variables, self._unknown_identifier() )
     self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() )
     self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
-    self._patch_overlap.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     
-    self._patch_overlap.generator.includes += """
-#include "peano4/utils/Loop.h" 
+    self._patch_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
+    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
+    
+    self._patch_overlap.generator.includes     += """
+#include "peano4/utils/Loop.h"
+#include "observers/SolverRepository.h" 
 """
+    self._patch_overlap_new.generator.includes += """
+#include "peano4/utils/Loop.h"
+#include "observers/SolverRepository.h" 
+"""
+   
 
     ##
     ## Sollte alles auf not marker.isRefined() fuer cells stehen
     ##
-    self._guard_copy_new_face_data_into_face_data  = "not marker.isRefined()"
-    self._guard_adjust_cell                        = "not marker.isRefined()"
-    self._guard_AMR                                = "not marker.isRefined()"
-    self._guard_project_patch_onto_faces           = "not marker.isRefined()"
-    self._guard_update_cell                        = "not marker.isRefined()"
-    self._guard_handle_boundary                    = "not marker.isRefined() and fineGridFaceLabel.getBoundary()"
+    self._guard_copy_new_face_data_into_face_data  = self._predicate_face_carrying_data()
+    self._guard_adjust_cell                        = self._predicate_cell_carrying_data()
+    self._guard_AMR                                = self._predicate_cell_carrying_data()
+    self._guard_project_patch_onto_faces           = self._predicate_cell_carrying_data()
+    self._guard_update_cell                        = self._predicate_cell_carrying_data()
+    self._guard_handle_boundary                    = self._predicate_face_carrying_data()
 
     self._min_h                = min_h
     self._max_h                = max_h 
@@ -178,8 +196,22 @@ class FV(object):
     self._template_update_cell     = jinja2.Template( "" )
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+    
+    self._patch_overlap.generator.send_condition               = "false"
+    self._patch_overlap.generator.receive_and_merge_condition  = "false"
+
+    self._patch_overlap_new.generator.send_condition               = "false"
+    self._patch_overlap_new.generator.receive_and_merge_condition  = "false"
+
     pass
+
   
+  def _predicate_face_carrying_data(self):
+    return "not marker.isRefined()"
+
+
+  def _predicate_cell_carrying_data(self):
+    return "not marker.isRefined()"
   
   
   def _unknown_identifier(self):
@@ -239,8 +271,8 @@ class FV(object):
   
     """
     return ""
-
-
+  
+  
   def add_actions_to_init_grid(self, step):
     d = {}
     self._init_dictionary_with_default_parameters(d)
@@ -253,12 +285,19 @@ class FV(object):
     ))
     step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
       self._patch,
-      self._patch_overlap,
+      self._patch_overlap_new,
       self._guard_project_patch_onto_faces, 
       self._get_default_includes() + self.get_user_includes()
     ))
-    
+    step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
+      self._patch_overlap_new,
+      self._patch_overlap,
+      False,
+      self._guard_copy_new_face_data_into_face_data,
+      self._get_default_includes() + self.get_user_includes()
+    ))
 
+    
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     d = {}
     self._init_dictionary_with_default_parameters(d)
@@ -289,11 +328,6 @@ class FV(object):
     if self._plot_grid_properties:    
         step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid" + self._name,None ))
 
-    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
-      self._patch,self._patch_overlap,
-      self._guard_project_patch_onto_faces,
-      self._get_default_includes() + self.get_user_includes()
-    ))
     pass
    
  

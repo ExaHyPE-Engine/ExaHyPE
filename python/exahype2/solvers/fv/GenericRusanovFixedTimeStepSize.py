@@ -66,7 +66,6 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
     
       Instantiate a generic FV scheme with an overlap of 1.
       
-      
     """
     #super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
@@ -85,7 +84,12 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
       print( "ERROR: Combination of fluxes/operators not supported" )
           
     self.set_update_cell_implementation()
-  
+
+    self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+    self._patch_overlap.generator.receive_and_merge_condition  = self._predicate_face_carrying_data() + " and " \
+      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
+      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+
     pass
   
   

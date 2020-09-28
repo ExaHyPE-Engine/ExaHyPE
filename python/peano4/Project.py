@@ -58,6 +58,10 @@ class Project (object):
     self.constants  = peano4.output.Constants(self)
 
 
+  def __str__(self):
+    return "(#steps=" + str(self.solversteps) + ",model=" + str(self.datamodel) + ")"
+      
+    
   def cleanup(self):
     """
       This routine has to be called after you've generated your code.
@@ -67,6 +71,7 @@ class Project (object):
     
     self.datamodel.clear()       
     self.solversteps.clear()
+    self.output.clear_artefacts()
 
     
   def generate(self, overwrite=peano4.output.Overwrite.Default, throw_away_data_after_generation=False):

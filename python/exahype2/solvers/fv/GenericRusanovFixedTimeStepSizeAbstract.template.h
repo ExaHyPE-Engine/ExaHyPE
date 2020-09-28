@@ -184,6 +184,8 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     double getMaxMeshSize() const final;
     double getMinMeshSize() const final;
+
+    SolverState  getSolverState() const;
   protected:
     const int  _NumberOfFiniteVolumesPerAxisPerPatch;
 
