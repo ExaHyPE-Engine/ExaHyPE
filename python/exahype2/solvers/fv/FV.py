@@ -178,7 +178,7 @@ class FV(object):
     self._guard_AMR                                = self._predicate_cell_carrying_data()
     self._guard_project_patch_onto_faces           = self._predicate_cell_carrying_data()
     self._guard_update_cell                        = self._predicate_cell_carrying_data()
-    self._guard_handle_boundary                    = self._predicate_face_carrying_data()
+    self._guard_handle_boundary                    = self._predicate_boundary_face_carrying_data()
 
     self._min_h                = min_h
     self._max_h                = max_h 
@@ -208,6 +208,10 @@ class FV(object):
   
   def _predicate_face_carrying_data(self):
     return "not marker.isRefined()"
+
+
+  def _predicate_boundary_face_carrying_data(self):
+    return "not marker.isRefined() and fineGridFaceLabel.getBoundary()"
 
 
   def _predicate_cell_carrying_data(self):

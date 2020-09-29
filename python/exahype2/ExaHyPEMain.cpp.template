@@ -68,16 +68,23 @@ tarch::timing::Measurement   plotMeasurement;
  */
 bool selectNextAlgorithmicStep() {{
   static bool   gridConstructed                             = false;
-  static bool   gridInitialised                             = false;
   static double nextPlotTimeStamp                           = FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
   static bool   haveReceivedNoncriticialAssertion           = false;
   static bool   addGridSweepWithoutGridRefinementNext       = false;
   static int    iterationsWithoutGridRefinement             = 0;
   static int    iterationsWithGridRefinementSinceLastRefinement  = 0;
+  static int    initGridIterations                               = 0;
   static tarch::la::Vector<Dimensions,double> minH               = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
 
   bool          continueToSolve   = true;
+  
+  // Once we have hit the finest grid, we have to inject a few
+  // CreateGrid sweeps, as some subpartitions might lag behind
+  // by means of the mesh construction. As a consequence, there
+  // might still be an adaptive mesh even though we want to 
+  // operate with a regular one. See the FAQ in the guidebook 
+  const int InitGridIterations = 3;
   
   if (exahype2::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {{
     peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -89,13 +96,20 @@ bool selectNextAlgorithmicStep() {{
   else if (exahype2::hasNonCriticalAssertionBeenViolated()) {{
     continueToSolve = false;
   }}
-  else if (gridConstructed and not gridInitialised) {{
-    gridInitialised = true;
+  else if (gridConstructed and initGridIterations<InitGridIterations) {{
+    initGridIterations++;
+    
+    if (initGridIterations==InitGridIterations) {{
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
+      );
+    }}
+    else {{
+      peano4::parallel::Node::getInstance().setNextProgramStep(
+        observers::StepRepository::toProgramStep( observers::StepRepository::Steps::CreateGrid )
+      );
+    }}
  
-    peano4::parallel::Node::getInstance().setNextProgramStep(
-      observers::StepRepository::toProgramStep( observers::StepRepository::Steps::InitGrid )
-    );
-
     assertionNumericalEquals( observers::getMinTimeStamp(), 0.0 );
   }}
   else if (not gridConstructed) {{

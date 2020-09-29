@@ -58,14 +58,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     spawning over the enclaves. I plug into the data model routines to 
     add the marker to the cell which holds the semaphore/cell number.      
     
-    
-    Attributes:
-    
-    _guard_copy_new_face_data_into_face_data: C++ string describing a predicate
-        We should call this one only in touch-face-last-time in the secondary 
-        traversal.
-
-      
     """
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
     AbstractAoSWithOverlap1.__init__(self, flux, ncp)
@@ -86,34 +78,43 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
       ")"
     
     #
-    # Distribute the numerical activities over the two grid sweeps
+    # The roll over usually happens in the secondary iteration, as the NewQ 
+    # then has arrived from other trees. As the roll-over is the last thing 
+    # that we do, this means that the roll-over happens towards the end of 
+    # the secondary sweep. 
     #
-    self._guard_copy_new_face_data_into_face_data = self._guard_copy_new_face_data_into_face_data + " and " + \
-      self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary"
+    # We need all projected data at the boundary to impose boundary conditions.
+    # Therefore, it is important that we also swap over as last action in the 
+    # initialisation. Otherwise, the boundary initialisation in the first 
+    # primary sweep has no valid input data.
+    #
+    # After the initialisation, we do not have to roll stuff over, as we 
+    # exchange the real Q (not the new Q) after the initialisation step.
+    # Again, this works only as we roll over the new Q in the end of the 
+    # initialisation. This roll-over precedes the boundary data exchange.
+    #
+    self._guard_copy_new_face_data_into_face_data = self._predicate_face_carrying_data() + " and (" + \
+      self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
+      self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation " + \
+      ")"
     
-    self._guard_adjust_cell = self._guard_adjust_cell + " and " + primary_or_initialisation_sweep_predicate_for_guard
+    self._guard_adjust_cell = self._predicate_cell_carrying_data() + " and " + primary_or_initialisation_sweep_predicate_for_guard
 
-    self._guard_AMR = self._guard_AMR + " and (" + \
+    self._guard_AMR = self._predicate_cell_carrying_data() + " and (" + \
         "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction or " \
       + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary " + \
       ")"
       
-    self._guard_project_patch_onto_faces = self._guard_project_patch_onto_faces + " and (" + \
+    self._guard_project_patch_onto_faces = self._predicate_cell_carrying_data() + " and (" + \
       "   (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
       "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
       "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
       "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
       ")"
 
-    self._guard_update_cell     = self._guard_update_cell + " and " + primary_sweep_predicate_for_guard
+    self._guard_update_cell     = self._predicate_cell_carrying_data() + " and " + primary_sweep_predicate_for_guard
     
-    self._guard_handle_boundary = self._guard_handle_boundary + " and " + primary_sweep_predicate_for_guard
-    
-    #
-    # @todo Das sollte im create grid zentral ausgeschaltet sein!
-    #
-    
-    
+    self._guard_handle_boundary = self._predicate_boundary_face_carrying_data() + " and " + primary_or_initialisation_sweep_predicate_for_guard
     
     #
     # Exchange new patch data
@@ -122,9 +123,13 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     # the new time step approximation is rolled over. So here, we send out data in the primary
     # sweep and then receive it in the secondary.
     #
-    self._patch_overlap_new.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " \
-                                                                   + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation"
-    self._patch_overlap_new.generator.receive_and_merge_condition  = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary"
+    self._patch_overlap_new.generator.send_condition               = self._predicate_face_carrying_data() + " and (" \
+      + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " \
+      + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation " \
+      + ")"
+    self._patch_overlap_new.generator.receive_and_merge_condition  = self._predicate_face_carrying_data() + " and (" \
+      + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" \
+      + ")"
 
     #
     # Exchange patch overlaps
@@ -133,18 +138,31 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     # information at all. This is different to the baseline version where the current time 
     # step information is exchanged (after we've used the time step updates to obtain the new 
     # step's solution). The reason for this is that we exchange the new patch data, i.e. the 
-    # updates, rather than the real data. So consult self._patch_overlap_new for details.
+    # updates, rather than the real data. This information then is merged in the secondary
+    # sweep and consequently rolled over.
     #
-    # That leaves us with the fact that we have to exchange all data throughout the grid 
-    # construction. Here, the new patch data is not used yet.
+    # Throughout the grid construction we do not exchange any data. Neither do we exchange
+    # data when we plot stuff.
     #
-    self._patch_overlap.generator.send_condition               = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" 
-    self._patch_overlap.generator.receive_and_merge_condition  = "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " \
-                                                               + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation"
-    self._patch_overlap.generator.includes                    += """
-#include "observers/SolverRepository.h" 
-#include "peano4/utils/Loop.h" 
-"""     
+    # The tricky part is the grid initialisation: Here, we have to exchange the real Q and 
+    # consequently receive it in the very first follow-up sweep. I tried to use the new Q to
+    # transfer data, but that does not work et all as I have to roll over the new Q into the 
+    # real Q before I apply any boundary conditions. The roll overs however happen towards 
+    # the end of a sweep. So it becomes all bloody complicated. I therefore exchange the 
+    # real Q throughout the initialisation. That means, in the very first real sweep (which 
+    # either is the plot or the primary sweep of the very first time step), the real Q 
+    # counterpart along a partition domain is available, we can merge it, and then directly
+    # apply any patch reconstruction or boundary data routines.  
+    # 
+    # See self._patch_overlap_new for further details.
+    #
+    self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and (" \
+      + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" \
+      + ")"
+    self._patch_overlap.generator.receive_and_merge_condition  = self._predicate_face_carrying_data() + " and (" \
+      + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " \
+      + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" \
+      + ")"
     
     self._template_adjust_cell      = self._get_template_adjust_cell()
     self._template_AMR              = self._get_template_AMR()
@@ -182,10 +200,10 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
   
   def _wrap_update_cell_template(self, update_cell_template, memory_location):
     free_memory_call_for_skeleton_cells = ""
-    if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
+    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
       free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Heap);"
-    if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      print( "not yet implemented!")
+    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+      print( "on-accelerator storage not yet implemented!")
       free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Accelerator);"
 
     result = """if (marker.isSkeletonCell()) {
