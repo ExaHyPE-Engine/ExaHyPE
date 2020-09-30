@@ -330,7 +330,7 @@ class FV(object):
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat("solution-" + self._name,self._patch, self._unknown_identifier()) )
 
     if self._plot_grid_properties:    
-        step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid" + self._name,None ))
+        step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid-" + self._name,None ))
 
     pass
    

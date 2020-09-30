@@ -139,16 +139,19 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     virtual void finishPlottingStep();
 
+
     {% if FLUX_IMPLEMENTATION!="<none>" %}
-   virtual void flux(
-     double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-     const tarch::la::Vector<Dimensions,double>&  faceCentre,
-     const tarch::la::Vector<Dimensions,double>&  volumeH,
-     double                                       t,
-     int                                          normal,
-     double                                       F[{{NUMBER_OF_UNKNOWNS}}]
+    virtual void flux(
+      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double                                       F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
-     {% endif %}
+    {% endif %}
+
+
      {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
       double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],

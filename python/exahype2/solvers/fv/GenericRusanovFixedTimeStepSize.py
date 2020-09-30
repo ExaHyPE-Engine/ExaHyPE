@@ -58,6 +58,50 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
           }, 
 """
 
+
+  RusanovCallWithNCPAndEigenvalues = """
+        ::exahype2::fv::splitRusanov1d(
+          [] (
+            double                                       Q[],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal,
+            double                                       F[]
+          ) -> void {
+          },
+          [] (
+            double                                       Q[],
+            double                                       gradQ[][Dimensions],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal,
+            double                                       BgradQ[]
+          ) -> void {
+            {% if use_gpu %}
+            {{SOLVER_INSTANCE}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ, tarch::multicore::TargetDevice::MayRunOnGPU );
+            {% else %}
+            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+            {% endif %}
+          },
+          [] (
+            double                                       Q[],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal
+          ) -> double {
+            {% if use_gpu %}
+            return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, tarch::multicore::TargetDevice::MayRunOnGPU );
+            {% else %}
+            return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            {% endif %}
+          }, 
+"""
   
   
   
@@ -80,9 +124,12 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
     self._rusanov_call = ""
     if flux!=PDETerms.None_Implementation and ncp==PDETerms.None_Implementation:
       self._rusanov_call = self.RusanovCallWithFluxAndEigenvalues
+    elif flux==PDETerms.None_Implementation and ncp!=PDETerms.None_Implementation:
+      self._rusanov_call = self.RusanovCallWithNCPAndEigenvalues
     else:
       print( "ERROR: Combination of fluxes/operators not supported" )
           
+    self.set_implementation(flux,ncp)
     self.set_update_cell_implementation()
 
     self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"

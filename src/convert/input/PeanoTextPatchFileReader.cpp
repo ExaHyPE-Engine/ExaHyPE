@@ -115,30 +115,30 @@ void convert::input::PeanoTextPatchFileReader::parse() {
 
       subReaders.push_back( PeanoTextPatchFileReader(filename) );
     }
-    else if ( tokens[0]=="begin" and tokens[1]=="cell-values" ) { //define a cell variable
+    else if ( tokens[0]=="begin" and tokens[1]=="cell-metadata" ) { //define a cell variable
       std::string variableName = Parser::removeHyphens(tokens[2]);
       std::vector<std::string> variableDeclarationLines;
-      while ( i<lines.size() and lines[i].find( "end cell-values" )==std::string::npos ) {
+      while ( i<lines.size() and lines[i].find( "end cell-metadata" )==std::string::npos ) {
         variableDeclarationLines.push_back( lines[i] );
         i++;
       }
       if (i==lines.size()) {
-        logError( "parse()", "file " << _file << " is corrupt as cell-values for " << variableName << " is not terminated properly. Quit parsing" );
+        logError( "parse()", "file " << _file << " is corrupt as cell-metadata for " << variableName << " is not terminated properly. Quit parsing" );
         tarch::mpi::Rank::abort(-1);
       }
       else {
         parseVariablesDeclaration( _data.size()-1, variableDeclarationLines, variableName, convert::data::PeanoDataType::Cell_Values );
       }
     }
-    else if ( tokens[0]=="begin" and tokens[1]=="vertex-values" ) { //define a vertex variable
+    else if ( tokens[0]=="begin" and tokens[1]=="vertex-metadata" ) { //define a vertex variable
       std::string variableName = Parser::removeHyphens(tokens[2]);
       std::vector<std::string> variableDeclarationLines;
-      while ( i<lines.size()  and lines[i].find( "end vertex-values" )==std::string::npos ) {
+      while ( i<lines.size()  and lines[i].find( "end vertex-metadata" )==std::string::npos ) {
         variableDeclarationLines.push_back( lines[i] );
         i++;
       }
       if (i==lines.size()) {
-        logError( "parse()", "file " << _file << " is corrupt as vertex-values for " << variableName << " is not terminated properly. Quit parsing" );
+        logError( "parse()", "file " << _file << " is corrupt as vertex-metadata for " << variableName << " is not terminated properly. Quit parsing" );
         tarch::mpi::Rank::abort(-1);
       }
       else {

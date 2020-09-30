@@ -29,12 +29,12 @@ namespace exahype2 {
         double                                       F[]
       ) >   flux,
       std::function< double(
-              double                                       Q[],
-              const tarch::la::Vector<Dimensions,double>&  faceCentre,
-              const tarch::la::Vector<Dimensions,double>&  volumeH,
-              double                                       t,
-              double                                       dt,
-              int                                          normal
+        double                                       Q[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
       ) >   eigenvalues,
       double QL[],
       double QR[],
@@ -54,25 +54,25 @@ namespace exahype2 {
      * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
      */
     void splitRusanov1d(
-          std::function< void(
-                  double                                       Q[],
-                  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-                  const tarch::la::Vector<Dimensions,double>&  volumeH,
-                  double                                       t,
-                  double                                       dt,
-                  int                                          normal,
-                  double                                       F[]
-          ) >   flux,
-          std::function< void(
-              double                                       Q[],
-              double                                       gradQ[][Dimensions],
-              const tarch::la::Vector<Dimensions,double>&  faceCentre,
-              const tarch::la::Vector<Dimensions,double>&  volumeH,
-              double                                       t,
-              double                                       dt,
-              int                                          normal,
-              double                                       BgradQ[]
-            ) >   nonconservativeProduct,
+      std::function< void(
+        double                                       Q[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       F[]
+      ) >   flux,
+      std::function< void(
+        double                                       Q[],
+        double                                       gradQ[][Dimensions],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       BgradQ[]
+      ) >   nonconservativeProduct,
           std::function< double(
                   double                                       Q[],
                   const tarch::la::Vector<Dimensions,double>&  faceCentre,

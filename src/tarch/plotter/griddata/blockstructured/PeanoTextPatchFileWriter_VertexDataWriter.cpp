@@ -15,14 +15,14 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataW
   _numberOfVerticesPerAxis(unknownsPerAxis),
   _numberOfUnknowns(numberOfUnknowns),
   _entryCounter(0) {
-  _writer._snapshotFileOut << "begin vertex-values \"" << identifier << "\"" << std::endl
+  _writer._snapshotFileOut << "begin vertex-metadata \"" << identifier << "\"" << std::endl
                            << "  number-of-unknowns " << _numberOfUnknowns << std::endl
                            << "  number-of-dofs-per-axis " << _numberOfVerticesPerAxis << std::endl;
 
   _writer.writeMetaData(metaData);
   _writer.writeMapping(getVerticesPerPatch(),mapping);
 
-  _writer._snapshotFileOut << "end vertex-values" << std::endl << std::endl;
+  _writer._snapshotFileOut << "end vertex-metadata" << std::endl << std::endl;
 }
 
 

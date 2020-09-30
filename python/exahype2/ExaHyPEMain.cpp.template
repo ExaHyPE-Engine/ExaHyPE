@@ -315,6 +315,7 @@ int main(int argc, char** argv) {{
   const int ExitCodeSuccess          = 0;
   const int ExitCodeUnitTestsFailed  = 1;
   const int ExitCodeInvalidArguments = 2;
+  const int ExitCodeInvalidBuild     = 3;
   
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
@@ -324,6 +325,11 @@ int main(int argc, char** argv) {{
     DomainSize,
     0
   );
+  
+  if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {{
+    logError("main()", "MPI runs without multithreading are not supported currently.");
+    return ExitCodeInvalidBuild;
+  }}
 
   if (not exahype2::parseCommandLineArguments(argc,argv) ) {{
     return ExitCodeInvalidArguments;

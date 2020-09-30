@@ -15,14 +15,14 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWri
   _numberOfCellsPerAxis(unknownsPerAxis),
   _numberOfUnknowns(numberOfUnknowns),
   _entryCounter(0) {
-  _writer._snapshotFileOut << "begin cell-values \"" << identifier << "\"" << std::endl
+  _writer._snapshotFileOut << "begin cell-metadata \"" << identifier << "\"" << std::endl
                << "  number-of-unknowns " << _numberOfUnknowns << std::endl
                << "  number-of-dofs-per-axis " << _numberOfCellsPerAxis << std::endl;
 
   _writer.writeMetaData(metaData);
   _writer.writeMapping(getCellsPerPatch(),mapping);
 
-  _writer._snapshotFileOut << "end cell-values" << std::endl << std::endl;
+  _writer._snapshotFileOut << "end cell-metadata" << std::endl << std::endl;
 }
 
 

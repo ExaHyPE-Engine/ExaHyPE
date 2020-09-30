@@ -190,9 +190,12 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     self._rusanov_call = ""
     if flux!=PDETerms.None_Implementation and ncp==PDETerms.None_Implementation:
       self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithFluxAndEigenvalues
+    elif flux==PDETerms.None_Implementation and ncp!=PDETerms.None_Implementation:
+      self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithNCPAndEigenvalues
     else:
       print( "ERROR: Combination of fluxes/operators not supported" )
           
+    self.set_implementation(flux,ncp)
     self.set_update_cell_implementation()
   
     pass
