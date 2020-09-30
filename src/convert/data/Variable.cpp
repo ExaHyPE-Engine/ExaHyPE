@@ -58,11 +58,11 @@ std::string convert::data::Variable::toString() const {
   std::ostringstream msg;
 
   msg << "(name:" << name
-	  << ",dofs-per-axis:" << dofsPerAxis
+      << ",dofs-per-axis:" << dofsPerAxis
       << ",unknowns:" << unknowns
-	  << ",type:" << (type==convert::data::PeanoDataType::Cell_Values ? "cell-values" : "vertex-values" )
+      << ",type:" << (type==convert::data::PeanoDataType::Cell_Values ? "cell-values" : "vertex-values" )
       << ",dim:" << dimensions
-	  << ")";
+      << ")";
 
   return msg.str();
 }

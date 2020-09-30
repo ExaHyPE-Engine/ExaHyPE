@@ -55,8 +55,13 @@
   rank takes all the refinement instructions and then realises them throughout
   the subsequent grid sweep. So if a rank gets a refinement command and then
   gives away parts of its mesh, then it might not be able to realise this 
-  refinement. For most codes, that's not a problem as the newly established rank
-  will just realise the refinement one grid sweep later, but the point is:
+  refinement. At the same time, the rank accepting the new partition is not
+  aware of the refinement requests yet. So it might get the refinement
+  request, but with one step delay: It sets up the local partition, evaluates
+  the refinement criterion, is informed about a refinement wish for this
+  area, and subsequently realises it. For most codes, that delay by one
+  iteration is not a problem as the newly established rank will just realise the
+  refinement one grid sweep later, but the point is:
   refine and erase commands in \Peano\ are always a wishlist to the kernel. The
   kernel can decide to ignore it---at least for one grid sweep.
   \item To be continued \dots

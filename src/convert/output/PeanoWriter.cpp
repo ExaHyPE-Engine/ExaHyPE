@@ -241,20 +241,20 @@ void convert::output::PeanoWriter::writeFile(const convert::data::Variable& vari
 void convert::output::PeanoWriter::writeVariableDeclaration(const convert::data::Variable& variable, std::ofstream& file) {
   file << "begin ";
   if ( variable.type==convert::data::PeanoDataType::Cell_Values) {
-    file << "cell-values ";
+    file << "cell-metadata ";
   }
   else {
-    file << "vertex-values ";
+    file << "vertex-metadata ";
   }
   file << "\"" << variable.name << "\"" << std::endl;
   file << "  number-of-dofs-per-axis " << variable.dofsPerAxis << std::endl;
   file << "  number-of-unknowns      " << variable.unknowns << std::endl;
   file << "end ";
   if ( variable.type==convert::data::PeanoDataType::Cell_Values) {
-    file << "cell-values ";
+    file << "cell-metadata ";
   }
   else {
-    file << "vertex-values ";
+    file << "vertex-metadata ";
   }
   file << std::endl << std::endl;
 }

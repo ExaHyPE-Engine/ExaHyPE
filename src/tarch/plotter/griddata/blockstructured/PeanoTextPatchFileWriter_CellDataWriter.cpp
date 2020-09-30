@@ -15,14 +15,14 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWri
   _numberOfCellsPerAxis(unknownsPerAxis),
   _numberOfUnknowns(numberOfUnknowns),
   _entryCounter(0) {
-  _writer._snapshotFileOut << "begin cell-values \"" << identifier << "\"" << std::endl
+  _writer._snapshotFileOut << "begin cell-metadata \"" << identifier << "\"" << std::endl
                << "  number-of-unknowns " << _numberOfUnknowns << std::endl
                << "  number-of-dofs-per-axis " << _numberOfCellsPerAxis << std::endl;
 
   _writer.writeMetaData(metaData);
   _writer.writeMapping(getCellsPerPatch(),mapping);
 
-  _writer._snapshotFileOut << "end cell-values" << std::endl << std::endl;
+  _writer._snapshotFileOut << "end cell-metadata" << std::endl << std::endl;
 }
 
 
@@ -42,7 +42,12 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDa
     }
     else {
       if ( std::abs(value) < std::numeric_limits<double>::min() ) value = 0.0;
-      _out << " " << value;
+      if (tarch::la::equals(value,0.0)) {
+        _out << " 0";
+      }
+      else {
+        _out << " " << value;
+      }
     }
     _entryCounter++;
   }
@@ -57,7 +62,12 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDa
     }
     else {
       if ( std::abs(values[i]) < std::numeric_limits<double>::min() ) values[i] = 0.0;
-      _out << " " << values[i];
+      if (tarch::la::equals(values[i],0.0)) {
+        _out << " 0";
+      }
+      else {
+        _out << " " << values[i];
+      }
     }
     _entryCounter++;
   }

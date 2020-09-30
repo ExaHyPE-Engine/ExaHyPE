@@ -280,7 +280,7 @@ void {FULL_QUALIFIED_CLASSNAME}::endTraversal( const tarch::la::Vector<Dimension
 
   TemplateGetGridControlEvents_Prologue = """
   
-std::vector< peano4::grid::GridControlEvent > {FULL_QUALIFIED_CLASSNAME}::getGridControlEvents() {{
+std::vector< peano4::grid::GridControlEvent > {FULL_QUALIFIED_CLASSNAME}::getGridControlEvents() const {{
   std::vector< peano4::grid::GridControlEvent > result;
 """
 

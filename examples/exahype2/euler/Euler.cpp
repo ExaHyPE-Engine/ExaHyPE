@@ -204,11 +204,21 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   int                                          normal
 ) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
+
+  nonCriticalAssertion4( Qinside[0]==Qinside[0], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Qinside[1]==Qinside[1], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Qinside[2]==Qinside[2], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Qinside[3]==Qinside[3], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
+
+  nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
+
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];
   Qoutside[2] = Qinside[2];
   Qoutside[3] = Qinside[3];
   Qoutside[4] = Qinside[4];
+
   logTraceOut( "boundaryConditions(...)" );
 }
 

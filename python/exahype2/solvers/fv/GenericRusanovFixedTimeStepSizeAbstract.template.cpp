@@ -1,8 +1,6 @@
 #include "{{CLASSNAME}}.h"
 
 
-tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}::_log( "{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}" );
-
 
 {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}():
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
@@ -61,36 +59,23 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishG
 }
 
 
+{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::SolverState {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getSolverState() const {
+  return _solverState;
+}
+
+
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStamp,
   double globalMaxTimeStamp,
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  if (
-    _solverState == SolverState::GridInitialisation
-  ) {
-    _solverState = SolverState::PrimaryAfterGridInitialisation;
-  }
-  else if (
-    _solverState == SolverState::Primary
-    or
-    _solverState == SolverState::PrimaryAfterGridInitialisation
-  ) {
-    _solverState = SolverState::Secondary;
-  }
-  else {
-    _solverState = SolverState::Primary;
-  }
-
-  logDebug( "startTimeStep(...)", "new state is " << toString(_solverState) );
+  _solverState = SolverState::TimeStep;
 }
 
 
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishTimeStep() {
-  if ( _solverState == SolverState::Secondary ) {
-    _timeStamp += {{TIME_STEP_SIZE}};
-  }
+  _timeStamp += {{TIME_STEP_SIZE}};
 }
 
 
@@ -100,12 +85,7 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startPl
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  if ( _solverState == SolverState::GridInitialisation ) {
-    _solverState = SolverState::PlottingInitialCondition;
-  }
-  else {
-    _solverState = SolverState::Plotting;
-  }
+  _solverState = SolverState::Plotting;
 }
 
 
@@ -119,14 +99,8 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
       return "grid-construction";
     case SolverState::GridInitialisation:
       return "grid-initialisation";
-    case SolverState::Primary:
-      return "primary";
-    case SolverState::Secondary:
-      return "secondary";
-    case SolverState::PlottingInitialCondition:
-      return "plotting-initial-condition";
-    case SolverState::PrimaryAfterGridInitialisation:
-      return "primary-after-grid-initialisation";
+    case SolverState::TimeStep:
+      return "time-step";
     case SolverState::Plotting:
       return "plotting";
   }
@@ -134,15 +108,9 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
 }
 
 
-{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::SolverState {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getSolverState() const {
-  return _solverState;
-}
-
-
-
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::refinementCriterion(
-  double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+  double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
@@ -150,7 +118,7 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {
+  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
 
@@ -164,7 +132,7 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::adjustSolution(
-  double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
+  double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t

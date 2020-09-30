@@ -238,10 +238,10 @@ class Project(object):
     self.__configure_makefile()
     
     create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
-    init_grid                           = peano4.solversteps.Step( "InitGrid", False )
+    init_grid                           = peano4.solversteps.Step( "InitGrid",   False )
     create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
     plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
-    perform_time_step                   = peano4.solversteps.Step( "TimeStep", False )
+    perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
     
     self._project.cleanup()
     
@@ -261,7 +261,7 @@ class Project(object):
       solver.add_use_data_statements_to_Peano4_solver_step( create_grid_but_postpone_refinement )
       
       solver.add_actions_to_create_grid( create_grid,                         evaluate_refinement_criterion=True  )
-      solver.add_actions_to_create_grid( init_grid,                           evaluate_refinement_criterion=False )
+      solver.add_actions_to_init_grid( init_grid )
       solver.add_actions_to_create_grid( create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
       solver.add_actions_to_plot_solution( plot_solution )
       solver.add_actions_to_perform_time_step( perform_time_step )

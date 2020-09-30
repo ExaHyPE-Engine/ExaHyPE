@@ -1,5 +1,6 @@
 #include "EnclaveTask.h"
 #include "EnclaveBookkeeping.h"
+#include "tarch/multicore/Core.h"
 
 
 
@@ -31,10 +32,10 @@ int exahype2::EnclaveTask::getTaskNumber() const {
 
 bool exahype2::EnclaveTask::run() {
   logTraceIn( "run()" );
-  _outputValues = new double[_numberOfResultValues];
+  _outputValues = tarch::multicore::allocateMemory( _numberOfResultValues, tarch::multicore::MemoryLocation::Heap );
 
   _functor(_inputValues,_outputValues,_marker);
-  delete[] _inputValues;
+  tarch::multicore::freeMemory(_inputValues,tarch::multicore::MemoryLocation::Heap );
 
   EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);
   logTraceOut( "run()" );

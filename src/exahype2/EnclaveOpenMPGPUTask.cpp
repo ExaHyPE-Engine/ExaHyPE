@@ -59,7 +59,7 @@ bool exahype2::EnclaveOpenMPGPUTask::run() {
       delete[] _inputValues;
     }
 
-    double* outputValuesOnHost = new double[_numberOfResultValues];
+    double* outputValuesOnHost = tarch::multicore::allocateMemory( _numberOfResultValues, tarch::multicore::MemoryLocation::Heap);
     std::copy_n( _outputValues, _numberOfResultValues, outputValuesOnHost );
     tarch::multicore::freeMemory(_outputValues,tarch::multicore::MemoryLocation::Accelerator);
 

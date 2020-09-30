@@ -11,6 +11,7 @@
 
 
 #include "exahype2/RefinementControl.h"
+#include "exahype2/Solver.h"
 
 #include "tarch/la/Vector.h"
 
@@ -31,7 +32,7 @@
 
 
 
-class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
+class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public ::exahype2::Solver {
   public:
     enum class SolverState {
       GridConstruction,
@@ -43,6 +44,37 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
     static std::string toString(SolverState);
 
     {{CLASSNAME}}();
+
+    virtual double getMinTimeStamp() const = 0;
+    virtual double getMaxTimeStamp() const = 0;
+    virtual double getMinTimeStepSize() const = 0;
+    virtual double getMaxTimeStepSize() const = 0;
+
+    virtual void startGridConstructionStep() = 0;
+    virtual void finishGridConstructionStep() = 0;
+
+    virtual void startGridInitialisationStep() = 0;
+    virtual void finishGridInitialisationStep() = 0;
+
+    virtual void startTimeStep(
+      double globalMinTimeStamp,
+      double globalMaxTimeStamp,
+      double globalMinTimeStepSize,
+      double globalMaxTimeStepSize
+    ) = 0;
+    virtual void finishTimeStep() = 0;
+
+    virtual void startPlottingStep(
+      double globalMinTimeStamp,
+      double globalMaxTimeStamp,
+      double globalMinTimeStepSize,
+      double globalMaxTimeStepSize
+    ) = 0;
+    virtual void finishPlottingStep() = 0;
+
+    double getMaxMeshSize() const = 0;
+    double getMinMeshSize() const = 0;
+
 
     double getMinTimeStamp() const;
     double getMaxTimeStamp() const;

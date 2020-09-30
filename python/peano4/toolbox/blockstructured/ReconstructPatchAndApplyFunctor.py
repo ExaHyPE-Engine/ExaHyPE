@@ -17,11 +17,15 @@ class ReconstructedArrayMemoryLocation(Enum):
    reconstructed data yourself.
   """
   Heap = 1,
+  HeapThroughTarch = 2,
   """
    Create data on the heap for an accelerator. It relies on the tarch::allocateMemoryOnAccelerator
    routine and you have to use this one again to free it.
   """
-  AcceleratorMemory = 2
+  AcceleratorMemory = 3,
+  HeapThroughTarchWithoutDelete = 4,
+  HeapWithoutDelete = 5,
+  AcceleratorWithoutDelete = 6
 
 
 
@@ -107,7 +111,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.d[ "GUARD_CELL_OPERATION" ]                 = guard_cell_operation
     self.d[ "GUARD_FACE_OPERATION" ]                 = guard_face_operation
 
-    if reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap:
+    if reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
     double* reconstructedPatch = new double[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
@@ -123,7 +127,16 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """    
-    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorMemory:
+    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
+      self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
+    double* reconstructedPatch;
+    #if Dimensions==2
+    reconstructedPatch = ::tarch::multicore::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::multicore::MemoryLocation::Heap);
+    #elif Dimensions==3
+    reconstructedPatch = ::tarch::multicore::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::multicore::MemoryLocation::Heap);
+    #endif
+"""    
+    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorMemory or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorMemoryWithoutDelete:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     double* reconstructedPatch;
     #if Dimensions==2
@@ -134,6 +147,23 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 """    
     else:  
       printf( "Error: memory allocation mode for patch reconstruction not known")
+
+
+    if reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap:
+      self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
+    delete[] reconstructedPatch;
+"""    
+    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch:
+      self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
+    ::tarch::multicore::freeMemory(reconstructedPatch, tarch::multicore::MemoryLocation::Heap );
+"""    
+    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorMemory:
+      self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
+    ::tarch::multicore::freeMemory(reconstructedPatch, tarch::multicore::MemoryLocation::Accelerator );
+"""    
+    else:
+      self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = ""
+
 
     self.additional_includes                         = additional_includes
     self.additional_attributes                       = ""
@@ -250,6 +280,11 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 
     double* originalPatch = {CELL_ACCESSOR}.value;
     {CELL_FUNCTOR_IMPLEMENTATION}
+    
+    
+    {DESTROY_RECONSTRUCTED_PATCH}
+    
+    
     logTraceOut( "touchCellFirstTime(...)" );
   }}
 """
@@ -276,4 +311,5 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     return """
 #include <functional>
 #include "peano4/utils/Loop.h"
+#include "tarch/multicore/Core.h"
 """ + self.additional_includes

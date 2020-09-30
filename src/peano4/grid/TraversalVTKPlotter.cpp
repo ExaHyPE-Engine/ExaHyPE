@@ -268,6 +268,6 @@ void peano4::grid::TraversalVTKPlotter::endTraversalOnRank(bool isParallelRun) {
 }
 
 
-std::vector< peano4::grid::GridControlEvent > peano4::grid::TraversalVTKPlotter::getGridControlEvents() {
+std::vector< peano4::grid::GridControlEvent > peano4::grid::TraversalVTKPlotter::getGridControlEvents() const {
   return std::vector< peano4::grid::GridControlEvent >();
 }

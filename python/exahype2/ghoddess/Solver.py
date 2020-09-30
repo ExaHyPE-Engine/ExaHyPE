@@ -113,9 +113,9 @@ class Solver(object):
     """
     return ""
 
-  AdjustCellTemplate = ""
+  _AdjustCellTemplate = ""
     
-  AMRTemplate = "::exahype2::RefinementCommand::Keep;"
+  _AMRTemplate = "::exahype2::RefinementCommand::Keep;"
 
   BoundaryTemplate = ""
 
@@ -131,12 +131,12 @@ class Solver(object):
     
     step.add_action_set( GenericCellKernel( self._cell_data, 
       "true",
-      self.AdjustCellTemplate.format(**d), 
+      self._AdjustCellTemplate.format(**d), 
       self.__get_default_includes() + self.get_user_includes()) 
     )
     step.add_action_set( AMRKernel( self._cell_data, 
       "true",
-      self.AMRTemplate.format(**d), 
+      self._AMRTemplate.format(**d), 
       self.__get_default_includes() + self.get_user_includes(), True ))
     pass
   
@@ -157,7 +157,7 @@ class Solver(object):
     
     step.add_action_set( GenericCellKernel( self._cell_data, 
       d["SOLVER_INSTANCE"] + ".startNewTimeStepOnCellAndProjectOntoFace()",
-      self.AdjustCellTemplate.format(**d), 
+      self._AdjustCellTemplate.format(**d), 
       self.__get_default_includes() + self.get_user_includes()) 
     )
 
@@ -181,7 +181,7 @@ class Solver(object):
 
     step.add_action_set( AMRKernel( self._cell_data, 
       d["SOLVER_INSTANCE"] + ".solveCellProblemAndFinishTimeStepOnCell()",
-      self.AMRTemplate.format(**d), 
+      self._AMRTemplate.format(**d), 
       self.__get_default_includes() + self.get_user_includes(), False))
     pass
 

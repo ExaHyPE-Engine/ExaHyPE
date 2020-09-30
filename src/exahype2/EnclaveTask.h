@@ -53,6 +53,8 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
   public:
     /**
      * Create plain enclave task.
+     *
+     * @param inputValues Has to be created on heap via tarch::multicore::allocateMemory().
      */
     EnclaveTask(
       const ::peano4::datamanagement::CellMarker&    marker,

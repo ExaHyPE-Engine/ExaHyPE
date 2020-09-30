@@ -13,6 +13,10 @@ class Model(object):
     self.generator   = ModelToDataRepository(self)
 
 
+  def __str__(self):
+    return "(#cells=" + str(len(self.cell_data)) + ",#faces="  + str(len(self.face_data)) + ",#vertices=" + str(len(self.vertex_data)) + ")" 
+   
+
   def add_cell(self,submodel):
     submodel.configure(self.namespace, DoFAssociation.Cell)
     self.cell_data.append(submodel)

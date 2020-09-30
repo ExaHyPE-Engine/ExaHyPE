@@ -28,16 +28,7 @@ def get_face_overlap_merge_implementation(patch_overlap):
     return result;
   }};
   
-  //
-  // The face merges are always called from a cell. So it is one particular
-  // cell that loads a particular face for the first time and thus 
-  //
-  //
-  #if PeanoDebug>0
-  tarch::logging::Log _log( "Q" );
-  logDebug( "merge()", "merge at x=" << marker.toString() << " with an outer normal of " << marker.outerNormal() ); 
-  #endif
-  
+
   const int faceNormal = marker.getSelectedFaceNumber() % Dimensions;
   dfore(i,{DOFS_PER_AXIS},faceNormal,0) {{
     for (int j=0; j<{OVERLAP}; j++) {{
@@ -46,7 +37,15 @@ def get_face_overlap_merge_implementation(patch_overlap):
       
       int volumeSerialised = serialisePatchIndex(volume, faceNormal);
       for (int k=0; k<{UNKNOWNS}; k++) {{
+        assertion4( 
+          neighbour.value[volumeSerialised*{UNKNOWNS}+k]==neighbour.value[volumeSerialised*{UNKNOWNS}+k],
+          k, {UNKNOWNS},
+          volume,
+          marker.toString()
+        );
+      
         value[volumeSerialised*{UNKNOWNS}+k] = neighbour.value[volumeSerialised*{UNKNOWNS}+k];
+      
       }}
       
       // This should be non-critical assertion, but this assertion is only
