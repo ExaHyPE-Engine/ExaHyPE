@@ -1,4 +1,5 @@
 #include "{{CLASSNAME}}.h"
+#include "exahype2/RefinementControl.h"
 
 
 tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::_log( "{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}" );
@@ -19,7 +20,7 @@ tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLA
     result = ::exahype2::RefinementCommand::Refine;
   }
 
-  logTraceOutWith1Argument( "refinementCriterion(...)", toString(result) );
+  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;
 }
 {% endif %}

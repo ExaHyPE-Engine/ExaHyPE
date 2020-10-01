@@ -5,5 +5,5 @@ from .AbstractAoSWithOverlap1                        import AbstractAoSWithOverl
 from .GenericRusanovFixedTimeStepSize                import GenericRusanovFixedTimeStepSize
 from .GenericRusanovFixedTimeStepSizeWithEnclaves    import GenericRusanovFixedTimeStepSizeWithEnclaves
 
-#from .PointWiseClawPack                  import PointWiseClawPackFixedTimeStepSize
+from .PointWiseClawPack                              import PointWiseClawPackFixedTimeStepSize
 
