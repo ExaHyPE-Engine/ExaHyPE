@@ -50,16 +50,34 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
       
   """
   RiemannSolverCall = """
-    FL[0] = 0.0; FL[1] = 0.0;
-    FR[0] = 0.0; FR[1] = 0.0;
+    double wave[{{NUMBER_OF_UNKNOWNS}}]; 
+    double speed[{{NUMBER_OF_UNKNOWNS}}]; 
+
+    {{CLAWPACK_RIEMANN_SOLVER}}_(
+      {{NUMBER_OF_UNKNOWNS}},             // int num_eqn
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},  // int num_aux
+      {{NUMBER_OF_UNKNOWNS}},             // int num_waves 
+      QL,                                 // double* q_l 
+      QR,                                 // double* q_r
+      QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
+      QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
+      wave,
+      speed,
+      FL,                                 // double* amdq
+      FR                                  // double* apdq
+    );
 """
 
 
   
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, plot_grid_properties=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
+      
+      
+      Riemann_solver_implementation_files: list of strings
+        These are the Fortran files the code should add to the compile. 
       
     """
     #super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
@@ -80,6 +98,8 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
+    self.clawpack_Riemann_solver = clawpack_Riemann_solver 
+    self.Riemann_solver_implementation_files = Riemann_solver_implementation_files
     pass
   
   
@@ -129,7 +149,8 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
     """
     self._add_generic_Rusanov_FV_entries_to_text_replacement_dictionary(d)
 
-    d[ "TIME_STEP_SIZE" ] = self._time_step_size
+    d[ "TIME_STEP_SIZE" ]         = self._time_step_size
+    d[ "CLAWPACK_RIEMANN_SOLVER"] = self.clawpack_Riemann_solver
     
     pass
   
@@ -137,8 +158,18 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
   def get_user_includes(self):
     return """
 #include "exahype2/fv/Generic.h"
-#include "exahype2/fv/Rusanov.h"
 """    
   
+  
+  def add_implementation_files_to_project(self,namespace,output):
+    """
+    
+      Invoke add_implementation_files_to_project() of superclass and
+      then add all the Fortran files to the makefile.
+      
+    """
+    FV.add_implementation_files_to_project(self,namespace,output)
+    for f in self.Riemann_solver_implementation_files:
+      output.makefile.add_fortran_file(f)
   
     
