@@ -71,7 +71,7 @@ class Project (object):
     
     self.datamodel.clear()       
     self.solversteps.clear()
-    self.output.clear_artefacts()
+    self.output.clear()
 
     
   def generate(self, overwrite=peano4.output.Overwrite.Default, throw_away_data_after_generation=False):
@@ -102,7 +102,6 @@ class Project (object):
     self.is_built = False
     if len(self.output.artefacts)>0:
       print( "some artefacts have already been added to repository ... assume this is intentional (by higher abstraction layer, e.g.)")
-      #self.output.clear_artefacts()    
 
     self.datamodel.construct_output(self.output)
     self.solversteps.construct_output(self.output)

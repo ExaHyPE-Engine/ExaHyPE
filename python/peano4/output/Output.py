@@ -14,9 +14,9 @@ class Output(object):
     self.makefile = Makefile()
 
 
-  def clear_artefacts(self):
+  def clear(self):
     self.artefacts = []
-    self.makefile.cppfiles = []
+    self.makefile = Makefile()
 
           
   def add(self,artefact,append=True):

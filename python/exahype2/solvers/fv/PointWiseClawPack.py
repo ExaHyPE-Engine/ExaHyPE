@@ -48,6 +48,11 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
       double                                       FL[],
       double                                       FR[]
       
+   My generic kernel requires FR and FL along the normal of the respective
+   cell you look at F. That is, I need -FR compared to what ClawPack gives 
+   me. Quick trial and error with the acoustics equations tells you that
+   it indeed has to be -FR and not -FL. 
+      
   """
   RiemannSolverCall = """
     double wave[{{NUMBER_OF_UNKNOWNS}}]; 
@@ -70,8 +75,11 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
       FL,                                 // double* amdq
       FR                                  // double* apdq
     );
+
+    for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
+      FR[i] = -FR[i];
+    }
     
-    std::cout << "terminated with " << wave[0] << " x " << wave[1] << std::endl;
 """
 
 
