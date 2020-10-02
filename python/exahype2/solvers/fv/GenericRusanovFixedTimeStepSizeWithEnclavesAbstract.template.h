@@ -48,37 +48,6 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     {{CLASSNAME}}();
 
-    double getMinTimeStamp() const;
-    double getMaxTimeStamp() const;
-    double getMinTimeStepSize() const;
-    double getMaxTimeStepSize() const;
-
-    SolverState  getSolverState() const;
-
-    /**
-     * @param Q Vector of unknowns
-     * @param t Time
-     */
-    virtual ::exahype2::RefinementCommand refinementCriterion(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
-    ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
-
-    /**
-     * Feel free to change the solution in the particular finite volume.
-     * You can for example change the initial conditions by overwriting
-     * the solution for t=0. You may change Q. All other parameters are
-     * in.
-     */
-    virtual void adjustSolution(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
-    ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
-
     /**
      * Determine max eigenvalue over Jacobian in a given point with solution values
      * (states) Q. All parameters are in.
@@ -89,55 +58,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal
-    ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
-
-    /**
-     * Apply boundary conditions. You can overwrite both the inside and
-     * outside values though most BCs only modify the outside ones. Please
-     * note that the boundary conditions you set here are after that subject
-     * to the Riemann solver, i.e. flux and eigenvalues.
-     */
-    virtual void boundaryConditions(
-      double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal
-    ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
-
-
-    virtual void startGridConstructionStep();
-    virtual void finishGridConstructionStep();
-
-    virtual void startGridInitialisationStep();
-    virtual void finishGridInitialisationStep();
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
-    virtual void startTimeStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    );
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
-    virtual void finishTimeStep();
-
-    virtual void startPlottingStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    );
-
-    virtual void finishPlottingStep();
+    ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
 
     {% if FLUX_IMPLEMENTATION!="<none>" %}
@@ -148,7 +69,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       double                                       t,
       int                                          normal,
       double                                       F[{{NUMBER_OF_UNKNOWNS}}]
-    ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
+    ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
     {% endif %}
 
 
@@ -164,20 +85,8 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
      {% endif %}
 
-    double getMaxMeshSize() const;
-    double getMinMeshSize() const;
 
-  protected:
-    static tarch::logging::Log  _log;
-
-    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
-
-    double     _timeStamp;
-
-    SolverState  _solverState;
-
-    double     _maxH;
-    double     _minH;
+    {% include "AbstractSolverFixedTimeStepSize.template.h" %}
 };
 
 

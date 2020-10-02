@@ -1,7 +1,5 @@
-#include "{{CLASSNAME}}.h"
+{% include "AbstractSolverFixedTimeStepSize.template.cpp" %}
 
-
-tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}::_log( "{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}" );
 
 
 {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}():
@@ -11,36 +9,6 @@ tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLA
   _maxH({{MAX_H}}),
   _minH({{MIN_H}})
   {
-}
-
-
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMinMeshSize() const {
-  return _minH;
-}
-
-
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMaxMeshSize() const {
-  return _maxH;
-}
-
-
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMinTimeStamp() const {
-  return _timeStamp;
-}
-
-
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMaxTimeStamp() const {
-  return _timeStamp;
-}
-
-
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMinTimeStepSize() const {
-  return {{TIME_STEP_SIZE}};
-}
-
-
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMaxTimeStepSize() const {
-  return {{TIME_STEP_SIZE}};
 }
 
 
@@ -137,47 +105,6 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
 }
 
 
-{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::SolverState {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getSolverState() const {
-  return _solverState;
-}
-
-
-{% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
-::exahype2::RefinementCommand {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::refinementCriterion(
-  double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
-) {
-  {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
-
-  return result;
-  {% else %}
-  {{REFINEMENT_CRITERION_IMPLEMENTATION}}
-  {% endif %}
-}
-{% endif %}
-
-
-{% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::adjustSolution(
-  double                                       Q[{{NUMBER_OF_UNKNOWNS}}],
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
-) {
-  if (tarch::la::equals(t,0.0) ) {
-    {{INITIAL_CONDITIONS_IMPLEMENTATION}}
-  }
-}
-{% endif %}
-
-
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" %}
 double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEigenvalue(
   double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -187,20 +114,6 @@ double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEi
   int                                          normal
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
-}
-{% endif %}
-
-
-{% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundaryConditions(
-  double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal
-) {
-  {{BOUNDARY_CONDITIONS_IMPLEMENTATION}}
 }
 {% endif %}
 

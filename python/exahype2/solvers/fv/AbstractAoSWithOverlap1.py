@@ -25,13 +25,16 @@ class AbstractAoSWithOverlap1(object):
     self._refinement_criterion_implementation = PDETerms.User_Defined_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
 
-  
+
   def set_implementation(self,flux=PDETerms.User_Defined_Implementation,ncp=PDETerms.None_Implementation,eigenvalues=PDETerms.User_Defined_Implementation,boundary_conditions=PDETerms.User_Defined_Implementation,refinement_criterion=PDETerms.User_Defined_Implementation,initial_conditions=PDETerms.User_Defined_Implementation):
     """
       If you pass in User_Defined, then the generator will create C++ stubs 
       that you have to befill manually. If you pass in None_Implementation, it 
       will create nop, i.e. no implementation or defaults. Any other string
       is copied 1:1 into the implementation. 
+      
+      Please note that not all options are supported by all solvers. You 
+      cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
     """
     self._flux_implementation        = flux
     self._ncp_implementation         = ncp

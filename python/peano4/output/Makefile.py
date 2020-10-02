@@ -20,7 +20,7 @@ class Makefile(object):
     self.d = {}
     self.d["CXX"]           = ""
     self.d["CXXFLAGS"]      = ""
-    self.d["F77"]           = ""
+    self.d["FC"]           = ""
     self.d["FCFLAGS"]       = ""
     self.d["LDFLAGS"]       = ""
     self.d["LIBS"]          = ""
@@ -102,15 +102,19 @@ class Makefile(object):
     
     
   def add_CXX_flag(self,value):    
-    self.d["CXXFLAGS"]     += value
+    self.d["CXXFLAGS"]     += " " + value
     
     
   def set_Fortran_compiler(self,value):
-    self.d["F77"]           = value
+    self.d["FC"]           = value
     
     
   def set_Fortran_flags(self,value):
     self.d["FCFLAGS"]       = value
+
+
+  def add_Fortran_flag(self,value):
+    self.d["FCFLAGS"]      += " " + value
     
     
   def set_linker_flags(self,value):

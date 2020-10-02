@@ -1,11 +1,11 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-
-
 import sympy
 
+from .PDE import PDE
 
-class FirstOrderConservativePDEFormulation:
+
+class FirstOrderConservativePDEFormulation(PDE):
   """
     
     Helper class to model a hyperbolic PDE in first-order conservative 
@@ -31,32 +31,16 @@ class FirstOrderConservativePDEFormulation:
 
         
   """
-  def __init__(self, unknowns, dimensions ):
-    self.unknowns   = unknowns
-    self.dimensions = dimensions
+  def __init__(self, unknowns, auxiliary_variables, dimensions ):
+    PDE.__init__(self, unknowns, auxiliary_variables, dimensions)
     
-    self.Q              = sympy.symarray("Q",               (unknowns))
-    self.F              = sympy.symarray("F",               (unknowns,dimensions))
     self.eigenvalue     = sympy.symarray("alpha",           (unknowns,dimensions))
-    self.initial_values = sympy.symarray("Q0",              (unknowns))
-    self.x              = sympy.symarray("x",               (dimensions))
+    self.F              = sympy.symarray("F",               (unknowns,dimensions))
     
     for i in range(0,unknowns):
       self.F[i]          = [0 for i in range(0,dimensions)]
       self.eigenvalue[i] = [0 for i in range(0,dimensions)]
     pass
-
-
-  def name_Q_entry(self,offset_in_Q,name):
-    self.Q[offset_in_Q] = sympy.symbols( name )
-    return self.Q[offset_in_Q]
-
-
-  def name_Q_entries(self,offset_in_Q,cardinality,name):
-    new_entry = sympy.symarray(name, cardinality)
-    for i in range(0,cardinality):
-      self.Q[offset_in_Q+i] = new_entry[i]
-    return new_entry
 
 
   def __str__(self):
@@ -98,33 +82,6 @@ class FirstOrderConservativePDEFormulation:
     return result  
 
 
-  def __implementation_of_mapping_onto_named_quantities(self, is_cell_mapping = True):
-    """
-    
-      Return the C code that maps the quantities from Q onto
-      properly labelled quantities
-      
-    """
-    result = ""
-    for i in range(0,self.unknowns):
-      result += "const "
-      result += "double "
-      result += sympy.printing.cxxcode( self.Q[i] )
-      result += " = Q[" + str(i) + "];\n"
-      
-    for i in range(0,self.dimensions):
-      result += "const double x_"
-      result += str(i)
-      result += " = "
-      if is_cell_mapping:
-        result += "volumeCentre"
-      else:
-        result += "faceCentre"
-      result += "(" + str(i) + ");\n"
-      result += ";\n"
-    return result
-
-
   def substitute_expression(self,expression,new_expression):
     """
     
@@ -148,7 +105,7 @@ class FirstOrderConservativePDEFormulation:
         before we pipe it into the output. If your expression is something numeric,
         then evalf will fail (as it is not defined for scalar quantities). 
     """
-    result  = self.__implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
+    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
     result += "switch( normal ) {\n"
     for d in range(0,self.dimensions):
       result += "  case " + str(d) + ":\n"
@@ -178,7 +135,7 @@ class FirstOrderConservativePDEFormulation:
         before we pipe it into the output. If your expression is something numeric,
         then evalf will fail (as it is not defined for scalar quantities). 
     """
-    result  = self.__implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
+    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
     result += "switch (normal) {\n"
     for d in range(0,self.dimensions):
       result += "  case " + str(d) + ":\n"
@@ -198,7 +155,7 @@ class FirstOrderConservativePDEFormulation:
     """
       Return maximum eigenvalue
     """
-    result  = self.__implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
+    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = False)
     result += "double lambda[" + str(self.unknowns) + "];\n"
     result += "switch (normal) {\n"
     for d in range(0,self.dimensions):
@@ -216,28 +173,5 @@ class FirstOrderConservativePDEFormulation:
       result += "result = std::max( result, lambda[" + str(i)+ "] );\n"
     result += "return result;\n"
     return result  
-  
-  
-  def implementation_of_homogeneous_Neumann_BC(self):
-    result = ""
-    for i in range(0,self.unknowns):
-      result += "Qoutside[" + str(i) + "] = Qinside[" + str(i) + "];\n"
-    return result
-  
-  
-  def implementation_of_initial_conditions(self, invoke_evalf_before_output = True):
-    """
-      invoke_evalf_before_output: boolean
-        If your expression is a symbolic expression (default) then we use evalf 
-        before we pipe it into the output. If your expression is something numeric,
-        then evalf will fail (as it is not defined for scalar quantities). 
-    """
-    result  = self.__implementation_of_mapping_onto_named_quantities(is_cell_mapping = True)
-    for i in range(0,self.unknowns):
-      if invoke_evalf_before_output:
-        result += sympy.printing.cxxcode( self.initial_values[i].evalf(), assign_to="Q[" + str(i) + "]" )
-      else:
-        result += "Q[" + str(i) + "] = " + sympy.printing.cxxcode( self.initial_values[i] ) + ";"
-      result += "\n"
-    return result
+
     

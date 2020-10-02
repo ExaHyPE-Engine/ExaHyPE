@@ -387,8 +387,12 @@ class FV(object):
   def add_implementation_files_to_project(self,namespace,output):
     """
     
-      makefile is an instance of peano4.output.Makefile, so you can 
-      add your files to this instance.
+     The ExaHyPE2 project will call this operation when it sets 
+     up the overall environment.
+     
+     
+     
+     output: peano4.output.Output
       
     """
 

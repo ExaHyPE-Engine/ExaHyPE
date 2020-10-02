@@ -19,6 +19,20 @@
 
 
 
+/**
+ * Import for ClawPack's FORTRAN routine
+ *
+ *
+ * See the subchapter "Passing Data Arguments by Value" at
+ *
+ * https://northstar-www.dartmouth.edu/doc/solaris-forte/manuals/fortran/prog_guide/11_cfort.html
+ *
+ * By default, FORTRAN routines should have return value int. I don't check
+ * error codes anyway, so it does not really make a difference.
+ */
+extern "C" int {{CLAWPACK_RIEMANN_SOLVER}}_(int* num_eqn, int* num_aux, int* num_waves, double* q_l, double* q_r, double* aux_l, double* aux_r, double* wave, double* s, double* amdq, double* apdq);
+
+
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -45,159 +59,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     {{CLASSNAME}}();
 
-    virtual double getMinTimeStamp() const = 0;
-    virtual double getMaxTimeStamp() const = 0;
-    virtual double getMinTimeStepSize() const = 0;
-    virtual double getMaxTimeStepSize() const = 0;
-
-    virtual void startGridConstructionStep() = 0;
-    virtual void finishGridConstructionStep() = 0;
-
-    virtual void startGridInitialisationStep() = 0;
-    virtual void finishGridInitialisationStep() = 0;
-
-    virtual void startTimeStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    ) = 0;
-    virtual void finishTimeStep() = 0;
-
-    virtual void startPlottingStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    ) = 0;
-    virtual void finishPlottingStep() = 0;
-
-    double getMaxMeshSize() const = 0;
-    double getMinMeshSize() const = 0;
-
-
-    double getMinTimeStamp() const;
-    double getMaxTimeStamp() const;
-    double getMinTimeStepSize() const;
-    double getMaxTimeStepSize() const;
-
-    /**
-     * @param Q Vector of unknowns
-     * @param t Time
-     */
-    virtual ::exahype2::RefinementCommand refinementCriterion(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
-    ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
-
-    /**
-     * Feel free to change the solution in the particular finite volume.
-     * You can for example change the initial conditions by overwriting
-     * the solution for t=0. You may change Q. All other parameters are
-     * in.
-     */
-    virtual void adjustSolution(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
-    ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
-
-    /**
-     * Determine max eigenvalue over Jacobian in a given point with solution values
-     * (states) Q. All parameters are in.
-     */
-    virtual double maxEigenvalue(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal
-    ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
-
-    /**
-     * Apply boundary conditions. You can overwrite both the inside and
-     * outside values though most BCs only modify the outside ones. Please
-     * note that the boundary conditions you set here are after that subject
-     * to the Riemann solver, i.e. flux and eigenvalues.
-     */
-    virtual void boundaryConditions(
-      double                                       Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      double                                       Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal
-    ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% endif %};
-
-
-    virtual void startGridConstructionStep();
-    virtual void finishGridConstructionStep();
-
-    virtual void startGridInitialisationStep();
-    virtual void finishGridInitialisationStep();
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
-    virtual void startTimeStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    );
-
-    /**
-     * If you hook into this routine, ensure the abstract base class
-     * operation is still invoked.
-     */
-    virtual void finishTimeStep();
-
-    virtual void startPlottingStep(
-      double globalMinTimeStamp,
-      double globalMaxTimeStamp,
-      double globalMinTimeStepSize,
-      double globalMaxTimeStepSize
-    );
-
-    virtual void finishPlottingStep();
-
-    {% if FLUX_IMPLEMENTATION!="<none>" %}
-   virtual void flux(
-     double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-     const tarch::la::Vector<Dimensions,double>&  faceCentre,
-     const tarch::la::Vector<Dimensions,double>&  volumeH,
-     double                                       t,
-     int                                          normal,
-     double                                       F[{{NUMBER_OF_UNKNOWNS}}]
-    ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
-     {% endif %}
-     {% if NCP_IMPLEMENTATION!="<none>" %}
-    virtual void nonconservativeProduct(
-      double                                       Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal,
-      double                                       BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-    ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
-     {% endif %}
-
-    double getMaxMeshSize() const;
-    double getMinMeshSize() const;
-  protected:
-    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
-
-    double     _timeStamp;
-
-    SolverState  _solverState;
-
-    double     _maxH;
-    double     _minH;
+    {% include "AbstractSolverFixedTimeStepSize.template.h" %}
 };
 
 
