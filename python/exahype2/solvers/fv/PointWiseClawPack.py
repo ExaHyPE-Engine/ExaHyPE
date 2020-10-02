@@ -53,10 +53,14 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
     double wave[{{NUMBER_OF_UNKNOWNS}}]; 
     double speed[{{NUMBER_OF_UNKNOWNS}}]; 
 
+    int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
+    int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    int num_waves = {{NUMBER_OF_UNKNOWNS}}; 
+
     {{CLAWPACK_RIEMANN_SOLVER}}_(
-      {{NUMBER_OF_UNKNOWNS}},             // int num_eqn
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},  // int num_aux
-      {{NUMBER_OF_UNKNOWNS}},             // int num_waves 
+      &num_eqn,
+      &num_aux,
+      &num_waves, 
       QL,                                 // double* q_l 
       QR,                                 // double* q_r
       QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
@@ -66,6 +70,8 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
       FL,                                 // double* amdq
       FR                                  // double* apdq
     );
+    
+    std::cout << "terminated with " << wave[0] << " x " << wave[1] << std::endl;
 """
 
 

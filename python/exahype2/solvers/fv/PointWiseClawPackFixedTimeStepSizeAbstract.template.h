@@ -23,10 +23,12 @@
  * Import for ClawPack's FORTRAN routine
  *
  *
+ * See the subchapter "Passing Data Arguments by Value" at
  *
+ * https://northstar-www.dartmouth.edu/doc/solaris-forte/manuals/fortran/prog_guide/11_cfort.html
  *
  */
-extern "C" void {{CLAWPACK_RIEMANN_SOLVER}}_(int num_eqn, int num_aux, int num_waves, double* q_l, double* q_r, double* aux_l, double* aux_r, double* wave, double* s, double* amdq, double* apdq);
+extern "C" void {{CLAWPACK_RIEMANN_SOLVER}}_(int* num_eqn, int* num_aux, int* num_waves, double* q_l, double* q_r, double* aux_l, double* aux_r, double* wave, double* s, double* amdq, double* apdq);
 
 
 
