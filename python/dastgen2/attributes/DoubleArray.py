@@ -4,6 +4,20 @@ from .Double import Double
 
 
 class DoubleArray(Double):
+  """
+   An array of doubles, i.e. a vector in the mathematical sense
+   
+   
+   :Arguments:
+   
+   name: String
+     Name of this vector
+     
+   cardinality: String
+     Cardinality of data. This has to be a string. Therefore it can be a 
+     symbol, i.e. a name defined via ifdef somewhere in your code.
+          
+  """
   def __init__(self, name, cardinality):
     Double.__init__(self, name)
     self._cardinality = cardinality

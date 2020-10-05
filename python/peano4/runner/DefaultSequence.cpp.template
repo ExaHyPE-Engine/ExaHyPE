@@ -80,13 +80,24 @@ int main(int argc, char** argv) {{
     tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
   ));
 
+  #if Dimensions==2
+  auto DomainOffset = {{0.0, 0.0}};
+  auto DomainSize   = {{1.0, 1.0}};
+  #else
+  auto DomainOffset = {{0.0, 0.0, 0.0}};
+  auto DomainSize   = {{1.0, 1.0, 1.0}};
+  #endif
+
+
   peano4::initParallelEnvironment(&argc,&argv);
   peano4::fillLookupTables();
-  
   {FULL_NAMESPACE}::observers::DataRepository::initDatatypes();
-
-Da fehlt der Node init und shutdown. Fixen -> gibt es jetzt auch zentral in Peano.h
-
+  peano4::initSingletons(
+    DomainOffset,
+    DomainSize,
+    0
+  );
+  
   #if PeanoDebug>=2
   tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();
   peanoCoreTests->run();
@@ -106,16 +117,12 @@ Da fehlt der Node init und shutdown. Fixen -> gibt es jetzt auch zentral in Pean
  
   #endif
 
-  peano4::parallel::SpacetreeSet::getInstance().init(
-    #if Dimensions==2
-    {{0.0, 0.0}},
-    {{1.0, 1.0}},
-    #else
-    {{0.0, 0.0, 0.0}},
-    {{1.0, 1.0, 1.0}},
-    #endif
-    0
-  );
+  #if defined(SharedOMP)
+  #pragma omp parallel
+  {{
+  #pragma omp master 
+  {{
+  #endif
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
   }}
   else {{
@@ -123,9 +130,13 @@ Da fehlt der Node init und shutdown. Fixen -> gibt es jetzt auch zentral in Pean
       logDebug( "runParallel(...)", "trigger a new sweep with step " << peano4::parallel::Node::getInstance().getCurrentProgramStep() );
     }}
   }}
+  #if defined(SharedOMP)
+  }}
+  }}
+  #endif
 
+  peano4::shutdownSingletons();
   {FULL_NAMESPACE}::observers::DataRepository::shutdownDatatypes();
-
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;
