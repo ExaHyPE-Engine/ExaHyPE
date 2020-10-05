@@ -12,7 +12,11 @@
 
 
 #include "toolbox/loadbalancing/NoLoadBalancing.h"
-#include "toolbox/loadbalancing/RecursiveSubdivision.h"
+
+{% if LOAD_BALANCER!="" -%}
+#include "{{LOAD_BALANCER | replace('::', '/') }}.h"
+{% endif -%}
+
 #include "exahype2/RefinementControl.h"
 #include "peano4/grid/GridStatistics.h"
 
