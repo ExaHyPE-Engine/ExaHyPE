@@ -91,7 +91,7 @@ class PDE(object):
         before we pipe it into the output. If your expression is something numeric,
         then evalf will fail (as it is not defined for scalar quantities). 
     """
-    result  = self.__implementation_of_mapping_onto_named_quantities(is_cell_mapping = True)
+    result  = self._implementation_of_mapping_onto_named_quantities(is_cell_mapping = True)
     for i in range(0,self.unknowns + self.auxiliary_variables):
       if invoke_evalf_before_output:
         result += sympy.printing.cxxcode( self.initial_values[i].evalf(), assign_to="Q[" + str(i) + "]" )
