@@ -23,7 +23,7 @@ exahype2::EnclaveOpenMPGPUTask::EnclaveOpenMPGPUTask(
   _outputValues(nullptr),
   _numberOfResultValues(numberOfResultValues),
   _functor(functor),
-  _taskNumber(EnclaveBookkeeping::getInstance().reserveTaskNumber()),
+  _taskNumber(tarch::multicore::reserveTaskNumber()),
   _inputDataCreatedOnDevice(inputDataCreatedOnDevice) {
   logTraceIn( "EnclaveOpenMPGPUTask(...)" );
 

@@ -23,6 +23,28 @@ namespace tarch {
     void yield();
 
     /**
+     * Usually called directly by EnclaveTask.
+     *
+     * This routine has to return a number which is currently not in use.
+     * There is however no need for the delivered task numbers to be
+     * consecutive. Therefore, I use the size of the existing task set as
+     * a guideline for a task number to search for. If this initial guess
+     * is already handed out, I increase the counter by a prime number and
+     * try the new number again - until I've finally found a task which is
+     * not yet processed.
+     */
+    int reserveTaskNumber();
+
+    void releaseTaskNumber(int number);
+
+    /**
+     * @return Number of tasks that are currently reserved. I assume that these belong
+     *  to tasks that are either running or that have produced outcome that's not yet
+     *  used.
+     */
+    int getNumberOfReservedTaskNumbers();
+
+    /**
      * Abstract super class for a job.
      */
     class Task {
@@ -31,7 +53,7 @@ namespace tarch {
       public:
         Task( int priority=0 );
 
-	virtual ~Task() {}
+        virtual ~Task() {}
 
         int getPriority() const;
         void setPriority( int priority );

@@ -19,7 +19,7 @@ exahype2::EnclaveTask::EnclaveTask(
   _outputValues(nullptr),
   _numberOfResultValues(numberOfResultValues),
   _functor(functor),
-  _taskNumber(EnclaveBookkeeping::getInstance().reserveTaskNumber()) {
+  _taskNumber(tarch::multicore::reserveTaskNumber()) {
   logTraceIn( "EnclaveTask(...)" );
   logTraceOut( "EnclaveTask(...)" );
 }

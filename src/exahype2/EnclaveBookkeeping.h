@@ -32,15 +32,13 @@ class exahype2::EnclaveBookkeeping {
     const static std::string MemoryAllocationsInLookupTableIdentifier;
     const static std::string LookupMissesIdentifier;
 
-    tarch::multicore::BooleanSemaphore  _activeTasksSemaphore;
-    tarch::multicore::BooleanSemaphore  _finishedTasksSemaphore;
-    std::set<int>                       _activeTaskNumbers;
-
     /**
      * Plain map onto ouput array. See lifecycle discussion of EnclaveTask
      * for details.
      */
     std::unordered_map<int, std::pair<int,double*> >       _finishedTasks;
+
+    tarch::multicore::BooleanSemaphore  _finishedTasksSemaphore;
 
     EnclaveBookkeeping() = default;
   public:
@@ -54,19 +52,6 @@ class exahype2::EnclaveBookkeeping {
     void dumpStatistics();
 
     void waitForTaskToTerminateAndCopyResultOver(int number, double* destination);
-
-    /**
-     * Usually called directly by EnclaveTask.
-     *
-     * This routine has to return a number which is currently not in use.
-     * There is however no need for the delivered task numbers to be
-     * consecutive. Therefore, I use the size of the existing task set as
-     * a guideline for a task number to search for. If this initial guess
-     * is already handed out, I increase the counter by a prime number and
-     * try the new number again - until I've finally found a task which is
-     * not yet processed.
-     */
-    int reserveTaskNumber();
 
     /**
      * Usually called directly by EnclaveTask.
