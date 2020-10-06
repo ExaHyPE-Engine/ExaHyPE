@@ -25,13 +25,7 @@ exahype2::EnclaveBookkeeping& exahype2::EnclaveBookkeeping::getInstance() {
 
 
 void exahype2::EnclaveBookkeeping::dumpStatistics() {
-  std::ostringstream activeTasksMsg;
-  activeTasksMsg << "(#" << _activeTaskNumbers.size();
-  for (auto& p: _activeTaskNumbers) {
-    activeTasksMsg << "," << p;
-  }
-  activeTasksMsg << ")";
-  logInfo( "dumpStatistics()", "active tasks=" << activeTasksMsg.str() );
+  logInfo( "dumpStatistics()", "active tasks=" << tarch::multicore::getNumberOfReservedTaskNumbers() );
 
   std::ostringstream finishedTasksMsg;
   finishedTasksMsg << "(#" << _finishedTasks.size();
@@ -52,7 +46,7 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
   while (not isContained) {
     ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
 
-    bool processedTask = ::tarch::multicore::processPendingTasks(1);
+    bool processedTask = ::tarch::multicore::processTask(number);
 
     if (not processedTask) {
       tarch::multicore::yield();
@@ -69,26 +63,11 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
   _finishedTasks.erase( number );
   finishedTasksLock.free();
 
-  tarch::multicore::Lock activeTasksLock( _activeTasksSemaphore );
-  assertionEquals( _activeTaskNumbers.count(number),1 );
-  _activeTaskNumbers.erase( number );
-  activeTasksLock.free();
+  tarch::multicore::releaseTaskNumber(number);
 
   std::copy_n( storedData.second, storedData.first, destination );
   tarch::multicore::freeMemory( storedData.second, tarch::multicore::MemoryLocation::Heap );
   logDebug( "waitForTaskToTerminateAndCopyResultOver()", "delivered outcome of task " << number << " (" << storedData.first << " entries copied over)");
-}
-
-
-int  exahype2::EnclaveBookkeeping::reserveTaskNumber() {
-  tarch::multicore::Lock lock( _activeTasksSemaphore );
-  int result = _activeTaskNumbers.size();
-  while (_activeTaskNumbers.count( result )>0) {
-    result+=23;
-  }
-  _activeTaskNumbers.insert( result );
-  logDebug( "reserveTaskNumber()", "return " << result << " at a total task number count of " << _activeTaskNumbers.size() );
-  return result;
 }
 
 

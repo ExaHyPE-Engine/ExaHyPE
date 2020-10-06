@@ -4,7 +4,18 @@ import dastgen2.attributes.DoubleArray
 
 
 class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
+  """
+  
+    Specialisation of dastgen2.attributes.DoubleArray which relies on
+    Peano's tarch. Therefore, things alike the vector initialisation 
+    in the constructor do work.
+     
+  """
+  
   def __init__(self, name, cardinality):
+    """
+      See superclass' constructor.
+    """
     dastgen2.attributes.DoubleArray.__init__(self, name, cardinality)
     self._cardinality = cardinality
     

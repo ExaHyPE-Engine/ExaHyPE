@@ -64,7 +64,7 @@ peano4::parallel::Tasks::Tasks(
   int                     location
 ):
   Tasks(
-    new tarch::multicore::TaskWithCopyOfFunctor(function),
+    new tarch::multicore::TaskWithCopyOfFunctor(-1,getPriority(type),function),
     type,
     location
   ) {

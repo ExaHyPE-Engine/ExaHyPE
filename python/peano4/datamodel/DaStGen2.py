@@ -48,6 +48,18 @@ class DaStGen2(DoF):
     A DaStGen2 data type generator. To add fields to this object, just
     use the DaStGen2 instance data of this field, i.e. data.add_attribute().
     
+    :Attributes:
+    
+    data: dastgen2.DataModel
+      Add elements to this guy to enrich your data model.
+    
+    :Arguments:
+    
+    name: String
+      Name (unqualified)
+      
+    
+      
   """  
   def __init__(self, name):
     super(DaStGen2, self).__init__(name)

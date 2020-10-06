@@ -235,7 +235,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
         }
       );
       
-      fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( newEnclaveTask->getTaskNumber() );
+      fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( newEnclaveTask->getTaskId() );
       peano4::parallel::Tasks spawn( 
         newEnclaveTask,
         peano4::parallel::Tasks::TaskType::LowPriorityLIFO,

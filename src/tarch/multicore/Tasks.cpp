@@ -1,10 +1,41 @@
 #include "tarch/Assertions.h"
+#include "BooleanSemaphore.h"
+#include "Lock.h"
 
 
 #include <thread>
 #include <queue>
+#include <set>
 #include "Tasks.h"
 #include "multicore.h"
+
+namespace {
+  tarch::multicore::BooleanSemaphore  activeTasksSemaphore;
+  std::set<int>                       activeTaskNumbers;
+}
+
+
+int tarch::multicore::getNumberOfReservedTaskNumbers() {
+  return activeTaskNumbers.size();
+}
+
+
+void tarch::multicore::releaseTaskNumber(int number) {
+  tarch::multicore::Lock activeTasksLock( activeTasksSemaphore );
+  assertionEquals( activeTaskNumbers.count(number),1 );
+  activeTaskNumbers.erase( number );
+}
+
+
+int tarch::multicore::reserveTaskNumber() {
+  tarch::multicore::Lock lock( activeTasksSemaphore );
+  int result = activeTaskNumbers.size();
+  while (activeTaskNumbers.count( result )>0) {
+    result+=23;
+  }
+  activeTaskNumbers.insert( result );
+  return result;
+}
 
 
 bool operator<( const tarch::multicore::Task& lhs, const tarch::multicore::Task& rhs ) {
@@ -22,7 +53,8 @@ bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
 }
 
 
-tarch::multicore::Task::Task( int priority ):
+tarch::multicore::Task::Task( int id, int priority ):
+  _id(id),
   _priority( priority ) {
 }
 
@@ -41,9 +73,13 @@ void tarch::multicore::Task::prefetch() {
 }
 
 
+int tarch::multicore::Task::getTaskId() const {
+  return _id;
+}
 
 
-tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( const std::function<bool()>& taskFunctor ):
+tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int id, int priority, const std::function<bool()>& taskFunctor ):
+  Task(id,priority),
   _taskFunctor(taskFunctor)  {
 }
 
@@ -53,7 +89,8 @@ bool tarch::multicore::TaskWithCopyOfFunctor::run() {
 }
 
 
-tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( std::function<bool()>& taskFunctor ):
+tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( int id, int priority, std::function<bool()>& taskFunctor ):
+  Task(id,priority),
   _taskFunctor(taskFunctor)  {
 }
 
@@ -69,6 +106,19 @@ bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
 
 namespace {
   std::queue<tarch::multicore::Task* > nonblockingTasks;
+}
+
+
+bool tarch::multicore::processTask(int number) {
+  int currentTaskNumber = -1;
+  while ( currentTaskNumber!=number and !nonblockingTasks.empty() ) {
+    Task* p = nonblockingTasks.front();
+    nonblockingTasks.pop();
+    currentTaskNumber = p->getTaskId();
+    while (p->run()) {};
+    delete p;
+  }
+  return currentTaskNumber==number;
 }
 
 
