@@ -48,7 +48,6 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     double*                                      _outputValues;
     int                                          _numberOfResultValues;
     std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                      _functor;
-    const int                                    _taskNumber;
 
   public:
     /**
@@ -65,15 +64,6 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
 
     EnclaveTask(const EnclaveTask& other) = delete;
     EnclaveTask(const EnclaveTask&& other) = delete;
-
-    /**
-     * Every task grabs a unique task number. You will want to memorise this
-     * task number somewhere so you can later poll the enclave task
-     * bookkeeping whether a task is already completed.
-     *
-     * ::exahype2::EnclaveBookkeeping::getInstance().reserveTaskNumber();
-     */
-    int getTaskNumber() const;
 
     bool run() override;
 

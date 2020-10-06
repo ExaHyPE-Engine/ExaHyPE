@@ -38,6 +38,9 @@ namespace tarch {
     void releaseTaskNumber(int number);
 
     /**
+     * Should usually be more than pending tasks, as it also includes tasks that have
+     * finished yet have not released their number yet.
+     *
      * @return Number of tasks that are currently reserved. I assume that these belong
      *  to tasks that are either running or that have produced outcome that's not yet
      *  used.
@@ -49,12 +52,16 @@ namespace tarch {
      */
     class Task {
       protected:
-        int   _priority;
+        const int   _id;
+        int         _priority;
       public:
-        Task( int priority=0 );
+        const int DefaultPriority = 0;
+
+        Task( int id, int priority );
 
         virtual ~Task() {}
 
+        int getTaskId() const;
         int getPriority() const;
         void setPriority( int priority );
 
@@ -115,7 +122,7 @@ namespace tarch {
            */
         std::function<bool()>   _taskFunctor;
       public:
-        TaskWithCopyOfFunctor( const std::function<bool()>& taskFunctor );
+        TaskWithCopyOfFunctor( int id, int priority, const std::function<bool()>& taskFunctor );
 
         bool run() override;
     };
@@ -132,7 +139,7 @@ namespace tarch {
             */
     	   std::function<bool()>&   _taskFunctor;
       public:
-        TaskWithoutCopyOfFunctor( std::function<bool()>& taskFunctor );
+        TaskWithoutCopyOfFunctor( int id, int priority, std::function<bool()>& taskFunctor );
 
         bool run() override;
     };
@@ -149,6 +156,14 @@ namespace tarch {
      * @return There have been tasks
      */
     bool processPendingTasks(int maxTasks = getNumberOfPendingTasks());
+
+    /**
+     * Process a particular task.
+     *
+     * @param number  Has to be a number acquired before via reserveTaskNumber.
+     * @return Found this one and have done it.
+     */
+    bool processTask(int number);
 
     /**
      * Kick out a new job. The job's type has to be set properly: It

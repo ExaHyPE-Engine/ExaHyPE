@@ -67,6 +67,16 @@ bool tarch::multicore::processPendingTasks(int) {
 }
 
 
+/**
+ * Can't pick out a particular task. They are all hidden somewhere in the
+ * OpenMP runtime.
+ */
+bool tarch::multicore::processTask(int number) {
+  yield();
+  return false;
+}
+
+
 void tarch::multicore::yield() {
   #pragma omp taskyield
 }

@@ -53,7 +53,8 @@ bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
 }
 
 
-tarch::multicore::Task::Task( int priority ):
+tarch::multicore::Task::Task( int id, int priority ):
+  _id(id),
   _priority( priority ) {
 }
 
@@ -72,9 +73,13 @@ void tarch::multicore::Task::prefetch() {
 }
 
 
+int tarch::multicore::Task::getTaskId() const {
+  return _id;
+}
 
 
-tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( const std::function<bool()>& taskFunctor ):
+tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int id, int priority, const std::function<bool()>& taskFunctor ):
+  Task(id,priority),
   _taskFunctor(taskFunctor)  {
 }
 
@@ -84,7 +89,8 @@ bool tarch::multicore::TaskWithCopyOfFunctor::run() {
 }
 
 
-tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( std::function<bool()>& taskFunctor ):
+tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( int id, int priority, std::function<bool()>& taskFunctor ):
+  Task(id,priority),
   _taskFunctor(taskFunctor)  {
 }
 
@@ -100,6 +106,19 @@ bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
 
 namespace {
   std::queue<tarch::multicore::Task* > nonblockingTasks;
+}
+
+
+bool tarch::multicore::processTask(int number) {
+  int currentTaskNumber = -1;
+  while ( currentTaskNumber!=number and !nonblockingTasks.empty() ) {
+    Task* p = nonblockingTasks.front();
+    nonblockingTasks.pop();
+    currentTaskNumber = p->getTaskId();
+    while (p->run()) {};
+    delete p;
+  }
+  return currentTaskNumber==number;
 }
 
 

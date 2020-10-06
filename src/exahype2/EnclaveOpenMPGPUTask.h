@@ -69,15 +69,6 @@ class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
     EnclaveOpenMPGPUTask(const EnclaveOpenMPGPUTask&& other) = delete;
 
     /**
-     * Every task grabs a unique task number. You will want to memorise this
-     * task number somewhere so you can later poll the enclave task
-     * bookkeeping whether a task is already completed.
-     *
-     * ::exahype2::EnclaveBookkeeping::getInstance().reserveTaskNumber();
-     */
-    int getTaskNumber() const;
-
-    /**
      * Run the actual functor
      *
      * This operation consists of two big items: The kernel invocation (compute
@@ -128,7 +119,6 @@ class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
     double*                                      _outputValues;
     int                                          _numberOfResultValues;
     Functor                                      _functor;
-    const int                                    _taskNumber;
     const bool                                   _inputDataCreatedOnDevice;
 
 };

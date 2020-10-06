@@ -46,7 +46,7 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
   while (not isContained) {
     ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
 
-    bool processedTask = ::tarch::multicore::processPendingTasks(1);
+    bool processedTask = ::tarch::multicore::processTask(number);
 
     if (not processedTask) {
       tarch::multicore::yield();
