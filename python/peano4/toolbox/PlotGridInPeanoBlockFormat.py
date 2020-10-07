@@ -9,11 +9,17 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     """
       Plot only the grid structure
       
-      filename       Name of the output file
-      cell_unknown   If you use cell unknowns, pass any unknown in. As we do not dump
-                     any semantic information about unknowns, it does not matter which 
-                     one you choose. If you don't have cell unknowns at all, pass in 
-                     None 
+      :Attibutes:
+      
+      filename: String
+         Name of the output file.
+         
+      cell_unknown: None or cell data   
+         If you use cell unknowns, pass any unknown in. As we do not dump
+         any semantic information about unknowns, it does not matter which 
+         one you choose. If you don't have cell unknowns at all, pass in 
+         None.
+          
     """
     self.d = {}
     self.d[ "FILENAME" ]     = filename

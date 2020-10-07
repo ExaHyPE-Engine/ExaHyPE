@@ -387,12 +387,12 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         // Therefore we don't use the usual shift of @f$ 2 \cdot 2d @f$ or @f$ 2 \cdot 2^d @f$ 
         // but only half of it.
         {ACTIVE_ACTION_SET}.createPersistentVertex(
-           marker.select(pick) @pick raus
+           marker
           ,{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}
           {,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS}
         );
         {ACTIVE_ACTION_SET}.touchVertexFirstTime(
-           marker.select(pick)
+           marker
           ,{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}
           {,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS}
         );
@@ -403,12 +403,12 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         marker.isLocal()
       ) {{
         {ACTIVE_ACTION_SET}.createHangingVertex(
-           marker.select(pick)
+           marker
           ,{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}
           {,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS}
         );
         {ACTIVE_ACTION_SET}.touchVertexFirstTime(
-           marker.select(pick)
+           marker
           ,{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}
           {,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS}
         );
@@ -419,7 +419,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         marker.isLocal()
       )) {{
         {ACTIVE_ACTION_SET}.touchVertexFirstTime(
-           marker.select(pick)
+           marker
           ,{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}
           {,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS}
         );
@@ -832,9 +832,9 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
     
     for (int i=0; i<TwoPowerD; i++) {{
       int outVertexStack        = event.getVertexDataTo(i);
-      int inVertexPosition      = event.getVertexDataFrom(i);
+      int pick                  = event.getVertexDataFrom(i);
 
-      marker.select(inVertexPosition);
+      marker.select(pick);
       
       if (
         outVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -1110,7 +1110,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4:
     auto& data = DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId,inOutStack
     )->top(relativePositionOnInOutStack);
-    logDebug( "sendXXX(...)", "send out " << data.toString() << " to tree " << toTree << "'s stack " << toStack << " (relativePositionOnInOutStack=" << relativePositionOnInOutStack << ")" );
+    logDebug( "sendXXX(...)", "send out " << data.toString() << " to stack " << toStack << " (relativePositionOnInOutStack=" << relativePositionOnInOutStack << ")" );
     
     DataRepository::_{logical_type_name}Stack.getForPush(
       _spacetreeId, toStack
@@ -1237,7 +1237,7 @@ void {FULL_QUALIFIED_CLASSNAME}::deleteAllStacks() {{
       output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**self.d) )
     for vertex in self.vertices:
       self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree.format(**self.d) )
+      output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**self.d) )
     output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue.format(**self.d) )
 
     output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue.format(**self.d) )
@@ -1296,7 +1296,7 @@ void {FULL_QUALIFIED_CLASSNAME}::deleteAllStacks() {{
       output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**self.d) )
     for vertex in self.vertices:
       self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_deleteAllStacks.format(**self.d) )
+      output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**self.d) )
     output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Epilogue.format(**self.d) )
       
       

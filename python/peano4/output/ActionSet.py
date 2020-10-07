@@ -205,6 +205,7 @@ class ActionSet(object):
         outputfile.write( self.__get_operation_arguments(operation) )
         outputfile.write( " {\n" )
         outputfile.write( self.implementation.get_body_of_operation( operation[0] ) )
+        outputfile.write( "\n" )
         outputfile.write( "}\n\n\n" )
 
 
