@@ -1,6 +1,7 @@
 #include "Generic.h"
 
 #include "tarch/logging/Log.h"
+#include "tarch/multicore/multicore.h"
 
 #include "../PatchUtils.h"
 
@@ -372,7 +373,9 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
   double numericalFluxR[unknowns]; // helper out variable
 
   for (int shift=0; shift<2; shift++) {
-    #pragma omp collapse(2) simd
+    #ifdef SharedOMP
+    #pragma omp simd collapse(2)
+    #endif
     for (int x=shift; x<=numberOfVolumesPerAxisInPatch; x+=2)
     for (int y=0; y<numberOfVolumesPerAxisInPatch; y++)  {
       const int leftVoxelInPreimage  =  x
@@ -408,7 +411,9 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
   }
 
   for (int shift=0; shift<2; shift++) {
-    #pragma omp collapse(2) simd
+    #ifdef SharedOMP
+    #pragma omp simd collapse(2)
+    #endif
     for (int y=shift; y<=numberOfVolumesPerAxisInPatch; y+=2)
     for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
       const int lowerVoxelInPreimage =  x+1
@@ -482,7 +487,9 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
   double numericalFluxR[unknowns]; // helper out variable
 
   for (int shift=0; shift<2; shift++) {
-    #pragma omp collapse(3) simd
+    #ifdef SharedOMP
+    #pragma omp simd collapse(3)
+    #endif
     for (int x=shift; x<=numberOfVolumesPerAxisInPatch; x+=2)
     for (int z=0; z<numberOfVolumesPerAxisInPatch; z++)
     for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
@@ -524,7 +531,9 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
   }
 
   for (int shift=0; shift<2; shift++) {
-    #pragma omp collapse(3) simd
+    #ifdef SharedOMP
+    #pragma omp simd collapse(3)
+    #endif
     for (int y=shift; y<=numberOfVolumesPerAxisInPatch; y+=2)
     for (int z=0; z<numberOfVolumesPerAxisInPatch; z++)
     for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
@@ -568,7 +577,9 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
 
 
   for (int shift=0; shift<2; shift++) {
-    #pragma omp collapse(3) simd
+    #ifdef SharedOMP
+    #pragma omp simd collapse(3)
+    #endif
     for (int z=shift; z<=numberOfVolumesPerAxisInPatch; z+=2)
     for (int y=0; y<numberOfVolumesPerAxisInPatch; y++)
     for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
