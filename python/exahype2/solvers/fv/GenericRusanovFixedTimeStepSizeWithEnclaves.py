@@ -187,20 +187,21 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     #self._patch.generator.load_persistent_condition   = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Secondary"
     self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """
 
+    print("HHHHHH")
     self._rusanov_call = ""
-    if flux!=PDETerms.None_Implementation and ncp==PDETerms.None_Implementation:
+    if   flux!=PDETerms.None_Implementation and ncp==PDETerms.None_Implementation:
       self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithFluxAndEigenvalues
     elif flux==PDETerms.None_Implementation and ncp!=PDETerms.None_Implementation:
       self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithNCPAndEigenvalues
     else:
-      print( "ERROR: Combination of fluxes/operators not supported" )
-          
+      raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
+
     self.set_implementation(flux,ncp)
     self.set_update_cell_implementation()
-  
+
     pass
-  
-  
+
+
   def _wrap_update_cell_template(self, update_cell_template, memory_location):
     free_memory_call_for_skeleton_cells = ""
     if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:

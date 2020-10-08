@@ -102,33 +102,33 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
             {% endif %}
           }, 
 """
-  
-  
-  
+
+
+
   def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.None_Implementation, ncp=PDETerms.None_Implementation, plot_grid_properties=False):
     """
-    
+
       Instantiate a generic FV scheme with an overlap of 1.
-      
+
     """
     #super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
     AbstractAoSWithOverlap1.__init__(self, flux, ncp)
-    
+
     self._time_step_size = time_step_size
-    
+
     self._template_adjust_cell      = self._get_template_adjust_cell()
     self._template_AMR              = self._get_template_AMR()
     self._template_handle_boundary  = self._get_template_handle_boundary()
-    
+
     self._rusanov_call = ""
     if flux!=PDETerms.None_Implementation and ncp==PDETerms.None_Implementation:
       self._rusanov_call = self.RusanovCallWithFluxAndEigenvalues
     elif flux==PDETerms.None_Implementation and ncp!=PDETerms.None_Implementation:
       self._rusanov_call = self.RusanovCallWithNCPAndEigenvalues
     else:
-      print( "ERROR: Combination of fluxes/operators not supported" )
-          
+      raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
+
     self.set_implementation(flux,ncp)
     self.set_update_cell_implementation()
 
