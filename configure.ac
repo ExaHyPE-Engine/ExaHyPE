@@ -212,7 +212,7 @@ if test "$vtk_include" != false; then
     AC_MSG_RESULT(assume library suffix is $vtk_suffix)
   fi
 
-  AC_CHECK_LIB(vtkIOCore$vtk_suffix,main)
+  AC_CHECK_LIB(vtkIOCore$vtk_suffix,main,,[AC_MSG_ERROR([vtk library not found])])
   VTK_LIBRARY_SUFFIX=$vtk_suffix
   AC_SUBST([VTK_LIBRARY_SUFFIX])
 fi
