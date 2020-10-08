@@ -59,3 +59,15 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
   return msg.str();
 }
 
+
+#ifdef Parallel
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::initDatatype() {
+}
+
+
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::shutdownDatatype() {
+}
+
+
+MPI_Datatype   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::Datatype;
+#endif

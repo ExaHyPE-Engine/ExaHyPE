@@ -60,6 +60,22 @@
       static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
       static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
 
+      #ifdef Parallel
+      /**
+       * Sets the Datatype to MPI_Double.
+       */
+      static void initDatatype();
+
+      /**
+       * Degenerates to nop here, but we need such a function to fit to all other types.
+       */
+      static void shutdownDatatype();
+
+      /**
+       * Map each entry to an MPI_DOUBLE.
+       */
+      static MPI_Datatype   Datatype;
+      #endif
 
       std::string toString() const;
   };
