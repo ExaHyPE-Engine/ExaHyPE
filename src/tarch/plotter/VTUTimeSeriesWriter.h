@@ -23,21 +23,29 @@ namespace tarch {
 class tarch::plotter::VTUTimeSeriesWriter {
   public:
     enum class IndexFileMode {
+      /**
+       * Create new meta file.
+       */
       CreateNew,
+      /**
+       * Create a new data set within an existing index file. This is usually
+       * used to add a new snapshot (for a new time step for example).
+       */
       AppendNewDataSet,
+      /**
+       * Add new data. This usually adds a new file to the current snapshot
+       * (time step).
+       */
       AppendNewData,
       NoIndexFile
     };
 
-    void addSnapshot(const std::string& snapshotFileName, double time, bool parallelRun);
-
     /**
-     * This is the name of the VTU file. It has nothing to do with the actual
-     * name of the data files.
-     *
-     * @return Has been successful
+     * @see IndexFileMode
      */
-    bool writeFile(const std::string& outputFileName);
+    static void createEmptyNewFile( const std::string& snapshotFileName );
+    static void appendNewDataSet( const std::string& snapshotFileName, double t );
+    static void appendNewData(const std::string& snapshotFileName, const std::string& dataFile);
 };
 
 

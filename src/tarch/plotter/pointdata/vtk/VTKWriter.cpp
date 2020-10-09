@@ -6,12 +6,12 @@
 tarch::mpi::BooleanSemaphore  tarch::plotter::pointdata::vtk::VTKWriter::_sempahore( "tarch::plotter::pointdata::vtk::VTKTextFileWriter" );
 
 
-tarch::plotter::pointdata::vtk::VTKWriter::VTKWriter(bool binary, const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode mode) {
-  if (binary) {
-    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter(indexFile,mode);
+tarch::plotter::pointdata::vtk::VTKWriter::VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode mode) {
+  if (binaryFile) {
+    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter(fileName, indexFileName, mode);
   }
   else {
-    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter(indexFile,mode);
+    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter(fileName, indexFileName, mode);
   }
 
   _vertexWriter = _vtkWriter->createVertexWriter();
@@ -33,7 +33,7 @@ tarch::plotter::pointdata::PointWriter::PointDataWriter*    tarch::plotter::poin
 }
 
 
-bool tarch::plotter::pointdata::vtk::VTKWriter::writeToFile( const std::string& filename ) {
+bool tarch::plotter::pointdata::vtk::VTKWriter::writeToFile() {
   if (_vertexWriter!=nullptr) {
     _vertexWriter->close();
     _cellWriter->close();
@@ -45,7 +45,7 @@ bool tarch::plotter::pointdata::vtk::VTKWriter::writeToFile( const std::string& 
     _cellWriter   = nullptr;
   }
 
-  return _vtkWriter->writeToFile(filename);
+  return _vtkWriter->writeToFile();
 }
 
 

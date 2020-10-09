@@ -87,6 +87,8 @@ class tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter:
     std::stringstream _vertexDataDescription;
     std::stringstream _cellDataDescription;
 
+    std::string _fileName;
+
     void validateDataWriterIdentifier( const std::string& identifier ) const;
 
 
@@ -99,14 +101,14 @@ class tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter:
     }
 
   public:
-    VTKBinaryFileWriter(const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision=6);
+    VTKBinaryFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision=6);
     virtual ~VTKBinaryFileWriter();
 
-    virtual bool isOpen();
+    bool isOpen() override;
 
-    virtual bool writeToFile( const std::string& filename );
+    bool writeToFile() override;
 
-    virtual void clear();
+    void clear() override;
 
     virtual VertexWriter*      createVertexWriter();
     virtual CellWriter*        createCellWriter();

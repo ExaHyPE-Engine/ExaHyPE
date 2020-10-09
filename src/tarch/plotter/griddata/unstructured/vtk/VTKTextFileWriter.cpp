@@ -13,13 +13,21 @@ const std::string tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter
 "ASCII\n ";
 
 
-tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWriter(const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision):
+tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode mode, const int precision):
   _writtenToFile(false),
   _precision(precision),
   _doubleOrFloat(setDoubleOrFloatString(precision)),
   _numberOfVertices(0),
   _numberOfCells(0),
-  _numberOfCellEntries(0) {}
+  _numberOfCellEntries(0),
+  _fileName(fileName) {
+  if (fileName.rfind(".vtk")!=std::string::npos) {
+    logWarning( "writeToFile()", "filename should not end with .vtk as routine adds extension automatically. Chosen filename prefix=" << fileName );
+  }
+  if (mode!=tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::NoIndexFile and indexFileName.rfind(".pvd")!=std::string::npos) {
+    logWarning( "writeToFile()", "index filename should not end with .pvd as routine adds extension automatically. Chosen filename prefix=" << indexFileName );
+  }
+}
 
 
 tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::~VTKTextFileWriter() {
@@ -44,14 +52,11 @@ void tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::clear() {
 }
 
 
-bool tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::writeToFile( const std::string& filenamePrefix ) {
+bool tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::writeToFile() {
   assertion( !_writtenToFile );
 
-  if (filenamePrefix.rfind(".vtk")!=std::string::npos) {
-    logWarning( "writeToFile()", "filename should not end with .vtk as routine adds extension automatically. Chosen filename prefix=" << filenamePrefix );
-  }
   std::ostringstream filenameStream;
-  filenameStream << filenamePrefix
+  filenameStream << _fileName
                  << ".vtk";
   const std::string filename = filenameStream.str();
 

@@ -187,7 +187,7 @@ class tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter: publi
     /**
      * @return Write has been successful
      */
-    bool writeToFile( const std::string& filename ) override;
+    bool writeToFile() override;
 
     /**
      * @return Whether writer is ready to accept data.

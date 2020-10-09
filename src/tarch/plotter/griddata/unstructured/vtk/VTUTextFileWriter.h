@@ -83,21 +83,23 @@ class tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter:
     std::string _parallelVertexDataDescription;
     std::string _parallelCellDataDescription;
 
+    std::string _fileName;
+
     void validateDataWriterIdentifier( const std::string& identifier ) const;
 
   public:
-    VTUTextFileWriter(const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision=6);
+    VTUTextFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision=6);
     virtual ~VTUTextFileWriter();
 
-    virtual bool isOpen();
+    bool isOpen() override;
 
     /**
      * @param filename Name of output file. Should be unique for each thread/rank combination
      * @param parallelMetaFilename Meta file giving an overview over all files written simultaneously
      */
-    virtual bool writeToFile( const std::string& filename );
+    bool writeToFile() override;
 
-    virtual void clear();
+    void clear() override;
 
     virtual VertexWriter*      createVertexWriter();
     virtual CellWriter*        createCellWriter();
