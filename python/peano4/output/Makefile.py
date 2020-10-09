@@ -15,8 +15,10 @@ class Makefile(object):
    
   
   def __init__(self):
-    self.cppfiles = []
-    self.fortranfiles = []
+    self.clear()
+
+
+  def clear(self):
     self.d = {}
     self.d["CXX"]           = ""
     self.d["CXXFLAGS"]      = ""
@@ -27,9 +29,16 @@ class Makefile(object):
     self.d["DIM"]           = "2"
     self.d["CONFIGUREPATH"] = "."
     self.set_mode( CompileMode.Debug )
-
+    self.clear_files()
+      
+      
+  def clear_files(self):
+    self.cppfiles = []
+    self.fortranfiles = []
+    
     
   def set_dimension(self,dimension):
+    print( "INFO: dimensions is " + str(dimension ))
     self.d["DIM"] = str(dimension)
 
 
@@ -210,6 +219,9 @@ class Makefile(object):
       for i in self.fortranfiles:
         self.d[ 'FORTRAN_SOURCES' ] += " "
         self.d[ 'FORTRAN_SOURCES' ] += i
+        
+        
+      print( "INFO: " + self.d[ "DIM"] )
      
       # We first eliminate the precompiled variant, and then we get rid of the
       # postfix in the case where it is a source file
