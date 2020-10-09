@@ -697,6 +697,32 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * - The first thread that hits the barrier in a set traversal synchronises with
      *   all other ranks. All other local threads have to wait meanwhile.
      * - After that, the other ranks are allowed to pass one by one.
+     *
+     * The name is misleading, as the barrier per se does not really order stuff.
+     * However, you can use the barrier to impose an ordering: You can invoke the
+     * barrier on three 0 after you've done critical stuf and you can invoke it on
+     * all other ranks before you do critical stuff.
+     *
+     *
+     * <h2> Usage </h2>
+     *
+     * The class behaves similar to any other barrier, i.e. you have to call it on
+     * all ranks. You may call it on all threads per rank, too. The first thread
+     * that encounters the barrier will synchronise with all the other ranks. The
+     * other threads will not sync anymore, i.e. you can have different thread counts
+     * per rank, but they will not continue concurrently.
+     *
+     * You can use a barrier with an identifier only once per iteration.
+     *
+     *
+     * <h2> Implementation </h2>
+     *
+     * I use the rank-local map _hasPassedOrderedBarrier to memorise whether a barrier
+     * had been hit by a particular rank. This one is protected by a semaphore. If a
+     * rank has not yet passed the barrier, the semaphore locks the other guys out and
+     * we enter a barrier.
+     *
+     * The barrier map is cleared once per iteration.
      */
     void orderedBarrier( const std::string& identifier );
 };

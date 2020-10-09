@@ -161,7 +161,7 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     enum class IndexFileMode {
       CreateNew,
       AppendNewDataSet,
-      DontChange
+      AppendNewData
     };
 
     /**

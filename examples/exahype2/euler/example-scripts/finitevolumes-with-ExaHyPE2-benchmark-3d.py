@@ -53,9 +53,7 @@ project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEncla
   unknowns,
   min_h, max_h,
   time_step_size,
-  flux = True,
-  ncp  = False,
-  use_gpu = True
+  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
 ))
 
 

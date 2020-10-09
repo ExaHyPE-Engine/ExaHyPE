@@ -14,7 +14,7 @@ class DynamicArrayOverPrimitivesToStdVector(object):
 
 
   def get_stack_container(self):
-    return "peano4::stacks::STDVectorStack< " + self.data.get_full_qualified_type() + " >";
+    return "peano4::stacks::STDVectorStack< " + self._data.get_full_qualified_type() + " >";
 
     
   def get_header_file_include(self):

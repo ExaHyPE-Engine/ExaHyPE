@@ -104,7 +104,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
     case IndexFileMode::AppendNewDataSet:
       addNewDatasetToIndexFile();
       break;
-    case IndexFileMode::DontChange:
+    case IndexFileMode::AppendNewData:
       break;
   }
 }

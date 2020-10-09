@@ -36,13 +36,15 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
     return self.__Template_Constructor.format(**self.d)
 
 
-  __Template_Destructor = """
+  __Template_EndTraversal = """
   static int rankLocalCounter = 0;
   static tarch::multicore::BooleanSemaphore booleanSemaphore;
   
-  if (_dataWriter!=nullptr and _treeNumber>=0) {{
-    _dataWriter->close();
-
+  assertion(_dataWriter!=nullptr);
+  
+  assertion1(_dataWriter!=nullptr,_treeNumber);
+  
+  if ( and _treeNumber>=0) {{
     int counter;
     {{
       tarch::multicore::Lock lock(booleanSemaphore);
@@ -64,7 +66,7 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
 
     
   def get_destructor_body(self):
-    return self.__Template_Destructor.format(**self.d)
+    return ""
 
 
   def get_body_of_getGridControlEvents(self):
@@ -118,7 +120,7 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
       Dimensions,"{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::DontChange
+      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
     );
   }}  
   
@@ -133,6 +135,8 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
       result = self.__Template_TouchCellFirstTime.format(**self.d) 
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = self.__Template_BeginTraversal.format(**self.d)             
+    if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
+      result = self.__Template_EndTraversal.format(**self.d)             
     return result
 
 

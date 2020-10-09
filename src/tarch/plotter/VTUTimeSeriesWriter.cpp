@@ -1,10 +1,9 @@
-#include "tarch/plotter/griddata/VTUTimeSeriesWriter.h"
+#include "VTUTimeSeriesWriter.h"
 
 #include <fstream>
 #include "tarch/mpi/Rank.h"
 
-tarch::logging::Log tarch::plotter::griddata::VTUTimeSeriesWriter::_log( "tarch::plotter::griddata::VTUTimeSeriesWriter" );
-
+/*
 
 
 tarch::plotter::griddata::VTUTimeSeriesWriter::VTUTimeSeriesWriter() {
@@ -64,3 +63,4 @@ bool tarch::plotter::griddata::VTUTimeSeriesWriter::writeFile(const std::string&
     return false;
   }
 }
+*/

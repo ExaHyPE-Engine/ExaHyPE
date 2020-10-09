@@ -187,7 +187,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     #self._patch.generator.load_persistent_condition   = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Secondary"
     self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """
 
-    print("HHHHHH")
     self._rusanov_call = ""
     if   flux!=PDETerms.None_Implementation and ncp==PDETerms.None_Implementation:
       self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithFluxAndEigenvalues

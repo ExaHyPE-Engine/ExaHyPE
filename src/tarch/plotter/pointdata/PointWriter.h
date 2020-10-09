@@ -40,8 +40,6 @@ class tarch::plotter::pointdata::PointWriter {
     virtual int plotPoint(const tarch::la::Vector<2,double>& position) = 0;
     virtual int plotPoint(const tarch::la::Vector<3,double>& position) = 0;
 
-    virtual void close() = 0;
-
     /**
      * A writer to assign points a value.
      */

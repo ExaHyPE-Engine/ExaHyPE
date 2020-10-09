@@ -10,9 +10,7 @@
 
 namespace tarch {
   namespace plotter {
-    namespace griddata {
-      class VTUTimeSeriesWriter;
-    }
+    class VTUTimeSeriesWriter;
   }
 }
 
@@ -22,18 +20,15 @@ namespace tarch {
  * are solely written serially, i.e. you may use this class on any rank, but it
  * only writes out data on Peano's global master.
  */
-class tarch::plotter::griddata::VTUTimeSeriesWriter {
-  private:
-    static tarch::logging::Log _log;
-
-    std::stringstream _out;
+class tarch::plotter::VTUTimeSeriesWriter {
   public:
-    VTUTimeSeriesWriter();
+    enum class IndexFileMode {
+      CreateNew,
+      AppendNewDataSet,
+      AppendNewData,
+      NoIndexFile
+    };
 
-    /**
-     * Add a new snapshot. Please pass full name incl. extension. This
-     * operation should only be invoked on the global master rank, i.e. rank 0.
-     */
     void addSnapshot(const std::string& snapshotFileName, double time, bool parallelRun);
 
     /**

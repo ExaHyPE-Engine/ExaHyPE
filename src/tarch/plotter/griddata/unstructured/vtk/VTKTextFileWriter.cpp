@@ -13,7 +13,7 @@ const std::string tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter
 "ASCII\n ";
 
 
-tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWriter(const int precision):
+tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWriter(const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision):
   _writtenToFile(false),
   _precision(precision),
   _doubleOrFloat(setDoubleOrFloatString(precision)),
