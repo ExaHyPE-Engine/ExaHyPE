@@ -76,7 +76,7 @@ def prepare2Dpatches(cell_data, num_patches, dof, unknowns):
 
   return grid
 
-def render3Dpatches(cell_data, num_patches, dof, unknowns):
+def prepare3Dpatches(cell_data, num_patches, dof, unknowns):
   """
     Prepare 3D patches in grid for rendering 
     
@@ -182,9 +182,9 @@ def renderFile(filename):
     return 
 
   print("Dimensions: ", dimensions)
-  print("Number of variables per cell: ", dof)
-  print("Number of cells per patch: ", unknowns)
-
+  print("Number of variables per cell: ", unknowns)
+  print("Number of cells per patch per direction: ", dof)
+ 
   num_patches = len(cell_data)
   print("Number of patches:", num_patches)
 
@@ -196,11 +196,11 @@ def renderFile(filename):
   tp = TrivialProducer()
   tp.GetClientSideObject().SetOutput(grid)
   Show(tp)
-  #Interact() #Needed if running from command line
+  Interact() #Needed if running from command line
   #WriteImage("Output.png")
   return
 
 
-filename = "./example_output/solution-Euler-tree-0-0.peano-patch-file"
+filename = "./example_output/solution-Euler-4.peano-patch-file"
 renderFile(filename)
 

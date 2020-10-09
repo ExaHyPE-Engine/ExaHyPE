@@ -66,9 +66,9 @@ class OutputFileParser:
         #Read out meta data  
         if this_line.startswith("begin cell-metadata") and this_line.endswith('"'+set_identifier+'"'):
           this_line = data_file.readline().strip() 
-          dof = int(this_line.strip().split()[1]) 
+          unknowns = int(this_line.strip().split()[1]) 
           this_line = data_file.readline().strip() 
-          unknowns = int(this_line.strip().split()[1])   
+          dof = int(this_line.strip().split()[1])   
           
         elif this_line.startswith("begin patch"):
         
