@@ -201,6 +201,6 @@ def renderFile(filename):
   return
 
 
-filename = "./example_output/solution-Euler-4.peano-patch-file"
+filename = "./example_output/solution-Euler-tree-0-0.peano-patch-file"
 renderFile(filename)
 
