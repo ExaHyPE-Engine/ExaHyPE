@@ -16,6 +16,49 @@
 
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
+double* tarch::multicore::allocateMemory(int size, MemoryLocation location) {
+  double* result;
+  switch (location) {
+    case MemoryLocation::Heap:
+      //#pragma omp allocate(result) allocator(allocator) memspace(memspace) memtraits(optimized=latency)
+      //#pragma omp allocate(result) memtraits(optimized=latency)
+      result = new double[size];
+      break;
+    case MemoryLocation::Accelerator:
+      #if defined(GPUOffloading) and defined(UseNVIDIA)
+      cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
+      #elif defined(GPUOffloading) and defined(UseAMD)
+      result = new double[size];
+      // AMD does not (yet) support managed memory
+      // hipMallocManaged(&result, size*sizeof(double));
+      #else
+      // #pragma omp allocate ()
+      result = new double[size];
+      #endif
+      break;
+  }
+  return result;
+}
+
+
+void tarch::multicore::freeMemory(double* data, MemoryLocation location) {
+  switch (location) {
+    case MemoryLocation::Heap:
+      delete[] data;
+      break;
+    case MemoryLocation::Accelerator:
+      #if defined(GPUOffloading) and defined(UseNVIDIA)
+      cudaFree(data);
+      #elif defined(GPUOffloading) and defined(UseAMD)
+      // See remark on managed memory above
+      // hipFree(data);
+      delete[] data;
+      #else
+      delete[] data;
+      #endif
+      break;
+  }
+}
 
 tarch::multicore::Core::Core():
   _numberOfThreads(std::thread::hardware_concurrency()) {
