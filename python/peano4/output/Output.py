@@ -14,9 +14,16 @@ class Output(object):
     self.makefile = Makefile()
 
 
-  def clear_artefacts(self):
+  def clear(self):
+    """
+    
+      The clear eliminates all artefacts, but it does not erase the Makefile. 
+      This is important as I don't want to loose all the makefile info. If 
+      you want to clear the makefile, too, you have to invoke a clear on it.
+    
+    """
     self.artefacts = []
-    self.makefile.cppfiles = []
+    self.makefile.clear_files()
 
           
   def add(self,artefact,append=True):

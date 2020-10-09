@@ -9,7 +9,18 @@ class Enumeration(Attribute):
   Wrapper around C++ enumerations which is not a datatype supported
   natively by MPI.
   
-  variants is a sequence of strings
+  The attribute has two-fold meaning. It defines a enum class subtype
+  within the generated code and it creates a new attribute of this 
+  type.
+  
+  :Arguments:
+  
+  name: String
+     Something that can become a C++ identifier
+    
+  variants: [String]
+     Sequence of strings. The strings have to be something C++ accepts
+     as enumeration identifiers.
   
   """
   def __init__(self, name, variants):

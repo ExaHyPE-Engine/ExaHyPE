@@ -15,21 +15,30 @@ class Makefile(object):
    
   
   def __init__(self):
-    self.cppfiles = []
-    self.fortranfiles = []
+    self.clear()
+
+
+  def clear(self):
     self.d = {}
     self.d["CXX"]           = ""
     self.d["CXXFLAGS"]      = ""
-    self.d["F77"]           = ""
+    self.d["FC"]           = ""
     self.d["FCFLAGS"]       = ""
     self.d["LDFLAGS"]       = ""
     self.d["LIBS"]          = ""
     self.d["DIM"]           = "2"
     self.d["CONFIGUREPATH"] = "."
     self.set_mode( CompileMode.Debug )
-
+    self.clear_files()
+      
+      
+  def clear_files(self):
+    self.cppfiles = []
+    self.fortranfiles = []
+    
     
   def set_dimension(self,dimension):
+    print( "INFO: dimensions is " + str(dimension ))
     self.d["DIM"] = str(dimension)
 
 
@@ -102,15 +111,19 @@ class Makefile(object):
     
     
   def add_CXX_flag(self,value):    
-    self.d["CXXFLAGS"]     += value
+    self.d["CXXFLAGS"]     += " " + value
     
     
   def set_Fortran_compiler(self,value):
-    self.d["F77"]           = value
+    self.d["FC"]           = value
     
     
   def set_Fortran_flags(self,value):
     self.d["FCFLAGS"]       = value
+
+
+  def add_Fortran_flag(self,value):
+    self.d["FCFLAGS"]      += " " + value
     
     
   def set_linker_flags(self,value):
@@ -206,6 +219,9 @@ class Makefile(object):
       for i in self.fortranfiles:
         self.d[ 'FORTRAN_SOURCES' ] += " "
         self.d[ 'FORTRAN_SOURCES' ] += i
+        
+        
+      print( "INFO: " + self.d[ "DIM"] )
      
       # We first eliminate the precompiled variant, and then we get rid of the
       # postfix in the case where it is a source file

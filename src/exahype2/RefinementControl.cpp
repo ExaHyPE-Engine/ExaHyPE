@@ -51,11 +51,9 @@ void exahype2::RefinementControl::clear() {
 }
 
 
-std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControl::getGridControlEvents() {
+std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControl::getGridControlEvents() const {
   logDebug( "getGridControlEvents()", "return " << _committedEvents.size() << " grid control events" );
-  std::vector< peano4::grid::GridControlEvent > result = _committedEvents;
-  _committedEvents.clear();
-  return result;
+  return _committedEvents;
 }
 
 
@@ -100,6 +98,7 @@ void exahype2::RefinementControl::finishStep() {
   if (not _newEvents.empty()) {
     logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/coarsening instructions" );
   }
+  _committedEvents.clear();
   _committedEvents.insert( _committedEvents.end(), _newEvents.begin(), _newEvents.end() );
   _newEvents.clear();
 }

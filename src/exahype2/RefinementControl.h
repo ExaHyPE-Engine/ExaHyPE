@@ -101,10 +101,9 @@ class exahype2::RefinementControl {
     void clear();
 
     /**
-     * Is not const, as it also erases the committed events. These are now
-     * delivered, so there's place more.
+     * @see clear()
      */
-    std::vector< peano4::grid::GridControlEvent >  getGridControlEvents();
+    std::vector< peano4::grid::GridControlEvent >  getGridControlEvents() const;
 
     /**
 	   * @param x Centre of the cell for which this command is triggered

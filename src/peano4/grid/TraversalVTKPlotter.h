@@ -12,7 +12,6 @@
 
 
 #include "tarch/plotter/griddata/unstructured/vtk/VTUTextFileWriter.h"
-#include "tarch/plotter/griddata/VTUTimeSeriesWriter.h"
 
 
 #include "../config.h"
@@ -62,25 +61,11 @@ namespace peano4 {
 class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver {
   protected:
     static tarch::logging::Log                 _log;
-    static tarch::multicore::BooleanSemaphore  _semaphore;
-
-    #ifdef Parallel
-    static int _plotterMessageTag;
-    #endif
 
     const std::string                                                                _filename;
     const int                                                                        _spacetreeId;
 
     static int                                                                       _counter;
-
-    /**
-     * In a parallel environment, please invoke this operation only on the main
-     * writer. This guy himself will be empty, but it has to build up the vector
-     * of existing data files.
-     */
-    void updateMetaFile(int spacetreeId);
-    void closeFile();
-    void openFile();
 
     /**
      * Does the actual plotting, i.e. all checks/decision making is already done before
@@ -94,15 +79,6 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
     tarch::plotter::griddata::unstructured::UnstructuredGridWriter::CellWriter*      _cellWriter;
     tarch::plotter::griddata::unstructured::UnstructuredGridWriter::CellDataWriter*  _spacetreeIdWriter;
     tarch::plotter::griddata::unstructured::UnstructuredGridWriter::CellDataWriter*  _coreWriter;
-    tarch::plotter::griddata::VTUTimeSeriesWriter                                    _timeSeriesWriter;
-
-    /**
-     * Whenever I clone this observer, it enters its filename into this vector.
-     * This way, I know per rank which trees have written something. Whenever I
-     * dump a time series file, this thing is cleared as we restart to "collect"
-     * dumps.
-     */
-    std::vector<std::string>                                                         _clonedSpacetreeIds;
 
     std::string getFilename( int spacetreeId ) const;
   public:
@@ -136,18 +112,9 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
     TraversalObserver* clone(int spacetreeId) override;
 
     /**
-     * This routine has to be called prior to the traversal call on the
-     * spacetree set. In an MPI environment, it has to be called on all
-     * ranks. So it is different to beginTraversal(). beginTraversal()
-     * is invoked per thread/per tree, while this one per rank.
-     */
-    void beginTraversalOnRank(bool isParallelRun);
-    void endTraversalOnRank(bool isParallelRun);
-
-    /**
      * Obviously empty for this particular observer.
      */
-    std::vector< GridControlEvent > getGridControlEvents() override;
+    std::vector< GridControlEvent > getGridControlEvents() const override;
 };
 
 #endif

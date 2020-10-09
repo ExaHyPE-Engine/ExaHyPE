@@ -6,6 +6,7 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/plotter/griddata/unstructured/UnstructuredGridWriter.h"
+#include "tarch/plotter/VTUTimeSeriesWriter.h"
 
 
 namespace tarch {
@@ -98,7 +99,7 @@ class tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter:
     }
 
   public:
-    VTKTextFileWriter(const int precision=6);
+    VTKTextFileWriter(const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision=6);
     virtual ~VTKTextFileWriter();
 
     virtual bool isOpen();

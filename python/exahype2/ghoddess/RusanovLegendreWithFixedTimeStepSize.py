@@ -27,14 +27,14 @@ class RusanovLegendreWithFixedTimeStepSize(Solver):
   #
   # We have a couple of predefined macros here. See Solver superclass.
   #
-  AdjustCellTemplate = """
+  _AdjustCellTemplate = """
   {SOLVER_INSTANCE}.adjustSolution(
     cellData, marker.x(), marker.h(), {SOLVER_INSTANCE}.getMinTimeStamp()
   );  
 """
 
 
-  #AMRTemplate = """
+  #_AMRTemplate = """
   #  {SOLVER_INSTANCE}.refinementCriterion(
   #    cellData,
   #    marker.x(), 

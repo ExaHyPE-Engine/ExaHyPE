@@ -6,6 +6,7 @@
 #ifdef SharedCPP
 #include <thread>
 #include <queue>
+#include <list>
 #include <mutex>
 #include <atomic>
 
@@ -18,7 +19,7 @@
  * documentation there.
  */
 namespace {
-  std::queue<tarch::multicore::Task* > nonblockingTasks;
+  std::list<tarch::multicore::Task* > nonblockingTasks;
   std::mutex                           taskQueueMutex;
 }
 
@@ -38,7 +39,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
     taskQueueMutex.lock();
     if (not nonblockingTasks.empty()) {
       p = nonblockingTasks.front();
-      nonblockingTasks.pop();
+      nonblockingTasks.pop_front();
     }
     taskQueueMutex.unlock();
 
@@ -62,41 +63,38 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
 }
 
 
-namespace {
-  std::atomic<int> numberOfConsumerTasks(0);
+//namespace {
+  //std::atomic<int> numberOfConsumerTasks(0);
 
 
-  void spawnConsumerTask( int numberOfTasks = tarch::multicore::getNumberOfPendingTasks() ) {
-    numberOfConsumerTasks++;
+  //void spawnConsumerTask( int numberOfTasks = tarch::multicore::getNumberOfPendingTasks() ) {
+    //numberOfConsumerTasks++;
 
-    std::thread([numberOfTasks]() {
-      bool hasProcessedTasks = tarch::multicore::processPendingTasks( numberOfTasks );
-      int  newNumberOfTasks  = tarch::multicore::getNumberOfPendingTasks();
+    //std::thread([numberOfTasks]() {
+      //bool hasProcessedTasks = tarch::multicore::processPendingTasks( numberOfTasks );
+      //int  newNumberOfTasks  = tarch::multicore::getNumberOfPendingTasks();
 
-      if (hasProcessedTasks and newNumberOfTasks>numberOfTasks*2) {
-        spawnConsumerTask( numberOfTasks );
-        spawnConsumerTask( numberOfTasks );
-      }
-      else if (hasProcessedTasks and newNumberOfTasks>numberOfTasks) {
-        spawnConsumerTask( numberOfTasks+1 );
-      }
-      else if (hasProcessedTasks and numberOfTasks>1) {
-        spawnConsumerTask( numberOfTasks-1 );
-      }
-      numberOfConsumerTasks--;
-    }).detach();
-  }
-}
+      //if (hasProcessedTasks and newNumberOfTasks>numberOfTasks*2) {
+        //spawnConsumerTask( numberOfTasks );
+        //spawnConsumerTask( numberOfTasks );
+      //}
+      //else if (hasProcessedTasks and newNumberOfTasks>numberOfTasks) {
+        //spawnConsumerTask( numberOfTasks+1 );
+      //}
+      //else if (hasProcessedTasks and numberOfTasks>1) {
+        //spawnConsumerTask( numberOfTasks-1 );
+      //}
+      //numberOfConsumerTasks--;
+    //}).detach();
+  //}
+//}
 
 
 void tarch::multicore::spawnTask(Task*  job) {
   taskQueueMutex.lock();
-  nonblockingTasks.push(job);
+  nonblockingTasks.push_back(job);
+  //std::cerr << "SPAWN NBQ size now: " << nonblockingTasks.size() <<  " consumer: " << numberOfConsumerTasks << "\n";
   taskQueueMutex.unlock();
-
-  if (numberOfConsumerTasks==0) {
-    spawnConsumerTask();
-  }
 }
 
 
@@ -122,14 +120,43 @@ int tarch::multicore::getNumberOfPendingTasks() {
   return nonblockingTasks.size();
 }
 
+bool tarch::multicore::processTask(int number) {
+
+  // Iterate backwards through list
+  Task* myTask = nullptr;
+  taskQueueMutex.lock();
+  for (auto it = nonblockingTasks.end(); it !=nonblockingTasks.begin();)
+  {
+    --it;
+    {
+       myTask = (*it);
+       //std::cout << myTask->getTaskId() << "/" << nonblockingTasks.size() << " I want " << number << "\n";
+       nonblockingTasks.erase(it);
+       it=nonblockingTasks.begin();
+    }
+  }
+
+  taskQueueMutex.unlock();
+
+  if (myTask != nullptr)
+  {
+    while (myTask->run()) {};
+    delete myTask;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
 
 void tarch::multicore::cpp::shutdownConsumerTasks() {
-  static tarch::logging::Log _log( "tarch::multicore::cpp" );
-  logTraceInWith1Argument( "shutdownConsumerTasks()", numberOfConsumerTasks.fetch_add(0) );
-  while (numberOfConsumerTasks.fetch_add(0)>0) {
-	yield();
-  }
-  logTraceOut( "shutdownConsumerTasks()" );
+  //static tarch::logging::Log _log( "tarch::multicore::cpp" );
+  //logTraceInWith1Argument( "shutdownConsumerTasks()", numberOfConsumerTasks.fetch_add(0) );
+  //while (numberOfConsumerTasks.fetch_add(0)>0) {
+	//yield();
+  //}
+  //logTraceOut( "shutdownConsumerTasks()" );
 }
 
 

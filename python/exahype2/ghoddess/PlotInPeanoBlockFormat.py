@@ -33,7 +33,7 @@ class PlotInPeanoBlockFormat(ActionSet):
     mode = tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet;
   }}
   else {{
-    mode = tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::DontChange;
+    mode = tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData;
   }}
 
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(

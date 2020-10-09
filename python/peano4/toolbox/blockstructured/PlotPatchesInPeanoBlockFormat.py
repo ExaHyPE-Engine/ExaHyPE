@@ -136,7 +136,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
       Dimensions,"{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::DontChange
+      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
     );
   }}
 

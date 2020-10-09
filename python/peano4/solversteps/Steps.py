@@ -16,6 +16,10 @@ class Steps(object):
     self.generator = StepsToStepRepository(self)
     
     
+  def __str__(self):
+    return "(#steps=" + str(len(self._steps)) + ")"
+    
+    
   def add_step(self,step):
     step.set_project(self._project)
     self._steps.append(step)

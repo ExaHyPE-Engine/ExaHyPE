@@ -1,5 +1,6 @@
 #include "EnclaveTask.h"
 #include "EnclaveBookkeeping.h"
+#include "tarch/multicore/Core.h"
 
 
 
@@ -12,31 +13,25 @@ exahype2::EnclaveTask::EnclaveTask(
   int                                            numberOfResultValues,
   std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                        functor
 ):
-  tarch::multicore::Task(0),
+  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority),
   _marker(marker),
   _inputValues(inputValues),
   _outputValues(nullptr),
   _numberOfResultValues(numberOfResultValues),
-  _functor(functor),
-  _taskNumber(EnclaveBookkeeping::getInstance().reserveTaskNumber()) {
+  _functor(functor) {
   logTraceIn( "EnclaveTask(...)" );
   logTraceOut( "EnclaveTask(...)" );
 }
 
 
-int exahype2::EnclaveTask::getTaskNumber() const {
-  return _taskNumber;
-}
-
-
 bool exahype2::EnclaveTask::run() {
   logTraceIn( "run()" );
-  _outputValues = new double[_numberOfResultValues];
+  _outputValues = tarch::multicore::allocateMemory( _numberOfResultValues, tarch::multicore::MemoryLocation::Heap );
 
   _functor(_inputValues,_outputValues,_marker);
-  delete[] _inputValues;
+  tarch::multicore::freeMemory(_inputValues,tarch::multicore::MemoryLocation::Heap );
 
-  EnclaveBookkeeping::getInstance().finishedTask(_taskNumber,_numberOfResultValues,_outputValues);
+  EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues);
   logTraceOut( "run()" );
   return false;
 }

@@ -47,9 +47,6 @@ class MPI(object):
     static void sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag );
 #endif
-
-
-
     """
     
     if self._dof_association==DoFAssociation.Vertex:
@@ -80,7 +77,7 @@ class MPI(object):
     static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
 """ 
       pass
-    elif self._dof_association==DoFAssociation.Generic:
+    elif self._dof_association==DoFAssociation.Generic or self._dof_association==DoFAssociation.Global:
       pass
     else:
       assert False
@@ -226,7 +223,7 @@ bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagem
   return true;
 }
 """      
-    elif self._dof_association==DoFAssociation.Generic:
+    elif self._dof_association==DoFAssociation.Generic or self._dof_association==DoFAssociation.Global:
       pass
     else:
       assert False

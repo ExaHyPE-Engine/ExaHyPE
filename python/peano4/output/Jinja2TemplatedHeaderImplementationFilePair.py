@@ -38,9 +38,9 @@ class Jinja2TemplatedHeaderImplementationFilePair(object):
     if template_file!=None and writeFile(overwrite,self.default_overwrite,full_qualified_filename):
       print( "write " + full_qualified_filename + " (generated from template " + template_file + ")")
 
-      template_loader = jinja2.FileSystemLoader(searchpath='/')
+      template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(template_file)[0])
       templateEnv = jinja2.Environment(loader=template_loader)
-      template = templateEnv.get_template( template_file )
+      template = templateEnv.get_template( os.path.split(template_file)[1] )
 
       with open( full_qualified_filename, "w" ) as output:
         output.write( template.render(self.d) )
