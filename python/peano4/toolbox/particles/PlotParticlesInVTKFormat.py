@@ -10,7 +10,7 @@ import jinja2
 
 
 class PlotParticlesInVTKFormat(ActionSet):
-  def __init__(self,filename,particle):
+  def __init__(self,filename,particle_set):
     """
       Plot only the grid structure
       
@@ -19,15 +19,16 @@ class PlotParticlesInVTKFormat(ActionSet):
       filename: String
          Name of the output file.
          
-      particle: @todo   
+      particle: ParticleSet
+         I take this as particle set and I assume that it yields a C++ 
+         container which I can traverse.
           
     """
     self.d = {}
-    self.d[ "FILENAME" ]     = filename
-    self.d[ "CELL_WRAPPER" ] = "Cell"
-    #if cell_unknown!=None:
-    #  self.d[ "CELL_WRAPPER" ] += cell_unknown.name
-    
+    self.d[ "FILENAME" ]            = filename
+    self.d[ "PARTICLE" ]            = particle_set.particle_model.name
+    self.d[ "PARTICLES_CONTAINER" ] = particle_set.name
+    self.d[ "WRITE_BINARY" ]        = "false"
 
   __Template_Constructor = jinja2.Template("""
   _writer      = nullptr;
@@ -44,13 +45,65 @@ class PlotParticlesInVTKFormat(ActionSet):
     return self.__Template_Constructor.render(**self.d)
 
 
-  __Template_Destructor = jinja2.Template("""
+    
+  def get_destructor_body(self):
+    return ""
+
+
+  def get_body_of_getGridControlEvents(self):
+    return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
+
+
+  def user_should_modify_template(self):
+    return False
+
+  __Template_TouchVertexFirstTime = jinja2.Template(""" 
+  assertion( _dataWriter!=nullptr );
+  for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
+    int particleNumber = _writer->plotPoint(p.getX());
+    _dataWriter->plot(particleNumber,p.getX());
+  }
+""")
+
+
+  __Template_BeginTraversal = jinja2.Template("""
+  static bool calledBefore = false;
+  static tarch::mpi::BooleanSemaphore globalSemaphore("{{FILENAME}}");
+  
+  // This stuff only ensures that the overview file remains correct. The 
+  // sync and add of the individual dumps is then managed within the actual
+  // plotter files.
+  if ( _treeNumber==0 and not calledBefore ) {
+    calledBefore = true;
+    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}},"{{FILENAME}}",tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::CreateNew);
+    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{{FILENAME}}");
+  }
+  else if ( _treeNumber==0 ) {
+    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}},"{{FILENAME}}",tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::AppendNewDataSet);
+    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{{FILENAME}}");
+  }
+  else {
+    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{{FILENAME}}");
+    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}},"{{FILENAME}}",tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::AppendNewData);
+  }
+
+  _dataWriter = _writer->createPointDataWriter( "x", 3 );
+""")
+
+
+  __Template_EndTraversal = jinja2.Template("""
   static int rankLocalCounter = 0;
   static tarch::multicore::BooleanSemaphore booleanSemaphore;
   
-  if (_dataWriter!=nullptr and _treeNumber>=0) {
-    _dataWriter->close();
-
+  assertion(_dataWriter!=nullptr);
+  
+  _dataWriter->close();
+  
+  if (_treeNumber>=0) {
     int counter;
     {
       tarch::multicore::Lock lock(booleanSemaphore);
@@ -70,46 +123,14 @@ class PlotParticlesInVTKFormat(ActionSet):
   _writer     = nullptr;
 """)
 
-    
-  def get_destructor_body(self):
-    return self.__Template_Destructor.render(**self.d)
-
-
-  def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
-
-
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
-
-
-  def user_should_modify_template(self):
-    return False
-
-
-  __Template_TouchCellFirstTime = jinja2.Template(""" 
-  int particleNumber = _writer->plotPoint(marker.x());
-
-  assertion( _dataWriter!=nullptr );
-  
-  //_dataWriter->plotCell(indices,markerData);
-""")
-
-
-  __Template_BeginTraversal = jinja2.Template("""
-  static bool calledBefore = false;
-  
-  _writer     = new tarch::plotter::pointdata::vtk::VTKBinaryFileWriter();
-  _dataWriter = _writer->createPointDataWriter( "x", 3 );
-""")
-
-
   def get_body_of_operation(self,operation_name):
     result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = self.__Template_TouchCellFirstTime.render(**self.d) 
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+      result = self.__Template_TouchVertexFirstTime.render(**self.d) 
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = self.__Template_BeginTraversal.render(**self.d)             
+    if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
+      result = self.__Template_EndTraversal.render(**self.d)             
     return result
 
 
@@ -117,16 +138,18 @@ class PlotParticlesInVTKFormat(ActionSet):
     return """
     int                _treeNumber;
 
-    tarch::plotter::pointdata::vtk::VTKBinaryFileWriter*      _writer;
+    tarch::plotter::pointdata::vtk::VTKWriter*                _writer;
     tarch::plotter::pointdata::PointWriter::PointDataWriter*  _dataWriter;
 """
 
 
   def get_includes(self):
     return """
-#include "tarch/plotter/pointdata/vtk/VTKBinaryFileWriter.h"
+#include "tarch/plotter/pointdata/vtk/VTKWriter.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/mpi/Lock.h"
 #include "peano4/parallel/SpacetreeSet.h"
+#include "../vertexdata/""" + self.d["PARTICLES_CONTAINER"] + """.h"
+#include "../globaldata/""" + self.d["PARTICLE"] + """.h"
 """

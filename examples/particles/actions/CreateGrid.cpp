@@ -57,12 +57,14 @@ void examples::particles::actions::CreateGrid::createPersistentVertex(
   tarch::la::Vector<Dimensions,double>  debugH = marker.h();
   examples::particles::globaldata::Particle::MoveState  moveState( examples::particles::globaldata::Particle::MoveState::New );
 
-  for (int i=0; i<20; i++) {
+  for (int i=0; i<100; i++) {
     tarch::la::Vector<Dimensions,double>  x = marker.x();
+    tarch::la::Vector<Dimensions,double>  v;
     for (int d=0; d<Dimensions; d++) {
       x(d) += (static_cast<double>(rand())/static_cast<double>(RAND_MAX)-0.5) * marker.h()(d);
+      v(d)  = static_cast<double>(rand())/static_cast<double>(RAND_MAX)-0.5;
     }
-    fineGridVertexParticleSet.push_back( examples::particles::globaldata::Particle(debugX,debugH,x,moveState) );
+    fineGridVertexParticleSet.push_back( examples::particles::globaldata::Particle(debugX,debugH,x,moveState,v) );
   }
 }
 

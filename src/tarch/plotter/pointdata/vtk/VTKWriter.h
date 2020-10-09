@@ -1,11 +1,12 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TARCH_PLOTTER_POINTDATA_VTK_TEXT_FILE_WRITER_H_
-#define _TARCH_PLOTTER_POINTDATA_VTK_TEXT_FILE_WRITER_H_
+#ifndef _TARCH_PLOTTER_POINTDATA_VTK_WRITER_H_
+#define _TARCH_PLOTTER_POINTDATA_VTK_WRITER_H_
 
 
 #include "tarch/la/Vector.h"
 #include "tarch/plotter/griddata/unstructured/vtk/VTKTextFileWriter.h"
+#include "tarch/mpi/BooleanSemaphore.h"
 #include "../PointWriter.h"
 
 
@@ -13,7 +14,7 @@ namespace tarch {
   namespace plotter {
     namespace pointdata {
       namespace vtk {
-        class VTKTextFileWriter;
+        class VTKWriter;
       }
     }
   }
@@ -22,15 +23,26 @@ namespace tarch {
 
 /**
  * Implementation of the point data writer that basically maps the points onto
- * a plain vtk text file, i.e. it uses the unstructured grid writer. First
- * prototype of the writer. Isn't fast and should only be used to debug the
- * plot output.
+ * a vtk text file, i.e. it uses the unstructured grid writer.
+ *
+ *
+ * <h2> Implementation </h2>
+ *
+ *
+ *
  *
  * @author Tobias Weinzierl
  */
-class tarch::plotter::pointdata::vtk::VTKTextFileWriter: public tarch::plotter::pointdata::PointWriter {
+class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdata::PointWriter {
   private:
-    tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter                  _vtkWriter;
+    /**
+     * This is a global (mpi) semaphore that I use to update/modify the
+     * index file over all files. The individual data writes are totally
+     * concurrent.
+     */
+    static tarch::mpi::BooleanSemaphore _sempahore;
+
+    tarch::plotter::griddata::unstructured::UnstructuredGridWriter*                 _vtkWriter;
     tarch::plotter::griddata::unstructured::UnstructuredGridWriter::VertexWriter*   _vertexWriter;
     tarch::plotter::griddata::unstructured::UnstructuredGridWriter::CellWriter*     _cellWriter;
 
@@ -41,7 +53,7 @@ class tarch::plotter::pointdata::vtk::VTKTextFileWriter: public tarch::plotter::
      * protected to allow implementations to hide their copy constructor as
      * well.
      */
-    VTKTextFileWriter(const VTKTextFileWriter& writer) = delete;
+    VTKWriter(const VTKWriter& writer) = delete;
 
     /**
      * Assignment operator.
@@ -50,14 +62,25 @@ class tarch::plotter::pointdata::vtk::VTKTextFileWriter: public tarch::plotter::
      * protected to allow implementations to hide their copy constructor as
      * well.
      */
-    VTKTextFileWriter& operator=(const VTKTextFileWriter& writer) = delete;
+    VTKWriter& operator=(const VTKWriter& writer) = delete;
 
   public:
-    VTKTextFileWriter();
+    VTKWriter(bool binaryFile, const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile);
 
-    virtual ~VTKTextFileWriter();
+    virtual ~VTKWriter();
 
-    virtual bool writeToFile( const std::string& filename );
+    /**
+     * Before we write to a file, we have to close the
+     *
+     * - vertex writer
+     * - call writer
+     *
+     * However, we might have closed the point data plotters already and thus they
+     * might be down already. So we close them only if they are still up.
+     *
+     * @see PointDataWriter::close()
+     */
+    bool writeToFile( const std::string& filename ) override;
 
     /**
      * @return Whether writer is ready to accept data.
@@ -74,8 +97,6 @@ class tarch::plotter::pointdata::vtk::VTKTextFileWriter: public tarch::plotter::
     virtual int plotPoint(const tarch::la::Vector<2,double>& position);
     virtual int plotPoint(const tarch::la::Vector<3,double>& position);
 
-    virtual void close();
-
     /**
      * A writer to assign points a value.
      */
@@ -84,11 +105,11 @@ class tarch::plotter::pointdata::vtk::VTKTextFileWriter: public tarch::plotter::
         /**
          * Underlying VTK writer.
          */
-        VTKTextFileWriter& _myWriter;
+        VTKWriter& _myWriter;
 
         tarch::plotter::griddata::unstructured::UnstructuredGridWriter::VertexDataWriter*  _particleDataWriter;
       public:
-        PointDataWriter(VTKTextFileWriter& myWriter, const std::string& identifier, int recordsPerPoint);
+        PointDataWriter(VTKWriter& myWriter, const std::string& identifier, int recordsPerPoint);
         virtual ~PointDataWriter();
 
         /**
@@ -105,8 +126,21 @@ class tarch::plotter::pointdata::vtk::VTKTextFileWriter: public tarch::plotter::
         /**
          * If you close your writer, each point has to be assigned a
          * value, i.e. you may not add less data than you have points.
+         *
+         * <h2> Implementation </h2>
+         *
+         * The point writer (master class) does hold a writer for cells and one for
+         * vertices. This are used via plotPoints(). When we close the data writer,
+         * we first have to close both vertex and cell writer. For unstructured grids,
+         * we expect users to do this manually.
+         *
+         * Here, we work with a lazy close mechanism. We check whether the vertices
+         * and cells are shutdown alerady. If not, we do it. Then we continue. This
+         * lazy implicit closing implies that we need another check in the master
+         * class, as there might situations where users dump particles without any
+         * data, i.e. this close() is never invoked.
          */
-        virtual void close();
+        void close() override;
 
         /**
          * @see close()

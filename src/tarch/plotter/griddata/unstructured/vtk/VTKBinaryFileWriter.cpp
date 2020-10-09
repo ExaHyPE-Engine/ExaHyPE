@@ -14,7 +14,7 @@ const std::string tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWrit
 "BINARY\n ";
 
 
-tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileWriter(const int precision):
+tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileWriter(const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision):
   _writtenToFile(false),
   _precision(precision),
   _doubleOrFloat(setDoubleOrFloatString(precision)),

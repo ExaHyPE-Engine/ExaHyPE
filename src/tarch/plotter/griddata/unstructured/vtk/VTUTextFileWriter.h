@@ -6,6 +6,7 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/plotter/griddata/unstructured/UnstructuredGridWriter.h"
+#include "tarch/plotter/VTUTimeSeriesWriter.h"
 
 
 #include <vector>
@@ -85,7 +86,7 @@ class tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter:
     void validateDataWriterIdentifier( const std::string& identifier ) const;
 
   public:
-    VTUTextFileWriter(const int precision=6);
+    VTUTextFileWriter(const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision=6);
     virtual ~VTUTextFileWriter();
 
     virtual bool isOpen();

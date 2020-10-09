@@ -21,15 +21,24 @@ class Particle(DaStGen2):
     You have to add the particle to your project though via 
     
     my_project.add_global_object
+
+    If you want to attributes to a particle, use the data subattribute.
+    An all-time classic is the call
     
+    <pre>
+    add_attribute( peano4.dastgen2.Peano4DoubleArray("v","Dimensions") )
+    </pre>
   
+  """
+  def __init__(self,name):
+    """
+    
     :Attributes:
     
     name: String
       Name of the particle. Has to be a valid C++ class name.
-  
-  """
-  def __init__(self,name):
+      
+    """
     peano4.datamodel.DaStGen2.__init__( self, name )
     
     self.name = name

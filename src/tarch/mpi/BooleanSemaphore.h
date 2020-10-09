@@ -27,8 +27,7 @@ namespace tarch {
 /**
  * Boolean Semaphore
  *
- * A boolean semaphore is a global atomic variable.
- *
+ * @see Constructor for details
  *
  * @author Tobias Weinzierl
  */
