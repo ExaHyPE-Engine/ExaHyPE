@@ -64,7 +64,7 @@ void peano4::grid::TraversalVTKPlotter::beginTraversal(
     _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
       snapshotName.str(),
       _filename,
-      tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::CreateNew
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew
     );
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("peano4::grid::TraversalVTKPlotter");
   }
@@ -72,7 +72,7 @@ void peano4::grid::TraversalVTKPlotter::beginTraversal(
     _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
       snapshotName.str(),
       _filename,
-      tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::AppendNewDataSet
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet
     );
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("peano4::grid::TraversalVTKPlotter");
   }
@@ -81,7 +81,7 @@ void peano4::grid::TraversalVTKPlotter::beginTraversal(
     _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
       snapshotName.str(),
       _filename,
-      tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::AppendNewData
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData
     );
   }
 

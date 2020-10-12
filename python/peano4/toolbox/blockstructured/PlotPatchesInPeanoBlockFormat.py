@@ -48,23 +48,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   __Template_Destructor = """
-  static int rankLocalCounter = 0;
-  static tarch::multicore::BooleanSemaphore booleanSemaphore;
-
-  if (_dataWriter!=nullptr and _treeNumber>=0) {{
-    _dataWriter->close();
-
-    int counter;
-    {{
-      tarch::multicore::Lock lock(booleanSemaphore);
-      counter = rankLocalCounter;
-      rankLocalCounter++;
-    }}
-
-    std::ostringstream filename;
-    filename << "{FILENAME}" << "-tree-" << _treeNumber << "-" << counter;
-    _writer->writeToFile( filename.str() );
-  }}
+  _dataWriter->close();
+  _writer->writeToFile();
   
   delete _dataWriter;
   delete _writer;
@@ -116,18 +101,30 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   __Template_BeginTraversal = """
+  static int rankLocalCounter = 0;
+  static tarch::mpi::BooleanSemaphore booleanSemaphore("{FILENAME}");
   static bool calledBefore = false;
+  
+  int counter;
+  {{
+    tarch::mpi::Lock lock(booleanSemaphore);
+    counter = rankLocalCounter;
+    rankLocalCounter++;
+  }}
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "{FILENAME}" << "-tree-" << _treeNumber << "-" << counter;
+
   if ( _treeNumber==0 and not calledBefore ) {{
     calledBefore = true;
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions,"{FILENAME}",
+      Dimensions, snapshotFileName.str(), "{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::CreateNew
     );
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
   }}
   else if ( _treeNumber==0 ) {{
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions,"{FILENAME}",
+      Dimensions, snapshotFileName.str(), "{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet
     );
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
@@ -135,7 +132,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   else {{
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions,"{FILENAME}",
+      Dimensions, snapshotFileName.str(), "{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
     );
   }}

@@ -71,7 +71,7 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
      * @param indexFileName Name of the index file. Can we empty if you select
      *                      NoIndexFile.
      */
-    VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile);
+    VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode modeFile);
 
     virtual ~VTKWriter();
 

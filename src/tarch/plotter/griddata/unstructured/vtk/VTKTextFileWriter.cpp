@@ -13,7 +13,7 @@ const std::string tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter
 "ASCII\n ";
 
 
-tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode mode, const int precision):
+tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode, const int precision):
   _writtenToFile(false),
   _precision(precision),
   _doubleOrFloat(setDoubleOrFloatString(precision)),
@@ -24,8 +24,22 @@ tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWrite
   if (fileName.rfind(".vtk")!=std::string::npos) {
     logWarning( "writeToFile()", "filename should not end with .vtk as routine adds extension automatically. Chosen filename prefix=" << fileName );
   }
-  if (mode!=tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::NoIndexFile and indexFileName.rfind(".pvd")!=std::string::npos) {
+  if (mode!=tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile and indexFileName.rfind(".pvd")!=std::string::npos) {
     logWarning( "writeToFile()", "index filename should not end with .pvd as routine adds extension automatically. Chosen filename prefix=" << indexFileName );
+  }
+
+  switch (mode) {
+    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew:
+      tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile(indexFileName);
+      break;
+    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet:
+      tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet(indexFileName, fileName + ".vtk");
+      break;
+    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData:
+      tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtk");
+      break;
+    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile:
+      break;
   }
 }
 

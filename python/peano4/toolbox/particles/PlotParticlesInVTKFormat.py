@@ -71,24 +71,34 @@ class PlotParticlesInVTKFormat(ActionSet):
 
 
   __Template_BeginTraversal = jinja2.Template("""
+  static int rankLocalCounter = 0;
+  static tarch::mpi::BooleanSemaphore booleanSemaphore("{{FILENAME}}");
   static bool calledBefore = false;
-  static tarch::mpi::BooleanSemaphore globalSemaphore("{{FILENAME}}");
+  
+  int counter;
+  {
+    tarch::mpi::Lock lock(booleanSemaphore);
+    counter = rankLocalCounter;
+    rankLocalCounter++;
+  }
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "{{FILENAME}}" << "-tree-" << _treeNumber << "-" << counter;
   
   // This stuff only ensures that the overview file remains correct. The 
   // sync and add of the individual dumps is then managed within the actual
   // plotter files.
   if ( _treeNumber==0 and not calledBefore ) {
     calledBefore = true;
-    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}},"{{FILENAME}}",tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::CreateNew);
+    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}}, snapshotFileName.str(), "{{FILENAME}}",tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew);
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{{FILENAME}}");
   }
   else if ( _treeNumber==0 ) {
-    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}},"{{FILENAME}}",tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::AppendNewDataSet);
+    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}}, snapshotFileName.str(), "{{FILENAME}}",tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet);
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{{FILENAME}}");
   }
   else {
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{{FILENAME}}");
-    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}},"{{FILENAME}}",tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::AppendNewData);
+    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}}, snapshotFileName.str(), "{{FILENAME}}",tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData);
   }
 
   _dataWriter = _writer->createPointDataWriter( "x", 3 );
@@ -96,25 +106,10 @@ class PlotParticlesInVTKFormat(ActionSet):
 
 
   __Template_EndTraversal = jinja2.Template("""
-  static int rankLocalCounter = 0;
-  static tarch::multicore::BooleanSemaphore booleanSemaphore;
-  
   assertion(_dataWriter!=nullptr);
-  
+ 
   _dataWriter->close();
-  
-  if (_treeNumber>=0) {
-    int counter;
-    {
-      tarch::multicore::Lock lock(booleanSemaphore);
-      counter = rankLocalCounter;
-      rankLocalCounter++;
-    }
-
-    std::ostringstream filename;
-    filename << "{{FILENAME}}" << "-tree-" << _treeNumber << "-" << counter;
-    _writer->writeToFile( filename.str() );
-  }
+  _writer->writeToFile();
   
   delete _dataWriter;
   delete _writer;
