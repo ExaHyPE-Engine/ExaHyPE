@@ -38,7 +38,6 @@ class Makefile(object):
     
     
   def set_dimension(self,dimension):
-    print( "INFO: dimensions is " + str(dimension ))
     self.d["DIM"] = str(dimension)
 
 
@@ -220,9 +219,7 @@ class Makefile(object):
         self.d[ 'FORTRAN_SOURCES' ] += " "
         self.d[ 'FORTRAN_SOURCES' ] += i
         
-        
-      print( "INFO: " + self.d[ "DIM"] )
-     
+             
       # We first eliminate the precompiled variant, and then we get rid of the
       # postfix in the case where it is a source file
       with open( os.path.realpath(__file__).replace( ".pyc", ".template" ).replace( ".py", ".template" ), "r" ) as input:

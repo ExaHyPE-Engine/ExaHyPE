@@ -49,9 +49,11 @@ void examples::particles::actions::MoveParticles::endTraversal(
 
 
 void examples::particles::actions::MoveParticles::createPersistentVertex(
-      const peano4::datamanagement::VertexMarker& marker,
-      examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet) {
+    const peano4::datamanagement::VertexMarker& marker,
+    examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.     
@@ -63,9 +65,11 @@ void examples::particles::actions::MoveParticles::createPersistentVertex(
 
 
 void examples::particles::actions::MoveParticles::destroyPersistentVertex(
-      const peano4::datamanagement::VertexMarker& marker,
-      examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet) {
+    const peano4::datamanagement::VertexMarker& marker,
+    examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.     
@@ -77,9 +81,11 @@ void examples::particles::actions::MoveParticles::destroyPersistentVertex(
 
 
 void examples::particles::actions::MoveParticles::createHangingVertex(
-      const peano4::datamanagement::VertexMarker& marker,
-      examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet) {
+    const peano4::datamanagement::VertexMarker& marker,
+    examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.     
@@ -91,9 +97,11 @@ void examples::particles::actions::MoveParticles::createHangingVertex(
 
 
 void examples::particles::actions::MoveParticles::destroyHangingVertex(
-      const peano4::datamanagement::VertexMarker& marker,
-      examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet) {
+    const peano4::datamanagement::VertexMarker& marker,
+    examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.     
@@ -105,9 +113,11 @@ void examples::particles::actions::MoveParticles::destroyHangingVertex(
 
 
 void examples::particles::actions::MoveParticles::touchVertexFirstTime(
-      const peano4::datamanagement::VertexMarker& marker,
-      examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet) {
+    const peano4::datamanagement::VertexMarker& marker,
+    examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.     
@@ -119,9 +129,11 @@ void examples::particles::actions::MoveParticles::touchVertexFirstTime(
 
 
 void examples::particles::actions::MoveParticles::touchVertexLastTime(
-      const peano4::datamanagement::VertexMarker& marker,
-      examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet) {
+    const peano4::datamanagement::VertexMarker& marker,
+    examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
 
   const double timeStepSize = 0.0001;
   for (auto& p: fineGridVertexParticleSet) {
@@ -132,10 +144,12 @@ void examples::particles::actions::MoveParticles::touchVertexLastTime(
 
 
 void examples::particles::actions::MoveParticles::touchCellFirstTime(
-      const peano4::datamanagement::CellMarker& marker,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> fineGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet) {
-
+    const peano4::datamanagement::CellMarker& marker,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> fineGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.     
 // logTraceIn( "touchCellFirstTime()" );
@@ -146,12 +160,49 @@ void examples::particles::actions::MoveParticles::touchCellFirstTime(
 
 
 void examples::particles::actions::MoveParticles::touchCellLastTime(
-      const peano4::datamanagement::CellMarker& marker,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> fineGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet) {
+    const peano4::datamanagement::CellMarker& marker,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> fineGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.     
+// logTraceIn( "touchCellLastTime()" );
+// @todo Please implement
+// logTraceOut( "touchCellLastTime()" );
+
+}
+
+
+void examples::particles::actions::MoveParticles::createCell(
+    const peano4::datamanagement::CellMarker& marker,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> fineGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
+
+// Feel free to comment in and to add arguments if you want to trace them.
+// Ensure the logTraceOut is activated, too, if you switch on traceIn.
+// logTraceIn( "touchCellLastTime()" );
+// @todo Please implement
+// logTraceOut( "touchCellLastTime()" );
+
+}
+
+
+void examples::particles::actions::MoveParticles::destroyCell(
+    const peano4::datamanagement::CellMarker& marker,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> fineGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
+    peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
+    examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
+) {
+
+// Feel free to comment in and to add arguments if you want to trace them.
+// Ensure the logTraceOut is activated, too, if you switch on traceIn.
 // logTraceIn( "touchCellLastTime()" );
 // @todo Please implement
 // logTraceOut( "touchCellLastTime()" );
