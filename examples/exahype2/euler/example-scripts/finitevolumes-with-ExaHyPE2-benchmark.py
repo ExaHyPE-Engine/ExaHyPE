@@ -2,8 +2,8 @@
 
  A very simple example which demonstrates how to configure a patch-based
  Finite Volume solver in Peano4. The code relies on snippets from ExaHyPE2.
- However, it relies only on ExaHyPE's C/FORTRAN compute kernels, i.e. the 
- sophisticated build environment of this H2020 project is not used. The 
+ However, it relies only on ExaHyPE's C/FORTRAN compute kernels, i.e. the
+ sophisticated build environment of this H2020 project is not used. The
  solver simulates the simple Euler equations.
 
 """
@@ -46,15 +46,13 @@ max_h          = args.h
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-#project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSize(
-project.add_solver(  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
-  "Euler", 
-  patch_size, 
+project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+  "Euler",
+  patch_size,
   unknowns, 0,
   min_h, max_h,
   time_step_size,
-  flux = True,
-  ncp  = False
+  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
 ))
 
 # use_gpu =  False

@@ -9,12 +9,13 @@ class Model(object):
     self.cell_data   = []
     self.face_data   = []
     self.vertex_data = []
+    self.global_data = []
     self.namespace   = namespace
     self.generator   = ModelToDataRepository(self)
 
 
   def __str__(self):
-    return "(#cells=" + str(len(self.cell_data)) + ",#faces="  + str(len(self.face_data)) + ",#vertices=" + str(len(self.vertex_data)) + ")" 
+    return "(#cells=" + str(len(self.cell_data)) + ",#faces="  + str(len(self.face_data)) + ",#vertices=" + str(len(self.vertex_data)) + ",#global-objects=" + str(len(self.global_data)) + ")" 
    
 
   def add_cell(self,submodel):
@@ -32,12 +33,19 @@ class Model(object):
     self.vertex_data.append(submodel)
 
 
+  def add_global_object(self,submodel):
+    submodel.configure(self.namespace, DoFAssociation.Global)
+    self.global_data.append(submodel)
+
+
   def construct_output(self,output):
     for i in self.cell_data:
       i.generator.construct_output(output)
     for i in self.face_data:
       i.generator.construct_output(output)
     for i in self.vertex_data:
+      i.generator.construct_output(output)
+    for i in self.global_data:
       i.generator.construct_output(output)
     self.generator.construct_output(output)
 
@@ -46,7 +54,8 @@ class Model(object):
     self.cell_data   = []
     self.face_data   = []
     self.vertex_data = []
-    
+    self.global_data = []
+
 
 
 

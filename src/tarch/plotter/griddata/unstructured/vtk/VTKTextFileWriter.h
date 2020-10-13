@@ -4,6 +4,7 @@
 #define _TARCH_PLOTTER_GRIDDATA_UNSTRUCTURED_VTK_VTKTEXTFILEWRITER_H_
 
 
+#include "../../../PVDTimeSeriesWriter.h"
 #include "tarch/logging/Log.h"
 #include "tarch/plotter/griddata/unstructured/UnstructuredGridWriter.h"
 
@@ -86,6 +87,8 @@ class tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter:
     std::string _vertexDataDescription;
     std::string _cellDataDescription;
 
+    std::string _fileName;
+
     void validateDataWriterIdentifier( const std::string& identifier ) const;
 
 
@@ -98,14 +101,14 @@ class tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter:
     }
 
   public:
-    VTKTextFileWriter(const int precision=6);
+    VTKTextFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode modeFile, const int precision=6);
     virtual ~VTKTextFileWriter();
 
-    virtual bool isOpen();
+    bool isOpen() override;
 
-    virtual bool writeToFile( const std::string& filename );
+    bool writeToFile() override;
 
-    virtual void clear();
+    void clear() override;
 
     virtual VertexWriter*      createVertexWriter();
     virtual CellWriter*        createCellWriter();

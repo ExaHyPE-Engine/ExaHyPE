@@ -9,11 +9,17 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     """
       Plot only the grid structure
       
-      filename       Name of the output file
-      cell_unknown   If you use cell unknowns, pass any unknown in. As we do not dump
-                     any semantic information about unknowns, it does not matter which 
-                     one you choose. If you don't have cell unknowns at all, pass in 
-                     None 
+      :Attibutes:
+      
+      filename: String
+         Name of the output file.
+         
+      cell_unknown: None or cell data   
+         If you use cell unknowns, pass any unknown in. As we do not dump
+         any semantic information about unknowns, it does not matter which 
+         one you choose. If you don't have cell unknowns at all, pass in 
+         None.
+          
     """
     self.d = {}
     self.d[ "FILENAME" ]     = filename
@@ -37,24 +43,11 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     return self.__Template_Constructor.format(**self.d)
 
 
-  __Template_Destructor = """
-  static int rankLocalCounter = 0;
-  static tarch::multicore::BooleanSemaphore booleanSemaphore;
-  
-  if (_dataWriter!=nullptr and _treeNumber>=0) {{
-    _dataWriter->close();
+  __Template_EndTraversal = """
+  assertion1(_dataWriter!=nullptr,_treeNumber);
 
-    int counter;
-    {{
-      tarch::multicore::Lock lock(booleanSemaphore);
-      counter = rankLocalCounter;
-      rankLocalCounter++;
-    }}
-
-    std::ostringstream filename;
-    filename << "{FILENAME}" << "-tree-" << _treeNumber << "-" << counter;
-    _writer->writeToFile( filename.str() );
-  }}
+  _dataWriter->close();
+  _writer->writeToFile();
   
   delete _dataWriter;
   delete _writer;
@@ -65,7 +58,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
     
   def get_destructor_body(self):
-    return self.__Template_Destructor.format(**self.d)
+    return ""
 
 
   def get_body_of_getGridControlEvents(self):
@@ -100,18 +93,30 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
 
   __Template_BeginTraversal = """
+  static int rankLocalCounter = 0;
+  static tarch::mpi::BooleanSemaphore booleanSemaphore("{FILENAME}");
   static bool calledBefore = false;
+  
+  int counter;
+  {{
+    tarch::mpi::Lock lock(booleanSemaphore);
+    counter = rankLocalCounter;
+    rankLocalCounter++;
+  }}
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "{FILENAME}" << "-tree-" << _treeNumber << "-" << counter;
+
   if ( _treeNumber==0 and not calledBefore ) {{
     calledBefore = true;
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions,"{FILENAME}",
+      Dimensions, snapshotFileName.str(), "{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::CreateNew
     );
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
   }}
   else if ( _treeNumber==0 ) {{
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions,"{FILENAME}",
+      Dimensions, snapshotFileName.str(), "{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet
     );
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
@@ -119,8 +124,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
   else {{
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions,"{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::DontChange
+      Dimensions, snapshotFileName.str(), "{FILENAME}",
+      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
     );
   }}
 
@@ -134,6 +139,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
       result = self.__Template_TouchCellFirstTime.format(**self.d) 
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = self.__Template_BeginTraversal.format(**self.d)             
+    if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
+      result = self.__Template_EndTraversal.format(**self.d)             
     return result
 
 

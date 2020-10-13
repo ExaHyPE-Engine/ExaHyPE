@@ -3,6 +3,11 @@
  A simple benchmark script for the LOH.1 problem solved via a generic
  Rusanov solver.
 
+ This file should be invoked from the directory above. Ensure you've 
+ set PYTHONPATH correctly before you kick off:
+
+ export PYTHONPATH=../../../python/
+
 """
 
 
@@ -17,8 +22,8 @@ import argparse
 
 
 
-parser = argparse.ArgumentParser(description='ExaHyPE 2 - Rusanov benchmarking script')
-parser.add_argument("--h",              dest="h",              type=float, required=True, help="Mesh size" )
+parser = argparse.ArgumentParser(description='ExaHyPE 2 - LOH.1')
+parser.add_argument("--h",              dest="h",              type=float, required=True, help="Mesh size (domain size is 30x30x30)" )
 args = parser.parse_args()
 
 
@@ -39,7 +44,7 @@ mesh_size      = args.h
 time_step_size = 0.0001
 
 project.add_solver(  
-  exahype2.solvers.GenericRusanovFVFixedTimeStepSizeWithEnclaves(
+  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
     name           = "LOH1", 
     patch_size     = 5, 
     unknowns       = 3+6,      # vel(3) + stress(6)
@@ -47,13 +52,13 @@ project.add_solver(
     time_step_size = 0.01, 
     min_h          = mesh_size,
     max_h          = mesh_size,
-    flux           = False, 
-    ncp            = True,
-    use_gpu        = False) )
+    flux           = exahype2.solvers.fv.PDETerms.None_Implementation, 
+    ncp            = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    ))
 
 
 
-dimensions=3 
+dimensions=3
 project.set_global_simulation_parameters(
   dimensions            = dimensions,
   offset                = [0.0]*dimensions, 

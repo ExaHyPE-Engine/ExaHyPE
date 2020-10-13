@@ -126,16 +126,14 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_VertexDataWriter.cpp \
  tarch/plotter/griddata/unstructured/vtk/VTUTextFileWriter_VertexWriter.cpp \
  tarch/plotter/griddata/unstructured/vtk/VTKTextFileWriter.cpp \
- tarch/plotter/griddata/VTUTimeSeriesWriter.cpp \
+ tarch/plotter/PVDTimeSeriesWriter.cpp \
  tarch/plotter/griddata/blockstructured/PeanoTextPatchFileWriter.cpp \
  tarch/plotter/griddata/blockstructured/PeanoTextPatchFileWriter_VertexDataWriter.cpp \
  tarch/plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter.cpp \
  tarch/plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter_CellDataWriter.cpp \
  tarch/plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter_VertexDataWriter.cpp \
  tarch/plotter/griddata/blockstructured/PeanoTextPatchFileWriter_CellDataWriter.cpp \
- tarch/plotter/pointdata/vtk/VTKTextFileWriter.cpp \
- tarch/plotter/pointdata/vtk/VTKBinaryFileWriter.cpp \
- tarch/plotter/pointdata/vtk/VTKBinaryFileWriter_PointDataWriter.cpp \
+ tarch/plotter/pointdata/vtk/VTKWriter.cpp \
  tarch/mpi/BooleanSemaphore.cpp \
  tarch/mpi/Lock.cpp \
  tarch/mpi/Rank.cpp \

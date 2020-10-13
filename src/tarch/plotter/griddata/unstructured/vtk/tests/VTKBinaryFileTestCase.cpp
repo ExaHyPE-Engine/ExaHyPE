@@ -27,8 +27,7 @@ void tarch::plotter::griddata::unstructured::vtk::tests::VTKBinaryFileTestCase::
 
 
 void tarch::plotter::griddata::unstructured::vtk::tests::VTKBinaryFileTestCase::testHexahedron() {
-
-  VTKBinaryFileWriter writer;
+  VTKBinaryFileWriter writer( "./VTKBinaryFileTestCase_testHexahedron.vtk", "no-index", tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile );
 
   tarch::la::Vector<3,double> p;
   tarch::plotter::griddata::unstructured::UnstructuredGridWriter::VertexWriter* vertexWriter = writer.createVertexWriter();
@@ -103,7 +102,7 @@ void tarch::plotter::griddata::unstructured::vtk::tests::VTKBinaryFileTestCase::
   cellDataWriter->close();
   delete cellDataWriter;
 
-  writer.writeToFile( "./VTKBinaryFileTestCase_testHexahedron.vtk" );
+  writer.writeToFile();
 }
 
 

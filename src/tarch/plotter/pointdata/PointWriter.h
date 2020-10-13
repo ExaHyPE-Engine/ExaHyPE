@@ -23,7 +23,10 @@ namespace tarch {
  */
 class tarch::plotter::pointdata::PointWriter {
   public:
-    virtual bool writeToFile( const std::string& filename ) = 0;
+    /**
+     * Counterpart to close() on all the depending writers.
+     */
+    virtual bool writeToFile() = 0;
 
     /**
      * @return Whether writer is ready to accept data.
@@ -39,8 +42,6 @@ class tarch::plotter::pointdata::PointWriter {
 
     virtual int plotPoint(const tarch::la::Vector<2,double>& position) = 0;
     virtual int plotPoint(const tarch::la::Vector<3,double>& position) = 0;
-
-    virtual void close() = 0;
 
     /**
      * A writer to assign points a value.

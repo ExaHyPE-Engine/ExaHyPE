@@ -21,6 +21,7 @@ class DoFAssociation(IntEnum):
   # grid entities
   #
   Generic = 4
+  Global = 5
   
   
   
@@ -45,6 +46,8 @@ class DoF(object):
       self.namespace += [ "celldata" ]
     elif association==DoFAssociation.Face:
       self.namespace += [ "facedata" ]
+    elif association==DoFAssociation.Global:
+      self.namespace += [ "globaldata" ]
     else:
       assert False
     #print( "added a new DoF: " + str(self.namespace) )
@@ -71,19 +74,12 @@ class DoF(object):
       result += "CellData"
     elif self.association==DoFAssociation.Face:
       result += "FaceData"
+    elif association==DoFAssociation.Global:
+      result += "GlobalData"
     else:
       assert False
     result += self.name
     return result
-
-    
-  #def has_enumerator(self):
-  #  if self.association==DoFAssociation.Vertex:
-  #    return True
-  #  elif self.association==DoFAssociation.Face:
-  #    return True
-  #  else:
-  #    return False
 
 
   def get_enumeration_type(self):
