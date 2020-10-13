@@ -277,17 +277,25 @@ and log out and log in again.
 Next, set up the Python virtualenv [if using Python]:
 \begin{code}
 python3 -m venv $HOME/peano-python-api
-source activate $HOME/peano-python-api/bin/activate
+source $HOME/peano-python-api/bin/activate
 pip install jinja2 sympy
 \end{code}
 
 To build Peano:
 \begin{code}
+ git clone -b p4 https://gitlab.lrz.de/hpcsoftware/Peano.git
  module purge
  module load cuda/10.2.89
  module load gcc/10.2.0
  export CXXFLAGS="-fopenmp"
  export LDFLAGS="-lgomp"
+ libtoolize
+ aclocal
+ autoconf
+ autoheader
+ cp src/config.h.in .
+ automake --add-missing
+
  ./configure --enable-exahype --enable-loadbalancing-toolbox --with-multithreading=omp \
     --with-toolchain=nvidia \
     CXXFLAGS="-fopenmp -foffload=nvptx-none -lm -fno-fast-math -fno-associative-math" \
@@ -323,7 +331,8 @@ To run an example, create a SLURM script (e.g - slurm.sh) with something like th
 
 and to run it:
 \begin{code}
-  sbatch run.sh
+  module load slurm
+  sbatch slurm.sh
 \end{code}
 
 \section{Local workstations}
