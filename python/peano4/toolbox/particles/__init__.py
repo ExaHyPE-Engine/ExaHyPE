@@ -4,4 +4,5 @@
 from .Particle                 import Particle
 from .ParticleSet              import ParticleSet
 from .PlotParticlesInVTKFormat import PlotParticlesInVTKFormat
-
+from .ParticleDensityAMR       import ParticleDensityAMR
+from .ParticleTreeAnalysis     import ParticleTreeAnalysis      
