@@ -85,15 +85,21 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::create
 
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPatchFileWriter(
-  int                 dimension,
-  const std::string&  indexFile,
-  IndexFileMode       appendToIndexFile
+  int dimension, const std::string&  fileName, const std::string&  indexFileName, IndexFileMode appendToIndexFile
 ):
   _writtenToFile(false),
   _dimensions(dimension),
-  _indexFile(indexFile) {
+  _fileName(fileName),
+  _indexFile(indexFileName) {
   assertion( dimension>=2 );
   assertion( dimension<=3 );
+
+  if (fileName.rfind(".peano-patch-file")!=std::string::npos) {
+    logWarning( "writeToFile()", "filename should not end with .peano-patch-file as routine adds extension automatically. Chosen filename prefix=" << fileName );
+  }
+  if (indexFileName.rfind(".peano-patch-file")!=std::string::npos) {
+    logWarning( "writeToFile()", "index filename should not end with .peano-patch-file as routine adds extension automatically. Chosen filename prefix=" << indexFileName );
+  }
 
   clear();
 
@@ -238,15 +244,11 @@ int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::plotPat
 }
 
 
-bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeToFile( const std::string& filenamePrefix ) {
+bool tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeToFile() {
   assertion( !_writtenToFile );
 
-
-  if (filenamePrefix.rfind(".peano-patch-file")!=std::string::npos) {
-    logWarning( "writeToFile()", "filename should not end with .peano-patch-file as routine adds extension automatically. Chosen filename prefix=" << filenamePrefix );
-  }
   std::ostringstream filenameStream;
-  filenameStream << filenamePrefix
+  filenameStream << _fileName
     #ifdef Parallel
                  << "-rank-" << tarch::mpi::Rank::getInstance().getRank()
     #endif

@@ -126,7 +126,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/plotter/griddata/unstructured/vtk/VTKBinaryFileWriter_VertexDataWriter.cpp \
  tarch/plotter/griddata/unstructured/vtk/VTUTextFileWriter_VertexWriter.cpp \
  tarch/plotter/griddata/unstructured/vtk/VTKTextFileWriter.cpp \
- tarch/plotter/VTUTimeSeriesWriter.cpp \
+ tarch/plotter/PVDTimeSeriesWriter.cpp \
  tarch/plotter/griddata/blockstructured/PeanoTextPatchFileWriter.cpp \
  tarch/plotter/griddata/blockstructured/PeanoTextPatchFileWriter_VertexDataWriter.cpp \
  tarch/plotter/griddata/blockstructured/PeanoHDF5PatchFileWriter.cpp \

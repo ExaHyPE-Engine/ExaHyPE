@@ -46,26 +46,42 @@ void peano4::grid::TraversalVTKPlotter::beginTraversal(
 
   assertion(_writer==nullptr);
 
+  static int rankLocalCounter = 0;
+  static tarch::multicore::BooleanSemaphore booleanSemaphore;
+
+  int counter;
+  {
+    tarch::multicore::Lock lock(booleanSemaphore);
+    counter = rankLocalCounter;
+    rankLocalCounter++;
+  }
+
+  std::ostringstream snapshotName;
+  snapshotName << _filename << "-tree-" << _spacetreeId << "-" << counter;
+
   if ( _spacetreeId==0 and not calledBefore ) {
     calledBefore = true;
     _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
+      snapshotName.str(),
       _filename,
-      tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::CreateNew
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew
     );
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("peano4::grid::TraversalVTKPlotter");
   }
   else if ( _spacetreeId==0 ) {
     _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
+      snapshotName.str(),
       _filename,
-      tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::AppendNewDataSet
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet
     );
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("peano4::grid::TraversalVTKPlotter");
   }
   else {
     ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("peano4::grid::TraversalVTKPlotter");
     _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
+      snapshotName.str(),
       _filename,
-      tarch::plotter::VTUTimeSeriesWriter::IndexFileMode::AppendNewData
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData
     );
   }
 
@@ -87,20 +103,8 @@ void peano4::grid::TraversalVTKPlotter::endTraversal(
   _spacetreeIdWriter->close();
   _coreWriter->close();
 
-  static int rankLocalCounter = 0;
-  static tarch::multicore::BooleanSemaphore booleanSemaphore;
-
   if (_spacetreeId>=0) {
-    int counter;
-    {
-      tarch::multicore::Lock lock(booleanSemaphore);
-      counter = rankLocalCounter;
-      rankLocalCounter++;
-    }
-
-    std::ostringstream filename;
-    filename << _filename << "-tree-" << _spacetreeId << "-" << counter;
-    _writer->writeToFile( filename.str() );
+    _writer->writeToFile();
   }
 
   delete _writer;
@@ -149,10 +153,10 @@ void peano4::grid::TraversalVTKPlotter::plotCell(
   int vertexIndices[TwoPowerD];
 
   dfor2(k)
-      assertion( _vertexWriter!=nullptr );
-      vertexIndices[kScalar] = _vertexWriter->plotVertex(
-        event.getX() + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(k), event.getH() ) - event.getH() * 0.5
-      );
+    assertion( _vertexWriter!=nullptr );
+    vertexIndices[kScalar] = _vertexWriter->plotVertex(
+      event.getX() + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(k), event.getH() ) - event.getH() * 0.5
+    );
   enddforx
 
 	assertion( _cellWriter!=nullptr );

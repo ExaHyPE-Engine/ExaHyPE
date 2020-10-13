@@ -65,7 +65,13 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
     VTKWriter& operator=(const VTKWriter& writer) = delete;
 
   public:
-    VTKWriter(bool binaryFile, const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile);
+    /**
+     * @param fileName      Name of the file to write. Has to be unique per
+     *                      dump.
+     * @param indexFileName Name of the index file. Can we empty if you select
+     *                      NoIndexFile.
+     */
+    VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode modeFile);
 
     virtual ~VTKWriter();
 
@@ -80,7 +86,7 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
      *
      * @see PointDataWriter::close()
      */
-    bool writeToFile( const std::string& filename ) override;
+    bool writeToFile() override;
 
     /**
      * @return Whether writer is ready to accept data.

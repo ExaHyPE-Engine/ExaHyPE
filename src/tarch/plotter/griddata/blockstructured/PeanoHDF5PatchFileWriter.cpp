@@ -304,7 +304,7 @@ hid_t  tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::crea
 #endif
 
 
-bool tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::writeToFile( const std::string& filenamePrefix ) {
+bool tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::writeToFile() {
   assertion( _isOpen );
 
   #ifdef UseHDF5
