@@ -251,9 +251,80 @@ Sollte nur oneapi sein, nciht das all
 
 
 
+\section{Bede}
+\emph{Note: Bede is still being set up, so things may change / not work as expected yet.}
 
+You will first need to apply for an account through SAFE:
+\begin{itemize}
+  \item Go to \url{https://safe.epcc.ed.ac.uk/}
+  \item Create account and log in
+  \item Go to Login Accounts $->$ Request login account at the top of the page
+  \item Choose your project (this should have been provided to you)
+\end{itemize}
+You will then need to upload your SSH Key through SAFE.
+Once this is done and your account has been approved, you should be able to SSH into Bede:
 
+\begin{code}
+ssh <username>@bede.dur.ac.uk
+\end{code}
 
+You will need to run this:
+\begin{code}
+  echo builder > ~/.application_environment
+\end{code}
+and log out and log in again.
+
+Next, set up the Python virtualenv [if using Python]:
+\begin{code}
+python3 -m venv $HOME/peano-python-api
+source activate $HOME/peano-python-api/bin/activate
+pip install jinja2 sympy
+\end{code}
+
+To build Peano:
+\begin{code}
+ module purge
+ module load cuda/10.2.89
+ module load gcc/10.2.0
+ export CXXFLAGS="-fopenmp"
+ export LDFLAGS="-lgomp"
+ ./configure --enable-exahype --enable-loadbalancing-toolbox --with-multithreading=omp \
+    --with-toolchain=nvidia \
+    CXXFLAGS="-fopenmp -foffload=nvptx-none -lm -fno-fast-math -fno-associative-math" \
+    LDFLAGS="-lnvToolsExt"
+ make clean
+ make -j 64
+\end{code}
+
+To run an example, create a SLURM script (e.g - slurm.sh) with something like the following:
+\begin{code}
+#!/bin/bash
+#SBATCH --account=bddur01
+#SBATCH --time=1:0:0
+#SBATCH --export=ALL
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --exclusive
+#SBATCH --gres=gpu:1  # 1/4 node cpu & mem allocated per gpu
+#SBATCH --gpu-bind=closest
+
+ module purge
+ module load cuda/10.2.89
+ module load gcc/10.2.0
+
+ export CXXFLAGS="-fopenmp"
+ export LDFLAGS="-lgomp"
+
+ pushd Peano/examples/exahype2/euler
+ export PYTHONPATH=../../../python
+ python3 example-scripts/finitevolumes-bede.py
+ ./peano4
+\end{code}
+
+and to run it:
+\begin{code}
+  sbatch run.sh
+\end{code}
 
 \section{Local workstations}
 
