@@ -3,7 +3,7 @@
 
 class Patch:
   """
-    Parser for Peano block file output. 
+    Patch class that contains offset, size and value of a Peano patch. 
     
     Parameters:
     ----------
