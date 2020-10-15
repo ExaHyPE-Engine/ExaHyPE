@@ -47,7 +47,10 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     return self.__Template_Constructor.format(**self.d)
 
 
-  __Template_Destructor = """
+  __Template_EndTraversal = """
+  assertion1( _dataWriter!=nullptr, _treeNumber );
+  assertion1( _writer!=nullptr,     _treeNumber );
+
   _dataWriter->close();
   _writer->writeToFile();
   
@@ -60,7 +63,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
     
   def get_destructor_body(self):
-    return self.__Template_Destructor.format(**self.d)
+    return ""
 
 
   def get_body_of_getGridControlEvents(self):
@@ -147,6 +150,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       result = self.__Template_TouchCellFirstTime.format(**self.d)
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = self.__Template_BeginTraversal.format(**self.d)             
+    if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
+      result = self.__Template_EndTraversal.format(**self.d)             
     return result
 
 
