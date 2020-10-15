@@ -9,7 +9,6 @@ import peano4.solversteps.ActionSet
 
 
 class ActionSet(object):
- 
   def __init__(self,classname,namespace,subdirectory,implementation = None):
     """
      implementation Should be of type peano4.solversteps.Mapping or None. If 
