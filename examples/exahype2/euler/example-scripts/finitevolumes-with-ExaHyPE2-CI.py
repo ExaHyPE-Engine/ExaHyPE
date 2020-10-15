@@ -69,10 +69,12 @@ build_mode = peano4.output.CompileMode.Release
 #
 # Lets configure some global parameters
 #
+number_of_time_steps = 50
+end_time = time_step_size * number_of_time_steps
 project.set_global_simulation_parameters(
   dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
-  time_step_size * 50,           # end time
-  time_step_size * 50, 0.1                         # snapshots
+  end_time,           # end time
+  end_time, 0.1                         # snapshots
 )
 
 
