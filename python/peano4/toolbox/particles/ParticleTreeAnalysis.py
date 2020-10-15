@@ -39,6 +39,7 @@ class ParticleTreeAnalysis(ActionSet):
     self.cell_marker     = peano4.datamodel.DaStGen2( self._cell_data_name )
     
     self.cell_marker.data.add_attribute( dastgen2.attributes.Integer("NumberOfParticles") )
+    self.cell_marker.data.add_attribute( dastgen2.attributes.Boolean("ParentOfRefinedCell") )
     
     self.d = {
       "CELL_DATA_NAME":    self._cell_data_name,
@@ -50,11 +51,13 @@ class ParticleTreeAnalysis(ActionSet):
 
   __Template_TouchCellFirstTime = jinja2.Template( """
   fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(0);
+  fineGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell(false);
 """)
 
              
   __Template_TouchCellLastTime = jinja2.Template("""
   if (marker.isRefined()) {
+    coarseGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell(true);
   }
   else {
     int count = 0;
@@ -63,6 +66,7 @@ class ParticleTreeAnalysis(ActionSet):
     }
     fineGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(count);
   }
+  
   coarseGridCell{{CELL_DATA_NAME}}.setNumberOfParticles(
     coarseGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() 
     +

@@ -4,6 +4,25 @@ from abc import abstractmethod
  
 
 class ActionSet(object):
+  """
+  
+    Actions are triggered by the observer and represent the highest
+    grid traversal view that I have implemented within Peano. They
+    listen to the tree traversal through notifications alike "this 
+    is the first time I see (touch) a vertex". A list of messages 
+    that we can listen to is specified by this class through class
+    attributes starting with OPERATION_.
+    
+    Action sets are non-persistent, i.e. if you generate C++ code, 
+    remind yourself that the class implementing a particular action
+    set will be generated once per grid sweep per tree. As a logical
+    consequence, different action sets are in principle totally 
+    independent. If they exchange data, you have to realise this.
+    However, there's a creational routine and a merge command, i.e.
+    you can implement forks and joins (reductions) "natively". There
+    are also functions to inject static data into an action set.
+    
+  """
   def __init__(self):
     pass
 
@@ -80,7 +99,12 @@ class ActionSet(object):
   @abstractmethod
   def get_attributes(self):
     """
+
      Return attributes as copied and pasted into the generated class.
+     
+     Please note that action sets are not persistent, i.e. there is one
+     object creation per grid sweep per tree.
+     
     """
     return ""
 

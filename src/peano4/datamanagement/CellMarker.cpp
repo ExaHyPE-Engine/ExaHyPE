@@ -51,6 +51,11 @@ tarch::la::Vector<Dimensions,double>  peano4::datamanagement::CellMarker::h() co
 }
 
 
+tarch::la::Vector<Dimensions,double>  peano4::datamanagement::CellMarker::getOffset() const {
+  return _centre-0.5*_h;
+}
+
+
 std::string peano4::datamanagement::CellMarker::toString() const {
   std::ostringstream msg;
   msg << "(x=" << _centre << ",h=" << _h << ",refined=" << _isRefined << ")";

@@ -40,11 +40,19 @@ struct peano4::datamanagement::CellMarker {
     bool isRefined() const;
 
     /**
-     * The x coordinate of a cell is its centre.
+     * @return x coordinate of a cell is its centre.
      */
     tarch::la::Vector<Dimensions,double>  x() const;
 
+    /**
+     * @return Size of cell
+     */
     tarch::la::Vector<Dimensions,double>  h() const;
+
+    /**
+     * @return Offset of cell, i.e. the bottom left vertex's coordinate
+     */
+    tarch::la::Vector<Dimensions,double>  getOffset() const;
 
     std::string toString() const;
 
