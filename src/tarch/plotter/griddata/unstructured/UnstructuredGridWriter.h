@@ -24,7 +24,7 @@ class tarch::plotter::griddata::unstructured::UnstructuredGridWriter {
     /**
      * @return Write has been successful
      */
-    virtual bool writeToFile( const std::string& filename ) = 0;
+    virtual bool writeToFile() = 0;
 
     /**
      * @return Whether writer is ready to accept data.

@@ -145,8 +145,8 @@ int main(int argc, char** argv) {
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     }
 
-    for (int i=0; i<10; i++) {
-      for (int j=0; j<10; j++) {
+    for (int i=0; i<100; i++) {
+      for (int j=0; j<50; j++) {
         examples::particles::observers::MoveParticles observer;
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
       }

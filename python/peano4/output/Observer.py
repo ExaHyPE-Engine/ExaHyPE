@@ -551,12 +551,12 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
   {{
     auto view = DataRepository::_{logical_type_name}Stack.getForPush( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
     
+    peano4::datamanagement::CellMarker  marker(event);
+
     const int inCellStack  = event.getCellData();
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
     logDebug("enterCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack << "(" << {full_qualified_type}::loadPersistently(marker) << ")" );
-    
-    peano4::datamanagement::CellMarker  marker(event);
-    
+        
     {full_qualified_type}& data = view.get(0);
     if (
       inCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity

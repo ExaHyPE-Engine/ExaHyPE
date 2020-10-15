@@ -23,7 +23,10 @@ namespace tarch {
  */
 class tarch::plotter::pointdata::PointWriter {
   public:
-    virtual bool writeToFile( const std::string& filename ) = 0;
+    /**
+     * Counterpart to close() on all the depending writers.
+     */
+    virtual bool writeToFile() = 0;
 
     /**
      * @return Whether writer is ready to accept data.

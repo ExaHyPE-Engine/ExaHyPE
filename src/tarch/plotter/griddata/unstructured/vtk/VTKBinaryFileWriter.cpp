@@ -14,13 +14,35 @@ const std::string tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWrit
 "BINARY\n ";
 
 
-tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileWriter(const std::string& indexFile, tarch::plotter::VTUTimeSeriesWriter::IndexFileMode modeFile, const int precision):
+tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode, const int precision):
   _writtenToFile(false),
   _precision(precision),
   _doubleOrFloat(setDoubleOrFloatString(precision)),
   _numberOfVertices(0),
   _numberOfCells(0),
-  _numberOfCellEntries(0) {}
+  _numberOfCellEntries(0),
+  _fileName(fileName) {
+  if (fileName.rfind(".vtk")!=std::string::npos) {
+    logWarning( "writeToFile()", "filename should not end with .vtk as routine adds extension automatically. Chosen filename prefix=" << fileName );
+  }
+  if (mode!=tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile and indexFileName.rfind(".pvd")!=std::string::npos) {
+    logWarning( "writeToFile()", "index filename should not end with .pvd as routine adds extension automatically. Chosen filename prefix=" << indexFileName );
+  }
+
+  switch (mode) {
+    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew:
+      tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile(indexFileName);
+      break;
+    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet:
+      tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet(indexFileName, fileName + ".vtk");
+      break;
+    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData:
+      tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtk");
+      break;
+    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile:
+      break;
+  }
+}
 
 
 tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::~VTKBinaryFileWriter() {
@@ -45,14 +67,11 @@ void tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::clear() {
 }
 
 
-bool tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::writeToFile( const std::string& filenamePrefix ) {
+bool tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::writeToFile() {
   assertion( !_writtenToFile );
 
-  if (filenamePrefix.rfind(".vtk")!=std::string::npos) {
-    logWarning( "writeToFile()", "filename should not end with .vtk as routine adds extension automatically. Chosen filename prefix=" << filenamePrefix );
-  }
   std::ostringstream filenameStream;
-  filenameStream << filenamePrefix
+  filenameStream << _fileName
                  << ".vtk";
   const std::string filename = filenameStream.str();
 
