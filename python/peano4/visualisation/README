@@ -39,9 +39,4 @@ There are two options, both need a functioning install of ParaView:
 - The script will render the content of the file in a new window. You can turn the rendered image, but not do much else with it (unless you do it directly in the script).
 
 2. Run in ParaView.
-- In ParaView, activate the Python Shell by clicking the check box in the "View" menu.
-- Click the "Run Script" button next to the Python Shell.
-- In the File Selector dialogue, choose the render.py script and hit "OK".
-- The script will run in the Python Shell. You can then change the Display Type, View, etc. in the Paraview GUI. Changes can also be made in the Python Shell using pvpython. 
-
-At this point, filtering, time step visualisation and other functionality are not implemented yet.
+- See guidebook.

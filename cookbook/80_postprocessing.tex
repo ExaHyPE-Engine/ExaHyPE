@@ -15,6 +15,8 @@ teh following steps:
 \end{center}
 
 
+
+
 \begin{enumerate}
   \item Before you start up Paraview, ensure that both the \Peano\ python
   directory and any third-party Python lib are in your path. Paraview seems to
@@ -24,6 +26,8 @@ teh following steps:
 export PYTHONPATH=../../../python:/usr/lib/python3/dist-packages  
   \end{code}
   The latter holds \texttt{jinja2} on my system.
+  \item Open Paraview and activate the Python Shell by clicking the check box in
+  the View menu.
   \item Open the Paraview Python terminal and import \Peano's visualisation
   package:
   \begin{code}
@@ -31,7 +35,7 @@ import peano4.visualisation
   \end{code}
   \item Load the file you are interested in:
   \begin{code}
-peano4.visualisation.render_file( "solution-Euler-tree-0-0.peano-patch-file" ) 
+peano4.visualisation.render_single_file( "solution-Euler-tree-0-0.peano-patch-file" ) 
   \end{code}
   This is only one snapshot. We discuss the postprocessing of meta files,
   i.e.~files that link to other files, below.
@@ -45,13 +49,24 @@ in a 2d fine grid only, e.g., I use:
 
 \begin{code}
 import peano4.visualisation  
-peano4.visualisation.render_file( \
+peano4.visualisation.render_single_file( \
   "solution-Euler-tree-0-0.peano-patch-file",display_as_tree=False, \
-  filter=[peano4.visualisation.ExtractFineGridFilter(2)] \
+  filter=[peano4.visualisation.ExtractFineGridFilter(dimensions=2)] \
 )
 \end{code}
 
 
+\noindent
+Further to that, you can also display a particular data set (snapshot):
+\begin{code}
+import peano4.visualisation  
+peano4.visualisation.render_dataset( \
+  "solution-Euler.peano-patch-file", \
+  display_as_tree=False, \
+  filter=[peano4.visualisation.ExtractFineGridFilter(dimensions=2)], \
+  dataset_number=0 \
+)
+\end{code}
 
 
 
