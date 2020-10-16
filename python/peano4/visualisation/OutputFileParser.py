@@ -3,7 +3,7 @@
 import numpy as np
 import sys
 
-from .Patch import Patch
+from peano4.visualisation import Patch
 
 from paraview.simple import *
 
