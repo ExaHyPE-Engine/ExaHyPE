@@ -172,9 +172,9 @@ def prepare3Dpatches(cell_data, num_patches, dof, unknowns):
       
 
 
-def render_file(filename, display_as_tree = True, filter=None):
+def render_single_file(filename, display_as_tree = True, filter=None):
   """
-    Parse peano-patch-file and render data 
+    Parse a single peano-patch-file and render data 
     
     Parameters:
     ----------
@@ -194,8 +194,14 @@ def render_file(filename, display_as_tree = True, filter=None):
   
   parser = OutputFileParser(filename)
   cell_data, dimensions, dof, unknowns = parser.parse_file("EulerQ")
-  if (dimensions != 2 and dimensions != 3) or dof == 0 or unknowns == 0:
-    print("File parsing unsuccessful.")
+  if dimensions != 2 and dimensions != 3:
+    print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
+    return 
+  if dof == 0:
+    print("File parsing unsuccessful. No dof specified")
+    return 
+  if unknowns == 0:
+    print("File parsing unsuccessful. No unknowns specified")
     return 
 
   print("Dimensions: ", dimensions)
@@ -223,4 +229,107 @@ def render_file(filename, display_as_tree = True, filter=None):
   #WriteImage("Output.png")
   return      
 
+
+
+def render_dataset(filename, dataset_number=0, display_as_tree = True, filter=None):
+  """
+  
+    Peano patch files can either hold data (see render_single_file)
+    or they can serve as meta file linking to other files. In the 
+    latter case, they hold a sequence of data sets and each data
+    set holds multiple files written by multiple threads.
+    
+    This routine picks one dataset (typically, a data set corresponds
+    to one snapshot at one point in time), and loads all files 
+    associated with this data set. It then fuses these individual 
+    files into one big one before it converts the data into vtk.
+    The routine therefore is a natural extension of render_single_file
+    into something that acts on a set of files.
+
+    Parameters:
+    ----------
+    dataset_number: int
+      Number of dataset within file that is to be read
+       
+  """
+  input_file = open( filename, "r" )
+  lines = input_file.readlines()
+  
+  dimensions = -1
+  unknowns   = -1
+  dof        = -1
+  cell_data  = []
+  
+  #
+  # Will be decreased by first hit
+  #
+  dataset_number = dataset_number+1
+  
+  for line in lines:
+    if "begin dataset" in line:
+      dataset_number = dataset_number-1
+    if "include" in line and dataset_number==0:
+      snapshot_file_name = line.split( "\"" )[1]
+      print( "parse file ", snapshot_file_name )
+
+      parser = OutputFileParser(snapshot_file_name)
+      snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns = parser.parse_file( "EulerQ" )
+
+      if snapshot_dimensions != 2 and snapshot_dimensions != 3:
+        print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
+        return 
+      if snapshot_dof == 0:
+        print("File parsing unsuccessful. No dof specified")
+        return 
+      if snapshot_unknowns == 0:
+        print("File parsing unsuccessful. No unknowns specified")
+        return
+       
+      if snapshot_dimensions!=dimensions and dimensions>0:
+        print( "Dimensions not compatible with dimensions from previous files in the snapshot" )
+        return
+      dimensions = snapshot_dimensions
+      if snapshot_dof!=dof and dof>0:
+        print("DoF not compatible with dof from previous files in the snapshot")
+        return 
+      dof=snapshot_dof
+       
+      if snapshot_unknowns!=unknowns and unknowns>0:
+        print("Unknowns not compatible with unknowns from previous files in the snapshot")
+        return
+      unknowns=snapshot_unknowns
+      
+      print("Dimensions: ", dimensions)
+      print("Number of variables per cell: ", unknowns)
+      print("Number of cells per patch per direction: ", dof)
+ 
+      snapshot_num_patches = len(snapshot_cell_data)
+      print("Number of patches:", snapshot_num_patches)
+  
+      if filter!=None:
+        for p in filter:
+          snapshot_cell_data, num_patches, dof, unknowns = p.render(snapshot_cell_data, snapshot_num_patches, dof, unknowns)
+
+      cell_data =  cell_data + snapshot_cell_data
+
+  num_patches = len(cell_data)
+  print("Total number of patches:", num_patches)
+
+  if filter!=None:
+    for p in filter:
+     cell_data, num_patches, dof, unknowns = p.render(cell_data, num_patches, dof, unknowns)
+
+  if dimensions == 2 and display_as_tree:
+    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns) 
+  elif dimensions == 2 and not display_as_tree:
+    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 0.0) 
+  else: # Tested above that it can only be 2 or 3
+    grid = prepare3Dpatches(cell_data, num_patches, dof, unknowns) 
+  
+  tp = TrivialProducer()
+  tp.GetClientSideObject().SetOutput(grid)
+  Show(tp)
+  #  Interact() #Needed if running from command line
+  #WriteImage("Output.png")
+  return      
       

@@ -4,13 +4,13 @@ from .Filter import Filter
 
 
 class ExtractFineGridFilter( Filter ):
-  def __init__(self,d):
-    Filter.__init__(self,d)
+  def __init__(self,dimensions):
+    Filter.__init__(self,dimensions)
     pass
   
   
   def __patches_overlap(self,a,b):
-    if self._d==3:
+    if self._dimensions==3:
       return a.offset[0] + a.size[0] >= b.offset[0] and \
              a.offset[1] + a.size[1] >= b.offset[1] and \
              a.offset[2] + a.size[2] >= b.offset[2] and \
