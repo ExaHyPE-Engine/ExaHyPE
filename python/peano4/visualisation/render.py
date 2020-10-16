@@ -1,5 +1,5 @@
 from paraview.simple import *
-from .Visualiser             import render_single_file 
+from peano4.visualisation.Visualiser import render_single_file 
 import sys
 
 
@@ -13,6 +13,6 @@ if __name__ == "__main__":
         print("Error, specified input file '{}' does not exist, exiting...". format(filename))
         sys.exit(1)
     print("Rendering {}".format(filename))
-    render_single_file(filename)
+    render_single_file(filename, "EulerQ")
 
     sys.exit(0)

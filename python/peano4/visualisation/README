@@ -19,12 +19,20 @@ Files
 Parser class for peano-patch-files with 2D or 3D data.
 To be initialised with path to peano-patch-file. 
 
+...Visualiser.py...
+Contains functions to prepare and render 2D and 3D grids. 
+
 ...Patch.py...
 Patch class that contains offset, size and value of a Peano patch. (Basically a struct.)
 
+...Filter.py...
+Abstract filter class.
+
+...ExtractFineGridFilter.py...
+Fine Grid Filter class.
 
 ...render.py...
-Renderer script. Contains functions to prepare and render 2D and 3D grids. Currently takes the file path of the peano-patch-file hard-coded at the end of the file (for convenience during development, to be changed). 
+Renderer script. Takes the file path of the peano-patch-file as argument. 
 
 
 ------------------------------------
@@ -35,7 +43,7 @@ There are two options, both need a functioning install of ParaView:
 
 1. Run as stand-alone vis.
 - For this, you need the "Interact()" call in line 199 of render.py. (Note that this will lead to a warning for option 2 and will need to be be guarded in some way at some point.) 
-- Simply call the render script as you would a normal python script with "pvpython render.py" (if you like typing you can change the render script to take the file name as an argument).
+- Simply call the render script as you would a normal python script, but with pvpython, providing the peano-patch-file name as argument.
 - The script will render the content of the file in a new window. You can turn the rendered image, but not do much else with it (unless you do it directly in the script).
 
 2. Run in ParaView.
