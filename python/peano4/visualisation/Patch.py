@@ -1,7 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 
-class Patch:
+class Patch(object):
   """
     Patch class that contains offset, size and value of a Peano patch. 
     
