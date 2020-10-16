@@ -38,6 +38,21 @@ peano4.visualisation.render_file( "solution-Euler-tree-0-0.peano-patch-file" )
 \end{enumerate}
 
 
+\noindent
+In practice, you typically want to filter data before you pipe it into Paraview.
+This can be achieved by passing the parser a filter pipeline. If I'm interested
+in a 2d fine grid only, e.g., I use:
+
+\begin{code}
+import peano4.visualisation  
+peano4.visualisation.render_file( \
+  "solution-Euler-tree-0-0.peano-patch-file",display_as_tree=False, \
+  filter=[peano4.visualisation.ExtractFineGridFilter(2)] \
+)
+\end{code}
+
+
+
 
 
 \section{Installing \Peano\ with VTK support}

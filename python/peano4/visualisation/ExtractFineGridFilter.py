@@ -33,8 +33,6 @@ class ExtractFineGridFilter( Filter ):
     new_num_patches = 0
     new_cell_data   = []
     
-    print( "filter data set input size: ", num_patches)
-    
     for i in range(0,num_patches):
       overlaps_with_patch_in_new_cell_data = False
       for j in new_cell_data:
@@ -47,7 +45,8 @@ class ExtractFineGridFilter( Filter ):
             new_entry = cell_data[j]
         new_num_patches += 1
         new_cell_data.append(new_entry)
-        print( "add patch. total size=", new_num_patches)
+
+    print( "extracted " + str(new_num_patches) + " from the " + str(num_patches) + " patch(es)" )
 
     return new_cell_data, new_num_patches, dof, unknowns
   
