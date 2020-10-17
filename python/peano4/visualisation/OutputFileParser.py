@@ -114,5 +114,4 @@ class OutputFileParser(object):
       
       
     return cell_data, dimensions, dof, unknowns    
-      
-      
+ 
