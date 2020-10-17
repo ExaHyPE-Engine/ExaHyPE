@@ -191,6 +191,14 @@ def render_single_file(filename, set_identifier, display_as_tree = True, filter=
     filter: List of filter objects
       If it is None, then we don't apply any filter on the input file.
      
+      
+      
+    Result:
+    -------
+    
+    Returns an instace of TrivialProducer. You can call Interact
+    on this object, e.g.
+       
        
   """
   
@@ -215,7 +223,7 @@ def render_single_file(filename, set_identifier, display_as_tree = True, filter=
   
   if filter!=None:
     for p in filter:
-      cell_data, num_patches, dof, unknowns = p.render(cell_data, num_patches, dof, unknowns)
+      cell_data, num_patches, dof, unknowns, dimensions = p.render(cell_data, num_patches, dof, unknowns, dimensions)
 
   if dimensions == 2 and display_as_tree:
     grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns) 
@@ -224,12 +232,7 @@ def render_single_file(filename, set_identifier, display_as_tree = True, filter=
   else: # Tested above that it can only be 2 or 3
     grid = prepare3Dpatches(cell_data, num_patches, dof, unknowns) 
   
-  tp = TrivialProducer()
-  tp.GetClientSideObject().SetOutput(grid)
-  Show(tp)
-  # Interact() #Needed if running from command line
-  #WriteImage("Output.png")
-  return      
+  return grid
 
 
 
@@ -258,6 +261,13 @@ def render_dataset(filename, set_identifier, dataset_number=0, display_as_tree =
     
     dataset_number: int
       Number of dataset within file that is to be read
+      
+      
+    Result:
+    -------
+    
+    Returns an instace of TrivialProducer. You can call Interact
+    on this object, e.g.
        
   """
   input_file = open( filename, "r" )
@@ -316,7 +326,7 @@ def render_dataset(filename, set_identifier, dataset_number=0, display_as_tree =
   
       if filter!=None:
         for p in filter:
-          snapshot_cell_data, num_patches, dof, unknowns = p.render(snapshot_cell_data, snapshot_num_patches, dof, unknowns)
+          snapshot_cell_data, num_patches, dof, unknowns, dimensions = p.render(snapshot_cell_data, snapshot_num_patches, dof, unknowns, dimensions)
 
       cell_data =  cell_data + snapshot_cell_data
 
@@ -325,7 +335,7 @@ def render_dataset(filename, set_identifier, dataset_number=0, display_as_tree =
 
   if filter!=None:
     for p in filter:
-     cell_data, num_patches, dof, unknowns = p.render(cell_data, num_patches, dof, unknowns)
+     cell_data, num_patches, dof, unknowns, dimensions = p.render(cell_data, num_patches, dof, unknowns, dimensions)
 
   if dimensions == 2 and display_as_tree:
     grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns) 
@@ -334,10 +344,5 @@ def render_dataset(filename, set_identifier, dataset_number=0, display_as_tree =
   else: # Tested above that it can only be 2 or 3
     grid = prepare3Dpatches(cell_data, num_patches, dof, unknowns) 
   
-  tp = TrivialProducer()
-  tp.GetClientSideObject().SetOutput(grid)
-  Show(tp)
-  #Interact() #Needed if running from command line
-  #WriteImage("Output.png")
-  return      
+  return grid
       

@@ -4,7 +4,38 @@ scripts}
 
 
 
+We do offer three different ways to handle \Peano\ output, i.e.~the native Peano
+patch files:
+
+\begin{enumerate}
+  \item You visualise them directly within Paraview (Section~\ref{label:postprocessing:display-in-paraview}).
+  \item You use a Python-based visualisation suite from the command line
+  (Section~\ref{section:postprocessing:python-command-line}).
+  \item You convert the patch files via a C++ command line tool into VTK and
+  postprocess the data from there
+  (Section~\ref{section:postprocessing:command-line}).
+\end{enumerate}
+
+
+\noindent
+The following three sections discuss these three routes, before I give some
+general visualisation comments in
+Section~\ref{section:postprocessing:tweaking-pictures}. 
+Furthermore, I sketch further Python scripts that can be used to postprocess
+some output you get from any \Peano\ application.
+This is information about the general runtime or load balancing distribution,
+e.g.
+
+
 \section{Displaying \Peano\ files directly within Paraview}
+\label{label:postprocessing:display-in-paraview}
+
+\begin{remark}
+  \Peano's postprocessing scripts use Python 3. This means you need a Paraview
+  version with Python 3 support (oldish Paraview installations only support
+  Python 2.7, and some Paraview downloads don't come along with Python support
+  at al).
+\end{remark}
 
 
 You can display \Peano's patch files directly within Paraview. For this, follow
@@ -49,10 +80,13 @@ in a 2d fine grid only, e.g., I use:
 
 \begin{code}
 import peano4.visualisation  
-peano4.visualisation.render_single_file( \
+data = peano4.visualisation.render_single_file( \
   "solution-Euler-tree-0-0.peano-patch-file",display_as_tree=False, \
-  filter=[peano4.visualisation.ExtractFineGridFilter(dimensions=2)] \
+  filter=[peano4.visualisation.ExtractFineGridFilter()] \
 )
+tp = TrivialProducer()
+tp.GetClientSideObject().SetOutput(data)
+Show(tp)
 \end{code}
 
 
@@ -60,17 +94,73 @@ peano4.visualisation.render_single_file( \
 Further to that, you can also display a particular data set (snapshot):
 \begin{code}
 import peano4.visualisation  
-peano4.visualisation.render_dataset( \
+data = peano4.visualisation.render_dataset( \
   "solution-Euler.peano-patch-file", \
   display_as_tree=False, \
-  filter=[peano4.visualisation.ExtractFineGridFilter(dimensions=2)], \
+  filter=[peano4.visualisation.ExtractFineGridFilter()], \
   dataset_number=0 \
 )
+tp = TrivialProducer()
+tp.GetClientSideObject().SetOutput(data)
+Show(tp)
 \end{code}
 
 
 
-\section{Installing \Peano\ with VTK support}
+
+\section{Interactive visualisation via Paraview's Python command line}
+\label{section:postproce ssing:python-command-line}
+
+\begin{remark}
+  \Peano's postprocessing scripts use Python 3. This means you need a Paraview
+  version with Python 3 support (oldish Paraview installations only support
+  Python 2.7, and some Paraview downloads don't come along with Python support
+  at al).
+\end{remark}
+
+
+\noindent
+To visualise \Peano\ output interactively, you can use the \texttt{pvpython}
+(Paraview python) interface:
+
+\begin{itemize}
+  \item Ensure that the Python path hosts both \Peano's Python scripts and
+  third-party libs such as jinja2. On my Ubuntu system, I have to use
+  \begin{code}
+export PYTHONPATH=~/git/Peano/python:/usr/lib/python3/dist-packages  
+  \end{code}
+  for example, while the OpenSUSE installation requires
+  \begin{code}
+export PYTHONPATH=~/git/Peano/python:/usr/lib/python3.8/site-packages:\
+/usr/lib64/python3.8/site-packages
+  \end{code}
+  \item Invoke the Paraview script:
+  \begin{code}
+pvpython ~/git/Peano/python/peano4/visualisation/render.py  
+  \end{code}
+  Depending on your type of the Paraview installation, you might require an
+  \texttt{mpirun} prefix.
+\end{itemize}
+
+% export PYTHONPATH=~/git/Peano/python/
+% 
+% /opt/paraview/bin/pvpython ~/git/Peano/python/peano4/visualisation/render.py
+
+
+
+\section{Off-line/command-line conversion}
+\label{section:postprocessing:command-line}
+
+
+\begin{remark}
+  If you configure \Peano\ with VTK support, \Peano\ builds a command-line tool
+  \texttt{convert} which you can use to convert \Peano 's patch files into plain
+  (binary) vtk.
+\end{remark}
+
+
+
+\noindent
 Installing VTK support can be challenging. 
 Here's some things you might want to consider/check:
 
@@ -118,6 +208,29 @@ export LDFLAGS="-L/opt/vtk/lib64"
 \end{itemize}
 
 
+\noindent
+Once you have managed to configure with VTK and the build process has terminated
+successfully, your directory \texttt{src/convert} holds the actual \texttt{convert}
+script.
+If you call \texttt{convert} without arguments, you get a usage message.
+\texttt{convert} allows you to extract data from a data dump, and store it
+within the patch files under a new identifier.
+It also allows you to extract a dataset from patch files into vtu.
+vtu is one of VTK's binary file formats.
+
+
+A standard postprocessing workflow on the command line reads as follows:
+\begin{enumerate}
+  \item Use \texttt{convert} to extract certain data from the dumped data files.
+  You might want to extract only the finest grid level, e.g., or to pick a
+  particular unknown. \texttt{convert} is given a new identifier (name) for the
+  new tdata set, and it stores the extracted data either within the existing
+  patch files or a new, separate one.
+  \item Use \texttt{convert} to pick one particular dataset via its identifier
+  and to dump it into a vtu file.
+  \item Use Paraview or VisIt to display the vtu file.
+\end{enumerate}
+
 %   \item If you configure with \texttt{--with-vtk}, but the makefile cannot find
 %   the headers, you have to add the correct search path\footnote.
 %   You can either set the
@@ -161,6 +274,8 @@ export LDFLAGS="-L/opt/vtk/lib64"
 
     
 \section{Tweaking your pictures}
+\label{section:postprocessing:tweaking-pictures}
+
 
 Peano's default VTK plotters project Peano's tree-based grid onto an
 unstructured mesh, as VTK does not support tree meshes.
