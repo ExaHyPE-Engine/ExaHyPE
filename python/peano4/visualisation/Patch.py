@@ -5,19 +5,22 @@ class Patch(object):
   """
     Patch class that contains offset, size and value of a Peano patch. 
     
-    Parameters:
+    Attributes:  
     ----------
     offset: Tuple
       Offset of the patch from origin of coordinate system
+      
     size: Tuple
       Size of patch
+      
     values: List
       List of values in the patch    
       
-    Attributes:  
+    Parameters:
     ----------
     file_path: String
       String of input file path (including filename and extension)
+      Not here anymore. @todo update
     
   """
   
@@ -26,20 +29,3 @@ class Patch(object):
     self.size   = size
     self.values = values
       
-
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-    
-    
-    
-
-        
-

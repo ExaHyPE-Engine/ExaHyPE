@@ -80,10 +80,13 @@ in a 2d fine grid only, e.g., I use:
 
 \begin{code}
 import peano4.visualisation  
-peano4.visualisation.render_single_file( \
+data = peano4.visualisation.render_single_file( \
   "solution-Euler-tree-0-0.peano-patch-file",display_as_tree=False, \
-  filter=[peano4.visualisation.ExtractFineGridFilter(dimensions=2)] \
+  filter=[peano4.visualisation.ExtractFineGridFilter()] \
 )
+tp = TrivialProducer()
+tp.GetClientSideObject().SetOutput(data)
+Show(tp)
 \end{code}
 
 
@@ -91,12 +94,15 @@ peano4.visualisation.render_single_file( \
 Further to that, you can also display a particular data set (snapshot):
 \begin{code}
 import peano4.visualisation  
-peano4.visualisation.render_dataset( \
+data = peano4.visualisation.render_dataset( \
   "solution-Euler.peano-patch-file", \
   display_as_tree=False, \
-  filter=[peano4.visualisation.ExtractFineGridFilter(dimensions=2)], \
+  filter=[peano4.visualisation.ExtractFineGridFilter()], \
   dataset_number=0 \
 )
+tp = TrivialProducer()
+tp.GetClientSideObject().SetOutput(data)
+Show(tp)
 \end{code}
 
 
@@ -113,6 +119,7 @@ peano4.visualisation.render_dataset( \
 \end{remark}
 
 
+\noindent
 To visualise \Peano\ output interactively, you can use the \texttt{pvpython}
 (Paraview python) interface:
 

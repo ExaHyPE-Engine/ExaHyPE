@@ -13,16 +13,15 @@ class Filter(object):
     optimisations do not work.
     
   """
-  def __init__(self,dimensions):
-    self._dimensions = dimensions
+  def __init__(self):
     pass
   
   
-  def render(self,cell_data, num_patches, dof, unknowns):
+  def render(self, cell_data, num_patches, dof, unknowns, dimensions):
     """
     
       Overwrite this one for the particular filter. 
       
     """
-    return cell_data, num_patches, dof, unknowns
+    return cell_data, num_patches, dof, unknowns, dimensions
 
