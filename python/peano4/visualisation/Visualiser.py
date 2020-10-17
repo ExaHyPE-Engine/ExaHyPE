@@ -1,6 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from .OutputFileParser import OutputFileParser
+from peano4.visualisation.OutputFileParser import OutputFileParser
 from paraview.simple import *
 
 
@@ -172,7 +172,7 @@ def prepare3Dpatches(cell_data, num_patches, dof, unknowns):
       
 
 
-def render_single_file(filename, display_as_tree = True, filter=None):
+def render_single_file(filename, set_identifier, display_as_tree = True, filter=None):
   """
     Parse a single peano-patch-file and render data 
     
@@ -180,7 +180,9 @@ def render_single_file(filename, display_as_tree = True, filter=None):
     ----------
     filename: String
       Path to file to be parsed
-      
+ 
+    set_identifier: String
+      Name of the set of unknowns we want to extract  
       
     display_as_tree: Boolean
       Displays multiscale data as tree, i.e. uses the z-axis for the 
@@ -193,7 +195,7 @@ def render_single_file(filename, display_as_tree = True, filter=None):
   """
   
   parser = OutputFileParser(filename)
-  cell_data, dimensions, dof, unknowns = parser.parse_file("EulerQ")
+  cell_data, dimensions, dof, unknowns = parser.parse_file(set_identifier)
   if dimensions != 2 and dimensions != 3:
     print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
     return 
@@ -225,13 +227,13 @@ def render_single_file(filename, display_as_tree = True, filter=None):
   tp = TrivialProducer()
   tp.GetClientSideObject().SetOutput(grid)
   Show(tp)
-  #  Interact() #Needed if running from command line
+  # Interact() #Needed if running from command line
   #WriteImage("Output.png")
   return      
 
 
 
-def render_dataset(filename, dataset_number=0, display_as_tree = True, filter=None):
+def render_dataset(filename, set_identifier, dataset_number=0, display_as_tree = True, filter=None):
   """
   
     Peano patch files can either hold data (see render_single_file)
@@ -248,6 +250,12 @@ def render_dataset(filename, dataset_number=0, display_as_tree = True, filter=No
 
     Parameters:
     ----------
+    filename: String
+      Path to file to be parsed
+    
+    set_identifier: String
+      Name of the set of unknowns we want to extract
+    
     dataset_number: int
       Number of dataset within file that is to be read
        
@@ -273,7 +281,7 @@ def render_dataset(filename, dataset_number=0, display_as_tree = True, filter=No
       print( "parse file ", snapshot_file_name )
 
       parser = OutputFileParser(snapshot_file_name)
-      snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns = parser.parse_file( "EulerQ" )
+      snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns = parser.parse_file(set_identifier)
 
       if snapshot_dimensions != 2 and snapshot_dimensions != 3:
         print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
@@ -329,7 +337,7 @@ def render_dataset(filename, dataset_number=0, display_as_tree = True, filter=No
   tp = TrivialProducer()
   tp.GetClientSideObject().SetOutput(grid)
   Show(tp)
-  #  Interact() #Needed if running from command line
+  #Interact() #Needed if running from command line
   #WriteImage("Output.png")
   return      
       
