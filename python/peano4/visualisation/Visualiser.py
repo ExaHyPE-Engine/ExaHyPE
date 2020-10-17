@@ -72,7 +72,7 @@ def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling = 1.0)
         cells.InsertCellPoint(count+3)
           
         data.SetNumberOfComponents(unknowns)
-        data.InsertNextTuple(cell_data[p].values[cell_number*unknowns:cell_number*unknowns+5]) #density, velocity x, y, z, energy per set  
+        data.InsertNextTuple(cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns]) #density, velocity x, y, z, energy per set  
         data.SetName("Cell Data (density, velocity x, y, z, energy)")                  
         count = count+4
 
@@ -160,7 +160,7 @@ def prepare3Dpatches(cell_data, num_patches, dof, unknowns):
           cells.InsertCellPoint(count+7)
           
           data.SetNumberOfComponents(unknowns)
-          data.InsertNextTuple(cell_data[p].values[cell_number*unknowns:cell_number*unknowns+5]) #density, velocity x, y, z, energy per set  
+          data.InsertNextTuple(cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns]) #density, velocity x, y, z, energy per set  
           data.SetName("Cell Data (density, velocity x, y, z, energy)")                  
           count = count+8
 
