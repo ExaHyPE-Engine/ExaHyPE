@@ -23,12 +23,12 @@ format ascii
 dimensions 3
 patch-size 6 6 6
 
-begin vertex-values "identifier A"
+begin vertex-metadata "identifier A"
   number-of-unknowns 58
   meta-data "This is some fancy meta data"  
 end vertex-values
 
-begin vertex-values "time"
+begin vertex-metadata "time"
   number-of-unknowns 1
   meta-data "This is some fancy meta data"  
 end vertex-values
@@ -73,13 +73,13 @@ This spec file specifies a simple grid that
 \end{itemize}
 
 
-\noindent
-If you use Peano's HDF5 file format, please note that you typically obtain
-a bunch of files. 
-A meta file whose name coincides with the one you specify in your specification
-file. 
-This meta file contains links to the actual data files. 
-Its syntax is self-explaining and you can open it with a plain text editor.
+%\noindent
+%If you use Peano's HDF5 file format, please note that you typically obtain
+%a bunch of files. 
+%A meta file whose name coincides with the one you specify in your specification
+%file. 
+%This meta file contains links to the actual data files. 
+%Its syntax is self-explaining and you can open it with a plain text editor.
 
 
 \section{More sophiciated dumps}
