@@ -88,3 +88,25 @@ peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
 peano4_project.build(make_clean_first=True)
 
+
+
+#
+# These are steps to analyse the data in Paraview (please note that the
+# amount of files depends on the core number):
+#
+
+import peano4.visualisation
+peano4.visualisation.render_file( "solution-Euler-tree-0-8.peano-patch-file",  display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+peano4.visualisation.render_file( "solution-Euler-tree-6-11.peano-patch-file", display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+peano4.visualisation.render_file( "solution-Euler-tree-8-3.peano-patch-file",  display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+peano4.visualisation.render_file( "solution-Euler-tree-11-7.peano-patch-file", display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+peano4.visualisation.render_file( "solution-Euler-tree-3-1.peano-patch-file",  display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+peano4.visualisation.render_file( "solution-Euler-tree-1-10.peano-patch-file", display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+peano4.visualisation.render_file( "solution-Euler-tree-2-0.peano-patch-file",  display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+peano4.visualisation.render_file( "solution-Euler-tree-4-2.peano-patch-file",  display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+peano4.visualisation.render_file( "solution-Euler-tree-9-9.peano-patch-file",  display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+peano4.visualisation.render_file( "solution-Euler-tree-5-6.peano-patch-file",  display_as_tree=False, filter=[peano4.visualisation.ExtractFineGridFilter(2)] )
+
+
+
+

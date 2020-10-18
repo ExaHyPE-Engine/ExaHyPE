@@ -1,5 +1,5 @@
 #include "{{CLASSNAME}}.h"
-
+#include "globaldata/{{PARTICLE_TYPE}}.h"
 
 
 #if PeanoDebug>=1
@@ -50,9 +50,9 @@ bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::loadPer
 
 std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::toString() const {
   std::ostringstream msg;
-  msg << "(";
+  msg << "(#" << size();
   #if PeanoDebug>=1
-  msg << "x=" << _debugX
+  msg << ",x=" << _debugX
       << ",h=" << _debugH;
   #endif
   msg << ")";

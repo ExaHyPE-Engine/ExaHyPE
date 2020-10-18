@@ -22,6 +22,25 @@ class ActionSet(object):
     you can implement forks and joins (reductions) "natively". There
     are also functions to inject static data into an action set.
     
+    There will be one class per action set per context (observer) 
+    it is used for. Oen object will be created per grid sweep, and 
+    it will have the tree identifier -1 by default. The actual 
+    objects that then are used are constructed from this prototype
+    object via the augmented copy constructor. The other important
+    role of the prototype object, i.e. the one tied to spacetree id
+    -1, is to manage the grid traversal events. It is this object
+    that is asked to hand out grid traversals.
+    
+    BSP-like programming:
+    ---------------------
+    
+    If you want to realise BSP-like programming, then you typically
+    realise the data sharing via the copy constructor. The 
+    attributes of the action set then are all thread-local, i.e. 
+    there's no need to be afraid of memory races. The join in turn
+    should be done within OPERATION_END_TRAVERSAL. Here, you'll need a 
+    semaphore, as the fusion of objects is not per se thread-safe. 
+    
   """
   def __init__(self):
     pass

@@ -172,7 +172,7 @@ def prepare3Dpatches(cell_data, num_patches, dof, unknowns):
       
 
 
-def render_single_file(filename, set_identifier, display_as_tree = True, filter=None):
+def render_single_file(filename, identifier, display_as_tree = True, filter=None):
   """
     Parse a single peano-patch-file and render data 
     
@@ -181,7 +181,7 @@ def render_single_file(filename, set_identifier, display_as_tree = True, filter=
     filename: String
       Path to file to be parsed
  
-    set_identifier: String
+    identifier: String
       Name of the set of unknowns we want to extract  
       
     display_as_tree: Boolean
@@ -203,7 +203,7 @@ def render_single_file(filename, set_identifier, display_as_tree = True, filter=
   """
   
   parser = OutputFileParser(filename)
-  cell_data, dimensions, dof, unknowns = parser.parse_file(set_identifier)
+  cell_data, dimensions, dof, unknowns = parser.parse_file(identifier)
   if dimensions != 2 and dimensions != 3:
     print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
     return 
@@ -236,7 +236,7 @@ def render_single_file(filename, set_identifier, display_as_tree = True, filter=
 
 
 
-def render_dataset(filename, set_identifier, dataset_number=0, display_as_tree = True, filter=None):
+def render_dataset(filename, identifier, dataset_number=0, display_as_tree = True, filter=None):
   """
   
     Peano patch files can either hold data (see render_single_file)
@@ -256,7 +256,7 @@ def render_dataset(filename, set_identifier, dataset_number=0, display_as_tree =
     filename: String
       Path to file to be parsed
     
-    set_identifier: String
+    identifier: String
       Name of the set of unknowns we want to extract
     
     dataset_number: int
@@ -291,7 +291,7 @@ def render_dataset(filename, set_identifier, dataset_number=0, display_as_tree =
       print( "parse file ", snapshot_file_name )
 
       parser = OutputFileParser(snapshot_file_name)
-      snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns = parser.parse_file(set_identifier)
+      snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns = parser.parse_file(identifier)
 
       if snapshot_dimensions != 2 and snapshot_dimensions != 3:
         print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")

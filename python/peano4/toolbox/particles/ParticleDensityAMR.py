@@ -43,24 +43,51 @@ class ParticleDensityAMR(ActionSet):
     newEntry.setOffset( marker.getOffset() );
     newEntry.setWidth( marker.h() );
     newEntry.setH( marker.h()/3.0 );
-    _gridControlEvents.push_back(newEntry);
+    _localGridControlEvents.push_back(newEntry);
   }
 """)
 
+  
+  __Template_EndTraversal = jinja2.Template("""
+  static tarch::multicore::BooleanSemaphore semaphore;
+  tarch::multicore::Lock lock(semaphore);
+  
+  _gridControlEvents.insert( _gridControlEvents.end(), _localGridControlEvents.begin(), _localGridControlEvents.end() );
+""")
 
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
+    if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
+      result = """
+  _gridControlEvents.clear();
+"""      
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d)             
+    if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
+      result = self.__Template_EndTraversal.render(**self.d)             
     return result
 
 
   def get_body_of_getGridControlEvents(self):
-    return "std::cout << _gridControlEvents.size(); return _gridControlEvents;" 
+    return "return _gridControlEvents;" 
 
 
   def get_attributes(self):
     return """
-  std::vector< peano4::grid::GridControlEvent >   _gridControlEvents;
+  std::vector< peano4::grid::GridControlEvent >          _localGridControlEvents;
+  static std::vector< peano4::grid::GridControlEvent >   _gridControlEvents;
+"""
+
+
+
+  def get_static_initialisations(self,full_qualified_classname):
+    return """
+std::vector< peano4::grid::GridControlEvent >  """ + full_qualified_classname + """::_gridControlEvents;
+"""    
+
+
+  def get_includes(self):
+    return """
+#include "tarch/multicore/Lock.h"
 """

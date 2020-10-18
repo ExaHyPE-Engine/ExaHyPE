@@ -3,11 +3,13 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
+#include "tarch/logging/LogFilterFileReader.h"
 #include "tarch/multicore/multicore.h"
 
 #include "peano4/peano.h"
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
+
 
 #include "observers/DataRepository.h"
 #include "observers/StepRepository.h"
@@ -34,62 +36,6 @@ int main(int argc, char** argv) {
   const int ExitCodeSuccess         = 0;
   const int ExitCodeUnitTestsFailed = 1;
 
-  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "peano4", 
-    tarch::logging::LogFilter::FilterListEntry::BlackListEntry
-  ));
-  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetTrace, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "peano4", 
-    tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
-  ));
-  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetInfo, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "peano4", 
-    tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
-  ));
-  
-  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "tarch", 
-    tarch::logging::LogFilter::FilterListEntry::BlackListEntry
-  ));
-  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetTrace, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "tarch", 
-    tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
-  ));
-  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetInfo, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "tarch", 
-    tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
-  ));
- 
-  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "examples::particles", 
-    tarch::logging::LogFilter::FilterListEntry::BlackListEntry
-  ));
-  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetTrace, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "examples::particles", 
-    tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
-  ));
-  tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetInfo, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "examples::particles", 
-    tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
-  ));
 
   #if Dimensions==2
   auto DomainOffset = {0.0, 0.0};
@@ -108,7 +54,12 @@ int main(int argc, char** argv) {
     DomainSize,
     0
   );
-  
+
+  std::string logFilterFile = "peano4.log-filter";
+  if ( not tarch::logging::LogFilterFileReader::parsePlainTextFile( logFilterFile ) ) {
+    logWarning( "main()", "no exahype.log-filter file found or file has been corrupted. Use default logging configuration" );
+  }
+
   #if PeanoDebug>=2
   tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();
   peanoCoreTests->run();
@@ -140,16 +91,21 @@ int main(int argc, char** argv) {
     // inserted manually
     // =================
     //
-    while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<3) {
+    int gridConstructionSteps = 0;
+    while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
       examples::particles::observers::CreateGrid observer;
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+      gridConstructionSteps++;
     }
+
+    logInfo( "main()", "finished grid construction after " << gridConstructionSteps << " steps, start to move particles" )
 
     for (int i=0; i<100; i++) {
       for (int j=0; j<50; j++) {
         examples::particles::observers::MoveParticles observer;
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
       }
+      logInfo( "main()", "plot" )
       examples::particles::observers::Plot observer;
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     }
