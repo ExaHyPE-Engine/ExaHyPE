@@ -4,7 +4,6 @@ from peano4.visualisation.Visualiser import render_dataset
 
 import peano4.visualisation
 
-import vtk
 import sys
 import os
 import argparse
@@ -37,6 +36,7 @@ if __name__ == "__main__":
       data = render_dataset(args.filename, args.identifier, args.dataset, True, filter)
 
     if args.output!=None and data!=None:
+      import vtk
       if not args.output.endswith( ".vtu" ):
         print( "WARNING: output file name should end with .vtu" )
         

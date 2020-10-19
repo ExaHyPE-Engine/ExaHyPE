@@ -5,7 +5,7 @@
 tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter::CellDataWriter::CellDataWriter(
   const std::string& identifier,
   int                unknownsPerAxis,
-  int                numberOfUnknowns,
+  int                numberOfUnknowns, const std::string& description,
   const std::string& metaData,
   double*            mapping,
   tarch::plotter::griddata::blockstructured::PeanoHDF5PatchFileWriter& writer

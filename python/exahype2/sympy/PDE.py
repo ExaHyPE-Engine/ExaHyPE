@@ -16,6 +16,20 @@ class PDE(object):
     pass
   
   
+  def unknown_identifier_for_plotter(self):
+    """
+    
+      Use this one to feed  set_plot_description of your solver.
+    
+    """
+    result = ""
+    for i in range(0,self.unknowns+self.auxiliary_variables):
+      if i!=0:
+        result += ","
+      result += str( self.Q[i] )
+    return result
+     
+  
   def _implementation_of_mapping_onto_named_quantities(self, is_cell_mapping = True):
     """
     
@@ -41,8 +55,6 @@ class PDE(object):
       result += "(" + str(i) + ");\n"
       result += ";\n"
     return result
-
-
 
 
   def name_Q_entry(self,offset_in_Q,name):
@@ -74,7 +86,6 @@ class PDE(object):
     for i in range(0,cardinality):
       self.Q[offset_in_Q+i] = new_entry[i]
     return new_entry
-  
   
   
   def implementation_of_homogeneous_Neumann_BC(self):

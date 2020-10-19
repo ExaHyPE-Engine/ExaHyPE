@@ -100,6 +100,9 @@ int main(int argc, char** argv) {
 
     logInfo( "main()", "finished grid construction after " << gridConstructionSteps << " steps, start to move particles" )
 
+    examples::particles::observers::Plot observer;
+    peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    logInfo( "main()", "dumped initial condition" )
     for (int i=0; i<100; i++) {
       for (int j=0; j<50; j++) {
         examples::particles::observers::MoveParticles observer;

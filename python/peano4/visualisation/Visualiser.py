@@ -51,11 +51,10 @@ def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling = 1.0)
 
     for k in range(dof):
       for l in range(dof):
-    
         cell_number = k*dof + l
     
-        x_0 = patch_x_0 + k*cell_length
-        y_0 = patch_y_0 + l*cell_height
+        x_0 = patch_x_0 + l*cell_length
+        y_0 = patch_y_0 + k*cell_height
         x_1 = x_0 + cell_length
         y_1 = y_0 + cell_height
        
@@ -131,11 +130,11 @@ def prepare3Dpatches(cell_data, num_patches, dof, unknowns):
       for l in range(dof):
         for m in range(dof):
     
-          cell_number = k*dof + l
+          cell_number = k*dof*dof + l*dof + m
     
-          x_0 = patch_x_0 + k*cell_length
+          x_0 = patch_x_0 + m*cell_length
           y_0 = patch_y_0 + l*cell_height
-          z_0 = patch_z_0 + m*cell_depth
+          z_0 = patch_z_0 + k*cell_depth
           x_1 = x_0 + cell_length
           y_1 = y_0 + cell_height
           z_1 = z_0 + cell_depth

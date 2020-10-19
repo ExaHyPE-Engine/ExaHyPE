@@ -114,7 +114,10 @@ class FV(object):
     _patch_overlap_new.generator.merge_method_definition: string
       See _patch_overlap_new.generator.send_condition.
   
-  
+    plot_description: string
+      The description I use when I plot. By default, it is empty, but 
+      some solvers add a string here that explains which entry of the 
+      tuple represents which data.   
   
   
   """
@@ -203,6 +206,7 @@ class FV(object):
     self._patch_overlap_new.generator.send_condition               = "false"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "false"
 
+    self.plot_description = ""
     pass
 
   
@@ -322,12 +326,23 @@ class FV(object):
     pass
   
   
+  def set_plot_description(self,description):
+    """
+    
+     Use this one to set a description within the output patch file that tells
+     the vis solver what the semantics of the entries are. Typicallly, I use 
+     a comma-separated list here. 
+    
+    """
+    self.plot_description = description
+    
+  
   def add_actions_to_plot_solution(self, step):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat("solution-" + self._name,self._patch, self._unknown_identifier()) )
+    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( filename="solution-" + self._name, patch=self._patch, dataset_name=self._unknown_identifier(), description=self.plot_description ) )
 
     if self._plot_grid_properties:    
         step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid-" + self._name,None ))
