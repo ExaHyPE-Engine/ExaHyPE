@@ -10,12 +10,13 @@ class PlotInPeanoBlockFormat(ActionSet):
   """
   
   
-  def __init__(self,filename,number_of_unknowns_within_cell,no_of_unknowns,dataset_name):
+  def __init__(self,filename,number_of_unknowns_within_cell,no_of_unknowns,dataset_name,description):
     self.d = {}
     self.d[ "FILENAME" ]          = filename
     self.d[ "UNKNOWNS" ]          = no_of_unknowns
     self.d[ "UNKNOWNS_PER_CELL" ] = number_of_unknowns_within_cell
     self.d[ "NAME" ]              = dataset_name
+    self.d[ "DESCRIPTION" ]       = description
         
 
   __Template_Constructor = """
@@ -39,8 +40,8 @@ class PlotInPeanoBlockFormat(ActionSet):
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
     Dimensions,"{FILENAME}",mode
   );
-  _dataWriter    = _writer->createCellDataWriter( "{NAME}", 1, {UNKNOWNS}*{UNKNOWNS_PER_CELL} );
-  _averageWriter = _writer->createCellDataWriter( "{NAME}Average", 1, {UNKNOWNS} );
+  _dataWriter    = _writer->createCellDataWriter( "{NAME}", 1, {UNKNOWNS}*{UNKNOWNS_PER_CELL}, "{DESCRIPTION}" );
+  _averageWriter = _writer->createCellDataWriter( "{NAME}Average", 1, {UNKNOWNS}, "{DESCRIPTION}" );
 """
 
 

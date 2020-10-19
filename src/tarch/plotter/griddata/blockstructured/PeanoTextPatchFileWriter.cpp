@@ -141,38 +141,38 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeM
 
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter*
-tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell ) {
-  return new CellDataWriter(identifier, unknownsPerAxis, recordsPerCell, "", nullptr, *this);
+tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description ) {
+  return new CellDataWriter(identifier, unknownsPerAxis, recordsPerCell, description, "", nullptr, *this);
 }
 
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter*
-tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& metaData ) {
-  return new CellDataWriter(identifier, unknownsPerAxis, recordsPerCell, metaData, nullptr, *this);
+tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData ) {
+  return new CellDataWriter(identifier, unknownsPerAxis, recordsPerCell, description, metaData, nullptr, *this);
 }
 
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter*
-tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& metaData, double* mapping ) {
-  return new CellDataWriter(identifier, unknownsPerAxis, recordsPerCell, metaData, mapping, *this);
+tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData, double* mapping ) {
+  return new CellDataWriter(identifier, unknownsPerAxis, recordsPerCell, description,  metaData, mapping, *this);
 }
 
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter*
-tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex ) {
-  return new VertexDataWriter(identifier, unknownsPerAxis, recordsPerVertex , "", nullptr, *this);
+tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description ) {
+  return new VertexDataWriter(identifier, unknownsPerAxis, recordsPerVertex , description, "", nullptr, *this);
 }
 
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter*
-tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& metaData ) {
-  return new VertexDataWriter(identifier, unknownsPerAxis, recordsPerVertex , metaData, nullptr, *this);
+tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData ) {
+  return new VertexDataWriter(identifier, unknownsPerAxis, recordsPerVertex , description, metaData, nullptr, *this);
 }
 
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter*
-tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& metaData, double* mapping ) {
-  return new VertexDataWriter(identifier, unknownsPerAxis, recordsPerVertex , metaData, mapping, *this);
+tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData, double* mapping ) {
+  return new VertexDataWriter(identifier, unknownsPerAxis, recordsPerVertex , description, metaData, mapping, *this);
 }
 
 

@@ -374,7 +374,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
 
   for (int shift=0; shift<2; shift++) {
     #ifdef SharedOMP
-    #pragma omp simd collapse(2)
+    #pragma omp parallel for simd collapse(2)
     #endif
     for (int x=shift; x<=numberOfVolumesPerAxisInPatch; x+=2)
     for (int y=0; y<numberOfVolumesPerAxisInPatch; y++)  {
@@ -412,7 +412,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
 
   for (int shift=0; shift<2; shift++) {
     #ifdef SharedOMP
-    #pragma omp simd collapse(2)
+    #pragma omp parallel for simd collapse(2)
     #endif
     for (int y=shift; y<=numberOfVolumesPerAxisInPatch; y+=2)
     for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
@@ -488,7 +488,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
 
   for (int shift=0; shift<2; shift++) {
     #ifdef SharedOMP
-    #pragma omp simd collapse(3)
+    #pragma omp parallel for simd collapse(3)
     #endif
     for (int x=shift; x<=numberOfVolumesPerAxisInPatch; x+=2)
     for (int z=0; z<numberOfVolumesPerAxisInPatch; z++)
@@ -532,7 +532,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
 
   for (int shift=0; shift<2; shift++) {
     #ifdef SharedOMP
-    #pragma omp simd collapse(3)
+    #pragma omp parallel for simd collapse(3)
     #endif
     for (int y=shift; y<=numberOfVolumesPerAxisInPatch; y+=2)
     for (int z=0; z<numberOfVolumesPerAxisInPatch; z++)
@@ -578,7 +578,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
 
   for (int shift=0; shift<2; shift++) {
     #ifdef SharedOMP
-    #pragma omp simd collapse(3)
+    #pragma omp parallel for simd collapse(3)
     #endif
     for (int z=shift; z<=numberOfVolumesPerAxisInPatch; z+=2)
     for (int y=0; y<numberOfVolumesPerAxisInPatch; y++)

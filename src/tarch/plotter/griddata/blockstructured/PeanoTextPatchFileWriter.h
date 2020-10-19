@@ -83,7 +83,7 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
         CellDataWriter(
           const std::string& identifier,
           int                unknownsPerAxis,
-          int                numberOfUnknowns,
+          int                numberOfUnknowns, const std::string& description,
           const std::string& metaData,
           double*            mapping,
           tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter& writer
@@ -129,7 +129,7 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
          VertexDataWriter(
            const std::string& identifier,
            int                unknownsPerAxis,
-           int                numberOfUnknowns,
+           int                numberOfUnknowns, const std::string& description,
            const std::string& metaData,
            double*            mapping,
            tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter& writer
@@ -178,16 +178,16 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     /**
      * Caller has to destroy this instance manually.
      */
-    CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell ) override;
-    CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& metaData ) override;
-    CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& metaData, double* mapping ) override;
+    CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description ) override;
+    CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData ) override;
+    CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData, double* mapping ) override;
 
     /**
      * Caller has to destroy this instance manually.
      */
-    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex ) override;
-    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& metaData  ) override;
-    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& metaData, double* mapping ) override;
+    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description ) override;
+    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData  ) override;
+    VertexDataWriter*  createVertexDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerVertex, const std::string& description, const std::string& metaData, double* mapping ) override;
 
     int plotPatch(
       const tarch::la::Vector<2,double>& offset,

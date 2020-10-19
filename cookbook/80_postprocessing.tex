@@ -66,10 +66,16 @@ import peano4.visualisation
   \end{code}
   \item Load the file you are interested in:
   \begin{code}
-peano4.visualisation.render_single_file( "solution-Euler-tree-0-0.peano-patch-file" ) 
+data = peano4.visualisation.render_single_file(  "solution-Euler-tree-0-0.peano-patch-file", identifier="MyQName" )
   \end{code}
   This is only one snapshot. We discuss the postprocessing of meta files,
   i.e.~files that link to other files, below.
+  \item Display the file:
+  \begin{code}
+tp = TrivialProducer()
+tp.GetClientSideObject().SetOutput(data)
+Show(tp)
+  \end{code}
 \end{enumerate}
 
 
@@ -82,7 +88,8 @@ in a 2d fine grid only, e.g., I use:
 import peano4.visualisation  
 data = peano4.visualisation.render_single_file( \
   "solution-Euler-tree-0-0.peano-patch-file",display_as_tree=False, \
-  filter=[peano4.visualisation.ExtractFineGridFilter()] \
+  filter=[peano4.visualisation.ExtractFineGridFilter()], \
+  identifier="MyQName" \
 )
 tp = TrivialProducer()
 tp.GetClientSideObject().SetOutput(data)
@@ -98,7 +105,7 @@ data = peano4.visualisation.render_dataset( \
   "solution-Euler.peano-patch-file", \
   display_as_tree=False, \
   filter=[peano4.visualisation.ExtractFineGridFilter()], \
-  dataset_number=0 \
+  dataset_number=0, identifier="MyQName" \
 )
 tp = TrivialProducer()
 tp.GetClientSideObject().SetOutput(data)

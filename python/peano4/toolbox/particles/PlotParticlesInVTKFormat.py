@@ -44,7 +44,6 @@ class PlotParticlesInVTKFormat(ActionSet):
   def get_constructor_body(self):
     return self.__Template_Constructor.render(**self.d)
 
-
     
   def get_destructor_body(self):
     return ""

@@ -5,7 +5,7 @@
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::VertexDataWriter(
   const std::string& identifier,
   int                unknownsPerAxis,
-  int                numberOfUnknowns,
+  int                numberOfUnknowns, const std::string& description,
   const std::string& metaData,
   double*            mapping,
   tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter& writer
@@ -17,7 +17,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataW
   _entryCounter(0) {
   _writer._snapshotFileOut << "begin vertex-metadata \"" << identifier << "\"" << std::endl
                            << "  number-of-unknowns " << _numberOfUnknowns << std::endl
-                           << "  number-of-dofs-per-axis " << _numberOfVerticesPerAxis << std::endl;
+                           << "  number-of-dofs-per-axis " << _numberOfVerticesPerAxis << std::endl
+                           << "  description \"" << description << "\"" << std::endl;
 
   _writer.writeMetaData(metaData);
   _writer.writeMapping(getVerticesPerPatch(),mapping);

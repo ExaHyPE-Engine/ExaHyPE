@@ -5,7 +5,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
-  def __init__(self,filename,vertex_unknown,getter):
+  def __init__(self,filename,vertex_unknown,getter,description):
     """
       Plot only the grid structure
       
@@ -19,6 +19,7 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
     self.d[ "FILENAME" ]            = filename
     self.d[ "VERTEX_UNKNOWN_NAME" ] = vertex_unknown.name
     self.d[ "GETTER" ]              = getter
+    self.d[ "DESCRIPTION" ]         = description
         
 
   __Template_Constructor = """
@@ -123,7 +124,7 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
   }}  
   
   
-  _dataWriter = _writer->createVertexDataWriter( "{VERTEX_UNKNOWN_NAME}", 2, 1 );
+  _dataWriter = _writer->createVertexDataWriter( "{VERTEX_UNKNOWN_NAME}", 2, 1, "{DESCRIPTION}" );
 """
 
 

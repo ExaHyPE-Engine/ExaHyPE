@@ -26,6 +26,19 @@ class OutputFileParser(object):
   
   def __init__(self,file_path):
     self.file_path = file_path
+    self.dof = 0
+    self.unknowns = 0
+    
+    
+  def __parse_meta_data_line(self, line):
+    if "number-of-unknowns" in line:
+      self.unknowns = int(line.strip().split()[1])
+    if "number-of-dofs-per-axis" in line:
+      self.dof = int(line.strip().split()[1])   
+    if "description" in line:
+      #dof = int(this_line.strip().split()[1])
+      pass   
+
     
   def parse_file(self, set_identifier):
     """
@@ -53,8 +66,6 @@ class OutputFileParser(object):
     """  
     cell_data = []
     dimensions = 0
-    dof = 0
-    unknowns = 0
     
     print("Reading "+ self.file_path)
     
@@ -69,10 +80,10 @@ class OutputFileParser(object):
         
         #Read out meta data  
         if this_line.startswith("begin cell-metadata") and this_line.endswith('"'+set_identifier+'"'):
-          this_line = data_file.readline().strip() 
-          unknowns = int(this_line.strip().split()[1]) 
-          this_line = data_file.readline().strip() 
-          dof = int(this_line.strip().split()[1])   
+          line = data_file.readline().strip()
+          while not "end cell-metadata" in line:
+            self.__parse_meta_data_line( line )
+            line = data_file.readline().strip()
           
         elif this_line.startswith("begin patch"):
         
@@ -113,5 +124,5 @@ class OutputFileParser(object):
            
       
       
-    return cell_data, dimensions, dof, unknowns    
+    return cell_data, dimensions, self.dof, self.unknowns    
  

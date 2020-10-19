@@ -129,7 +129,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     );
   }}
 
-  _dataWriter = _writer->createCellDataWriter( "cell-marker(refined,local,enclave)", 1, 3 );
+  _dataWriter = _writer->createCellDataWriter( "cell-marker", 1, 3, "refined,local,enclave" );
 """
 
 

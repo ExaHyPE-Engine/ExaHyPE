@@ -20,12 +20,13 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   
   
-  def __init__(self,filename,patch,dataset_name):
+  def __init__(self,filename,patch,dataset_name, description):
     self.d = {}
     self.d[ "FILENAME" ]           = filename
     self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
     self.d[ "DOFS_PER_AXIS" ]      = str(patch.dim[0])
     self.d[ "NAME" ]               = dataset_name
+    self.d[ "DESCRIPTION" ]        = description
         
     for i in patch.dim:
       if i!=patch.dim[0]:
@@ -140,7 +141,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     );
   }}
 
-  _dataWriter = _writer->createCellDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS} );
+  _dataWriter = _writer->createCellDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}" );
 """
 
 
