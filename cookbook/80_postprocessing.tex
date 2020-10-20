@@ -113,6 +113,18 @@ Show(tp)
 \end{code}
 
 
+\noindent
+The gold version of our data exporation is the actual \texttt{Visualiser}
+class:
+\begin{code}
+import peano4.visualisation
+visualiser = peano4.visualisation.Visualiser( "solution-Euler.peano-patch-file" )
+visualiser.display()
+visualiser.select_dataset(0)
+visualiser.append_filter(peano4.visualisation.ExtractFineGridFilter())
+visualiser.reload() # If your file has changed
+\end{code}
+
 
 
 \section{Interactive visualisation via Paraview's Python command line}

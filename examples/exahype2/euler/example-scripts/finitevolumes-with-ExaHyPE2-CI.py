@@ -46,8 +46,8 @@ max_h          = args.h
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-#project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
-project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSize(
+project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+#project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSize(
   "Euler",
   patch_size,
   unknowns, 0,
@@ -87,6 +87,7 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
 project.set_Peano4_installation("../../..", build_mode)
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
-peano4_project.build(make_clean_first=True)
+peano4_project.generate()
+#peano4_project.build(make_clean_first=True, number_of_parallel_builds=1)
 
 

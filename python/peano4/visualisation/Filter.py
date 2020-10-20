@@ -13,15 +13,24 @@ class Filter(object):
     optimisations do not work.
     
   """
-  def __init__(self):
+  def __init__(self, exploit_idempotent):
+    """
+    
+    exploit_idempotent: boolean
+      Exploit the fact that the filter is idempotent, i.e. that we
+      can apply it to fragments of the dataset and then to the whole
+      result again.
+      
+    """
+    self.exploit_idempotent = exploit_idempotent
     pass
   
   
-  def render(self, cell_data, num_patches, dof, unknowns, dimensions):
+  def render(self, cell_data, dof, unknowns, dimensions):
     """
     
       Overwrite this one for the particular filter. 
       
     """
-    return cell_data, num_patches, dof, unknowns, dimensions
+    return cell_data, dof, unknowns, dimensions
 

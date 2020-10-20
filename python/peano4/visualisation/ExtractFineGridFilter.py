@@ -4,8 +4,25 @@ from peano4.visualisation.Filter import Filter
 
 
 class ExtractFineGridFilter( Filter ):
-  def __init__(self):
-    Filter.__init__(self)
+  """
+    
+    Extract the fine grid information
+      
+    This is a very expensive filter if it is applied on large patch 
+    sets, as it has to compare each patch with each other patch.
+    If you want to use it in an economically sensible way, I 
+    recommend that you first apply other, cheapter filters to bring
+    the patch count down.
+   
+    Even though the overlap operation is idempotent - if a patch
+    is not a fine grid patch within a small local dataset written
+    by one tree, then it can't be part of the fine grid in the 
+    overall data set - I found that it is usually faster to 
+    concatenate all data and then to apply the filter.
+      
+  """
+  def __init__(self, exploit_idempotent=True):
+    Filter.__init__(self, exploit_idempotent)
     pass
   
   
@@ -24,29 +41,50 @@ class ExtractFineGridFilter( Filter ):
              a.offset[1] <= b.offset[1] + b.size[1] 
   
   
-  def render(self,cell_data, num_patches, dof, unknowns, dimensions):
+  def render(self,cell_data, dof, unknowns, dimensions):
     """
     
       Overwrite this one for the particular filter. 
       
+      List operations are very epensive in Python. I therefore implement a 
+      two-pass stra
+      
     """
-    new_num_patches = 0
-    new_cell_data   = []
+    def sort_key(patch):
+      return patch.size[0]
+  
+    print( "Sort input data to optimise algorithmic efficiency" )
+    cell_data.sort(reverse=True, key=sort_key)
     
-    for i in range(0,num_patches):
-      overlaps_with_patch_in_new_cell_data = False
-      for j in new_cell_data:
-        overlaps_with_patch_in_new_cell_data = overlaps_with_patch_in_new_cell_data or self.__patches_overlap(cell_data[i],j,dimensions)
-        
-      if not overlaps_with_patch_in_new_cell_data:
-        new_entry = cell_data[i]
-        for j in range(i+1,num_patches):
-          if self.__patches_overlap(cell_data[j],new_entry,dimensions) and cell_data[j].size[0] < new_entry.size[0]:
-            new_entry = cell_data[j]
+    new_num_patches = 0
+    new_cell_data   = [None] * len(cell_data)
+    
+    print( "Build up auxiliary data structures over " + str(len(cell_data)) + " entries" )
+    
+    ratio_for_print = 10
+    
+    for i in range(0, len(cell_data) ):
+      insert = True
+      
+      j = i+1
+      while j<len(cell_data) and insert:
+        insert = insert and (not self.__patches_overlap(cell_data[i],cell_data[j],dimensions) or cell_data[i].size[0] < cell_data[j].size[0])
+        j = j+1
+
+      if insert:        
+        new_cell_data[new_num_patches] = cell_data[i]
         new_num_patches += 1
-        new_cell_data.append(new_entry)
 
-    print( "extracted " + str(new_num_patches) + " from the " + str(num_patches) + " patch(es)" )
+      if i>0.01*ratio_for_print*len(cell_data):
+        print( "... " + str(ratio_for_print) + "%" )
+        ratio_for_print += 10
 
-    return new_cell_data, new_num_patches, dof, unknowns, dimensions
+    print( "Copy results into output (commit changes)" )
+    result_cell_data = [None] * new_num_patches
+    for i in range(0,new_num_patches):
+      result_cell_data[i] = new_cell_data[i]
+
+    print( "extracted " + str( new_num_patches ) + " from the " + str( len(cell_data) ) + " patch(es)" )
+
+    return result_cell_data, dof, unknowns, dimensions
   
