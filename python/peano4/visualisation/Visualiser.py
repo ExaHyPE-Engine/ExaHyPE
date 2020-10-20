@@ -428,13 +428,9 @@ class Visualiser(object):
       Should be called only once
       
     """
-    self._tp = TrivialProducer()
-    if self.data!=None:
-      #
-      # Aber ansonsten sollte man schon auch was sehen oder Feedback bekommen
-      #
-      self._tp.GetClientSideObject().SetOutput(self._data)
-      Show(self._tp)
+    if self._tp==None:
+      self._tp = TrivialProducer()
+      self.reload()
 
 
   def select_dataset(self, number):

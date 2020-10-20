@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .Convert                import Convert
 from .ExtractFineGridFilter  import ExtractFineGridFilter
+from .ExtractMeshResolutionFilter import ExtractMeshResolutionFilter
 from .OutputFileParser       import OutputFileParser
 from .Patch                  import Patch
 from .Visualiser             import Visualiser 

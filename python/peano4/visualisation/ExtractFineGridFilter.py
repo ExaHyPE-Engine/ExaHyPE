@@ -4,24 +4,24 @@ from peano4.visualisation.Filter import Filter
 
 
 class ExtractFineGridFilter( Filter ):
+  """
+    
+    Extract the fine grid information
+      
+    This is a very expensive filter if it is applied on large patch 
+    sets, as it has to compare each patch with each other patch.
+    If you want to use it in an economically sensible way, I 
+    recommend that you first apply other, cheapter filters to bring
+    the patch count down.
+   
+    Even though the overlap operation is idempotent - if a patch
+    is not a fine grid patch within a small local dataset written
+    by one tree, then it can't be part of the fine grid in the 
+    overall data set - I found that it is usually faster to 
+    concatenate all data and then to apply the filter.
+      
+  """
   def __init__(self, exploit_idempotent=True):
-    """
-    
-      Extract the fine grid information
-      
-      This is a very expensive filter if it is applied on large patch 
-      sets, as it has to compare each patch with each other patch.
-      If you want to use it in an economically sensible way, I 
-      recommend that you first apply other, cheapter filters to bring
-      the patch count down.
-    
-      Even though the overlap operation is idempotent - if a patch
-      is not a fine grid patch within a small local dataset written
-      by one tree, then it can't be part of the fine grid in the 
-      overall data set - I found that it is usually faster to 
-      concatenate all data and then to apply the filter.
-      
-    """
     Filter.__init__(self, exploit_idempotent)
     pass
   
