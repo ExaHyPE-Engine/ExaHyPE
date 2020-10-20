@@ -7,6 +7,14 @@ class ExtractFineGridFilter( Filter ):
   def __init__(self, exploit_idempotent=True):
     """
     
+      Extract the fine grid information
+      
+      This is a very expensive filter if it is applied on large patch 
+      sets, as it has to compare each patch with each other patch.
+      If you want to use it in an economically sensible way, I 
+      recommend that you first apply other, cheapter filters to bring
+      the patch count down.
+    
       Even though the overlap operation is idempotent - if a patch
       is not a fine grid patch within a small local dataset written
       by one tree, then it can't be part of the fine grid in the 
@@ -42,6 +50,12 @@ class ExtractFineGridFilter( Filter ):
       two-pass stra
       
     """
+    def sort_key(patch):
+      return patch.size[0]
+  
+    print( "Sort input data to optimise algorithmic efficiency" )
+    cell_data.sort(reverse=True, key=sort_key)
+    
     new_num_patches = 0
     new_cell_data   = [None] * len(cell_data)
     
@@ -52,10 +66,9 @@ class ExtractFineGridFilter( Filter ):
     for i in range(0, len(cell_data) ):
       insert = True
       
-      j = 0
+      j = i+1
       while j<len(cell_data) and insert:
-        if j!=i:
-          insert = insert and (not self.__patches_overlap(cell_data[i],cell_data[j],dimensions) or cell_data[i].size[0] < cell_data[j].size[0])
+        insert = insert and (not self.__patches_overlap(cell_data[i],cell_data[j],dimensions) or cell_data[i].size[0] < cell_data[j].size[0])
         j = j+1
 
       if insert:        
@@ -71,7 +84,7 @@ class ExtractFineGridFilter( Filter ):
     for i in range(0,new_num_patches):
       result_cell_data[i] = new_cell_data[i]
 
-    print( "extracted " + str( len(new_cell_data) ) + " from the " + str( len(cell_data) ) + " patch(es)" )
+    print( "extracted " + str( new_num_patches ) + " from the " + str( len(cell_data) ) + " patch(es)" )
 
     return result_cell_data, dof, unknowns, dimensions
   

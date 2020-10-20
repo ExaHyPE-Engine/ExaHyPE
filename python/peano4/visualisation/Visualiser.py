@@ -387,7 +387,7 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
     for p in filter:
      cell_data, dof, unknowns, dimensions = p.render(cell_data, dof, unknowns, dimensions)
 
-  print( "Convert into VTK data structures" )
+  print( "Parsing complete. Convert into VTK data structures" )
 
   if dimensions == 2 and display_as_tree:
     grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description ) 
@@ -395,8 +395,6 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
     grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description) 
   else: # Tested above that it can only be 2 or 3
     grid = prepare3Dpatches(cell_data, dof, unknowns, description) 
-
-  print( "Parsing complete" )
 
   return grid
       
