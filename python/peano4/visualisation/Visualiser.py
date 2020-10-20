@@ -288,7 +288,8 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
     if filter!=None:
       snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description = parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description
       for p in filter:
-        snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions = p.render(snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions)
+        if p.exploit_idempotent:
+          snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions = p.render(snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions)
       parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description = snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description
 
 

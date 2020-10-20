@@ -13,7 +13,16 @@ class Filter(object):
     optimisations do not work.
     
   """
-  def __init__(self):
+  def __init__(self, exploit_idempotent):
+    """
+    
+    exploit_idempotent: boolean
+      Exploit the fact that the filter is idempotent, i.e. that we
+      can apply it to fragments of the dataset and then to the whole
+      result again.
+      
+    """
+    self.exploit_idempotent = exploit_idempotent
     pass
   
   

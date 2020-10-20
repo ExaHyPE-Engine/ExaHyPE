@@ -4,8 +4,17 @@ from peano4.visualisation.Filter import Filter
 
 
 class ExtractFineGridFilter( Filter ):
-  def __init__(self):
-    Filter.__init__(self)
+  def __init__(self, exploit_idempotent=True):
+    """
+    
+      Even though the overlap operation is idempotent - if a patch
+      is not a fine grid patch within a small local dataset written
+      by one tree, then it can't be part of the fine grid in the 
+      overall data set - I found that it is usually faster to 
+      concatenate all data and then to apply the filter.
+      
+    """
+    Filter.__init__(self, exploit_idempotent)
     pass
   
   
@@ -33,9 +42,12 @@ class ExtractFineGridFilter( Filter ):
       two-pass stra
       
     """
-    #new_num_patches = 0
-    #new_cell_data   = [None] * num_patches
-    new_cell_data = []
+    new_num_patches = 0
+    new_cell_data   = [None] * len(cell_data)
+    
+    print( "Build up auxiliary data structures over " + str(len(cell_data)) + " entries" )
+    
+    ratio_for_print = 10
     
     for i in range(0, len(cell_data) ):
       insert = True
@@ -47,11 +59,19 @@ class ExtractFineGridFilter( Filter ):
         j = j+1
 
       if insert:        
-        #new_cell_data[new_num_patches] = cell_data[i]
-        #new_num_patches += 1
-        new_cell_data.append( cell_data[i] )
+        new_cell_data[new_num_patches] = cell_data[i]
+        new_num_patches += 1
+
+      if i>0.01*ratio_for_print*len(cell_data):
+        print( "... " + str(ratio_for_print) + "%" )
+        ratio_for_print += 10
+
+    print( "Copy results into output (commit changes)" )
+    result_cell_data = [None] * new_num_patches
+    for i in range(0,new_num_patches):
+      result_cell_data[i] = new_cell_data[i]
 
     print( "extracted " + str( len(new_cell_data) ) + " from the " + str( len(cell_data) ) + " patch(es)" )
 
-    return new_cell_data, dof, unknowns, dimensions
+    return result_cell_data, dof, unknowns, dimensions
   
