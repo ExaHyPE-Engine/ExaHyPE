@@ -6,7 +6,7 @@ from paraview.simple import *
 
 
 
-def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling = 1.0):
+def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling, description):
   """
     Prepare 2D patches in grid for rendering 
     
@@ -33,7 +33,11 @@ def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling = 1.0)
   grid   = paraview.vtk.vtkUnstructuredGrid() 
 
   data   = paraview.vtk.vtkDoubleArray()
-  grid.GetCellData().SetScalars(data)
+  data.SetNumberOfComponents(unknowns+1)
+  if description!="":
+    data.SetName("Unknowns (" + description + ", subdomain)" )
+  else:                  
+    data.SetName("Unknowns (..., subdomain)" )
 
   count = 0
 
@@ -70,19 +74,21 @@ def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling = 1.0)
         cells.InsertCellPoint(count+2)
         cells.InsertCellPoint(count+3)
           
-        data.SetNumberOfComponents(unknowns)
-        data.InsertNextTuple(cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns]) #density, velocity x, y, z, energy per set  
-        data.SetName("Cell Data (density, velocity x, y, z, energy)")                  
+        new_data = [x for x in cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns] ]
+        new_data.append(cell_data[p].subdomain_number)
+        data.InsertNextTuple(new_data)
+  
         count = count+4
 
   grid.SetPoints(points)
   grid.SetCells(paraview.vtk.VTK_PIXEL, cells)
+  grid.GetCellData().SetScalars(data)
 
   return grid
 
 
 
-def prepare3Dpatches(cell_data, num_patches, dof, unknowns):
+def prepare3Dpatches(cell_data, num_patches, dof, unknowns, description):
   """
     Prepare 3D patches in grid for rendering 
     
@@ -109,7 +115,11 @@ def prepare3Dpatches(cell_data, num_patches, dof, unknowns):
   grid   = paraview.vtk.vtkUnstructuredGrid() 
 
   data   = paraview.vtk.vtkDoubleArray()
-  grid.GetCellData().SetScalars(data)
+  data.SetNumberOfComponents(unknowns+1)
+  if description!="":
+    data.SetName("Unknowns (" + description + ", subdomain)" )
+  else:                  
+    data.SetName("Unknowns (..., subdomain)" )
 
   count = 0
 
@@ -157,14 +167,16 @@ def prepare3Dpatches(cell_data, num_patches, dof, unknowns):
           cells.InsertCellPoint(count+5)
           cells.InsertCellPoint(count+6)
           cells.InsertCellPoint(count+7)
-          
-          data.SetNumberOfComponents(unknowns)
-          data.InsertNextTuple(cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns]) #density, velocity x, y, z, energy per set  
-          data.SetName("Cell Data (density, velocity x, y, z, energy)")                  
+
+          new_data = [x for x in cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns] ]
+          new_data.append(cell_data[p].subdomain_number)
+          data.InsertNextTuple(new_data)
+             
           count = count+8
 
   grid.SetPoints(points)
   grid.SetCells(paraview.vtk.VTK_VOXEL, cells)
+  grid.GetCellData().SetScalars(data)
 
   return grid
 
@@ -202,7 +214,7 @@ def render_single_file(filename, identifier, display_as_tree = True, filter=None
   """
   
   parser = OutputFileParser(filename)
-  cell_data, dimensions, dof, unknowns = parser.parse_file(identifier)
+  cell_data, dimensions, dof, unknowns, description = parser.parse_file(identifier)
   if dimensions != 2 and dimensions != 3:
     print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
     return 
@@ -225,11 +237,11 @@ def render_single_file(filename, identifier, display_as_tree = True, filter=None
       cell_data, num_patches, dof, unknowns, dimensions = p.render(cell_data, num_patches, dof, unknowns, dimensions)
 
   if dimensions == 2 and display_as_tree:
-    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns) 
+    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 1.0, description) 
   elif dimensions == 2 and not display_as_tree:
-    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 0.0) 
+    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 0.0, description) 
   else: # Tested above that it can only be 2 or 3
-    grid = prepare3Dpatches(cell_data, num_patches, dof, unknowns) 
+    grid = prepare3Dpatches(cell_data, num_patches, dof, unknowns, description) 
   
   return grid
 
@@ -281,17 +293,21 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
   # Will be decreased by first hit
   #
   dataset_number = dataset_number+1
+  include_file_counter = 0
   
   for line in lines:
     if "begin dataset" in line:
       dataset_number = dataset_number-1
+      include_file_counter = 0
     if "include" in line and dataset_number==0:
       snapshot_file_name = line.split( "\"" )[1]
       print( "parse file ", snapshot_file_name )
 
       parser = OutputFileParser(snapshot_file_name)
-      snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns = parser.parse_file(identifier)
+      snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description = parser.parse_file(identifier, include_file_counter)
 
+      include_file_counter += 1
+      
       if snapshot_dimensions != 2 and snapshot_dimensions != 3:
         print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
         return 
@@ -337,11 +353,89 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
      cell_data, num_patches, dof, unknowns, dimensions = p.render(cell_data, num_patches, dof, unknowns, dimensions)
 
   if dimensions == 2 and display_as_tree:
-    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns) 
+    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 1.0, description ) 
   elif dimensions == 2 and not display_as_tree:
-    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 0.0) 
+    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 0.0, description) 
   else: # Tested above that it can only be 2 or 3
-    grid = prepare3Dpatches(cell_data, num_patches, dof, unknowns) 
+    grid = prepare3Dpatches(cell_data, num_patches, dof, unknowns, description) 
   
   return grid
+      
+
+class Visualiser(object):
+  """
+    The visualiser is first and foremost a persistency layer around 
+    datasets. It does not work on the command line.
+  """
+  
+  def __init__(self, file_name ):
+    """
+    
+     file_name: String
+       Name of a Peano patch file. This has to be a meta file, i.e. a file which 
+       does not hold actual data but hosts data sets that in turn link to actual
+       data. 
+        
+    """
+    self.file_name      = file_name
+    self._tp            = None
+    self.dataset_number = 0
+    self.filter         = []
+    self.identifier     = ""
+    self.data           = None
+    
+    
+  def display(self, invoked_on_command_line = False):
+    """
+    
+      Should be called only once
+      
+    """
+    self._tp = TrivialProducer()
+    if self.data!=None:
+      #
+      # Aber ansonsten sollte man schon auch was sehen oder Feedback bekommen
+      #
+      self._tp.GetClientSideObject().SetOutput(self._data)
+      Show(self._tp)
+
+
+  def select_dataset(self, number):
+    """
+      number: int
+    """
+    self.dataset_number = number
+    self.reload()
+  
+  
+  def append_filter(self, filter):
+    """
+     
+    """
+    self.filter.append(filter)
+    self.reload()
+    
+    
+  def remove_filters(self):
+    """
+     
+    """
+    self.filter = []
+    self.reload()
+    
+    
+  def reload(self):
+    if self._tp != None:
+      self._data = render_dataset( 
+        self.file_name,
+        self.identifier,
+        self.dataset_number,
+        False, # display_as_tree
+        self.filter
+      )
+      self._tp.GetClientSideObject().SetOutput(self._data)
+      Show(self._tp)
+      print( "Please press the play button to update your pipeline" )
+      # 
+      #visualiser._tp.GetClientSideObject().Update()
       
