@@ -28,6 +28,7 @@ class OutputFileParser(object):
     self.file_path = file_path
     self.dof = 0
     self.unknowns = 0
+    self.description = ""
     
     
   def __parse_meta_data_line(self, line):
@@ -36,18 +37,19 @@ class OutputFileParser(object):
     if "number-of-dofs-per-axis" in line:
       self.dof = int(line.strip().split()[1])   
     if "description" in line:
-      #dof = int(this_line.strip().split()[1])
+      self.description = line.strip().split("description")[1]
       pass   
 
     
-  def parse_file(self, set_identifier):
+  def parse_file(self, set_identifier, subdomain_number=0):
     """
       Read file and return cell data, dimensions, number of degrees of freedom and number of unknowns
           
       Parameters:
       ----------
       set_identifier: String
-        Name of the set of unknowns we want to extract
+        Name of the set of unknowns we want to extract. If this is the empty string
+        then I parse all content.
       
       Returns:
       ---------- 
@@ -67,7 +69,7 @@ class OutputFileParser(object):
     cell_data = []
     dimensions = 0
     
-    print("Reading "+ self.file_path)
+    print("Reading "+ self.file_path + " as subdomain " + str(subdomain_number) )
     
     with open(self.file_path, 'r') as data_file:
             
@@ -79,7 +81,7 @@ class OutputFileParser(object):
           print("Dim:", dimensions)
         
         #Read out meta data  
-        if this_line.startswith("begin cell-metadata") and this_line.endswith('"'+set_identifier+'"'):
+        if this_line.startswith("begin cell-metadata") and ( set_identifier=="" or this_line.endswith('"'+set_identifier+'"' )):
           line = data_file.readline().strip()
           while not "end cell-metadata" in line:
             self.__parse_meta_data_line( line )
@@ -112,17 +114,17 @@ class OutputFileParser(object):
              
           #Get patch data  
           this_line = data_file.readline().strip()
-          if this_line.startswith("begin cell-values") and this_line.endswith('"'+set_identifier+'"'):
+          if this_line.startswith("begin cell-values") and ( set_identifier=="" or this_line.endswith('"'+set_identifier+'"')):
             this_line = data_file.readline()
             values = np.fromstring(this_line, dtype=float, sep=' ')
             
           #Add patch to list
-          cell_data.append(Patch(offset, size, values))  
+          cell_data.append(Patch(offset, size, values, subdomain_number))  
       
         #else:
           #Do nothing
            
       
       
-    return cell_data, dimensions, self.dof, self.unknowns    
+    return cell_data, dimensions, self.dof, self.unknowns, self.description
  

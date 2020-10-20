@@ -14,7 +14,10 @@ class Patch(object):
       Size of patch
       
     values: List
-      List of values in the patch    
+      List of values in the patch
+      
+    subdomain: integer
+      Integer value which identifies from which subdomain data stems from    
       
     Parameters:
     ----------
@@ -24,8 +27,9 @@ class Patch(object):
     
   """
   
-  def __init__(self, offset, size, values):
-    self.offset = offset
-    self.size   = size
-    self.values = values
+  def __init__(self, offset, size, values, subdomain_number=0):
+    self.offset    = offset
+    self.size      = size
+    self.values    = values
+    self.subdomain_number = subdomain_number
       
