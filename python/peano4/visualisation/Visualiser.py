@@ -4,9 +4,11 @@ from peano4.visualisation.OutputFileParser import OutputFileParser
 from paraview.simple import *
 
 
+import multiprocessing
 
 
-def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling, description):
+
+def prepare2Dpatches(cell_data, dof, unknowns, depth_scaling, description):
   """
     Prepare 2D patches in grid for rendering 
     
@@ -14,10 +16,10 @@ def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling, descr
     ----------
     cell_data: list of patches
       List of Patches with file data 
-    num_patches: Integer
-      Number of patches in tree
+
     dof: Integer
       Number of degrees of freedom per axis
+
     unknowns: Integer
       Number of unknowns per patch volume  
       
@@ -41,7 +43,7 @@ def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling, descr
 
   count = 0
 
-  for p in range(num_patches):
+  for p in range( len(cell_data) ):
 
     patch_x_0 = cell_data[p].offset[0]
     patch_y_0 = cell_data[p].offset[1]
@@ -88,7 +90,7 @@ def prepare2Dpatches(cell_data, num_patches, dof, unknowns, depth_scaling, descr
 
 
 
-def prepare3Dpatches(cell_data, num_patches, dof, unknowns, description):
+def prepare3Dpatches(cell_data, dof, unknowns, description):
   """
     Prepare 3D patches in grid for rendering 
     
@@ -96,10 +98,10 @@ def prepare3Dpatches(cell_data, num_patches, dof, unknowns, description):
     ----------
     cell_data: list of patches
       List of Patches with file data 
-    num_patches: Integer
-      Number of patches in tree
+
     dof: Integer
       Number of degrees of freedom per axis
+
     unknowns: Integer
       Number of unknowns per patch volume  
       
@@ -123,7 +125,7 @@ def prepare3Dpatches(cell_data, num_patches, dof, unknowns, description):
 
   count = 0
 
-  for p in range(num_patches):
+  for p in range(len(cell_data)):
 
     patch_x_0 = cell_data[p].offset[0]
     patch_y_0 = cell_data[p].offset[1]
@@ -213,8 +215,10 @@ def render_single_file(filename, identifier, display_as_tree = True, filter=None
        
   """
   
-  parser = OutputFileParser(filename)
-  cell_data, dimensions, dof, unknowns, description = parser.parse_file(identifier)
+  parser = OutputFileParser(filename,identifier,0)
+  parser.parse_file()
+  cell_data, dimensions, dof, unknowns, description = parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description
+  
   if dimensions != 2 and dimensions != 3:
     print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
     return 
@@ -234,17 +238,16 @@ def render_single_file(filename, identifier, display_as_tree = True, filter=None
   
   if filter!=None:
     for p in filter:
-      cell_data, num_patches, dof, unknowns, dimensions = p.render(cell_data, num_patches, dof, unknowns, dimensions)
+      cell_data, dof, unknowns, dimensions = p.render(cell_data, dof, unknowns, dimensions)
 
   if dimensions == 2 and display_as_tree:
-    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 1.0, description) 
+    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description) 
   elif dimensions == 2 and not display_as_tree:
-    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 0.0, description) 
+    grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description) 
   else: # Tested above that it can only be 2 or 3
-    grid = prepare3Dpatches(cell_data, num_patches, dof, unknowns, description) 
+    grid = prepare3Dpatches(cell_data, dof, unknowns, description) 
   
   return grid
-
 
 
 def render_dataset(filename, identifier, dataset_number=0, display_as_tree = True, filter=None):
@@ -281,6 +284,14 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
     on this object, e.g.
        
   """
+  def __apply_filter(parser,unknowns, dimensions):
+    if filter!=None:
+      snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description = parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description
+      for p in filter:
+        snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions = p.render(snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions)
+      parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description = snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description
+
+
   input_file = open( filename, "r" )
   lines = input_file.readlines()
   
@@ -294,7 +305,8 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
   #
   dataset_number = dataset_number+1
   include_file_counter = 0
-  
+
+  parsers = []  
   for line in lines:
     if "begin dataset" in line:
       dataset_number = dataset_number-1
@@ -303,62 +315,88 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
       snapshot_file_name = line.split( "\"" )[1]
       print( "parse file ", snapshot_file_name )
 
-      parser = OutputFileParser(snapshot_file_name)
-      snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description = parser.parse_file(identifier, include_file_counter)
-
+      parser = OutputFileParser(snapshot_file_name,identifier, include_file_counter)
+      parsers.append( parser )
       include_file_counter += 1
       
-      if snapshot_dimensions != 2 and snapshot_dimensions != 3:
-        print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
-        return 
-      if snapshot_dof == 0:
-        print("File parsing unsuccessful. No dof specified")
-        return 
-      if snapshot_unknowns == 0:
-        print("File parsing unsuccessful. No unknowns specified")
-        return
-       
-      if snapshot_dimensions!=dimensions and dimensions>0:
-        print( "Dimensions not compatible with dimensions from previous files in the snapshot" )
-        return
-      dimensions = snapshot_dimensions
-      if snapshot_dof!=dof and dof>0:
-        print("DoF not compatible with dof from previous files in the snapshot")
-        return 
-      dof=snapshot_dof
-       
-      if snapshot_unknowns!=unknowns and unknowns>0:
-        print("Unknowns not compatible with unknowns from previous files in the snapshot")
-        return
-      unknowns=snapshot_unknowns
+  print( "Will read " + str( len(parsers) ) + " parsers in parallel" )
       
-      print("Dimensions: ", dimensions)
-      print("Number of variables per cell: ", unknowns)
-      print("Number of cells per patch per direction: ", dof)
- 
-      snapshot_num_patches = len(snapshot_cell_data)
-      print("Number of patches:", snapshot_num_patches)
-  
-      if filter!=None:
-        for p in filter:
-          snapshot_cell_data, num_patches, dof, unknowns, dimensions = p.render(snapshot_cell_data, snapshot_num_patches, dof, unknowns, dimensions)
+  #
+  # This can be done in parallel
+  #
+  pool = multiprocessing.Pool( len(parsers) ) 
+  for parser in parsers:
+    pool.apply_async( parser.parse_file() )
+    #parser.parse_file()
+  pool.close()
+  pool.join()
+    
+  print( "All individual files are parsed" )
+    
+  for parser in parsers:
+    snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description = parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description
 
-      cell_data =  cell_data + snapshot_cell_data
+    if snapshot_dimensions != 2 and snapshot_dimensions != 3:
+      print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
+      return 
+    if snapshot_dof == 0:
+      print("File parsing unsuccessful. No dof specified")
+      return 
+    if snapshot_unknowns == 0:
+      print("File parsing unsuccessful. No unknowns specified")
+      return
+       
+    if snapshot_dimensions!=dimensions and dimensions>0:
+      print( "Dimensions not compatible with dimensions from previous files in the snapshot" )
+      return
+    dimensions = snapshot_dimensions
+    if snapshot_dof!=dof and dof>0:
+      print("DoF not compatible with dof from previous files in the snapshot")
+      return 
+    dof=snapshot_dof
+     
+    if snapshot_unknowns!=unknowns and unknowns>0:
+      print("Unknowns not compatible with unknowns from previous files in the snapshot")
+      return
+    unknowns=snapshot_unknowns
+       
+  print( "Apply filter to individual snapshots" )
+
+  #
+  # Parallel
+  #
+  pool = multiprocessing.Pool( len(parsers) ) 
+  for parser in parsers:
+    pool.apply_async( __apply_filter( parser, unknowns, dimensions) )
+    #__apply_filter( parser, unknowns, dimensions)
+  pool.close()
+  pool.join()
+
+  print( "Concatenate snapshots" )
+
+  for parser in parsers:
+    cell_data =  cell_data + parser.cell_data
 
   num_patches = len(cell_data)
   print("Total number of patches:", num_patches)
 
+  
   if filter!=None:
+    print( "Apply " + str(len(filter)) + " filter(s) to concatenated data set" )
     for p in filter:
-     cell_data, num_patches, dof, unknowns, dimensions = p.render(cell_data, num_patches, dof, unknowns, dimensions)
+     cell_data, dof, unknowns, dimensions = p.render(cell_data, dof, unknowns, dimensions)
+
+  print( "Convert into VTK data structures" )
 
   if dimensions == 2 and display_as_tree:
-    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 1.0, description ) 
+    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description ) 
   elif dimensions == 2 and not display_as_tree:
-    grid = prepare2Dpatches(cell_data, num_patches, dof, unknowns, 0.0, description) 
+    grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description) 
   else: # Tested above that it can only be 2 or 3
-    grid = prepare3Dpatches(cell_data, num_patches, dof, unknowns, description) 
-  
+    grid = prepare3Dpatches(cell_data, dof, unknowns, description) 
+
+  print( "Parsing complete" )
+
   return grid
       
 

@@ -24,29 +24,34 @@ class ExtractFineGridFilter( Filter ):
              a.offset[1] <= b.offset[1] + b.size[1] 
   
   
-  def render(self,cell_data, num_patches, dof, unknowns, dimensions):
+  def render(self,cell_data, dof, unknowns, dimensions):
     """
     
       Overwrite this one for the particular filter. 
       
+      List operations are very epensive in Python. I therefore implement a 
+      two-pass stra
+      
     """
-    new_num_patches = 0
-    new_cell_data   = []
+    #new_num_patches = 0
+    #new_cell_data   = [None] * num_patches
+    new_cell_data = []
     
-    for i in range(0,num_patches):
-      overlaps_with_patch_in_new_cell_data = False
-      for j in new_cell_data:
-        overlaps_with_patch_in_new_cell_data = overlaps_with_patch_in_new_cell_data or self.__patches_overlap(cell_data[i],j,dimensions)
-        
-      if not overlaps_with_patch_in_new_cell_data:
-        new_entry = cell_data[i]
-        for j in range(i+1,num_patches):
-          if self.__patches_overlap(cell_data[j],new_entry,dimensions) and cell_data[j].size[0] < new_entry.size[0]:
-            new_entry = cell_data[j]
-        new_num_patches += 1
-        new_cell_data.append(new_entry)
+    for i in range(0, len(cell_data) ):
+      insert = True
+      
+      j = 0
+      while j<len(cell_data) and insert:
+        if j!=i:
+          insert = insert and (not self.__patches_overlap(cell_data[i],cell_data[j],dimensions) or cell_data[i].size[0] < cell_data[j].size[0])
+        j = j+1
 
-    print( "extracted " + str(new_num_patches) + " from the " + str(num_patches) + " patch(es)" )
+      if insert:        
+        #new_cell_data[new_num_patches] = cell_data[i]
+        #new_num_patches += 1
+        new_cell_data.append( cell_data[i] )
 
-    return new_cell_data, new_num_patches, dof, unknowns, dimensions
+    print( "extracted " + str( len(new_cell_data) ) + " from the " + str( len(cell_data) ) + " patch(es)" )
+
+    return new_cell_data, dof, unknowns, dimensions
   

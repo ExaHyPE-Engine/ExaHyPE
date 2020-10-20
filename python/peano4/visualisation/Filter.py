@@ -17,11 +17,11 @@ class Filter(object):
     pass
   
   
-  def render(self, cell_data, num_patches, dof, unknowns, dimensions):
+  def render(self, cell_data, dof, unknowns, dimensions):
     """
     
       Overwrite this one for the particular filter. 
       
     """
-    return cell_data, num_patches, dof, unknowns, dimensions
+    return cell_data, dof, unknowns, dimensions
 
