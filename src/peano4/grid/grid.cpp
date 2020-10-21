@@ -34,14 +34,14 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
   static tarch::logging::Log _log( "peano4::grid" );
   logTraceInWith1Argument( "merge(...)", events.size() );
 
-  const auto inputSetSize = events.size();
-
   std::vector< peano4::grid::GridControlEvent > result;
-  while (not events.empty()) {
-    peano4::grid::GridControlEvent currentEvent = events.back();
-    events.pop_back();
 
-    for ( std::vector< GridControlEvent >::iterator i = events.begin(); i!=events.end(); ) {
+  for ( auto currentEvent: events ) {
+    std::vector< GridControlEvent >::iterator i = result.begin();
+
+    bool hasInserted = false;
+
+    while (i!=result.end()) {
       tarch::la::Vector<Dimensions,double> boundingEventOffset = tarch::la::min( i->getOffset(), currentEvent.getOffset() );
       tarch::la::Vector<Dimensions,double> boundingEventSize   = tarch::la::max( i->getOffset()+i->getWidth(), currentEvent.getOffset()+currentEvent.getWidth() ) - boundingEventOffset;
 
@@ -56,37 +56,25 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
         and
         tarch::la::volume(boundingEventSize) <= (1.0+Tolerance) * (tarch::la::volume(i->getWidth()) + tarch::la::volume(currentEvent.getWidth()))
       ) {
-        currentEvent = GridControlEvent(
+        *i = GridControlEvent(
           GridControlEvent::RefinementControl::Refine,
           boundingEventOffset, boundingEventSize, i->getH()
         );
-        i = events.erase(i);
         logDebug( "merge(...)", "merged into " << currentEvent.toString() );
+        hasInserted = true;
+        i           = result.end();
       }
       else {
         i++;
       }
     }
 
-    result.push_back( currentEvent );
-  }
-
-  assertion( result.size()<=inputSetSize );
-  const bool continueWithTailRecursion = result.size()<inputSetSize;
-  if (not continueWithTailRecursion and result.size()==1) {
-    logDebug( "merge(...)", "have to handle one refine/coarsen command: " << result[0].toString() );
-  }
-  else if (not continueWithTailRecursion and not result.empty()) {
-    logDebug( "merge(...)", "have to handle " << result.size() << " refine/coarsen commands" );
-    #if PeanoDebug>1
-    for (auto p: result) {
-      logDebug( "merge(...)", " - " << p.toString() );
+    if (not hasInserted ) {
+      result.push_back( currentEvent );
     }
-    #endif
   }
 
-  logTraceOutWith1Argument( "merge(...)", result.size() );
-  return continueWithTailRecursion ? merge(result) : result;
+  return events.size()>result.size() ? merge(result, Tolerance) : result;
 }
 
 
