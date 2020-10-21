@@ -36,6 +36,10 @@ peano4_project.output.makefile.add_library(
 
 
 \begin{itemize}
+  \item \textbf{My compiler yields errors like `warning \#3191: scoped
+  enumeration types are a C++11 feature`}. Your compiler seems not to have
+  C++11 (or, newer) enabled by default. Rerun configure with the flag
+  \texttt{CXXFLAGS=-std=c++0x}.
   \item \textbf{ My compiler terminates with `error: unknown
    attribute 'optimize' ignored*`}. We have seen this issue notably on macOS
    with CLANG replacing GCC. Unfortunately, CLANG seems to pretend to be GNU on
@@ -70,6 +74,10 @@ the directory.} includes a file such that the
 \section{Linking}
 
 \begin{itemize}
+  \item \textbf{My linker yields errors like `undefined reference to
+  std::vector ...  `}.
+  We have seen this with some outdated GCC compilers. Ensure you meet the
+  minimum GCC requirements or switch to another compiler.
   \item \textbf{The linker says that the vtk libraries were not found}.
   VTK can be tricky to get up and running. See a comprehensive discussion on VTK
   issues in Chapter \ref{chapter:postprocessing}. It includes compiler/linker issues.
