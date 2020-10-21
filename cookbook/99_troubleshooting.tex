@@ -74,6 +74,10 @@ the directory.} includes a file such that the
 \section{Linking}
 
 \begin{itemize}
+  \item \textbf{My linker yields errors like `undefined reference to
+  std::vector ...  `}.
+  We have seen this with some outdated GCC compilers. Ensure you meet the
+  minimum GCC requirements or switch to another compiler.
   \item \textbf{The linker says that the vtk libraries were not found}.
   VTK can be tricky to get up and running. See a comprehensive discussion on VTK
   issues in Chapter \ref{chapter:postprocessing}. It includes compiler/linker issues.

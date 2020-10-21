@@ -19,6 +19,13 @@ import exahype2
 import argparse
 
 
+print( """
+Please call this script from the directory hosting the Makefile and the 
+sources. Typically, I invoke the script via
+
+python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
+""")
+
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("--load-balancing-quality", dest="load_balancing_quality", type=float, required=True, help="Load balancing quality (something between 0 and 1; 1 is optimal)" )

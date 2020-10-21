@@ -139,34 +139,41 @@ class Makefile(object):
     
     """
     input_file = directory + "/src/Makefile"
-    input = open( input_file, "r" )
-    print( "parse configure outcome " + input_file + " to extract compile settings" )
-    for line in input:
-      if re.match( "CXX *=", line) and line.startswith( "CXX" ):
-        compiler = line.split("=")[-1].strip()
-        print( "used C++ compiler is " + compiler )
-        self.d["CXX"] = compiler
-      if re.match( "FC *=", line) and line.startswith( "FC" ):
-        compiler = line.split("=")[-1].strip()
-        print( "used Fortran compiler is " + compiler )
-        self.d["FC"] = compiler
-      if re.search( "CXXFLAGS *=", line) and line.startswith( "CXXFLAGS" ):
-        flags = line.split("=",1)[1].strip()
-        self.d["CXXFLAGS"] += flags
-        self.d["CXXFLAGS"] += " "
-      if re.search( "FCFLAGS *=", line) and line.startswith( "FCFLAGS" ):
-        flags = line.split("=",1)[1].strip()
-        self.d["FCFLAGS"] += flags
-        self.d["FCFLAGS"] += " "
-      if re.search( "LDFLAGS *=", line) and line.startswith( "LDFLAGS" ):
-        flags = line.split("=",1)[1].strip()
-        self.d["LDFLAGS"] += flags
-        self.d["LDFLAGS"] += " "
-      if re.search( "LIBS *=", line) and line.startswith( "LIBS" ):
-        flags = line.split("=",1)[1].strip()
-        self.d["LIBS"] += flags
-        self.d["LIBS"] += " "
-    self.d["CONFIGUREPATH"] = directory
+    try:
+      input = open( input_file, "r" )
+      print( "parse configure outcome " + input_file + " to extract compile settings" )
+      for line in input:
+        if re.match( "CXX *=", line) and line.startswith( "CXX" ):
+          compiler = line.split("=")[-1].strip()
+          print( "used C++ compiler is " + compiler )
+          self.d["CXX"] = compiler
+        if re.match( "FC *=", line) and line.startswith( "FC" ):
+          compiler = line.split("=")[-1].strip()
+          print( "used Fortran compiler is " + compiler )
+          self.d["FC"] = compiler
+        if re.search( "CXXFLAGS *=", line) and line.startswith( "CXXFLAGS" ):
+          flags = line.split("=",1)[1].strip()
+          self.d["CXXFLAGS"] += flags
+          self.d["CXXFLAGS"] += " "
+        if re.search( "FCFLAGS *=", line) and line.startswith( "FCFLAGS" ):
+          flags = line.split("=",1)[1].strip()
+          self.d["FCFLAGS"] += flags
+          self.d["FCFLAGS"] += " "
+        if re.search( "LDFLAGS *=", line) and line.startswith( "LDFLAGS" ):
+          flags = line.split("=",1)[1].strip()
+          self.d["LDFLAGS"] += flags
+          self.d["LDFLAGS"] += " "
+        if re.search( "LIBS *=", line) and line.startswith( "LIBS" ):
+          flags = line.split("=",1)[1].strip()
+          self.d["LIBS"] += flags
+          self.d["LIBS"] += " "
+      self.d["CONFIGUREPATH"] = directory
+    except IOError:
+      print( """
+Error: if you call parse_configure_script_outcome(), please hand over directory where 
+./configure had been called. You passed """ + directory + """ and the script therefore
+did search for a file """ + input_file ) 
+      
 
  
   def add_cpp_file(self,filename):
