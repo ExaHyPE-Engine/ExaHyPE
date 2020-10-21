@@ -36,6 +36,10 @@ peano4_project.output.makefile.add_library(
 
 
 \begin{itemize}
+  \item \textbf{My compiler yields errors like `warning \#3191: scoped
+  enumeration types are a C++11 feature`}. Your compiler seems not to have
+  C++11 (or, newer) enabled by default. Rerun configure with the flag
+  \texttt{CXXFLAGS=-std=c++0x}.
   \item \textbf{ My compiler terminates with `error: unknown
    attribute 'optimize' ignored*`}. We have seen this issue notably on macOS
    with CLANG replacing GCC. Unfortunately, CLANG seems to pretend to be GNU on
