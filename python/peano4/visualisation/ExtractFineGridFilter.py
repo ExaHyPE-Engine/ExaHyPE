@@ -21,8 +21,8 @@ class ExtractFineGridFilter( Filter ):
     concatenate all data and then to apply the filter.
       
   """
-  def __init__(self, exploit_idempotent=True):
-    Filter.__init__(self, exploit_idempotent)
+  def __init__(self, run_on_individual_pieces_of_data=True):
+    Filter.__init__(self, run_on_individual_pieces_of_data, True)
     pass
   
   

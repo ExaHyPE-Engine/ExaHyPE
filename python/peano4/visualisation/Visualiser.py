@@ -288,7 +288,7 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
     if filter!=None:
       snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description = parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description
       for p in filter:
-        if p.exploit_idempotent:
+        if p.run_on_individual_pieces_of_data:
           snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions = p.render(snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions)
       parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description = snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description
 
@@ -385,7 +385,8 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
   if filter!=None:
     print( "Apply " + str(len(filter)) + " filter(s) to concatenated data set" )
     for p in filter:
-     cell_data, dof, unknowns, dimensions = p.render(cell_data, dof, unknowns, dimensions)
+     if p.run_on_concatenated_data:
+       cell_data, dof, unknowns, dimensions = p.render(cell_data, dof, unknowns, dimensions)
 
   print( "Parsing complete. Convert into VTK data structures" )
 

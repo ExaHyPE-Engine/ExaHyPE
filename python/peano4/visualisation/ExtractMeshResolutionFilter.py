@@ -4,8 +4,8 @@ from peano4.visualisation.Filter import Filter
 
 
 class ExtractMeshResolutionFilter( Filter ):
-  def __init__(self, min_h, max_h, exploit_idempotent=True):
-    Filter.__init__(self, exploit_idempotent)
+  def __init__(self, min_h, max_h, run_on_individual_pieces_of_data=True):
+    Filter.__init__(self, run_on_individual_pieces_of_data, not run_on_individual_pieces_of_data)
     self.min_h = min_h
     self.max_h = max_h
     if min_h > max_h:
