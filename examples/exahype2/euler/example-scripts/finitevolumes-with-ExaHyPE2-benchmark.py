@@ -106,7 +106,5 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" 
 project.set_Peano4_installation("../../..", build_mode)
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
-from IPython import embed
-embed()
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
