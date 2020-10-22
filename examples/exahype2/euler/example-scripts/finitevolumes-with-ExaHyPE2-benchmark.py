@@ -29,9 +29,21 @@ python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("--load-balancing-quality", dest="load_balancing_quality", type=float, required=True, help="Load balancing quality (something between 0 and 1; 1 is optimal)" )
-parser.add_argument("--h",              dest="h",              type=float, required=True, help="Mesh size" )
+parser.add_argument("--h",               dest="h",              type=float, required=True, help="Mesh size" )
+parser.add_argument("--j",               dest="j",              type=int, default=4, help="Parallel builds" )
+parser.add_argument("--d",               dest="dim",            type=int, default=2, help="Dimensions" )
+parser.add_argument("--m",               dest="mode",                     default="release", help="release|trace|assert" )
 args = parser.parse_args()
 
+if args.dim not in [1,2]:
+    print("Error, dimension must be 2 or 3, you supplied {}".format(args.dim))
+    import sys
+    sys.exit(1)
+
+if args.mode not in ["release", "trace", "assert"]:
+    print("Error, mode must be release, trace or assert, you supplied {}".format(args.mode))
+    import sys
+    sys.exit(1)
 
 #
 # Create a project and configure it to end up in a subnamespace (and thus
@@ -66,10 +78,13 @@ project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEncl
 
 
 
-dimensions = 2
-build_mode = peano4.output.CompileMode.Release
-#build_mode = peano4.output.CompileMode.Trace
-#build_mode = peano4.output.CompileMode.Asserts
+dimensions = args.dim
+if (args.mode=="release"):
+    build_mode = peano4.output.CompileMode.Release
+elif (args.mode=="trace"):
+    build_mode = peano4.output.CompileMode.Trace
+else:
+    build_mode = peano4.output.CompileMode.Asserts
 
 
 
@@ -91,5 +106,7 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" 
 project.set_Peano4_installation("../../..", build_mode)
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
-peano4_project.build(make_clean_first=True,number_of_parallel_builds=12)
+from IPython import embed
+embed()
+peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 
