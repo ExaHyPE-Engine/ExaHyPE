@@ -334,20 +334,22 @@ fi
 # Check compiler versions
 #
 
-compiler_type="$echo $CXX"
-AC_MSG_NOTICE( [found C++ compiler $compiler_type] )
+#compiler_type="$echo $CXX"
+#AC_MSG_NOTICE( [found C++ compiler $compiler_type] )
 
 
 
-is_intel_compiler="$echo $CXX"
-AC_MSG_NOTICE( [identified C++ compiler $is_intel_compiler] )
+is_intel_compiler="$(echo $CXX | grep icpc)"
+is_gnu_compiler="$(echo $CXX | grep g++)"
+
+AC_MSG_NOTICE( [identified  C++ compilers $is_intel_compiler and $is_gnu_compiler] )
+
 
 
 
 
 found_compiler_type=false
-
-if test $compiler_type == "icpc"; then
+if test x$is_intel_compiler != x ; then
   AC_MSG_NOTICE([Intel Compiler (ICC) detected])
   CXX_VERSION="`${CXX} -dumpversion`"
   AC_MSG_NOTICE([Compiler version: $CXX_VERSION])
@@ -355,7 +357,7 @@ if test $compiler_type == "icpc"; then
   found_compiler_type=true
 fi
 
-if test $compiler_type == "g++"; then
+if test x$is_gnu_compiler != x ; then
   AC_MSG_NOTICE([GNU Compiler (GCC) detected])
   CXX_VERSION="`${CXX} -dumpversion`"
   AC_MSG_NOTICE([Compiler version: $CXX_VERSION])
