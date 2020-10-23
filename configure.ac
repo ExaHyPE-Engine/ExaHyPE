@@ -339,8 +339,14 @@ AC_MSG_NOTICE( [found C++ compiler $compiler_type] )
 
 
 
+is_intel_compiler="$echo $CXX"
+AC_MSG_NOTICE( [identified C++ compiler $is_intel_compiler] )
+
+
+
 
 found_compiler_type=false
+
 if test $compiler_type == "icpc"; then
   AC_MSG_NOTICE([Intel Compiler (ICC) detected])
   CXX_VERSION="`${CXX} -dumpversion`"
