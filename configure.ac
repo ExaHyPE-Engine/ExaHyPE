@@ -57,10 +57,6 @@ AC_PROG_CXX
 AC_PROG_FC
 
 
-#
-# Ensure 
-#
-
 
 #
 # OpenMP Options
@@ -330,6 +326,39 @@ fi
 
 if test "$toolchain" == gnu; then
   LDFLAGS+=-flto
+fi
+
+
+
+#
+# Check compiler versions
+#
+
+compiler_type="$echo $CXX"
+AC_MSG_NOTICE( [found C++ compiler $compiler_type] )
+
+
+
+
+found_compiler_type=false
+if test $compiler_type == "icpc"; then
+  AC_MSG_NOTICE([Intel Compiler (ICC) detected])
+  CXX_VERSION="`${CXX} -dumpversion`"
+  AC_MSG_NOTICE([Compiler version: $CXX_VERSION])
+  AX_COMPARE_VERSION([$CXX_VERSION], [ge], [19], , [ AC_MSG_ERROR([Intel compiler version too old. Use at least 2019. Switch compiler through CXX flag.]) ])
+  found_compiler_type=true
+fi
+
+if test $compiler_type == "g++"; then
+  AC_MSG_NOTICE([GNU Compiler (GCC) detected])
+  CXX_VERSION="`${CXX} -dumpversion`"
+  AC_MSG_NOTICE([Compiler version: $CXX_VERSION])
+  AX_COMPARE_VERSION([$CXX_VERSION], [ge], [9.0], , [ AC_MSG_ERROR([GCC compiler version too old. Use at least 9.0. Switch compiler through CXX flag.]) ])
+  found_compiler_type=true
+fi
+
+if test $found_compiler_type == false; then
+  AC_MSG_FAILURE( [Not able to determine compiler type. Set CXX flag to g++ or icpc.] )
 fi
 
 
