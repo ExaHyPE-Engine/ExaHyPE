@@ -7,13 +7,13 @@ from .CompileMode import CompileMode
 
 import os
 import re
-  
+
 
 class Makefile(object):
   """ Represents the created makefile of a Peano4 project """
   default_overwrite = True
-   
-  
+
+
   def __init__(self):
     self.clear()
 
@@ -28,15 +28,18 @@ class Makefile(object):
     self.d["LIBS"]          = ""
     self.d["DIM"]           = "2"
     self.d["CONFIGUREPATH"] = "."
+    self.d["EXECUTABLENAME"] = "peano4"
     self.set_mode( CompileMode.Debug )
     self.clear_files()
-      
-      
+
+  def set_executable_name(self, fname):
+      self.d["EXECUTABLENAME"] = fname
+
   def clear_files(self):
     self.cppfiles = []
     self.fortranfiles = []
-    
-    
+
+
   def set_dimension(self,dimension):
     self.d["DIM"] = str(dimension)
 
@@ -62,13 +65,13 @@ class Makefile(object):
   def add_library(self, library_name, library_path="" ):
     """
     If you want to link against a library from Peano, feel free to use
-    get_Peano4_source_directory() and hand in a concatenation of this 
-    path plus a subpath. Otherwise, specify the absolute path where to 
-    search for. By default, Peano's src directory is in the search 
+    get_Peano4_source_directory() and hand in a concatenation of this
+    path plus a subpath. Otherwise, specify the absolute path where to
+    search for. By default, Peano's src directory is in the search
     path.
-    
-    A popular invocation including one of Peano's toolboxes is 
-    
+
+    A popular invocation including one of Peano's toolboxes is
+
     project.output.makefile.add_library( "ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements" )
 
     """
@@ -79,10 +82,10 @@ class Makefile(object):
 
   def set_mode( self, mode ):
     """
-      mode should be of type CompileMode. Pass in 
+      mode should be of type CompileMode. Pass in
 
       peano4.output.CompileMode.Debug
-      
+
       for example
     """
     if mode==CompileMode.Debug:
@@ -98,45 +101,45 @@ class Makefile(object):
       self.d["CXX_MODE_FLAGS"]  = "-O2 -DPeanoDebug=0"
       self.d["LIBRARY_POSTFIX"] = ""
     else:
-      assert(False)      
+      assert(False)
 
 
   def set_CXX_compiler(self,value):
     self.d["CXX"]           = value
-    
 
-  def set_CXX_flags(self,value):    
+
+  def set_CXX_flags(self,value):
     self.d["CXXFLAGS"]      = value
-    
-    
-  def add_CXX_flag(self,value):    
+
+
+  def add_CXX_flag(self,value):
     self.d["CXXFLAGS"]     += " " + value
-    
-    
+
+
   def set_Fortran_compiler(self,value):
     self.d["FC"]           = value
-    
-    
+
+
   def set_Fortran_flags(self,value):
     self.d["FCFLAGS"]       = value
 
 
   def add_Fortran_flag(self,value):
     self.d["FCFLAGS"]      += " " + value
-    
-    
+
+
   def set_linker_flags(self,value):
     self.d["LDFLAGS"]       = value + " "
 
 
   def parse_configure_script_outcome(self,directory):
     """
-    
+
     directory should point to the directory which holds the ./configure script.
-    It furthermore has to be invoked after configure has passed successfully. 
+    It furthermore has to be invoked after configure has passed successfully.
     This script does not accept relative paths. I then search for the subdirector
     src and parse the Makefile there.
-    
+
     """
     input_file = directory + "/src/Makefile"
     try:
@@ -170,41 +173,41 @@ class Makefile(object):
       self.d["CONFIGUREPATH"] = directory
     except IOError:
       print( """
-Error: if you call parse_configure_script_outcome(), please hand over directory where 
+Error: if you call parse_configure_script_outcome(), please hand over directory where
 ./configure had been called. You passed """ + directory + """ and the script therefore
-did search for a file """ + input_file ) 
-      
+did search for a file """ + input_file )
 
- 
+
+
   def add_cpp_file(self,filename):
     """
-    
+
      Add a new filename. This is basically a set implementation, i.e. you can
-     add files multiple times, but they are not inserted multiple times. This 
-     is important, as the steps add the cpp files. Multiple steps can hold the 
+     add files multiple times, but they are not inserted multiple times. This
+     is important, as the steps add the cpp files. Multiple steps can hold the
      same action, so this action would be created multiple times.
-     
-     All the standard Peano 4 routines rely on this function to add their 
-     generated files to the build environment. Nothing stops you however to 
+
+     All the standard Peano 4 routines rely on this function to add their
+     generated files to the build environment. Nothing stops you however to
      add more files yourself.
-     
+
     """
     if self.cppfiles.count(filename)==0:
       self.cppfiles.append( filename )
 
- 
+
   def add_fortran_file(self,filename):
     """
-    
+
      Add a new filename. This is basically a set implementation, i.e. you can
-     add files multiple times, but they are not inserted multiple times. This 
-     is important, as the steps add the cpp files. Multiple steps can hold the 
+     add files multiple times, but they are not inserted multiple times. This
+     is important, as the steps add the cpp files. Multiple steps can hold the
      same action, so this action would be created multiple times.
-     
-     All the standard Peano 4 routines rely on this function to add their 
-     generated files to the build environment. Nothing stops you however to 
+
+     All the standard Peano 4 routines rely on this function to add their
+     generated files to the build environment. Nothing stops you however to
      add more files yourself.
-     
+
     """
     if self.fortranfiles.count(filename)==0:
       self.fortranfiles.append( filename )
@@ -214,7 +217,7 @@ did search for a file """ + input_file )
     filename = directory + "/Makefile";
     if writeFile(overwrite,self.default_overwrite,filename):
       print( "write " + filename )
-      
+
       # files
       self.d[ 'CXX_SOURCES' ] = ""
       for i in self.cppfiles:
@@ -225,12 +228,12 @@ did search for a file """ + input_file )
       for i in self.fortranfiles:
         self.d[ 'FORTRAN_SOURCES' ] += " "
         self.d[ 'FORTRAN_SOURCES' ] += i
-        
-             
+
+
       # We first eliminate the precompiled variant, and then we get rid of the
       # postfix in the case where it is a source file
       with open( os.path.realpath(__file__).replace( ".pyc", ".template" ).replace( ".py", ".template" ), "r" ) as input:
         template = input.read()
       with open( filename, "w" ) as output:
         output.write( template.format(**self.d) )
-   
+
