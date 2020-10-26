@@ -32,9 +32,9 @@ all: solver
 
     
 solver: $(CXX_OBJS) $(FORTRAN_OBJS)
-	$(CXX) $(LDFLAGS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LIBS) -o peano4 
+	$(CXX) $(LDFLAGS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LIBS) -o {EXECUTABLENAME} 
 
     
 clean:
 	rm -f $(CXX_OBJS) $(FORTRAN_OBJS)
-	rm -f peano4
+	rm -f {EXECUTABLENAME}
