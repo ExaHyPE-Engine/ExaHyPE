@@ -13,14 +13,14 @@
 # We import Peano4 as project. If this step fails, ensure that your environment
 # variable PYTHONPATH points to Peano4's python directory.
 #
-import os
+import os, sys
 import peano4
 import exahype2
 import argparse
 
 
 print( """
-Please call this script from the directory hosting the Makefile and the 
+Please call this script from the directory hosting the Makefile and the
 sources. Typically, I invoke the script via
 
 python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
@@ -33,6 +33,11 @@ parser.add_argument("--h",               dest="h",              type=float, requ
 parser.add_argument("--j",               dest="j",              type=int, default=4, help="Parallel builds" )
 parser.add_argument("--d",               dest="dim",            type=int, default=2, help="Dimensions" )
 parser.add_argument("--m",               dest="mode",                     default="release", help="release|trace|assert" )
+parser.add_argument("--t",               dest="timesteps",      type=int, default=10, help="Number of timesteps" )
+parser.add_argument("--p",               dest="peanodir",                 default="../../../", help="Peano4 directory" )
+parser.add_argument("--c",               dest="configuredir",             default="../../../", help="Location of configure" )
+parser.add_argument("--o",               dest="out",             default="peano4", help="Executable name" )
+parser.add_argument("--f",               dest="force",             default=False, action="store_true", help="Allow overwriting of output file." )
 args = parser.parse_args()
 
 if args.dim not in [1,2]:
@@ -45,11 +50,18 @@ if args.mode not in ["release", "trace", "assert"]:
     import sys
     sys.exit(1)
 
+if args.out is not None and os.path.exists(args.out) and not args.force:
+    print("No overwriting existing output file name {}. Use -f to force it.".format(args.out))
+    sys.exit(1)
+
+print("\nConfiguring {}D Euler problem with h={} and {} timesteps. Buildmode is {}, nbuilds={}.\n".format(args.dim, args.h, args.timesteps, args.mode, args.j))
+print("Executable: {}".format(args.out))
+
 #
 # Create a project and configure it to end up in a subnamespace (and thus
 # subdirectory). 
 #
-project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", "." )
+project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", executable=args.out )
 
 
 #
@@ -93,8 +105,8 @@ else:
 #
 project.set_global_simulation_parameters(
   dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
-  time_step_size * 50,           # end time
-  0.0, 0                         # snapshots
+  time_step_size * args.timesteps, # end time
+  0.0, 0                           # snapshots
 )
 
 
@@ -103,8 +115,8 @@ project.set_global_simulation_parameters(
 # prototype we did start off with.
 #
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.load_balancing_quality) + ")" )
-project.set_Peano4_installation("../../..", build_mode)
+project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project()
-peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
+peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
-
+print("Done. Executable is: {}".format(args.out))
