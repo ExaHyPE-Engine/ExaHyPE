@@ -40,7 +40,7 @@ parser.add_argument("--o",               dest="out",             default="peano4
 parser.add_argument("--f",               dest="force",             default=False, action="store_true", help="Allow overwriting of output file." )
 args = parser.parse_args()
 
-if args.dim not in [1,2]:
+if args.dim not in [2,3]:
     print("Error, dimension must be 2 or 3, you supplied {}".format(args.dim))
     import sys
     sys.exit(1)
