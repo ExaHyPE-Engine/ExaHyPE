@@ -84,7 +84,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
 
 
   
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
@@ -96,7 +96,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
     """
     #super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-    AbstractAoSWithOverlap1.__init__(self, flux=PDETerms.None_Implementation,ncp=PDETerms.None_Implementation)
+    AbstractAoSWithOverlap1.__init__(self, flux=PDETerms.None_Implementation,ncp=PDETerms.None_Implementation, kernel_implementation=kernel_implementation)
     
     self._time_step_size = time_step_size
     
