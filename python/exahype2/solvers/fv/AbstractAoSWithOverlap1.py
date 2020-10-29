@@ -17,13 +17,37 @@ from enum import Enum
 
 
 class AbstractAoSWithOverlap1(object):
-  def __init__(self, flux, ncp):
-    self._flux_implementation        = PDETerms.User_Defined_Implementation
-    self._ncp_implementation         = PDETerms.None_Implementation
+  """
+  
+    This is the straightforward implementation.
+    
+  """
+  CellUpdateImplementation_NestedLoop = """
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+    #endif
+  """
+
+  CellUpdateImplementation_SplitLoop = """
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
+    #endif
+  """
+     
+     
+  def __init__(self, flux, ncp, kernel_implementation = CellUpdateImplementation_NestedLoop):
+    self._flux_implementation                 = flux
+    self._ncp_implementation                  = ncp
     self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.User_Defined_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+    self._kernel_implementation               = kernel_implementation
+
 
 
   def set_implementation(self,flux=PDETerms.User_Defined_Implementation,ncp=PDETerms.None_Implementation,eigenvalues=PDETerms.User_Defined_Implementation,boundary_conditions=PDETerms.User_Defined_Implementation,refinement_criterion=PDETerms.User_Defined_Implementation,initial_conditions=PDETerms.User_Defined_Implementation):
@@ -138,32 +162,10 @@ class AbstractAoSWithOverlap1(object):
      
      
     
-  """
-  
-    This is the straightforward implementation.
-  """
-  CellUpdateImplementation_NestedLoop = """
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-    #endif
-  """
-
-  CellUpdateImplementation_SplitLoop = """
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-    #endif
-  """
-     
-     
   def _get_template_update_cell(self,
-    split_Riemann_solver_function_call,
+    split_Riemann_solver_kernel_implementation,
     cell_time_stamp     = "{{SOLVER_INSTANCE}}.getMinTimeStamp()", 
-    cell_time_step_size = "{{TIME_STEP_SIZE}}",
-    function_call       = CellUpdateImplementation_NestedLoop
+    cell_time_step_size = "{{TIME_STEP_SIZE}}"
   ):
     """
     
@@ -171,7 +173,7 @@ class AbstractAoSWithOverlap1(object):
     into a Jinja2 template if you wanna use it within C++.
     
     
-    split_Riemann_solver_function_call: String
+    split_Riemann_solver_kernel_implementation: String
        A plain function call to invoke the 1d Riemann solver. For the arguments 
        that are available at this point, see below. 
        
@@ -188,7 +190,7 @@ class AbstractAoSWithOverlap1(object):
         double                                       FL[],
         double                                       FR[]
       ) -> void {
-        """ + split_Riemann_solver_function_call + """
+        """ + split_Riemann_solver_kernel_implementation + """
       },
       marker.x(),
       marker.h(),
@@ -202,4 +204,4 @@ class AbstractAoSWithOverlap1(object):
   );
 """
 
-    return str(function_call) + str(signature)  
+    return str(self._kernel_implementation) + str(signature)  

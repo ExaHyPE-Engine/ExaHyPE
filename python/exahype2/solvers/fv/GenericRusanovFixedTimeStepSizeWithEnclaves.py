@@ -14,7 +14,7 @@ from .GenericRusanovFixedTimeStepSize import GenericRusanovFixedTimeStepSize
 
 
 class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.None_Implementation, ncp=PDETerms.None_Implementation, plot_grid_properties=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.None_Implementation, ncp=PDETerms.None_Implementation, plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
@@ -60,7 +60,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     
     """
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-    AbstractAoSWithOverlap1.__init__(self, flux, ncp)
+    AbstractAoSWithOverlap1.__init__(self, flux, ncp, kernel_implementation=kernel_implementation)
 
     # @todo Ein Haufen der Logik kann raus
     
