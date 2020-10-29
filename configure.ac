@@ -353,7 +353,7 @@ if test x$is_intel_compiler != x ; then
   AC_MSG_NOTICE([Intel Compiler (ICC) detected])
   CXX_VERSION="`${CXX} -dumpversion`"
   AC_MSG_NOTICE([Compiler version: $CXX_VERSION])
-  AX_COMPARE_VERSION([$CXX_VERSION], [ge], [19], , [ AC_MSG_ERROR([Intel compiler version too old. Use at least 2019. Switch compiler through CXX flag.]) ])
+  AX_COMPARE_VERSION([$CXX_VERSION], [ge], [19], , [ AC_MSG_ERROR([Intel compiler version ($CXX_VERSION) too old. Use at least 19. Switch compiler through CXX flag.]) ])
   found_compiler_type=true
 fi
 
@@ -361,7 +361,7 @@ if test x$is_gnu_compiler != x ; then
   AC_MSG_NOTICE([GNU Compiler (GCC) detected])
   CXX_VERSION="`${CXX} -dumpversion`"
   AC_MSG_NOTICE([Compiler version: $CXX_VERSION])
-  AX_COMPARE_VERSION([$CXX_VERSION], [ge], [9.0], , [ AC_MSG_ERROR([GCC compiler version too old. Use at least 9.0. Switch compiler through CXX flag.]) ])
+  AX_COMPARE_VERSION([$CXX_VERSION], [ge], [9.0], , [ AC_MSG_ERROR([GCC compiler version ($CXX_VERSION) too old. Use at least 9.0. Switch compiler through CXX flag.]) ])
   found_compiler_type=true
 fi
 
