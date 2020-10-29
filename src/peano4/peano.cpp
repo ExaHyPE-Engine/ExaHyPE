@@ -31,7 +31,11 @@ void peano4::writeCopyrightMessage() {
     buildInfo += ", no mpi";
     #endif
 
-    #if defined(SharedOMP)
+    #if defined(SharedOMP) and defined(LayeredMultitaskingRuntime)
+    buildInfo += ", omp(layered) (";
+    buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
+    buildInfo += " threads)";
+    #elif defined(SharedOMP) and !defined(LayeredMultitaskingRuntime)
     buildInfo += ", omp (";
     buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
     buildInfo += " threads)";
