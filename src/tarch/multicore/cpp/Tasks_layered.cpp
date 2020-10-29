@@ -158,9 +158,9 @@ bool tarch::multicore::processTask(int number) {
   for (auto it = nonblockingTasks.end(); it !=nonblockingTasks.begin();)
   {
     --it;
-    {
+    if ((*it)->getTaskId() == number) {
        myTask = (*it);
-       //std::cout << myTask->getTaskId() << "/" << nonblockingTasks.size() << " I want " << number << "\n";
+       std::cout << myTask->getTaskId() << "///" << nonblockingTasks.size() << " I want " << number << "\n";
        nonblockingTasks.erase(it);
        it=nonblockingTasks.begin();
     }
