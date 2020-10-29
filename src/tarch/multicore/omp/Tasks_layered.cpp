@@ -7,31 +7,18 @@
 #include <atomic>
 #include <thread>
 #include <queue>
+#include <mutex>
+#include <list>
 #include "../Tasks.h"
 
 #include "tarch/logging/Statistics.h"
 
 
-
 namespace {
-  std::priority_queue<
-    tarch::multicore::Task*,
-    std::vector<tarch::multicore::Task*>,
-    tarch::multicore::TaskComparison
-  > nonblockingTasks;
-
+  std::list<tarch::multicore::Task* > nonblockingTasks;
+  std::mutex                           taskQueueMutex;
   const int StandardPriority           = 16;
   const int BackgroundConsumerPriority = 1;
-
-//  void spawnTaskConsumer(int numberOfTasksToSpawn=1, int numberOfTasksToProcessPerConsumerTask=1) {
-//    for (int i=0; i<numberOfTasksToSpawn; i++) {
-//      #pragma omp task firstprivate(numberOfTasksToProcessPerConsumerTask) priority(BackgroundConsumerPriority)
-//      {
-//        //::tarch::logging::Statistics::getInstance().log( TasksPerConsumerRunStatisticsIdentifier, numberOfTasksToProcessPerConsumerTask );
-//        processPendingTasks(numberOfTasksToProcessPerConsumerTask);
-//      }
-//    }
-//  }
 }
 
 
@@ -49,44 +36,46 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier,        tarch::multicore::getNumberOfPendingTasks() );
 
   bool  result        = false;
-  bool  spawnConsumer = maxTasks==0;
-  const int   backupOfMaxTasks = maxTasks;
 
   // TODO change such that we process a whole bunch of tasks at a time
   while (maxTasks>0) {
     Task* myTask = nullptr;
+    std::vector<Task*> work;
     #pragma omp critical (backgroundTaskQueue)
     {
       if (nonblockingTasks.empty()) {
         maxTasks = 0;
       }
       else {
-        myTask = nonblockingTasks.top();
-        nonblockingTasks.pop();
+         while (not nonblockingTasks.empty() and (work.size() < std::min(maxTasks, int(nonblockingTasks.size())) ) )
+         {
+            myTask = nonblockingTasks.front();
+            nonblockingTasks.pop_front();
+            work.push_back(myTask);
+         }
       }
-      // mk vector of tasks, delete from queue
-      // for loop over vector
     }
+    //std::cerr << std::this_thread::get_id() << " will process " << work.size() << " tasks while maxTasks is " << maxTasks <<"\n";
 
-    if (myTask!=nullptr) {
-      bool requeue = myTask->run();
-      if (requeue) {
-        spawnTask( myTask );
-      }
-      else {
-        delete myTask;
-      }
-      maxTasks--;
-      result = true;
-//      spawnConsumer = true;
+   if (myTask!=nullptr)
+    {
+       while (work.size()>0)
+       {
+          myTask = work.back();
+          bool requeue = myTask->run();
+          if (requeue) {
+            spawnTask( myTask );
+          }
+          else {
+            delete myTask;
+          }
+          work.pop_back();
+          maxTasks--;
+          result = true;
+
+       }
     }
   }
-
-  //if (spawnConsumer) {
-  //  int numberOfTasksToSpawn = static_cast<int>(nonblockingTasks.size())>backupOfMaxTasks ? 2 : 1;
-  //  spawnTaskConsumer(numberOfTasksToSpawn, backupOfMaxTasks+1);
- // }
-
   return result;
 }
 
@@ -125,7 +114,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
 void tarch::multicore::spawnTask(Task*  job) {
   #pragma omp critical (backgroundTaskQueue)
   {
-    nonblockingTasks.push(job);
+    nonblockingTasks.push_back(job);
   }
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
@@ -161,6 +150,9 @@ void tarch::multicore::spawnTask(Task*  job) {
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
+     int max_tasks = 50;
+     // NOTE: this is likely not performant
+     if (std::getenv("MAXTASKS") != nullptr) max_tasks = atoi(std::getenv("MAXTASKS"));
 
       int nnn(tasks.size());
       #pragma omp taskloop nogroup priority(StandardPriority) shared(nnn)
@@ -177,7 +169,7 @@ void tarch::multicore::spawnAndWait(
         
         while (nnn>0 && not nonblockingTasks.empty())
         {
-           tarch::multicore::processPendingTasks(1);
+           tarch::multicore::processPendingTasks(max_tasks);
         }
       }
      #pragma omp taskwait
@@ -191,16 +183,44 @@ void tarch::multicore::spawnAndWait(
  // }
 }
 
-bool tarch::multicore::processTask(int number) {
-     yield();
-    return false;
-}
-
 
 void tarch::multicore::yield() {
   #pragma omp taskyield
 }
 
+//bool tarch::multicore::processTask(int number) {
+//     yield();
+//    return false;
+//}
+
+bool tarch::multicore::processTask(int number) {
+
+  // Iterate backwards through list
+  Task* myTask = nullptr;
+  taskQueueMutex.lock();
+  for (auto it = nonblockingTasks.end(); it !=nonblockingTasks.begin();)
+  {
+    --it;
+    if ((*it)->getTaskId() == number) {
+       myTask = (*it);
+       nonblockingTasks.erase(it);
+       it=nonblockingTasks.begin();
+    }
+  }
+
+  taskQueueMutex.unlock();
+
+  if (myTask != nullptr)
+  {
+    while (myTask->run()) {};
+    delete myTask;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
 
 int tarch::multicore::getNumberOfPendingTasks() {
   return nonblockingTasks.size();
