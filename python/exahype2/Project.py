@@ -29,7 +29,7 @@ class Project(object):
   @see generate_Peano4_project()
   
   """
-  def __init__(self, namespace, project_name, directory = "."):
+  def __init__(self, namespace, project_name, directory = ".", executable="peano4"):
     self._project = peano4.Project(namespace, project_name, directory)
     self._solvers = []
     self._domain_offset = [0.0, 0.0, 0.0]
@@ -42,6 +42,7 @@ class Project(object):
     self._load_balancer_arguments = ""
     self._Peano_src_directory = "."
     self._build_mode          = peano4.output.CompileMode.Asserts
+    self._executable_name = executable
     
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
@@ -165,7 +166,8 @@ class Project(object):
 
   def __configure_makefile(self):
     self._project.output.makefile.set_dimension(self._dimensions)
-    
+    self._project.output.makefile.set_executable_name(self._executable_name)
+
 
   def set_global_simulation_parameters(self,dimensions,offset,size,end_time,first_plot_time_stamp,time_in_between_plots):
     """
