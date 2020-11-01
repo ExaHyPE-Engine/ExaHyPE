@@ -11,7 +11,7 @@ namespace {
 }
 
 
-void tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile( const std::string& snapshotFileName ) {
+void tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile( const std::string& snapshotFileName, const std::string& dataFile ) {
   const std::string filename = snapshotFileName + ".pvd";
 
   std::vector<std::string> lines;
@@ -19,6 +19,10 @@ void tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile( const std::string&
   lines.push_back( "<?xml version=\"1.0\"?>" );
   lines.push_back( "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">" );
   lines.push_back( "<Collection>" );
+
+  if (not dataFile.empty()) {
+    lines.push_back( createFileEntry(dataFile, 0, 0) );
+  }
 
   addFileTail(lines);
 
@@ -70,7 +74,6 @@ std::tuple< int, int, std::vector<std::string> > tarch::plotter::PVDTimeSeriesWr
 void tarch::plotter::PVDTimeSeriesWriter::writeFile( const std::string& filename, const std::vector<std::string>& lines ) {
   std::ofstream out;
   out.open( filename.c_str() );
-  //out.open( filename.c_str(), std::ios::binary );
   if ( (!out.fail()) and out.is_open() ) {
     for (auto& p: lines) {
       out << p << std::endl;
@@ -108,6 +111,9 @@ void tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet( const std::string& s
 
   removeFileTail(lines);
   lines.push_back( createFileEntry(dataFile, snapshotCounter+1, 0) );
+
+  logWarning( "appendNewDataSet(...)", "no of lines=" << lines.size() );
+
   addFileTail(lines);
   writeFile( filename, lines );
 }
@@ -125,6 +131,9 @@ void tarch::plotter::PVDTimeSeriesWriter::appendNewData(const std::string& snaps
 
   removeFileTail(lines);
   lines.push_back( createFileEntry(dataFile, snapshotCounter, part+1) );
+
+  logWarning( "appendNewDataSet(...)", "no of lines=" << lines.size() );
+
   addFileTail(lines);
   writeFile( filename, lines );
 }
