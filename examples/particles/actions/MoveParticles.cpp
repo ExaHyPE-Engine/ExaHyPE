@@ -135,14 +135,14 @@ void examples::particles::actions::MoveParticles::touchVertexLastTime(
     examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics
 ) {
 
-  const double timeStepSize = 0.0001;
+  const double timeStepSize = 0.001;
   for (auto& p: fineGridVertexParticleSet) {
     p->setX( p->getX() + timeStepSize * p->getV() );
     for (int d=0; d<Dimensions; d++) {
       if ( p->getX()(d)<0.0 ) {
         p->setV(d, std::abs(p->getV()(d)));
       }
-      if ( p->getX()(d)>0.0 ) {
+      if ( p->getX()(d)>1.0 ) {
         p->setV(d, -std::abs(p->getV()(d)));
       }
     }

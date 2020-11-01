@@ -44,6 +44,8 @@ struct peano4::datamanagement::CellMarker {
      */
     tarch::la::Vector<Dimensions,double>  x() const;
 
+    bool isContained( const tarch::la::Vector<Dimensions,double>& x ) const;
+
     /**
      * @return Size of cell
      */

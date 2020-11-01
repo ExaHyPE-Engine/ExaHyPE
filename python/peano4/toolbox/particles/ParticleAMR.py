@@ -31,7 +31,8 @@ class ParticleAMR(ActionSet):
 
   
   __Template_TouchCellLastTime = jinja2.Template("""
-  bool refine = false;
+  bool refine  = false;
+  bool erase   = false;
   if (
     not coarseGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
     and
@@ -58,12 +59,30 @@ class ParticleAMR(ActionSet):
     }
   }
   
+  if (
+    not refine
+    and
+    fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
+    and
+    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
+  ) {
+    erase = true;
+  }
+  
   if (refine) {
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
     newEntry.setOffset( marker.getOffset() );
     newEntry.setWidth( marker.h() );
     newEntry.setH( marker.h()/3.0 );
+    _localGridControlEvents.push_back(newEntry);
+  }
+  else if (erase) {
+    peano4::grid::GridControlEvent newEntry;
+    newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Erase );
+    newEntry.setOffset( marker.getOffset() );
+    newEntry.setWidth( marker.h() );
+    newEntry.setH( marker.h() );
     _localGridControlEvents.push_back(newEntry);
   }
 """)
