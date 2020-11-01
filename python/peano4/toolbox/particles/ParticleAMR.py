@@ -9,21 +9,19 @@ import jinja2
    
 
 
-class ParticleDensityAMR(ActionSet):
+class ParticleAMR(ActionSet):
   """
   
     AMR criterion based upon the particle density
-    
-    This criterion is given a certain number of particles per cell. 
-    Whenever a cell hosts more than this particular number, the 
-    criterion refines the cell. The AMR criterion needs the particle
-    tree analysis to work properly.
-    
+        
   """
-  def __init__(self,particle_tree_analysis,max_particles_per_cell=10):
+  def __init__(self,particle_set,particle_tree_analysis,min_particles_per_cell=1,max_particles_per_cell=65536):
     self.d = {
       "CELL_DATA_NAME":          particle_tree_analysis._cell_data_name,
-      "MAX_PARTICLES_PER_CELL":  max_particles_per_cell
+      "MIN_PARTICLES_PER_CELL":  min_particles_per_cell,
+      "MAX_PARTICLES_PER_CELL":  max_particles_per_cell,
+      "PARTICLE_SET":            particle_set.name,
+      "PARTICLE":                particle_set.particle_model.name,
     }
     pass
 
@@ -33,11 +31,34 @@ class ParticleDensityAMR(ActionSet):
 
   
   __Template_TouchCellLastTime = jinja2.Template("""
+  bool refine = false;
   if (
     not coarseGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MAX_PARTICLES_PER_CELL}}
   ) {
+   refine = true;
+  }
+
+  if (
+    not refine
+    and
+    not coarseGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
+    and
+    fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() > {{MIN_PARTICLES_PER_CELL}}
+  ) {
+    double h = std::numeric_limits<double>::max();
+    
+    for (int i=0; i<TwoPowerD; i++) {
+      h = std::min( h, fineGridVertices{{PARTICLE_SET}}(i).getMinCutOffRadius() );
+    }
+    
+    if (h < tarch::la::min(marker.h())/3.0 ) {
+      refine = true;
+    }
+  }
+  
+  if (refine) {
     peano4::grid::GridControlEvent newEntry;
     newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
     newEntry.setOffset( marker.getOffset() );
@@ -88,6 +109,9 @@ std::vector< peano4::grid::GridControlEvent >  """ + full_qualified_classname + 
 
 
   def get_includes(self):
-    return """
+    result = jinja2.Template( """
 #include "tarch/multicore/Lock.h"
-"""
+#include "vertexdata/{{PARTICLE_SET}}.h"
+#include "globaldata/{{PARTICLE}}.h"
+""" )
+    return result.render(**self.d)             

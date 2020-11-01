@@ -4,6 +4,8 @@
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/LogFilterFileReader.h"
+#include "tarch/logging/CommandLineLogger.h"
+
 #include "tarch/multicore/multicore.h"
 
 #include "peano4/peano.h"
@@ -96,22 +98,27 @@ int main(int argc, char** argv) {
       examples::particles::observers::CreateGrid observer;
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
       gridConstructionSteps++;
+      tarch::logging::CommandLineLogger::getInstance().closeOutputStreamAndReopenNewOne();
     }
 
-    logInfo( "main()", "finished grid construction after " << gridConstructionSteps << " steps, start to move particles" )
+    logInfo( "main()", "finished grid construction after " << gridConstructionSteps << " steps, start timestepping" )
 
     examples::particles::observers::Plot observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     logInfo( "main()", "dumped initial condition" )
-    for (int i=0; i<10; i++) {
-      for (int j=0; j<50; j++) {
+    for (int i=0; i<100; i++) {
+      for (int j=0; j<10; j++) {
         examples::particles::observers::MoveParticles observer;
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
       }
       logInfo( "main()", "plot" )
       examples::particles::observers::Plot observer;
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+
+      tarch::logging::CommandLineLogger::getInstance().closeOutputStreamAndReopenNewOne();
     }
+
+    logInfo( "main()", "terminated successfully" )
   }
   else {
     while (peano4::parallel::Node::getInstance().continueToRun()) {

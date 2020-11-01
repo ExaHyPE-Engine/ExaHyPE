@@ -10,6 +10,20 @@ import jinja2
 
 
 class PlotParticlesInVTKFormat(ActionSet):
+  """
+  
+   By default, I plot the point particles (obviously) and drop their
+   coordinates as vector, too. I also plot the cut-off radius which 
+   is a simple scalar. I often use it to colour-code or as radius 
+   of the rendered sphere. 
+   
+   Finally, I do render the associativity. This is one vector per 
+   point that points towards the vertex the object belongs to. To
+   visualise it, add a Glyph filter and select association as 
+   orientation array. Make association also the scale array and 
+   scale by magnitude.
+   
+  """
   def __init__(self,filename,particle_set):
     """
       Plot only the grid structure
@@ -31,9 +45,11 @@ class PlotParticlesInVTKFormat(ActionSet):
     self.d[ "WRITE_BINARY" ]        = "false"
 
   __Template_Constructor = jinja2.Template("""
-  _writer      = nullptr;
-  _dataWriter  = nullptr;
-  _treeNumber  = treeNumber;
+  _writer             = nullptr;
+  _positionWriter     = nullptr;
+  _cutOffWriter       = nullptr;
+  _associationWriter  = nullptr;
+  _treeNumber         = treeNumber;
 
   // An MPI lock (critical section) would be important!
     
@@ -61,10 +77,12 @@ class PlotParticlesInVTKFormat(ActionSet):
     return False
 
   __Template_TouchVertexFirstTime = jinja2.Template(""" 
-  assertion( _dataWriter!=nullptr );
+  assertion( _positionWriter!=nullptr );
   for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
-    int particleNumber = _writer->plotPoint(p.getX());
-    _dataWriter->plot(particleNumber,p.getX());
+    int particleNumber = _writer->plotPoint(p->getX());
+    _positionWriter->plot(particleNumber,p->getX());
+    _cutOffWriter->plot(particleNumber,p->getCutOffRadius());
+    _associationWriter->plot(particleNumber,marker.x()-p->getX());
   }
 """)
 
@@ -100,21 +118,29 @@ class PlotParticlesInVTKFormat(ActionSet):
     _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}}, snapshotFileName.str(), "{{FILENAME}}",tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData);
   }
 
-  _dataWriter = _writer->createPointDataWriter( "x", 3 );
+  _positionWriter    = _writer->createPointDataWriter( "x", 3 );
+  _cutOffWriter      = _writer->createPointDataWriter( "cut-off-radius", 1 );
+  _associationWriter = _writer->createPointDataWriter( "association", 3 );
 """)
 
 
   __Template_EndTraversal = jinja2.Template("""
-  assertion(_dataWriter!=nullptr);
+  assertion(_positionWriter!=nullptr);
  
-  _dataWriter->close();
+  _positionWriter->close();
+  _cutOffWriter->close();
+  _associationWriter->close();
   _writer->writeToFile();
   
-  delete _dataWriter;
+  delete _positionWriter;
+  delete _cutOffWriter;
+  delete _associationWriter;
   delete _writer;
 
-  _dataWriter = nullptr;
-  _writer     = nullptr;
+  _positionWriter    = nullptr;
+  _cutOffWriter      = nullptr;
+  _associationWriter = nullptr;
+  _writer            = nullptr;
 """)
 
   def get_body_of_operation(self,operation_name):
@@ -133,7 +159,9 @@ class PlotParticlesInVTKFormat(ActionSet):
     int                _treeNumber;
 
     tarch::plotter::pointdata::vtk::VTKWriter*                _writer;
-    tarch::plotter::pointdata::PointWriter::PointDataWriter*  _dataWriter;
+    tarch::plotter::pointdata::PointWriter::PointDataWriter*  _positionWriter;
+    tarch::plotter::pointdata::PointWriter::PointDataWriter*  _cutOffWriter;
+    tarch::plotter::pointdata::PointWriter::PointDataWriter*  _associationWriter;
 """
 
 

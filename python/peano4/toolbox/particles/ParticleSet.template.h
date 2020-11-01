@@ -40,7 +40,7 @@
   namespace {{ item }} {
 {%- endfor %}
 
-  class {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}} > {
+  class {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
     #if PeanoDebug>=1
     private:
      tarch::la::Vector<Dimensions,double> _debugX;
@@ -78,6 +78,8 @@
       #endif
 
       std::string toString() const;
+
+      double getMinCutOffRadius() const;
   };
 
 {% for item in NAMESPACE -%}

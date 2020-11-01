@@ -32,23 +32,22 @@ struct peano4::datamanagement::VertexEnumerator {
     }
 
 
-	/**
-	 * Usually is only used by the observers, i.e. users should not interact
-	 * with this routine.
-	 */
-	void setPointer(int i, Vertex* value) {
-	  assertion(i>=0);
-	  assertion(i<TwoPowerD);
-	  assertion(value!=nullptr);
-	  _vertices[i] = value;
-	}
+    /**
+     * Usually is only used by the observers, i.e. users should not interact
+     * with this routine.
+     */
+    void setPointer(int i, Vertex* value) {
+      assertion(i>=0);
+      assertion(i<TwoPowerD);
+      assertion(value!=nullptr);
+      _vertices[i] = value;
+    }
 
-	Vertex& operator()(int i) const {
-	  assertion(i>=0);
-	  assertion(i<TwoPowerD);
-	  return *(_vertices[i]);
-	}
-
+    Vertex& operator()(int i) const {
+      assertion(i>=0);
+      assertion(i<TwoPowerD);
+      return *(_vertices[i]);
+    }
 };
 
 

@@ -112,7 +112,7 @@ void tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet( const std::string& s
   removeFileTail(lines);
   lines.push_back( createFileEntry(dataFile, snapshotCounter+1, 0) );
 
-  logWarning( "appendNewDataSet(...)", "no of lines=" << lines.size() );
+  logDebug( "appendNewDataSet(...)", "no of lines=" << lines.size() );
 
   addFileTail(lines);
   writeFile( filename, lines );
@@ -132,7 +132,7 @@ void tarch::plotter::PVDTimeSeriesWriter::appendNewData(const std::string& snaps
   removeFileTail(lines);
   lines.push_back( createFileEntry(dataFile, snapshotCounter, part+1) );
 
-  logWarning( "appendNewDataSet(...)", "no of lines=" << lines.size() );
+  logDebug( "appendNewDataSet(...)", "no of lines=" << lines.size() );
 
   addFileTail(lines);
   writeFile( filename, lines );

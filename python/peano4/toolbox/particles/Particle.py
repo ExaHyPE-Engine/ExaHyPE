@@ -46,3 +46,4 @@ class Particle(DaStGen2):
     
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray(self._position_identifier,"Dimensions") )
     self.data.add_attribute( dastgen2.attributes.Enumeration("MoveState",["New","NotMovedYet","Moved"]) )
+    self.data.add_attribute( dastgen2.attributes.Double( "cutOffRadius" ) )
