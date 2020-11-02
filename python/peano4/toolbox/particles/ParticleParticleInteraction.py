@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.solversteps.ActionSet import ActionSet
 
-
 import jinja2
 
 import peano4.datamodel.DaStGen2
@@ -12,22 +11,39 @@ import dastgen2.attributes.Integer
 
 
 class ParticleParticleInteraction(ActionSet):
-  def __init__(self,particle_set):
+  def __init__(self,particle_set,function_call):
+    """
+    
+    particle_set: ParticleSet
+    
+    function_call: String holding C++ code
+      This C++ code can access three different types of variables: There's 
+      a list of particles called activeParticles, there's a list of particles
+      called localParticles, and there's the cell marker. See the guidebook
+      for further info.
+    
+    """
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
+    self.d[ "FUNCTION_CALL" ]            = function_call
 
 
   __Template_TouchCellFirstTime = jinja2.Template("""
+  std::forward_list< globaldata::{{PARTICLE}}* >  localParticles;
   for (int i=0; i<TwoPowerD; i++) {
     for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
       bool append = marker.isContained( p->getX() );
       if (append) {
+        localParticles.push_front( p );
         _activeParticles.push_front( p );
       }
     }
   }
+  
+  std::forward_list< globaldata::{{PARTICLE}}* >&  activeParticles = _activeParticles;
+  {{FUNCTION_CALL}};
 """)
   
 
