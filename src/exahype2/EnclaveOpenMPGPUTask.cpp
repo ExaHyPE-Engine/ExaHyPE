@@ -14,16 +14,14 @@ exahype2::EnclaveOpenMPGPUTask::EnclaveOpenMPGPUTask(
   const ::peano4::datamanagement::CellMarker&    marker,
   double*                                        inputValues,
   int                                            numberOfResultValues,
-  std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                        functor,
-  bool                                           inputDataCreatedOnDevice
+  std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >   functor
 ):
   tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority),
   _marker(marker),
   _inputValues(inputValues),
   _outputValues(nullptr),
   _numberOfResultValues(numberOfResultValues),
-  _functor(functor),
-  _inputDataCreatedOnDevice(inputDataCreatedOnDevice) {
+  _functor(functor) {
   logTraceIn( "EnclaveOpenMPGPUTask(...)" );
 
   _outputValues = tarch::multicore::allocateMemory(_numberOfResultValues,tarch::multicore::MemoryLocation::Accelerator);
@@ -46,12 +44,7 @@ bool exahype2::EnclaveOpenMPGPUTask::run() {
   #pragma omp task depend(in:dependencyMarker)
   #endif
   {
-    if (_inputDataCreatedOnDevice) {
-      tarch::multicore::freeMemory(_inputValues,tarch::multicore::MemoryLocation::Accelerator);
-    }
-    else {
-      delete[] _inputValues;
-    }
+    tarch::multicore::freeMemory(_inputValues,tarch::multicore::MemoryLocation::Accelerator);
 
     double* outputValuesOnHost = tarch::multicore::allocateMemory( _numberOfResultValues, tarch::multicore::MemoryLocation::Heap);
     std::copy_n( _outputValues, _numberOfResultValues, outputValuesOnHost );

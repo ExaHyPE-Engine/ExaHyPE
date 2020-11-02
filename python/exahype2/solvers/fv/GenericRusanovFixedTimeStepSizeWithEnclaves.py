@@ -202,11 +202,16 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
 
 
   def _wrap_update_cell_template(self, update_cell_template, memory_location):
+    """
+    
+    I use the same memory management for both the skeletons and the enclave
+    cells. Consequently, I also have to use the corresponding frees.
+    
+    """
     free_memory_call_for_skeleton_cells = ""
     if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
       free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Heap);"
     if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      print( "on-accelerator storage not yet implemented!")
       free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Accelerator);"
 
     result = """if (marker.isSkeletonCell()) {
@@ -214,7 +219,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
       """ + free_memory_call_for_skeleton_cells + """
     }
     else {
-      ::exahype2::EnclaveTask* newEnclaveTask = new ::exahype2::EnclaveTask(
+      ::exahype2::EnclaveTask* newEnclaveTask = new {{ENCLAVE_TASK_TYPE}}(
         marker,
         reconstructedPatch,
         #if Dimensions==2
@@ -251,6 +256,12 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     function_call   = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop,
     memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete
   ):
+    """
+    
+      Do not invoke this routine if you use a GPU. Use the GPU 
+      alternative instead.
+    
+    """
     if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete and \
        memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       print( "WARNING: Selected memory allocation which does delete allocated memory. Enclave tasking has to have a mode which does not automatically free the memory and allocation has to run through tarch. Code will likely produce invalid memory accesses!" )
@@ -276,7 +287,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     d[ "TIME_STEP_SIZE" ] = self._time_step_size
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
-    
+    d[ "ENCLAVE_TASK_TYPE" ] = "::exahype2::EnclaveTask"
     pass
   
   
@@ -357,5 +368,21 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     FV.add_use_data_statements_to_Peano4_solver_step(self,step)
     step.use_cell(self._cell_sempahore_label)
+
+
+  def use_OpenMP5_GPUs(self):
+    """
+      
+      If you use this operation, do not  use set_update_cell_implementation()
+      anymore. The two routines switch to different variants. This one is the 
+      GPU variant.
+      
+    """
+    self.set_update_cell_implementation(self,
+      function_call = AbstractAoSWithOverlap1.CellUpdateImplementation_SplitLoop,
+      memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete
+    )
+    
+    d[ "ENCLAVE_TASK_TYPE" ] = "::exahype2::EnclaveOpenMPGPUTask"
 
 
