@@ -35,6 +35,11 @@ struct peano4::datamanagement::VertexMarker {
 
     std::bitset<TwoPowerD>  _isRefined;
     std::bitset<TwoPowerD>  _isLocal;
+
+    /**
+     * Entries from (0,1,2,3). Is the left, bottom vertex.
+     */
+    tarch::la::Vector<Dimensions,int>  _relativePositionWithinFatherCell;
   public:
     VertexMarker(const peano4::grid::GridTraversalEvent& event, int select = 0);
 
@@ -72,6 +77,9 @@ struct peano4::datamanagement::VertexMarker {
     // @todo
     // Dann darf ich nicht verfeinern. Bruach ich in ExaHyPE z.B.
     // isAdjacentToEnclaveCell
+
+    tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
+    tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
 };
 
 

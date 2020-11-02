@@ -30,7 +30,7 @@ tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWrite
 
   switch (mode) {
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew:
-      tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile(indexFileName);
+      tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile(indexFileName, fileName + ".vtu");
       break;
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet:
       tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet(indexFileName, fileName + ".vtk");

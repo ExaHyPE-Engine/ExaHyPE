@@ -18,6 +18,22 @@ peano4::datamanagement::VertexMarker::VertexMarker(
     _isRefined[i]  = event.getIsRefined(i);
     _isLocal[i]    = event.getIsVertexLocal(i);
   }
+  _relativePositionWithinFatherCell = event.getRelativePositionToFather();
+}
+
+
+tarch::la::Vector<Dimensions,int>  peano4::datamanagement::VertexMarker::getRelativePositionWithinFatherCell() const {
+  return getRelativePositionWithinFatherCell(_select);
+}
+
+
+tarch::la::Vector<Dimensions,int>  peano4::datamanagement::VertexMarker::getRelativePositionWithinFatherCell(int i) const {
+  tarch::la::Vector<Dimensions,int> result = _relativePositionWithinFatherCell;
+  std::bitset<Dimensions> index = i;
+  for (int d=0; d<Dimensions; d++) {
+    result(d) += index[d] ? 1 : 0;
+  }
+  return result;
 }
 
 

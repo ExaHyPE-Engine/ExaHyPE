@@ -29,12 +29,12 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::merge(c
 
 
 bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::send(const peano4::datamanagement::VertexMarker& marker) {
-  return true;
+  return false;
 }
 
 
 bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
-  return true;
+  return false;
 }
 
 
@@ -71,3 +71,12 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::shutdow
 
 MPI_Datatype   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::Datatype;
 #endif
+
+
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMinCutOffRadius() const {
+  double result = std::numeric_limits<double>::max();
+  for (auto& p: *this) {
+    result = std::min( result, p->getCutOffRadius() );
+  }
+  return result;
+}

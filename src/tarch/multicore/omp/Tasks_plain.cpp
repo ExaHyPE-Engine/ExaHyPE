@@ -55,7 +55,10 @@ void tarch::multicore::spawnAndWait(
       while (tasks[i]->run()) {}
       delete tasks[i];
     }
-    #pragma omp taskwait
+    #pragma omp taskwait // wait for all elements from tasks to complete
+                         // do not wait for the children of tasks
+                         // but do children if you have time (this does not
+                         // happen however)
   }
 }
 

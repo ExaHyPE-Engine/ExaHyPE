@@ -74,6 +74,7 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
     }
   }
 
+  logTraceOutWith1Argument( "merge(...)", events.size() );
   return events.size()>result.size() ? merge(result, Tolerance) : result;
 }
 

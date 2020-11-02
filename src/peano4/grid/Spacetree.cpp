@@ -244,13 +244,11 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
   }
   else {
     _gridControlEvents = merge( observer.getGridControlEvents() );
-    if (not _gridControlEvents.empty()) {
-      logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control event(s)" );
-      #if PeanoDebug>0
-      for (auto& p: _gridControlEvents) {
-        logInfo( "traverse(...)", "- event:" << p.toString() );
-      }
-      #endif
+    if (_gridControlEvents.size()==1) {
+      logInfo( "traverse(...)", "got one grid control events: " << _gridControlEvents[0].toString() );
+    }
+    else if (not _gridControlEvents.empty()) {
+      logInfo( "traverse(...)", "got " << _gridControlEvents.size() << " grid control events"  );
     }
   }
 

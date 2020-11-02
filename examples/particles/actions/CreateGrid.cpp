@@ -59,9 +59,9 @@ void examples::particles::actions::CreateGrid::createPersistentVertex(
   examples::particles::globaldata::Particle::MoveState  moveState( examples::particles::globaldata::Particle::MoveState::New );
 
   #if Dimensions==2
-  const double ParticleDensity = 1000;
+  const double ParticleDensity = 100 * tarch::la::norm2(marker.x());
   #else
-  const double ParticleDensity = 100000;
+  const double ParticleDensity = 100 * tarch::la::norm2(marker.x());
   #endif
   const int NumberOfParticles = tarch::la::round( tarch::la::volume( marker.h() ) * ParticleDensity );
 
@@ -72,7 +72,13 @@ void examples::particles::actions::CreateGrid::createPersistentVertex(
       x(d) += (static_cast<double>(rand())/static_cast<double>(RAND_MAX)-0.5) * marker.h()(d);
       v(d)  = static_cast<double>(rand())/static_cast<double>(RAND_MAX)-0.5;
     }
-    fineGridVertexParticleSet.push_back( examples::particles::globaldata::Particle(debugX,debugH,x,moveState,v) );
+
+    const double MinH = 0.001;
+    const double MaxH = 0.1;
+
+    double h = static_cast<double>(rand())/static_cast<double>(RAND_MAX) * (MaxH-MinH) + MinH;
+
+    fineGridVertexParticleSet.push_back( new examples::particles::globaldata::Particle(debugX,debugH,x,moveState,h,v) );
   }
 }
 

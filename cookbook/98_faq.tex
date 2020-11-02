@@ -64,5 +64,23 @@
   refinement one grid sweep later, but the point is:
   refine and erase commands in \Peano\ are always a wishlist to the kernel. The
   kernel can decide to ignore it---at least for one grid sweep.
+  \item \textbf{Why do I get imbalanced partitions even though I tried to tell
+  my load balancer of choice to balance brilliantly?}
+  \Peano\ is based upon three-partitioning, i.e.~whenever it refines a cell it
+  yields $3^d$ new cells. Most users scale up in multiples of two. As $3^d$
+  cannot be divided into two equally-sized chunks, we always have some
+  imbalance.
+  \item \textbf{Why do some load balancing schemes report that they have to
+  extrapolate data?} 
+  A typical message you get is ``global number of cells lags behind local one.
+  \ldots ''' Most of my toolbox load balancing relies on asynchronous
+  (non-blocking) collectives to gather information about the total grid
+  structure. As a consequence, this information always might lag behind the
+  actual status quo (load balancing info is sent out while the mesh refines,
+  e.g.). Some load balancing schemes can detect such inconsistencies---they only
+  arise due to AMR and typically are sorted out an iteration later anyway---and
+  apply heuristics. If they detect that the global cell number seems to be too
+  small, e.g., they assume that every rank meanwhile has refined once more and
+  multiply the global cell count with $3^d$.
   \item To be continued \dots
 \end{itemize}

@@ -69,9 +69,12 @@ class tarch::plotter::PVDTimeSeriesWriter {
     };
 
     /**
+     * @param dataFile  First file entry to insert. Pass an empty string if you don't want Peano to
+     *   add a file into the original index file.
+     *
      * @see IndexFileMode
      */
-    static void createEmptyNewFile( const std::string& snapshotFileName );
+    static void createEmptyNewFile( const std::string& snapshotFileName, const std::string& dataFile );
     static void appendNewDataSet( const std::string& snapshotFileName, const std::string& dataFile );
     static void appendNewData(const std::string& snapshotFileName, const std::string& dataFile);
 };

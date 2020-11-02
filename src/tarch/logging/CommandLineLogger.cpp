@@ -99,6 +99,17 @@ std::string tarch::logging::CommandLineLogger::addSeparators(std::string::size_t
 
 void tarch::logging::CommandLineLogger::closeOutputStreamAndReopenNewOne() {
   _iterationCounter ++;
+
+  #if PeanoDebug>0
+  if ( _indentTraces.size()>0 ) {
+    while (not _indentTraces.empty()) {
+      logWarning( "closeOutputStreamAndReopenNewOne()", "tag still open: " << _indentTraces.top() );
+      _indentTraces.pop();
+    }
+  }
+  #endif
+
+
   reopenOutputStream();
 }
 
@@ -137,6 +148,8 @@ std::string tarch::logging::CommandLineLogger::constructMessageString(
   std::string          messageType,
   long int timestampNanoseconds, int rank, int threadId, const std::string& trace, const std::string& message
 ) {
+  assertion( _indent!=0 or _indentTraces.empty() );
+
   std::string prefix = "";
   const unsigned int indent = _indent;
   for (unsigned int i=0; i<indent; i++ ) prefix += " ";

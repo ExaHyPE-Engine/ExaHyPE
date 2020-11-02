@@ -6,11 +6,14 @@
  \begin{center}
   \includegraphics[width=0.2\textwidth]{60_exahype/EU.png}
   \includegraphics[width=0.5\textwidth]{60_exahype/ExaHyPE_Logo.jpg}
+  \includegraphics[width=0.2\textwidth]{60_exahype/ExCALIBUR.png}
  \end{center}
  \caption{
    The original ExaHyPE project delivering the first generation of the ExaHyPE
    software has received funding from the European Union’s Horizon 2020 research
    and innovation programme under grant agreement No 671698 (ExaHyPE).
+   \ExaHyPE\ has been made possible by EPSRC under the grant EP/V00154X/1
+   (ExaClaw). 
  }
 \end{figure}
 
@@ -51,13 +54,19 @@ It is relatively straightforward to use \ExaHyPE\ within \Peano:
 
 \begin{itemize}
   \item Configure \Peano\ with the flags \texttt{--enable-exahype}
-  \texttt{--enable-loadbalancing-toolbox}. These are the two mandatory extensions. You might want to add further options---for VTK and parallelisation, e.g. That is:
-  This configuration allows you to run a basic serial \ExaHyPE\ application and
-  to write some files in the \Peano\ format, but nothing more.
-  \item Recompile your code. This should give you a couple of
+  \texttt{--enable-loadbalancing-toolbox}. These are the two mandatory extensions. You might want to add further options.
+  \item Recompile your \Peano\ code. This should give you a couple of
   \texttt{ExaHyPE2Core} libraries in the respective subdirectories.
   \item Ensure that \texttt{python} subdirectory is in your Python search path.
 \end{itemize}
+
+
+\begin{remark}
+ I do discuss how \ExaHyPE\ works in this chapter. Once you have compiled with
+ \ExaHyPE\ you might however prefer to switch into the directory
+ \texttt{examples/exahype2/euler} and run the Jupyter notebook there.
+ It runs you through the ExaHyPE usage from a user's point of view.
+\end{remark}
 
 
 \section*{Difference of \ExaHyPE\ vs.~ExaHyPE (first generation)}
