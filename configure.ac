@@ -125,6 +125,10 @@ fi
 #
 # MPI  Options
 #
+# Logic: user provides mpi compiler command
+#        check if that command exists
+#        overwrite CXX to be the user supplied value
+#
 AC_ARG_WITH(mpi,
   AC_HELP_STRING([--with-mpi], [switch on distributed memory parallelisation [default=no, mpiCC command]]),
   [ AC_MSG_CHECKING(for mpi)
@@ -133,12 +137,43 @@ AC_ARG_WITH(mpi,
       *)     AC_MSG_RESULT(use mpi c++ command ${withval});  mpi=${withval}  ;;
     esac ],
   [ AC_MSG_CHECKING(for mpi); AC_MSG_RESULT(no); mpi=false ])
-  
+ 
+AC_DEFUN([AC_PROG_USERMPI], [AC_CHECK_PROG(USERMPI,"${mpi}",yes)])
+
 
 if test "$mpi" != false; then
+  AC_PROG_USERMPI
+  if test x"${USERMPI}" != x"yes" ; then
+      AC_MSG_ERROR([The specified MPI compiler (${mpi}) was not found.])
+  fi
   CXX=$mpi
   AC_DEFINE([Parallel], [1], [Parallel])
+else
+  MPICXX=false
 fi
+
+#
+# Compiler options. Allow icpc and gnu. Plus minimum version check.
+#
+
+AX_COMPILER_VENDOR
+AX_COMPILER_VERSION
+
+found_compiler_type=false
+AS_IF([test "x${ax_cv_cxx_compiler_vendor}" = xintel],
+  AX_COMPARE_VERSION([${ax_cv_cxx_compiler_version}], [ge], [19], , [ AC_MSG_ERROR([Intel compiler version (${ax_cv_cxx_compiler_version}) too old. Use at least 19. Switch compiler through CXX flag.]) ]),
+  found_compiler_type=true
+  )
+
+AS_IF([test "x${ax_cv_cxx_compiler_vendor}" = xgnu],
+  AX_COMPARE_VERSION([${ax_cv_cxx_compiler_version}], [ge], [9.0], , [ AC_MSG_ERROR([GNU compiler version (${ax_cv_cxx_compiler_version}) too old. Use at least 9.0. Switch compiler through CXX flag.]) ]),
+  found_compiler_type=true
+  )
+
+if test $found_compiler_type == false; then
+  AC_MSG_FAILURE( [Not able to determine compiler type. Set CXX flag to g++ or icpc.] )
+fi
+
 
 ##
 ## VTK Options
@@ -340,45 +375,6 @@ if test "$toolchain" == gnu; then
 fi
 
 
-
-#
-# Check compiler versions
-#
-
-#compiler_type="$echo $CXX"
-#AC_MSG_NOTICE( [found C++ compiler $compiler_type] )
-
-
-
-is_intel_compiler="$(echo $CXX | grep icpc)"
-is_gnu_compiler="$(echo $CXX | grep g++)"
-
-AC_MSG_NOTICE( [identified  C++ compilers $is_intel_compiler and $is_gnu_compiler] )
-
-
-
-
-
-found_compiler_type=false
-if test x$is_intel_compiler != x ; then
-  AC_MSG_NOTICE([Intel Compiler (ICC) detected])
-  CXX_VERSION="`${CXX} -dumpversion`"
-  AC_MSG_NOTICE([Compiler version: $CXX_VERSION])
-  AX_COMPARE_VERSION([$CXX_VERSION], [ge], [19], , [ AC_MSG_ERROR([Intel compiler version ($CXX_VERSION) too old. Use at least 19. Switch compiler through CXX flag.]) ])
-  found_compiler_type=true
-fi
-
-if test x$is_gnu_compiler != x ; then
-  AC_MSG_NOTICE([GNU Compiler (GCC) detected])
-  CXX_VERSION="`${CXX} -dumpversion`"
-  AC_MSG_NOTICE([Compiler version: $CXX_VERSION])
-  AX_COMPARE_VERSION([$CXX_VERSION], [ge], [9.0], , [ AC_MSG_ERROR([GCC compiler version ($CXX_VERSION) too old. Use at least 9.0. Switch compiler through CXX flag.]) ])
-  found_compiler_type=true
-fi
-
-if test $found_compiler_type == false; then
-  AC_MSG_FAILURE( [Not able to determine compiler type. Set CXX flag to g++ or icpc.] )
-fi
 
 
 
