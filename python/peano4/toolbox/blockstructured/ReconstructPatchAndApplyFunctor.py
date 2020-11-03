@@ -104,6 +104,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "assertion4"
     self.d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "assertion5"
     self.d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "assertion6"
+    self.d[ "ASSERTION_WITH_7_ARGUMENTS" ] = "assertion7"
     
     self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = functor_implementation
     self.d[ "FACE_FUNCTOR_IMPLEMENTATION" ] = touch_face_first_time_functor
@@ -229,7 +230,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       int destinationCellSerialised  = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
       for (int j=0; j<{UNKNOWNS}; j++) {{
         reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j] = {CELL_ACCESSOR}.value[ sourceCellSerialised*{UNKNOWNS}+j ];
-        {ASSERTION_WITH_3_ARGUMENTS}( reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j]==reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j], sourceCell, j, _treeNumber );
+        {ASSERTION_WITH_4_ARGUMENTS}( reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j]==reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j], sourceCell, j, _treeNumber, marker.toString() );
       }}
     }}
   
@@ -255,9 +256,9 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 
           for (int j=0; j<{UNKNOWNS}; j++) {{
             reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d).value[ sourceCellSerialised*{UNKNOWNS}+j ];
-            {ASSERTION_WITH_6_ARGUMENTS}( 
+            {ASSERTION_WITH_7_ARGUMENTS}( 
               reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
-              sourceCell, destinationCell, j, d, marker.toString(), _treeNumber 
+              sourceCell, destinationCell, j, d, marker.toString(), _treeNumber, marker.toString()
             );
           }}
 
@@ -268,9 +269,9 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
           sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
           for (int j=0; j<{UNKNOWNS}; j++) {{
             reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ];
-            {ASSERTION_WITH_6_ARGUMENTS}( 
+            {ASSERTION_WITH_7_ARGUMENTS}( 
               reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
-              sourceCell, destinationCell, j, d, marker.toString(), _treeNumber
+              sourceCell, destinationCell, j, d, marker.toString(), _treeNumber, marker.toString()
             );
           }}
         }}

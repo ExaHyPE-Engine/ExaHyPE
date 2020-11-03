@@ -196,7 +196,7 @@ did search for a file """ + input_file )
       self.cppfiles.append( filename )
 
 
-  def add_fortran_file(self,filename):
+  def add_Fortran_file(self,filename):
     """
 
      Add a new filename. This is basically a set implementation, i.e. you can
@@ -207,10 +207,20 @@ did search for a file """ + input_file )
      All the standard Peano 4 routines rely on this function to add their
      generated files to the build environment. Nothing stops you however to
      add more files yourself.
+     
+     Fortran is really picky about the translation order. So you have to add
+     the stuff in the right order. Otherwise, Fortran might complain. This is 
+     your responsibility. Also, I don't know what happens if you use -j no 
+     the generated makefile with Fortran.
 
     """
     if self.fortranfiles.count(filename)==0:
       self.fortranfiles.append( filename )
+
+
+  def add_Fortran_files(self,filenames):
+    for i in filenames:
+      self.add_Fortran_file(i)
 
 
   def generate(self,overwrite,directory):

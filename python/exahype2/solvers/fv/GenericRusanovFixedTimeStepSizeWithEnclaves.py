@@ -14,7 +14,7 @@ from .GenericRusanovFixedTimeStepSize import GenericRusanovFixedTimeStepSize
 
 
 class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.None_Implementation, ncp=PDETerms.None_Implementation, plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
@@ -60,7 +60,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     
     """
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-    AbstractAoSWithOverlap1.__init__(self, flux, ncp, kernel_implementation=kernel_implementation)
+    AbstractAoSWithOverlap1.__init__(self, kernel_implementation=kernel_implementation)
 
     # @todo Ein Haufen der Logik kann raus
     
@@ -188,12 +188,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """
 
     self._rusanov_call = ""
-    if   flux!=PDETerms.None_Implementation and ncp==PDETerms.None_Implementation:
-      self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithFluxAndEigenvalues
-    elif flux==PDETerms.None_Implementation and ncp!=PDETerms.None_Implementation:
-      self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithNCPAndEigenvalues
-    else:
-      raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
 
     self.set_implementation(flux,ncp)
     self.set_update_cell_implementation()
@@ -201,7 +195,39 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     pass
 
 
-  def _wrap_update_cell_template(self, update_cell_template, memory_location):
+  def __construct_template_update_cell(self):
+    self._template_update_cell      = jinja2.Template( self._get_template_update_cell( self._rusanov_call + """
+          QL, QR, x, dx, t, dt, normal, """ + 
+      str(self._unknowns) + """, """ + str(self._auxiliary_variables) + """, FL, FR
+        );
+""" ))
+    self._template_update_cell      = jinja2.Template( self._wrap_update_cell_template( 
+      self._get_template_update_cell( self._rusanov_call + """
+          QL, QR, x, dx, t, dt, normal, """ + 
+      str(self._unknowns) + """, """ + str(self._auxiliary_variables) + """, FL, FR
+        );
+"""   )))
+    
+    
+  def set_implementation(self,flux=PDETerms.User_Defined_Implementation,ncp=None,eigenvalues=PDETerms.User_Defined_Implementation,boundary_conditions=PDETerms.User_Defined_Implementation,refinement_criterion=PDETerms.User_Defined_Implementation,initial_conditions=PDETerms.User_Defined_Implementation):
+    """
+    
+     Wrapper around superclass
+     
+    """
+    AbstractAoSWithOverlap1.set_implementation(self,flux,ncp,eigenvalues,boundary_conditions,refinement_criterion,initial_conditions)
+
+    if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
+      self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithFluxAndEigenvalues
+    elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
+      self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithNCPAndEigenvalues
+    else:
+      raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
+
+    self.__construct_template_update_cell()
+
+
+  def _wrap_update_cell_template(self, update_cell_template):
     """
     
     I use the same memory management for both the skeletons and the enclave
@@ -209,9 +235,9 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     
     """
     free_memory_call_for_skeleton_cells = ""
-    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
       free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Heap);"
-    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Accelerator);"
 
     result = """if (marker.isSkeletonCell()) {
@@ -266,13 +292,8 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
        memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       print( "WARNING: Selected memory allocation which does delete allocated memory. Enclave tasking has to have a mode which does not automatically free the memory and allocation has to run through tarch. Code will likely produce invalid memory accesses!" )
 
-    self._template_update_cell      = jinja2.Template( self._wrap_update_cell_template( 
-      self._get_template_update_cell( self._rusanov_call + """
-          QL, QR, x, dx, t, dt, normal, """ + 
-      str(self._unknowns) + """, """ + str(self._auxiliary_variables) + """, FL, FR
-        );
-"""   ), memory_location))
-    self._reconstructed_array_memory_location = memory_location
+    self._reconstructed_array_memory_location = memory_location 
+    self.__construct_template_update_cell()
         
   
   def add_entries_to_text_replacement_dictionary(self,d):

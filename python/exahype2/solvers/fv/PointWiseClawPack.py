@@ -28,10 +28,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
   
     Very simple solver that can use ClawPack's point-wise Riemann solver.
   
-  """
-    
-  
-  """
+
    The actual call of the Riemann solver has to be a simple function call
    which has the following variables available. The FL and FR is the only
    out array. All the other data are in.
@@ -51,7 +48,10 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
    My generic kernel requires FR and FL along the normal of the respective
    cell you look at F. That is, I need -FR compared to what ClawPack gives 
    me. Quick trial and error with the acoustics equations tells you that
-   it indeed has to be -FR and not -FL. 
+   it indeed has to be -FR and not -FL.
+   
+   There's also the opportunity to misuse a degenerated 1d Riemann solver, i.e.
+   a solver specified over a 1d array as point-wise solver.  
       
   """
   RiemannSolverCall = """
@@ -83,26 +83,67 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
 """
 
 
+  RiemannSolverCallDegenerated1DSolver = """
+    double wave[{{NUMBER_OF_UNKNOWNS}}]; 
+    double speed[{{NUMBER_OF_UNKNOWNS}}]; 
+
+    int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
+    int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    int num_waves = {{NUMBER_OF_UNKNOWNS}};
+    
+    int maxm      = 1;
+    int num_ghost = 1;
+    int num_cells = 1; 
+
+    {{CLAWPACK_RIEMANN_SOLVER}}_(
+      &maxm, 
+      &num_eqn,
+      &num_waves, 
+      &num_aux,
+      &num_ghost,
+      &num_cells,
+      QL,                                 // double* q_l 
+      QR,                                 // double* q_r
+      QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
+      QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
+      wave,
+      speed,
+      FL,                                 // double* amdq
+      FR                                  // double* apdq
+    );
+
+    for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
+      FR[i] = -FR[i];
+    }
+    
+"""
   
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop, is_degenerated_1d_solver=False):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
       
       
       Riemann_solver_implementation_files: list of strings
-        These are the Fortran files the code should add to the compile. 
+        These are the Fortran files the code should add to the compile.
+        
+        
+      is_degenerated_1d_solver: Boolean
+        I prefer ClawPack solvers which are written point-wisely. Alternatively, I 
+        can misuse 1d solvers.  
       
     """
     #super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-    AbstractAoSWithOverlap1.__init__(self, flux=PDETerms.None_Implementation,ncp=PDETerms.None_Implementation, kernel_implementation=kernel_implementation)
+    AbstractAoSWithOverlap1.__init__(self, flux=None,ncp=None, kernel_implementation=kernel_implementation)
     
     self._time_step_size = time_step_size
     
     self._template_adjust_cell      = self._get_template_adjust_cell()
     self._template_AMR              = self._get_template_AMR()
     self._template_handle_boundary  = self._get_template_handle_boundary()
+    
+    self._is_degenerated_1d_solver  = is_degenerated_1d_solver
     
     self.set_implementation()
     self.set_update_cell_implementation()
@@ -129,14 +170,14 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
     
     self._reconstructed_array_memory_location = memory_location
 
-    self._template_update_cell      = jinja2.Template( 
-      self._get_template_update_cell( self.RiemannSolverCall )
-    );
-    #self._template_update_cell      = jinja2.Template( self._get_template_update_cell( self._rusanov_call + """
-    #      QL, QR, x, dx, t, dt, normal, """ + 
-    #  str(self._unknowns) + """, """ + str(self._auxiliary_variables) + """, FL, FR
-    #    );
-    #""" ))
+    if self._is_degenerated_1d_solver:
+      self._template_update_cell      = jinja2.Template( 
+        self._get_template_update_cell( self.RiemannSolverCallDegenerated1DSolver )
+      );
+    else:
+      self._template_update_cell      = jinja2.Template( 
+        self._get_template_update_cell( self.RiemannSolverCall )
+      );
 
 
   def set_implementation(self,boundary_conditions=PDETerms.User_Defined_Implementation,refinement_criterion=PDETerms.User_Defined_Implementation,initial_conditions=PDETerms.User_Defined_Implementation):
@@ -146,9 +187,9 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
       to all FV solvers.
     """
     AbstractAoSWithOverlap1.set_implementation(self,
-      flux=PDETerms.None_Implementation,
-      ncp=PDETerms.None_Implementation,
-      eigenvalues=PDETerms.None_Implementation,
+      flux=None,
+      ncp=None,
+      eigenvalues=None,
       boundary_conditions=boundary_conditions,refinement_criterion=refinement_criterion,initial_conditions=initial_conditions
     )    
     pass
@@ -165,6 +206,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
 
     d[ "TIME_STEP_SIZE" ]         = self._time_step_size
     d[ "CLAWPACK_RIEMANN_SOLVER"] = self.clawpack_Riemann_solver
+    d[ "DEGENERATED_1D_SOLVER" ]  = self._is_degenerated_1d_solver
     
     pass
   

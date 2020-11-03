@@ -52,7 +52,7 @@ project.add_solver(
     time_step_size = 0.01, 
     min_h          = mesh_size,
     max_h          = mesh_size,
-    flux           = exahype2.solvers.fv.PDETerms.None_Implementation, 
+    flux           = None, 
     ncp            = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
     ))
 
