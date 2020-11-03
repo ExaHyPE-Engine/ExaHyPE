@@ -12,9 +12,9 @@ tarch::la::Vector<Dimensions,double>  exahype2::getVolumeSize(
   tarch::la::Vector<Dimensions,double> volumeSize;
 
   for (int d=0; d<Dimensions; d++) {
-  #if !defined(GPUOffloading)
+    #if !defined(GPUOffloading)
     assertion2( numberOfVolumesPerAxisInPatch>=1, h, numberOfVolumesPerAxisInPatch );
-  #endif
+    #endif
     volumeSize(d) = h(d)/numberOfVolumesPerAxisInPatch;
   }
 

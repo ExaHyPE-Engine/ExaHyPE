@@ -61,8 +61,7 @@ class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
       const ::peano4::datamanagement::CellMarker&    marker,
       double*                                        inputValues,
       int                                            numberOfResultValues,
-	  Functor                                        functor,
-	  bool                                           inputDataCreatedOnDevice = true
+	  Functor                                        functor
     );
 
     EnclaveOpenMPGPUTask(const EnclaveOpenMPGPUTask& other) = delete;
@@ -119,7 +118,6 @@ class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
     double*                                      _outputValues;
     int                                          _numberOfResultValues;
     Functor                                      _functor;
-    const bool                                   _inputDataCreatedOnDevice;
 
 };
 

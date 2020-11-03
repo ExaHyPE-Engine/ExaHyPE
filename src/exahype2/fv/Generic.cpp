@@ -38,6 +38,7 @@ void exahype2::fv::copyPatch(
 }
 
 
+/*
 void exahype2::fv::gpu::copyPatch(
   double* __restrict__ QinWithHalo,
   double* __restrict__ QOutWithoutHalo,
@@ -77,6 +78,7 @@ void exahype2::fv::gpu::copyPatch(
   }
   #endif
 }
+*/
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(

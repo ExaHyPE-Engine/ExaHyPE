@@ -225,22 +225,28 @@ systems.
 
 \section{GPU support}
 
-To add GPU support (via OpenMP 5), you have to do a couple of steps
-and you have to check first whether your solver of choice supports
-GPUs. 
-Not all solvers are suited for a GPU.
-Next, you have to run through a couple of steps:
+\ExaHyPE\ supports GPUs via OpenMP 5.
+You have to follow the following steps:
 
 
 First, your environment has to be compiled with OpenMP, and I strongly recommend
 that you also add \texttt{--with-nvidia} to have support for their tools.
 Check that \texttt{-DnoGPUOffloading} is \emph{not} set within the compile
-flags and translate your code.
+flags.
+Translate the whole \Peano\ core.
+
+
 Second, ensure that you use an \ExaHyPE\ solver which has support for GPUs. 
-The enclave solvers typically are your solvers of choice.
-Solvers that provide GPU support have a flag \texttt{use\_gpu} in their
-constructor which is unset by default. 
-Set it to \texttt{True} and rerun the toolkit.
+The Finite Volume enclave solver for example does support GPUs. 
+However, you have to explicitly switch GPUs on by invoking a routine on the 
+solver.
+
+
+Third, write alternatives of those solver routines that have to be deployed
+to the GPU.
+There have to be stateless variants of these routines.
+The remainder of this section orbits around this.
+
 
 \begin{definition}{Solvers with GPU support}
  A solver can use GPUs if and only if can provide all of its PDE terms
