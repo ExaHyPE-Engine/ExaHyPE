@@ -5,20 +5,21 @@
 .PHONY: all solver clean
 
 
-CXX = {CXX}
-FC  = {FC}
-CXXFLAGS += -std=c++0x {CXX_MODE_FLAGS} {CXXFLAGS} -DDimensions={DIM} -I. -I{CONFIGUREPATH}/src
-FCFLAGS  += {FCFLAGS}
-LDFLAGS  += {LDFLAGS}
-LIBS = -L{CONFIGUREPATH}/src {LIBS} -lPeano4Core{DIM}d{LIBRARY_POSTFIX} -lTarch{LIBRARY_POSTFIX} 
-DIM  = {DIM}
+CXX = {{CXX}}
+FC  = {{FC}}
+CXXFLAGS += -std=c++0x {{CXX_MODE_FLAGS}} {{CXXFLAGS}} -DDimensions={{DIM}} -I. -I{{CONFIGUREPATH}}/src
+FCFLAGS  += {{FCFLAGS}}
+LDFLAGS  += {{LDFLAGS}}
+LIBS = -L{{CONFIGUREPATH}}/src {{LIBS}} -lPeano4Core{{DIM}}d{{LIBRARY_POSTFIX}} -lTarch{{LIBRARY_POSTFIX}} 
 
 
-CXX_SOURCES={CXX_SOURCES} 
-FORTRAN_SOURCES={FORTRAN_SOURCES}
+CXX_SOURCES={% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %} 
+FORTRAN_SOURCES={% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
+
 
 CXX_OBJS=$(subst .cpp,.o,$(CXX_SOURCES))
 FORTRAN_OBJS=$(subst .f90,.o,$(FORTRAN_SOURCES))
+
 
 all: solver
 
@@ -31,10 +32,16 @@ all: solver
 	$(FC) $(FCFLAGS) -c -o $@ $<
 
     
-solver: $(CXX_OBJS) $(FORTRAN_OBJS)
+{% for modulename,files in FORTRAN_MODULES.items() -%} 
+{{modulename}}: {% for file in files -%} {{file}} {%- endfor %}  
+{%- endfor %}
+
+
+
+solver: {% for modulename,file in FORTRAN_MODULES.items() -%}{{modulename+" "}}{%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) 
 	$(CXX) $(LDFLAGS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LIBS) -o {EXECUTABLENAME} 
 
     
 clean:
 	rm -f $(CXX_OBJS) $(FORTRAN_OBJS)
-	rm -f {EXECUTABLENAME}
+	rm -f {{EXECUTABLENAME}}

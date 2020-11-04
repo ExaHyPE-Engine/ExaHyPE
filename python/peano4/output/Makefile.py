@@ -9,6 +9,9 @@ import os
 import re
 
 
+import jinja2
+
+
 class Makefile(object):
   """ Represents the created makefile of a Peano4 project """
   default_overwrite = True
@@ -20,23 +23,26 @@ class Makefile(object):
 
   def clear(self):
     self.d = {}
-    self.d["CXX"]           = ""
-    self.d["CXXFLAGS"]      = ""
-    self.d["FC"]           = ""
-    self.d["FCFLAGS"]       = ""
-    self.d["LDFLAGS"]       = ""
-    self.d["LIBS"]          = ""
-    self.d["DIM"]           = "2"
-    self.d["CONFIGUREPATH"] = "."
-    self.d["EXECUTABLENAME"] = "peano4"
+    self.d["CXX"]              = ""
+    self.d["CXXFLAGS"]         = ""
+    self.d["FC"]               = ""
+    self.d["FCFLAGS"]          = ""
+    self.d["LDFLAGS"]          = ""
+    self.d["LIBS"]             = ""
+    self.d["DIM"]              = "2"
+    self.d["CONFIGUREPATH"]    = "."
+    self.d["EXECUTABLENAME"]   = "peano4"
+    self.d["FORTRAN_MODULES"]  = {}
     self.set_mode( CompileMode.Debug )
     self.clear_files()
+
 
   def set_executable_name(self, fname):
       self.d["EXECUTABLENAME"] = fname
 
+
   def clear_files(self):
-    self.cppfiles = []
+    self.cppfiles     = []
     self.fortranfiles = []
 
 
@@ -223,27 +229,32 @@ did search for a file """ + input_file )
       self.add_Fortran_file(i)
 
 
+  def add_Fortran_module(self,module_name,module_files):
+    self.d["FORTRAN_MODULES"][ module_name ] = []
+    for i in module_files:
+      self.d["FORTRAN_MODULES"][ module_name ].append( i.replace( ".f90", ".o") )
+      self.fortranfiles.append(i)
+    
+
   def generate(self,overwrite,directory):
     filename = directory + "/Makefile";
     if writeFile(overwrite,self.default_overwrite,filename):
       print( "write " + filename )
 
       # files
-      self.d[ 'CXX_SOURCES' ] = ""
-      for i in self.cppfiles:
-        self.d[ 'CXX_SOURCES' ] += " "
-        self.d[ 'CXX_SOURCES' ] += i
+      self.d[ 'CXX_SOURCES' ]     = self.cppfiles
+      
+      self.d[ 'FORTRAN_SOURCES' ] = self.fortranfiles
 
-      self.d[ 'FORTRAN_SOURCES' ] = ""
-      for i in self.fortranfiles:
-        self.d[ 'FORTRAN_SOURCES' ] += " "
-        self.d[ 'FORTRAN_SOURCES' ] += i
+
+      template_file   = os.path.realpath(__file__).replace( ".pyc", ".template" ).replace( ".py", ".template" )
+      template_loader = jinja2.FileSystemLoader(searchpath=os.path.split(template_file)[0])
+      templateEnv     = jinja2.Environment(loader=template_loader)
+      template        = templateEnv.get_template( os.path.split(template_file)[1] )
 
 
       # We first eliminate the precompiled variant, and then we get rid of the
       # postfix in the case where it is a source file
-      with open( os.path.realpath(__file__).replace( ".pyc", ".template" ).replace( ".py", ".template" ), "r" ) as input:
-        template = input.read()
       with open( filename, "w" ) as output:
-        output.write( template.format(**self.d) )
+        output.write( template.render(self.d) )
 

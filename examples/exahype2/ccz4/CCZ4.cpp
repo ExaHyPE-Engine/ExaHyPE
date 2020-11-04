@@ -35,8 +35,6 @@ tarch::logging::Log   examples::exahype2::ccz4::CCZ4::_log( "examples::exahype2:
 }
 
 
-
-
 void examples::exahype2::ccz4::CCZ4::adjustSolution(
   double * __restrict__ Q, // Q[63+0],
   const tarch::la::Vector<Dimensions,double>&  volumeX,
