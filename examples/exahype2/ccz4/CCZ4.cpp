@@ -152,16 +152,23 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
 
   // routine requires explicit normal vector
   double normalVector[3];
+
+/*
   normalVector[0] = 0;
   normalVector[1] = 0;
   normalVector[2] = 0;
-
   if (normal==0) normalVector[0] = -1.0;
   if (normal==1) normalVector[1] = -1.0;
   if (normal==2) normalVector[2] = -1.0;
   if (normal==3) normalVector[0] =  1.0;
   if (normal==4) normalVector[1] =  1.0;
   if (normal==5) normalVector[2] =  1.0;
+*/
+
+  normalVector[0] = normal % 3 == 0 ? 1.0 : 0.0;
+  normalVector[1] = normal % 3 == 1 ? 1.0 : 0.0;
+  normalVector[2] = normal % 3 == 2 ? 1.0 : 0.0;
+
 
   // actual method invocation
   pdeeigenvalues_(lambda, Q, normalVector);
@@ -188,14 +195,14 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 ) {
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
 
-  double gradQTimeNormal[63];
-  int    selectD = normal % 3;
-  double scaling = normal<3 ? -1.0 : 1.0;
+  double gradQSerialised[63*3];
   for (int i=0; i<63; i++) {
-    gradQTimeNormal[i] = gradQ[i][selectD] * scaling;
+    gradQSerialised[i+0*63] = gradQ[i][0];
+    gradQSerialised[i+1*63] = gradQ[i][1];
+    gradQSerialised[i+2*63] = gradQ[i][2];
   }
 
-  pdencp_(BgradQ, Q, gradQTimeNormal);
+  pdencp_(BgradQ, Q, gradQSerialised);
 
   logTraceOut( "nonconservativeProduct(...)" );
 }
