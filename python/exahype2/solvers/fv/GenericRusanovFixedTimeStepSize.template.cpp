@@ -51,7 +51,7 @@ double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEi
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
-  double * __restrict__ lambda // lambda[{{NUMBER_OF_UNKNOWNS}}]
+  int                                          normal
 ) {
   logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
   // @todo implement

@@ -39,33 +39,40 @@ class AbstractAoSWithOverlap1(object):
   """
      
      
-  def __init__(self, flux, ncp, kernel_implementation = CellUpdateImplementation_NestedLoop):
-    self._flux_implementation                 = flux
-    self._ncp_implementation                  = ncp
-    self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
-    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
-    self._refinement_criterion_implementation = PDETerms.User_Defined_Implementation
-    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+  def __init__(self, kernel_implementation = CellUpdateImplementation_NestedLoop):
+    self._flux_implementation                 = PDETerms.None_Implementation
+    self._ncp_implementation                  = PDETerms.None_Implementation
+    self._eigenvalues_implementation          = PDETerms.None_Implementation
+    self._boundary_conditions_implementation  = PDETerms.None_Implementation
+    self._refinement_criterion_implementation = PDETerms.None_Implementation
+    self._initial_conditions_implementation   = PDETerms.None_Implementation
     self._kernel_implementation               = kernel_implementation
 
 
 
-  def set_implementation(self,flux=PDETerms.User_Defined_Implementation,ncp=PDETerms.None_Implementation,eigenvalues=PDETerms.User_Defined_Implementation,boundary_conditions=PDETerms.User_Defined_Implementation,refinement_criterion=PDETerms.User_Defined_Implementation,initial_conditions=PDETerms.User_Defined_Implementation):
+  def set_implementation(self,flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None):
     """
       If you pass in User_Defined, then the generator will create C++ stubs 
       that you have to befill manually. If you pass in None_Implementation, it 
       will create nop, i.e. no implementation or defaults. Any other string
-      is copied 1:1 into the implementation. 
+      is copied 1:1 into the implementation. If you pass in None, then the 
+      set value so far won't be overwritten.
       
       Please note that not all options are supported by all solvers. You 
       cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
     """
-    self._flux_implementation        = flux
-    self._ncp_implementation         = ncp
-    self._eigenvalues_implementation = eigenvalues
-    self._boundary_conditions_implementation        = boundary_conditions
-    self._refinement_criterion_implementation       = refinement_criterion
-    self._initial_conditions_implementation         = initial_conditions
+    if flux!=None:
+      self._flux_implementation        = flux
+    if ncp!=None:
+      self._ncp_implementation         = ncp
+    if eigenvalues!=None:    
+      self._eigenvalues_implementation = eigenvalues
+    if boundary_conditions!=None:
+      self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion!=None:
+      self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions!=None: 
+      self._initial_conditions_implementation         = initial_conditions
     pass
 
   
