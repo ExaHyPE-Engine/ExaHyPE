@@ -44,4 +44,7 @@ solver: {% for modulename,file in FORTRAN_MODULES.items() -%}{{modulename+" "}}{
     
 clean:
 	rm -f $(CXX_OBJS) $(FORTRAN_OBJS)
+	{% for modulename,files in FORTRAN_MODULES.items() -%} 
+	rm -f {{modulename}}  
+	{%- endfor %}
 	rm -f {{EXECUTABLENAME}}
