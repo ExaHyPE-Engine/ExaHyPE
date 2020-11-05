@@ -44,19 +44,38 @@ class Constants(object):
     self.d[ "INCLUDE_GUARD" ] = self.d[ "INCLUDE_GUARD" ].upper()
     
     
-    
   def export( self, name, value ):
     """
+    
       Tell the C++ code underlying the project that a certain variable with a 
       name has a certain value. The passed arguments are mapped onto an 
       constexpr. Therefore, name has to be a string, while value can be an 
       integer, a float or a string as well. If you want to export booleans
       or just define variants, you have to use the other routines.
+      
+      
     """
     new_entry = "constexpr auto " + str(name) + " = " + str(value) + ";"
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
   
+  
+  def export_string( self, name, value ):
+    """
+    
+      Tell the C++ code underlying the project that a certain variable with a 
+      name has a certain value. The passed arguments are mapped onto an 
+      constexpr. Therefore, name has to be a string, while value can be an 
+      integer, a float or a string as well. If you want to export booleans
+      or just define variants, you have to use the other routines.
+      
+      
+    """
+    new_entry = "const std::string " + str(name) + " = \"" + str(value) + "\";"
+    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
+    pass
+  
+    
   
   def clear(self):
     self.d[ "ADD_CONSTANTS" ]            = ""
