@@ -2,24 +2,59 @@
 \label{section:exahype}
 
 
-\begin{figure}[htb]
+% \begin{figure}[htb]
  \begin{center}
-  \includegraphics[width=0.2\textwidth]{60_exahype/EU.png}
-  \includegraphics[width=0.5\textwidth]{60_exahype/ExaHyPE_Logo.jpg}
-  \includegraphics[width=0.2\textwidth]{60_exahype/ExCALIBUR.png}
+  \includegraphics[width=0.16\textwidth]{60_exahype/EU.png}
+  \includegraphics[width=0.35\textwidth]{60_exahype/ExaHyPE_Logo.jpg}
+  \includegraphics[width=0.27\textwidth]{60_exahype/ExCALIBUR.png}
  \end{center}
- \caption{
+%  \caption{
+ { \footnotesize
    The original ExaHyPE project delivering the first generation of the ExaHyPE
    software has received funding from the European Union’s Horizon 2020 research
    and innovation programme under grant agreement No 671698 (ExaHyPE).
    \ExaHyPE\ has been made possible by EPSRC under the grant EP/V00154X/1
    (ExaClaw). 
  }
-\end{figure}
+% \end{figure}
 
-\noindent
-\ExaHyPE\ is the follow-up development of the ExaHyPE project which has been
-funded by the EU from 2015--2019.
+
+\begin{framed}
+\paragraph*{First \ExaHyPE\ run}
+\begin{itemize}
+  \item Configure \Peano\ with the flags \texttt{--enable-exahype}
+  \texttt{--enable-loadbalancing-toolbox}:
+  \begin{code}
+libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+./configure --enable-exahype --enable-loadbalancing-toolbox
+  \end{code}
+   These are the two mandatory extensions. You might want to add further options.
+  \item Recompile your \Peano\ code. This should give you a couple of
+  \texttt{ExaHyPE2Core} libraries in the respective subdirectories.
+  \item Ensure that \texttt{python} subdirectory is in your Python search path
+  and
+  \item run the Jupyter notebook in \texttt{examples/exahype2/euler}: 
+  \begin{code}
+export PYTHONPATH=../../../python/
+jupyter-notebook Euler.ipynb
+  \end{code}
+  \noindent
+  or---if you don't like Jupyter notebooks---type in
+  \begin{code}
+export PYTHONPATH=../../../python/
+python3 example-scripts/finitevolumes-with-ExaHyPE2-CI.py
+make
+./peano4
+  \end{code}
+\end{itemize}
+\end{framed}
+
+
+
+\section{Historical remarks}
+
+\ExaHyPE\ is the follow-up development of the ExaHyPE project which has
+been funded by the EU from 2015--2019.
 The present version is the second generation of the code (\ExaHyPE) and has
 seen substantial rewrites of core routines.
 However, many paradigms and even code blocks remain the same.
@@ -48,28 +83,9 @@ document.
 
 
 
-\section*{Preparing \Peano\ to run \ExaHyPE}
-
-It is relatively straightforward to use \ExaHyPE\ within \Peano:
-
-\begin{itemize}
-  \item Configure \Peano\ with the flags \texttt{--enable-exahype}
-  \texttt{--enable-loadbalancing-toolbox}. These are the two mandatory extensions. You might want to add further options.
-  \item Recompile your \Peano\ code. This should give you a couple of
-  \texttt{ExaHyPE2Core} libraries in the respective subdirectories.
-  \item Ensure that \texttt{python} subdirectory is in your Python search path.
-\end{itemize}
 
 
-\begin{remark}
- I do discuss how \ExaHyPE\ works in this chapter. Once you have compiled with
- \ExaHyPE\ you might however prefer to switch into the directory
- \texttt{examples/exahype2/euler} and run the Jupyter notebook there.
- It runs you through the ExaHyPE usage from a user's point of view.
-\end{remark}
-
-
-\section*{Difference of \ExaHyPE\ vs.~ExaHyPE (first generation)}
+\section{Difference of \ExaHyPE\ vs.~ExaHyPE (first generation)}
 
 The original ExaHyPE had been built on top of Peano (third generation) and tried
 to hide as much of Peano away as possible.
@@ -88,67 +104,70 @@ then assembles the application.
 
 
 
-\section{Minimalistic Finite Volumes for the Euler equations}
+\section{Minimalist Finite Volumes for the Euler equations}
 \label{section:exahype:fv}
 
-I wrote a very simple Finite Volume implementation of a plain Euler solver to
-explain the fundamental ideas behind \ExaHyPE.
-It is a Jupyter notebook and hosts details explanations.
-It also explores different ways how to model the solver, i.e.~I compare
-C++-based vs.~symbolic models for all PDE terms.
-You can start it via
-
-
+A minimalist \ExaHyPE\ solver resembles:
 \begin{code}
-cd examples/exahype2/euler
-export PYTHONPATH=../../../python
-jupyter notebook
+project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", "myexecname" )
+
+project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+  "Euler",
+  patch_size,
+  unknowns, 0,
+  min_h, max_h,
+  time_step_size,
+  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+))
+
+project.set_global_simulation_parameters(
+  dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
+  time_step_size * args.timesteps, # end time
+  0.0, 0                           # snapshots
+)
+
+project.set_Peano4_installation( args.peanodir, build_mode )
+peano4_project = project.generate_Peano4_project()
+peano4_project.generate()
 \end{code}
 
-
 \noindent
-Alternatively, you can execute the notebook via \texttt{ipython3}.
+We first create a new project.
+There's a number of solvers currently available within \ExaHyPE.
+We add at least of them to \ExaHyPE\ before we set the global simulation
+parameters.
+The two final steps are that we make the \ExaHyPE\ API generate a \Peano\
+project, and this \Peano\ project then can generate the actual C++ code.
 
 
+The above snippet does set up a complete \ExaHyPE\ simulation.
+The solver will consist of two classes: \texttt{AbstractEuler} and a subclass
+\texttt{Euler}.
+The texttt{Euler} is an empty stub when you call the script the first time.
+You will have to befill it with the actual Physics---flux functions for example.
 
-All calls from the notebook can obviously also be made from a plain Python
-script. 
-You find examples for such scripts within the subdirectory
-\texttt{example-scripts}.
+
+Details are discussed in the Euler Jupyter notebook.
 
 
 \section{IO and logging}
 
 
 \ExaHyPE\ codes by default yield snapshots in \Peano's block format. 
-That is, there's no distinguished \ExaHyPE\ format.
+That is, there's no distinguished \ExaHyPE\ format. 
+Logging/state data is piped to the terminal or a file. 
+It depends whether you have compiled \Peano\ with a special toolchain.
 
 
-\paragraph{Explicit VTK conversion with command line tool}
-If you have configured \Peano\ with VTK support (\texttt{--with-vtk}), you can
-directly convert \ExaHyPE' output files into VTK and visualise these through
-Paraview or VisIt.
-The command line tool is discussed in Chapter
-\ref{chapter:postprocessing}.
+\paragraph{Patch file output}
 
-
-There's also a VTK wrapper around the command line tool:
-
-\begin{code}
-convert = peano4.visualisation.Convert( "solution-Euler" )
-convert.set_visualisation_tools_path( "../../../../src/visualisation" )
-convert.extract_fine_grid()
-convert.convert_to_vtk()
-\end{code}
-
-
-\paragraph{Direct postprocessing within Paraview}
-
-Paraview offers a Python scripting option. 
-Through this scripting interface, you can directly load and manipulate \Peano\
-(and hence \ExaHyPE) outputs. 
-The interface is also discussed in Chapter
-\ref{chapter:postprocessing}.
+The format as well as the postprocessing of \Peano's patch-file output is
+discussed in Chapter \ref{chapter:postprocessing}.
+By default, \ExaHyPE\ dumps all data as one large vector \texttt{Q} per Finite
+Volume/integration point, i.e.~you get a set of scalars.
+It also dumps all the resolution levels of the grid simultaneously.
+Therefore, one of the first postprocessing steps usually is to remove all data
+from the output data set besides the fine grid level.
 
 
 \paragraph{Logging output}
