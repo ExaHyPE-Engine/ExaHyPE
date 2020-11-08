@@ -135,44 +135,71 @@ void tarch::multicore::spawnTask(Task*  job) {
  * single. So I rely here on explicit tasking. Other threads will steal away
  * the guys we create.
  *
- * In principle, the processing of the tasks is a simple task group. However,
- * we may assume that that tasks are pretty imbalanced, so it would be nice
- * if the processing of some background tasks could slot in. Therefore, I
- * first spawn to tasks: The first one issues one task per item in the vector
- * tasks. The other task is kind of degenerated: It issues core consumer tasks.
- * On the highest level, we wait for both tasks to terminate. The one that
- * spawns further consumer tasks will actually return almost immediately. The
- * traversal task on the other hand will wait for quite a while as it itself
- * hosts a taskwait waiting for the mesh traversal tasks to get there.
+ * The taskloop requires an explicit nogroup statement, as we don't want the
+ * loop to wait for all descendents. We only want to wait for direct 
+ * children. Therefore, we take away the group property and add an explicit
+ * taskwait.
+ *
+ * The taskwait pragma allows the scheduler to process other tasks. This way,
+ * it should keep cores busy all the time. However, several groups have 
+ * reported that this is not the case. See in particular
+ *
+ * Jones, Christopher Duncan (Fermilab): Using OpenMP for HEP Framework Algorithm Scheduling
+ * http://cds.cern.ch/record/2712271
+ *
+ * The presentation slides can be found at https://zenodo.org/record/3598796#.X6eVv8fgqV4. 
+ *
+ * This documentation clarifies that some OpenMP runtimes do (busy) waits within
+ * the taskwait construct to be able to continue immediately. They do not 
+ * process other tasks meanwhile. We want to support a variaty of runtimes - 
+ * GCC for example is important for us due to its NVIDIA GPU support = and
+ * we therefore do supply the layered implementation. Also, we need a, again
+ * for our GPU/dynamic LB stuff, a variant where we have scheduler control.
+ *
+ * <h2> Implementation </h2>
+ *
+ * The implementation is straightforward: We use a counter that we set to the 
+ * number of work items. Every task decrements this counter upon completion.
+ * That is: each task knows towards the end of its lifetime how many other
+ * tasks are still up and running. While there are some other tasks, it can
+ * grab a task and process it.
+ *
+ * Grabbing only one task at a time is not efficient. The overhead of the 
+ * lookups is too big. Therefore, we use a variable max_tasks logcally. It
+ * is initialised by the very first task that completes: It analyses the 
+ * number of available background tasks at the time, and initialises 
+ * max_tasks with this number divided by the number of high-level tasks that
+ * have to be completed. This way, we add a dynamic touch to the whole thing. 
  *
  * @see  processPendingTasks(int).
  */
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
-     int max_tasks = 50;
-     // NOTE: this is likely not performant
-     if (std::getenv("MAXTASKS") != nullptr) max_tasks = atoi(std::getenv("MAXTASKS"));
+  if (not tasks.empty()) {
+    static int max_tasks;
+    max_tasks = 0;
 
-      int nnn(tasks.size());
-      #pragma omp taskloop nogroup priority(StandardPriority) shared(nnn)
-      for (int i=0; i<tasks.size(); i++) {
-        while (tasks[i]->run()) {}
-        delete tasks[i];
-        #pragma omp atomic 
-        nnn--;
+    int nnn(tasks.size());
+    #pragma omp taskloop nogroup priority(StandardPriority) shared(nnn)
+    for (int i=0; i<tasks.size(); i++) {
+      while (tasks[i]->run()) {}
+      delete tasks[i];
+      #pragma omp atomic 
+      nnn--;
 
-        if (omp_get_thread_num() == 0)
-        {
-           std::cerr << "# BG tasks: " << nonblockingTasks.size() << "\n";
-        }
-        
-        while (nnn>0 && not nonblockingTasks.empty())
-        {
-           tarch::multicore::processPendingTasks(max_tasks);
-        }
+      if (max_tasks==0) {
+        max_tasks = nonblockingTasks.size()/tasks.size();
       }
-     #pragma omp taskwait
+
+      while (nnn>0 && not nonblockingTasks.empty()) {
+        tarch::multicore::processPendingTasks(max_tasks);
+        max_tasks = std::max(1,max_tasks/2);
+      }
+    }
+    #pragma omp taskwait
+    std::cout << max_tasks << " ";
+
    // #pragma omp task
    // {
    //   spawnTaskConsumer(
@@ -181,6 +208,7 @@ void tarch::multicore::spawnAndWait(
    // }
     // std::cerr << omp_get_thread_num() << " done waiting " <<  nnn << " \n";
  // }
+  }
 }
 
 
@@ -201,11 +229,11 @@ bool tarch::multicore::processTask(int number) {
   for (auto it = nonblockingTasks.end(); it !=nonblockingTasks.begin();)
   {
     --it;
-    if ((*it)->getTaskId() == number) {
+    //if ((*it)->getTaskId() == number) {
        myTask = (*it);
        nonblockingTasks.erase(it);
        it=nonblockingTasks.begin();
-    }
+    //}
   }
 
   taskQueueMutex.unlock();
