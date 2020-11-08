@@ -23,6 +23,8 @@ import argparse
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("--h",              dest="h",              type=float, help="Mesh size",  default=0.01 )
 parser.add_argument("--d",              dest="dim",            type=int,   help="Dimensions", default=2 )
+parser.add_argument("--p",              dest="plot",           type=bool,  help="Plot final solution", default=False )
+parser.add_argument("--n",              dest="number_of_time_steps",  type=int,  help="Number of timesteps", default=10 )
 args = parser.parse_args()
 
 
@@ -70,12 +72,14 @@ build_mode = peano4.output.CompileMode.Release
 #
 # Lets configure some global parameters
 #
-number_of_time_steps = 50
-end_time = time_step_size * number_of_time_steps
+plot_interval = 0.0
+if args.plot:
+  plot_interval = 0.1
+end_time = time_step_size * args.number_of_time_steps
 project.set_global_simulation_parameters(
   dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
   end_time,           # end time
-  end_time, 0.1                         # snapshots
+  end_time, plot_interval                        # snapshots
 )
 
 
