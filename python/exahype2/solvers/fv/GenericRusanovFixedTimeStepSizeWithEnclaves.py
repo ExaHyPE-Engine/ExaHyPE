@@ -191,6 +191,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """
 
     self._rusanov_call = ""
+    self._enclave_task = "::exahype2::EnclaveTask"
 
     self.set_implementation(flux,ncp)
     self.set_update_cell_implementation()
@@ -248,7 +249,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
       """ + free_memory_call_for_skeleton_cells + """
     }
     else {
-      ::exahype2::EnclaveTask* newEnclaveTask = new {{ENCLAVE_TASK_TYPE}}(
+      {{ENCLAVE_TASK_TYPE}}* newEnclaveTask = new {{ENCLAVE_TASK_TYPE}}(
         marker,
         reconstructedPatch,
         #if Dimensions==2
@@ -311,7 +312,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     d[ "TIME_STEP_SIZE" ] = self._time_step_size
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
-    d[ "ENCLAVE_TASK_TYPE" ] = "::exahype2::EnclaveTask"
+    d[ "ENCLAVE_TASK_TYPE" ] = self._enclave_task
     pass
   
   
@@ -402,11 +403,11 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
       GPU variant.
       
     """
-    self.set_update_cell_implementation(self,
+    self.set_update_cell_implementation(
       function_call = AbstractAoSWithOverlap1.CellUpdateImplementation_SplitLoop,
       memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete
     )
     
-    d[ "ENCLAVE_TASK_TYPE" ] = "::exahype2::EnclaveOpenMPGPUTask"
+    self._enclave_task = "::exahype2::EnclaveOpenMPGPUTask"
 
 
