@@ -16,10 +16,11 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
   logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
+  /*
     if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {{
     result = ::exahype2::RefinementCommand::Refine;
   }}
-
+*/
 
 
   /*
