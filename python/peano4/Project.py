@@ -82,8 +82,14 @@ class Project (object):
     lazily called by the other project routines - the latest before
     you run the code.
     
-    It is important that I reset the output. Otherwise, two 
-    subsequent generate calls enrich the output twice.
+    It is important that I reset the output after each generate 
+    call before you change parameter settings and call generate
+    again. To do so, invoke cleanup(). If you forget this, two 
+    subsequent generate calls enrich the output twice. The 
+    throw_away_data_after_generation is even more aggressive and 
+    effectively destroys the object, i.e. all that remains is a 
+    hull that you can use to compile and run the project, but the
+    state is lost.
     
     throw_away_data_after_generation: Bool
       The Peano 4 memory footprint can become quite substantial 
