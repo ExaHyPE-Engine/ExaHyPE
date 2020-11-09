@@ -171,6 +171,15 @@ void tarch::multicore::spawnTask(Task*  job) {
  * max_tasks with this number divided by the number of high-level tasks that
  * have to be completed. This way, we add a dynamic touch to the whole thing. 
  *
+ * <h2> Bugs </h2>
+ *
+ * Due to the above scheduling policy, we have frequently observed that our
+ * code deadlocks with GCC if we use more OMP_NUM_THREADS than physical 
+ * threads. Notably, if hyperthreading is used, too. In this case, our 
+ * domain traversal tasks from tasks seem to starve.
+ *
+ *
+ *
  * @see  processPendingTasks(int).
  */
 void tarch::multicore::spawnAndWait(
@@ -198,16 +207,6 @@ void tarch::multicore::spawnAndWait(
       }
     }
     #pragma omp taskwait
-    std::cout << max_tasks << " ";
-
-   // #pragma omp task
-   // {
-   //   spawnTaskConsumer(
-   //     tarch::multicore::Core::getInstance().getNumberOfThreads()
-   //   );
-   // }
-    // std::cerr << omp_get_thread_num() << " done waiting " <<  nnn << " \n";
- // }
   }
 }
 
@@ -216,39 +215,100 @@ void tarch::multicore::yield() {
   #pragma omp taskyield
 }
 
-//bool tarch::multicore::processTask(int number) {
-//     yield();
-//    return false;
-//}
 
-bool tarch::multicore::processTask(int number) {
+/**
+ * Process one particular task 
+ *
+ */
+namespace {
+  enum class ProcessTaskStrategy {
+    SearchLIFOUntilFound,
+    SearchFIFOUntilFound,
+    PickFirstElementFIFO,
+    PickFirstElementLIFO
+  };
 
-  // Iterate backwards through list
-  Task* myTask = nullptr;
-  taskQueueMutex.lock();
-  for (auto it = nonblockingTasks.end(); it !=nonblockingTasks.begin();)
-  {
-    --it;
-    //if ((*it)->getTaskId() == number) {
-       myTask = (*it);
-       nonblockingTasks.erase(it);
-       it=nonblockingTasks.begin();
-    //}
-  }
 
-  taskQueueMutex.unlock();
+  bool processTask(int number, ProcessTaskStrategy processTaskStrategy) {
+    // Iterate backwards through list
+    tarch::multicore::Task* myTask = nullptr;
 
-  if (myTask != nullptr)
-  {
-    while (myTask->run()) {};
-    delete myTask;
-    return true;
-  }
-  else
-  {
-    return false;
+    taskQueueMutex.lock();
+    switch (processTaskStrategy) {
+      case ProcessTaskStrategy::SearchLIFOUntilFound:
+        {
+          for (auto it = nonblockingTasks.end(); it !=nonblockingTasks.begin();) {
+            --it;
+            if ((*it)->getTaskId() == number) {
+              myTask = (*it);
+              nonblockingTasks.erase(it);
+              it=nonblockingTasks.begin();
+            }
+          }
+        }
+        break;
+      case ProcessTaskStrategy::SearchFIFOUntilFound:
+        {
+          for (auto it = nonblockingTasks.begin(); it !=nonblockingTasks.end();) {
+            if ((*it)->getTaskId() == number) {
+              myTask = (*it);
+              nonblockingTasks.erase(it);
+              it=nonblockingTasks.end();
+            }
+            else it++;
+          }
+        }
+        break;
+      case ProcessTaskStrategy::PickFirstElementFIFO:
+        {
+          if ( not nonblockingTasks.empty() ) {
+            auto p = nonblockingTasks.begin();
+            myTask = *p;
+            nonblockingTasks.erase(p);
+          }
+        }
+        break;
+      case ProcessTaskStrategy::PickFirstElementLIFO:
+        {
+          if ( not nonblockingTasks.empty() ) {
+            auto p = nonblockingTasks.end();
+            p--;
+            myTask = *p;
+            nonblockingTasks.erase(p);
+          }
+        }
+        break;
+    }
+    taskQueueMutex.unlock();
+
+    if (myTask != nullptr) {
+      int myTaskNumber = myTask->getTaskId();
+      while (myTask->run()) {};
+      delete myTask;
+      return myTaskNumber==number;
+    }
+    else return false;
   }
 }
+
+
+
+/**
+ * Process one particular task 
+ * 
+ * The stupid/dummy implementation of this routine resembles
+ *
+ * <pre>
+bool tarch::multicore::processTask(int number) {
+  yield();
+  return false;
+}
+   </pre>
+ */
+bool tarch::multicore::processTask(int number) {
+  ::processTask(number,::ProcessTaskStrategy::SearchLIFOUntilFound);
+}
+
 
 int tarch::multicore::getNumberOfPendingTasks() {
   return nonblockingTasks.size();
