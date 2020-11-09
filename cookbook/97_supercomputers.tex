@@ -279,22 +279,38 @@ pip install jinja2 sympy
 
 \paragraph{Build with the GNU compilers}
 
+
+
 To build \Peano:
 \begin{code}
-. /opt/software/spack/share/spack/setup-env.sh
 module purge
-module load spack
-spack load gcc@10.2.0
-spack load cuda
-export CXXFLAGS="-fopenmp"
-export LDFLAGS="-lgomp"
-./configure --with-multithreading=omp \
-   --with-toolchain=nvidia \
-   CXXFLAGS="-fopenmp -foffload=nvptx-none -lm -fno-fast-math -fno-associative-math" \
-   LDFLAGS="-lnvToolsExt -fopenmp"
-make clean
-make -j 64
+module load gcc
+module load cuda
+./configure --with-multithreading=omp --with-toolchain=nvidia CXXFLAGS="-fopenmp \ 
+  -foffload=nvptx-none -lm -fno-fast-math -fno-associative-math -g3 \
+  -DLayeredMultitaskingRuntime" --enable-gpu=nvidia  LDFLAGS="-lnvToolsExt \
+  -fopenmp -lcudart -foffload=-lm -fno-fast-math -fno-associative-math"
 \end{code}
+
+
+-foffload=-lm-fno-fast-math -fno-associative-math
+
+% To build \Peano:
+% \begin{code}
+% . /opt/software/spack/share/spack/setup-env.sh
+% module purge
+% module load spack
+% spack load gcc@10.2.0
+% spack load cuda
+% export CXXFLAGS="-fopenmp"
+% export LDFLAGS="-lgomp"
+% ./configure --with-multithreading=omp \
+%    --with-toolchain=nvidia \
+%    CXXFLAGS="-fopenmp -foffload=nvptx-none -lm -fno-fast-math -fno-associative-math" \
+%    LDFLAGS="-lnvToolsExt -fopenmp"
+% make clean
+% make -j 64
+% \end{code}
 
 \noindent
 Don't forget to add \texttt{--enable-exahype --enable-loadbalancing-toolbox} if
