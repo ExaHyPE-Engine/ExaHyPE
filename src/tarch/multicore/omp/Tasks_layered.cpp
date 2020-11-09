@@ -306,7 +306,7 @@ bool tarch::multicore::processTask(int number) {
    </pre>
  */
 bool tarch::multicore::processTask(int number) {
-  ::processTask(number,::ProcessTaskStrategy::SearchLIFOUntilFound);
+  return ::processTask(number,::ProcessTaskStrategy::SearchLIFOUntilFound);
 }
 
 
