@@ -248,21 +248,30 @@ systems.
 You have to follow the following steps:
 
 
-First, your environment has to be compiled with OpenMP, and I strongly recommend
-that you also add \texttt{--with-nvidia} to have support for their tools.
-Check that \texttt{-DnoGPUOffloading} is \emph{not} set within the compile
-flags.
-Translate the whole \Peano\ core.
+First, \emph{your environment has to be compiled with GPU support}.
+For this, configure with the argument \texttt{--enable-gpu}.
+For NVIDIA systems, I furthermore strongly recommend that you also add \texttt{--with-nvidia} to have support for their tools.
+Rebuild the whole \Peano\ core.
 
 
-Second, ensure that you use an \ExaHyPE\ solver which has support for GPUs. 
+Second, \emph{use an \ExaHyPE\ solver which has support for GPUs}. 
 The Finite Volume enclave solver for example does support GPUs. 
-However, you have to explicitly switch GPUs on by invoking a routine on the 
-solver.
+The solver documentation should clarify which one to select.
 
 
-Third, write alternatives of those solver routines that have to be deployed
-to the GPU.
+Third, \emph{switch to GPU compute kernels}.
+Most solvers allow you to switch between different compute kernels,
+i.e.~realisations of their core compute routines.
+The solvers that support GPUs also offer tailored GPU compute kernels.
+For the Finite Volume solvers, there is for example an explicit
+\texttt{use\_OpenMP5\_GPUs} function that you call within your Python
+script.
+It sets all the required routines.
+
+
+
+Finally, \emph{write alternatives of those solver routines that have to be
+deployed to the GPU}.
 There have to be stateless variants of these routines.
 The remainder of this section orbits around this.
 

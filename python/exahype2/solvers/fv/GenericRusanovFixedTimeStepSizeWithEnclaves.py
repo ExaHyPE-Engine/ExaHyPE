@@ -17,8 +17,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
   def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop):
     """
     
-      Instantiate a generic FV scheme with an overlap of 1.
-      
     A fixed time stepping scheme with enclave tasking
     
     This is a simple implementation of a FV scheme using a generic 
@@ -57,6 +55,11 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     For the actions, I add a further action which administers the task
     spawning over the enclaves. I plug into the data model routines to 
     add the marker to the cell which holds the semaphore/cell number.      
+    
+    
+    GPU support:
+    
+    This solver supports GPUs. To enable it, please call use_OpenMP5_GPUs().
     
     """
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
