@@ -25,6 +25,7 @@ parser.add_argument("--h",              dest="h",              type=float, help=
 parser.add_argument("--d",              dest="dim",            type=int,   help="Dimensions", default=2 )
 parser.add_argument("--p",              dest="plot",           type=bool,  help="Plot final solution", default=False )
 parser.add_argument("--n",              dest="number_of_time_steps",  type=int,  help="Number of timesteps", default=10 )
+parser.add_argument("--gpu",            dest="gpu",           type=bool,  help="Use GPU", default=False )
 args = parser.parse_args()
 
 
@@ -48,16 +49,20 @@ max_h          = args.h
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
-#project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSize(
+solver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
   "Euler",
   patch_size,
   unknowns, 0,
   min_h, max_h,
   time_step_size,
   flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
-))
+)
 
+if args.gpu:
+  solver.use_OpenMP5_GPUs()
+ 
+
+project.add_solver( solver );
 # use_gpu =  False
 
 
