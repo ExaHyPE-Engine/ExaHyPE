@@ -65,7 +65,12 @@ class Makefile(object):
 
 
   def add_header_search_path(self, path ):
+    """
+     Add the header search path to both the C++ and the Fortran 
+     call command.
+    """
     self.d["CXXFLAGS"] += " -I" + path
+    self.d["FCFLAGS"]  += " -I" + path
 
 
   def add_library(self, library_name, library_path="" ):
