@@ -249,8 +249,13 @@ You have to follow the following steps:
 
 
 First, \emph{your environment has to be compiled with GPU support}.
-For this, configure with the argument \texttt{--enable-gpu}.
-For NVIDIA systems, I furthermore strongly recommend that you also add \texttt{--with-nvidia} to have support for their tools.
+For this, configure with the argument \texttt{--enable-gpu=xxx} where
+\texttt{xxx} selects the vendor.
+We have different settings for different GPU producers.
+Some GPU targets might require further features; our NVIDIA port for example
+requires OpenMP multithreading.
+For NVIDIA systems, I furthermore strongly
+recommend that you also add \texttt{--with-nvidia} to have support for their tools.
 Rebuild the whole \Peano\ core.
 
 
