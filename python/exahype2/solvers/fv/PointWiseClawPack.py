@@ -81,7 +81,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
 """
 
   RiemannSolverCallDiscriminateNormal = """
-    int ixy;
+    int ixy = normal+1;
     double wave[{{NUMBER_OF_UNKNOWNS}}]; 
     double speed[{{NUMBER_OF_UNKNOWNS}}]; 
 
@@ -161,7 +161,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
 
     if self._discriminate_normal: 
       self._template_update_cell      = jinja2.Template( 
-      self._get_template_update_cell( self.RiemannSolverCallRiemannSolverCallDiscriminateNormal )
+      self._get_template_update_cell( self.RiemannSolverCallDiscriminateNormal )
       )    
     else:
       self._template_update_cell      = jinja2.Template( 
@@ -195,7 +195,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
 
     d[ "TIME_STEP_SIZE" ]         = self._time_step_size
     d[ "CLAWPACK_RIEMANN_SOLVER"] = self.clawpack_Riemann_solver
-    d[ "DISCRIMINATE_NORMAL" ]  = self._discriminate_normal
+    d[ "DISCRIMINATE_NORMAL" ]    = self._discriminate_normal
     
     pass
   
