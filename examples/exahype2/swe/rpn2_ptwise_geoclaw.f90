@@ -1,6 +1,6 @@
 subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
 
-    use geoclaw_module, only: g=> grav, drytol => dry_tolerance, rho
+    use geoclaw_module, only: g => grav, drytol => dry_tolerance, rho
     use geoclaw_module, only: earth_radius, deg2rad
     use amr_module, only: mcapa
 
