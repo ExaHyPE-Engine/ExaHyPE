@@ -171,7 +171,7 @@ class AbstractAoSWithOverlap1(object):
     
   def _get_template_update_cell(self,
     split_Riemann_solver_kernel_implementation,
-    cell_time_stamp     = "{{SOLVER_INSTANCE}}.getMinTimeStamp()", 
+    cell_time_stamp     = "minTimeStamp", 
     cell_time_step_size = "{{TIME_STEP_SIZE}}"
   ):
     """

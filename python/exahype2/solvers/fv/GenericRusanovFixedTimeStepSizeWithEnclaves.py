@@ -193,6 +193,8 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     self._rusanov_call = ""
     self._enclave_task = "::exahype2::EnclaveTask"
 
+    self._use_gpu = False
+
     self.set_implementation(flux,ncp)
     self.set_update_cell_implementation()
 
@@ -200,11 +202,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
 
 
   def __construct_template_update_cell(self):
-    self._template_update_cell      = jinja2.Template( self._get_template_update_cell( self._rusanov_call + """
-          QL, QR, x, dx, t, dt, normal, """ + 
-      str(self._unknowns) + """, """ + str(self._auxiliary_variables) + """, FL, FR
-        );
-""" ))
     self._template_update_cell      = jinja2.Template( self._wrap_update_cell_template( 
       self._get_template_update_cell( self._rusanov_call + """
           QL, QR, x, dx, t, dt, normal, """ + 
@@ -244,19 +241,18 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Accelerator);"
 
-    result = """if (marker.isSkeletonCell()) {
+    result = """
+    double minTimeStamp =  {{SOLVER_INSTANCE}}.getMinTimeStamp();
+
+    if (marker.isSkeletonCell()) {
 """ + update_cell_template + """
       """ + free_memory_call_for_skeleton_cells + """
     }
     else {
-      {{ENCLAVE_TASK_TYPE}}* newEnclaveTask = new {{ENCLAVE_TASK_TYPE}}(
-        marker,
-        reconstructedPatch,
-        #if Dimensions==2
-        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
-        #else
-        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
-        #endif
+      #if defined(GPUOffloading)
+      #pragma omp declare target
+      #endif
+      auto perCellFunctor = 
         [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
            ::exahype2::fv::copyPatch(
              reconstructedPatch,
@@ -267,7 +263,20 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
              {{HALO_SIZE}}
            );
            """ + update_cell_template + """
-        }
+        };
+      #if defined(GPUOffloading)
+      #pragma omp end declare target
+      #endif
+
+      {{ENCLAVE_TASK_TYPE}}* newEnclaveTask = new {{ENCLAVE_TASK_TYPE}}(
+        marker,
+        reconstructedPatch,
+        #if Dimensions==2
+        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
+        #else
+        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
+        #endif
+        perCellFunctor
       );
       
       fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( newEnclaveTask->getTaskId() );
@@ -289,13 +298,15 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     """
     
       Do not invoke this routine if you use a GPU. Use the GPU 
-      alternative instead.
+      alternative instead. It will call this routine with exactly
+      the right operations (and also do the other setup).
     
     """
     if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete and \
        memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       print( "WARNING: Selected memory allocation which does delete allocated memory. Enclave tasking has to have a mode which does not automatically free the memory and allocation has to run through tarch. Code will likely produce invalid memory accesses!" )
 
+    self._kernel_implementation               = function_call
     self._reconstructed_array_memory_location = memory_location 
     self.__construct_template_update_cell()
         
@@ -313,6 +324,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "ENCLAVE_TASK_TYPE" ] = self._enclave_task
+    d[ "use_gpu" ] = self._use_gpu
     pass
   
   
@@ -407,7 +419,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
       function_call = AbstractAoSWithOverlap1.CellUpdateImplementation_SplitLoop,
       memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete
     )
-    
     self._enclave_task = "::exahype2::EnclaveOpenMPGPUTask"
-
+    self._use_gpu = True
 

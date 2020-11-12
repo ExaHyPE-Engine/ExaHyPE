@@ -14,7 +14,7 @@ exahype2::EnclaveOpenMPGPUTask::EnclaveOpenMPGPUTask(
   const ::peano4::datamanagement::CellMarker&    marker,
   double*                                        inputValues,
   int                                            numberOfResultValues,
-  std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >   functor
+  Functor                                        functor
 ):
   tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority),
   _marker(marker),
@@ -35,18 +35,18 @@ bool exahype2::EnclaveOpenMPGPUTask::run() {
 
   int*  dependencyMarker = new int;
 
-  #if defined(GPUOffloading)
-  #pragma omp task depend(out:dependencyMarker)
-  {
+  //#if defined(GPUOffloading)
+  //#pragma omp task depend(out:dependencyMarker)
+  //{
+    #if defined(GPUOffloading)
     #pragma omp target
-    {
     #endif
     _functor(_inputValues,_outputValues,_marker);
-  #if defined(GPUOffloading)
-  } }
+  //#if defined(GPUOffloading)
+  //} }
 
-  #pragma omp task depend(in:dependencyMarker)
-  #endif
+  //#pragma omp task depend(in:dependencyMarker)
+  //#endif
   {
     tarch::multicore::freeMemory(_inputValues,tarch::multicore::MemoryLocation::Accelerator);
 
@@ -56,9 +56,9 @@ bool exahype2::EnclaveOpenMPGPUTask::run() {
 
     EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,outputValuesOnHost);
   }
-  #if defined(GPUOffloading)
-  #pragma omp taskwait
-  #endif
+  //#if defined(GPUOffloading)
+  //#pragma omp taskwait
+  //#endif
 
   delete dependencyMarker;
 
