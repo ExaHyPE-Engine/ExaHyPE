@@ -31,25 +31,25 @@ namespace exahype2 {
  */
 class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
   public:
-	/**
-	 * This functor represents what happens in a cell. It accepts the input
-	 * data which is passed into the enclave task, and it is given also the
-	 * output data which is a local array the enclave task creates. The latter
-	 * will eventually be bookkept once the enclave task has terminated, though
-	 * this particular implementation can create output as a device array. In
-	 * this case, it will copy output over into a host memory region which is
-	 * then given the bookkeeping.
-	 *
-	 * We had quite some issues with declaring the marker as GPU offloadable.
-	 * In principle, it should not be a major issue to get it there, but the
-	 * marker has some routines which extract marker properties from other
-	 * Peano classes. To port them or to extract them would be cumbersome. As
-	 * a consequence, the functor might have to copy elements from the marker
-	 * manually into scalars before it enters a target region.
-	 *
-	 * The functor is responsible to access the target! See run() for requirements.
-	 */
-	typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >  Functor;
+    /**
+     * This functor represents what happens in a cell. It accepts the input
+     * data which is passed into the enclave task, and it is given also the
+     * output data which is a local array the enclave task creates. The latter
+     * will eventually be bookkept once the enclave task has terminated, though
+     * this particular implementation can create output as a device array. In
+     * this case, it will copy output over into a host memory region which is
+     * then given the bookkeeping.
+     *
+     * We had quite some issues with declaring the marker as GPU offloadable.
+     * In principle, it should not be a major issue to get it there, but the
+     * marker has some routines which extract marker properties from other
+     * Peano classes. To port them or to extract them would be cumbersome. As
+     * a consequence, the functor might have to copy elements from the marker
+     * manually into scalars before it enters a target region.
+     *  
+     * The functor is responsible to access the target! See run() for requirements.
+     */
+    typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >  Functor;
 
     /**
      * Construct a task that can run on the GPU
@@ -61,7 +61,7 @@ class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
       const ::peano4::datamanagement::CellMarker&    marker,
       double*                                        inputValues,
       int                                            numberOfResultValues,
-	  Functor                                        functor
+      Functor                                        functor
     );
 
     EnclaveOpenMPGPUTask(const EnclaveOpenMPGPUTask& other) = delete;
