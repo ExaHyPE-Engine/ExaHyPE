@@ -298,13 +298,15 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     """
     
       Do not invoke this routine if you use a GPU. Use the GPU 
-      alternative instead.
+      alternative instead. It will call this routine with exactly
+      the right operations (and also do the other setup).
     
     """
     if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete and \
        memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       print( "WARNING: Selected memory allocation which does delete allocated memory. Enclave tasking has to have a mode which does not automatically free the memory and allocation has to run through tarch. Code will likely produce invalid memory accesses!" )
 
+    self._kernel_implementation               = function_call
     self._reconstructed_array_memory_location = memory_location 
     self.__construct_template_update_cell()
         
