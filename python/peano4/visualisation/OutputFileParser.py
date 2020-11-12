@@ -79,7 +79,7 @@ class OutputFileParser(object):
           self.dimensions = int(this_line.strip().split()[1])
         
         #Read out meta data  
-        if this_line.startswith("begin cell-metadata") and ( self.set_identifier=="" or this_line.endswith('"'+set_identifier+'"' )):
+        if this_line.startswith("begin cell-metadata") and ( self.set_identifier=="" or this_line.endswith('"'+self.set_identifier+'"' )):
           line = data_file.readline().strip()
           while not "end cell-metadata" in line:
             self.__parse_meta_data_line( line )
@@ -112,7 +112,7 @@ class OutputFileParser(object):
              
           #Get patch data  
           this_line = data_file.readline().strip()
-          if this_line.startswith("begin cell-values") and ( self.set_identifier=="" or this_line.endswith('"'+set_identifier+'"')):
+          if this_line.startswith("begin cell-values") and ( self.set_identifier=="" or this_line.endswith('"'+self.set_identifier+'"')):
             this_line = data_file.readline()
             values = np.fromstring(this_line, dtype=float, sep=' ')
             
