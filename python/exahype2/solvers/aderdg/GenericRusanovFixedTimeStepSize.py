@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from .FV                       import FV
-from .AbstractAoSWithOverlap1  import AbstractAoSWithOverlap1
+from .ADERDG import ADERDG
  
 from .PDETerms import PDETerms
 
@@ -10,7 +9,7 @@ import peano4
 import jinja2
 
 
-class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
+class GenericRusanovFixedTimeStepSize( ADERDG, AbstractAoSWithOverlap1 ):
   """
   
     Probably the simplest solver you could think off. There's a few
@@ -105,15 +104,15 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
 
 
 
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop):
+  def __init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop):
     """
 
-      Instantiate a generic FV scheme with an overlap of 1.
+      Instantiate a generic ADER-DG scheme
 
     """
     #super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
-    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-    AbstractAoSWithOverlap1.__init__(self, kernel_implementation=kernel_implementation)
+    ADERDG.__init__(self, self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties)
+    #AbstractAoSWithOverlap1.__init__(self, kernel_implementation=kernel_implementation)
 
     self._time_step_size = time_step_size
 
@@ -190,7 +189,6 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
   
   def get_user_includes(self):
     return """
-#include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 """    
   

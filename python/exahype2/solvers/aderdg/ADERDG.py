@@ -4,8 +4,7 @@ import os
 
 import peano4
 import peano4.datamodel
-import peano4.output.TemplatedHeaderFile
-import peano4.output.TemplatedHeaderImplementationFilePair
+
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
@@ -14,6 +13,22 @@ import exahype2.grid.AMROnPatch
 import jinja2
 
 from abc import abstractmethod
+
+
+from enum import IntEnum
+
+
+class Polynomials(IntEnum):
+  """
+  
+   Superclass has to be IntEnum, as I use this one within Jinja2 templates
+   where I struggled to compare against enum variants. I however can always
+   compare against integers.
+  
+  """
+  Gauss_Legendre = 0,
+  Gauss_Lobatto = 1
+  
 
 
 class ADERDG(object):
@@ -27,6 +42,10 @@ class ADERDG(object):
     layer closer to the actual patch hosts a nodal representation of the 
     solution. The outer ghost layer holds a nodel representation of the solution
     gradient along the boundary.
+    
+    Further to the width of the overlaps, our face data always is space-time.
+    For a global time stepping, this is not required, as we can directly apply
+    the space-time integral. For all other routines, it is essential.
     
     We use two overlaps: one with gradient and solution, and one with the 
     outcome of the Riemann solve.
@@ -42,92 +61,21 @@ class ADERDG(object):
   
   
     Attributes:
-  
+
+    @todo Has to be updated
+      
     The guard variables are used within the templates and switch them on/off. By 
     default, they all are true, i.e. the actions are triggered in every grid 
     traversal an action in theory could be active.
   
-    
-    _guard_copy_new_face_data_into_face_data: C++ string describing a predicate
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      The routine triggers the roll-over, i.e. the actual commit of 
-      a new time step. It is the final operation per face per grid
-      sweep. 
-      
-
-    _guard_handle_boundary: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      Updates the boundary. By definition, boundary cells in the domain
-      are skeleton cells. Furthermore, the initialiation/setting of 
-      boundary conditions only has to happen once per time step. We 
-      hence trigger this routine for skeletons in the primary sweeps.
-
-    _guard_project_patch_onto_faces: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      This routine guards the mapping of an updated cell content onto a
-      cell's faces. The destination in QNew, i.e. is not "seen" by 
-      others unless the faces' new data are committed. Therefore, I 
-      trigger this routine in the primary sweep for skeleton cells and
-      in the secondary  sweep for enclave cells. The primary calls 
-      ensure that data are mapped onto the faces before faces are 
-      exchanged with neighbour partitions.
-      
-    _guard_handle_cell: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      Actual FV kernel invocation.
-      
-    _patch_overlap.generator.send_condition: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      Send out the faces in the grid initialisation. There's no need to 
-      send out data in other iterations, as all data exchange is 
-      realised through the QNew field. This is different to the plain
-      FV realisation, where data exchange happens through Q: The enclave
-      tasking exchanges QNew and then rolls data over from QNew into Q.
-      The plain FV scheme rolls over QNew into Q and then exchanges the
-      data.
-    
-    _patch_overlap.generator: string
-      See documentation of _patch_overlap.generator.send_condition.
-      
-    _patch_overlap.generator.merge_method_definition: string
-      The merge routines are set to the standard patch conditions for
-      both NewQ and Q. However, they are all by default disabled, as 
-      different solvers exchange either Q or NewQ. You have to enable
-      them explicitly if you need a boundary merger.
-
-    _guard_AMR: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      AMR is active throughout the grid construction. After that, it is
-      only available for skeleton cells.
-    
-    _patch_overlap_new.generator.send_condition: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      See discussion of _patch_overlap.generator.send_condition for 
-      details. As we effectively disable the data exchange for Q and
-      instead ask for data exchange of QNew, we have to add merge 
-      operations to QNew.
-      
-    _patch_overlap_new.generator.receive_and_merge_condition: string
-      See _patch_overlap_new.generator.send_condition.
-      
-    _patch_overlap_new.generator.merge_method_definition: string
-      See _patch_overlap_new.generator.send_condition.
   
     plot_description: string
       The description I use when I plot. By default, it is empty, but 
       some solvers add a string here that explains which entry of the 
       tuple represents which data.   
   
-  
   """
-  def __init__(self, name, order, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
+  def __init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties):
     """
   name: string
      A unique name for the solver. This one will be used for all generated 
@@ -146,6 +94,9 @@ class ADERDG(object):
      work with AoS. But the solver has to be able to distinguish them, as 
      only the unknowns are subject to a hyperbolic formulation.
      
+  polynomials: Polynomials
+     Type of polynomials used within the cell.
+  
   min_h: double
   
   max_h: double
@@ -155,13 +106,13 @@ class ADERDG(object):
      (such as enclave status flags), too.
  
     """
-    self._name              = name
-    self._patch             = peano4.datamodel.Patch( (patch_size,patch_size,patch_size),    unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
+    self._name                    = name
+    self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._spacetime_patch_overlap = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._Riemann_result          = peano4.datamodel.Patch( 2,order+1,order+1),            unknowns+auxiliary_variables, self._unknown_identifier() )
     
-    self._patch_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
-    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
+    #self._patch_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
+    #self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     
     self._patch_overlap.generator.includes     += """
 #include "peano4/utils/Loop.h"
