@@ -153,7 +153,9 @@ class GenericRusanovFixedTimeStepSize( FV, AbstractAoSWithOverlap1 ):
 
 
   def __construct_template_update_cell(self):
-    self._template_update_cell      = jinja2.Template( self._get_template_update_cell( self._rusanov_call + """
+    self._template_update_cell      = jinja2.Template( 
+      """double minTimeStamp =  {{SOLVER_INSTANCE}}.getMinTimeStamp();
+      """ + self._get_template_update_cell( self._rusanov_call + """
           QL, QR, x, dx, t, dt, normal, """ + 
       str(self._unknowns) + """, """ + str(self._auxiliary_variables) + """, FL, FR
         );
