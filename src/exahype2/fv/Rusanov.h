@@ -73,27 +73,27 @@ namespace exahype2 {
         int                                          normal,
         double * __restrict__ BgradQ
       ) >   nonconservativeProduct,
-          std::function< double(
-                  double * __restrict__ Q,
-                  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-                  const tarch::la::Vector<Dimensions,double>&  volumeH,
-                  double                                       t,
-                  double                                       dt,
-                  int                                          normal
-          ) >   eigenvalues, 
-          double * __restrict__ QL,
-          double * __restrict__ QR,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       dx,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          int                                          unknowns,
-          int                                          auxiliaryVariables,
-          double * __restrict__ FL,
-          double * __restrict__ FR
-      );
-    }
+      std::function< double(
+        double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) >   eigenvalues,
+      double * __restrict__ QL,
+      double * __restrict__ QR,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       dx,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      double * __restrict__ FL,
+      double * __restrict__ FR
+    );
+  }
 
     namespace gpu {
 	    // @todo docu: Would like to have it in the cpp file. Docu in 
