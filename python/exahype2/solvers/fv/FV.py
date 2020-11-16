@@ -121,6 +121,104 @@ class FV(object):
   
   
   """
+  
+  TemplateAMR = """
+  { 
+    ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
+
+    if (tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+      refinementCriterion = ::exahype2::RefinementCommand::Refine;
+    } 
+    else {
+      int index = 0;
+      dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+        refinementCriterion = refinementCriterion and {{SOLVER_INSTANCE}}.refinementCriterion(
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+          ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
+          ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+          {{SOLVER_INSTANCE}}.getMinTimeStamp()
+        );
+        index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+      }
+     
+      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < {{SOLVER_INSTANCE}}.getMinMeshSize() ) {
+        refinementCriterion = ::exahype2::RefinementCommand::Keep;
+      } 
+      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+        refinementCriterion = ::exahype2::RefinementCommand::Keep;
+      } 
+    }
+    
+    _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {{IS_GRID_CREATION}} );
+  } 
+"""
+     
+  
+  TemplateHandleBoundary = """
+    logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
+    ::exahype2::fv::applyBoundaryConditions(
+      [&](
+        double                                       Qinside[],
+        double                                       Qoutside[],
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) -> void {
+        {{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
+      },
+      marker.x(),
+      marker.h(),
+      {{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      {{TIME_STEP_SIZE}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      marker.getSelectedFaceNumber(),
+      fineGridFace{{UNKNOWN_IDENTIFIER}}.value
+    );
+"""
+  
+  
+  TemplateAdjustCell = """
+  { 
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      {{SOLVER_INSTANCE}}.adjustSolution(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+        ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
+        ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        {{SOLVER_INSTANCE}}.getMinTimeStamp()
+      );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  } 
+"""
+  
+  
+  """
+  
+    This is the straightforward implementation.
+    
+  """
+  CellUpdateImplementation_NestedLoop = """
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d
+    #endif
+  """
+
+
+  CellUpdateImplementation_SplitLoop = """
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop
+    #endif
+  """
+  
+      
   def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
     """
   name: string
@@ -193,9 +291,10 @@ class FV(object):
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
 
-    self._template_adjust_cell     = jinja2.Template( "" )
-    self._template_AMR             = jinja2.Template( "" )
-    self._template_handle_boundary = jinja2.Template( "" )
+    self._template_adjust_cell     = jinja2.Template(self.TemplateAdjustCell)
+    self._template_AMR             = jinja2.Template(self.TemplateAMR)
+    self._template_handle_boundary = jinja2.Template(self.TemplateHandleBoundary)
+    
     self._template_update_cell     = jinja2.Template( "" )
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
@@ -446,6 +545,9 @@ class FV(object):
   def _init_dictionary_with_default_parameters(self,d):
     """
     
+      This one is called by all algorithmic steps before I invoke 
+      add_entries_to_text_replacement_dictionary().
+      
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
     d["HALO_SIZE"]                      = int(self._patch_overlap.dim[0]/2)
@@ -457,12 +559,14 @@ class FV(object):
         
     if self._patch_overlap.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
+      
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
     d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
     d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
     d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
     d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
+
     d[ "MAX_H"] = self._min_h
     d[ "MIN_H"] = self._max_h
- 
+   

@@ -90,125 +90,48 @@ class AbstractAoSWithOverlap1(object):
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
     
-    
-  def _get_template_adjust_cell(self):
-    return jinja2.Template("""
-  { 
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      {{SOLVER_INSTANCE}}.adjustSolution(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
-        ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp()
-      );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  } 
-""")
-    
-    
-  def _get_template_handle_boundary(self):
-    return jinja2.Template("""
-    logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
-    ::exahype2::fv::applyBoundaryConditions(
-      [&](
-        double                                       Qinside[],
-        double                                       Qoutside[],
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> void {
-        {{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
-      },
-      marker.x(),
-      marker.h(),
-      {{SOLVER_INSTANCE}}.getMinTimeStamp(),
-      {{TIME_STEP_SIZE}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.getSelectedFaceNumber(),
-      fineGridFace{{UNKNOWN_IDENTIFIER}}.value
-    );
-""")
-    
-    
-  def _get_template_AMR(self):
-     return jinja2.Template("""
-  { 
-    ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
-
-    if (tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
-      refinementCriterion = ::exahype2::RefinementCommand::Refine;
-    } 
-    else {
-      int index = 0;
-      dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-        refinementCriterion = refinementCriterion and {{SOLVER_INSTANCE}}.refinementCriterion(
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-          ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
-          ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-          {{SOLVER_INSTANCE}}.getMinTimeStamp()
-        );
-        index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-      }
-     
-      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < {{SOLVER_INSTANCE}}.getMinMeshSize() ) {
-        refinementCriterion = ::exahype2::RefinementCommand::Keep;
-      } 
-      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
-        refinementCriterion = ::exahype2::RefinementCommand::Keep;
-      } 
-    }
-    
-    _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {{IS_GRID_CREATION}} );
-  } 
-""")
-     
      
     
-  def _get_template_update_cell(self,
-    split_Riemann_solver_kernel_implementation,
-    cell_time_stamp     = "minTimeStamp", 
-    cell_time_step_size = "{{TIME_STEP_SIZE}}"
-  ):
-    """
-    
-    Returns a string that handles the whole cell treatment. You will have to wrap it 
-    into a Jinja2 template if you wanna use it within C++.
-    
-    
-    split_Riemann_solver_kernel_implementation: String
-       A plain function call to invoke the 1d Riemann solver. For the arguments 
-       that are available at this point, see below. 
-       
-    """
-    signature = """
-      [&](
-        double                                       QL[],
-        double                                       QR[],
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       FL[],
-        double                                       FR[]
-      ) -> void {
-        """ + split_Riemann_solver_kernel_implementation + """
-      },
-      marker.x(),
-      marker.h(),
-      """ + cell_time_stamp + """,
-      """ + cell_time_step_size + """,
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      reconstructedPatch,
-      originalPatch
-  );
-"""
-
-    return str(self._kernel_implementation) + str(signature)  
+  #def _get_template_update_cell(self,
+  #  split_Riemann_solver_kernel_implementation,
+  #  cell_time_stamp     = "minTimeStamp", 
+  #  cell_time_step_size = "{{TIME_STEP_SIZE}}"
+  #):
+  #  """
+  #  
+  #  Returns a string that handles the whole cell treatment. You will have to wrap it 
+  #  into a Jinja2 template if you wanna use it within C++.
+  #  
+  #  
+  #  split_Riemann_solver_kernel_implementation: String
+  #     A plain function call to invoke the 1d Riemann solver. For the arguments 
+  #     that are available at this point, see below. 
+  #     
+  #  """
+  #  signature = """
+  #    [&](
+  #      double                                       QL[],
+  #      double                                       QR[],
+  #      const tarch::la::Vector<Dimensions,double>&  x,
+  #      double                                       dx,
+  #      double                                       t,
+  #      double                                       dt,
+  #      int                                          normal,
+  #      double                                       FL[],
+  #      double                                       FR[]
+  #    ) -> void {
+  #      """ + split_Riemann_solver_kernel_implementation + """
+  #    },
+  #    marker.x(),
+  #    marker.h(),
+  #    """ + cell_time_stamp + """,
+  #    """ + cell_time_step_size + """,
+  #    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+  #    {{NUMBER_OF_UNKNOWNS}},
+  #    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+  #    reconstructedPatch,
+  #    originalPatch
+  #);
+  #"""
+  #
+  #  return str(self._kernel_implementation) + str(signature)  

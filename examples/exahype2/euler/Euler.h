@@ -28,13 +28,6 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
     static tarch::logging::Log   _log;
 
   public:
-    ::exahype2::RefinementCommand refinementCriterion(
-      double                                       Q[5],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
-    )  override;
-
     void adjustSolution(
       double                                       Q[5],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
