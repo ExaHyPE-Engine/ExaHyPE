@@ -44,7 +44,23 @@ class GenericRusanovFixedTimeStepSize( FV ):
 """
 
 
+  """
+  
+    Flux is empty here.
+    
+  """
   RusanovCallWithNCP = """
+          [] (
+           double * __restrict__ Q,
+           const tarch::la::Vector<Dimensions,double>&  faceCentre,
+           const tarch::la::Vector<Dimensions,double>&  volumeH,
+           double                                       t,
+           double                                       dt,
+           int                                          normal,
+           double * __restrict__                        F
+          ) -> void {
+            for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
+          },
           [] (
             double                                       Q[],
             double                                       gradQ[][Dimensions],
