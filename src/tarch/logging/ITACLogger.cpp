@@ -146,10 +146,10 @@ void tarch::logging::ITACLogger::traceIn(long int timestampNanoseconds, int rank
   #ifdef UseITAC
   tarch::multicore::Lock lock(_semaphore);
 
-  if (_itacHandles.count(trace)) {
-	int newHandle;
+  if (_itacHandles.count(trace)==0) {
+    int newHandle;
     VT_funcdef( trace , VT_NOCLASS, &newHandle );
-	_itaceHandles.insert( std::pair<std::string, int>(trace,newHandle) );
+	  _itaceHandles.insert( std::pair<std::string, int>(trace,newHandle) );
   }
 
   VT_begin(_itaceHandles[trace].c_str());

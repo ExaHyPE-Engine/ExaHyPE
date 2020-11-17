@@ -46,20 +46,6 @@ class examples::exahype2::loh1::LOH1: public examples::exahype2::loh1::AbstractL
     		double Q[]);
 
   public:
-    /**
-     * @param Q Vector of unknowns
-     * @param x Position of unknowns (finite volume centre)
-     * @param h Mesh size of finite volume
-     * @param t Time
-     */
-    virtual ::exahype2::RefinementCommand refinementCriterion(
-      double                                       Q[9+4],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
-    ) override;
-
-
     virtual void adjustSolution(
       double                                       Q[9+4],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,

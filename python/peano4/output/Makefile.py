@@ -237,8 +237,9 @@ did search for a file """ + input_file )
   def add_Fortran_module(self,module_name,module_files):
     self.d["FORTRAN_MODULES"][ module_name ] = []
     for i in module_files:
-      self.d["FORTRAN_MODULES"][ module_name ].append( i.replace( ".f90", ".o") )
-      self.fortranfiles.append(i)
+      self.d["FORTRAN_MODULES"][ module_name ].append( i.replace( ".f90", ".o").replace(".f", ".o") )
+      self.d["FORTRAN_MODULES"][ module_name ].append( i )
+      #self.fortranfiles.append(i)
     
 
   def generate(self,overwrite,directory):

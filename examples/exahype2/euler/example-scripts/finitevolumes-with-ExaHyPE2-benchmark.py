@@ -38,6 +38,7 @@ parser.add_argument("--p",               dest="peanodir",                 defaul
 parser.add_argument("--c",               dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("--o",               dest="out",             default="peano4", help="Executable name" )
 parser.add_argument("--f",               dest="force",             default=False, action="store_true", help="Allow overwriting of output file." )
+parser.add_argument("--gpu",             dest="GPU",             default=False, action="store_true", help="Use GPU features." )
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
@@ -77,17 +78,22 @@ max_h          = args.h
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+#
+
+thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
   "Euler",
   patch_size,
   unknowns, 0,
   min_h, max_h,
   time_step_size,
   flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
-))
+)
 
-# use_gpu =  False
+if opts.GPU:
+    print("Turning on OpenMP for GPUs")
+    thesolver.use_OpenMP5_GPUs()
 
+project.add_solver( thesolver )
 
 
 dimensions = args.dim

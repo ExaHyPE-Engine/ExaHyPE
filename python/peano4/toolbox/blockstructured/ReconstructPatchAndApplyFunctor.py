@@ -22,7 +22,7 @@ class ReconstructedArrayMemoryLocation(Enum):
    Create data on the heap for an accelerator. It relies on the tarch::allocateMemoryOnAccelerator
    routine and you have to use this one again to free it.
   """
-  AcceleratorMemory = 3,
+  Accelerator = 3,
   HeapThroughTarchWithoutDelete = 4,
   HeapWithoutDelete = 5,
   AcceleratorWithoutDelete = 6
@@ -137,7 +137,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     reconstructedPatch = ::tarch::multicore::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::multicore::MemoryLocation::Heap);
     #endif
 """    
-    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorMemory or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     double* reconstructedPatch;
     #if Dimensions==2
@@ -158,7 +158,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
     ::tarch::multicore::freeMemory(reconstructedPatch, tarch::multicore::MemoryLocation::Heap );
 """    
-    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorMemory:
+    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator:
       self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
     ::tarch::multicore::freeMemory(reconstructedPatch, tarch::multicore::MemoryLocation::Accelerator );
 """    

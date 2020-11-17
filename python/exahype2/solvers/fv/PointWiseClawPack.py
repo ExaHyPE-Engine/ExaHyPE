@@ -154,7 +154,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
     if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack and \
        memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Heap and \
        memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch and \
-       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorMemory:
+       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Accelerator:
       print( "WARNING: Selected memory allocation which does not delete allocated memory!" )
     
     self._reconstructed_array_memory_location = memory_location
