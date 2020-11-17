@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 from .FV                       import FV
-from .AbstractAoSWithOverlap1  import AbstractAoSWithOverlap1
  
 from .PDETerms import PDETerms
 
@@ -13,8 +12,108 @@ import jinja2
 from .GenericRusanovFixedTimeStepSize import GenericRusanovFixedTimeStepSize 
 
 
-class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop):
+class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
+  TemplateUpdateCell = """
+  if (marker.isSkeletonCell()) {
+    {{LOOP_OVER_PATH_FUNCTION_CALL}}(
+      [&](
+        double                                       QL[],
+        double                                       QR[],
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       FL[],
+        double                                       FR[]
+      ) -> void {
+        ::exahype2::fv::splitRusanov1d(
+          {{RUSANOV_ON_FACE}},
+          {{EIGENVALUES}},
+          QL, QR, x, dx, t, dt, normal,
+          {{NUMBER_OF_UNKNOWNS}},
+          {{NUMBER_OF_AUXILIARY_VARIABLES}},
+          FL,FR
+        );
+      },
+      marker.x(),
+      marker.h(),
+      {{TIME_STAMP}},
+      {{TIME_STEP_SIZE}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      reconstructedPatch,
+      originalPatch
+    );
+    
+    {{FREE_SKELETON_MEMORY}}
+  }
+  else { // is an enclave cell
+    auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
+      ::exahype2::fv::copyPatch(
+        reconstructedPatch,
+        originalPatch,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        1 // halo size
+      );
+      {{LOOP_OVER_PATH_FUNCTION_CALL}}(
+        [&](
+          double                                       QL[],
+          double                                       QR[],
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       dx,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double                                       FL[],
+          double                                       FR[]
+        ) -> void {
+          ::exahype2::fv::splitRusanov1d(
+            {{RUSANOV_ON_FACE}},
+            {{EIGENVALUES}},
+            QL, QR, x, dx, t, dt, normal,
+            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            FL,FR
+          );
+        },
+        marker.x(),
+        marker.h(),
+        {{TIME_STAMP}},
+        {{TIME_STEP_SIZE}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        reconstructedPatch,
+        originalPatch
+      );
+    };
+
+    ::exahype2::EnclaveTask* newEnclaveTask = new ::exahype2::EnclaveTask(
+      marker,
+      reconstructedPatch,
+      #if Dimensions==2
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
+      #else
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
+      #endif
+      perCellFunctor
+    );
+      
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+    peano4::parallel::Tasks spawn( 
+      newEnclaveTask,
+      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
+      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
+    );      
+  }
+  """      
+
+
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop, memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete):
     """
     
     A fixed time stepping scheme with enclave tasking
@@ -63,12 +162,25 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     
     """
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-    AbstractAoSWithOverlap1.__init__(self, kernel_implementation=kernel_implementation)
 
     # @todo Ein Haufen der Logik kann raus
     
     self._time_step_size = time_step_size
     
+    self._flux_implementation                 = PDETerms.None_Implementation
+    self._ncp_implementation                  = PDETerms.None_Implementation
+    self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
+    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
+    self._refinement_criterion_implementation = PDETerms.Empty_Implementation
+    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+
+    self._kernel_implementation               = None
+    self._rusanov_call                        = None
+    self._reconstructed_array_memory_location = None
+
+    self.set_implementation(flux=flux,ncp=ncp)
+    self.set_update_cell_implementation(kernel_implementation=kernel_implementation,memory_location=memory_location)
+
     primary_sweep_predicate_for_guard = "(" + \
       self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
@@ -167,10 +279,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
       + "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" \
       + ")"
     
-    self._template_adjust_cell      = self._get_template_adjust_cell()
-    self._template_AMR              = self._get_template_AMR()
-    self._template_handle_boundary  = self._get_template_handle_boundary()
-    
     self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
    
     #
@@ -190,16 +298,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     #self._patch.generator.load_persistent_condition   = "marker.isSkeletonCell() or observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::Secondary"
     self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """
 
-    self._rusanov_call = ""
-    self._enclave_task = "::exahype2::EnclaveTask"
-
-    self._use_gpu = False
-
-    self.set_implementation(flux,ncp)
-    self.set_update_cell_implementation()
-
-    pass
-
 
   def __construct_template_update_cell(self):
     self._template_update_cell      = jinja2.Template( self._wrap_update_cell_template( 
@@ -210,125 +308,62 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
 """   )))
     
     
-  def set_implementation(self,flux=PDETerms.User_Defined_Implementation,ncp=None,eigenvalues=PDETerms.User_Defined_Implementation,boundary_conditions=PDETerms.User_Defined_Implementation,refinement_criterion=PDETerms.User_Defined_Implementation,initial_conditions=PDETerms.User_Defined_Implementation):
+  def set_implementation(self,flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None):
     """
+      If you pass in User_Defined, then the generator will create C++ stubs 
+      that you have to befill manually. If you pass in None_Implementation, it 
+      will create nop, i.e. no implementation or defaults. Any other string
+      is copied 1:1 into the implementation. If you pass in None, then the 
+      set value so far won't be overwritten.
+      
+      Please note that not all options are supported by all solvers. You 
+      cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
+    """
+    if flux!=None:
+      self._flux_implementation        = flux
+    if ncp!=None:
+      self._ncp_implementation         = ncp
+    if eigenvalues!=None:    
+      self._eigenvalues_implementation = eigenvalues
+    if boundary_conditions!=None:
+      self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion!=None:
+      self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions!=None: 
+      self._initial_conditions_implementation         = initial_conditions
     
-     Wrapper around superclass
-     
-    """
-    AbstractAoSWithOverlap1.set_implementation(self,flux,ncp,eigenvalues,boundary_conditions,refinement_criterion,initial_conditions)
-
     if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
-      self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithFluxAndEigenvalues
+      self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithFlux
     elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-      self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithNCPAndEigenvalues
+      self._rusanov_call = GenericRusanovFixedTimeStepSize.RusanovCallWithNCP
     else:
       raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
 
     self.__construct_template_update_cell()
 
 
-  def _wrap_update_cell_template(self, update_cell_template):
-    """
-    
-    I use the same memory management for both the skeletons and the enclave
-    cells. Consequently, I also have to use the corresponding frees.
-    
-    """
-    free_memory_call_for_skeleton_cells = ""
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
-      free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Heap);"
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Accelerator);"
-
-    result = """
-    double minTimeStamp =  {{SOLVER_INSTANCE}}.getMinTimeStamp();
-
-    if (marker.isSkeletonCell()) {
-""" + update_cell_template + """
-      """ + free_memory_call_for_skeleton_cells + """
-    }
-    else {
-      #if defined(GPUOffloading)
-      #pragma omp declare target
-      #endif
-      auto perCellFunctor = 
-        [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
-           ::exahype2::fv::copyPatch(
-             reconstructedPatch,
-             originalPatch,
-             {{NUMBER_OF_UNKNOWNS}},
-             {{NUMBER_OF_AUXILIARY_VARIABLES}},
-             {{NUMBER_OF_VOLUMES_PER_AXIS}},
-             {{HALO_SIZE}}
-           );
-           """ + update_cell_template + """
-        };
-      #if defined(GPUOffloading)
-      #pragma omp end declare target
-      #endif
-
-      {{ENCLAVE_TASK_TYPE}}* newEnclaveTask = new {{ENCLAVE_TASK_TYPE}}(
-        marker,
-        reconstructedPatch,
-        #if Dimensions==2
-        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
-        #else
-        {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
-        #endif
-        perCellFunctor
-      );
-      
-      fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-      peano4::parallel::Tasks spawn( 
-        newEnclaveTask,
-        peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
-        peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFV" )
-      );      
-    }
-"""
-    return result
-    
-    
-  
   def set_update_cell_implementation(self,
-    function_call   = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop,
-    memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete
+    kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
+    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete
   ):
-    """
-    
-      Do not invoke this routine if you use a GPU. Use the GPU 
-      alternative instead. It will call this routine with exactly
-      the right operations (and also do the other setup).
-    
-    """
-    if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete and \
-       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      print( "WARNING: Selected memory allocation which does delete allocated memory. Enclave tasking has to have a mode which does not automatically free the memory and allocation has to run through tarch. Code will likely produce invalid memory accesses!" )
-
-    self._kernel_implementation               = function_call
-    self._reconstructed_array_memory_location = memory_location 
-    self.__construct_template_update_cell()
+    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack:
+      raise Exception( "Non-heap allocation chosen" )
         
-  
-  def add_entries_to_text_replacement_dictionary(self,d):
-    """
-     
-     d: Dictionary of string to string
-        in/out argument
-    
-    """
-    self._add_generic_Rusanov_FV_entries_to_text_replacement_dictionary(d)
+    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Heap:
+      memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete  
+      print( "Warning: Reset memory mode to mode without implicit delete, as enclave tasks free memory themselves" )
+    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch:
+      memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete  
+      print( "Warning: Reset memory mode to mode without implicit delete, as enclave tasks free memory themselves" )
+    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Accelerator:
+      memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete  
+      print( "Warning: Reset memory mode to mode without implicit delete, as enclave tasks free memory themselves" )
 
-    d[ "TIME_STEP_SIZE" ] = self._time_step_size
-    d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
-    d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
-    d[ "ENCLAVE_TASK_TYPE" ] = self._enclave_task
-    d[ "use_gpu" ] = self._use_gpu
-    pass
+    self._reconstructed_array_memory_location = memory_location
+    self._kernel_implementation               = kernel_implementation
+    self.__construct_template_update_cell()
+
   
-  
-  # @todo Das sollte man komplett auslagern koennen
   def get_user_includes(self):
     return """
 #include "exahype2/fv/Generic.h"
@@ -339,15 +374,57 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
 
 #include "peano4/parallel/Tasks.h"
 """    
-  
 
-  # @todo Das sollte man komplett auslagern koennen
+  
+  def add_entries_to_text_replacement_dictionary(self,d):
+    """
+     
+     d: Dictionary of string to string
+        in/out argument
+    
+    """
+    d[ "TIME_STEP_SIZE" ] = self._time_step_size
+    
+    d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
+    d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
+    d[ "EIGENVALUES_IMPLEMENTATION"]          = self._eigenvalues_implementation
+    d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
+    d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
+    d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
+    
+    d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.EnclaveLabels.get_attribute_name(self._name)
+
+
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Heap:
+      d[ "FREE_SKELETON_MEMORY" ] = "delete[] reconstructedPatch;"
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch:
+      d[ "FREE_SKELETON_MEMORY" ] = "::tarch::multicore::freeMemory(reconstructedPatch, ::tarch::multicore::MemoryLocation::Heap);"
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Accelerator:
+      d[ "FREE_SKELETON_MEMORY" ] = "::tarch::multicore::freeMemory(reconstructedPatch, ::tarch::multicore::MemoryLocation::Accelerator);"
+    pass
+
+
+  def __construct_template_update_cell(self):
+    d = {}
+    self._init_dictionary_with_default_parameters(d)
+    self.add_entries_to_text_replacement_dictionary(d)
+    d[ "LOOP_OVER_PATH_FUNCTION_CALL" ] = self._kernel_implementation
+    d[ "TIME_STAMP" ]                   = "{{SOLVER_INSTANCE}}.getMinTimeStamp()"
+    d[ "RUSANOV_ON_FACE"]               = self._rusanov_call
+    d[ "EIGENVALUES"]                   = GenericRusanovFixedTimeStepSize.EigenvaluesCall
+      
+    temp = jinja2.Template( self.TemplateUpdateCell ).render(d);
+    self._template_update_cell      = jinja2.Template( temp ); 
+
+
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     FV.add_actions_to_create_grid(self,step,evaluate_refinement_criterion)
     step.add_action_set( exahype2.grid.EnclaveLabels( self._name ) )
 
 
-  # @todo Das sollte man komplett auslagern koennen
   def add_actions_to_perform_time_step(self, step):
     """
       Add enclave aspect to time stepping
@@ -368,17 +445,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
     """
     FV.add_actions_to_perform_time_step(self,step)
 
-    #reconstruct_patch_and_apply_FV_kernel = peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
-    #  self._patch,
-    #  self._patch_overlap,
-    #  task_based_implementation_primary_iteration,
-    #  "",
-    #  "marker.isEnclaveCell() and not marker.isRefined() and " + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + """::SolverState::Primary""",
-    #  "false",
-    #  self._get_default_includes() + self.get_user_includes(),
-    #  memory_allocation_mode
-    #)
-
     roll_over_enclave_task_results = peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
       self._patch,
       """
@@ -392,7 +458,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
       self._get_default_includes() + self.get_user_includes()
     )
 
-    #step.add_action_set( reconstruct_patch_and_apply_FV_kernel )
     step.add_action_set( exahype2.grid.EnclaveLabels(self._name) ) 
     step.add_action_set( roll_over_enclave_task_results )
     
@@ -405,20 +470,3 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV, AbstractAoSWithOverlap1 )
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     FV.add_use_data_statements_to_Peano4_solver_step(self,step)
     step.use_cell(self._cell_sempahore_label)
-
-
-  def use_OpenMP5_GPUs(self):
-    """
-      
-      If you use this operation, do not  use set_update_cell_implementation()
-      anymore. The two routines switch to different variants. This one is the 
-      GPU variant.
-      
-    """
-    self.set_update_cell_implementation(
-      function_call = AbstractAoSWithOverlap1.CellUpdateImplementation_SplitLoop,
-      memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete
-    )
-    self._enclave_task = "::exahype2::EnclaveOpenMPGPUTask"
-    self._use_gpu = True
-

@@ -6,35 +6,6 @@
 tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype2::euler::Euler" );
 
 
-
-::exahype2::RefinementCommand examples::exahype2::euler::Euler::refinementCriterion(
-  double Q[5],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  double                                       t
-) {
-  logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  /*
-    if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(h)) ) {{
-    result = ::exahype2::RefinementCommand::Refine;
-  }}
-*/
-
-
-  /*
-  if (tarch::la::equals(t,0.0) and tarch::la::max(h)>MaxHOfVolume) {
-    result = ::exahype2::RefinementCommand::Refine;
-    logDebug( "refinementCriterion(...)", "refine as mesh width is only " << tarch::la::max(h) << " as compared to " << MaxHOfVolume );
-  }
-  */
-
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
-  return result;
-}
-
-
 void examples::exahype2::euler::Euler::adjustSolution(
   double Q[5],
   const tarch::la::Vector<Dimensions,double>&  x,
@@ -69,19 +40,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
 ) {
   assertion(normal>=0);
   assertion(normal<Dimensions);
-  return maxEigenvalue(Q,faceCentre,volumeH,t,normal,tarch::multicore::TargetDevice::MayRunOnGPU);
-}
 
-
-
-double examples::exahype2::euler::Euler::maxEigenvalue(
-  double                                       Q[5],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal,
-  tarch::multicore::TargetDevice
-) {
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -124,38 +83,6 @@ void examples::exahype2::euler::Euler::flux(
 
   nonCriticalAssertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
 
-  //
-  // If the solution becomes unphysical, the density often becomes zero or
-  // negative. I catch them as non-critical, i.e. the code then will complete
-  // its timestep and plot the result. While this is convenient for numerical
-  // errors (you in particular can spot where problems arise within the domain)
-  // programming errors often manifest in negative pressures, too, and should
-  // lead to an immediate termination so you can use a debugger to analyse the
-  // backtrace. In this case, I simply comment the following assertion in.
-  //
-  // assertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-
-  flux(Q,faceCentre, volumeH, t, normal, F, tarch::multicore::TargetDevice::MayRunOnGPU);
-
-  nonCriticalAssertion( F[0]==F[0] );
-  nonCriticalAssertion( F[1]==F[1] );
-  nonCriticalAssertion( F[2]==F[2] );
-  nonCriticalAssertion( F[3]==F[3] );
-  nonCriticalAssertion( F[4]==F[4] );
-
-  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-}
-
-
-void examples::exahype2::euler::Euler::flux(
-  double                                       Q[5],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal,
-  double                                       F[5],
-  tarch::multicore::TargetDevice
-) {
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -193,6 +120,14 @@ void examples::exahype2::euler::Euler::flux(
         }
         break;
   }
+
+  nonCriticalAssertion( F[0]==F[0] );
+  nonCriticalAssertion( F[1]==F[1] );
+  nonCriticalAssertion( F[2]==F[2] );
+  nonCriticalAssertion( F[3]==F[3] );
+  nonCriticalAssertion( F[4]==F[4] );
+
+  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
 
 
