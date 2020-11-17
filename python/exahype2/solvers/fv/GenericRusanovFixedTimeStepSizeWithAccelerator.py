@@ -118,6 +118,70 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
   }
   """      
 
+
+  RusanovCallWithFluxAndEigenvalues = """
+        ::exahype2::fv::splitRusanov1d(
+          [] (
+            double                                       Q[],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal,
+            double                                       F[]
+          ) -> void {
+            {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F );
+          },
+          [] (
+            double                                       Q[],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal
+          ) -> double {
+            return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal );
+          }, 
+"""
+
+
+  RusanovCallWithNCPAndEigenvalues = """
+        ::exahype2::fv::splitRusanov1d(
+          [] (
+            double                                       Q[],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal,
+            double                                       F[]
+          ) -> void {
+          },
+          [] (
+            double                                       Q[],
+            double                                       gradQ[][Dimensions],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal,
+            double                                       BgradQ[]
+          ) -> void {
+            {{SOLVER_INSTANCE}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+          },
+          [] (
+            double                                       Q[],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal
+          ) -> double {
+            return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal );
+          }, 
+"""
+
+
   """
   
    This is a specialisation of the enclave tasking that works with accelerators

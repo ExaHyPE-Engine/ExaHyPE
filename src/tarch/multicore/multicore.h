@@ -241,16 +241,6 @@ and
      const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
      const std::string ConsumerTaskCountStatisticsIdentifier( "tarch::multicore::consumer-tasks");
      const std::string TasksPerConsumerRunStatisticsIdentifier( "tarch::multicore::tasks-per-consumer-run");
-
-     #if defined(GPUOffloading)
-     #pragma omp declare target
-     #endif
-     enum class TargetDevice {
-       MayRunOnGPU
-     };
-     #if defined(GPUOffloading)
-     #pragma omp end declare target
-     #endif
   }
 }
 
