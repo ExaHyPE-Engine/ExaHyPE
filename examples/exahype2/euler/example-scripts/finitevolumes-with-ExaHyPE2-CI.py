@@ -52,7 +52,7 @@ max_h          = args.h
 solver = None
 
 if args.gpu:
-  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+  solver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator(
     "EulerOnGPU",
     patch_size,
     unknowns, 0,
@@ -61,7 +61,7 @@ if args.gpu:
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 else:
-  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+  solver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
     "Euler",
     patch_size,
     unknowns, 0,
