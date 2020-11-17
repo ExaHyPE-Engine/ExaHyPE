@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 from .FV                       import FV
-from .AbstractAoSWithOverlap1  import AbstractAoSWithOverlap1
  
 from .PDETerms import PDETerms
 
@@ -23,7 +22,7 @@ import jinja2
 #! aux fields: 2
 
 
-class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
+class PointWiseClawPackFixedTimeStepSize(  FV ):
   """
   
     Very simple solver that can use ClawPack's point-wise Riemann solver.
@@ -54,71 +53,61 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
    a solver specified over a 1d array as point-wise solver.  
       
   """
-  RiemannSolverCall = """
-    double wave[{{NUMBER_OF_UNKNOWNS}}]; 
-    double speed[{{NUMBER_OF_UNKNOWNS}}]; 
-
-    int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
-    int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    int num_waves = {{NUMBER_OF_UNKNOWNS}}; 
-
-    {{CLAWPACK_RIEMANN_SOLVER}}_(
-      &num_eqn,
-      &num_aux,
-      &num_waves, 
-      QL,                                 // double* q_l 
-      QR,                                 // double* q_r
-      QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
-      QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
-      wave,
-      speed,
-      FL,                                 // double* amdq
-      FR                                  // double* apdq
-    );
-
-    for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
-      FR[i] = -FR[i];
-    }
-    
-"""
-
-
-  RiemannSolverCallDegenerated1DSolver = """
-    double wave[{{NUMBER_OF_UNKNOWNS}}]; 
-    double speed[{{NUMBER_OF_UNKNOWNS}}]; 
-
-    int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
-    int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    int num_waves = {{NUMBER_OF_UNKNOWNS}};
-    
-    int maxm      = 1;
-    int num_ghost = 1;
-    int num_cells = 1; 
-
-    {{CLAWPACK_RIEMANN_SOLVER}}_(
-      &maxm, 
-      &num_eqn,
-      &num_waves, 
-      &num_aux,
-      &num_ghost,
-      &num_cells,
-      QL,                                 // double* q_l 
-      QR,                                 // double* q_r
-      QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
-      QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
-      wave,
-      speed,
-      FL,                                 // double* amdq
-      FR                                  // double* apdq
-    );
-
-    for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
-      FR[i] = -FR[i];
-    }
-    
-"""
   
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop, is_degenerated_1d_solver=False):
+  
+  TemplateUpdateCell = """
+    {{LOOP_OVER_PATH_FUNCTION_CALL}}(
+      [&](
+        double                                       QL[],
+        double                                       QR[],
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       FL[],
+        double                                       FR[]
+      ) -> void {
+        double wave[{{NUMBER_OF_UNKNOWNS}}]; 
+        double speed[{{NUMBER_OF_UNKNOWNS}}]; 
+
+        int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
+        int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+        int num_waves = {{NUMBER_OF_UNKNOWNS}}; 
+
+        {{CLAWPACK_RIEMANN_SOLVER}}_(
+          &num_eqn,
+          &num_aux,
+          &num_waves, 
+          QL,                                 // double* q_l 
+          QR,                                 // double* q_r
+          QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
+          QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
+          wave,
+          speed,
+          FL,                                 // double* amdq
+          FR                                  // double* apdq
+        );
+
+        for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
+          FR[i] = -FR[i];
+        }
+      },
+      marker.x(),
+      marker.h(),
+      {{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      {{TIME_STEP_SIZE}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      reconstructedPatch,
+      originalPatch
+    );
+  """      
+  
+
+  
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
@@ -135,65 +124,57 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
     """
     #super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-    AbstractAoSWithOverlap1.__init__(self, flux=None,ncp=None, kernel_implementation=kernel_implementation)
     
     self._time_step_size = time_step_size
     
-    self._template_adjust_cell      = self._get_template_adjust_cell()
-    self._template_AMR              = self._get_template_AMR()
-    self._template_handle_boundary  = self._get_template_handle_boundary()
-    
-    self._is_degenerated_1d_solver  = is_degenerated_1d_solver
-    
+    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
+    self._refinement_criterion_implementation = PDETerms.Empty_Implementation
+    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+    self._kernel_implementation               = kernel_implementation
+
     self.set_implementation()
-    self.set_update_cell_implementation()
+    self.set_update_cell_implementation(kernel_implementation=kernel_implementation)
 
     self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
     self._patch_overlap.generator.receive_and_merge_condition  = self._predicate_face_carrying_data() + " and " \
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
-    self.clawpack_Riemann_solver = clawpack_Riemann_solver 
+    self.clawpack_Riemann_solver             = clawpack_Riemann_solver 
     self.Riemann_solver_implementation_files = Riemann_solver_implementation_files
+    
+    self._template_update_cell      = jinja2.Template( self.TemplateUpdateCell ); 
     pass
   
   
+
+
+  def set_implementation(self,boundary_conditions=None,refinement_criterion=None,initial_conditions=None):
+    """
+    
+      Pass in None if you don't want to overwrite any default.
+      
+    """
+    if boundary_conditions!=None:
+      self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion!=None:
+      self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions!=None: 
+      self._initial_conditions_implementation         = initial_conditions
+
+    
   def set_update_cell_implementation(self,
-    function_call   = AbstractAoSWithOverlap1.CellUpdateImplementation_NestedLoop,
-    memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch
+    kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
+    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
   ):
-    if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack and \
-       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Heap and \
-       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch and \
-       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Accelerator:
-      print( "WARNING: Selected memory allocation which does not delete allocated memory!" )
-    
+    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
+       memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
+       memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+
     self._reconstructed_array_memory_location = memory_location
+    self._kernel_implementation               = kernel_implementation
 
-    if self._is_degenerated_1d_solver:
-      self._template_update_cell      = jinja2.Template( 
-        self._get_template_update_cell( self.RiemannSolverCallDegenerated1DSolver )
-      );
-    else:
-      self._template_update_cell      = jinja2.Template( 
-        self._get_template_update_cell( self.RiemannSolverCall )
-      );
-
-
-  def set_implementation(self,boundary_conditions=PDETerms.User_Defined_Implementation,refinement_criterion=PDETerms.User_Defined_Implementation,initial_conditions=PDETerms.User_Defined_Implementation):
-    """
-      Don't use the superclass counterpart where you can also set fluxes and ncps.
-      One day, I'll have to revise the code such that this variant is not available
-      to all FV solvers.
-    """
-    AbstractAoSWithOverlap1.set_implementation(self,
-      flux=None,
-      ncp=None,
-      eigenvalues=None,
-      boundary_conditions=boundary_conditions,refinement_criterion=refinement_criterion,initial_conditions=initial_conditions
-    )    
-    pass
-    
   
   def add_entries_to_text_replacement_dictionary(self,d):
     """
@@ -202,14 +183,13 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
         in/out argument
     
     """
-    self._add_generic_Rusanov_FV_entries_to_text_replacement_dictionary(d)
-
     d[ "TIME_STEP_SIZE" ]         = self._time_step_size
     d[ "CLAWPACK_RIEMANN_SOLVER"] = self.clawpack_Riemann_solver
-    d[ "DEGENERATED_1D_SOLVER" ]  = self._is_degenerated_1d_solver
-    
-    pass
-  
+
+    d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
+    d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
+    d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+
   
   def get_user_includes(self):
     return """
@@ -226,6 +206,6 @@ class PointWiseClawPackFixedTimeStepSize(  FV, AbstractAoSWithOverlap1 ):
     """
     FV.add_implementation_files_to_project(self,namespace,output)
     for f in self.Riemann_solver_implementation_files:
-      output.makefile.add_fortran_file(f)
+      output.makefile.add_Fortran_file(f)
   
     
