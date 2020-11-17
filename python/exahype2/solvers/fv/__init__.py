@@ -6,6 +6,7 @@ from .FV                                             import FV
 
 from .GenericRusanovFixedTimeStepSize                import GenericRusanovFixedTimeStepSize
 from .GenericRusanovFixedTimeStepSizeWithEnclaves    import GenericRusanovFixedTimeStepSizeWithEnclaves
+from .GenericRusanovFixedTimeStepSizeWithAccelerator import GenericRusanovFixedTimeStepSizeWithAccelerator
 
 from .PointWiseClawPack                              import PointWiseClawPackFixedTimeStepSize
 

@@ -49,17 +49,27 @@ max_h          = args.h
 # Still the same solver, but this time we use named arguments. This is the way
 # you can add further PDE terms btw.
 #
-solver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
-  "Euler",
-  patch_size,
-  unknowns, 0,
-  min_h, max_h,
-  time_step_size,
-  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
-)
+solver = None
 
 if args.gpu:
-  solver.use_OpenMP5_GPUs()
+  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+    "EulerOnGPU",
+    patch_size,
+    unknowns, 0,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
+else:
+  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+    "Euler",
+    patch_size,
+    unknowns, 0,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
+
  
 
 project.add_solver( solver );

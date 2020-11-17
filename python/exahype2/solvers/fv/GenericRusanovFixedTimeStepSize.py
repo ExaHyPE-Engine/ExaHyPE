@@ -183,16 +183,16 @@ class GenericRusanovFixedTimeStepSize( FV ):
     
   
   def set_update_cell_implementation(self,
-    function_call   = FV.CellUpdateImplementation_NestedLoop,
-    memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch
+    kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
+    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
   ):
-    if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack and \
-       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Heap and \
-       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch and \
-       memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorMemory:
-      print( "WARNING: Selected memory allocation which does not delete allocated memory!" )
-    
+    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
+       memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
+       memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+
     self._reconstructed_array_memory_location = memory_location
+    self._kernel_implementation               = kernel_implementation
     self.__construct_template_update_cell()
   
   
