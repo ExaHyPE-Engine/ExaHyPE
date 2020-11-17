@@ -5,8 +5,6 @@ import sys
 
 from peano4.visualisation.Patch import Patch
 
-from paraview.simple import *
-
 
 class OutputFileParser(object):
   """

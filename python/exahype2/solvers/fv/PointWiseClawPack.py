@@ -56,7 +56,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
   
   
   TemplateUpdateCell = """
-    {{LOOP_OVER_PATH_FUNCTION_CALL}}(
+    {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
       [&](
         double                                       QL[],
         double                                       QR[],
@@ -96,7 +96,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
       marker.x(),
       marker.h(),
       {{SOLVER_INSTANCE}}.getMinTimeStamp(),
-      {{TIME_STEP_SIZE}},
+      {{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -184,7 +184,9 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     
     """
     d[ "TIME_STEP_SIZE" ]         = self._time_step_size
-    d[ "CLAWPACK_RIEMANN_SOLVER"] = self.clawpack_Riemann_solver
+    
+    d[ "CLAWPACK_RIEMANN_SOLVER"]        = self.clawpack_Riemann_solver
+    d[ "LOOP_OVER_PATCH_FUNCTION_CALL" ] = self._kernel_implementation
 
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
