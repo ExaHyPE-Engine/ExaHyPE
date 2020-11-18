@@ -1,0 +1,63 @@
+rank 0: assigned message SolverRepository - statistics exchange tag the free tag 0 (1 consecutive tags reserved)
+Peano 4 (C) www.peano-framework.org 
+build: 3d, no mpi, no threading, debug level=2
+rank 0: assigned message global semaphores the free tag 1 (1 consecutive tags reserved)
+rank 0: assigned message peano4::parallel::Node - rank orchestration the free tag 2 (1 consecutive tags reserved)
+rank 0: assigned message peano4::parallel::Node - data management the free tag 3 (16384 consecutive tags reserved)
+ 125387       00:00:00     rank:0       core:1       trace        peano4::parallel::Node::registerId(int,int)             in:id:0,masterId:-1 (file:peano4/parallel/Node.cpp,line:157)
+ 142303       00:00:00     rank:0       core:1       trace        peano4::parallel::Node::registerId(int,int)             out (file:peano4/parallel/Node.cpp,line:164)
+rank 0: assigned message peano4::parallel::SpacetreeSet - request message the free tag 16387 (1 consecutive tags reserved)
+rank 0: assigned message peano4::parallel::SpacetreeSet - answer message the free tag 16388 (64 consecutive tags reserved)
+ 321293       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4.grid.tests" ....... ok
+ 330389       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4.grid" ... ok
+ 364491       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4.parallel.tests" ....... ok
+ 368953       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4.parallel" ... ok
+ 372671       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4" ... ok
+ 376277       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection ... ok
+ 412199       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch.la.tests" ..... ok
+ 433500       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch.la" ............. ok
+ 438504       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch.mpi.tests" ..... ok
+ 442074       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch.mpi" ... ok
+ 445540       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch" ... ok
+ 448979       00:00:00     rank:0       core:1       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection ... ok
+ 558496       00:00:00     rank:0       core:1       info         ::::selectNextAlgorithmicStep()                         mesh rebalancing seems to be kind of stationary, so refine mesh further in next sweep
+ 2124         00:00:00     rank:0       core:1       info         ::step()                                                run CreateGrid
+ 228146455    00:00:00     rank:0       core:1       info         exahype2::RefinementControl::finishStep()               activate 27 refinement/coarsening instructions
+ 227619965    00:00:00     rank:0       core:1       info         ::step()                                                run CreateGrid
+ 451663939    00:00:00     rank:0       core:1       info         exahype2::RefinementControl::finishStep()               activate 27 refinement/coarsening instructions
+ 451694760    00:00:00     rank:0       core:1       info         ::::selectNextAlgorithmicStep()                         mesh rebalancing seems to be kind of stationary, so refine mesh further in next sweep
+ 451135680    00:00:00     rank:0       core:1       info         ::step()                                                run CreateGridButPostponeRefinement
+ 1756412846   00:00:01     rank:0       core:1       info         ::step()                                                run CreateGrid
+ 7956635195   00:00:07     rank:0       core:4       info         exahype2::RefinementControl::finishStep()               activate 729 refinement/coarsening instructions
+ 7956692776   00:00:07     rank:0       core:4       info         ::::selectNextAlgorithmicStep()                         mesh rebalancing seems to be kind of stationary, so refine mesh further in next sweep
+ 7956134127   00:00:07     rank:0       core:4       info         ::step()                                                run CreateGridButPostponeRefinement
+ 9299643124   00:00:09     rank:0       core:4       info         ::::selectNextAlgorithmicStep()                         mesh rebalancing seems to be kind of stationary, so refine mesh further in next sweep
+ 9299126371   00:00:09     rank:0       core:4       info         ::step()                                                run CreateGrid
+ 15539402440  00:00:15     rank:0       core:4       info         exahype2::RefinementControl::finishStep()               activate 729 refinement/coarsening instructions
+ 15539452550  00:00:15     rank:0       core:4       info         ::::selectNextAlgorithmicStep()                         mesh rebalancing seems to be kind of stationary, so refine mesh further in next sweep
+ 15538893603  00:00:15     rank:0       core:4       info         ::step()                                                run CreateGrid
+ 182278261839 00:03:02     rank:0       core:7       info         ::::selectNextAlgorithmicStep()                         finest mesh resolution of 0.1 reached with h_min=[0.037037,0.037037,0.037037]
+ 182277714509 00:03:02     rank:0       core:7       info         ::step()                                                run CreateGrid
+ 345766859460 00:05:45     rank:0       core:3       info         ::step()                                                run InitGrid
+ 503540274310 00:08:23     rank:0       core:4       info         ::step()                                                run PlotSolution
+ 569549032839 00:09:29     rank:0       core:3       info         ::step()                                                run TimeStep
+ 569549349906 00:09:29     rank:0       core:3       info         ::step()                                                t_{min}  = 0
+ 569549354921 00:09:29     rank:0       core:3       info         ::step()                                                t_{max}  = 0
+ 569549359791 00:09:29     rank:0       core:3       info         ::step()                                                dt_{min} = 0.0001
+ 569549363422 00:09:29     rank:0       core:3       info         ::step()                                                dt_{max} = 0.0001
+ 2151404661136 00:35:51     rank:0       core:3       info         ::step()                                                run TimeStep
+ 2151404676944 00:35:51     rank:0       core:3       info         ::step()                                                t_{min}  = 0.0001
+ 2151404680775 00:35:51     rank:0       core:3       info         ::step()                                                t_{max}  = 0.0001
+ 2151404683832 00:35:51     rank:0       core:3       info         ::step()                                                dt_{min} = 0.0001
+ 2151404686717 00:35:51     rank:0       core:3       info         ::step()                                                dt_{max} = 0.0001
+ 3909890713689 01:05:09     rank:0       core:3       info         ::step()                                                run TimeStep
+ 3909890904771 01:05:09     rank:0       core:3       info         ::step()                                                t_{min}  = 0.0002
+ 3909890909912 01:05:09     rank:0       core:3       info         ::step()                                                t_{max}  = 0.0002
+ 3909890913553 01:05:09     rank:0       core:3       info         ::step()                                                dt_{min} = 0.0001
+ 3909890916870 01:05:09     rank:0       core:3       info         ::step()                                                dt_{max} = 0.0001
+ 5491475758583 01:31:31     rank:0       core:0       info         ::step()                                                run TimeStep
+ 5491475924961 01:31:31     rank:0       core:0       info         ::step()                                                t_{min}  = 0.0003
+ 5491475928996 01:31:31     rank:0       core:0       info         ::step()                                                t_{max}  = 0.0003
+ 5491475932045 01:31:31     rank:0       core:0       info         ::step()                                                dt_{min} = 0.0001
+ 5491475934849 01:31:31     rank:0       core:0       info         ::step()                                                dt_{max} = 0.0001
+ 7073153

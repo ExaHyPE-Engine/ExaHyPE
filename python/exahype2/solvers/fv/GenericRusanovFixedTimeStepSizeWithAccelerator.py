@@ -15,7 +15,7 @@ from .GenericRusanovFixedTimeStepSizeWithEnclaves import GenericRusanovFixedTime
 class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeStepSizeWithEnclaves ):
   TemplateUpdateCell = """
   if (marker.isSkeletonCell()) {
-    {{LOOP_OVER_PATH_FUNCTION_CALL}}(
+    {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
       [&](
         double                                       QL[],
         double                                       QR[],
@@ -62,7 +62,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         1 // halo size
       );
-      {{LOOP_OVER_PATH_FUNCTION_CALL}}(
+      {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
         [&](
           double                                       QL[],
           double                                       QR[],

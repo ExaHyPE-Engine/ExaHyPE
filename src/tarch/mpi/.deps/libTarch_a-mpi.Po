@@ -1,0 +1,13 @@
+tarch/mpi/libTarch_a-mpi.o: tarch/mpi/mpi.cpp /usr/include/stdc-predef.h \
+ tarch/mpi/mpi.h config.h tarch/compiler/CompilerSpecificSettings.h \
+ tarch/compiler/LinuxGCC.h
+
+/usr/include/stdc-predef.h:
+
+tarch/mpi/mpi.h:
+
+config.h:
+
+tarch/compiler/CompilerSpecificSettings.h:
+
+tarch/compiler/LinuxGCC.h:

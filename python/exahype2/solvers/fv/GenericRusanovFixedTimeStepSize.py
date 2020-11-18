@@ -98,7 +98,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
 
 
   TemplateUpdateCell = """
-    {{LOOP_OVER_PATH_FUNCTION_CALL}}(
+    {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
       [&](
         double                                       QL[],
         double                                       QR[],
@@ -242,7 +242,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
-    d[ "LOOP_OVER_PATH_FUNCTION_CALL" ] = self._kernel_implementation
+    d[ "LOOP_OVER_PATCH_FUNCTION_CALL" ] = self._kernel_implementation
     d[ "TIME_STAMP" ]                   = "{{SOLVER_INSTANCE}}.getMinTimeStamp()"
     d[ "RUSANOV_ON_FACE"]               = self._rusanov_call
     d[ "EIGENVALUES"]                   = self.EigenvaluesCall
