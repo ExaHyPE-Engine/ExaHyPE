@@ -239,7 +239,7 @@ did search for a file """ + input_file )
     for i in module_files:
       self.d["FORTRAN_MODULES"][ module_name ].append( i.replace( ".f90", ".o").replace(".f", ".o") )
       self.d["FORTRAN_MODULES"][ module_name ].append( i )
-      #self.fortranfiles.append(i)
+      self.fortranfiles.append(i)
     
 
   def generate(self,overwrite,directory):
