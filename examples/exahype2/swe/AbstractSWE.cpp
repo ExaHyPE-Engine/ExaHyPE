@@ -41,6 +41,23 @@ examples::exahype2::swe::AbstractSWE::SolverState examples::exahype2::swe::Abstr
 
 
 
+::exahype2::RefinementCommand examples::exahype2::swe::AbstractSWE::refinementCriterion(
+  double * __restrict__ Q, // Q[3+1],
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t
+) {
+  
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+
+  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
+    result = ::exahype2::RefinementCommand::Refine;
+  }
+
+  return result;
+  
+}
+
 
 
 

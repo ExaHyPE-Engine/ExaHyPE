@@ -70,7 +70,7 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
-    ) = 0;
+    )  final ;
 
 
 

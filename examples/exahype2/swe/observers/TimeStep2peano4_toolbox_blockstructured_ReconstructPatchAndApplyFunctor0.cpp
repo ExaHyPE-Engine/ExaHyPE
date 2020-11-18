@@ -206,11 +206,10 @@ void examples::exahype2::swe::observers::TimeStep2peano4_toolbox_blockstructured
     logTraceInWith1Argument( "touchCellFirstTime(...)", marker.toString() );
 
     
-    double* reconstructedPatch;
     #if Dimensions==2
-    reconstructedPatch = ::tarch::multicore::allocateMemory(676, ::tarch::multicore::MemoryLocation::Heap);
+    double reconstructedPatch[676];
     #elif Dimensions==3
-    reconstructedPatch = ::tarch::multicore::allocateMemory(8788, ::tarch::multicore::MemoryLocation::Heap);
+    double reconstructedPatch[8788];
     #endif
 
 
@@ -274,12 +273,13 @@ void examples::exahype2::swe::observers::TimeStep2peano4_toolbox_blockstructured
 
     double* originalPatch = fineGridCellSWEQ.value;
     
+    
     #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d
     #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d
     #endif
-  
+  (
       [&](
         double                                       QL[],
         double                                       QR[],
@@ -291,51 +291,48 @@ void examples::exahype2::swe::observers::TimeStep2peano4_toolbox_blockstructured
         double                                       FL[],
         double                                       FR[]
       ) -> void {
-        
-    int ixy = normal+1;
-    double wave[3]; 
-    double speed[3]; 
+        double wave[3]; 
+        double speed[3]; 
 
-    int num_eqn   = 3;
-    int num_aux   = 1;
-    int num_waves = 3; 
+        int num_eqn   = 3;
+        int num_aux   = 1;
+        int num_waves = 3; 
 
-    rpn2_(
-      &ixy,
-      &num_eqn,
-      &num_aux,
-      &num_waves, 
-      QL,                                 // double* q_l 
-      QR,                                 // double* q_r
-      QL+3,          // double* aux_l
-      QR+3,          // double* aux_r
-      wave,
-      speed,
-      FL,                                 // double* amdq
-      FR                                  // double* apdq
-    );
+        rpn2_(
+          
+            &normal,
+             
+          &num_eqn,
+          &num_aux,
+          &num_waves, 
+          QL,                                 // double* q_l 
+          QR,                                 // double* q_r
+          QL+3,          // double* aux_l
+          QR+3,          // double* aux_r
+          wave,
+          speed,
+          FL,                                 // double* amdq
+          FR                                  // double* apdq
+        );
 
-    for (int i=0; i<3; i++) {
-      FR[i] = -FR[i];
-    }
-    
-
+        for (int i=0; i<3; i++) {
+          FR[i] = -FR[i];
+        }
       },
       marker.x(),
       marker.h(),
       InstanceOfSWE.getMinTimeStamp(),
-      0.0001,
+      InstanceOfSWE.getMinTimeStepSize(),
       11,
       3,
       1,
       reconstructedPatch,
       originalPatch
-  );
+    );
+  
     
     
     
-    ::tarch::multicore::freeMemory(reconstructedPatch, tarch::multicore::MemoryLocation::Heap );
-
     
     
     logTraceOut( "touchCellFirstTime(...)" );

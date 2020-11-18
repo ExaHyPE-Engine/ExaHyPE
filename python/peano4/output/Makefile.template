@@ -33,7 +33,7 @@ all: solver
 
     
 {% for modulename,files in FORTRAN_MODULES.items() -%} 
-{{"\n" + modulename}}: {% for file in files -%} {{file}} {%- endfor %}  
+{{"\n" + modulename}}: {% for file in files -%} {{file+" "}} {%- endfor %}  
 {%- endfor %}
 
 
@@ -43,8 +43,5 @@ solver: {% for modulename,file in FORTRAN_MODULES.items() -%}{{modulename+" "}}{
 
     
 clean:
-	rm -f $(CXX_OBJS) $(FORTRAN_OBJS)
-	{% for modulename,files in FORTRAN_MODULES.items() -%} 
-	rm -f {{modulename+"\n"}}  
-	{%- endfor %}
+	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) {% for modulename,files in FORTRAN_MODULES.items() -%} {{modulename+" "}} {%- endfor %}
 	rm -f {{EXECUTABLENAME}}
