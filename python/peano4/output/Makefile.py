@@ -235,6 +235,18 @@ did search for a file """ + input_file )
 
 
   def add_Fortran_module(self,module_name,module_files):
+    """
+    
+      Add a new FORTRAN modules. The module name is usually something that ends
+      with .mod. It is important that you add the module files in the right order,
+      as the order you call add_Fortran_module() will be reflected in the 
+      Makefile.
+      
+    """
+    
+    if not module_name.endswith( ".mod" ):
+      print( "WARNING: Python modules usually end with .mod. Got " + module_name + " instead" )
+    
     self.d["FORTRAN_MODULES"][ module_name ] = []
     for i in module_files:
       self.d["FORTRAN_MODULES"][ module_name ].append( i.replace( ".f90", ".o").replace(".f", ".o") )
