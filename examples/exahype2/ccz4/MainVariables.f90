@@ -4,7 +4,8 @@
 ! DIM Parameters
   
   MODULE MainVariables 
-    IMPLICIT NONE  
+    USE ISO_C_BINDING
+    IMPLICIT NONE
     PUBLIC  
 
     ! This typesDef.f90 is a relict still from the old Fortran interface in Exahype.
@@ -24,21 +25,22 @@
     INTEGER, PARAMETER             	:: nDim = 2                   ! The number of space dimensions
 #endif
 	INTEGER, PARAMETER             	:: nAux = 0
-    INTEGER, PARAMETER             	:: nVar = 96                           ! The number of variables of the PDE system 
+    INTEGER, PARAMETER             	:: nVar = 64                           ! The number of variables of the PDE system 
     INTEGER, PARAMETER 				:: nLin = 0
 	INTEGER, PARAMETER				:: nParam=0
 	INTEGER, PARAMETER				:: d=3
+  LOGICAL(C_BOOL), BIND(C, name="istwopunct_") :: istwopunct = .FALSE.
     !CHARACTER(LEN=20), PARAMETER	:: ICType='NLOPRUPTURE'
-	CHARACTER(LEN=20)				:: ICType
-  TYPE tEquations 
+  CHARACTER(LEN=20) :: ICType
+  TYPE, bind(C) :: tEquations
       REAL(8)    :: gamma, Pi, c0, g = 9.81, friction = 1.0     
       REAL(8)    :: CCZ4k1, CCZ4k2, CCZ4k3, CCZ4eta, CCZ4itau, CCZ4f, CCZ4g, CCZ4xi, CCZ4e, CCZ4c, CCZ4mu, CCZ4ds, CCZ4sk, CCZ4bs  
       REAL(8)    :: CCZ4GLMc0 = 0.5, CCZ4GLMc = 0.75, CCZ4GLMd = 0.75, CCZ4GLMepsD = 1e-2, CCZ4GLMepsA = 1e-2, CCZ4GLMepsP = 1e-2, cs, alpha, beta, lambda, cv, rho0, p0, tau1, tau2, mu, kappa ,tau 
       INTEGER :: CCZ4LapseType, EinsteinAutoAux = 0, ReferenceDepth = 1.0    
       REAL(8)    :: DivCleaning_a = 1.0 
-  END TYPE tEquations 
+  END TYPE tEquations
+  TYPE(tEquations), bind(C, name="mainVar_eqn") :: EQN
 	
-	TYPE(tEquations) :: EQN
 	
    !Variables for NSTOV module 
 #ifdef SPHERICAL  
@@ -56,7 +58,7 @@
 	REAL(8)            ::  Mbh = 1.0, aom = 0.0 
 	REAL(8), PARAMETER    :: P_eps = 1e-4
 	integer, parameter :: MYRANK=0 	
-    
+
     !
     TYPE tNSTOVVar
         INTEGER :: Computed
