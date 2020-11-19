@@ -1,7 +1,6 @@
 subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
 
-    use geoclaw_module, only: g=> grav, drytol => dry_tolerance, rho
-    use geoclaw_module, only: earth_radius, deg2rad
+    use geoclaw_module, only: deg2rad
     use amr_module, only: mcapa
 
     implicit none
@@ -26,11 +25,18 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     real(kind=8) :: s1m,s2m
     real(kind=8) :: hstar,hstartest,hstarHLL,sLtest,sRtest
     real(kind=8) :: tw,dxdc
+    real(kind=8) :: g, drytol, rho, earth_radius
 
     logical :: rare1,rare2
-    
+       
 !    logical :: pressure_forcing = .false.
 !    integer :: pressure_index = 4
+
+    ! from clawpack/apps/notebooks/geoclaw/chile2010a/geoclaw.data
+    g = 9.81
+    drytol = 0.001
+    rho = 1025.0
+    earth_radius = 6367500.0  
 
     ! In case there is no pressure forcing
     pL = 0.d0
@@ -152,7 +158,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     sE2 = max(sR,sRoe2) ! Eindfeldt speed 2 wave
 
     maxiter = 1
-
+    
     call riemann_aug_JCP(maxiter,3,3,hL,hR,huL,huR,hvL,hvR,bL,bR,uL,uR,vL,vR,  &
                          phiL,phiR,pL,pR,sE1,sE2,drytol,g,rho,sw,fw)
 
