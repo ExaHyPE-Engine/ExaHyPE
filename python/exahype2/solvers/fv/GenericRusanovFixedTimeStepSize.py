@@ -154,7 +154,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
 
     self.set_implementation(flux=flux,ncp=ncp)
-    self.set_update_cell_implementation(function_call=kernel_implementation)
+    self.set_update_cell_implementation(kernel_implementation=kernel_implementation)
 
     self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
     self._patch_overlap.generator.receive_and_merge_condition  = self._predicate_face_carrying_data() + " and " \
