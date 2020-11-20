@@ -2,6 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.visualisation.OutputFileParser import OutputFileParser
 from paraview.simple import *
+import vtk
 
 
 import multiprocessing
@@ -459,6 +460,13 @@ class Visualiser(object):
     
     
   def reload(self):
+    """
+     
+     Invokes render_dataset() and then sets the resulting self._data
+     as output of the client side object of the trivial producer. Does
+     not work if self._tp is set to None
+    
+    """
     if self._tp != None:
       self._data = render_dataset( 
         self.file_name,
@@ -473,3 +481,44 @@ class Visualiser(object):
       # 
       #visualiser._tp.GetClientSideObject().Update()
       
+
+  def write_vtu(self,file_name):
+    if not file_name.endswith( ".vtu"):
+      print( "Append .vtu extension to " + file_name)
+      file_name += ".vtu"
+    writer = vtk.vtkXMLUnstructuredGridWriter()
+    writer.SetFileName( file_name )
+    writer.SetInputData( self._data )
+    writer.Write()
+
+
+  def write_vtu_time_series(self):
+    pvd_file = """<?xml version="1.0"?>
+<VTKFile type="Collection" version="0.1"
+         byte_order="LittleEndian"
+         compressor="vtkZLibDataCompressor">
+  <Collection>
+"""    
+    file_name = self.file_name.replace( ".peano-patch-file", "" )
+    i = 0;
+    try:
+      while True:
+        self.select_dataset(i)
+        snapshot_file_name = file_name + "-" + str(i) + ".vtu"
+        self.write_vtu( snapshot_file_name )
+        pvd_file += """
+    <DataSet timestep=\"""" + str(i) + """\" group="" part="0" file=\"""" + snapshot_file_name + """\" />
+"""
+        i+=1
+    except:
+      pass
+    print( "dumped " + str(i) + " datasets" ) 
+    pvd_file += """
+  </Collection>
+</VTKFile>
+"""
+    meta_file = open( file_name + ".pvd", "w" )
+    meta_file.write( pvd_file )
+    
+    
+    
