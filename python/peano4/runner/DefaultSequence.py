@@ -22,6 +22,7 @@ class DefaultSequence(object):
   def __init__(self,project):  
     self.project   = project
     self.overwrite = False
+    self.d         = {}
     
   def _get_header_file_template(self):
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    
@@ -41,12 +42,15 @@ class DefaultSequence(object):
     """
     output.makefile.add_cpp_file( main_name + ".cpp" )
     print( "generated " + main_name + ".cpp")
+    
+    self.d[ "MAIN_NAME" ] = main_name
+
     generated_files = peano4.output.TemplatedHeaderImplementationFilePair(
       self._get_header_file_template(),
       self._get_implementation_file_template(),
       main_name, 
       self.project.namespace,
       ".", 
-      {"MAIN_NAME": main_name},
+      self.d,
       self.overwrite)
     output.add(generated_files)
