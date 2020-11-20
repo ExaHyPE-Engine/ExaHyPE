@@ -139,6 +139,10 @@ class Makefile(object):
     self.d["FCFLAGS"]      += " " + value
 
 
+  def add_linker_flag(self,value):
+    self.d["LDFLAGS"]      += " " + value
+
+
   def set_linker_flags(self,value):
     self.d["LDFLAGS"]       = value + " "
 
