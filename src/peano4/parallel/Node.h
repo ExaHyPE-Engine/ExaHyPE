@@ -221,7 +221,17 @@ class peano4::parallel::Node {
      * routine to ensure that stuff is only done on tree 0.
      */
     static std::set< PeriodicBoundaryStackIdentifier >  getInputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags);
+
+    /**
+     * You hand in a the flags of a vertex and you get the boundary stack identifiers
+     * including their normals.
+     */
     static std::set< PeriodicBoundaryStackIdentifier >  getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags);
+
+    /**
+     * @return The output stack for a periodic boundary data exchange for one face
+     */
+    static int  getOutputStackForPeriodicBoundaryExchange(int faceNumber);
 
     /**
      * See getOutputStackNumberOfBoundaryExchange().
@@ -233,6 +243,11 @@ class peano4::parallel::Node {
     static bool isVerticalDataExchangeInputStackNumber(int number);
 
     static bool isPeriodicBoundaryExchangeOutputStackNumber(int number);
+
+    /**
+     * Hand in an output stack number of a face/vertex and you get back the input
+     * stack number.
+     */
     static int  getPeriodicBoundaryExchangeInputStackNumberForOutputStack(int outputStackNumber);
 
 
