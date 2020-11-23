@@ -2019,11 +2019,19 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
         }
 
         if ( isFaceAlongPeriodicBoundaryCondition(fineGridVertices,inFacePositionWithinCell,true) ) {
+          int oppositeFace = (inFacePositionWithinCell + Dimensions) % (2*Dimensions);
+
           const int fromStack   = peano4::parallel::Node::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(
-            peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(inFacePositionWithinCell)
+            peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(oppositeFace)
           );
 
-          logInfo( "receiveAndMergeUserData(...)", "will merge" );
+          peano4::datamanagement::FaceMarker marker(enterCellTraversalEvent,inFacePositionWithinCell /*oppositeFace*/);
+          logDebug(
+            "receiveAndMergeUserData(...)",
+            "will merge face from periodic BC stack #" << fromStack << " with local face. Cell marker=" << marker.toString() <<
+            ". in-face=" << inFacePositionWithinCell << ", opposite face=" << oppositeFace
+          );
+
           observer.receiveAndMergeFace(
             enterCellTraversalEvent,
             inFacePositionWithinCell,
@@ -2031,7 +2039,7 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
             outCallStackCounter,    // Relative position in stack from top
             fromStack,
             TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap,
-            peano4::datamanagement::FaceMarker(enterCellTraversalEvent,inFacePositionWithinCell)
+            marker
           );
         }
 
@@ -2174,19 +2182,22 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
 
 
         if ( isFaceAlongPeriodicBoundaryCondition(fineGridVertices,outFacePositionWithinCell,false) ) {
-          logInfo(
+
+          peano4::datamanagement::FaceMarker marker(leaveCellTraversalEvent,outFacePositionWithinCell);
+          const int toStack   = peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(outFacePositionWithinCell);
+
+          logDebug(
             "sendUserData(...)",
             "send local face from stack " << outFaceStack << " of tree " << _id <<
-            " to periodic BC stack"
+            " to periodic BC stack #" << toStack << ". marker=" << marker.toString()
           );
 
-          const int toStack   = peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(outFacePositionWithinCell);
           observer.sendFace(
             outFaceStack,
             (totalOutStackWrites-1),
             toStack,
             TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap,
-            peano4::datamanagement::FaceMarker(leaveCellTraversalEvent,outFacePositionWithinCell)
+            marker
           );
         }
       }

@@ -281,7 +281,8 @@ void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks( Cont
       not stackContainer.getForPush(sourceStackKey)->empty()
     ) {
       const int targetStack = Node::getInstance().getPeriodicBoundaryExchangeInputStackNumberForOutputStack(sourceStackKey.second);
-      logDebug(
+      // @todo Debug
+      logInfo(
          "exchangeStacksAsynchronously(...)",
          "map output stream " << sourceStackKey.second << " onto input stream " << targetStack <<
          " to realise periodic boundary conditions. Copy/clone " << stackContainer.getForPush(sourceStackKey)->size() << " entries"
