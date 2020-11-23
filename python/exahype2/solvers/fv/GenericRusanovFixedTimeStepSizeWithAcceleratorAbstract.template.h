@@ -48,11 +48,14 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
     {{CLASSNAME}}();
 
+    {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" %}
     /**
      * Determine max eigenvalue over Jacobian in a given point with solution values
      * (states) Q. All parameters are in.
+     *
+     * @return Max eigenvalue. Result has to be positive, so we are actually speaking
+     *   about the maximum absolute eigenvalue.
      */
-    {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" %}
     #if defined(GPUOffloading)
     #pragma omp declare target
     #endif
