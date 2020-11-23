@@ -2026,7 +2026,8 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
           );
 
           peano4::datamanagement::FaceMarker marker(enterCellTraversalEvent,inFacePositionWithinCell /*oppositeFace*/);
-          logDebug(
+          // @todo Debug
+          logInfo(
             "receiveAndMergeUserData(...)",
             "will merge face from periodic BC stack #" << fromStack << " with local face. Cell marker=" << marker.toString() <<
             ". in-face=" << inFacePositionWithinCell << ", opposite face=" << oppositeFace
@@ -2186,7 +2187,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           peano4::datamanagement::FaceMarker marker(leaveCellTraversalEvent,outFacePositionWithinCell);
           const int toStack   = peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(outFacePositionWithinCell);
 
-          logDebug(
+          // @todo Debug
+          logInfo(
             "sendUserData(...)",
             "send local face from stack " << outFaceStack << " of tree " << _id <<
             " to periodic BC stack #" << toStack << ". marker=" << marker.toString()
