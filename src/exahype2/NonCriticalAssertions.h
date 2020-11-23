@@ -170,6 +170,80 @@ namespace exahype2 {
   msg << "parameter " << #param9 << ": " << param9 << std::endl; \
   ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
 }
+
+
+#define nonCriticalAssertion11(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10) if (!(expr)) { \
+  std::ostringstream msg; \
+  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
+  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
+  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
+  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
+  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
+  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
+  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
+  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
+  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
+  msg << "parameter " << #param9 << ": " << param9 << std::endl; \
+  msg << "parameter " << #param10 << ": " << param10 << std::endl; \
+  ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
+}
+
+
+#define nonCriticalAssertion12(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11) if (!(expr)) { \
+  std::ostringstream msg; \
+  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
+  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
+  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
+  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
+  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
+  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
+  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
+  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
+  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
+  msg << "parameter " << #param9 << ": " << param9 << std::endl; \
+  msg << "parameter " << #param10 << ": " << param10 << std::endl; \
+  msg << "parameter " << #param11 << ": " << param11 << std::endl; \
+  ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
+}
+
+
+#define nonCriticalAssertion13(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12) if (!(expr)) { \
+  std::ostringstream msg; \
+  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
+  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
+  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
+  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
+  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
+  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
+  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
+  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
+  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
+  msg << "parameter " << #param9 << ": " << param9 << std::endl; \
+  msg << "parameter " << #param10 << ": " << param10 << std::endl; \
+  msg << "parameter " << #param11 << ": " << param11 << std::endl; \
+  msg << "parameter " << #param12 << ": " << param12 << std::endl; \
+  ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
+}
+
+
+#define nonCriticalAssertion14(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12,param13) if (!(expr)) { \
+  std::ostringstream msg; \
+  msg << "parameter " << #param0 << ": " << param0 << std::endl; \
+  msg << "parameter " << #param1 << ": " << param1 << std::endl; \
+  msg << "parameter " << #param2 << ": " << param2 << std::endl; \
+  msg << "parameter " << #param3 << ": " << param3 << std::endl; \
+  msg << "parameter " << #param4 << ": " << param4 << std::endl; \
+  msg << "parameter " << #param5 << ": " << param5 << std::endl; \
+  msg << "parameter " << #param6 << ": " << param6 << std::endl; \
+  msg << "parameter " << #param7 << ": " << param7 << std::endl; \
+  msg << "parameter " << #param8 << ": " << param8 << std::endl; \
+  msg << "parameter " << #param9 << ": " << param9 << std::endl; \
+  msg << "parameter " << #param10 << ": " << param10 << std::endl; \
+  msg << "parameter " << #param11 << ": " << param11 << std::endl; \
+  msg << "parameter " << #param12 << ": " << param12 << std::endl; \
+  msg << "parameter " << #param13 << ": " << param13 << std::endl; \
+  ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, #expr, msg.str() ); \
+}
 #else
 #define nonCriticalAssertion(expr)
 #define nonCriticalAssertion1(expr,param0)
@@ -182,6 +256,10 @@ namespace exahype2 {
 #define nonCriticalAssertion8(expr,param0,param1,param2,param3,param4,param5,param6,param7)
 #define nonCriticalAssertion9(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8)
 #define nonCriticalAssertion10(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9)
+#define nonCriticalAssertion11(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10)
+#define nonCriticalAssertion12(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11)
+#define nonCriticalAssertion13(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12)
+#define nonCriticalAssertion14(expr,param0,param1,param2,param3,param4,param5,param6,param7,param8,param9,param10,param11,param12,param13)
 #endif
 
 
