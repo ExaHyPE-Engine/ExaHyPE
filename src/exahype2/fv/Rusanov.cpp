@@ -49,11 +49,16 @@ void exahype2::fv::splitRusanov1d(
 
   double lambdaMaxL = maxEigenvalue(QL,x,dx,t,dt,normal);
   double lambdaMaxR = maxEigenvalue(QR,x,dx,t,dt,normal);
+
+  nonCriticalAssertion7( lambdaMaxL>=0.0, x, dx, t, dt, normal, lambdaMaxL, lambdaMaxR );
+  nonCriticalAssertion7( lambdaMaxR>=0.0, x, dx, t, dt, normal, lambdaMaxL, lambdaMaxR );
+
   double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
   for (int unknown=0; unknown<unknowns; unknown++) {
     FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
     FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+    assertionEquals( FL[unknown], FR[unknown]);
   }
 };
 
@@ -120,6 +125,10 @@ void exahype2::fv::splitRusanov1d(
 
   double lambdaMaxL = maxEigenvalue(QL,x,dx,t,dt,normal);
   double lambdaMaxR = maxEigenvalue(QR,x,dx,t,dt,normal);
+
+  nonCriticalAssertion7( lambdaMaxL>=0.0, x, dx, t, dt, normal, lambdaMaxL, lambdaMaxR );
+  nonCriticalAssertion7( lambdaMaxR>=0.0, x, dx, t, dt, normal, lambdaMaxL, lambdaMaxR );
+
   double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
   for (int unknown=0; unknown<unknowns; unknown++) {
