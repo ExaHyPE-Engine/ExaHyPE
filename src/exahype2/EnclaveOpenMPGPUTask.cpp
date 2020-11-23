@@ -6,6 +6,10 @@
 #include <algorithm>
 #include "EnclaveOpenMPGPUTask.h"
 
+#include "exahype2/fv/BoundaryConditions.h"
+#include "exahype2/fv/Generic.h"
+#include "exahype2/fv/Rusanov.h"
+
 
 tarch::logging::Log  exahype2::EnclaveOpenMPGPUTask::_log( "exahype2::EnclaveOpenMPGPUTask" );
 
@@ -13,15 +17,16 @@ tarch::logging::Log  exahype2::EnclaveOpenMPGPUTask::_log( "exahype2::EnclaveOpe
 exahype2::EnclaveOpenMPGPUTask::EnclaveOpenMPGPUTask(
   const ::peano4::datamanagement::CellMarker&    marker,
   double*                                        inputValues,
-  int                                            numberOfResultValues,
-  Functor                                        functor
+  int                                            numberOfResultValues//,
+//  Functor                                        functor
 ):
   tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority),
   _marker(marker),
   _inputValues(inputValues),
   _outputValues(nullptr),
-  _numberOfResultValues(numberOfResultValues),
-  _functor(functor) {
+  _numberOfResultValues(numberOfResultValues)//,
+//  _functor(functor) 
+{
   logTraceIn( "EnclaveOpenMPGPUTask(...)" );
 
   _outputValues = tarch::multicore::allocateMemory(_numberOfResultValues,tarch::multicore::MemoryLocation::Accelerator);
@@ -38,10 +43,10 @@ bool exahype2::EnclaveOpenMPGPUTask::run() {
   //#if defined(GPUOffloading)
   //#pragma omp task depend(out:dependencyMarker)
   //{
-    #if defined(GPUOffloading)
-    #pragma omp target
-    #endif
-    _functor(_inputValues,_outputValues,_marker);
+//    #if defined(GPUOffloading)
+ //   #pragma omp target
+ //   #endif
+    manual(_inputValues,_outputValues,_marker);
   //#if defined(GPUOffloading)
   //} }
 
@@ -65,6 +70,23 @@ bool exahype2::EnclaveOpenMPGPUTask::run() {
   logTraceOut( "run()" );
   return false;
 }
+
+//#if defined(GPUOffloading)
+//#pragma omp declare target
+//#endif
+void exahype2::EnclaveOpenMPGPUTask::manual(double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker)
+{
+     //::exahype2::fv::copyPatch(
+       //reconstructedPatch,
+       //originalPatch,
+       //5,
+       //0,
+       //101,
+       //1
+     //);
+}
+//#pragma omp end declare target
+
 
 
 void exahype2::EnclaveOpenMPGPUTask::prefetch() {

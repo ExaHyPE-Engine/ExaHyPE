@@ -49,7 +49,7 @@ class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
      *  
      * The functor is responsible to access the target! See run() for requirements.
      */
-    typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >  Functor;
+  //  typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >  Functor;
 
     /**
      * Construct a task that can run on the GPU
@@ -60,8 +60,8 @@ class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
     EnclaveOpenMPGPUTask(
       const ::peano4::datamanagement::CellMarker&    marker,
       double*                                        inputValues,
-      int                                            numberOfResultValues,
-      Functor                                        functor
+      int                                            numberOfResultValues//,
+//      Functor                                        functor
     );
 
     EnclaveOpenMPGPUTask(const EnclaveOpenMPGPUTask& other) = delete;
@@ -103,6 +103,9 @@ class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
      */
     bool run() override;
 
+//#pragma omp declare target
+    void manual(double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker);
+//#pragma omp end declare target
     /**
      * nop
      */
@@ -117,7 +120,7 @@ class exahype2::EnclaveOpenMPGPUTask: public tarch::multicore::Task {
     double*                                      _inputValues;
     double*                                      _outputValues;
     int                                          _numberOfResultValues;
-    Functor                                      _functor;
+    //Functor                                      _functor;
 
 };
 
