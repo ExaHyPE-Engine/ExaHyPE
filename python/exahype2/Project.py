@@ -289,7 +289,7 @@ class Project(object):
     plot_solution.add_action_set( set_labels_action_set )
     perform_time_step.add_action_set( set_labels_action_set )
     
-    self._project.main = exahype2.ExaHyPEMain(self._project,self._periodic_BC)
+    self._project.main = exahype2.ExaHyPEMain(self._project,self._periodic_BC,self._dimensions)
 
     # maybe use ..
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )

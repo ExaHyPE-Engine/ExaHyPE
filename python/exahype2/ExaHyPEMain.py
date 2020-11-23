@@ -5,12 +5,20 @@ import os
 
 
 class ExaHyPEMain(peano4.runner.DefaultSequence):
-  def __init__(self,project,periodic_BC):  
+  def __init__(self,project,periodic_BC,dimensions):
+    """
+    
+     project: peano4.Project
+     
+     dimensions: int
+       Number of dimensions. Equals 2 or 3.
+     
+    """
     super(ExaHyPEMain,self).__init__(project)
     self.overwrite     = True
 
     periodicBCString = "0"
-    for i in range(0,3):
+    for i in range(0,dimensions):
       if periodic_BC[i]:
         periodicBCString += "+" + str(2**i)
 
