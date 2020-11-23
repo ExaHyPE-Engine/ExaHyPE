@@ -16,6 +16,11 @@ namespace exahype2 {
   namespace fv {
     /**
      * Apply boundary conditions. Works only for a halo size of 1.
+     *
+     *
+     * @param faceNumber Is usually taken from marker.getSelectedFaceNumber() and
+     *  is thus a number between 0 and 2d-1.
+     *
      */
     void applyBoundaryConditions(
       std::function< void(

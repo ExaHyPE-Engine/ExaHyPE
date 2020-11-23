@@ -1149,13 +1149,26 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTra
     auto&  data = DataRepository::_{logical_type_name}Stack.getForPush( _spacetreeId, inOutStack )->top(
       relativePositionOnInOutStack
     );
-    
-    assertionVectorNumericalEquals7( 
-      data.getDebugX(), incomingData.getDebugX(), 
-      data.getDebugH(), incomingData.getDebugH(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
-    assertionVectorNumericalEquals7( 
-      data.getDebugH(), incomingData.getDebugH(), 
-      data.getDebugX(), incomingData.getDebugX(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
+
+    logDebug( "receiveAndMergeFace(...)", "merge " << incomingData.toString() << " into " << data.toString() );
+   
+    if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
+      assertion9(
+        tarch::la::countEqualEntries(data.getDebugX(), incomingData.getDebugX())==Dimensions-1,
+        data.getDebugX(), incomingData.getDebugX(), 
+        data.getDebugH(), incomingData.getDebugH(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
+      assertionVectorNumericalEquals7( 
+        data.getDebugH(), incomingData.getDebugH(), 
+        data.getDebugX(), incomingData.getDebugX(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
+    }}
+    else {{
+      assertionVectorNumericalEquals7( 
+        data.getDebugX(), incomingData.getDebugX(), 
+        data.getDebugH(), incomingData.getDebugH(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
+      assertionVectorNumericalEquals7( 
+        data.getDebugH(), incomingData.getDebugH(), 
+        data.getDebugX(), incomingData.getDebugX(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
+    }}
     
     data.merge(incomingData, marker);
   }}

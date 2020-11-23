@@ -43,6 +43,7 @@ class Project(object):
     self._Peano_src_directory = "."
     self._build_mode          = peano4.output.CompileMode.Asserts
     self._executable_name = executable
+    self._periodic_BC = [False, False, False]
     
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
@@ -157,11 +158,15 @@ class Project(object):
       size_string   += str(self._domain_size[i])
     offset_string += "}"
     size_string   += "}"
+    self._project.constants.add_include( """#include <bitset>""") 
     self._project.constants.export( "DomainOffset", offset_string )
     self._project.constants.export( "DomainSize", size_string )
     self._project.constants.export( "TerminalTime", str(self._terminal_time) )
     self._project.constants.export( "FirstPlotTimeStamp", str(self._first_plot_time_stamp) )
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
+    
+    self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
+    
 
 
   def __configure_makefile(self):
@@ -169,7 +174,7 @@ class Project(object):
     self._project.output.makefile.set_executable_name(self._executable_name)
 
 
-  def set_global_simulation_parameters(self,dimensions,offset,size,end_time,first_plot_time_stamp,time_in_between_plots):
+  def set_global_simulation_parameters(self,dimensions,offset,size,end_time,first_plot_time_stamp,time_in_between_plots, periodic_BC = [False, False, False]):
     """
     
       offset and size should be lists with dimensions double entries.
@@ -184,6 +189,7 @@ class Project(object):
     self._terminal_time = end_time
     self._first_plot_time_stamp = first_plot_time_stamp
     self._time_in_between_plots = time_in_between_plots
+    self._periodic_BC           = periodic_BC
     
     
   def __generate_solver_repository(self):
@@ -287,7 +293,7 @@ class Project(object):
     plot_solution.add_action_set( set_labels_action_set )
     perform_time_step.add_action_set( set_labels_action_set )
     
-    self._project.main = exahype2.ExaHyPEMain(self._project)
+    self._project.main = exahype2.ExaHyPEMain(self._project,self._periodic_BC,self._dimensions)
 
     # maybe use ..
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )

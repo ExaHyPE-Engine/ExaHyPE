@@ -107,6 +107,10 @@ void tarch::logging::CommandLineLogger::closeOutputStreamAndReopenNewOne() {
       _indentTraces.pop();
     }
   }
+  else if (_indent!=0) {
+    logWarning( "closeOutputStreamAndReopenNewOne()", "indent is " << _indent << ". Indentation messed up - likely due to missing logTraceOut. Re-translate without shared memory parallelisation and rerun" );
+    _indent = 0;
+  }
   #endif
 
 

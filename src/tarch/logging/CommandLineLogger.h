@@ -289,6 +289,12 @@ class tarch::logging::CommandLineLogger {
      * setLogFormat() with a non-empty log file name. This operation closes the
      * output file, and opens a new one. Many uses, e.g., prefer one debug
      * output file per traversal.
+     *
+     * <h2> Debugging </h2>
+     *
+     * If you PeanoDebug symbol is bigger than 0, the routine gives you some hint
+     * which trace objects are still on the stack, i.e. which traceIn has not yet
+     * been matched by a traceOut.
      */
     void closeOutputStreamAndReopenNewOne();
 

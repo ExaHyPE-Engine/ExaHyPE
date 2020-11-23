@@ -6,9 +6,6 @@
  * routines written in Fortran.
  */
 #include "PDE.h"
-#include "InitialData.h"
-
-
 
 /**
  * This file is automatically created by Peano. I need it to interact with
@@ -16,69 +13,31 @@
  */
 #include "Constants.h"
 
-
 #include <limits>
-
-
-
 
 #include <stdio.h>
 #include <string.h>
 
-
 tarch::logging::Log   examples::exahype2::ccz4::CCZ4::_log( "examples::exahype2::ccz4::CCZ4" );
 
-
-/**
- * Manually inserted to initialise CCZ4 component. The clean way
- * how to implement the selection process would be to define it
- * in the
- */
-examples::exahype2::ccz4::CCZ4::CCZ4() {
-  // int length = Scenario.size();
-  // initparameters_(&length, Scenario.data());
-}
-
-
-/**
- * I leave this one as it is for the time being.
- */
-::exahype2::RefinementCommand examples::exahype2::ccz4::CCZ4::refinementCriterion(
-  double * __restrict__ Q, // Q[63+0]
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
-) {
-  logTraceInWith3Arguments( "refinementCriterion(...)", volumeX, volumeH, t );
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
-
-  logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
-  return result;
-}
-
-
-void examples::exahype2::ccz4::CCZ4::gaugeWave(
-  double * __restrict__ Q, // Q[63+0],
+void gaugeWave(
+  double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double t
 ) {
+  constexpr int nVars = 64;
   constexpr double pi = M_PI;
   constexpr double ICA = 0.1; ///< Amplitude of the wave
-  constexpr int nVars = 63;
   double HH     = 1.0 - ICA*sin( 2.0*pi*( volumeX[0] - t));
   double dxH    = -2.0*pi*ICA*cos( 2.0 * pi*(volumeX[0] - t));
   double dxphi  = - pow(HH,(-7.0/6.0))*dxH/6.0;
   double phi    = pow(( 1.0 / HH),(1.0/6.0));
   double Kxx    = - pi*ICA*cos( 2.0 * pi*(volumeX[0] - t))/sqrt( 1.0 - ICA*sin( 2.0*pi*( volumeX[0] - t))  );
   double traceK = Kxx/HH;
-  memset(Q, 0, nVars*sizeof(double));
-  Q[0]  = phi*phi*HH                         ;
-  Q[3]  = phi*phi                            ;
+  memset(Q, .0, nVars*sizeof(double));
+  Q[0]  = phi*phi*HH ;
+  Q[3]  = phi*phi  ;
   Q[5]  = phi*phi                            ;
   Q[6]  = phi*phi*(Kxx - 1.0/3.0*traceK*HH ) ;
   Q[9] =  phi*phi*(0.0 - 1.0/3.0*traceK*1.0) ;
@@ -92,8 +51,8 @@ void examples::exahype2::ccz4::CCZ4::gaugeWave(
   Q[53] = traceK;
   Q[54] = log(phi);
   Q[55] = dxphi/phi;
+  Q[59] = 1.0;
 }
-
 
 /**
  * I don't adjust the solution, but I adjust the solution in the very
@@ -101,34 +60,37 @@ void examples::exahype2::ccz4::CCZ4::gaugeWave(
  * the initialisation request to the Fortran routines.
  */
 void examples::exahype2::ccz4::CCZ4::adjustSolution(
-  double * __restrict__ Q, // Q[63+0],
+  double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
 ) {
   logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
   if (tarch::la::equals(t,0.0) ) {
+    // initial conditions      
     if ( Scenario=="gaugewave-c++" ) {
-      gaugeWave(Q, volumeX, volumeH, t);
+          gaugeWave(Q, volumeX, volumeH, t);
     }
     else {
 
-      double width = volumeH(0);
-      double t     = 0.0;
-      double dt    = 0.0001;
-
-  /*
-    initialdata_(
-      volumeX.data(), // const double* const x,const double* w,const double* t,const double* dt,double* Q
-      &t,
-      Q
-    );
-*/
-      logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
-    }
+          double width = volumeH(0);
+          double t     = 0.0;
+          double dt    = 0.0001;
+          logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
+      }
   }
-  else {
-    // other stuff
+  else{
+    double S[64];
+    memset(S, 0, 64*sizeof(double));
+    pdesource_(S,Q);
+    for(int i=0; i<64; i++){
+        if(!std::isfinite(S[i])){
+                logError("adjustSolution(...)", i << "-th source term is nan: " << S[i] );
+                Q[i] += S[i];
+                assert(1==0);
+        }
+        }
+    enforceccz4constraints_(Q);
   }
   logTraceOut( "adjustSolution(...)" );
 }
@@ -137,38 +99,24 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
 
 
 double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
-  double * __restrict__ Q, // Q[63+0],
+  double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
 ) {
   logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
-
   // helper data structure
-  constexpr int Unknowns = 63;
+  constexpr int Unknowns = 64;
   double lambda[Unknowns];
-  for (int i=0; i<Unknowns; i++) lambda[i] = 0.0;
+  for (int i=0; i<Unknowns; i++) 
+      lambda[i] = 1.0;
 
   // routine requires explicit normal vector
   double normalVector[3];
-
-/*
-  normalVector[0] = 0;
-  normalVector[1] = 0;
-  normalVector[2] = 0;
-  if (normal==0) normalVector[0] = -1.0;
-  if (normal==1) normalVector[1] = -1.0;
-  if (normal==2) normalVector[2] = -1.0;
-  if (normal==3) normalVector[0] =  1.0;
-  if (normal==4) normalVector[1] =  1.0;
-  if (normal==5) normalVector[2] =  1.0;
-*/
-
   normalVector[0] = normal % 3 == 0 ? 1.0 : 0.0;
   normalVector[1] = normal % 3 == 1 ? 1.0 : 0.0;
   normalVector[2] = normal % 3 == 2 ? 1.0 : 0.0;
-
 
   // actual method invocation
   pdeeigenvalues_(lambda, Q, normalVector);
@@ -178,31 +126,46 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
   for (int i=0; i<Unknowns; i++) {
     result = std::max(result,lambda[i]);
   }
-
-  logTraceOutWith1Argument( "eigenvalues(...)", result );
+  logTraceOut( "eigenvalues(...)" );
   return result;
 }
 
 
 void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
-  double * __restrict__ Q, // Q[63+0],
-  double                                       gradQ[63+0][Dimensions],
+  double * __restrict__ Q, // Q[64+0],
+  double                                       gradQ[64+0][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[63]
+  double * __restrict__ BgradQ // BgradQ[64]
 ) {
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
 
-  double gradQSerialised[63*3];
-  for (int i=0; i<63; i++) {
-    gradQSerialised[i+0*63] = gradQ[i][0];
-    gradQSerialised[i+1*63] = gradQ[i][1];
-    gradQSerialised[i+2*63] = gradQ[i][2];
+  double gradQSerialised[64*3];
+  for (int i=0; i<64; i++) {
+    gradQSerialised[i+0*64] = gradQ[i][0];
+    gradQSerialised[i+1*64] = gradQ[i][1];
+    gradQSerialised[i+2*64] = gradQ[i][2];
   }
-
   pdencp_(BgradQ, Q, gradQSerialised);
 
   logTraceOut( "nonconservativeProduct(...)" );
 }
+
+
+
+void examples::exahype2::ccz4::CCZ4::boundaryConditions(
+  double * __restrict__ Qinside, // Qinside[64+0]
+  double * __restrict__ Qoutside, // Qoutside[64+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+) {
+  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
+  for(int i=0; i<64; i++)
+      Qoutside[i]=Qinside[i];
+  logTraceOut( "boundaryConditions(...)" );
+}
+
