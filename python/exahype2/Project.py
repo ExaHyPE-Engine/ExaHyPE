@@ -189,7 +189,9 @@ class Project(object):
     self._terminal_time = end_time
     self._first_plot_time_stamp = first_plot_time_stamp
     self._time_in_between_plots = time_in_between_plots
-    self._periodic_BC           = periodic_BC
+    self._periodic_BC = []
+    for d in range(0,dimensions):
+      self._periodic_BC.append( periodic_BC[d] )
     
     
   def __generate_solver_repository(self):
