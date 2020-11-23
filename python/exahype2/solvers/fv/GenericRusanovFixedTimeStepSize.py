@@ -35,11 +35,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
             int                                          normal,
             double                                       F[]
           ) -> void {
-            {% if use_gpu %}
-            {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F, tarch::multicore::TargetDevice::MayRunOnGPU );
-            {% else %}
             {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
-            {% endif %}
           }
 """
 
@@ -71,11 +67,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {% if use_gpu %}
-            {{SOLVER_INSTANCE}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ, tarch::multicore::TargetDevice::MayRunOnGPU );
-            {% else %}
             {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
-            {% endif %}
           }
 """
 
@@ -88,11 +80,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
             double                                       dt,
             int                                          normal
           ) -> double {
-            {% if use_gpu %}
-            return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, tarch::multicore::TargetDevice::MayRunOnGPU );
-            {% else %}
             return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-            {% endif %}
           }
 """
 
