@@ -14,8 +14,15 @@ void examples::exahype2::euler::Euler::adjustSolution(
 ) {
   if (tarch::la::equals(t,0.0) ) {
     logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );
+
+    #if Dimensions==2
+    tarch::la::Vector<Dimensions,double> circleCentre = {0.2,0.5};
+    #else
+    tarch::la::Vector<Dimensions,double> circleCentre = {0.2,0.5,0.5};
+    #endif
+
     // initial conditions
-    bool isInTheCentre = ( tarch::la::norm2( x-tarch::la::Vector<Dimensions,double>(0.5) ) < 0.05 );
+    bool isInTheCentre = ( tarch::la::norm2( x-circleCentre ) < 0.05 );
     //bool isInTheCentre = x(0)<=0.5;
     //bool isInTheCentre = x(1)<=0.5;
     Q[0] = 0.1;  // rho
@@ -60,7 +67,8 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   lambda[3]  = u_n;
   lambda[4]  = u_n + c;
 
-  return std::max(lambda[0],lambda[4]);
+  double result = std::max( std::abs(lambda[0]), std::abs(lambda[4]) );
+  return result;
 }
 
 

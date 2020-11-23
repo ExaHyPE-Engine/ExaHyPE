@@ -154,29 +154,36 @@ class FV(object):
 """
      
   
+  """
+  
+    The global periodic boundary conditions are set in the Constants.h. 
+   
+  """
   TemplateHandleBoundary = """
     logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
-    ::exahype2::fv::applyBoundaryConditions(
-      [&](
-        double                                       Qinside[],
-        double                                       Qoutside[],
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> void {
-        {{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
-      },
-      marker.x(),
-      marker.h(),
-      {{SOLVER_INSTANCE}}.getMinTimeStamp(),
-      {{TIME_STEP_SIZE}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-      marker.getSelectedFaceNumber(),
-      fineGridFace{{UNKNOWN_IDENTIFIER}}.value
-    );
+    if (not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]) {
+      ::exahype2::fv::applyBoundaryConditions(
+        [&](
+          double                                       Qinside[],
+          double                                       Qoutside[],
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> void {
+          {{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
+        },  
+        marker.x(),
+        marker.h(),
+        {{SOLVER_INSTANCE}}.getMinTimeStamp(),
+        {{TIME_STEP_SIZE}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        marker.getSelectedFaceNumber(),
+        fineGridFace{{UNKNOWN_IDENTIFIER}}.value
+      );
+    }
 """
   
   

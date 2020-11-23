@@ -1106,7 +1106,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4:
 
 
   TemplateExchangeRoutines_send_Exchange = """
-  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap or {full_qualified_type}::send(marker) ) {{
+  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::send(marker) ) {{
     auto& data = DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId,inOutStack
     )->top(relativePositionOnInOutStack);
@@ -1141,7 +1141,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTra
 
 
   TemplateExchangeRoutines_receiveAndMerge_Exchange = """
-  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap or {full_qualified_type}::receiveAndMerge(marker) ) {{
+  if ( context==::peano4::grid::TraversalObserver::SendReceiveContext::Rebalancing or {full_qualified_type}::receiveAndMerge(marker) ) {{
     auto   incomingData = DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId, fromStack
     )->pop();

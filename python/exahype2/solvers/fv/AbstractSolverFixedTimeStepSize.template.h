@@ -1,3 +1,8 @@
+    /**
+     * Alias for periodic boundary conditions.
+     */
+    static std::bitset<Dimensions> PeriodicBC;
+
     double getMinTimeStamp() const final;
     double getMaxTimeStamp() const final;
     double getMinTimeStepSize() const final;

@@ -158,11 +158,15 @@ class Project(object):
       size_string   += str(self._domain_size[i])
     offset_string += "}"
     size_string   += "}"
+    self._project.constants.add_include( """#include <bitset>""") 
     self._project.constants.export( "DomainOffset", offset_string )
     self._project.constants.export( "DomainSize", size_string )
     self._project.constants.export( "TerminalTime", str(self._terminal_time) )
     self._project.constants.export( "FirstPlotTimeStamp", str(self._first_plot_time_stamp) )
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
+    
+    self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
+    
 
 
   def __configure_makefile(self):
