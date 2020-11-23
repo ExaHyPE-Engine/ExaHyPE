@@ -114,8 +114,8 @@
     void finishPlottingStep() override;
 
 
-    double getMaxMeshSize() const;
-    double getMinMeshSize() const;
+    double getMaxMeshSize() const override;
+    double getMinMeshSize() const override;
 
     SolverState  getSolverState() const;
   protected:
