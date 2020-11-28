@@ -32,7 +32,7 @@ class Makefile(object):
     self.d["DIM"]              = "2"
     self.d["CONFIGUREPATH"]    = "."
     self.d["EXECUTABLENAME"]   = "peano4"
-    self.d["FORTRAN_MODULES"]  = {}
+    self.d["FORTRAN_MODULES"]  = []
     self.set_mode( CompileMode.Debug )
     self.clear_files()
 
@@ -210,19 +210,22 @@ did search for a file """ + input_file )
   def add_Fortran_file(self,filename):
     """
 
-     Add a new filename. This is basically a set implementation, i.e. you can
-     add files multiple times, but they are not inserted multiple times. This
-     is important, as the steps add the cpp files. Multiple steps can hold the
-     same action, so this action would be created multiple times.
+     Add a new Fortran file. 
 
      All the standard Peano 4 routines rely on this function to add their
      generated files to the build environment. Nothing stops you however to
-     add more files yourself.
+     add more files yourself. Don't add a file multiple times. This might
+     break the compiler.
      
      Fortran is really picky about the translation order. So you have to add
      the stuff in the right order. Otherwise, Fortran might complain. This is 
-     your responsibility. Also, I don't know what happens if you use -j no 
-     the generated makefile with Fortran.
+     your responsibility. 
+     
+     If your file defines a module, please do not use this routine, but use
+     add_Fortran_module() instead.
+     
+     filename: String
+       Filename of a Fortran file. They usually should have the .f90 extension.
 
     """
     if self.fortranfiles.count(filename)==0:
@@ -230,16 +233,37 @@ did search for a file """ + input_file )
 
 
   def add_Fortran_files(self,filenames):
+    """
+    
+     Calls add_Fortran_file() for each file.
+     
+     filenames: [String]
+       List of files.
+        
+    """
     for i in filenames:
       self.add_Fortran_file(i)
 
 
-  def add_Fortran_module(self,module_name,module_files):
-    self.d["FORTRAN_MODULES"][ module_name ] = []
+  def add_Fortran_module(self,module_file):
+    """
+    
+     Add a Fortran module
+     
+     module_file: String
+       Filename of a Fortran source code file which hosts a module. It should
+       have the extension .f90 or similar.
+       
+    """
+    if not module_file.endswith( ".f90" ):
+      print( "Warning: Fortran module file does not have extension .f90 (" + module_file + ") and translation thus might fail" )
+    self.d["FORTRAN_MODULES"].append( module_file )
+    self.fortranfiles.append( module_file )
+    
+
+  def add_Fortran_modules(self,module_files):
     for i in module_files:
-      self.d["FORTRAN_MODULES"][ module_name ].append( i.replace( ".f90", ".o").replace(".f", ".o") )
-      self.d["FORTRAN_MODULES"][ module_name ].append( i )
-      #self.fortranfiles.append(i)
+      self.add_Fortran_module( i )
     
 
   def generate(self,overwrite,directory):
