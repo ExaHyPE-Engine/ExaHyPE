@@ -1214,11 +1214,30 @@ tarch::la::Vector< TwoPowerD, int >  peano4::grid::Spacetree::getAdjacentRanksOf
 
 }
 
+
+bool peano4::grid::Spacetree::isFaceAlongPeriodicBoundaryCondition(GridVertex fineGridVertices[TwoPowerD], int faceNumber, bool calledByReceivingProcess) const {
+  logTraceInWith2Arguments( "isFaceAlongPeriodicBoundaryCondition(...)", faceNumber, calledByReceivingProcess);
+
+  tarch::la::Vector< TwoPowerD, int >  adjacentRanksOfFace = getAdjacentRanksOfFace(fineGridVertices, faceNumber, calledByReceivingProcess);
+
+  bool isAdjacentToLocalRank              = false;
+  bool holdsPeriodicBoundaryConditionFlag = false; // semantics is either has been local or will be local
+  for (int i=0; i<TwoPowerD; i++) {
+    isAdjacentToLocalRank              |= adjacentRanksOfFace(i)==_id;
+    holdsPeriodicBoundaryConditionFlag |= adjacentRanksOfFace(i)==RankOfPeriodicBoundaryCondition;
+  }
+
+  holdsPeriodicBoundaryConditionFlag &= isAdjacentToLocalRank;
+
+  logTraceOutWith2Arguments( "isFaceAlongPeriodicBoundaryCondition(...)", holdsPeriodicBoundaryConditionFlag, isAdjacentToLocalRank );
+  return holdsPeriodicBoundaryConditionFlag;
+}
+
+
 int  peano4::grid::Spacetree::getNeighbourTrees( GridVertex fineGridVertices[TwoPowerD], int faceNumber, bool calledByReceivingProcess ) const {
   logTraceInWith3Arguments( "getNeighbourTrees(...)", faceNumber, calledByReceivingProcess, _id );
 
   tarch::la::Vector< TwoPowerD, int >  adjacentRanksOfFace = getAdjacentRanksOfFace(fineGridVertices, faceNumber, calledByReceivingProcess);
-
 
   logDebug( "getNeighbourTrees(...)", "face adjacency list=" << adjacentRanksOfFace );
 
@@ -1949,6 +1968,22 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
             peano4::datamanagement::VertexMarker(enterCellTraversalEvent,inVertexPositionWithinCell)
           );
         }
+
+        std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> periodicBCStacks =
+          _id==0 ? peano4::parallel::Node::getInstance().getOutputStacksForPeriodicBoundaryExchange(fineGridVertices[inVertexPositionWithinCell].getAdjacentRanks())
+                 : std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier>();
+
+        for (auto p: periodicBCStacks) {
+          observer.receiveAndMergeVertex(
+            enterCellTraversalEvent,
+            inVertexPositionWithinCell,
+            inOutStack,
+            outCallStackCounter,    // Relative position in stack from top
+            p.first,              // Rank
+            TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap,
+            peano4::datamanagement::VertexMarker(enterCellTraversalEvent,inVertexPositionWithinCell)
+          );
+        }
       }
       outCallStackCounter++;
     }
@@ -1965,13 +2000,13 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
       if (enterCellTraversalEvent.getIsFaceLocal(inFacePositionWithinCell)) {
         int neighbour = getNeighbourTrees(fineGridVertices,inFacePositionWithinCell, true);
         if (neighbour>=0) {
-    	  logDebug(
-          "receiveAndMergeUserData(...)",
-          "receive and merge " << i << "th face on stack " << inOutStack << " of tree " << _id << " (relative position=" <<
-          outCallStackCounter << ") with neighbour " << neighbour << ". Local position in cell=" << inFacePositionWithinCell <<
-          ", state=" << state.toString() << ", inFaceStack=" << inFaceStack
-        );
-        const int fromStack   = peano4::parallel::Node::getInputStackNumberForHorizontalDataExchange( neighbour );
+          logDebug(
+            "receiveAndMergeUserData(...)",
+            "receive and merge " << i << "th face on stack " << inOutStack << " of tree " << _id << " (relative position=" <<
+            outCallStackCounter << ") with neighbour " << neighbour << ". Local position in cell=" << inFacePositionWithinCell <<
+            ", state=" << state.toString() << ", inFaceStack=" << inFaceStack
+          );
+          const int fromStack   = peano4::parallel::Node::getInputStackNumberForHorizontalDataExchange( neighbour );
           observer.receiveAndMergeFace(
             enterCellTraversalEvent,
             inFacePositionWithinCell,
@@ -1982,6 +2017,32 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
             peano4::datamanagement::FaceMarker(enterCellTraversalEvent,inFacePositionWithinCell)
           );
         }
+
+        if ( isFaceAlongPeriodicBoundaryCondition(fineGridVertices,inFacePositionWithinCell,true) ) {
+          int oppositeFace = (inFacePositionWithinCell + Dimensions) % (2*Dimensions);
+
+          const int fromStack   = peano4::parallel::Node::getPeriodicBoundaryExchangeInputStackNumberForOutputStack(
+            peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(oppositeFace)
+          );
+
+          peano4::datamanagement::FaceMarker marker(enterCellTraversalEvent,inFacePositionWithinCell /*oppositeFace*/);
+          logDebug(
+            "receiveAndMergeUserData(...)",
+            "will merge face from periodic BC stack #" << fromStack << " with local face. Cell marker=" << marker.toString() <<
+            ". in-face=" << inFacePositionWithinCell << ", opposite face=" << oppositeFace
+          );
+
+          observer.receiveAndMergeFace(
+            enterCellTraversalEvent,
+            inFacePositionWithinCell,
+            inOutStack,
+            outCallStackCounter,    // Relative position in stack from top
+            fromStack,
+            TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap,
+            marker
+          );
+        }
+
       }
       outCallStackCounter++;
     }
@@ -2034,6 +2095,26 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             (totalOutStackWrites-1),
             toStack,
             TraversalObserver::SendReceiveContext::BoundaryExchange,
+            peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell)
+          );
+        }
+
+        std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> periodicBCStacks =
+          _id==0 ? peano4::parallel::Node::getInstance().getOutputStacksForPeriodicBoundaryExchange(fineGridVertices[outVertexPositionWithinCell].getAdjacentRanks())
+                 : std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier>();
+
+        for (auto stackNo: periodicBCStacks) {
+          logDebug(
+            "sendUserData(...)",
+            "vertex " << fineGridVertices[outVertexPositionWithinCell].toString() << " on tree " << _id <<
+            " goes to stack " << stackNo.first << " to realise periodic BC"
+          );
+
+          observer.sendVertex(
+            outVertexStack,
+            (totalOutStackWrites-1),
+            stackNo.first,
+            TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap,
             peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell)
           );
         }
@@ -2096,6 +2177,27 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             toStack,
             TraversalObserver::SendReceiveContext::BoundaryExchange,
             peano4::datamanagement::FaceMarker(leaveCellTraversalEvent,outFacePositionWithinCell)
+          );
+        }
+
+
+        if ( isFaceAlongPeriodicBoundaryCondition(fineGridVertices,outFacePositionWithinCell,false) ) {
+
+          peano4::datamanagement::FaceMarker marker(leaveCellTraversalEvent,outFacePositionWithinCell);
+          const int toStack   = peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(outFacePositionWithinCell);
+
+          logDebug(
+            "sendUserData(...)",
+            "send local face from stack " << outFaceStack << " of tree " << _id <<
+            " to periodic BC stack #" << toStack << ". marker=" << marker.toString()
+          );
+
+          observer.sendFace(
+            outFaceStack,
+            (totalOutStackWrites-1),
+            toStack,
+            TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap,
+            marker
           );
         }
       }

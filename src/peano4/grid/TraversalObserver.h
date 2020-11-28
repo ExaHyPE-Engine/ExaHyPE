@@ -201,7 +201,8 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
   enum class SendReceiveContext {
     BoundaryExchange,
     MultiscaleExchange,
-    Rebalancing
+    Rebalancing,
+    PeriodicBoundaryDataSwap
   };
 
   virtual void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker) {};

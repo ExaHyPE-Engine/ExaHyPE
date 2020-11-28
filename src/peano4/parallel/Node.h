@@ -221,7 +221,17 @@ class peano4::parallel::Node {
      * routine to ensure that stuff is only done on tree 0.
      */
     static std::set< PeriodicBoundaryStackIdentifier >  getInputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags);
+
+    /**
+     * You hand in a the flags of a vertex and you get the boundary stack identifiers
+     * including their normals.
+     */
     static std::set< PeriodicBoundaryStackIdentifier >  getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags);
+
+    /**
+     * @return The output stack for a periodic boundary data exchange for one face
+     */
+    static int  getOutputStackForPeriodicBoundaryExchange(int faceNumber);
 
     /**
      * See getOutputStackNumberOfBoundaryExchange().
@@ -233,6 +243,22 @@ class peano4::parallel::Node {
     static bool isVerticalDataExchangeInputStackNumber(int number);
 
     static bool isPeriodicBoundaryExchangeOutputStackNumber(int number);
+
+    /**
+     * Hand in an output stack number of a face/vertex and you get back the input
+     * stack number. This routine is used by the stack exchange in
+     * exchangeAllPeriodicBoundaryDataStacks() to map an output stack onto an
+     * input stack.
+     *
+     * If you want to use it for merging data, you have to be careful: Think about
+     * the right face of your domain. It is assigned a BC output stack. This
+     * routine tells you onto which input stack this output stack is mapped. In
+     * return, if you read in the periodic BC data for the right face, you will
+     * merge a data with its own! You however have to merge it with the input BC
+     * stack from the left face.
+     *
+     * @see peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks()
+     */
     static int  getPeriodicBoundaryExchangeInputStackNumberForOutputStack(int outputStackNumber);
 
 

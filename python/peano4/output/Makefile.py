@@ -139,6 +139,10 @@ class Makefile(object):
     self.d["FCFLAGS"]      += " " + value
 
 
+  def add_linker_flag(self,value):
+    self.d["LDFLAGS"]      += " " + value
+
+
   def set_linker_flags(self,value):
     self.d["LDFLAGS"]       = value + " "
 
@@ -263,7 +267,13 @@ did search for a file """ + input_file )
 
   def add_Fortran_modules(self,module_files):
     for i in module_files:
+<<<<<<< HEAD
       self.add_Fortran_module( i )
+=======
+      self.d["FORTRAN_MODULES"][ module_name ].append( i.replace( ".f90", ".o").replace(".f", ".o") )
+      self.d["FORTRAN_MODULES"][ module_name ].append( i )
+      self.fortranfiles.append(i)
+>>>>>>> origin/p4
     
 
   def generate(self,overwrite,directory):

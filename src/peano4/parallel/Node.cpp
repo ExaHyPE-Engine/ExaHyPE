@@ -224,6 +224,12 @@ std::bitset<2*Dimensions> peano4::parallel::Node::getPeriodicBoundaryNumber(cons
 }
 
 
+int  peano4::parallel::Node::getOutputStackForPeriodicBoundaryExchange(int faceNumber) {
+  const int baseIndex = peano4::grid::PeanoCurve::MaxNumberOfStacksPerSpacetreeInstance - peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionOutputStacks;
+  return baseIndex + faceNumber;
+}
+
+
 std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parallel::Node::getOutputStacksForPeriodicBoundaryExchange(const tarch::la::Vector<TwoPowerD,int>& flags) {
   std::bitset<2*Dimensions> boundaryNumbers = getPeriodicBoundaryNumber(flags);
   logTraceInWith2Arguments( "getOutputStacksForPeriodicBoundaryExchange(...)", flags, boundaryNumbers );
@@ -243,16 +249,14 @@ std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> peano4::parall
     }
   }
 
-  const int baseIndex = peano4::grid::PeanoCurve::MaxNumberOfStacksPerSpacetreeInstance - peano4::grid::PeanoCurve::NumberOfPeriodicBoundaryConditionOutputStacks;
   std::set<peano4::parallel::Node::PeriodicBoundaryStackIdentifier> result;
   for (auto p: powerSet) {
     std::bitset<Dimensions> stackAnnotation(0);
     for (int i=0; i<Dimensions; i++) {
       stackAnnotation.set( i, std::bitset<2*Dimensions>(p)[i] or std::bitset<2*Dimensions>(p)[i+Dimensions] );
     }
-    peano4::parallel::Node::PeriodicBoundaryStackIdentifier newEntry(baseIndex + p,stackAnnotation.to_ulong());
+    peano4::parallel::Node::PeriodicBoundaryStackIdentifier newEntry(getOutputStackForPeriodicBoundaryExchange(p),stackAnnotation.to_ulong());
     result.insert( newEntry );
-    logDebug( "getOutputStacksForPeriodicBoundaryExchange(...)", "inserted " << (baseIndex + p) << " as base is " << baseIndex );
   }
 
   logTraceOutWith1Argument( "getOutputStacksForPeriodicBoundaryExchange(...)", result.size() );

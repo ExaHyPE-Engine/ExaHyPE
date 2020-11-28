@@ -28,32 +28,36 @@ class peano4::grid::PeanoCurve {
 	   */
 	  static constexpr int NumberOfBaseStacks = 3;
 
-/**
- * In principle, there are Dimensions axes along which we can have periodic
- * boundary conditions. The faces along the x axis can wrap over, those along
- * the y axis can wrap over, those along the z axis, too. For each direction,
- * we need two stacks. The first one is for data flow along the coordinate
- * axis, the other one for the flow in the opposite direction. We order the
- * set of stacks this way: first all the ones along, then those in the other
- * direction. The whole thing becomes more complicated once we allow periodic
- * boundary conditions along multiple axis. In this case, we have those stacks
- * realising face-to-face wraps, but we also have to support combinations for
- * the few vertices which go diagonal within the cube. So we have 2d face
- * stacks but then any additional 2 out of 2d and and 3 out of 2d combination
- * which is to be supported, too.
- *
- * The whole set of stacks is replicated: We need a set of these stacks to
- * read from (those are the lower ones). They are followed by stacks to write
- * to. The two stacks are swapped over after each iteration. Within each set,
- * we first have all the stacks for data flow along the axis and then those
- * the other way round. For these, read access has to be permuted, too. This
- * is realised within getPeriodicBoundaryExchangeInputStackNumberForOutputStack().
- *
- * So for any vertex, we have a bitset with 2*Dimensions entries which tells
- * us exactly which data flows are tied to this vertex. Not all populations
- * of this bitset are admissible - you can't have the flag 'along x axis'
- * combined with 'against x axis' - but the highest d bits could be set.
- */
+    /**
+     * In principle, there are Dimensions axes along which we can have periodic
+     * boundary conditions. The faces along the x axis can wrap over, those along
+     * the y axis can wrap over, those along the z axis, too. For each direction,
+     * we need two stacks. The first one is for data flow along the coordinate
+     * axis, the other one for the flow in the opposite direction. We order the
+     * set of stacks this way: first all the ones along, then those in the other
+     * direction. The whole thing becomes more complicated once we allow periodic
+     * boundary conditions along multiple axis. In this case, we have those stacks
+     * realising face-to-face wraps, but we also have to support combinations for
+     * the few vertices which go diagonal within the cube. So we have 2d face
+     * stacks but then any additional 2 out of 2d and and 3 out of 2d combination
+     * which is to be supported, too.
+     *
+     * The whole set of stacks is replicated: We need a set of these stacks to
+     * read from (those are the lower ones). They are followed by stacks to write
+     * to. The two stacks are swapped over after each iteration. Within each set,
+     * we first have all the stacks for data flow along the axis and then those
+     * the other way round. For these, read access has to be permuted, too. This
+     * is realised within getPeriodicBoundaryExchangeInputStackNumberForOutputStack().
+     *
+     * So for any vertex, we have a bitset with 2*Dimensions entries which tells
+     * us exactly which data flows are tied to this vertex. Not all populations
+     * of this bitset are admissible - you can't have the flag 'along x axis'
+     * combined with 'against x axis' - but the highest d bits could be set.
+     *
+     * If you work with face data, then way fewer stacks will be used, as there
+     * is no way to combine different periodic BCs. For cells, there are no
+     * periodic BCs at all.
+     */
     #if Dimensions==2
     static constexpr int NumberOfPeriodicBoundaryConditionOutputStacks = 8+4+1;
     #elif Dimensions==3

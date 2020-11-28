@@ -38,8 +38,15 @@
 
 
 std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::toString() const {
-  std::string result = std::string("()");
-  return result;
+  std::ostringstream result;
+  result << "(";
+  #if PeanoDebug>=1
+  result << "x=" << _debugX;
+  result << ",";
+  result << "h=" << _debugH;
+  #endif
+  result << ")";
+  return result.str();
 }
 
 

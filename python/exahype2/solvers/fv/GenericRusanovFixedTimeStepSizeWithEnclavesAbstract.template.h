@@ -17,6 +17,7 @@
 
 #include "peano4/utils/Globals.h"
 
+#include "Constants.h"
 
 
 
@@ -51,6 +52,9 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     /**
      * Determine max eigenvalue over Jacobian in a given point with solution values
      * (states) Q. All parameters are in.
+     *
+     * @return Max eigenvalue. Result has to be positive, so we are actually speaking
+     *   about the maximum absolute eigenvalue.
      */
     virtual double maxEigenvalue(
       double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],

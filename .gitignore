@@ -1,1 +1,3 @@
-/cookbook/
+*.pyc
+*.Po
+

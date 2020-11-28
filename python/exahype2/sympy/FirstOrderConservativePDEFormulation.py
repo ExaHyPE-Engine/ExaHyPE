@@ -151,7 +151,7 @@ class FirstOrderConservativePDEFormulation(PDE):
   
   
 
-  def implementation_of_max_eigenvalue(self, invoke_evalf_before_output = False):
+  def implementation_of_max_eigenvalue(self, invoke_evalf_before_output = False, use_absolute_values=True):
     """
       Return maximum eigenvalue
     """
@@ -170,7 +170,10 @@ class FirstOrderConservativePDEFormulation(PDE):
     result += "}\n"
     result += "double result = 0.0;\n"
     for i in range(0,self.unknowns):
-      result += "result = std::max( result, lambda[" + str(i)+ "] );\n"
+      if use_absolute_values:
+        result += "result = std::max( result, std::abs(lambda[" + str(i)+ "]) );\n"
+      else:
+        result += "result = std::max( result, lambda[" + str(i)+ "] );\n"
     result += "return result;\n"
     return result  
 

@@ -95,6 +95,15 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     template <class Container>
     static void exchangeAllHorizontalDataExchangeStacks( Container& stackContainer, int spacetreeId, bool symmetricDataCardinality );
 
+    /**
+     * Exchange periodic BC data
+     *
+     * Close to trivial routine, as it basically examines whether anything
+     * has been written to a stack that is associated with periodic BCs.
+     * If so, the corresponding stack is copied over onto the respective
+     * input stack for the subsequent iteration. This routine should
+     * degenerate to nop on all ranks besides rank 0.
+     */
     template <class Container>
     static void exchangeAllPeriodicBoundaryDataStacks( Container& stackContainer, int spacetreeId );
 

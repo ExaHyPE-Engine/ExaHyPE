@@ -80,18 +80,29 @@ max_h          = args.h
 #
 #
 
-thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
-  "Euler",
-  patch_size,
-  unknowns, 0,
-  min_h, max_h,
-  time_step_size,
-  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
-)
 
-if opts.GPU:
-    print("Turning on OpenMP for GPUs")
-    thesolver.use_OpenMP5_GPUs()
+thesolver = None
+if args.GPU:
+  print("Turning on OpenMP for GPUs")
+  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator(
+    "EulerOnGPU",
+    patch_size,
+    unknowns, 0,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
+
+else:
+  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+    "Euler",
+    patch_size,
+    unknowns, 0,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
+
 
 project.add_solver( thesolver )
 

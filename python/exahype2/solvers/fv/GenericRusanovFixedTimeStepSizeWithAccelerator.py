@@ -15,6 +15,9 @@ from .GenericRusanovFixedTimeStepSizeWithEnclaves import GenericRusanovFixedTime
 class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeStepSizeWithEnclaves ):
   TemplateUpdateCell = """
   if (marker.isSkeletonCell()) {
+    // @todo Holger: Das bleibt auf der CPU. Also eigentlich kein Grund, es zu 
+    //  aendern. Wenn Du allerdings den GPU Task generierst, kannste das in der
+    //  Theorie auch generien. Wie gesagt - glaube das braucht es nicht.
     {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
       [&](
         double                                       QL[],
@@ -47,12 +50,11 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
       originalPatch
     );
     
-    {{FREE_SKELETON_MEMORY}}
+    ::tarch::multicore::freeMemory(reconstructedPatch, ::tarch::multicore::MemoryLocation::Accelerator);
   }
   else { // is an enclave cell
-    #if defined(GPUOffloading)
-    #pragma omp declare target
-    #endif
+    // @todo Holger: Your part
+    /*
     auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
       ::exahype2::fv::copyPatch(
         reconstructedPatch,
@@ -94,26 +96,23 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
         originalPatch
       );
     };
-    #if defined(GPUOffloading)
-    #pragma omp end declare target
-    #endif
+    */
 
     ::exahype2::EnclaveOpenMPGPUTask* newEnclaveTask = new ::exahype2::EnclaveOpenMPGPUTask(
       marker,
       reconstructedPatch,
       #if Dimensions==2
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}}
       #else
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}}
       #endif
-      perCellFunctor
     );
       
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
     peano4::parallel::Tasks spawn( 
       newEnclaveTask,
       peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
-      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
+      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithAccelerator" )
     );      
   }
   """      
