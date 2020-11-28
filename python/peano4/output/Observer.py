@@ -1193,127 +1193,105 @@ void {FULL_QUALIFIED_CLASSNAME}::deleteAllStacks() {{
 """
 
   def __generate_exchange_routines(self,output_file):
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue.format(**self.d) )
-    for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**self.d) )
-    for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**self.d) )
-    for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Epilogue.format(**self.d) )
-      
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Prologue.format(**self.d) )
-    for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**self.d) )
-    for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**self.d) )
-    for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Epilogue.format(**self.d) )
+    s=""
 
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Prologue.format(**self.d) )
+    prolodict = {"FULL_QUALIFIED_CLASSNAME":self.d["FULL_QUALIFIED_CLASSNAME"]}
+
+    s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Epilogue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Prologue.format(**self.d) )
+    s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**self.d) )
+      s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**self.d) )
+      s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue.format(**self.d) )
+      s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue.format(**self.d) )
+    s+= self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue.format(**self.d) )
+    s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Epilogue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_sendVertex_Prologue.format(**self.d) )
-    for vertex in self.vertices:
-      self.d[ "logical_type_name" ]   = vertex.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = vertex.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_send_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_sendVertex_Epilogue.format(**self.d) )
-      
-    output_file.write( self.TemplateExchangeRoutines_sendFace_Prologue.format(**self.d) )
-    for face in self.faces:
-      self.d[ "logical_type_name" ]   = face.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = face.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_send_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_sendFace_Epilogue.format(**self.d) )
-
-    output_file.write( self.TemplateExchangeRoutines_sendCell_Prologue.format(**self.d) )
+    s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "logical_type_name" ]   = cell.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = cell.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_send_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_sendCell_Epilogue.format(**self.d) )
-
-    output_file.write( self.TemplateExchangeRoutines_receiveAndMergeVertex_Prologue.format(**self.d) )
-    for vertex in self.vertices:
-      self.d[ "logical_type_name" ]   = vertex.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = vertex.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_receiveAndMergeVertex_Epilogue.format(**self.d) )
-      
-    output_file.write( self.TemplateExchangeRoutines_receiveAndMergeFace_Prologue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "logical_type_name" ]   = face.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = face.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_receiveAndMergeFace_Epilogue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
+    for vertex in self.vertices:
+      s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Prologue.format(**self.d) )
+    s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Epilogue.format(**self.d) )
-      
-      
-      
+      s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_sendVertex_Prologue.format(**prolodict)
+    for vertex in self.vertices:
+      temp = { "logical_type_name" : vertex.get_logical_type_name(), "full_qualified_type" :  vertex.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_send_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_sendVertex_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_sendFace_Prologue.format(**prolodict)
+    for face in self.faces:
+      temp = { "logical_type_name" : face.get_logical_type_name(), "full_qualified_type" :  face.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_send_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_sendFace_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_sendCell_Prologue.format(**prolodict)
+    for cell in self.cells:
+      temp = { "logical_type_name" : cell.get_logical_type_name(), "full_qualified_type" :  cell.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_send_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_sendCell_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_receiveAndMergeVertex_Prologue.format(**prolodict)
+    for vertex in self.vertices:
+      temp = { "logical_type_name" : vertex.get_logical_type_name(), "full_qualified_type" :  vertex.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_receiveAndMergeVertex_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_receiveAndMergeFace_Prologue.format(**prolodict)
+    for face in self.faces:
+      temp = { "logical_type_name" : face.get_logical_type_name(), "full_qualified_type" :  face.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_receiveAndMergeFace_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_deleteAllStacks_Prologue.format(**prolodict)
+    for cell in self.cells:
+      s+=  self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
+    for face in self.faces:
+      s+=  self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
+    for vertex in self.vertices:
+      s+=  self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_deleteAllStacks_Epilogue.format({})
+
+
+    output_file.write( s)
 
 
 
@@ -1342,7 +1320,7 @@ tarch::logging::Log {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME
       print( "write " + full_qualified_filename )
       output_file = open( full_qualified_filename, "w" )
       output_file.write( self.TemplateImplementationFilePrologue.format(**self.d) )
-      
+
       self.__generate_constructor(output_file)
       self.__generate_clone(output_file)
       self.__generate_getGridControlEvents(output_file)
@@ -1363,9 +1341,9 @@ tarch::logging::Log {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME
   def generate(self,overwrite,directory):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
-    
+
     cpp_filename    = directory + "/" + self.get_cpp_file_name()
-    
+
     self.__generate_header(overwrite,directory)
     self.__generate_implementation(overwrite,cpp_filename)
 
