@@ -13,21 +13,21 @@ import re
 
 class Observer(object):
   default_overwrite = True
-  
-  
+
+
   def __init__(self,classname,namespace,subdirectory,included_actions,vertices,faces,cells):
     """
       Included actions is a list of qualified actions which are used
     """
     self.classname    = classname
     self.namespace    = namespace
-    self.subdirectory = subdirectory 
-    
+    self.subdirectory = subdirectory
+
     self.included_actions = included_actions
     self.vertices          = vertices
     self.faces             = faces
     self.cells             = cells
-    
+
     self.d = {}
     self.d[ "OPEN_NAMESPACE" ]           = ""
     self.d[ "CLOSE_NAMESPACE" ]          = ""
@@ -66,10 +66,10 @@ class Observer(object):
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS" ]   += "DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)";
       self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ]     += "DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)";
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ]   += "DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)";
-      
+
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT" ]       = self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS" ]
     self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT" ]     = self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS" ]
-           
+
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS" ]      = ""
     self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS" ]    = ""
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]      = ""
@@ -84,7 +84,7 @@ class Observer(object):
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS" ]   += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )";
       self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]     += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )(pick)";
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]   += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )(pick)";
-      
+
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS" ]   = ""
     self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS" ] = ""
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]   = ""
@@ -100,6 +100,7 @@ class Observer(object):
       self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]     += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )(pick)";
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]   += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )(pick)";
 
+    print("Initially: {}".format(len(self.d)))
     #
     # Create powersets of arguments
     #
@@ -115,7 +116,8 @@ class Observer(object):
           new_dictionary_entries[keyA+","+keyB] = new_entry
       for key in new_dictionary_entries:
         self.d[key] = new_dictionary_entries[key]
-    
+
+    print("Powersets: {}".format(len(self.d)))
     #
     # Create variants with leading and tailing comma
     #
@@ -123,31 +125,33 @@ class Observer(object):
     for key in self.d:
       if self.d[key]!="":
         new_dictionary_entries[ key+","     ] = self.d[key] + ","
-        new_dictionary_entries[ ","+key     ] = "," + self.d[key] 
+        new_dictionary_entries[ ","+key     ] = "," + self.d[key]
         new_dictionary_entries[ ","+key+"," ] = "," + self.d[key] + ","
       else:
         new_dictionary_entries[ key+"," ]       = ""
         new_dictionary_entries[ "," + key ]     = ""
         new_dictionary_entries[ "," + key+"," ] = ""
-        
+
     for key in new_dictionary_entries:
       self.d[key] = new_dictionary_entries[key]
+    print("Commas: {}".format(len(self.d)))
 
 
   def __generate_header(self,overwrite,directory):
     headerfile_template = os.path.realpath(__file__).replace( ".pyc", ".h.template" ).replace( ".py", ".h.template" )
-    header = Jinja2TemplatedHeaderFile(headerfile_template,self.classname,self.namespace,self.subdirectory,self.d,self.default_overwrite)
+    header = Jinja2TemplatedHeaderFile(headerfile_template,self.classname,self.namespace,self.subdirectory,{"ATTRIBUTES":self.d["ATTRIBUTES"]},self.default_overwrite)
     header.generate(overwrite,directory)
-    
+    del header
+
 
 
   TemplateConstructor = """
-  
+
 {FULL_QUALIFIED_CLASSNAME}::{CLASSNAME}(int spacetreeId):
   _spacetreeId( spacetreeId ) {MAPPING_INITIALISATION_LIST}
 {{
 }}
-  
+
 
   """
 
@@ -165,11 +169,11 @@ class Observer(object):
 
 
   TemplateClone = """
-  
+
 peano4::grid::TraversalObserver* {FULL_QUALIFIED_CLASSNAME}::clone(int spacetreeId) {{
   return new {CLASSNAME}(spacetreeId);
 }}
-  
+
   """
 
 
@@ -262,24 +266,37 @@ void {FULL_QUALIFIED_CLASSNAME}::endTraversal( const tarch::la::Vector<Dimension
     
 
 
-  def __format_template_per_action(self,output_file,template,reverse_order=False):
+  def __format_template_per_action(self,output_file,template,reverse_order=False, manual_dict=None):
     """
      Takes the specified template file, iterates over actions and pastes
      the template into the output file once per action. Per action, the dictionary's
      entries are updated. Otherwise, the dictionary remains unchanged.
-    """ 
+    """
     local_actions = [x for x in self.included_actions]
     if reverse_order:
       local_actions.reverse()
-        
+
     for action in local_actions:
-      self.d[ "ACTIVE_ACTION_SET" ]  = "_actionSet" + str( self.included_actions.index(action) )
-      self.d[ "ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME" ]  = action
-      output_file.write( template.format(**self.d) )
-        
+      if manual_dict is None:
+          self.d[ "ACTIVE_ACTION_SET" ]  = "_actionSet" + str( self.included_actions.index(action) )
+          self.d[ "ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME" ]  = action
+          if output_file is not None:
+            output_file.write( template.format(**self.d) )
+          else:
+            return template.format(**self.d)
+      else:
+
+          manual_dict[ "ACTIVE_ACTION_SET" ]  = "_actionSet" + str( self.included_actions.index(action) )
+          manual_dict[ "ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME" ]  = action
+          # output_file.write( template.format(**manual_dict) )
+          if output_file is not None:
+            output_file.write( template.format(**manual_dict) )
+          else:
+            return template.format(**manual_dict)
+
 
   TemplateGetGridControlEvents_Prologue = """
-  
+
 std::vector< peano4::grid::GridControlEvent > {FULL_QUALIFIED_CLASSNAME}::getGridControlEvents() const {{
   std::vector< peano4::grid::GridControlEvent > result;
 """
@@ -589,13 +606,13 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateEnterCell_CellLoad_MappingCall = """  
+  TemplateEnterCell_CellLoad_MappingCall = """
   // Invoke creational events on cell {name}
   {{
     peano4::datamanagement::CellMarker marker( event );
     if (
       event.getCellData()==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
-      and 
+      and
       marker.isLocal()
     ) {{
       {ACTIVE_ACTION_SET}.createCell(
@@ -607,7 +624,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         {,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS}
         {,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}
       );
-    }}  
+    }}
   }}
 """
 
@@ -631,43 +648,81 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 }}
 """
 
-  
+  def mkSubDict(self, keys):
+      return {k : self.d[k] for k in keys}
+
   def __generate_enterCell(self,output_file):
     """
       Generates enter cell
     """
     output_file.write( self.TemplateEnterCell_Prologue.format(**self.d) )
-          
+
     for vertex in self.vertices:
+      temp = {
+        "name": vertex.name,
+        "enumeration_type":vertex.get_enumeration_type(),
+        "logical_type_name":vertex.get_logical_type_name(),
+        "full_qualified_type": vertex.get_full_qualified_type()
+       }
       self.d[ "name" ]                 = vertex.name
-      self.d[ "enumeration_type" ]     = vertex.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = vertex.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = vertex.get_full_qualified_type()
-      output_file.write( self.TemplateEnterCell_VertexLoad_Prologue.format(**self.d) )
+      output_file.write( self.TemplateEnterCell_VertexLoad_Prologue.format(**temp) )
     if len(self.vertices)>0:
       self.__format_template_per_action(output_file, self.TemplateEnterCell_VertexLoad_MappingCall, False)
 
     for face in self.faces:
+      temp = {
+        "name": face.name,
+        "enumeration_type":face.get_enumeration_type(),
+        "logical_type_name":face.get_logical_type_name(),
+        "full_qualified_type": face.get_full_qualified_type()
+       }
       self.d[ "name" ]                 = face.name
-      self.d[ "enumeration_type" ]     = face.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = face.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = face.get_full_qualified_type()
-      output_file.write( self.TemplateEnterCell_FaceLoad_Prologue.format(**self.d) )
+      output_file.write( self.TemplateEnterCell_FaceLoad_Prologue.format(**temp) )
+
     if len(self.faces)>0:
-      self.__format_template_per_action(output_file, self.TemplateEnterCell_FaceLoad_MappingCall, False)
+      md = self.mkSubDict(["name",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
+        "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS",
+        "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS"
+        ])
+      self.__format_template_per_action(output_file, self.TemplateEnterCell_FaceLoad_MappingCall, False, manual_dict=md)
+
 
     for cell in self.cells:
+      temp = {
+        "name": cell.name,
+        # "enumeration_type":cell.get_enumeration_type(),
+        "logical_type_name":cell.get_logical_type_name(),
+        "full_qualified_type": cell.get_full_qualified_type()
+       }
       self.d[ "name" ]                 = cell.name
-      #self.d[ "enumeration_type" ]     = cell.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = cell.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = cell.get_full_qualified_type()
-      output_file.write( self.TemplateEnterCell_CellLoad_Prologue.format(**self.d) )
+      output_file.write( self.TemplateEnterCell_CellLoad_Prologue.format(**temp) )
     if len(self.cells)>0:
-      self.__format_template_per_action(output_file, self.TemplateEnterCell_CellLoad_MappingCall, False)
+      md = self.mkSubDict(["name",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,",
+        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,",
+        "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS",
+        ",MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS",
+        ",MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"
+        ])
+      self.__format_template_per_action(output_file, self.TemplateEnterCell_CellLoad_MappingCall, False, manual_dict=md)
+      # from IPython import embed
+      # embed()
+      # import sys
+      # sys.exit(1)
 
 
-    self.__format_template_per_action(output_file, self.TemplateEnterCell_MappingCall, False)
-    output_file.write( self.TemplateEnterCell_Epilogue.format(**self.d) )
+    md = self.mkSubDict([
+      ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT",
+      ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT"])
+
+    self.__format_template_per_action(output_file, self.TemplateEnterCell_MappingCall, False, manual_dict=md)
+    output_file.write( self.TemplateEnterCell_Epilogue.format({}) )
 
 
   TemplateLeaveCell_Prologue = """  
@@ -922,36 +977,60 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
     """
       Generates enter cell
     """
-    output_file.write( self.TemplateLeaveCell_Prologue.format(**self.d) )
-    self.__format_template_per_action(output_file, self.TemplateLeaveCell_MappingCall, True)
-          
-    if len(self.cells)>0:
-      self.__format_template_per_action(output_file, self.TemplateLeaveCell_CellStore_MappingCall, True)
-    for cell in self.cells:
-      self.d[ "name" ]                 = cell.name
-      self.d[ "logical_type_name" ]    = cell.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = cell.get_full_qualified_type()
-      output_file.write( self.TemplateLeaveCell_CellStore_Epilogue.format(**self.d) )
+    output_file.write( self.TemplateLeaveCell_Prologue.format(**self.mkSubDict(["FULL_QUALIFIED_CLASSNAME"])) )
 
-    if len(self.faces):
-      self.__format_template_per_action(output_file, self.TemplateLeaveCell_FaceStore_MappingCall, True)
+    md = self.mkSubDict([
+      ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT",
+      ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT"
+      ])
+    self.__format_template_per_action(output_file, self.TemplateLeaveCell_MappingCall, True, manual_dict=md)
+
+    if len(self.cells)>0:
+      md = self.mkSubDict([
+        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"
+        ])
+      self.__format_template_per_action(output_file, self.TemplateLeaveCell_CellStore_MappingCall, True, manual_dict=md)
+
+    for cell in self.cells:
+      self.d[ "name" ] = cell.name
+      temp = { "name" : cell.name, "logical_type_name" : cell.get_logical_type_name(), "full_qualified_type" : cell.get_full_qualified_type() }
+      output_file.write( self.TemplateLeaveCell_CellStore_Epilogue.format(**temp) )
+
+    if len(self.faces)>0:
+      md = self.mkSubDict([
+        "name",
+        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ])
+      self.__format_template_per_action(output_file, self.TemplateLeaveCell_FaceStore_MappingCall, True, manual_dict=md)
+
     for face in self.faces:
-      self.d[ "name" ]                 = face.name
-      self.d[ "enumeration_type" ]     = face.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = face.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = face.get_full_qualified_type()
-      output_file.write( self.TemplateLeaveCell_FaceStore_Epilogue.format(**self.d) )
-        
+      self.d[ "name" ] = face.name
+      temp = { "name" : face.name, "enumeration_type":face.get_enumeration_type(), "logical_type_name":face.get_logical_type_name(), "full_qualified_type":face.get_full_qualified_type()}
+      output_file.write( self.TemplateLeaveCell_FaceStore_Epilogue.format(**temp) )
+
     if len(self.vertices)>0:
-      self.__format_template_per_action(output_file, self.TemplateLeaveCell_VertexStore_MappingCall, True)
+      md = self.mkSubDict([
+        "name",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
+        ])
+      self.__format_template_per_action(output_file, self.TemplateLeaveCell_VertexStore_MappingCall, True, manual_dict=md)
+
     for vertex in self.vertices:
       self.d[ "name" ]                 = vertex.name
-      self.d[ "enumeration_type" ]     = vertex.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = vertex.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = vertex.get_full_qualified_type()
-      output_file.write( self.TemplateLeaveCell_VertexStore_Epilogue.format(**self.d) )
+      temp = { "name":vertex.name, "enumeration_type": vertex.get_enumeration_type(), "logical_type_name":vertex.get_logical_type_name(), "full_qualified_type":vertex.get_full_qualified_type()}
+      output_file.write( self.TemplateLeaveCell_VertexStore_Epilogue.format(**temp) )
 
-    output_file.write( self.TemplateLeaveCell_Epilogue.format(**self.d) )
+    output_file.write( self.TemplateLeaveCell_Epilogue.format({}))
 
 
   TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue = """
