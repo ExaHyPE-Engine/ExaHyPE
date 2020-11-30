@@ -306,27 +306,27 @@ std::vector< peano4::grid::GridControlEvent > {FULL_QUALIFIED_CLASSNAME}::getGri
     const std::vector< peano4::grid::GridControlEvent > actionResult = {ACTIVE_ACTION_SET}.getGridControlEvents();
     result.insert(result.begin(),actionResult.begin(),actionResult.end());
   }}
-"""        
+"""
 
-  
+
   TemplateGetGridControlEvents_Epilogue = """
   return result;
 }}
-  
+
 """
-  
-        
+
+
   def __generate_getGridControlEvents(self,output_file):
-    output_file.write( self.TemplateGetGridControlEvents_Prologue.format(**self.d) )
-    self.__format_template_per_action(output_file,self.TemplateGetGridControlEvents_MappingCall)
-    output_file.write( self.TemplateGetGridControlEvents_Epilogue.format(**self.d) )
+    output_file.write( self.TemplateGetGridControlEvents_Prologue.format(**{"FULL_QUALIFIED_CLASSNAME":self.d["FULL_QUALIFIED_CLASSNAME"]}) )
+    self.__format_template_per_action(output_file,self.TemplateGetGridControlEvents_MappingCall, manual_dict={})
+    output_file.write( self.TemplateGetGridControlEvents_Epilogue.format(**{}) )
 
 
   def __generate_clone(self,output_file):
     output_file.write( self.TemplateClone.format(**self.d) )
 
 
-  TemplateEnterCell_Prologue = """  
+  TemplateEnterCell_Prologue = """
 void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEvent&  event ) {{
   logTraceInWith2Arguments( "enterCell(...)", _spacetreeId, event.toString() );
 """
