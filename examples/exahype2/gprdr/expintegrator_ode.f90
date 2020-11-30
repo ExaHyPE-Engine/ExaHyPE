@@ -83,7 +83,7 @@ CONTAINS
         Vpde(21)    = Vode(1)
         Vpde(9:17)  = Vode(2:10)
         !Vpde(6:8)   = Vode(11:13)
-        Vpde(24)    = real(Param(2),8)
+        !Vpde(24)    = real(Param(2),8)
 #endif
 #ifdef EQNTYPE7
 
@@ -208,7 +208,7 @@ CONTAINS
         ODE%alpha1 = RUPTURE_PARAMS(7)
         ODE%beta1  = RUPTURE_PARAMS(8)
         ODE%alpha2 = RUPTURE_PARAMS(9)
-        ODE%beta2  = RUPTURE_PARAMS(10)
+        ODE%beta2  = RUPTURE_PARAMS(10)*min(1.0,max(0.0,1.0-Q0(23))) ! Duo April 10
         
         ODE%Yeq_mode = EQN%Yeq_mode
         ODE%Yeq_A  =  RUPTURE_PARAMS(11)
