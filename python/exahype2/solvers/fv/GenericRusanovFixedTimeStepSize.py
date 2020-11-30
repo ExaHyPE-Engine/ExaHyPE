@@ -71,39 +71,6 @@ class GenericRusanovFixedTimeStepSize( FV ):
           }
 """
 
-
-  """
-  
-    Combination of the two previous ones.
-    
-  """
-  RusanovCallWithFluxAndNCP = """
-          [] (
-           double * __restrict__ Q,
-           const tarch::la::Vector<Dimensions,double>&  faceCentre,
-           const tarch::la::Vector<Dimensions,double>&  volumeH,
-           double                                       t,
-           double                                       dt,
-           int                                          normal,
-           double * __restrict__                        F
-          ) -> void {
-            {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
-          },
-          [] (
-            double                                       Q[],
-            double                                       gradQ[][Dimensions],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       BgradQ[]
-          ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
-          }
-"""
-
-
   EigenvaluesCall = """
           [] (
             double                                       Q[],
@@ -213,8 +180,6 @@ class GenericRusanovFixedTimeStepSize( FV ):
       self._rusanov_call = self.RusanovCallWithFlux
     elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
       self._rusanov_call = self.RusanovCallWithNCP
-    elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-      self._rusanov_call = self.RusanovCallWithFluxAndNCP
     else:
       raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
 

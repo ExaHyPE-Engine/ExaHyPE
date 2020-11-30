@@ -75,36 +75,3 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundar
 }
 {% endif %}
 
-
-{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::flux(
-  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal,
-  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
-) {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "flux(...)" );
-}
-{% endif %}
-
-
-{% if NCP_IMPLEMENTATION=="<user-defined>" %}
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::nonconservativeProduct(
-  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-) {
-  logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "nonconservativeProduct(...)" );
-}
-{% endif %}
-
