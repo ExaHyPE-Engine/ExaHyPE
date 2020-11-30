@@ -100,39 +100,6 @@ class Observer(object):
       self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]     += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )(pick)";
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]   += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )(pick)";
 
-    #
-    # Create powersets of arguments
-    #
-    for i in range(0,2):
-      new_dictionary_entries = {}
-      for keyA in self.d:
-        for keyB in self.d:
-          new_entry = ""
-          if self.d[keyA]!="" and self.d[keyB]!="":
-            new_entry = self.d[keyA] + "," + self.d[keyB]
-          else:
-            new_entry = self.d[keyA] + self.d[keyB]
-          new_dictionary_entries[keyA+","+keyB] = new_entry
-      for key in new_dictionary_entries:
-        self.d[key] = new_dictionary_entries[key]
-
-    #
-    # Create variants with leading and tailing comma
-    #
-    new_dictionary_entries = {}
-    for key in self.d:
-      if self.d[key]!="":
-        new_dictionary_entries[ key+","     ] = self.d[key] + ","
-        new_dictionary_entries[ ","+key     ] = "," + self.d[key]
-        new_dictionary_entries[ ","+key+"," ] = "," + self.d[key] + ","
-      else:
-        new_dictionary_entries[ key+"," ]       = ""
-        new_dictionary_entries[ "," + key ]     = ""
-        new_dictionary_entries[ "," + key+"," ] = ""
-
-    for key in new_dictionary_entries:
-      self.d[key] = new_dictionary_entries[key]
-
 
   def __generate_header(self,overwrite,directory):
     headerfile_template = os.path.realpath(__file__).replace( ".pyc", ".h.template" ).replace( ".py", ".h.template" )
@@ -140,7 +107,6 @@ class Observer(object):
     header = Jinja2TemplatedHeaderFile(headerfile_template,self.classname,self.namespace,self.subdirectory, md,self.default_overwrite)
     header.generate(overwrite,directory)
     del header
-
 
 
   TemplateConstructor = """
@@ -176,7 +142,7 @@ peano4::grid::TraversalObserver* {FULL_QUALIFIED_CLASSNAME}::clone(int spacetree
 
 
   TemplateBeginTraversal = """
-  
+
 void {FULL_QUALIFIED_CLASSNAME}::beginTraversal( const tarch::la::Vector<Dimensions,double>&  x, const tarch::la::Vector<Dimensions,double>&  h ) {{
   logTraceInWith2Arguments( "beginTraversal(...)", x, h );
   //
@@ -185,24 +151,24 @@ void {FULL_QUALIFIED_CLASSNAME}::beginTraversal( const tarch::la::Vector<Dimensi
 {MAPPING_BEGIN_TRAVERSAL_CALLS}
 
   //
-  // Fill call stacks with dummies which represent level -1 such that we can 
-  // call standard action routines on level 0 with parents. Without these 
-  // statements, a top(1) call would raise an assertion. 
+  // Fill call stacks with dummies which represent level -1 such that we can
+  // call standard action routines on level 0 with parents. Without these
+  // statements, a top(1) call would raise an assertion.
   //
 {INITIAL_PUSH_TO_OUTPUT_STREAMS}
   logTraceOutWith2Arguments( "beginTraversal(...)", x, h );
 }}
-  
+
   """
 
-    
+
   def __generate_beginTraversal(self,output_file):
     self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]     = ""
     for action in self.included_actions:
       self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]  += "  _actionSet"
       self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]  += str( self.included_actions.index(action) )
       self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]  += ".beginTraversal();\n"
-      
+
     self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    = ""
     for cell in self.cells:
       self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    += "  DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPush( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( " + cell.get_full_qualified_type() + "() );\n"
@@ -224,17 +190,17 @@ void {FULL_QUALIFIED_CLASSNAME}::beginTraversal( const tarch::la::Vector<Dimensi
 
 
   TemplateEndTraversal = """
-  
+
 void {FULL_QUALIFIED_CLASSNAME}::endTraversal( const tarch::la::Vector<Dimensions,double>&  x, const tarch::la::Vector<Dimensions,double>&  h ) {{
   logTraceInWith2Arguments( "endTraversal(...)", x, h );
 {MAPPING_END_TRAVERSAL_CALLS}
 {FINAL_POP_FROM_INPUT_STREAMS}
   logTraceOutWith2Arguments( "endTraversal(...)", x, h );
 }}
-  
+
   """
 
-    
+
   def __generate_endTraversal(self,output_file):
     self.d[ "MAPPING_END_TRAVERSAL_CALLS" ]                = ""
     for action in self.included_actions:
@@ -354,8 +320,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         assertion4( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
         data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inVertexStack))->pop();
       }}
-   
-      #if PeanoDebug>0  
+
+      #if PeanoDebug>0
       if (
         inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         or
@@ -386,20 +352,20 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
   // Handle vertex {name}
   {{
     peano4::datamanagement::VertexMarker  marker(event);
-    
+
     for (int i=0; i<TwoPowerD; i++) {{
       int inVertexStack  = event.getVertexDataFrom(i);
       int pick          = event.getVertexDataTo(i);   // the vertex position
 
       marker.select(pick);
-      
+
       if (
         inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         marker.isLocal()
       ) {{
         // Take care about the coarse grid accesses: Faces and cells are not yet loaded.
-        // Therefore we don't use the usual shift of @f$ 2 \cdot 2d @f$ or @f$ 2 \cdot 2^d @f$ 
+        // Therefore we don't use the usual shift of @f$ 2 \cdot 2d @f$ or @f$ 2 \cdot 2^d @f$
         // but only half of it.
         {ACTIVE_ACTION_SET}.createPersistentVertex(
            marker
@@ -444,7 +410,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateEnterCell_FaceLoad_Prologue = """  
+  TemplateEnterCell_FaceLoad_Prologue = """
   // Load face {name}
   {{
     auto view = DataRepository::_{logical_type_name}Stack.getForPush( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoTimesD );
@@ -454,7 +420,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       logDebug("enterCell(...)", "face stack " << inFaceStack << "->pos-" << outFaceStackPosition );
 
       peano4::datamanagement::FaceMarker  marker(event,outFaceStackPosition);
-      
+
       {full_qualified_type} data ;
       if (
         inFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -468,8 +434,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         assertion4( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
         data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inFaceStack))->pop();
       }}
-      
-      #if PeanoDebug>0  
+
+      #if PeanoDebug>0
       if (
         inFaceStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         or
@@ -496,7 +462,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateEnterCell_FaceLoad_MappingCall = """  
+  TemplateEnterCell_FaceLoad_MappingCall = """
   // Handle face {name}
   {{
     peano4::datamanagement::FaceMarker marker( event );
@@ -505,9 +471,9 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       int pick        = event.getFaceDataTo(i);
 
       marker.select(pick);
-      
+
       assertion3( marker.isLocal() or not event.getIsCellLocal(), marker.toString(), event.toString(), i );
-            
+
       if (
         inFaceStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -561,17 +527,17 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateEnterCell_CellLoad_Prologue = """  
+  TemplateEnterCell_CellLoad_Prologue = """
   // Load cell {name}
   {{
     auto view = DataRepository::_{logical_type_name}Stack.getForPush( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
-    
+
     peano4::datamanagement::CellMarker  marker(event);
 
     const int inCellStack  = event.getCellData();
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
     logDebug("enterCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack << "(" << {full_qualified_type}::loadPersistently(marker) << ")" );
-        
+
     {full_qualified_type}& data = view.get(0);
     if (
       inCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -583,8 +549,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       assertion3( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
       data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inCellStack))->pop();
     }}
-    
-    #if PeanoDebug>0  
+
+    #if PeanoDebug>0
     if (
       inCellStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       or
@@ -627,7 +593,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateEnterCell_MappingCall = """  
+  TemplateEnterCell_MappingCall = """
   {{
     peano4::datamanagement::CellMarker marker( event );
     if (marker.isLocal()) {{
@@ -646,8 +612,33 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 }}
 """
 
+  def generateDictEntry(self, key):
+      """
+      Some logic to produce new dictionary entries from existing ones.
+      This deals mainly with having to avoid C++ code with consequtive commata
+      as some dict entries can be an empty string.
+      """
+
+      fields = key.split(",")
+      nonempty = [self.d[f] for f in fields if not f=="" and not self.d[f]==""]
+      if len(nonempty)>0:
+          s = ",".join(nonempty)
+          if key.startswith(",") and not s.startswith(","): s = "," + s
+          if key.endswith(",") and not s.endswith(","): s+=","
+      else:
+          s=""
+
+      return s
+
+
   def mkSubDict(self, keys):
-      return {k : self.d[k] for k in keys}
+      temp = {}
+      for k in keys:
+          if not k in self.d:
+              temp[k] = self.generateDictEntry(k)
+          else:
+              temp[k] = self.d[k]
+      return temp
 
   def __generate_enterCell(self,output_file):
     """
@@ -699,6 +690,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
        }
       self.d[ "name" ]                 = cell.name
       output_file.write( self.TemplateEnterCell_CellLoad_Prologue.format(**temp) )
+
     if len(self.cells)>0:
       md = self.mkSubDict(["name",
         "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,",
@@ -709,10 +701,6 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         ",MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"
         ])
       self.__format_template_per_action(output_file, self.TemplateEnterCell_CellLoad_MappingCall, False, manual_dict=md)
-      # from IPython import embed
-      # embed()
-      # import sys
-      # sys.exit(1)
 
 
     md = self.mkSubDict([
@@ -723,14 +711,14 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
     output_file.write( self.TemplateEnterCell_Epilogue.format({}) )
 
 
-  TemplateLeaveCell_Prologue = """  
+  TemplateLeaveCell_Prologue = """
 void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEvent&  event ) {{
   logTraceInWith2Arguments( "leaveCell(...)", _spacetreeId, event.toString() );
 """
 
 
 
-  TemplateLeaveCell_MappingCall = """  
+  TemplateLeaveCell_MappingCall = """
   {{
     peano4::datamanagement::CellMarker marker( event );
     if (marker.isLocal()) {{
@@ -757,13 +745,13 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
         {,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS}
         ,{MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY}
         {,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}
-      ); 
+      );
     }}
   }}
 """
 
 
-  TemplateLeaveCell_CellStore_Epilogue = """  
+  TemplateLeaveCell_CellStore_Epilogue = """
   // Handle cell {name}
   {{
     const int inCellStack   = peano4::grid::PeanoCurve::CallStack;
@@ -791,7 +779,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
   // Handle face {name}
   {{
     peano4::datamanagement::FaceMarker  marker(event);
-    
+
     for (int i=0; i<TwoTimesD; i++) {{
       int outFaceStack      = event.getFaceDataTo(i);
       int pick              = event.getFaceDataFrom(i);
@@ -858,11 +846,11 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
       int inFaceStackPosition  = event.getFaceDataFrom(i);
       int outFaceStack         = event.getFaceDataTo(i);
       logDebug("leaveCell(...)", "pos-" << inFaceStackPosition << "->face stack " << outFaceStack );
-      
+
       peano4::datamanagement::FaceMarker  marker(event,inFaceStackPosition);
 
       {full_qualified_type} data = view.get(inFaceStackPosition);
-      
+
       if (
         outFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -882,13 +870,13 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
   // Handle vertex {name}
   {{
     peano4::datamanagement::VertexMarker  marker(event);
-    
+
     for (int i=0; i<TwoPowerD; i++) {{
       int outVertexStack        = event.getVertexDataTo(i);
       int pick                  = event.getVertexDataFrom(i);
 
       marker.select(pick);
-      
+
       if (
         outVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -944,11 +932,11 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
       int inVertexStackPosition  = event.getVertexDataFrom(i);
       int outVertexStack         = event.getVertexDataTo(i);
       logDebug("leaveCell(...)", "pos-" << inVertexStackPosition << "->vertex stack " << outVertexStack );
-      
+
       peano4::datamanagement::VertexMarker  marker(event,inVertexStackPosition);
 
       {full_qualified_type} data = view.get(inVertexStackPosition);
-  
+
       if (
         outVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -965,7 +953,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateLeaveCell_Epilogue = """  
+  TemplateLeaveCell_Epilogue = """
   logTraceOut( "leaveCell(...)" );
 }}
 """
@@ -1188,7 +1176,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4:
       _spacetreeId,inOutStack
     )->top(relativePositionOnInOutStack);
     logDebug( "sendXXX(...)", "send out " << data.toString() << " to stack " << toStack << " (relativePositionOnInOutStack=" << relativePositionOnInOutStack << ")" );
-    
+
     DataRepository::_{logical_type_name}Stack.getForPush(
       _spacetreeId, toStack
     ) -> push(data);
@@ -1208,7 +1196,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(const peano4::grid::GridT
 
   TemplateExchangeRoutines_receiveAndMergeFace_Prologue = """
 void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {{
-  logTraceInWith7Arguments( "receiveAndMergeFace(...)", event.toString(), positionWithinCell, inOutStack, relativePositionOnInOutStack, fromStack, marker.toString(), _spacetreeId ); 
+  logTraceInWith7Arguments( "receiveAndMergeFace(...)", event.toString(), positionWithinCell, inOutStack, relativePositionOnInOutStack, fromStack, marker.toString(), _spacetreeId );
 """
 
   TemplateExchangeRoutines_receiveAndMergeFace_Epilogue = """
@@ -1222,31 +1210,31 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTra
     auto   incomingData = DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId, fromStack
     )->pop();
-  
+
     auto&  data = DataRepository::_{logical_type_name}Stack.getForPush( _spacetreeId, inOutStack )->top(
       relativePositionOnInOutStack
     );
 
     logDebug( "receiveAndMergeFace(...)", "merge " << incomingData.toString() << " into " << data.toString() );
-   
+
     if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
       assertion9(
         tarch::la::countEqualEntries(data.getDebugX(), incomingData.getDebugX())==Dimensions-1,
-        data.getDebugX(), incomingData.getDebugX(), 
+        data.getDebugX(), incomingData.getDebugX(),
         data.getDebugH(), incomingData.getDebugH(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
-      assertionVectorNumericalEquals7( 
-        data.getDebugH(), incomingData.getDebugH(), 
+      assertionVectorNumericalEquals7(
+        data.getDebugH(), incomingData.getDebugH(),
         data.getDebugX(), incomingData.getDebugX(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
     }}
     else {{
-      assertionVectorNumericalEquals7( 
-        data.getDebugX(), incomingData.getDebugX(), 
+      assertionVectorNumericalEquals7(
+        data.getDebugX(), incomingData.getDebugX(),
         data.getDebugH(), incomingData.getDebugH(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
-      assertionVectorNumericalEquals7( 
-        data.getDebugH(), incomingData.getDebugH(), 
+      assertionVectorNumericalEquals7(
+        data.getDebugH(), incomingData.getDebugH(),
         data.getDebugX(), incomingData.getDebugX(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
     }}
-    
+
     data.merge(incomingData, marker);
   }}
 """
