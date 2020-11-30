@@ -38,13 +38,8 @@ all: solver
 
 
 
-<<<<<<< HEAD
 solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) 
 	$(CXX) $(LDFLAGS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LIBS) -o {{EXECUTABLENAME}} 
-=======
-solver: {% for modulename,file in FORTRAN_MODULES.items() -%}{{modulename+" "}}{%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) 
-	$(CXX) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(LIBS) -o {{EXECUTABLENAME}} 
->>>>>>> origin/p4
 
     
 clean:

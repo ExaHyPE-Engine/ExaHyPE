@@ -26,7 +26,7 @@ class examples::exahype2::gprdr::GPRDR: public AbstractGPRDR {
     static tarch::logging::Log   _log;
 
   public:
-    
+    GPRDR();
 
 
     
@@ -39,7 +39,7 @@ class examples::exahype2::gprdr::GPRDR: public AbstractGPRDR {
     
 
 
-    
+    /*
     virtual double maxEigenvalue(
       double * __restrict__ Q, // Q[27+3],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -68,8 +68,22 @@ class examples::exahype2::gprdr::GPRDR: public AbstractGPRDR {
       double                                       t,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[27]
-    ) override;
+    ) override;*/
+
     
+    void solveRiemannProblem(
+       double * __restrict__ QL,
+       double * __restrict__ QR,
+       const tarch::la::Vector<Dimensions,double>&  faceCentre,
+       double                                       volumeH,
+       double                                       t,
+       double                                       dt,
+       int                                          normal,
+       double * __restrict__ FL,
+       double * __restrict__ FR
+     ) override;
+
+
 };
 
 
