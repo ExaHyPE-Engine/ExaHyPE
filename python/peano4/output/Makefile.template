@@ -32,19 +32,20 @@ all: solver
 	$(FC) $(FCFLAGS) -c -o $@ $<
 
     
-{% for modulename,files in FORTRAN_MODULES.items() -%} 
-{{"\n" + modulename}}: {% for file in files -%} {{file}} {%- endfor %}  
+{% for module in FORTRAN_MODULES -%} 
+{{module | replace(".f90", ".mod")}}: {{module | replace(".f90", ".o") + "\n" }}  
 {%- endfor %}
 
 
 
-solver: {% for modulename,file in FORTRAN_MODULES.items() -%}{{modulename+" "}}{%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) 
-	$(CXX) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(LIBS) -o {{EXECUTABLENAME}} 
+solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) 
+	$(CXX) $(LDFLAGS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LIBS) -o {{EXECUTABLENAME}} 
 
     
 clean:
 	rm -f $(CXX_OBJS) $(FORTRAN_OBJS)
-	{% for modulename,files in FORTRAN_MODULES.items() -%} 
-	rm -f {{modulename+"\n"}}  
+	{% for module in FORTRAN_MODULES -%} 
+	rm -f {{module | replace(".f90", ".o") + "\n\t"}}  
 	{%- endfor %}
+	rm -f *.mod
 	rm -f {{EXECUTABLENAME}}
