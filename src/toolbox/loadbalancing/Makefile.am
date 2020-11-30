@@ -1,10 +1,8 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 
-if UseToolboxLoadBalancing
-  lib_LIBRARIES = libToolboxLoadBalancing2d.a libToolboxLoadBalancing2d_debug.a libToolboxLoadBalancing2d_trace.a  libToolboxLoadBalancing2d_asserts.a \
+lib_LIBRARIES = libToolboxLoadBalancing2d.a libToolboxLoadBalancing2d_debug.a libToolboxLoadBalancing2d_trace.a  libToolboxLoadBalancing2d_asserts.a \
                   libToolboxLoadBalancing3d.a libToolboxLoadBalancing3d_debug.a libToolboxLoadBalancing3d_trace.a  libToolboxLoadBalancing3d_asserts.a
-endif
 
 
 ToolboxLoadBalancing_SOURCES = \
