@@ -100,7 +100,6 @@ class Observer(object):
       self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]     += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )(pick)";
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]   += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )(pick)";
 
-    print("Initially: {}".format(len(self.d)))
     #
     # Create powersets of arguments
     #
@@ -117,7 +116,6 @@ class Observer(object):
       for key in new_dictionary_entries:
         self.d[key] = new_dictionary_entries[key]
 
-    print("Powersets: {}".format(len(self.d)))
     #
     # Create variants with leading and tailing comma
     #
@@ -134,12 +132,12 @@ class Observer(object):
 
     for key in new_dictionary_entries:
       self.d[key] = new_dictionary_entries[key]
-    print("Commas: {}".format(len(self.d)))
 
 
   def __generate_header(self,overwrite,directory):
     headerfile_template = os.path.realpath(__file__).replace( ".pyc", ".h.template" ).replace( ".py", ".h.template" )
-    header = Jinja2TemplatedHeaderFile(headerfile_template,self.classname,self.namespace,self.subdirectory,{"ATTRIBUTES":self.d["ATTRIBUTES"]},self.default_overwrite)
+    md = self.mkSubDict(["ATTRIBUTES", "INCLUDES"])
+    header = Jinja2TemplatedHeaderFile(headerfile_template,self.classname,self.namespace,self.subdirectory, md,self.default_overwrite)
     header.generate(overwrite,directory)
     del header
 
@@ -261,9 +259,9 @@ void {FULL_QUALIFIED_CLASSNAME}::endTraversal( const tarch::la::Vector<Dimension
       self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    += "  }\n"
       pass
 
-    
+
     output_file.write( self.TemplateEndTraversal.format(**self.d) )
-    
+
 
 
   def __format_template_per_action(self,output_file,template,reverse_order=False, manual_dict=None):
