@@ -31,7 +31,7 @@ class Constants(object):
     self.defines = []
     self.d = {}
     self.d[ "ADD_CONSTANTS" ]            = ""
-
+    self.d[ "INCLUDES" ]                 = ""
     self.d[ "OPEN_NAMESPACE" ]           = ""
     self.d[ "CLOSE_NAMESPACE" ]          = ""
     self.d[ "INCLUDE_GUARD" ]            = "_"
@@ -42,6 +42,15 @@ class Constants(object):
     self.d[ "INCLUDE_GUARD" ]         += "CONSTANTS_"
 
     self.d[ "INCLUDE_GUARD" ] = self.d[ "INCLUDE_GUARD" ].upper()
+    
+
+  def add_include(self, include_statement ):
+    """
+    
+     Add a whole include statement.
+    
+    """
+    self.d[ "INCLUDES" ] += include_statement + "\n"
     
     
   def export( self, name, value ):
@@ -56,6 +65,28 @@ class Constants(object):
       
     """
     new_entry = "constexpr auto " + str(name) + " = " + str(value) + ";"
+    self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
+    pass
+  
+  
+  def export_boolean_sequence( self, name, value ):
+    """
+    
+      Tell the C++ code underlying the project that a certain variable with a 
+      name has a certain value. The passed arguments are mapped onto an 
+      constexpr. Therefore, name has to be a string, while value can be an 
+      integer, a float or a string as well. If you want to export booleans
+      or just define variants, you have to use the other routines.
+      
+      
+    """
+    new_entry = "const std::bitset<" + str(len(value)) + "> " + str(name) + " = 0";
+    base = 1
+    for i in range(0,len(value)):
+      if value[i]:
+        new_entry += "+" + str(base)
+      base *= 2
+    new_entry += ";"
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
   

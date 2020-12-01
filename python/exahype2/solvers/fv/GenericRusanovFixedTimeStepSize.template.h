@@ -51,16 +51,6 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     {% endif %}
 
 
-    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    virtual double maxEigenvalue(
-      double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal
-    ) override;
-    {% endif %}
-
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void boundaryConditions(
@@ -74,28 +64,30 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     {% endif %}
 
 
-    {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-    void flux(
-      double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+
+    {% if RIEMANN_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
+    virtual void boundaryConditions(
+      double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double * __restrict__ Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
-      int                                          normal,
-      double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
-    ) override;
+      int                                          normal
+    )  override;
     {% endif %}
 
-    {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-    void nonconservativeProduct(
-      double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
+
+    void solveRiemannProblem(
+      double * __restrict__ QL,
+      double * __restrict__ QR,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
-      double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+      double * __restrict__ FL,
+      double * __restrict__ FR
     ) override;
-    {% endif %}
 };
 
 

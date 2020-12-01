@@ -11,6 +11,8 @@ void initparameters_(const int*  length, const char* parsetup);
 
 
 // only initialdata_ is used, no more.
+void readcgfile_(const double* const MyOffset, const double* const MyDomain);
 void pdelimitervalue_(int* limiter_value, const double* xx,const int* const numberOfObservables, const double* const observablesMin,const double* const observablesMax);
+void pdegeometriclimitervalue_(int* limiter_value, const double* xx);
 }/* extern "C" */
 #endif /* __INITIAL_DATA_ADAPTER_CPP_FORTRAN_MHD__ */

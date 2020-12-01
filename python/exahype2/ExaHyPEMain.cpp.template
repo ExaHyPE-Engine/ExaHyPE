@@ -320,10 +320,11 @@ int main(int argc, char** argv) {{
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
   peano4::fillLookupTables();
+  
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
-    0
+    {PERIODIC_BC}
   );
   
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>1 and tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {{

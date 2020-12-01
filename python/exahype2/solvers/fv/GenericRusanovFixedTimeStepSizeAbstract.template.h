@@ -17,6 +17,7 @@
 
 #include "peano4/utils/Globals.h"
 
+#include "Constants.h"
 
 
 
@@ -48,6 +49,9 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     /**
      * Determine max eigenvalue over Jacobian in a given point with solution values
      * (states) Q. All parameters are in.
+     *
+     * @return Max eigenvalue. Result has to be positive, so we are actually speaking
+     *   about the maximum absolute eigenvalue.
      */
     virtual double maxEigenvalue(
       double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -59,18 +63,18 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
 
 
     {% if FLUX_IMPLEMENTATION!="<none>" %}
-   virtual void flux(
-     double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-     const tarch::la::Vector<Dimensions,double>&  faceCentre,
-     const tarch::la::Vector<Dimensions,double>&  volumeH,
-     double                                       t,
-     int                                          normal,
-     double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+    virtual void flux(
+      double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
-     {% endif %}
+    {% endif %}
      
      
-     {% if NCP_IMPLEMENTATION!="<none>" %}
+    {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
       double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
@@ -80,7 +84,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
-     {% endif %}
+    {% endif %}
 
 
     {% include "AbstractSolverFixedTimeStepSize.template.h" %}

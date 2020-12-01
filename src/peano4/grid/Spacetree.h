@@ -49,6 +49,18 @@ namespace peano4 {
 class peano4::grid::Spacetree {
   public:
     static const int InvalidRank;
+    /**
+     * Periodic boundary conditions are technically realised as domain
+     * decomposition, i.e. the vertices along the periodic boundaries carry
+     * rank numbers which host RankOfPeriodicBoundaryCondition. So this is
+     * the rank number dedicated to periodic BCs. As we treat the BCs as
+     * particular neighbour ranks, all data along the periodic BCs is
+     * automatically piped onto specialised streams. This holds for both
+     * user and grid data.
+     *
+     * @see receiveAndMergeUserData()
+     * @see sendUserData()
+     */
     static const int RankOfPeriodicBoundaryCondition;
     static const int NumberOfStationarySweepsToWaitAtLeastTillJoin;
 
@@ -928,6 +940,8 @@ class peano4::grid::Spacetree {
     /**
      * Get the ids of the surround ids of a face.
      *
+     * We really return only neighbour ids, i.e. no ids of periodic boundary conditions.
+     *
      * <h2> Implementation remarks </h2>
      *
      * The domain ids (adjacency lists) along the boundary tell us what the neighbour
@@ -945,6 +959,8 @@ class peano4::grid::Spacetree {
      * @return -1  (TraversalObserver::NoData) if there's no neighbour or face is not local.
      */
     int  getNeighbourTrees( GridVertex vertex[TwoPowerD], int faceNumber, bool calledByReceivingProcess ) const;
+
+    bool isFaceAlongPeriodicBoundaryCondition(GridVertex vertex[TwoPowerD], int faceNumber, bool calledByReceivingProcess) const;
 
     /**
      * @see getNeighbourTrees()

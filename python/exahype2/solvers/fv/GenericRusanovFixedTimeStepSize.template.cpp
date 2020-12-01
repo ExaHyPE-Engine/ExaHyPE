@@ -45,21 +45,6 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::adjustS
 {% endif %}
 
 
-{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEigenvalue(
-  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal
-) {
-  logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "eigenvalues(...)" );
-}
-{% endif %}
-
-
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundaryConditions(
   double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -74,4 +59,22 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundar
   logTraceOut( "boundaryConditions(...)" );
 }
 {% endif %}
+
+
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::solveRiemannProblem(
+  double * __restrict__ QL,
+  double * __restrict__ QR,
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  double                                       volumeH,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  double * __restrict__ FL,
+  double * __restrict__ FR
+) {
+  logTraceInWith5Arguments( "solveRiemannProblem(...)", faceCentre, volumeH, t, dt, normal );
+  // @todo implement
+  logTraceOut( "solveRiemannProblem(...)" );
+
+}
 

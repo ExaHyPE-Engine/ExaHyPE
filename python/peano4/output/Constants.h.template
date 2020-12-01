@@ -11,6 +11,8 @@
 #include <string>
 
 
+{INCLUDES}
+
 
 {OPEN_NAMESPACE}
 {ADD_CONSTANTS}

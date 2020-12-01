@@ -4,9 +4,11 @@ from .PDETerms                                       import PDETerms
     
 from .FV                                             import FV
 
+from .GenericRiemannFixedTimeStepSize                import GenericRiemannFixedTimeStepSize
+ 
 from .GenericRusanovFixedTimeStepSize                import GenericRusanovFixedTimeStepSize
 from .GenericRusanovFixedTimeStepSizeWithEnclaves    import GenericRusanovFixedTimeStepSizeWithEnclaves
 from .GenericRusanovFixedTimeStepSizeWithAccelerator import GenericRusanovFixedTimeStepSizeWithAccelerator
 
-from .PointWiseClawPack                              import PointWiseClawPackFixedTimeStepSize
+from .PointWiseClawPackFixedTimeStepSize             import PointWiseClawPackFixedTimeStepSize
 
