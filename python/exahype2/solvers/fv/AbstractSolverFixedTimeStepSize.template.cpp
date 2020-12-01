@@ -1,5 +1,5 @@
 #include "{{CLASSNAME}}.h"
-
+#include "Constants.h"
 
 tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}::_log( "{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}" );
 
