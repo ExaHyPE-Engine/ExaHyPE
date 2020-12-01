@@ -2,6 +2,7 @@
 #include "Constants.h"
 #include "InitialData.h"
 #include "PDE.h"
+#include "ODE.h"
 
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
@@ -55,6 +56,18 @@ void examples::exahype2::gprdr::GPRDR::adjustSolution(
   double                                       t
 ) {
   logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
+
+  double x[3];
+  #if Dimensions==2
+  x[0] = volumeX(0);
+  x[1] = volumeX(1);
+  x[2] = 0.0;
+  #else
+  x[0] = volumeX(0);
+  x[1] = volumeX(1);
+  x[2] = volumeX(2);
+  #endif
+
   if (tarch::la::equals(t,0.0) ) {
     //
     // Initial conditions
@@ -65,18 +78,7 @@ void examples::exahype2::gprdr::GPRDR::adjustSolution(
 
     std::fill_n(Q,NumberOfUnknowns,0.0);
 
-    double x_3[3];
-    #if Dimensions==2
-    x_3[0] = volumeX(0);
-    x_3[1] = volumeX(1);
-    x_3[2] = 0.0;
-    #else
-    x_3[0] = volumeX(0);
-    x_3[1] = volumeX(1);
-    x_3[2] = volumeX(2);
-    #endif
-
-    initialdata_(x_3, &t, Q);
+    initialdata_(x, &t, Q);
   }
   else {
     //
@@ -91,56 +93,17 @@ void examples::exahype2::gprdr::GPRDR::adjustSolution(
     //
     // Guess this is the actual rupture part
     //
-    dfor(k,_NumberOfFiniteVolumesPerAxisPerPatch) {
-      int cellIndex = peano4::utils::dLinearised(k,_NumberOfFiniteVolumesPerAxisPerPatch);
-      double* Q_cell = Q + cellIndex * NumberOfUnknowns;
+    #if Dimensions==2
+    double slp = std::abs(Q[24]) ;
+    #endif
 
-      //dynamicrupture_(x,&t,&luh_cell[0],&slp);   //Duo April 28
-    }
+    dynamicrupture_(x,&t,Q,&slp);   //Duo April 28
+
+    double Q_cell_new[NumberOfUnknowns];
+    double dt = getMinTimeStepSize(); // not nice; see comment above
+    updatesolutionode_(Q_cell_new,Q,&dt);
+    std::copy_n(Q_cell_new,NumberOfUnknowns,Q);
   }
-/*
-    GPRDR::AbstractGPRDRSolver_FV::solutionUpdate(luh, cellCenter, cellSize, t, dt, maxAdmissibleDt);
-    constexpr int patchSize          = GPRDR::GPRDRSolver_FV::PatchSize;
-    constexpr int ghostLayerWidth    = GPRDR::GPRDRSolver_FV::GhostLayerWidth;
-    constexpr int patchBegin         = ghostLayerWidth; // patchBegin cell is inside domain
-    constexpr int patchEnd           = patchBegin+patchSize; // patchEnd cell is outside domain
-    constexpr int wholePatchSize      = patchSize+2*ghostLayerWidth;
-    double x[3];
-    double slp_p[3],slp_m[3];
-    double slp;
-    slp = 0.0;
-    slp_p[2] = 0.0;
-    slp_m[2] = 0.0;
-    x[2] = 0.0;
-
-  #if DIMENSIONS==3
-    kernels::idx4 idx(wholePatchSize,wholePatchSize,wholePatchSize,NumberOfVariables);
-    for (int k = patchBegin; k < patchEnd; k++) {
-  #else
-      kernels::idx3 idx(wholePatchSize,wholePatchSize,NumberOfVariables);
-  #endif
-      for (int j = patchBegin; j < patchEnd; j++) {
-        for (int i = patchBegin; i < patchEnd; i++) {
-  #if DIMENSIONS==3
-    double* luh_cell = luh + idx(k,j,i,0);
-  #else
-    double* luh_cell = luh + idx(j,i,0);
-      double* luh_m = luh+idx(patchEnd-j,i,0);
-
-      slp = std::abs( (luh_cell[24]-luh_m[24]) );
-      slp = std::abs(2*luh_cell[24]) ;
-  #endif
-    double luh_cell_new[NumberOfVariables];
-
-        x[0] = cellSize[0]/patchSize*(0.5+i-patchBegin)+cellCenter[0]-0.5*cellSize[0];
-        x[1] = cellSize[1]/patchSize*(0.5+j-patchBegin)+cellCenter[1]-0.5*cellSize[1];
-        dynamicrupture_(x,&t,&luh_cell[0],&slp);   //Duo April 28
-
-
-    updatesolutionode_(&luh_cell_new[0],luh_cell,&dt);
-    std::copy_n(luh_cell_new,NumberOfVariables,luh_cell);
-*/
-
 
   //
   // Sanity check

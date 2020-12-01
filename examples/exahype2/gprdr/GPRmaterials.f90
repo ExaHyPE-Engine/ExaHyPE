@@ -23,9 +23,10 @@ CONTAINS
         REAL                           :: DamCoeff(2)      ! (mu{2->1} lambda{2->1})
         REAL                           :: RuptureCoeff(8)  ! (K,Y0,Y1,alpha1,beta1,alpha2,beta2)
         REAL                           :: StressCoeff(4)   ! YEQ A,B,C and s0
+	REAL                           :: CoulombFLcoeff(10)  
 
 
-        call GetMaterialParameters(ChWSpeed,LamCoeff,DamCoeff,RuptureCoeff,StressCoeff, MATERIAL) 
+        call GetMaterialParameters(ChWSpeed,LamCoeff,DamCoeff,RuptureCoeff,StressCoeff, CoulombFLcoeff, MATERIAL) 
 
        getLameCoefficients  = LamCoeff(:)
 
@@ -43,6 +44,7 @@ CONTAINS
         REAL                           :: DamCoeff(2,nMAT)      ! (mu{2->1} lambda{2->1})
         REAL                           :: RuptureCoeff(8,nMAT)  ! (K,Y0,Y1,alpha1,beta1,alpha2,beta2)
         REAL                           :: StressCoeff(4,nMAT)   ! YEQ A,B,C and s0
+        REAL                           :: CoulombFLcoeff(10,nMAT)   ! 
         ! Local variables:
         REAL                           :: locXI(nMAT)
         REAL                           :: XITOT,XImean(nMAT)
@@ -53,6 +55,7 @@ CONTAINS
         REAL                           :: LDamCoeff(2)     
         REAL                           :: LRuptureCoeff(8) 
         REAL                           :: LStressCoeff(4)  
+        REAL                           :: LCoulombFLcoeff(10)
 
         do iMAT=1,nMAT
             locXI(iMAT)=max(0., min(1.,mixXI(iMAT)))
@@ -73,7 +76,7 @@ CONTAINS
         XImean=locXI/XITOT
         
         do iMAT=1,nMAT
-            call GetMaterialParameters(ChWSpeed(:,iMAT),LamCoeff(:,iMAT),DamCoeff(:,iMAT),RuptureCoeff(:,iMAT),StressCoeff(:,iMAT), MATERIALS(iMAT)) 
+            call GetMaterialParameters(ChWSpeed(:,iMAT),LamCoeff(:,iMAT),DamCoeff(:,iMAT),RuptureCoeff(:,iMAT),StressCoeff(:,iMAT), CoulombFLcoeff(:,iMAT),MATERIALS(iMAT)) 
         end do
         
         LChWSpeed     = 0.
@@ -105,6 +108,7 @@ CONTAINS
         REAL                           :: DamCoeff(2,nMAT)      ! (mu{2->1} lambda{2->1})
         REAL                           :: RuptureCoeff(8,nMAT)  ! (K,Y0,Y1,alpha1,beta1,alpha2,beta2)
         REAL                           :: StressCoeff(4,nMAT)   ! YEQ A,B,C and s0
+        REAL                           :: CoulombFLcoeff(10,nMAT)   !
         ! Local variables:
         REAL                           :: locXI(nMAT)
         REAL                           :: XITOT,XImean(nMAT)
@@ -115,6 +119,7 @@ CONTAINS
         REAL                           :: LDamCoeff(2)     
         REAL                           :: LRuptureCoeff(8) 
         REAL                           :: LStressCoeff(4)  
+        REAL                           :: LCoulombFLcoeff(10)
         
         IF(.NOT. PRESENT(RUPTUREONLY)) THEN
             FLAG = .FALSE.
@@ -140,7 +145,7 @@ CONTAINS
         XImean=locXI/XITOT
         
         do iMAT=1,nMAT
-            call GetMaterialParameters(ChWSpeed(:,iMAT),LamCoeff(:,iMAT),DamCoeff(:,iMAT),RuptureCoeff(:,iMAT),StressCoeff(:,iMAT), MATERIALS(iMAT)) 
+            call GetMaterialParameters(ChWSpeed(:,iMAT),LamCoeff(:,iMAT),DamCoeff(:,iMAT),RuptureCoeff(:,iMAT),StressCoeff(:,iMAT), CoulombFLcoeff(:,iMAT),MATERIALS(iMAT)) 
         end do
         
         LChWSpeed     = 0.
@@ -148,6 +153,7 @@ CONTAINS
         LDamCoeff     = 0.
         LRuptureCoeff = 0.
         LStressCoeff  = 0.
+	LCoulombFLcoeff = 0.
         
         do iMAT=1,nMAT
           LChWSpeed     = LChWSpeed     + XImean(iMat)*ChWSpeed(:,iMat)     
@@ -191,6 +197,7 @@ CONTAINS
         REAL                           :: DamCoeff(2)      ! (mu{2->1} lambda{2->1})
         REAL                           :: RuptureCoeff(8)  ! (K,Y0,Y1,alpha1,beta1,alpha2,beta2)
         REAL                           :: StressCoeff(4)   ! YEQ A,B,C and s0
+	REAL                           :: CoulombFLcoeff(10)   ! 
         LOGICAL                        :: FLAG
 
         IF(.NOT. PRESENT(RUPTUREONLY)) THEN
@@ -199,7 +206,7 @@ CONTAINS
             FLAG = RUPTUREONLY
         END IF
         
-        call GetMaterialParameters(ChWSpeed,LamCoeff,DamCoeff,RuptureCoeff,StressCoeff, MATERIAL) 
+        call GetMaterialParameters(ChWSpeed,LamCoeff,DamCoeff,RuptureCoeff,StressCoeff, CoulombFLcoeff, MATERIAL) 
 #if defined(EQNTYPEC99)
         IF(.NOT. FLAG) THEN
             Q(1)     = LamCoeff(1)
@@ -224,13 +231,14 @@ CONTAINS
         
     END SUBROUTINE AssignMaterialProperties
 
-    PURE SUBROUTINE GetMaterialParameters(ChWSpeed,LamCoeff,DamCoeff,RuptureCoeff,StressCoeff, MATERIAL)  
+    PURE SUBROUTINE GetMaterialParameters(ChWSpeed,LamCoeff,DamCoeff,RuptureCoeff,StressCoeff,CoulombFLcoeff, MATERIAL)  
         IMPLICIT NONE
         REAL, INTENT(OUT)              :: ChWSpeed(2)      ! The two characteristic wave speeds
         REAL, INTENT(OUT)              :: LamCoeff(3)      ! (lambda, mu, rho)
         REAL, INTENT(OUT)              :: DamCoeff(2)      ! ( mu{2->1}, lambda{2->1})
         REAL, INTENT(OUT)              :: RuptureCoeff(8)  ! (K,Y0,Y1,alpha1,beta1,alpha2,beta2)
         REAL, INTENT(OUT)              :: StressCoeff(4)   ! YEQ A,B,C and s0
+	REAL, INTENT(OUT)              :: CoulombFLcoeff(10) ! Friction related par
         CHARACTER(LEN=*), INTENT(IN)   :: MATERIAL
 
         !!!! ----------------------------------------------------------------------------------------------------------------!!!!
@@ -289,7 +297,103 @@ CONTAINS
             !StressCoeff(3)  = 4.7           ! Yeq_C                                        !
             !StressCoeff(4)  = 0.0           ! s0    
             ! -----------------------------------------------------------------------------!
+CASE('WESTERLY')
+            ! -----------------------------------------------------------------------------!
+            ! Set Lame parameters and characteristic wave speed ---------------------------!
+            LamCoeff(1) = 2620.0                                              ! RHO        !
+            ChWSpeed    = (/ 2.860630368795e+03, 4.954757140427e+03 /)        ! CS, CL     !
+            LamCoeff(2) = LamCoeff(1)*ChWSpeed(1)**2                          ! MU         !
+            LamCoeff(3) = LamCoeff(1)*(ChWSpeed(2)**2 - 2.0d0*ChWSpeed(1)**2) ! LAM        !
+            ! -----------------------------------------------------------------------------!
+            ! Set the degradation parameters for the mixture ------------------------------!
+            DamCoeff    = (/    2.0e-2   ,   -1.0d0  /)          ! MU12,LAM12    
+            ! DamCoeff    = (/    1.e-2   ,   0.666666   /)          ! MU12,LAM12               !
+            ! -----------------------------------------------------------------------------!
+            ! Set the rupture coefficients ------------------------------------------------!
+            RuptureCoeff(1) = 1.0           ! K                                            !
+            RuptureCoeff(2) = 2.2e7        ! Y0                                           !
+            RuptureCoeff(3) = 1.0          ! Y1                                           !
+            RuptureCoeff(4) = 60.0         ! aexp                                         !
+            ! -------------------------------------                                        !
+            RuptureCoeff(5) = 1.539911849785e+00          ! alpha1                                       !
+            RuptureCoeff(6) = 0.0          ! beta1                                        !
+            RuptureCoeff(7) = -1.296874588874e+01  ! alpha2                                !
+            RuptureCoeff(8) = 0.0         ! beta2                                        !
+            ! -----------------------------------------------------------------------------!
+            ! Set the equivalent stress coefficients --------------------------------------!
+            ! Shear based criteria                                                         !
+            StressCoeff(1)  = 1.0           ! Yeq_A                                        !
+            StressCoeff(2)  = 1.0           ! Yeq_B                                        !
+            StressCoeff(3)  = 0.0           ! Yeq_C                                        !
+            StressCoeff(4)  = 0.0           ! s0                                           !
+            !  EQN%Yeq_mode= 4        CASE('WESTERLY')
+            ! -----------------------------------------------------------------------------!
+			  CASE('ROCKWEAK')
+            ! -----------------------------------------------------------------------------!
+            ! Set Lame parameters and characteristic wave speed ---------------------------!
+            LamCoeff(1) = 2670.0                                              ! RHO        !
+            ChWSpeed    = (/ 3463.999983*0.7, 6000.000000*0.7 /)                      ! CS, CL     !
+            LamCoeff(2) = LamCoeff(1)*ChWSpeed(1)**2                          ! MU         !
+            LamCoeff(3) = LamCoeff(1)*(ChWSpeed(2)**2 - 2.0d0*ChWSpeed(1)**2) ! LAM        !
+            ! -----------------------------------------------------------------------------!
+            ! Set the degradation parameters for the mixture ------------------------------!
+            !DamCoeff    = (/    1./1.16666   ,   0.666666   /)          ! MU12,LAM12               !
+            DamCoeff    = (/    1.0  ,   0.0   /)          ! MU12,LAM12               !
+            ! -----------------------------------------------------------------------------!
+            ! Set the rupture coefficients ------------------------------------------------!
+            RuptureCoeff(1) = 1.0           ! K                                            !
+            RuptureCoeff(2) = 1.8e8         ! Y0                                           !
+            RuptureCoeff(3) = 0.01e12        ! Y1                                           !
+            RuptureCoeff(4) = 32.5          ! aexp                                         !
+            ! -------------------------------------                                        !
+            RuptureCoeff(5) = 36.25         ! alpha1                                       !
+            RuptureCoeff(6) = 0.0           ! beta1                                        !
+            RuptureCoeff(7) = 0.35*36.25         ! alpha2                                       !
+            RuptureCoeff(8) = 0.35*5e-7         ! beta2                                        !
+            ! -----------------------------------------------------------------------------!
+            ! Set the equivalent stress coefficients --------------------------------------!
+            ! Shear based criteria                                                         !
+            StressCoeff(1)  = 1.0           ! Yeq_A                                        !
+            StressCoeff(2)  = 0.0          ! Yeq_B                                        !
+            StressCoeff(3)  = 0.0           ! Yeq_C                                        !
+            StressCoeff(4)  = 0.0           ! s0                                           !
+            ! -----------------------------------------------------------------------------!
         CASE('ROCK1')
+            ! -----------------------------------------------------------------------------!
+            ! Set Lame parameters and characteristic wave speed ---------------------------!
+            LamCoeff(1) = 2670.0                                              ! RHO        !
+            ChWSpeed    = (/ 3463.999983, 6000.000000 /)                      ! CS, CL     !
+            LamCoeff(2) = LamCoeff(1)*ChWSpeed(1)**2                          ! MU         !
+            LamCoeff(3) = LamCoeff(1)*(ChWSpeed(2)**2 - 2.0d0*ChWSpeed(1)**2) ! LAM        !
+            ! -----------------------------------------------------------------------------!
+            ! Set the degradation parameters for the mixture ------------------------------!
+            !DamCoeff    = (/   1., 0.0  /)          ! MU12,LAM12 pure elastic              !
+            DamCoeff    = (/    1/1.16666   ,   0.666666   /)          ! MU12,LAM12               !
+            ! -----------------------------------------------------------------------------!
+            ! Set the rupture coefficients ------------------------------------------------!
+            RuptureCoeff(1) = 1.0           ! K                                            !
+            RuptureCoeff(2) = 1.8e8       ! Y0                                           !
+            RuptureCoeff(3) = 1e10     ! Y1                                           !
+            RuptureCoeff(4) = 32.5          ! aexp                                         !
+            ! -------------------------------------                                        !
+            RuptureCoeff(5) = 36.250         ! alpha1                                       !
+            RuptureCoeff(6) = 0.0           ! beta1                                        !
+            RuptureCoeff(7) = 36.250        ! alpha2 
+            RuptureCoeff(8) = 8e-6      ! beta2                                        !
+	    RuptureCoeff(7) = 1.0*RuptureCoeff(7)
+	    RuptureCoeff(8) = 1.0*RuptureCoeff(8)
+            ! -----------------------------------------------------------------------------!
+            ! Set the equivalent stress coefficients --------------------------------------!
+            ! Shear based criteria                                                         !
+            StressCoeff(1)  = 1.0           ! Yeq_A                                        !
+            StressCoeff(2)  = 0.0           ! Yeq_B                                        !
+            StressCoeff(3)  = 0.0           ! Yeq_C                                        !
+            StressCoeff(4)  = 0.0           ! s0                                           !
+            ! -----------------------------------------------------------------------------!
+            CoulombFLcoeff(1) = 0.6		!static fric.
+            CoulombFLcoeff(2) = 0.2		!dymamic fric.
+            CoulombFLcoeff(3) = 0.5		! dc
+        CASE('ROCK3')
             ! -----------------------------------------------------------------------------!
             ! Set Lame parameters and characteristic wave speed ---------------------------!
             LamCoeff(1) = 2670.0                                              ! RHO        !
@@ -303,36 +407,7 @@ CONTAINS
             ! Set the rupture coefficients ------------------------------------------------!
             RuptureCoeff(1) = 1.0           ! K                                            !
             RuptureCoeff(2) = 1.8e8        ! Y0                                           !
-            RuptureCoeff(3) = 0.01e9        ! Y1                                           !
-            RuptureCoeff(4) = 32.5          ! aexp                                         !
-            ! -------------------------------------                                        !
-            RuptureCoeff(5) = 36.25         ! alpha1                                       !
-            RuptureCoeff(6) = 0.0           ! beta1                                        !
-            RuptureCoeff(7) = 36.25         ! alpha2                                       !
-            RuptureCoeff(8) = 1.e-6         ! beta2                                        !
-            ! -----------------------------------------------------------------------------!
-            ! Set the equivalent stress coefficients --------------------------------------!
-            ! Shear based criteria                                                         !
-            StressCoeff(1)  = 1.0           ! Yeq_A                                        !
-            StressCoeff(2)  = 0.0           ! Yeq_B                                        !
-            StressCoeff(3)  = 0.0           ! Yeq_C                                        !
-            StressCoeff(4)  = 0.0           ! s0                                           !
-            ! -----------------------------------------------------------------------------!
-        CASE('ROCK3')
-            ! -----------------------------------------------------------------------------!
-            ! Set Lame parameters and characteristic wave speed ---------------------------!
-            LamCoeff(1) = 2670.0                                              ! RHO        !
-            ChWSpeed    = (/ 3463.999983, 6000.000000 /)                      ! CS, CL     !
-            LamCoeff(2) = LamCoeff(1)*ChWSpeed(1)**2                          ! MU         !
-            LamCoeff(3) = LamCoeff(1)*(ChWSpeed(2)**2 - 2.0d0*ChWSpeed(1)**2) ! LAM        !
-            ! -----------------------------------------------------------------------------!
-            ! Set the degradation parameters for the mixture ------------------------------!
-            DamCoeff    = (/    1./1.16666   ,   0.666666   /)          ! MU12,LAM12               !
-            ! -----------------------------------------------------------------------------!
-            ! Set the rupture coefficients ------------------------------------------------!
-            RuptureCoeff(1) = 0.2           ! K                                            !
-            RuptureCoeff(2) = 2.4e8        ! Y0                                           !
-            RuptureCoeff(3) = 0.01e9        ! Y1                                           !
+            RuptureCoeff(3) = 0.01e12        ! Y1                                           !
             RuptureCoeff(4) = 32.5          ! aexp                                         !
             ! -------------------------------------                                        !
             RuptureCoeff(5) = 36.25         ! alpha1                                       !

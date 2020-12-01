@@ -67,6 +67,7 @@ RECURSIVE SUBROUTINE PDEPrim2Cons(Q,V)
     Q=V
     Q(1)=V(1)
     Q(2:4)=V(2:4)*V(18)*V(1)
+    Q(25:27)=V(25:27)
     Q(5)   = rhoeh + 0.5*V(1)*( V(2)**2+V(3)**2+V(4)**2 ) + 0.5*V(1)*EQN%ch**2*( V(6)**2 + V(7)**2 + V(8)**2 ) + rhoevv
 END SUBROUTINE PDEPrim2Cons
 
@@ -121,6 +122,7 @@ RECURSIVE SUBROUTINE PDECons2Prim(V,Q)
     ! Compute the pressure as p=rho^2*E_rho -------------------------------------------------------------------------------
     Kelast  = LL_gpr+2.0/3.0*MM_gpr
     u       =Q(2:4)/Q(1)*ialpha
+    V(25:27)=Q(25:27)
     select case(EQN%EOS)
         case(1)
             ec      = 1./detA/Kelast*(Q(5)-0.5*Q(1)*sum(u(1:3)**2))

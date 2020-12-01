@@ -13,6 +13,7 @@
         public :: compute_l_m_dedc
         public :: compute_hydrodynamic_pressure
         public :: compute_total_stress
+        public :: compute_coulomb
         public :: compute_temperature
         public :: compute_s_of_t
         public :: StaticLimiterEQ99
@@ -56,7 +57,7 @@ subroutine computeGPRLEstressGen(stressnorm,sigma_vec,Avec, LL,MM,rho,ss, addp)
         sigma_vec(3)=sigma_vec(3)-pressure 
     end if
 
-    !stressnorm  = SQRT( 0.5 * ( (sigma_vec(1)-sigma_vec(2))**2 + (sigma_vec(2)-sigma_vec(3))**2 + (sigma_vec(3)-sigma_vec(1))**2 + 6.*(sigma_vec(4)**2+sigma_vec(6)**2+sigma_vec(5)**2) ) )  
+!    stressnorm  = SQRT( 0.5 * ( (sigma_vec(1)-sigma_vec(2))**2 + (sigma_vec(2)-sigma_vec(3))**2 + (sigma_vec(3)-sigma_vec(1))**2 + 6.*(sigma_vec(4)**2+sigma_vec(6)**2+sigma_vec(5)**2) ) )  
     ! stressnorm = 0.25*abs(sigma_vec(1)-sigma_vec(2))+0.8*abs(sigma_vec(1)+2.0*sigma_vec(2))/3.0
     !YY_sh=SQRT( 0.5 * ( (TT(1,1)-TT(2,2))**2 + (TT(2,2)-TT(3,3))**2 + (TT(3,3)-TT(1,1))**2 + 6.*(TT(1,2)**2+TT(1,3)**2+TT(2,3)**2) ) )  
     !YY_p=abs(pressure)
@@ -2606,6 +2607,33 @@ subroutine A2sigmaJacobianSGEOS(J,sig,theta,lambda1,mu1,rho0,g,s,cv,p0,EOS_mode,
         end select
     END SUBROUTINE compute_s_of_T
     ! *******************************************************************************************************
+    PURE SUBROUTINE compute_coulomb(Yeq2, Ydev,Yp,  lam, mu, G, devG, detA, ODE)
+        use expintegrator_type, only : T_ode_parameters,nvarode,ncc,nccc
+        USE expintegrator_linalg, only: compute_matrix_exponential, solve, determinant_lu, build_jacobian_matrix_mask, &
+                            build_reduced_jacobian_matrix, compute_first_order_linear_ode_solution, select_solution_from_mask, halven_rank42_rows, &
+                            flatten_rows, build_by_rows, cross_product, diadic_product, trace
+        USE, INTRINSIC :: ieee_arithmetic
+        ! Computation of total stress
+        REAL(8),                 INTENT(OUT) :: Yeq2, Yp, Ydev
+        REAL(8),                 INTENT(IN)  :: lam, mu
+        REAL(8), DIMENSION(3,3), INTENT(IN)  :: G, devG
+        REAL(8),                 INTENT(IN)  :: detA
+        TYPE(T_ode_parameters),  INTENT(IN)  :: ODE
+        REAL(8), DIMENSION(3,3)              :: sigma_visc, sigma, dev_sigma
+        REAL(8)                              :: hydro_pressure, total_pressure, J2_dev,Ypos,Yneg,xi
+        REAL(8), DIMENSION(3,3), PARAMETER   :: ID = reshape(&
+            [1.0d0,0.0d0,0.0d0,0.0d0,1.0d0,0.0d0,0.0d0,0.0d0,1.0d0], [3,3])
+        sigma_visc = -detA*mu*matmul(G, devG) ! note: non trace free, but without hydrodynamic pressure, changed!
+        CALL compute_hydrodynamic_pressure(hydro_pressure, detA, lam, mu,ODE%S,ODE%gamma,ODE%cv, ODE%p0,ODE%rho0, ODE%EOS, ODE%T0)
+        sigma = sigma_visc - hydro_pressure*ID
+        total_pressure = trace(sigma)/3.0d0 ! note: total pressure = hydro_pressure + tr(sigma_visc)/3
+        dev_sigma = sigma - total_pressure*ID
+        J2_dev = 0.5d0*trace(matmul(dev_sigma, dev_sigma))
+        Ydev = sqrt(3.0d0*J2_dev)
+        Yp = total_pressure
+	Yeq2=Ydev
+	end subroutine compute_coulomb
+
     PURE SUBROUTINE compute_total_stress(Y, Ydev,Yp,  lam, mu, G, devG, detA, ODE)
         use expintegrator_type, only : T_ode_parameters,nvarode,ncc,nccc
         USE expintegrator_linalg, only: compute_matrix_exponential, solve, determinant_lu, build_jacobian_matrix_mask, &
@@ -2624,7 +2652,7 @@ subroutine A2sigmaJacobianSGEOS(J,sig,theta,lambda1,mu1,rho0,g,s,cv,p0,EOS_mode,
             [1.0d0,0.0d0,0.0d0,0.0d0,1.0d0,0.0d0,0.0d0,0.0d0,1.0d0], [3,3])
         sigma_visc = -detA*mu*matmul(G, devG) ! note: non trace free, but without hydrodynamic pressure, changed!
         CALL compute_hydrodynamic_pressure(hydro_pressure, detA, lam, mu,ODE%S,ODE%gamma,ODE%cv, ODE%p0,ODE%rho0, ODE%EOS, ODE%T0)
-        sigma = sigma_visc + hydro_pressure*ID
+        sigma = sigma_visc - hydro_pressure*ID
         total_pressure = trace(sigma)/3.0d0 ! note: total pressure = hydro_pressure + tr(sigma_visc)/3
         dev_sigma = sigma - total_pressure*ID
         J2_dev = 0.5d0*trace(matmul(dev_sigma, dev_sigma))

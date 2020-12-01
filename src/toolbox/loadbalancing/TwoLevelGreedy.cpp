@@ -97,6 +97,7 @@ toolbox::loadbalancing::TwoLevelGreedy::StrategyStep toolbox::loadbalancing::Two
 void toolbox::loadbalancing::TwoLevelGreedy::finishStep() {
   switch ( getStrategyStep() ) {
     case StrategyStep::Wait:
+    case StrategyStep::Completed:
       break;
     case StrategyStep::SpreadEquallyOverAllRanks:
       {
@@ -127,7 +128,6 @@ void toolbox::loadbalancing::TwoLevelGreedy::finishStep() {
 
         _hasSplitRecently = 4;
       }
-      break;
       break;
   }
 
