@@ -38,59 +38,112 @@ e.g.
 \end{remark}
 
 
-You can display \Peano's patch files directly within Paraview. For this, follow
-teh following steps:
+\noindent
+You can display \Peano's patch files directly within Paraview. 
+Again, there are different ways.
+For all of them, \Peano's Python environment has to be available within Paraview:
+
+
+
+\paragraph{Prepare system.}
+%
+%
+Before you start up Paraview, ensure that both the \Peano\ \texttt{python}
+directory and any third-party Python lib are in your path. 
+On some systems, Paraview seems to
+only know its internal libraries, so you have to add these manually. On my
+system, I use
+  \begin{code}
+export PYTHONPATH=../../../python:/usr/lib/python3/dist-packages  
+  \end{code}
+The latter holds \texttt{jinja2} on my system.
+
+
+\paragraph{Start Paraview's Python environment.}
+%
+%
+You can either manipulate all data directly within Paraview or use Paraview's Python 
+terminal to convert data as a batch from Peano's native format into native Paraview data.
+I recommend the direct Paraview terminal route to interactively explore data.
+The actual data processing (of time-dependent data) however can be very slow.
+Once I know what information I need, I thus usually switch to Paraview's Python interpreter 
+to convert all data into Paraview's native file formats in one rush.
+
 
 \begin{center}
  \includegraphics[width=0.6\textwidth]{80_postprocessing/paraview.png}
 \end{center}
 
 
+For the batch mode, open the terminal \texttt{pvpython}.
+For the interactive GUI mode, open Paraview and activate the Python Shell by clicking the check box in
+the View menu.
 
 
-\begin{enumerate}
-  \item Before you start up Paraview, ensure that both the \Peano\ python
-  directory and any third-party Python lib are in your path. Paraview seems to
-  only know its internal libraries, so you have to add these manually. On my
-  system, I use
-  \begin{code}
-export PYTHONPATH=../../../python:/usr/lib/python3/dist-packages  
-  \end{code}
-  The latter holds \texttt{jinja2} on my system.
-  \item Open Paraview and activate the Python Shell by clicking the check box in
-  the View menu.
-  \item Open the Paraview Python terminal and import \Peano's visualisation
-  package:
-  \begin{code}
+Both visualisation routes first require you to load \Peano's Python tools---either
+within the \texttt{pvserver} terminal or the Paraview Python window:
+\begin{code}
 import peano4.visualisation  
-  \end{code}
-  \item Load the file you are interested in:
-  \begin{code}
-data = peano4.visualisation.render_single_file(  "solution-Euler-tree-0-0.peano-patch-file", identifier="MyQName" )
-  \end{code}
-  This is only one snapshot. We discuss the postprocessing of meta files,
-  i.e.~files that link to other files, below.
-  \item Display the file:
-  \begin{code}
-tp = TrivialProducer()
-tp.GetClientSideObject().SetOutput(data)
-Show(tp)
-  \end{code}
-\end{enumerate}
+\end{code}
+
+
+\paragraph{Work with a whole dataset.}
+%
+%
+%
+\Peano\ provides a Python class \texttt{Visualiser} which allows you to navigate through the whole data:
+\begin{code}
+import peano4.visualisation
+visualiser = peano4.visualisation.Visualiser( "solution-Euler.peano-patch-file" )
+visualiser.display()
+visualiser.append_filter(peano4.visualisation.ExtractFineGridFilter())
+\end{code}
+
+\noindent
+The snippet displays the first dataset (time step) from a \Peano\ data dump.
+Via 
+\begin{code}
+visualiser.select_dataset(10)
+visualiser.reload()
+\end{code}
+you can, for example, select the 11th data set and display this one.
+
+
+Running through data sets (time steps) manually is cumbersome in many cases.
+We have not yet managed to integrate our Python-based, bespoke postprocessing
+into Paraview's video replay features, and we also experience that it is relatively 
+slow.
+In such a case, it is more convenient to convert all data in one rush 
+into Paraview's native, binary file format vtu:
+\begin{code}
+visualiser.write_vtu_time_series()
+\end{code}
 
 
 \noindent
-In practice, you typically want to filter data before you pipe it into Paraview.
-This can be achieved by passing the parser a filter pipeline. If I'm interested
-in a 2d fine grid only, e.g., I use:
+Once this routine terminates, you'll find a file with the extension \texttt{.pvd}
+in your directory which you can open and play as video.
+Obviously, this conversion can be triggered in Paraview's Python interpreter 
+which is typically faster than Paraview's built-in terminal.
 
+\begin{remark}
+ You can trigger the Python postprocessing routines while the simulation is running.
+\end{remark}
+
+
+
+\paragraph{Display a single file.}
+%
+%
+Load the file you are interested in via
 \begin{code}
-import peano4.visualisation  
-data = peano4.visualisation.render_single_file( \
-  "solution-Euler-tree-0-0.peano-patch-file",display_as_tree=False, \
-  filter=[peano4.visualisation.ExtractFineGridFilter()], \
-  identifier="MyQName" \
-)
+data = peano4.visualisation.render_single_file(  "solution-Euler-tree-0-0.peano-patch-file", identifier="MyQName" )
+\end{code}
+
+\noindent
+This is only one snapshot file, i.e.~one file written by one thread in one step. 
+We can display the file with
+\begin{code}
 tp = TrivialProducer()
 tp.GetClientSideObject().SetOutput(data)
 Show(tp)
@@ -98,7 +151,13 @@ Show(tp)
 
 
 \noindent
-Further to that, you can also display a particular data set (snapshot):
+If we write large parallel files or time series, \Peano\ will typically 
+create one file like \texttt{solution-Euler.peano-patch-file} which links
+to all the files such as \linebreak \texttt{solution-Euler-tree-0-0.peano-patch-file}.
+The meta file (with the links) is plain text, so you can study it via a 
+text editor.
+Instead of picking a particular file, 
+you can display a particular data set (snapshot) from the meta file:
 \begin{code}
 import peano4.visualisation  
 data = peano4.visualisation.render_dataset( \
@@ -113,62 +172,36 @@ Show(tp)
 \end{code}
 
 
-\noindent
-The gold version of our data exporation is the actual \texttt{Visualiser}
-class:
-\begin{code}
-import peano4.visualisation
-visualiser = peano4.visualisation.Visualiser( "solution-Euler.peano-patch-file" )
-visualiser.display()
-visualiser.select_dataset(0)
-visualiser.append_filter(peano4.visualisation.ExtractFineGridFilter())
-visualiser.reload() # If your file has changed
-\end{code}
+\paragraph{Filters.}
+%
+%
+%
+\Peano's data are relatively complex.
+In practice, you typically want to filter data before you pipe it into Paraview.
+The most popular filter is the one which eliminates the coarse grid levels:
+\Peano\ holds all data in multiple resolution.
+If your code does not exploit this feature, you might not be interested in the 
+coarser resolutions, so removing it makes sense.
+
+
+There are more filters or you can write your own custom filters.
+Study the source code for further details.
 
 
 
-\section{Interactive visualisation via Paraview's Python command line}
-\label{section:postproce ssing:python-command-line}
-
-\begin{remark}
-  \Peano's postprocessing scripts use Python 3. This means you need a Paraview
-  version with Python 3 support (oldish Paraview installations only support
-  Python 2.7, and some Paraview downloads don't come along with Python support
-  at al).
-\end{remark}
-
-
-\noindent
-To visualise \Peano\ output interactively, you can use the \texttt{pvpython}
-(Paraview python) interface:
-
-\begin{itemize}
-  \item Ensure that the Python path hosts both \Peano's Python scripts and
-  third-party libs such as jinja2. On my Ubuntu system, I have to use
-  \begin{code}
-export PYTHONPATH=~/git/Peano/python:/usr/lib/python3/dist-packages  
-  \end{code}
-  for example, while the OpenSUSE installation requires
-  \begin{code}
-export PYTHONPATH=~/git/Peano/python:/usr/lib/python3.8/site-packages:\
-/usr/lib64/python3.8/site-packages
-  \end{code}
-  \item Invoke the Paraview script:
-  \begin{code}
-pvpython ~/git/Peano/python/peano4/visualisation/render.py  
-  \end{code}
-  Depending on your type of the Paraview installation, you might require an
-  \texttt{mpirun} prefix.
-\end{itemize}
-
-% export PYTHONPATH=~/git/Peano/python/
-% 
-% /opt/paraview/bin/pvpython ~/git/Peano/python/peano4/visualisation/render.py
-
-
-
-\section{Off-line/command-line conversion}
+\section{Offline/command-line conversion}
 \label{section:postprocessing:command-line}
+
+
+Installing \Peano's VTK command line tools can be quite tricky---depending on your
+local VTK installation.
+At the same time, the command line conversion via executables, i.e.~not via the 
+Python terminal as discussed above, is by far the fastest route.
+It  can even exploit multiple cores.
+I recommend to stick to the Python-based postprocessing route as long as possible 
+and to switch to the offline postprocessing only for large-scale production data
+where Python is just too slow and/or all postprocessing has to happen on a remote 
+supercomputer as you cannot transfer the (raw) \Peano\ data files.
 
 
 \begin{remark}
