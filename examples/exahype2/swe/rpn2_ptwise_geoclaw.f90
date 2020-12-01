@@ -37,7 +37,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     drytol = 0.001
     rho = 1025.0
     earth_radius = 6367500.0  
-
+ 
     ! In case there is no pressure forcing
     pL = 0.d0
     pR = 0.d0

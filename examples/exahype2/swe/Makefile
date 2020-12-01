@@ -7,14 +7,14 @@
 
 CXX = g++
 FC  = gfortran
-CXXFLAGS += -std=c++0x -g -O2 -DPeanoDebug=2 -g -O2 -fopenmp  -I/home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/amrclaw/src/2d/ -I/home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/ -DDimensions=2 -I. -I../../../src
+CXXFLAGS += -std=c++0x -g -O2 -DPeanoDebug=1 -g -O2 -fopenmp  -I/home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/amrclaw/src/2d/ -I/home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/ -DDimensions=2 -I. -I../../../src
 FCFLAGS  += -g -O2  -g -I/home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/amrclaw/src/2d/ -I/home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/
 LDFLAGS  += -fopenmp 
-LIBS = -L../../../src -L../../../src/toolbox/loadbalancing -L../../../src/exahype2   -lExaHyPE2Core2d_asserts  -lToolboxLoadBalancing2d_asserts  -lgfortran  -lPeano4Core2d_asserts -lTarch_asserts 
+LIBS = -L../../../src -L../../../src/toolbox/loadbalancing -L../../../src/exahype2   -lExaHyPE2Core2d_trace  -lToolboxLoadBalancing2d_trace  -lgfortran  -lPeano4Core2d_trace -lTarch_trace 
 
 
 CXX_SOURCES=AbstractSWE.cpp SWE.cpp observers/SolverRepository.cpp celldata/SWEQ.cpp facedata/SWEQ.cpp facedata/SWEQNew.cpp facedata/Label.cpp observers/DataRepository.cpp ./observers/CreateGrid2peano4_toolbox_blockstructured_ApplyFunctorOnPatch0.cpp ./observers/CreateGrid2exahype2_grid_AMROnPatch1.cpp ./observers/CreateGrid2exahype2_grid_SetLabels2.cpp ./observers/CreateGrid.cpp ./observers/InitGrid2peano4_toolbox_blockstructured_ApplyFunctorOnPatch0.cpp ./observers/InitGrid2peano4_toolbox_blockstructured_ProjectPatchOntoFaces1.cpp ./observers/InitGrid2peano4_toolbox_blockstructured_BackupPatchOverlap2.cpp ./observers/InitGrid2exahype2_grid_SetLabels3.cpp ./observers/InitGrid.cpp ./observers/CreateGridButPostponeRefinement2peano4_toolbox_blockstructured_ApplyFunctorOnPatch0.cpp ./observers/CreateGridButPostponeRefinement2exahype2_grid_SetLabels1.cpp ./observers/CreateGridButPostponeRefinement.cpp ./observers/PlotSolution2peano4_toolbox_blockstructured_PlotPatchesInPeanoBlockFormat0.cpp ./observers/PlotSolution2exahype2_grid_SetLabels1.cpp ./observers/PlotSolution.cpp ./observers/TimeStep2peano4_toolbox_blockstructured_ReconstructPatchAndApplyFunctor0.cpp ./observers/TimeStep2peano4_toolbox_blockstructured_ProjectPatchOntoFaces1.cpp ./observers/TimeStep2peano4_toolbox_blockstructured_ApplyFunctorOnPatch2.cpp ./observers/TimeStep2exahype2_grid_AMROnPatch3.cpp ./observers/TimeStep2peano4_toolbox_blockstructured_BackupPatchOverlap4.cpp ./observers/TimeStep2exahype2_grid_SetLabels5.cpp ./observers/TimeStep.cpp observers/StepRepository.cpp exaclaw-main.cpp  
-FORTRAN_SOURCES=/home/marion/workspace/Projects/ExaClaw/Peano/examples/exahype2/swe/rpn2_ptwise_geoclaw.f90 /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/amrclaw/src/2d/amr_module.f90 /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/geoclaw_module.f90 /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/utility_module.f90 /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/riemann/src/geoclaw_riemann_utils.f /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/amrclaw/src/2d/opendatafile.f 
+FORTRAN_SOURCES=rpn2_ptwise_geoclaw.f90 /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/utility_module.f90 /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/amrclaw/src/2d/amr_module.f90 /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/geoclaw_module.f90 /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/riemann/src/geoclaw_riemann_utils.f /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/amrclaw/src/2d/opendatafile.f 
 
 
 CXX_OBJS=$(subst .cpp,.o,$(CXX_SOURCES))
@@ -33,16 +33,16 @@ all: solver
 
     
 
+utility_module.mod: /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/utility_module.o /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/utility_module.f90 
 amr_module.mod: /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/amrclaw/src/2d/amr_module.o /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/amrclaw/src/2d/amr_module.f90 
 geoclaw_module.mod: /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/geoclaw_module.o /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/geoclaw_module.f90 
-utility_module.mod: /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/utility_module.o /home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1/geoclaw/src/2d/shallow/utility_module.f90 
 
 
 
-solver: amr_module.mod geoclaw_module.mod utility_module.mod  $(CXX_OBJS) $(FORTRAN_OBJS) 
+solver: utility_module.mod amr_module.mod geoclaw_module.mod  $(CXX_OBJS) $(FORTRAN_OBJS) 
 	$(CXX) $(LDFLAGS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LIBS) -o peano4 
 
     
 clean:
-	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) amr_module.mod geoclaw_module.mod utility_module.mod 
+	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) utility_module.mod amr_module.mod geoclaw_module.mod 
 	rm -f peano4

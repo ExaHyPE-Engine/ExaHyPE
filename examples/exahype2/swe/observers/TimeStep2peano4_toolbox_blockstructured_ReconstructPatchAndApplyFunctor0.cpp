@@ -291,8 +291,8 @@ void examples::exahype2::swe::observers::TimeStep2peano4_toolbox_blockstructured
         double                                       FL[],
         double                                       FR[]
       ) -> void {
-        double wave[3]; 
-        double speed[3]; 
+        double wave[3+1]; 
+        double speed[3+1]; 
 
         int num_eqn   = 3;
         int num_aux   = 1;
