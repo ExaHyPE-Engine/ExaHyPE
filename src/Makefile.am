@@ -6,10 +6,19 @@ AUTOMAKE_OPTIONS = subdir-objects
 # configure.ac script and rerun the whole autotool pipeline (see comment 
 # within configure.ac as well as its very last line).
 #
-SUBDIRS = . \
-          toolbox/finiteelements toolbox/multiprecision toolbox/loadbalancing \
-          unittests \
-          convert exahype2
+SUBDIRS = . unittests convert
+
+if UseToolboxFiniteElements
+SUBDIRS += toolbox/finiteelements
+endif
+
+if UseToolboxMultiprecision
+SUBDIRS += toolbox/multiprecision
+endif
+
+if UseExaHyPE
+SUBDIRS += toolbox/loadbalancing exahype2
+endif
 
 
 #

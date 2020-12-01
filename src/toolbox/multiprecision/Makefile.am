@@ -1,9 +1,7 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 
-if UseToolboxMultiprecision
-  lib_LIBRARIES = libToolboxMultiprecision.a libToolboxMultiprecision_debug.a libToolboxMultiprecision_trace.a
-endif
+lib_LIBRARIES = libToolboxMultiprecision.a libToolboxMultiprecision_debug.a libToolboxMultiprecision_trace.a
 
 
 ToolboxMultiprecision_SOURCES = \
