@@ -53,19 +53,29 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     ::tarch::multicore::freeMemory(reconstructedPatch, ::tarch::multicore::MemoryLocation::Accelerator);
   }
   else { // is an enclave cell
-    // @todo Holger: Your part
-    /*
-    auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
-      ::exahype2::fv::copyPatch(
-        reconstructedPatch,
-        originalPatch,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        1 // halo size
-      );
-      {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
-        [&](
+    const int gpuTaskId = tarch::multicore::reserveTaskNumber();
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( gpuTaskId );
+     
+    // @todo Holger: The two functions have to go to the GPU - later as indepenent tasks 
+    
+    #if Dimensions==2
+    const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #elif Dimensions==3
+    const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #endif
+    double* destinationPatchOnGPU = ::tarch::multicore::allocateMemory(destinationPatchSize, ::tarch::multicore::MemoryLocation::Accelerator);
+    double* destinationPatchOnCPU = ::tarch::multicore::allocateMemory(destinationPatchSize, ::tarch::multicore::MemoryLocation::Heap);
+    
+    ::exahype2::fv::copyPatch(
+      reconstructedPatch,
+      destinationPatchOnGPU,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      1 // halo size
+    );
+    {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
+      [&](
           double                                       QL[],
           double                                       QR[],
           const tarch::la::Vector<Dimensions,double>&  x,
@@ -93,27 +103,16 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         reconstructedPatch,
-        originalPatch
-      );
-    };
-    */
-
-    ::exahype2::EnclaveOpenMPGPUTask* newEnclaveTask = new ::exahype2::EnclaveOpenMPGPUTask(
-      marker,
-      reconstructedPatch,
-      #if Dimensions==2
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}}
-      #else
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}}
-      #endif
+        destinationPatchOnGPU
     );
-      
-    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-    peano4::parallel::Tasks spawn( 
-      newEnclaveTask,
-      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
-      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithAccelerator" )
-    );      
+    
+    
+    // get stuff explicitly back from GPU, as it will be stored
+    // locally for a while
+    std::copy_n(destinationPatchOnGPU,destinationPatchSize,destinationPatchOnCPU);
+    ::tarch::multicore::freeMemory(reconstructedPatch,    ::tarch::multicore::MemoryLocation::Accelerator);
+    ::tarch::multicore::freeMemory(destinationPatchOnGPU, ::tarch::multicore::MemoryLocation::Accelerator);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(gpuTaskId,destinationPatchSize,destinationPatchOnCPU);
   }
   """      
 
@@ -212,64 +211,8 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
       peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete)
 
   
-  #def _wrap_update_cell_template(self, update_cell_template):
-  #  """
-  #  
-  #  I use the same memory management for both the skeletons and the enclave
-  #  cells. Consequently, I also have to use the corresponding frees.
-  #  
-  #  """
-  #  free_memory_call_for_skeleton_cells = ""
-  #  if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
-  #    free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Heap);"
-  #  if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-  #    free_memory_call_for_skeleton_cells = "tarch::multicore::freeMemory(reconstructedPatch,::tarch::multicore::MemoryLocation::Accelerator);"##
-
-  #  result = """
-  #  double minTimeStamp =  {{SOLVER_INSTANCE}}.getMinTimeStamp();#
-
-  #  if (marker.isSkeletonCell()) {
-  #""" + update_cell_template + """
-  #    """ + free_memory_call_for_skeleton_cells + """
-  #  }
-  #  else {
-  #    #if defined(GPUOffloading)
-  #    #pragma omp declare target
-  #    #endif
-  #    auto perCellFunctor = 
-  #      [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
-  #         ::exahype2::fv::copyPatch(
-  #           reconstructedPatch,
-  #           originalPatch,
-  #           {{NUMBER_OF_UNKNOWNS}},
-  #           {{NUMBER_OF_AUXILIARY_VARIABLES}},
-  #           {{NUMBER_OF_VOLUMES_PER_AXIS}},
-  #           {{HALO_SIZE}}
-  #         );
-  #         """ + update_cell_template + """
-  #      };
-  #    #if defined(GPUOffloading)
-  #    #pragma omp end declare target
-  #    #endif##
-
-  #    {{ENCLAVE_TASK_TYPE}}* newEnclaveTask = new {{ENCLAVE_TASK_TYPE}}(
-  #      marker,
-  #      reconstructedPatch,
-  #      #if Dimensions==2
-  #      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
-  #      #else
-  #      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
-  #      #endif
-  #      perCellFunctor
-  #    );
-      
-  #    fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-  #    peano4::parallel::Tasks spawn( 
-  #      newEnclaveTask,
-  #      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
-  #      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFV" )
-  #    );      
-  #  }
-  #"""
-  #  return result
+  def get_user_includes(self):
+    return GenericRusanovFixedTimeStepSizeWithEnclaves.get_user_includes(self) + """
+#include <algorithm>
+"""    
     

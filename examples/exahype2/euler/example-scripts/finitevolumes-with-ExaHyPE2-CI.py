@@ -39,7 +39,7 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 #
 # Add the Finite Volumes solver
 #
-patch_size     = 101
+patch_size     = 10
 unknowns       = 5
 time_step_size = 0.000001
 min_h          = args.h
@@ -73,14 +73,12 @@ else:
  
 
 project.add_solver( solver );
-# use_gpu =  False
-
 
 
 dimensions = args.dim
-build_mode = peano4.output.CompileMode.Release
+#build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Trace
-#build_mode = peano4.output.CompileMode.Asserts
+build_mode = peano4.output.CompileMode.Asserts
 
 
 
