@@ -68,14 +68,17 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
         double                                       FL[],
         double                                       FR[]
       ) -> void {
-        double wave[{{NUMBER_OF_UNKNOWNS}}]; 
-        double speed[{{NUMBER_OF_UNKNOWNS}}]; 
+        double wave[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]; 
+        double speed[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]; 
 
         int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
         int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
         int num_waves = {{NUMBER_OF_UNKNOWNS}}; 
 
         {{CLAWPACK_RIEMANN_SOLVER}}_(
+          {%if DISCRIMINATE_NORMAL %}
+            &normal,
+          {% endif %}   
           &num_eqn,
           &num_aux,
           &num_waves, 
@@ -107,7 +110,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
   
 
   
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop, discriminate_normal=False):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
@@ -144,6 +147,9 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     self.Riemann_solver_implementation_files = Riemann_solver_implementation_files
     
     self._template_update_cell      = jinja2.Template( self.TemplateUpdateCell ); 
+    
+    self._discriminate_normal = discriminate_normal
+    
     pass
   
   
@@ -191,6 +197,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+    d[ "DISCRIMINATE_NORMAL"] = self._discriminate_normal
 
   
   def get_user_includes(self):

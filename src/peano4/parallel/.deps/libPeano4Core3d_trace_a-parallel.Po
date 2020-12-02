@@ -1,0 +1,7 @@
+peano4/parallel/libPeano4Core3d_trace_a-parallel.o: \
+ peano4/parallel/parallel.cpp /usr/include/stdc-predef.h \
+ peano4/parallel/parallel.h
+
+/usr/include/stdc-predef.h:
+
+peano4/parallel/parallel.h:

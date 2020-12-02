@@ -1,0 +1,35 @@
+# 
+# Peano patch file 
+# Version 0.2 
+# 
+format ASCII
+
+begin dataset
+
+  include "solution-SWE-tree-0-0.peano-patch-file"
+end dataset
+
+begin dataset
+
+  include "solution-SWE-tree-0-1.peano-patch-file"
+end dataset
+
+begin dataset
+
+  include "solution-SWE-tree-0-2.peano-patch-file"
+end dataset
+
+begin dataset
+
+  include "solution-SWE-tree-0-3.peano-patch-file"
+end dataset
+
+begin dataset
+
+  include "solution-SWE-tree-0-4.peano-patch-file"
+end dataset
+
+begin dataset
+
+  include "solution-SWE-tree-0-5.peano-patch-file"
+end dataset

@@ -1,0 +1,16 @@
+Peano 4 (C) www.peano-framework.org 
+build: 3d, no mpi, omp (8 threads), debug level=4
+ 439358       00:00:00     rank:0       core:3       warning      examples::unittests::main()                             usage: ././src/unittests/UnitTests3d core-count (use default core count=1 now) (file:main.cpp,line:88)
+ 644977       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch.la.tests" ..... ok
+ 677692       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch.la" ............. ok
+ 685052       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch.mpi.tests" ..... ok
+ 689908       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch.mpi" ... ok
+ 694256       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "tarch" ... ok
+ 698387       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection ... ok
+ 720295       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4.grid.tests" ....... ok
+ 724965       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4.grid" ... ok
+ 759191       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4.parallel.tests" ....... ok
+ 763704       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4.parallel" ... ok
+ 767740       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection "peano4" ... ok
+ 771787       00:00:00     rank:0       core:3       info         tarch::tests::TreeTestCaseCollection::run()             running test case collection ... ok
+PASS src/unittests/UnitTests3d (exit status: 0)
