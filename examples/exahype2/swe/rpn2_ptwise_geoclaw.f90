@@ -1,4 +1,23 @@
+c======================================================================
 subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
+c======================================================================
+c Solves normal Riemann problems for the 2D SHALLOW WATER equations
+c     with topography:
+c     #        h_t + (hu)_x + (hv)_y = 0                           #
+c     #        (hu)_t + (hu^2 + 0.5gh^2)_x + (huv)_y = -ghb_x      #
+c     #        (hv)_t + (huv)_x + (hv^2 + 0.5gh^2)_y = -ghb_y      #
+
+c On input, ql contains the state vector at the left edge of each cell
+c           qr contains the state vector at the right edge of each cell
+c
+c This data is along a slice in the x-direction if ixy=1
+c                            or the y-direction if ixy=2.
+
+c  Note that the i'th Riemann problem has left state qr(i-1,:)
+c                                     and right state ql(i,:)
+c  From the basic clawpack routines, this routine is called with
+c     ql = qr
+c======================================================================
 
     use geoclaw_module, only: deg2rad
     use amr_module, only: mcapa
@@ -41,7 +60,8 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     ! In case there is no pressure forcing
     pL = 0.d0
     pR = 0.d0
-
+    
+    !inform of a bad riemann problem from the start
     if (qr(1) < 0.d0 .or. ql(1) < 0.d0) then
         print *, "Negative input: hl, hr = ", qr(1), ql(1)
     end if
@@ -65,7 +85,8 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     if (ql(1) < 0.d0) then
         ql(:) = 0.d0
     end if
-
+    
+    !skip problem if in a completely dry area
     if (qr(1) <= drytol .and. ql(1) <= drytol) then
         return
     end if
@@ -116,7 +137,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     if (hR <= drytol) then
         call riemanntype(hL,hL,uL,-uL,hstar,s1m,s2m,rare1,rare2,1,drytol,g)
         hstartest=max(hL,hstar)
-        if (hstartest+bL.lt.bR) then 
+        if (hstartest+bL.lt.bR) then !right state should become ghost values that mirror left for wall problem
             wall(2) = 0.d0
             wall(3) = 0.d0
             hR=hL
@@ -131,7 +152,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     elseif (hL.le.drytol) then
         call riemanntype(hR,hR,-uR,uR,hstar,s1m,s2m,rare1,rare2,1,drytol,g)
         hstartest=max(hR,hstar)
-        if (hstartest+bR.lt.bL) then
+        if (hstartest+bR.lt.bL) then   !left state should become ghost values that mirror right
             wall(1)=0.d0
             wall(2)=0.d0
             hL=hR
@@ -159,10 +180,12 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
 
     maxiter = 1
     
+    !solve Riemann problem
     call riemann_aug_JCP(maxiter,3,3,hL,hR,huL,huR,hvL,hvR,bL,bR,uL,uR,vL,vR,  &
                          phiL,phiR,pL,pR,sE1,sE2,drytol,g,rho,sw,fw)
 
 
+    !eliminate ghost fluxes for wall
     do mw=1,3
         sw(mw)=sw(mw)*wall(mw)
 
@@ -177,6 +200,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
         fwave(nv,mw)=fw(3,mw)
     enddo
 
+    !Capacity for mapping from latitude longitude to physical space 
     if (mcapa > 0) then
         if (ixy == 1) then
             dxdc = (earth_radius * deg2rad)
