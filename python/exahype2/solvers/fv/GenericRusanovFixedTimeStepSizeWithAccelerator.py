@@ -117,8 +117,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
   """      
 
 
-  RusanovCallWithFluxAndEigenvalues = """
-        ::exahype2::fv::splitRusanov1d(
+  RusanovCallWithFlux = """
           [] (
             double                                       Q[],
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -129,31 +128,26 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
             double                                       F[]
           ) -> void {
             {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F );
-          },
-          [] (
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-          ) -> double {
-            return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal );
-          }, 
+          }
 """
 
 
-  RusanovCallWithNCPAndEigenvalues = """
-        ::exahype2::fv::splitRusanov1d(
+  """
+  
+    Flux is empty here.
+    
+  """
+  RusanovCallWithNCP = """
           [] (
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       F[]
+           double * __restrict__ Q,
+           const tarch::la::Vector<Dimensions,double>&  faceCentre,
+           const tarch::la::Vector<Dimensions,double>&  volumeH,
+           double                                       t,
+           double                                       dt,
+           int                                          normal,
+           double * __restrict__                        F
           ) -> void {
+            for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
           },
           [] (
             double                                       Q[],
@@ -165,8 +159,45 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {{SOLVER_INSTANCE}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+            {{SOLVER_NAME}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+          }
+"""
+
+
+  """
+  
+    Combination of the two previous ones.
+    
+  """
+  RusanovCallWithFluxAndNCP = """
+          [] (
+           double * __restrict__ Q,
+           const tarch::la::Vector<Dimensions,double>&  faceCentre,
+           const tarch::la::Vector<Dimensions,double>&  volumeH,
+           double                                       t,
+           double                                       dt,
+           int                                          normal,
+           double * __restrict__                        F
+          ) -> void {
+            {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F );
           },
+          [] (
+            double                                       Q[],
+            double                                       gradQ[][Dimensions],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal,
+            double                                       BgradQ[]
+          ) -> void {
+            {{SOLVER_NAME}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+          }
+"""
+
+
+
+  EigenvaluesCall = """
           [] (
             double                                       Q[],
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -175,8 +206,8 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
             double                                       dt,
             int                                          normal
           ) -> double {
-            return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal );
-          }, 
+            return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+          }
 """
 
 
@@ -195,6 +226,42 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
       peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete
     )
     
+
+  #def set_implementation(self,flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None):
+  #  """
+  #    Redefinition to ensure that we use our Riemann solver ingredient calls
+  #  """
+  #  GenericRusanovFixedTimeStepSizeWithEnclaves.set_implementation(self,flux,ncp,eigenvalues,boundary_conditions,refinement_criterion,initial_conditions)
+
+  #  if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
+  #    self._rusanov_call = self.RusanovCallWithFlux
+  #  elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
+  #    self._rusanov_call = self.RusanovCallWithNCP
+  #  elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
+  #    self._rusanov_call = self.RusanovCallWithFluxAndNCP
+  #  else:
+  #    raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
+
+  #  self._construct_template_update_cell()
+
+
+  def _construct_template_update_cell(self):
+    d = {}
+    self._init_dictionary_with_default_parameters(d)
+    self.add_entries_to_text_replacement_dictionary(d)
+    d[ "LOOP_OVER_PATCH_FUNCTION_CALL" ] = self._kernel_implementation
+    d[ "TIME_STAMP" ]                   = "{{SOLVER_INSTANCE}}.getMinTimeStamp()"
+    d[ "EIGENVALUES"]                   = self.EigenvaluesCall
+
+    if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
+      d[ "RUSANOV_ON_FACE"] = self.RusanovCallWithFlux
+    elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
+      d[ "RUSANOV_ON_FACE"] = self.RusanovCallWithNCP
+    elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
+      d[ "RUSANOV_ON_FACE"] = self.RusanovCallWithFluxAndNCP
+      
+    temp = jinja2.Template( self.TemplateUpdateCell ).render(d);
+    self._template_update_cell      = jinja2.Template( temp ); 
 
 
   def set_update_cell_implementation(self,
