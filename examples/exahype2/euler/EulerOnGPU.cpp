@@ -50,6 +50,11 @@ double examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
   double                                       t,
   int                                          normal
 ) {
+  // We should have a GPU assertion which is automatically removed
+  assertion(normal>=0);
+  assertion(normal<Dimensions);
+  assertion4( Q[0]>0.0, faceCentre, volumeH, t, normal );
+
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3

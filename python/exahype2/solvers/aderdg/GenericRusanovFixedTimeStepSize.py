@@ -132,10 +132,10 @@ class GenericRusanovFixedTimeStepSize( ADERDG, AbstractAoSWithOverlap1 ):
     else:
       raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
 
-    self.__construct_template_update_cell()
+    self._construct_template_update_cell()
 
 
-  def __construct_template_update_cell(self):
+  def _construct_template_update_cell(self):
     self._template_update_cell      = jinja2.Template( self._get_template_update_cell( self._rusanov_call + """
           QL, QR, x, dx, t, dt, normal, """ + 
       str(self._unknowns) + """, """ + str(self._auxiliary_variables) + """, FL, FR
@@ -154,7 +154,7 @@ class GenericRusanovFixedTimeStepSize( ADERDG, AbstractAoSWithOverlap1 ):
       print( "WARNING: Selected memory allocation which does not delete allocated memory!" )
     
     self._reconstructed_array_memory_location = memory_location
-    self.__construct_template_update_cell()
+    self._construct_template_update_cell()
     
   
   def add_entries_to_text_replacement_dictionary(self,d):
