@@ -102,7 +102,22 @@ class Constants(object):
       
       
     """
-    new_entry = "const std::string " + str(name) + " = \"" + str(value) + "\";"
+    self.export_const_with_type( name, "\"" + str(value) + "\"", "std::string" )
+    pass
+
+  
+  def export_const_with_type( self, name, value, type ):
+    """
+    
+      Tell the C++ code underlying the project that a certain variable with a 
+      name has a certain value. The passed arguments are mapped onto an 
+      constexpr. Therefore, name has to be a string, while value can be an 
+      integer, a float or a string as well. If you want to export booleans
+      or just define variants, you have to use the other routines.
+      
+      
+    """
+    new_entry = "const " + type + " " + str(name) + " = " + value + ";"
     self.d[ "ADD_CONSTANTS" ] += "  " + new_entry + "\n"
     pass
   

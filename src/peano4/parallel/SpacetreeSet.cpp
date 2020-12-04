@@ -113,6 +113,7 @@ void peano4::parallel::SpacetreeSet::answerQuestions() {
         }
         break;
       case peano4::parallel::TreeManagementMessage::Action::Acknowledgement:
+      case peano4::parallel::TreeManagementMessage::Action::JoinWithWorker:
         assertionMsg( false, "should only be passed synchronously and never run through this tag" );
         break;
 
