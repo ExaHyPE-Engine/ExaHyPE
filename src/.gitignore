@@ -1,9 +1,0 @@
-*.o
-/build/
-/Makefile
-/config.h
-/config.h.in
-**/lib*.la
-**/lib*.a
-**/lib*.lo
-
