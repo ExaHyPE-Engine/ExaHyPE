@@ -3,6 +3,7 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/Assertions.h"
 
 
 // @todo should be called system
@@ -51,7 +52,7 @@ void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::str
       MPI_Put( &rank, 1, MPI_INT, 0, 0, 1, MPI_INT, assertionWindow );
     }
     #elif defined(Parallel)
-    assertionMsg( false, "Noncritical assertion triggered, but system does not support single-sided communication so program will shut down immediately")
+    assertionMsg( false, "Noncritical assertion triggered, but system does not support single-sided communication so program will shut down immediately");
     #endif
   }
 }
