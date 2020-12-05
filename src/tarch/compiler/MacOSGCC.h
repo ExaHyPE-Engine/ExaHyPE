@@ -22,6 +22,7 @@
 #define CompilerHasTimespec
 //#define CompilerDefinesMPIMaxNameString
 //#define CompilerHasSysinfo
+#define MPISupportsSingleSidedCommunication
 
 
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)

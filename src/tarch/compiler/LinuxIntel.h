@@ -29,6 +29,8 @@
 
 #define CompilerHasSysinfo
 
+#define MPISupportsSingleSidedCommunication
+
 //#define CompilerDefinesMPIMaxNameString
 
 
