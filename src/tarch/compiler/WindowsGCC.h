@@ -10,7 +10,9 @@
 //#define CompilerHasTimespec
 //#define CompilerHasSysinfo
 //#define CompilerDefinesMPIMaxNameString
+if !defined(noMPISupportsSingleSidedCommunication) and !defined(MPISupportsSingleSidedCommunication)
 #define MPISupportsSingleSidedCommunication
+#endif
 
 
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)

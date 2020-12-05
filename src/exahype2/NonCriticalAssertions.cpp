@@ -6,7 +6,6 @@
 #include "tarch/Assertions.h"
 
 
-// @todo should be called system
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
 
