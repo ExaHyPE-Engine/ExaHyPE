@@ -190,7 +190,7 @@ class Makefile(object):
       # A posteriori fix for openmp flag propagation
       if "-fopenmp-targets" in self.d["CXXFLAGS"]:
           val = self.d["CXXFLAGS"].split("-fopenmp-targets=")[-1].split()[0]
-          self.d["LDFLAGS"] += " -fopenmp-targets={}".format(val)
+          self.d["LDFLAGS"] += " -fopenmp-targets={} ".format(val)
 
     except IOError:
       print( """
