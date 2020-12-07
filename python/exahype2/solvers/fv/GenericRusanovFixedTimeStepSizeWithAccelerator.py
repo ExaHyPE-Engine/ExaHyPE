@@ -60,12 +60,19 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     
     #if Dimensions==2
     const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #elif Dimensions==3
     const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
     double* destinationPatchOnGPU = ::tarch::multicore::allocateMemory(destinationPatchSize, ::tarch::multicore::MemoryLocation::Accelerator);
-    double* destinationPatchOnCPU = ::tarch::multicore::allocateMemory(destinationPatchSize, ::tarch::multicore::MemoryLocation::Heap);
+
+    const double timeStamp = {{SOLVER_INSTANCE}}.getMinTimeStamp();
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
+    {
+    #endif
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
       destinationPatchOnGPU,
@@ -74,6 +81,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       1 // halo size
     );
+    
     {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
       [&](
           double                                       QL[],
@@ -97,7 +105,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
         },
         marker.x(),
         marker.h(),
-        {{TIME_STAMP}},
+        timeStamp,
         {{TIME_STEP_SIZE}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_UNKNOWNS}},
@@ -105,10 +113,15 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
         reconstructedPatch,
         destinationPatchOnGPU
     );
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    }
+    #endif
     
     
     // get stuff explicitly back from GPU, as it will be stored
     // locally for a while
+    double* destinationPatchOnCPU = ::tarch::multicore::allocateMemory(destinationPatchSize, ::tarch::multicore::MemoryLocation::Heap);
     std::copy_n(destinationPatchOnGPU,destinationPatchSize,destinationPatchOnCPU);
     ::tarch::multicore::freeMemory(reconstructedPatch,    ::tarch::multicore::MemoryLocation::Accelerator);
     ::tarch::multicore::freeMemory(destinationPatchOnGPU, ::tarch::multicore::MemoryLocation::Accelerator);
