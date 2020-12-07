@@ -186,6 +186,12 @@ class Makefile(object):
           self.d["LIBS"] += flags
           self.d["LIBS"] += " "
       self.d["CONFIGUREPATH"] = directory
+
+      # A posteriori fix for openmp flag propagation
+      if "-fopenmp-targets" in self.d["CXXFLAGS"]:
+          val = self.d["CXXFLAGS"].split("-fopenmp-targets=")[-1].split()[0]
+          self.d["LDFLAGS"] += " -fopenmp-targets={}".format(val)
+
     except IOError:
       print( """
 Error: if you call parse_configure_script_outcome(), please hand over directory where
