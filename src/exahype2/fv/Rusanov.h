@@ -18,6 +18,9 @@ namespace exahype2 {
     /**
      * 1d Riemann accepting a flux and eigenvalue function.
      */
+#if defined(GPUOffloading)
+#pragma omp declare target
+#endif
     void splitRusanov1d(
       std::function< void(
         double * __restrict__ Q,
@@ -48,11 +51,17 @@ namespace exahype2 {
       double * __restrict__ FL,
       double * __restrict__ FR
     );
+#if defined(GPUOffloading)
+#pragma omp end declare target
+#endif
 
 
     /**
      * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
      */
+#if defined(GPUOffloading)
+#pragma omp declare target
+#endif
     void splitRusanov1d(
       std::function< void(
         double * __restrict__ Q,
@@ -94,45 +103,10 @@ namespace exahype2 {
       double * __restrict__ FR
     );
   }
+#if defined(GPUOffloading)
+#pragma omp end declare target
+#endif
 
-    namespace gpu {
-	    // @todo docu: Would like to have it in the cpp file. Docu in 
-	    // report that lambdas improves template thing and now we are 
-	    // back
-	    //
-	    // Big summary: Codes becomes uglier as all ends up in headerfiles
-      /**
-	     * Do this one only for the most generic variant. Doesn't matter, 
-	     * as it is a template, so compiler will filter out.
-	     *
-	     *
-	     * @todo Tons of docu that solver routines have to be stateless
-	     * different to original
-       */
-      #if defined(GPUOffloading)
-      #pragma omp declare target
-      #endif
-      template< typename Flux, typename NCP, typename MaxEigenvalue>
-      void splitRusanov1d(
-        Flux flux,
-        NCP  nonconservativeProduct,
-        MaxEigenvalue maxEigenvalue,
-        double * __restrict__ QL,
-        double * __restrict__ QR,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        int                                          unknowns,
-        int                                          auxiliaryVariables,
-        double * __restrict__ FL,
-        double * __restrict__ FR
-      );
-      #if defined(GPUOffloading)
-      #pragma omp end declare target
-      #endif
-  }
 }
 
 
