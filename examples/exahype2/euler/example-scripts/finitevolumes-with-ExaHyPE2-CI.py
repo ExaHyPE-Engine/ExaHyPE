@@ -76,9 +76,9 @@ project.add_solver( solver );
 
 
 dimensions = args.dim
-#build_mode = peano4.output.CompileMode.Release
+build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Trace
-build_mode = peano4.output.CompileMode.Asserts
+#build_mode = peano4.output.CompileMode.Asserts
 
 
 
