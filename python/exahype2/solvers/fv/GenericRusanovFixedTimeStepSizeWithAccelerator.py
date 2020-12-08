@@ -69,10 +69,10 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
 
     const double timeStamp = {{SOLVER_INSTANCE}}.getMinTimeStamp();
     
-    #if defined(GPUOffloading)
-    #pragma omp declare target map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
+    //#if defined(GPUOffloading)
+    #pragma omp target map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
     {
-    #endif
+    //#endif
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
       destinationPatchOnGPU,
@@ -81,6 +81,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       1 // halo size
     );
+}
     
     {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
       [&](
@@ -113,10 +114,9 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
         reconstructedPatch,
         destinationPatchOnGPU
     );
-    #if defined(GPUOffloading)
-    #pragma omp declare target
-    }
-    #endif
+//    #if defined(GPUOffloading)
+//    }
+//    #endif
     
     
     // get stuff explicitly back from GPU, as it will be stored
