@@ -38,8 +38,13 @@ all: solver
 
 
 
+#
+# Linker arguments are read from left to right and objects are thrown away
+# per step if they are not required anymore. That is: left libraries can
+# depend objects right but not the other way round.
+#
 solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) 
-	$(CXX) $(LDFLAGS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LIBS) -o {{EXECUTABLENAME}} 
+	$(CXX) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(LIBS) -o {{EXECUTABLENAME}} 
 
     
 clean:

@@ -22,7 +22,7 @@
 #define CompilerHasTimespec
 //#define CompilerDefinesMPIMaxNameString
 //#define CompilerHasSysinfo
-if !defined(noMPISupportsSingleSidedCommunication) and !defined(MPISupportsSingleSidedCommunication)
+#if !defined(noMPISupportsSingleSidedCommunication) and !defined(MPISupportsSingleSidedCommunication)
 #define MPISupportsSingleSidedCommunication
 #endif
 
