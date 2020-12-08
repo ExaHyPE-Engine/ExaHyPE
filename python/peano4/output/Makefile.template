@@ -11,7 +11,7 @@ CXXFLAGS += -std=c++0x {{CXX_MODE_FLAGS}} {{CXXFLAGS}} -DDimensions={{DIM}} -I. 
 FCFLAGS  += {{FCFLAGS}}
 LDFLAGS  += {{LDFLAGS}}
 LIBS = -L{{CONFIGUREPATH}}/src {{LIBS}} -lPeano4Core{{DIM}}d{{LIBRARY_POSTFIX}} -lTarch{{LIBRARY_POSTFIX}} 
-
+GPU_OBJS = {{GPUOBJS}}
 
 CXX_SOURCES={% for item in CXX_SOURCES -%} {{item+" "}} {%- endfor %} 
 FORTRAN_SOURCES={% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
@@ -44,7 +44,7 @@ all: solver
 # depend objects right but not the other way round.
 #
 solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) 
-	$(CXX) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(LIBS) -o {{EXECUTABLENAME}} 
+	$(CXX) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(LIBS) -o {{EXECUTABLENAME}} 
 
     
 clean:
