@@ -28,6 +28,7 @@ class Makefile(object):
     self.d["FC"]               = ""
     self.d["FCFLAGS"]          = ""
     self.d["LDFLAGS"]          = ""
+    self.d["GPUOBJS"]          = ""
     self.d["LIBS"]             = ""
     self.d["DIM"]              = "2"
     self.d["CONFIGUREPATH"]    = "."
@@ -66,12 +67,22 @@ class Makefile(object):
 
   def add_header_search_path(self, path ):
     """
-     Add the header search path to both the C++ and the Fortran 
+     Add the header search path to both the C++ and the Fortran
      call command.
     """
     self.d["CXXFLAGS"] += " -I" + path
     self.d["FCFLAGS"]  += " -I" + path
 
+
+  def add_gpu_object(self, object_path=""):
+    """
+    This is a temporary fix for GPU offloading with OpenMP and LLVM and will
+    be required ntil linking to static libraries is supported. We need to
+    collect all object files that contain offload instructions and later
+    add them to the linker command. NOTE: the order matters i.e. the
+    objects must be left of the static libs later.
+    """
+    self.d["GPUOBJS"] += " {}".format(object_path)
 
   def add_library(self, library_name, library_path="" ):
     """
@@ -190,7 +201,7 @@ class Makefile(object):
       # A posteriori fix for openmp flag propagation
       if "-fopenmp-targets" in self.d["CXXFLAGS"]:
           val = self.d["CXXFLAGS"].split("-fopenmp-targets=")[-1].split()[0]
-          self.d["LDFLAGS"] += " -fopenmp-targets={} ".format(val)
+          self.d["LDFLAGS"] += " -fopenmp -fopenmp-targets={} ".format(val)
 
     except IOError:
       print( """
@@ -220,20 +231,20 @@ did search for a file """ + input_file )
   def add_Fortran_file(self,filename):
     """
 
-     Add a new Fortran file. 
+     Add a new Fortran file.
 
      All the standard Peano 4 routines rely on this function to add their
      generated files to the build environment. Nothing stops you however to
      add more files yourself. Don't add a file multiple times. This might
      break the compiler.
-     
+
      Fortran is really picky about the translation order. So you have to add
-     the stuff in the right order. Otherwise, Fortran might complain. This is 
-     your responsibility. 
-     
+     the stuff in the right order. Otherwise, Fortran might complain. This is
+     your responsibility.
+
      If your file defines a module, please do not use this routine, but use
      add_Fortran_module() instead.
-     
+
      filename: String
        Filename of a Fortran file. They usually should have the .f90 extension.
 
@@ -244,12 +255,12 @@ did search for a file """ + input_file )
 
   def add_Fortran_files(self,filenames):
     """
-    
+
      Calls add_Fortran_file() for each file.
-     
+
      filenames: [String]
        List of files.
-        
+
     """
     for i in filenames:
       self.add_Fortran_file(i)
@@ -257,24 +268,24 @@ did search for a file """ + input_file )
 
   def add_Fortran_module(self,module_file):
     """
-    
+
      Add a Fortran module
-     
+
      module_file: String
        Filename of a Fortran source code file which hosts a module. It should
        have the extension .f90 or similar.
-       
+
     """
     if not module_file.endswith( ".f90" ):
       print( "Warning: Fortran module file does not have extension .f90 (" + module_file + ") and translation thus might fail" )
     self.d["FORTRAN_MODULES"].append( module_file )
     self.fortranfiles.append( module_file )
-    
+
 
   def add_Fortran_modules(self,module_files):
     for i in module_files:
       self.add_Fortran_module( i )
-   
+
 
   def generate(self,overwrite,directory):
     filename = directory + "/Makefile";
@@ -283,7 +294,7 @@ did search for a file """ + input_file )
 
       # files
       self.d[ 'CXX_SOURCES' ]     = self.cppfiles
-      
+
       self.d[ 'FORTRAN_SOURCES' ] = self.fortranfiles
 
 
