@@ -19,6 +19,10 @@ std::string exahype2::fv::plotVolume(
 };
 
 
+
+#if defined(GPUOffloading)
+#pragma omp declare target
+#endif
 void exahype2::fv::copyPatch(
   double* __restrict__ QinWithHalo,
   double* __restrict__ QOutWithoutHalo,
@@ -36,6 +40,9 @@ void exahype2::fv::copyPatch(
     }
   }
 }
+#if defined(GPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 /*
