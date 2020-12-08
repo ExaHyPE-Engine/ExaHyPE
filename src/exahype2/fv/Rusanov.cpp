@@ -9,9 +9,6 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
-#if defined(GPUOffloading)
-#pragma omp declare target
-#endif
 void exahype2::fv::splitRusanov1d(
   std::function< void(
     double * __restrict__ Q,
@@ -64,14 +61,8 @@ void exahype2::fv::splitRusanov1d(
     assertionEquals( FL[unknown], FR[unknown]);
   }
 };
-#if defined(GPUOffloading)
-#pragma omp end declare target
-#endif
 
 
-#if defined(GPUOffloading)
-#pragma omp declare target
-#endif
 void exahype2::fv::splitRusanov1d(
    std::function< void(
     double * __restrict__ Q,
@@ -145,7 +136,4 @@ void exahype2::fv::splitRusanov1d(
     FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]) + 0.5 * fluxnonconservativeProduct[unknown];
   }
 };
-#if defined(GPUOffloading)
-#pragma omp end declare target
-#endif
 

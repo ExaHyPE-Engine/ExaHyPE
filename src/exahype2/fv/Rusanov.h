@@ -18,9 +18,6 @@ namespace exahype2 {
     /**
      * 1d Riemann accepting a flux and eigenvalue function.
      */
-#if defined(GPUOffloading)
-#pragma omp declare target
-#endif
     void splitRusanov1d(
       std::function< void(
         double * __restrict__ Q,
@@ -51,17 +48,11 @@ namespace exahype2 {
       double * __restrict__ FL,
       double * __restrict__ FR
     );
-#if defined(GPUOffloading)
-#pragma omp end declare target
-#endif
 
 
     /**
      * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
      */
-#if defined(GPUOffloading)
-#pragma omp declare target
-#endif
     void splitRusanov1d(
       std::function< void(
         double * __restrict__ Q,
@@ -103,10 +94,6 @@ namespace exahype2 {
       double * __restrict__ FR
     );
   }
-#if defined(GPUOffloading)
-#pragma omp end declare target
-#endif
-
 }
 
 
