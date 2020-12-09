@@ -77,17 +77,40 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     {% endif %}
 
 
-    void solveRiemannProblem(
-      double * __restrict__ QL,
-      double * __restrict__ QR,
+    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+    double maxEigenvalue(
+      double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      double                                       volumeH,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double * __restrict__ FL,
-      double * __restrict__ FR
+      int                                          normal
     ) override;
+    {% endif %}
+
+
+    {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+    void flux(
+      double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+    ) override;
+    {% endif %}
+
+
+    {% if NCP_IMPLEMENTATION=="<user-defined>" %}
+    void nonconservativeProduct(
+      double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+    ) override;
+    {% endif %}
 };
 
 

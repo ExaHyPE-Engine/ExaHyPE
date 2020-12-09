@@ -61,20 +61,50 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundar
 {% endif %}
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::solveRiemannProblem(
-  double * __restrict__ QL,
-  double * __restrict__ QR,
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEigenvalue(
+  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  double                                       volumeH,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
-  double                                       dt,
-  int                                          normal,
-  double * __restrict__ FL,
-  double * __restrict__ FR
-) {
-  logTraceInWith5Arguments( "solveRiemannProblem(...)", faceCentre, volumeH, t, dt, normal );
+  int                                          normal
+)  {
+  logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
   // @todo implement
-  logTraceOut( "solveRiemannProblem(...)" );
-
+  logTraceOut( "maxEigenvalue(...)" );
 }
+{% endif %}
+
+
+{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::flux(
+  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+)  {
+  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+  // @todo implement
+  logTraceOut( "flux(...)" );
+}
+{% endif %}
+
+
+{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::nonconservativeProduct(
+  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+)  {
+  logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
+  // @todo implement
+  logTraceOut( "nonconservativeProduct(...)" );
+}
+{% endif %}
 
