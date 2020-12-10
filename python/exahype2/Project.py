@@ -159,8 +159,8 @@ class Project(object):
     offset_string += "}"
     size_string   += "}"
     self._project.constants.add_include( """#include <bitset>""") 
-    self._project.constants.export( "DomainOffset", offset_string )
-    self._project.constants.export( "DomainSize", size_string )
+    self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
+    self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
     self._project.constants.export( "TerminalTime", str(self._terminal_time) )
     self._project.constants.export( "FirstPlotTimeStamp", str(self._first_plot_time_stamp) )
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
@@ -189,7 +189,9 @@ class Project(object):
     self._terminal_time = end_time
     self._first_plot_time_stamp = first_plot_time_stamp
     self._time_in_between_plots = time_in_between_plots
-    self._periodic_BC           = periodic_BC
+    self._periodic_BC = []
+    for d in range(0,dimensions):
+      self._periodic_BC.append( periodic_BC[d] )
     
     
   def __generate_solver_repository(self):

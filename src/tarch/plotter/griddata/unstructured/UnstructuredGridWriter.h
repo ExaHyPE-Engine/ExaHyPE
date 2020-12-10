@@ -20,6 +20,7 @@ namespace tarch {
 
 class tarch::plotter::griddata::unstructured::UnstructuredGridWriter {
   public:
+    virtual ~UnstructuredGridWriter() = default;
 
     /**
      * @return Write has been successful

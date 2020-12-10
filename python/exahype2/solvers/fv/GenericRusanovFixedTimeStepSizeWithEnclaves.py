@@ -299,7 +299,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     self._patch.generator.includes                   += """ #include "observers/SolverRepository.h" """
 
 
-  def __construct_template_update_cell(self):
+  def _construct_template_update_cell(self):
     self._template_update_cell      = jinja2.Template( self._wrap_update_cell_template( 
       self._get_template_update_cell( self._rusanov_call + """
           QL, QR, x, dx, t, dt, normal, """ + 
@@ -339,7 +339,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     else:
       raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
 
-    self.__construct_template_update_cell()
+    self._construct_template_update_cell()
 
 
   def set_update_cell_implementation(self,
@@ -361,7 +361,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
 
     self._reconstructed_array_memory_location = memory_location
     self._kernel_implementation               = kernel_implementation
-    self.__construct_template_update_cell()
+    self._construct_template_update_cell()
 
   
   def get_user_includes(self):
@@ -370,7 +370,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "exahype2/EnclaveOpenMPGPUTask.h"
 
 #include "peano4/parallel/Tasks.h"
 """    
@@ -407,7 +406,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     pass
 
 
-  def __construct_template_update_cell(self):
+  def _construct_template_update_cell(self):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)

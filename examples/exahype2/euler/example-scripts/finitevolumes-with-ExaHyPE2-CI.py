@@ -39,7 +39,7 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 #
 # Add the Finite Volumes solver
 #
-patch_size     = 101
+patch_size     = 10
 unknowns       = 5
 time_step_size = 0.000001
 min_h          = args.h
@@ -70,11 +70,9 @@ else:
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 
- 
+
 
 project.add_solver( solver );
-# use_gpu =  False
-
 
 
 dimensions = args.dim
@@ -106,6 +104,9 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
 project.set_Peano4_installation("../../..", build_mode)
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
+if args.gpu:
+  peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core2d_a-Generic.o" )
+
 peano4_project.generate()
 #peano4_project.build(make_clean_first=True, number_of_parallel_builds=1)
 

@@ -51,16 +51,6 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     {% endif %}
 
 
-    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    virtual double maxEigenvalue(
-      double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal
-    ) override;
-    {% endif %}
-
 
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void boundaryConditions(
@@ -74,6 +64,30 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     {% endif %}
 
 
+
+    {% if RIEMANN_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
+    virtual void boundaryConditions(
+      double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double * __restrict__ Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal
+    )  override;
+    {% endif %}
+
+
+    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+    double maxEigenvalue(
+      double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal
+    ) override;
+    {% endif %}
+
+
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
     void flux(
       double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -84,6 +98,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
     {% endif %}
+
 
     {% if NCP_IMPLEMENTATION=="<user-defined>" %}
     void nonconservativeProduct(

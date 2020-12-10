@@ -71,6 +71,40 @@ class GenericRusanovFixedTimeStepSize( FV ):
           }
 """
 
+
+  """
+  
+    Combination of the two previous ones.
+    
+  """
+  RusanovCallWithFluxAndNCP = """
+          [] (
+           double * __restrict__ Q,
+           const tarch::la::Vector<Dimensions,double>&  faceCentre,
+           const tarch::la::Vector<Dimensions,double>&  volumeH,
+           double                                       t,
+           double                                       dt,
+           int                                          normal,
+           double * __restrict__                        F
+          ) -> void {
+            {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+          },
+          [] (
+            double                                       Q[],
+            double                                       gradQ[][Dimensions],
+            const tarch::la::Vector<Dimensions,double>&  faceCentre,
+            const tarch::la::Vector<Dimensions,double>&  volumeH,
+            double                                       t,
+            double                                       dt,
+            int                                          normal,
+            double                                       BgradQ[]
+          ) -> void {
+            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+          }
+"""
+
+
+
   EigenvaluesCall = """
           [] (
             double                                       Q[],
@@ -180,10 +214,12 @@ class GenericRusanovFixedTimeStepSize( FV ):
       self._rusanov_call = self.RusanovCallWithFlux
     elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
       self._rusanov_call = self.RusanovCallWithNCP
+    elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
+      self._rusanov_call = self.RusanovCallWithFluxAndNCP
     else:
       raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
 
-    self.__construct_template_update_cell()
+    self._construct_template_update_cell()
     
   
   def set_update_cell_implementation(self,
@@ -197,7 +233,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
 
     self._reconstructed_array_memory_location = memory_location
     self._kernel_implementation               = kernel_implementation
-    self.__construct_template_update_cell()
+    self._construct_template_update_cell()
   
   
   def get_user_includes(self):
@@ -226,7 +262,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
     pass
 
 
-  def __construct_template_update_cell(self):
+  def _construct_template_update_cell(self):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)

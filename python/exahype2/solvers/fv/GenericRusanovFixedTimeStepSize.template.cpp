@@ -45,21 +45,6 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::adjustS
 {% endif %}
 
 
-{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEigenvalue(
-  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal
-) {
-  logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "eigenvalues(...)" );
-}
-{% endif %}
-
-
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundaryConditions(
   double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -72,6 +57,54 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::boundar
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
   // @todo implement
   logTraceOut( "boundaryConditions(...)" );
+}
+{% endif %}
+
+
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
+double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEigenvalue(
+  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+)  {
+  logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
+  // @todo implement
+  logTraceOut( "maxEigenvalue(...)" );
+}
+{% endif %}
+
+
+{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::flux(
+  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+)  {
+  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+  // @todo implement
+  logTraceOut( "flux(...)" );
+}
+{% endif %}
+
+
+{% if NCP_IMPLEMENTATION=="<user-defined>" %}
+void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::nonconservativeProduct(
+  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+)  {
+  logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
+  // @todo implement
+  logTraceOut( "nonconservativeProduct(...)" );
 }
 {% endif %}
 

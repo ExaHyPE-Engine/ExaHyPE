@@ -1,7 +1,8 @@
 #include "{{CLASSNAME}}.h"
-
+#include "Constants.h"
 
 tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}::_log( "{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}" );
+
 std::bitset<Dimensions> {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}PeriodicBC;
 
 

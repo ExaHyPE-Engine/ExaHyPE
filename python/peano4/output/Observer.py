@@ -13,21 +13,21 @@ import re
 
 class Observer(object):
   default_overwrite = True
-  
-  
+
+
   def __init__(self,classname,namespace,subdirectory,included_actions,vertices,faces,cells):
     """
       Included actions is a list of qualified actions which are used
     """
     self.classname    = classname
     self.namespace    = namespace
-    self.subdirectory = subdirectory 
-    
+    self.subdirectory = subdirectory
+
     self.included_actions = included_actions
     self.vertices          = vertices
     self.faces             = faces
     self.cells             = cells
-    
+
     self.d = {}
     self.d[ "OPEN_NAMESPACE" ]           = ""
     self.d[ "CLOSE_NAMESPACE" ]          = ""
@@ -66,10 +66,10 @@ class Observer(object):
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS" ]   += "DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)";
       self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ]     += "DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(0)";
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_PICK_ENTRY" ]   += "DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(1)";
-      
+
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT" ]       = self.d[ "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS" ]
     self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT" ]     = self.d[ "MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS" ]
-           
+
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS" ]      = ""
     self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS" ]    = ""
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]      = ""
@@ -84,7 +84,7 @@ class Observer(object):
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS" ]   += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )";
       self.d[ "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]     += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD-1) )(pick)";
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS_PICK_ENTRY" ]   += "peano4::datamanagement::FaceEnumerator<" + face.get_full_qualified_type() + ">( &DataRepository::_" + face.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoTimesD*2-1) )(pick)";
-      
+
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS" ]   = ""
     self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS" ] = ""
     self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]   = ""
@@ -100,54 +100,22 @@ class Observer(object):
       self.d[ "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]     += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD-1) )(pick)";
       self.d[ "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY" ]   += "peano4::datamanagement::VertexEnumerator<" + vertex.get_full_qualified_type() + ">( &DataRepository::_" + vertex.get_logical_type_name() + "Stack.getForPop( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top(TwoPowerD*2-1) )(pick)";
 
-    #
-    # Create powersets of arguments
-    #
-    for i in range(0,2):
-      new_dictionary_entries = {}
-      for keyA in self.d:
-        for keyB in self.d:
-          new_entry = ""
-          if self.d[keyA]!="" and self.d[keyB]!="":
-            new_entry = self.d[keyA] + "," + self.d[keyB]
-          else:
-            new_entry = self.d[keyA] + self.d[keyB]
-          new_dictionary_entries[keyA+","+keyB] = new_entry
-      for key in new_dictionary_entries:
-        self.d[key] = new_dictionary_entries[key]
-    
-    #
-    # Create variants with leading and tailing comma
-    #
-    new_dictionary_entries = {}
-    for key in self.d:
-      if self.d[key]!="":
-        new_dictionary_entries[ key+","     ] = self.d[key] + ","
-        new_dictionary_entries[ ","+key     ] = "," + self.d[key] 
-        new_dictionary_entries[ ","+key+"," ] = "," + self.d[key] + ","
-      else:
-        new_dictionary_entries[ key+"," ]       = ""
-        new_dictionary_entries[ "," + key ]     = ""
-        new_dictionary_entries[ "," + key+"," ] = ""
-        
-    for key in new_dictionary_entries:
-      self.d[key] = new_dictionary_entries[key]
-
 
   def __generate_header(self,overwrite,directory):
     headerfile_template = os.path.realpath(__file__).replace( ".pyc", ".h.template" ).replace( ".py", ".h.template" )
-    header = Jinja2TemplatedHeaderFile(headerfile_template,self.classname,self.namespace,self.subdirectory,self.d,self.default_overwrite)
+    md = self.mkSubDict(["ATTRIBUTES", "INCLUDES"])
+    header = Jinja2TemplatedHeaderFile(headerfile_template,self.classname,self.namespace,self.subdirectory, md,self.default_overwrite)
     header.generate(overwrite,directory)
-    
+    del header
 
 
   TemplateConstructor = """
-  
+
 {FULL_QUALIFIED_CLASSNAME}::{CLASSNAME}(int spacetreeId):
   _spacetreeId( spacetreeId ) {MAPPING_INITIALISATION_LIST}
 {{
 }}
-  
+
 
   """
 
@@ -165,16 +133,16 @@ class Observer(object):
 
 
   TemplateClone = """
-  
+
 peano4::grid::TraversalObserver* {FULL_QUALIFIED_CLASSNAME}::clone(int spacetreeId) {{
   return new {CLASSNAME}(spacetreeId);
 }}
-  
+
   """
 
 
   TemplateBeginTraversal = """
-  
+
 void {FULL_QUALIFIED_CLASSNAME}::beginTraversal( const tarch::la::Vector<Dimensions,double>&  x, const tarch::la::Vector<Dimensions,double>&  h ) {{
   logTraceInWith2Arguments( "beginTraversal(...)", x, h );
   //
@@ -183,24 +151,24 @@ void {FULL_QUALIFIED_CLASSNAME}::beginTraversal( const tarch::la::Vector<Dimensi
 {MAPPING_BEGIN_TRAVERSAL_CALLS}
 
   //
-  // Fill call stacks with dummies which represent level -1 such that we can 
-  // call standard action routines on level 0 with parents. Without these 
-  // statements, a top(1) call would raise an assertion. 
+  // Fill call stacks with dummies which represent level -1 such that we can
+  // call standard action routines on level 0 with parents. Without these
+  // statements, a top(1) call would raise an assertion.
   //
 {INITIAL_PUSH_TO_OUTPUT_STREAMS}
   logTraceOutWith2Arguments( "beginTraversal(...)", x, h );
 }}
-  
+
   """
 
-    
+
   def __generate_beginTraversal(self,output_file):
     self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]     = ""
     for action in self.included_actions:
       self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]  += "  _actionSet"
       self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]  += str( self.included_actions.index(action) )
       self.d[ "MAPPING_BEGIN_TRAVERSAL_CALLS" ]  += ".beginTraversal();\n"
-      
+
     self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    = ""
     for cell in self.cells:
       self.d[ "INITIAL_PUSH_TO_OUTPUT_STREAMS" ]    += "  DataRepository::_" + cell.get_logical_type_name() + "Stack.getForPush( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->push( " + cell.get_full_qualified_type() + "() );\n"
@@ -222,17 +190,17 @@ void {FULL_QUALIFIED_CLASSNAME}::beginTraversal( const tarch::la::Vector<Dimensi
 
 
   TemplateEndTraversal = """
-  
+
 void {FULL_QUALIFIED_CLASSNAME}::endTraversal( const tarch::la::Vector<Dimensions,double>&  x, const tarch::la::Vector<Dimensions,double>&  h ) {{
   logTraceInWith2Arguments( "endTraversal(...)", x, h );
 {MAPPING_END_TRAVERSAL_CALLS}
 {FINAL_POP_FROM_INPUT_STREAMS}
   logTraceOutWith2Arguments( "endTraversal(...)", x, h );
 }}
-  
+
   """
 
-    
+
   def __generate_endTraversal(self,output_file):
     self.d[ "MAPPING_END_TRAVERSAL_CALLS" ]                = ""
     for action in self.included_actions:
@@ -257,29 +225,42 @@ void {FULL_QUALIFIED_CLASSNAME}::endTraversal( const tarch::la::Vector<Dimension
       self.d[ "FINAL_POP_FROM_INPUT_STREAMS" ]    += "  }\n"
       pass
 
-    
+
     output_file.write( self.TemplateEndTraversal.format(**self.d) )
-    
 
 
-  def __format_template_per_action(self,output_file,template,reverse_order=False):
+
+  def __format_template_per_action(self,output_file,template,reverse_order=False, manual_dict=None):
     """
      Takes the specified template file, iterates over actions and pastes
      the template into the output file once per action. Per action, the dictionary's
      entries are updated. Otherwise, the dictionary remains unchanged.
-    """ 
+    """
     local_actions = [x for x in self.included_actions]
     if reverse_order:
       local_actions.reverse()
-        
+
     for action in local_actions:
-      self.d[ "ACTIVE_ACTION_SET" ]  = "_actionSet" + str( self.included_actions.index(action) )
-      self.d[ "ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME" ]  = action
-      output_file.write( template.format(**self.d) )
-        
+      if manual_dict is None:
+          self.d[ "ACTIVE_ACTION_SET" ]  = "_actionSet" + str( self.included_actions.index(action) )
+          self.d[ "ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME" ]  = action
+          if output_file is not None:
+            output_file.write( template.format(**self.d) )
+          else:
+            return template.format(**self.d)
+      else:
+
+          manual_dict[ "ACTIVE_ACTION_SET" ]  = "_actionSet" + str( self.included_actions.index(action) )
+          manual_dict[ "ACTIVE_ACTION_SET_FULL_QUALIFIED_NAME" ]  = action
+          # output_file.write( template.format(**manual_dict) )
+          if output_file is not None:
+            output_file.write( template.format(**manual_dict) )
+          else:
+            return template.format(**manual_dict)
+
 
   TemplateGetGridControlEvents_Prologue = """
-  
+
 std::vector< peano4::grid::GridControlEvent > {FULL_QUALIFIED_CLASSNAME}::getGridControlEvents() const {{
   std::vector< peano4::grid::GridControlEvent > result;
 """
@@ -289,27 +270,27 @@ std::vector< peano4::grid::GridControlEvent > {FULL_QUALIFIED_CLASSNAME}::getGri
     const std::vector< peano4::grid::GridControlEvent > actionResult = {ACTIVE_ACTION_SET}.getGridControlEvents();
     result.insert(result.begin(),actionResult.begin(),actionResult.end());
   }}
-"""        
+"""
 
-  
+
   TemplateGetGridControlEvents_Epilogue = """
   return result;
 }}
-  
+
 """
-  
-        
+
+
   def __generate_getGridControlEvents(self,output_file):
-    output_file.write( self.TemplateGetGridControlEvents_Prologue.format(**self.d) )
-    self.__format_template_per_action(output_file,self.TemplateGetGridControlEvents_MappingCall)
-    output_file.write( self.TemplateGetGridControlEvents_Epilogue.format(**self.d) )
+    output_file.write( self.TemplateGetGridControlEvents_Prologue.format(**{"FULL_QUALIFIED_CLASSNAME":self.d["FULL_QUALIFIED_CLASSNAME"]}) )
+    self.__format_template_per_action(output_file,self.TemplateGetGridControlEvents_MappingCall, manual_dict={})
+    output_file.write( self.TemplateGetGridControlEvents_Epilogue.format(**{}) )
 
 
   def __generate_clone(self,output_file):
     output_file.write( self.TemplateClone.format(**self.d) )
 
 
-  TemplateEnterCell_Prologue = """  
+  TemplateEnterCell_Prologue = """
 void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEvent&  event ) {{
   logTraceInWith2Arguments( "enterCell(...)", _spacetreeId, event.toString() );
 """
@@ -339,8 +320,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         assertion4( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
         data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inVertexStack))->pop();
       }}
-   
-      #if PeanoDebug>0  
+
+      #if PeanoDebug>0
       if (
         inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         or
@@ -371,20 +352,20 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
   // Handle vertex {name}
   {{
     peano4::datamanagement::VertexMarker  marker(event);
-    
+
     for (int i=0; i<TwoPowerD; i++) {{
       int inVertexStack  = event.getVertexDataFrom(i);
       int pick          = event.getVertexDataTo(i);   // the vertex position
 
       marker.select(pick);
-      
+
       if (
         inVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
         marker.isLocal()
       ) {{
         // Take care about the coarse grid accesses: Faces and cells are not yet loaded.
-        // Therefore we don't use the usual shift of @f$ 2 \cdot 2d @f$ or @f$ 2 \cdot 2^d @f$ 
+        // Therefore we don't use the usual shift of @f$ 2 \cdot 2d @f$ or @f$ 2 \cdot 2^d @f$
         // but only half of it.
         {ACTIVE_ACTION_SET}.createPersistentVertex(
            marker
@@ -429,7 +410,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateEnterCell_FaceLoad_Prologue = """  
+  TemplateEnterCell_FaceLoad_Prologue = """
   // Load face {name}
   {{
     auto view = DataRepository::_{logical_type_name}Stack.getForPush( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( TwoTimesD );
@@ -439,7 +420,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       logDebug("enterCell(...)", "face stack " << inFaceStack << "->pos-" << outFaceStackPosition );
 
       peano4::datamanagement::FaceMarker  marker(event,outFaceStackPosition);
-      
+
       {full_qualified_type} data ;
       if (
         inFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -453,8 +434,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         assertion4( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
         data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inFaceStack))->pop();
       }}
-      
-      #if PeanoDebug>0  
+
+      #if PeanoDebug>0
       if (
         inFaceStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         or
@@ -481,7 +462,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateEnterCell_FaceLoad_MappingCall = """  
+  TemplateEnterCell_FaceLoad_MappingCall = """
   // Handle face {name}
   {{
     peano4::datamanagement::FaceMarker marker( event );
@@ -490,9 +471,9 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       int pick        = event.getFaceDataTo(i);
 
       marker.select(pick);
-      
+
       assertion3( marker.isLocal() or not event.getIsCellLocal(), marker.toString(), event.toString(), i );
-            
+
       if (
         inFaceStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -546,17 +527,17 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateEnterCell_CellLoad_Prologue = """  
+  TemplateEnterCell_CellLoad_Prologue = """
   // Load cell {name}
   {{
     auto view = DataRepository::_{logical_type_name}Stack.getForPush( DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->pushBlock( 1 );
-    
+
     peano4::datamanagement::CellMarker  marker(event);
 
     const int inCellStack  = event.getCellData();
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
     logDebug("enterCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack << "(" << {full_qualified_type}::loadPersistently(marker) << ")" );
-        
+
     {full_qualified_type}& data = view.get(0);
     if (
       inCellStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
@@ -568,8 +549,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       assertion3( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
       data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inCellStack))->pop();
     }}
-    
-    #if PeanoDebug>0  
+
+    #if PeanoDebug>0
     if (
       inCellStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
       or
@@ -589,13 +570,13 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateEnterCell_CellLoad_MappingCall = """  
+  TemplateEnterCell_CellLoad_MappingCall = """
   // Invoke creational events on cell {name}
   {{
     peano4::datamanagement::CellMarker marker( event );
     if (
       event.getCellData()==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
-      and 
+      and
       marker.isLocal()
     ) {{
       {ACTIVE_ACTION_SET}.createCell(
@@ -607,12 +588,12 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         {,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS}
         {,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}
       );
-    }}  
+    }}
   }}
 """
 
 
-  TemplateEnterCell_MappingCall = """  
+  TemplateEnterCell_MappingCall = """
   {{
     peano4::datamanagement::CellMarker marker( event );
     if (marker.isLocal()) {{
@@ -631,53 +612,118 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 }}
 """
 
-  
+  def generateDictEntry(self, key):
+      """
+      Some logic to produce new dictionary entries from existing ones.
+      This deals mainly with having to avoid C++ code with consequtive commata
+      as some dict entries can be an empty string.
+      """
+
+      fields = key.split(",")
+      nonempty = [self.d[f] for f in fields if not f=="" and not self.d[f]==""]
+      if len(nonempty)>0:
+          s = ",".join(nonempty)
+          if key.startswith(",") and not s.startswith(","): s = "," + s
+          if key.endswith(",") and not s.endswith(","): s+=","
+      else:
+          s=""
+
+      return s
+
+
+  def mkSubDict(self, keys):
+      temp = {}
+      for k in keys:
+          if not k in self.d:
+              temp[k] = self.generateDictEntry(k)
+          else:
+              temp[k] = self.d[k]
+      return temp
+
   def __generate_enterCell(self,output_file):
     """
       Generates enter cell
     """
     output_file.write( self.TemplateEnterCell_Prologue.format(**self.d) )
-          
+
     for vertex in self.vertices:
+      temp = {
+        "name": vertex.name,
+        "enumeration_type":vertex.get_enumeration_type(),
+        "logical_type_name":vertex.get_logical_type_name(),
+        "full_qualified_type": vertex.get_full_qualified_type()
+       }
       self.d[ "name" ]                 = vertex.name
-      self.d[ "enumeration_type" ]     = vertex.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = vertex.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = vertex.get_full_qualified_type()
-      output_file.write( self.TemplateEnterCell_VertexLoad_Prologue.format(**self.d) )
+      output_file.write( self.TemplateEnterCell_VertexLoad_Prologue.format(**temp) )
+
     if len(self.vertices)>0:
-      self.__format_template_per_action(output_file, self.TemplateEnterCell_VertexLoad_MappingCall, False)
+      md = self.mkSubDict(["name",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ])
+      self.__format_template_per_action(output_file, self.TemplateEnterCell_VertexLoad_MappingCall, False, manual_dict=md)
 
     for face in self.faces:
+      temp = {
+        "name": face.name,
+        "enumeration_type":face.get_enumeration_type(),
+        "logical_type_name":face.get_logical_type_name(),
+        "full_qualified_type": face.get_full_qualified_type()
+       }
       self.d[ "name" ]                 = face.name
-      self.d[ "enumeration_type" ]     = face.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = face.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = face.get_full_qualified_type()
-      output_file.write( self.TemplateEnterCell_FaceLoad_Prologue.format(**self.d) )
+      output_file.write( self.TemplateEnterCell_FaceLoad_Prologue.format(**temp) )
+
     if len(self.faces)>0:
-      self.__format_template_per_action(output_file, self.TemplateEnterCell_FaceLoad_MappingCall, False)
+      md = self.mkSubDict(["name",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
+        "MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS",
+        "MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS"
+        ])
+      self.__format_template_per_action(output_file, self.TemplateEnterCell_FaceLoad_MappingCall, False, manual_dict=md)
+
 
     for cell in self.cells:
+      temp = {
+        "name": cell.name,
+        # "enumeration_type":cell.get_enumeration_type(),
+        "logical_type_name":cell.get_logical_type_name(),
+        "full_qualified_type": cell.get_full_qualified_type()
+       }
       self.d[ "name" ]                 = cell.name
-      #self.d[ "enumeration_type" ]     = cell.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = cell.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = cell.get_full_qualified_type()
-      output_file.write( self.TemplateEnterCell_CellLoad_Prologue.format(**self.d) )
+      output_file.write( self.TemplateEnterCell_CellLoad_Prologue.format(**temp) )
+
     if len(self.cells)>0:
-      self.__format_template_per_action(output_file, self.TemplateEnterCell_CellLoad_MappingCall, False)
+      md = self.mkSubDict(["name",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,",
+        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,",
+        "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS",
+        ",MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS",
+        ",MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"
+        ])
+      self.__format_template_per_action(output_file, self.TemplateEnterCell_CellLoad_MappingCall, False, manual_dict=md)
 
 
-    self.__format_template_per_action(output_file, self.TemplateEnterCell_MappingCall, False)
-    output_file.write( self.TemplateEnterCell_Epilogue.format(**self.d) )
+    md = self.mkSubDict([
+      ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT",
+      ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT"])
+
+    self.__format_template_per_action(output_file, self.TemplateEnterCell_MappingCall, False, manual_dict=md)
+    output_file.write( self.TemplateEnterCell_Epilogue.format({}) )
 
 
-  TemplateLeaveCell_Prologue = """  
+  TemplateLeaveCell_Prologue = """
 void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEvent&  event ) {{
   logTraceInWith2Arguments( "leaveCell(...)", _spacetreeId, event.toString() );
 """
 
 
 
-  TemplateLeaveCell_MappingCall = """  
+  TemplateLeaveCell_MappingCall = """
   {{
     peano4::datamanagement::CellMarker marker( event );
     if (marker.isLocal()) {{
@@ -704,13 +750,13 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
         {,MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS}
         ,{MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY}
         {,MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS}
-      ); 
+      );
     }}
   }}
 """
 
 
-  TemplateLeaveCell_CellStore_Epilogue = """  
+  TemplateLeaveCell_CellStore_Epilogue = """
   // Handle cell {name}
   {{
     const int inCellStack   = peano4::grid::PeanoCurve::CallStack;
@@ -738,7 +784,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
   // Handle face {name}
   {{
     peano4::datamanagement::FaceMarker  marker(event);
-    
+
     for (int i=0; i<TwoTimesD; i++) {{
       int outFaceStack      = event.getFaceDataTo(i);
       int pick              = event.getFaceDataFrom(i);
@@ -805,11 +851,11 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
       int inFaceStackPosition  = event.getFaceDataFrom(i);
       int outFaceStack         = event.getFaceDataTo(i);
       logDebug("leaveCell(...)", "pos-" << inFaceStackPosition << "->face stack " << outFaceStack );
-      
+
       peano4::datamanagement::FaceMarker  marker(event,inFaceStackPosition);
 
       {full_qualified_type} data = view.get(inFaceStackPosition);
-      
+
       if (
         outFaceStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -829,13 +875,13 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
   // Handle vertex {name}
   {{
     peano4::datamanagement::VertexMarker  marker(event);
-    
+
     for (int i=0; i<TwoPowerD; i++) {{
       int outVertexStack        = event.getVertexDataTo(i);
       int pick                  = event.getVertexDataFrom(i);
 
       marker.select(pick);
-      
+
       if (
         outVertexStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -891,11 +937,11 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
       int inVertexStackPosition  = event.getVertexDataFrom(i);
       int outVertexStack         = event.getVertexDataTo(i);
       logDebug("leaveCell(...)", "pos-" << inVertexStackPosition << "->vertex stack " << outVertexStack );
-      
+
       peano4::datamanagement::VertexMarker  marker(event,inVertexStackPosition);
 
       {full_qualified_type} data = view.get(inVertexStackPosition);
-  
+
       if (
         outVertexStack!=peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity
         and
@@ -912,7 +958,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
 """
 
 
-  TemplateLeaveCell_Epilogue = """  
+  TemplateLeaveCell_Epilogue = """
   logTraceOut( "leaveCell(...)" );
 }}
 """
@@ -922,36 +968,60 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
     """
       Generates enter cell
     """
-    output_file.write( self.TemplateLeaveCell_Prologue.format(**self.d) )
-    self.__format_template_per_action(output_file, self.TemplateLeaveCell_MappingCall, True)
-          
-    if len(self.cells)>0:
-      self.__format_template_per_action(output_file, self.TemplateLeaveCell_CellStore_MappingCall, True)
-    for cell in self.cells:
-      self.d[ "name" ]                 = cell.name
-      self.d[ "logical_type_name" ]    = cell.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = cell.get_full_qualified_type()
-      output_file.write( self.TemplateLeaveCell_CellStore_Epilogue.format(**self.d) )
+    output_file.write( self.TemplateLeaveCell_Prologue.format(**self.mkSubDict(["FULL_QUALIFIED_CLASSNAME"])) )
 
-    if len(self.faces):
-      self.__format_template_per_action(output_file, self.TemplateLeaveCell_FaceStore_MappingCall, True)
+    md = self.mkSubDict([
+      ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_CELL_EVENT",
+      ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS_CELL_EVENT"
+      ])
+    self.__format_template_per_action(output_file, self.TemplateLeaveCell_MappingCall, True, manual_dict=md)
+
+    if len(self.cells)>0:
+      md = self.mkSubDict([
+        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS"
+        ])
+      self.__format_template_per_action(output_file, self.TemplateLeaveCell_CellStore_MappingCall, True, manual_dict=md)
+
+    for cell in self.cells:
+      self.d[ "name" ] = cell.name
+      temp = { "name" : cell.name, "logical_type_name" : cell.get_logical_type_name(), "full_qualified_type" : cell.get_full_qualified_type() }
+      output_file.write( self.TemplateLeaveCell_CellStore_Epilogue.format(**temp) )
+
+    if len(self.faces)>0:
+      md = self.mkSubDict([
+        "name",
+        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ",MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ])
+      self.__format_template_per_action(output_file, self.TemplateLeaveCell_FaceStore_MappingCall, True, manual_dict=md)
+
     for face in self.faces:
-      self.d[ "name" ]                 = face.name
-      self.d[ "enumeration_type" ]     = face.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = face.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = face.get_full_qualified_type()
-      output_file.write( self.TemplateLeaveCell_FaceStore_Epilogue.format(**self.d) )
-        
+      self.d[ "name" ] = face.name
+      temp = { "name" : face.name, "enumeration_type":face.get_enumeration_type(), "logical_type_name":face.get_logical_type_name(), "full_qualified_type":face.get_full_qualified_type()}
+      output_file.write( self.TemplateLeaveCell_FaceStore_Epilogue.format(**temp) )
+
     if len(self.vertices)>0:
-      self.__format_template_per_action(output_file, self.TemplateLeaveCell_VertexStore_MappingCall, True)
+      md = self.mkSubDict([
+        "name",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_COARSE_GRID_CELL_ARGUMENTS",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
+        ])
+      self.__format_template_per_action(output_file, self.TemplateLeaveCell_VertexStore_MappingCall, True, manual_dict=md)
+
     for vertex in self.vertices:
       self.d[ "name" ]                 = vertex.name
-      self.d[ "enumeration_type" ]     = vertex.get_enumeration_type()
-      self.d[ "logical_type_name" ]    = vertex.get_logical_type_name()
-      self.d[ "full_qualified_type" ]  = vertex.get_full_qualified_type()
-      output_file.write( self.TemplateLeaveCell_VertexStore_Epilogue.format(**self.d) )
+      temp = { "name":vertex.name, "enumeration_type": vertex.get_enumeration_type(), "logical_type_name":vertex.get_logical_type_name(), "full_qualified_type":vertex.get_full_qualified_type()}
+      output_file.write( self.TemplateLeaveCell_VertexStore_Epilogue.format(**temp) )
 
-    output_file.write( self.TemplateLeaveCell_Epilogue.format(**self.d) )
+    output_file.write( self.TemplateLeaveCell_Epilogue.format({}))
 
 
   TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue = """
@@ -1111,7 +1181,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4:
       _spacetreeId,inOutStack
     )->top(relativePositionOnInOutStack);
     logDebug( "sendXXX(...)", "send out " << data.toString() << " to stack " << toStack << " (relativePositionOnInOutStack=" << relativePositionOnInOutStack << ")" );
-    
+
     DataRepository::_{logical_type_name}Stack.getForPush(
       _spacetreeId, toStack
     ) -> push(data);
@@ -1131,7 +1201,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeVertex(const peano4::grid::GridT
 
   TemplateExchangeRoutines_receiveAndMergeFace_Prologue = """
 void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, ::peano4::grid::TraversalObserver::SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {{
-  logTraceInWith7Arguments( "receiveAndMergeFace(...)", event.toString(), positionWithinCell, inOutStack, relativePositionOnInOutStack, fromStack, marker.toString(), _spacetreeId ); 
+  logTraceInWith7Arguments( "receiveAndMergeFace(...)", event.toString(), positionWithinCell, inOutStack, relativePositionOnInOutStack, fromStack, marker.toString(), _spacetreeId );
 """
 
   TemplateExchangeRoutines_receiveAndMergeFace_Epilogue = """
@@ -1145,31 +1215,31 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(const peano4::grid::GridTra
     auto   incomingData = DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId, fromStack
     )->pop();
-  
+
     auto&  data = DataRepository::_{logical_type_name}Stack.getForPush( _spacetreeId, inOutStack )->top(
       relativePositionOnInOutStack
     );
 
     logDebug( "receiveAndMergeFace(...)", "merge " << incomingData.toString() << " into " << data.toString() );
-   
+
     if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
       assertion9(
         tarch::la::countEqualEntries(data.getDebugX(), incomingData.getDebugX())==Dimensions-1,
-        data.getDebugX(), incomingData.getDebugX(), 
+        data.getDebugX(), incomingData.getDebugX(),
         data.getDebugH(), incomingData.getDebugH(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
-      assertionVectorNumericalEquals7( 
-        data.getDebugH(), incomingData.getDebugH(), 
+      assertionVectorNumericalEquals7(
+        data.getDebugH(), incomingData.getDebugH(),
         data.getDebugX(), incomingData.getDebugX(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
     }}
     else {{
-      assertionVectorNumericalEquals7( 
-        data.getDebugX(), incomingData.getDebugX(), 
+      assertionVectorNumericalEquals7(
+        data.getDebugX(), incomingData.getDebugX(),
         data.getDebugH(), incomingData.getDebugH(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
-      assertionVectorNumericalEquals7( 
-        data.getDebugH(), incomingData.getDebugH(), 
+      assertionVectorNumericalEquals7(
+        data.getDebugH(), incomingData.getDebugH(),
         data.getDebugX(), incomingData.getDebugX(), fromStack, inOutStack, relativePositionOnInOutStack, marker.toString(), _spacetreeId );
     }}
-    
+
     data.merge(incomingData, marker);
   }}
 """
@@ -1193,127 +1263,105 @@ void {FULL_QUALIFIED_CLASSNAME}::deleteAllStacks() {{
 """
 
   def __generate_exchange_routines(self,output_file):
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue.format(**self.d) )
-    for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**self.d) )
-    for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**self.d) )
-    for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Epilogue.format(**self.d) )
-      
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Prologue.format(**self.d) )
-    for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**self.d) )
-    for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**self.d) )
-    for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Epilogue.format(**self.d) )
+    s=""
 
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Prologue.format(**self.d) )
+    prolodict = {"FULL_QUALIFIED_CLASSNAME":self.d["FULL_QUALIFIED_CLASSNAME"]}
+
+    s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Epilogue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_exchangeAllVerticalDataExchangeStacks_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Prologue.format(**self.d) )
+    s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**self.d) )
+      s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**self.d) )
+      s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue.format(**self.d) )
+      s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+= self.TemplateExchangeRoutines_exchangeAllHorizontalDataExchangeStacks_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue.format(**self.d) )
+    s+= self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_exchangeAllPeriodicBoundaryDataStacks_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue.format(**self.d) )
+    s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Epilogue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_sendVertex_Prologue.format(**self.d) )
-    for vertex in self.vertices:
-      self.d[ "logical_type_name" ]   = vertex.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = vertex.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_send_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_sendVertex_Epilogue.format(**self.d) )
-      
-    output_file.write( self.TemplateExchangeRoutines_sendFace_Prologue.format(**self.d) )
-    for face in self.faces:
-      self.d[ "logical_type_name" ]   = face.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = face.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_send_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_sendFace_Epilogue.format(**self.d) )
-
-    output_file.write( self.TemplateExchangeRoutines_sendCell_Prologue.format(**self.d) )
+    s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "logical_type_name" ]   = cell.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = cell.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_send_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_sendCell_Epilogue.format(**self.d) )
-
-    output_file.write( self.TemplateExchangeRoutines_receiveAndMergeVertex_Prologue.format(**self.d) )
-    for vertex in self.vertices:
-      self.d[ "logical_type_name" ]   = vertex.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = vertex.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_receiveAndMergeVertex_Epilogue.format(**self.d) )
-      
-    output_file.write( self.TemplateExchangeRoutines_receiveAndMergeFace_Prologue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "logical_type_name" ]   = face.get_logical_type_name()
-      self.d[ "full_qualified_type" ] = face.get_full_qualified_type()
-      output_file.write( self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_receiveAndMergeFace_Epilogue.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
+    for vertex in self.vertices:
+      s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Epilogue.format({})
 
-    output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Prologue.format(**self.d) )
+    s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Prologue.format(**prolodict)
     for cell in self.cells:
-      self.d[ "DATASET" ] = "DataRepository::_" + cell.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
     for face in self.faces:
-      self.d[ "DATASET" ] = "DataRepository::_" + face.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**self.d) )
+      s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      self.d[ "DATASET" ] = "DataRepository::_" + vertex.get_logical_type_name() + "Stack";
-      output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**self.d) )
-    output_file.write( self.TemplateExchangeRoutines_deleteAllStacks_Epilogue.format(**self.d) )
-      
-      
-      
+      s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_finishAllOutstandingSendsAndReceives_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_sendVertex_Prologue.format(**prolodict)
+    for vertex in self.vertices:
+      temp = { "logical_type_name" : vertex.get_logical_type_name(), "full_qualified_type" :  vertex.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_send_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_sendVertex_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_sendFace_Prologue.format(**prolodict)
+    for face in self.faces:
+      temp = { "logical_type_name" : face.get_logical_type_name(), "full_qualified_type" :  face.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_send_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_sendFace_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_sendCell_Prologue.format(**prolodict)
+    for cell in self.cells:
+      temp = { "logical_type_name" : cell.get_logical_type_name(), "full_qualified_type" :  cell.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_send_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_sendCell_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_receiveAndMergeVertex_Prologue.format(**prolodict)
+    for vertex in self.vertices:
+      temp = { "logical_type_name" : vertex.get_logical_type_name(), "full_qualified_type" :  vertex.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_receiveAndMergeVertex_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_receiveAndMergeFace_Prologue.format(**prolodict)
+    for face in self.faces:
+      temp = { "logical_type_name" : face.get_logical_type_name(), "full_qualified_type" :  face.get_full_qualified_type()}
+      s+=  self.TemplateExchangeRoutines_receiveAndMerge_Exchange.format(**temp)
+    s+=  self.TemplateExchangeRoutines_receiveAndMergeFace_Epilogue.format({})
+
+    s+=  self.TemplateExchangeRoutines_deleteAllStacks_Prologue.format(**prolodict)
+    for cell in self.cells:
+      s+=  self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**{"DATASET":"DataRepository::_" + cell.get_logical_type_name() + "Stack"})
+    for face in self.faces:
+      s+=  self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
+    for vertex in self.vertices:
+      s+=  self.TemplateExchangeRoutines_deleteAllStacks_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
+    s+=  self.TemplateExchangeRoutines_deleteAllStacks_Epilogue.format({})
+
+
+    output_file.write( s)
 
 
 
@@ -1342,7 +1390,7 @@ tarch::logging::Log {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME
       print( "write " + full_qualified_filename )
       output_file = open( full_qualified_filename, "w" )
       output_file.write( self.TemplateImplementationFilePrologue.format(**self.d) )
-      
+
       self.__generate_constructor(output_file)
       self.__generate_clone(output_file)
       self.__generate_getGridControlEvents(output_file)
@@ -1363,9 +1411,8 @@ tarch::logging::Log {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME
   def generate(self,overwrite,directory):
     if not os.path.exists( directory + "/" + self.subdirectory ):
       os.mkdir(directory + "/" + self.subdirectory)
-    
+
     cpp_filename    = directory + "/" + self.get_cpp_file_name()
-    
+
     self.__generate_header(overwrite,directory)
     self.__generate_implementation(overwrite,cpp_filename)
-
