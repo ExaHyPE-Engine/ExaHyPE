@@ -70,15 +70,15 @@ else:
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 
- 
+
 
 project.add_solver( solver );
 
 
 dimensions = args.dim
-#build_mode = peano4.output.CompileMode.Release
+build_mode = peano4.output.CompileMode.Release
 #build_mode = peano4.output.CompileMode.Trace
-build_mode = peano4.output.CompileMode.Asserts
+#build_mode = peano4.output.CompileMode.Asserts
 
 
 
@@ -104,6 +104,9 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
 project.set_Peano4_installation("../../..", build_mode)
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
+if args.gpu:
+  peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core2d_a-Generic.o" )
+
 peano4_project.generate()
 #peano4_project.build(make_clean_first=True, number_of_parallel_builds=1)
 

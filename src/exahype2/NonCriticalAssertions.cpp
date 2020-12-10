@@ -3,26 +3,30 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/Assertions.h"
+
+
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 
 namespace {
   int                                  rankWhichHasSetNonCriticalAssertion = -1;
   tarch::multicore::BooleanSemaphore   _assertionSemaphore;
-  #ifdef Parallel
+  #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
   MPI_Win assertionWindow;
   #endif
 }
 
 
 void exahype2::shutdownNonCritialAssertionEnvironment() {
-  #ifdef Parallel
+  #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
   MPI_Win_free( &assertionWindow );
   #endif
 }
 
 
 void exahype2::initNonCritialAssertionEnvironment() {
-  #ifdef Parallel
+  #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
   MPI_Win_create( &rankWhichHasSetNonCriticalAssertion, sizeof(int), sizeof(int), MPI_INFO_NULL, MPI_COMM_WORLD, &assertionWindow );
   #endif
 }
@@ -40,12 +44,14 @@ void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::str
 
     rankWhichHasSetNonCriticalAssertion = tarch::mpi::Rank::getInstance().getRank();
 
-    #ifdef Parallel
+    #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
     if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
       int rank = tarch::mpi::Rank::getInstance().getRank();
 
       MPI_Put( &rank, 1, MPI_INT, 0, 0, 1, MPI_INT, assertionWindow );
     }
+    #elif defined(Parallel)
+    assertionMsg( false, "Noncritical assertion triggered, but system does not support single-sided communication so program will shut down immediately");
     #endif
   }
 }

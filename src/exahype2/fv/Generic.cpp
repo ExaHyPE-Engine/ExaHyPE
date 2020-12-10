@@ -19,27 +19,11 @@ std::string exahype2::fv::plotVolume(
 };
 
 
+
+#if defined(GPUOffloading)
+#pragma omp declare target
+#endif
 void exahype2::fv::copyPatch(
-  double* __restrict__ QinWithHalo,
-  double* __restrict__ QOutWithoutHalo,
-  int    unknowns,
-  int    auxiliaryVariables,
-  int    numberOfVolumesPerAxisInPatch,
-  int    haloSize
-) {
-  dfor(k,numberOfVolumesPerAxisInPatch) {
-    tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
-    int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
-    int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
-    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-      QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
-    }
-  }
-}
-
-
-/*
-void exahype2::fv::gpu::copyPatch(
   double* __restrict__ QinWithHalo,
   double* __restrict__ QOutWithoutHalo,
   int    unknowns,
@@ -78,7 +62,10 @@ void exahype2::fv::gpu::copyPatch(
   }
   #endif
 }
-*/
+#if defined(GPUOffloading)
+#pragma omp end declare target
+#endif
+
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
