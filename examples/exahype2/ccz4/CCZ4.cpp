@@ -1,5 +1,6 @@
 #include "CCZ4.h"
 #include "exahype2/RefinementControl.h"
+#include "exahype2/NonCriticalAssertions.h"
 
 /**
  * I manually include this header which in turn declared all the
@@ -80,16 +81,15 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
       }
   }
   else{
+    for(int i=0; i<64; i++){
+      assertion4( std::isfinite(Q[i]), i, volumeX, volumeH, t );
+    }
     double S[64];
     memset(S, 0, 64*sizeof(double));
     pdesource_(S,Q);
     for(int i=0; i<64; i++){
-        if(!std::isfinite(S[i])){
-                logError("adjustSolution(...)", i << "-th source term is nan: " << S[i] );
-                Q[i] += S[i];
-                assert(1==0);
-        }
-        }
+      nonCriticalAssertion4( std::isfinite(S[i]), i, volumeX, volumeH, t );
+    }
     enforceccz4constraints_(Q);
   }
   logTraceOut( "adjustSolution(...)" );
@@ -109,8 +109,10 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
   // helper data structure
   constexpr int Unknowns = 64;
   double lambda[Unknowns];
-  for (int i=0; i<Unknowns; i++) 
-      lambda[i] = 1.0;
+  for (int i=0; i<Unknowns; i++) {
+    nonCriticalAssertion5( std::isfinite(Q[i]), i, faceCentre, volumeH, t, normal );
+    lambda[i] = 1.0;
+  }
 
   // routine requires explicit normal vector
   double normalVector[3];
@@ -124,8 +126,11 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
   // we are only interested in the maximum eigenvalue
   double result = 0.0;
   for (int i=0; i<Unknowns; i++) {
-    result = std::max(result,lambda[i]);
+    result = std::max(result,std::abs(lambda[i]));
   }
+
+  nonCriticalAssertion4( std::isfinite(result), faceCentre, volumeH, t, normal );
+
   logTraceOut( "eigenvalues(...)" );
   return result;
 }
@@ -150,6 +155,10 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
   }
   pdencp_(BgradQ, Q, gradQSerialised);
 
+  for (int i=0; i<64; i++) {
+    nonCriticalAssertion5( std::isfinite(BgradQ[i]), i, faceCentre, volumeH, t, normal );
+  }
+
   logTraceOut( "nonconservativeProduct(...)" );
 }
 
@@ -166,6 +175,7 @@ void examples::exahype2::ccz4::CCZ4::boundaryConditions(
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
   for(int i=0; i<64; i++)
       Qoutside[i]=Qinside[i];
+  assertion(false);
   logTraceOut( "boundaryConditions(...)" );
 }
 
