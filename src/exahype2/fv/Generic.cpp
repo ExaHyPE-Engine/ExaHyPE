@@ -7,6 +7,8 @@
 
 #include "peano4/utils/Loop.h"
 
+#include "exahype2/NonCriticalAssertions.h"
+
 
 std::string exahype2::fv::plotVolume(
   double Q[],
@@ -17,6 +19,24 @@ std::string exahype2::fv::plotVolume(
   result += ")";
   return result;
 };
+
+
+void exahype2::fv::validatePatch(
+  double* __restrict__ Q,
+  int    unknowns,
+  int    auxiliaryVariables,
+  int    numberOfVolumesPerAxisInPatch,
+  int    haloSize,
+  const std::string& location
+) {
+  const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
+  dfor (k,PatchSize) {
+    int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
+	for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      nonCriticalAssertion7( std::isfinite(Q[index+i]), unknowns, auxiliaryVariables, numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
+	}
+  }
+}
 
 
 
@@ -31,6 +51,16 @@ void exahype2::fv::copyPatch(
   int    numberOfVolumesPerAxisInPatch,
   int    haloSize
 ) {
+  dfor(k,numberOfVolumesPerAxisInPatch) {
+    tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
+    int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
+    int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
+    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
+    }
+  }
+
+/*
   #if Dimensions==2
   int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
   int destinationSerialised = 0;
@@ -61,6 +91,7 @@ void exahype2::fv::copyPatch(
     sourceSerialised += 2*haloSize+2*(numberOfVolumesPerAxisInPatch+haloSize*2);
   }
   #endif
+  */
 }
 #if defined(GPUOffloading)
 #pragma omp end declare target
