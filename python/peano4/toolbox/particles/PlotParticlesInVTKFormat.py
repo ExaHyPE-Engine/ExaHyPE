@@ -64,7 +64,7 @@ class PlotParticlesInVTKFormat(ActionSet):
 """)
 
 
-  def add_attribute_to_plot(self, attribute, cardinality):
+  def add_attribute_to_plot(self, attribute, cardinality=1):
       self._attributes_to_plot.append(attribute)
       writer_name = f"{attribute.get_to_string()}Writer"
       delim = "\n  "
