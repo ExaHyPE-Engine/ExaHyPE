@@ -155,11 +155,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     spawning over the enclaves. I plug into the data model routines to 
     add the marker to the cell which holds the semaphore/cell number.      
     
-    
-    GPU support:
-    
-    This solver supports GPUs. To enable it, please call use_OpenMP5_GPUs().
-    
     """
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
 
@@ -397,11 +392,11 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.EnclaveLabels.get_attribute_name(self._name)
 
 
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Heap:
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "FREE_SKELETON_MEMORY" ] = "delete[] reconstructedPatch;"
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarch:
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
       d[ "FREE_SKELETON_MEMORY" ] = "::tarch::multicore::freeMemory(reconstructedPatch, ::tarch::multicore::MemoryLocation::Heap);"
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.Accelerator:
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       d[ "FREE_SKELETON_MEMORY" ] = "::tarch::multicore::freeMemory(reconstructedPatch, ::tarch::multicore::MemoryLocation::Accelerator);"
     pass
 
@@ -444,15 +439,36 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     """
     FV.add_actions_to_perform_time_step(self,step)
 
-    roll_over_enclave_task_results = peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,
+    #
+    # @todo The template below still holds a lot of manually constructed
+    #       expressions. I should replace more of them with proper Jinja 
+    # expressions.
+    #
+    d = {}
+    self._init_dictionary_with_default_parameters(d)
+    self.add_entries_to_text_replacement_dictionary(d)
+    
+    template = jinja2.Template(
       """
       const int taskNumber = fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.getSemaphoreNumber();
       if ( taskNumber>=0 ) {
         ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, patchData );
       }
       fineGridCell""" + exahype2.grid.EnclaveLabels.get_attribute_name(self._name) + """.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-      """,
+      
+      ::exahype2::fv::validatePatch(
+        patchData,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        0,
+        std::string(__FILE__) + ": " + std::to_string(__LINE__)
+      );
+      """)
+    
+    roll_over_enclave_task_results = peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+      self._patch,
+      template.render(**d),
       "marker.isEnclaveCell() and not marker.isRefined() and " + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + """::SolverState::Secondary""",
       self._get_default_includes() + self.get_user_includes()
     )

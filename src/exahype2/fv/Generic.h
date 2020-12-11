@@ -25,6 +25,20 @@ namespace exahype2 {
       int    unknowns
     );
 
+    /**
+     * Just runs over the patch and ensures that no entry is non or infinite.
+     *
+     * @param location String that tells system from where this routine got called
+     */
+    void validatePatch(
+      double* __restrict__ Q,
+      int    unknowns,
+      int    auxiliaryVariables,
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSize,
+	  const std::string& location = ""
+    );
+
     #if defined(GPUOffloading)
     #pragma omp declare target
     #endif
