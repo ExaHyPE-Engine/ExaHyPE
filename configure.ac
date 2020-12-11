@@ -83,7 +83,7 @@ AC_ARG_WITH(
       tbb)    AC_MSG_RESULT([build with TBB (Intel Threading Building Blocks) support - please ensure that CXXFLAGS and LDFLAGS are properly set]); multithreading=tbb ;;
       omp)    AC_MSG_RESULT([build with OpenMP]); multithreading=omp ;;
       omp-layered)    AC_MSG_RESULT([build with OpenMP, layered]); multithreading=omp-layered ;;
-      *)      AC_MSG_FAILURE([default=no (no multithreading). Use cpp or tbb to define target]);            multithreading=false ;;
+      *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or tbb to define target]);            multithreading=false ;;
     esac
   ], 
   [ 
