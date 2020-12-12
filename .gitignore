@@ -1,7 +1,0 @@
-*.pyc
-*.Po
-
-**/*.pyc
-**/*.Po
-
-/cookbook/
