@@ -109,16 +109,16 @@ class ADERDG(object):
     self._name                    = name
     self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
     self._spacetime_patch_overlap = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._Riemann_result          = peano4.datamodel.Patch( 2,order+1,order+1),            unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._Riemann_result          = peano4.datamodel.Patch( (2,order+1,order+1),           unknowns+auxiliary_variables, self._unknown_identifier() )
     
     #self._patch_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     #self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     
-    self._patch_overlap.generator.includes     += """
+    self._spacetime_patch_overlap.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "observers/SolverRepository.h" 
 """
-    self._patch_overlap_new.generator.includes += """
+    self._Riemann_result.generator.includes += """
 #include "peano4/utils/Loop.h"
 #include "observers/SolverRepository.h" 
 """
@@ -151,11 +151,11 @@ class ADERDG(object):
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     
-    self._patch_overlap.generator.send_condition               = "false"
-    self._patch_overlap.generator.receive_and_merge_condition  = "false"
+    self._spacetime_patch_overlap.generator.send_condition               = "false"
+    self._spacetime_patch_overlap.generator.receive_and_merge_condition  = "false"
 
-    self._patch_overlap_new.generator.send_condition               = "false"
-    self._patch_overlap_new.generator.receive_and_merge_condition  = "false"
+    self._Riemann_result.generator.send_condition               = "false"
+    self._Riemann_result.generator.receive_and_merge_condition  = "false"
 
     self.plot_description = ""
     pass
@@ -189,8 +189,8 @@ class ADERDG(object):
       
     """
     datamodel.add_cell(self._patch)
-    datamodel.add_face(self._patch_overlap)
-    datamodel.add_face(self._patch_overlap_new)
+    datamodel.add_face(self._spacetime_patch_overlap)
+    datamodel.add_face(self._Riemann_result)
  
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
@@ -203,8 +203,8 @@ class ADERDG(object):
     
     """
     step.use_cell(self._patch)
-    step.use_face(self._patch_overlap)
-    step.use_face(self._patch_overlap_new)
+    step.use_face(self._spacetime_patch_overlap)
+    step.use_face(self._Riemann_result)
 
   
   def _get_default_includes(self):
@@ -237,24 +237,24 @@ class ADERDG(object):
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self._template_adjust_cell.render(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
-      self._patch,
-      self._patch_overlap_new,
-      self._guard_project_patch_onto_faces, 
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
-      self._patch_overlap_new,
-      self._patch_overlap,
-      False,
-      self._guard_copy_new_face_data_into_face_data,
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    #step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+    #  self._patch,self._template_adjust_cell.render(**d),
+    #  self._guard_adjust_cell,
+    #  self._get_default_includes() + self.get_user_includes()
+    #))
+    #step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
+    #  self._patch,
+    #  self._patch_overlap_new,
+    #  self._guard_project_patch_onto_faces, 
+    #  self._get_default_includes() + self.get_user_includes()
+    #))
+    #step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
+    #  self._patch_overlap_new,
+    #  self._patch_overlap,
+    #  False,
+    #  self._guard_copy_new_face_data_into_face_data,
+    #  self._get_default_includes() + self.get_user_includes()
+    #))
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -263,17 +263,17 @@ class ADERDG(object):
     self.add_entries_to_text_replacement_dictionary(d)
     d["IS_GRID_CREATION"] = "true"
     
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self._template_adjust_cell.render(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    if evaluate_refinement_criterion:
-      step.add_action_set( exahype2.grid.AMROnPatch(
-        self._patch,self._template_AMR.render(**d),
-        "not marker.isRefined()", 
-        self._get_default_includes() + self.get_user_includes()
-      ))
+    #step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+    #  self._patch,self._template_adjust_cell.render(**d),
+    #  self._guard_adjust_cell,
+    #  self._get_default_includes() + self.get_user_includes()
+    #))
+    #if evaluate_refinement_criterion:
+    #  step.add_action_set( exahype2.grid.AMROnPatch(
+    #    self._patch,self._template_AMR.render(**d),
+    #    "not marker.isRefined()", 
+    #    self._get_default_includes() + self.get_user_includes()
+    #  ))
     pass
   
   
@@ -308,40 +308,39 @@ class ADERDG(object):
     d["IS_GRID_CREATION"] = "false"
 
 
-    step.add_action_set( peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
-      self._patch,
-      self._patch_overlap,
-      self._template_update_cell.render(**d),
-      self._template_handle_boundary.render(**d),
-      self._guard_update_cell,
-      self._guard_handle_boundary,
-      self._get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
-""",
-      self._reconstructed_array_memory_location
-    )) 
-    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
-      self._patch,
-      self._patch_overlap_new,
-      self._guard_project_patch_onto_faces,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self._template_adjust_cell.render(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( exahype2.grid.AMROnPatch(
-      self._patch,self._template_AMR.render(**d),  
-      self._guard_AMR,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
-      self._patch_overlap_new,
-      self._patch_overlap,
-      False,
-      self._guard_copy_new_face_data_into_face_data,
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    #step.add_action_set( peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
+    #  self._patch,
+    #  self._patch_overlap,
+    #  self._template_update_cell.render(**d),
+    #  self._template_handle_boundary.render(**d),
+    #  self._guard_update_cell,
+    #  self._guard_handle_boundary,
+    #  self._get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
+    #      self._reconstructed_array_memory_location
+    #)) 
+    #step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
+    #  self._patch,
+    #  self._patch_overlap_new,
+    #  self._guard_project_patch_onto_faces,
+    #  self._get_default_includes() + self.get_user_includes()
+    #))
+    #step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+    #  self._patch,self._template_adjust_cell.render(**d),
+    #  self._guard_adjust_cell,
+    #  self._get_default_includes() + self.get_user_includes()
+    #))
+    #step.add_action_set( exahype2.grid.AMROnPatch(
+    #  self._patch,self._template_AMR.render(**d),  
+    #  self._guard_AMR,
+    #  self._get_default_includes() + self.get_user_includes()
+    #))
+    #step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
+    #  self._patch_overlap_new,
+    #  self._patch_overlap,
+    #  False,
+    #  self._guard_copy_new_face_data_into_face_data,
+    #  self._get_default_includes() + self.get_user_includes()
+    #))
     pass
 
 
@@ -398,22 +397,22 @@ class ADERDG(object):
     """
     
     """
-    d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
-    d["HALO_SIZE"]                      = int(self._patch_overlap.dim[0]/2)
+    #d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
+    #d["HALO_SIZE"]                      = int(self._patch_overlap.dim[0]/2)
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
         
-    if self._patch_overlap.dim[0]/2!=1:
-      print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
-    d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
-    d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
-    d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
-    d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
-    d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
-    d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
+    #if self._patch_overlap.dim[0]/2!=1:
+    #  print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
+    #d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
+    #d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
+    #d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
+    #d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
+    #d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
+    #d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
     d[ "MAX_H"] = self._min_h
     d[ "MIN_H"] = self._max_h
  
