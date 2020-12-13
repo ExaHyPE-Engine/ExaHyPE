@@ -2,6 +2,8 @@ import mpmath as mp
 import numpy as np
 from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto # nodes by default in [-1,1]
 
+from abc import abstractmethod
+
 PREC_DIGITS = 300
 
 mp.dps=PREC_DIGITS
@@ -24,7 +26,7 @@ class LagrangeBasis():
             self._fine_grid_projector[j] = self._compute_fine_grid_projector(j)
     def __str__(self):
         return "{}: {}".format(type(self).__name__,self.__dict__)
-
+    @abstractmethod
     def _compute_nodes_and_weights(self,num_points):
         """
         To be implemented by subclass.

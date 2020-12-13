@@ -18,6 +18,7 @@ from abc import abstractmethod
 
 from enum import IntEnum
 
+from LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
 class Polynomials(IntEnum):
   """
@@ -29,8 +30,6 @@ class Polynomials(IntEnum):
   """
   Gauss_Legendre = 0,
   Gauss_Lobatto = 1
-  
-
 
 class ADERDG(object):
   """ 
@@ -143,19 +142,10 @@ class ADERDG(object):
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
     
-    #
-    # All order 3. @todo Dominic your scripts. 
-    #
-    self._quadrature_points_over_unit_interval = [
-      -1.0/5.0*math.sqrt(15) * 0.5 + 0.5,
-       0                      + 0.5, 
-       1.0/5.0*math.sqrt(15) * 0.5 + 0.5,
-    ]
-    self._quadrature_weights_over_unit_interval = [
-       5.0/9.0,
-       8.0/9.0, 
-       5.0/9.0
-    ]
+    if polynomials is Polynomials.Gauss_Legendre:
+        self._basis = GaussLegendreBasis(order+1)
+    elif polynomials is Polynomials.Gauss_Lobatto:
+        self._basis = GaussLobattoBasis(order+1)
     
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
@@ -176,8 +166,7 @@ class ADERDG(object):
     self.plot_description = ""
     self.plot_metadata    = ""
     pass
-
-  
+ 
   def _predicate_face_carrying_data(self):
     return "not marker.isRefined()"
 
@@ -317,9 +306,9 @@ class ADERDG(object):
     self.add_entries_to_text_replacement_dictionary(d)
     
     mapping = []    
-    for z in self._quadrature_points_over_unit_interval:
-      for y in self._quadrature_points_over_unit_interval:
-        for x in self._quadrature_points_over_unit_interval:
+    for z in self._basis._nodes:
+      for y in self._basis._nodes:
+        for x in self._basis._nodes:
           mapping.append( (x,y,z) )
     
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
@@ -444,8 +433,8 @@ class ADERDG(object):
         
     d["ORDER"]                          = self._order
 
-    d["QUADRATURE_POINTS"]              = self._quadrature_points_over_unit_interval
-    d["QUADRATURE_WEIGHTS"]             = self._quadrature_weights_over_unit_interval
+    d["QUADRATURE_POINTS"]              = self._basis._nodes
+    d["QUADRATURE_WEIGHTS"]             = self._basis._weights
         
     #if self._patch_overlap.dim[0]/2!=1:
     #  print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
