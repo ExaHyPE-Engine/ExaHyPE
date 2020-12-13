@@ -331,9 +331,6 @@ class ADERDG(object):
       mapping=mapping,
       plot_cell_data=False
     ))
-    #step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( filename="updated-solution-" + self._name, patch=self._patch_new, dataset_name=self._unknown_identifier(), description=self.plot_description ) )
-    #self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
-    #self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
 
     if self._plot_grid_properties:    
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid-" + self._name,None ))
