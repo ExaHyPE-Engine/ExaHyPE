@@ -107,11 +107,14 @@ class ADERDG(object):
      (such as enclave status flags), too.
  
     """
+    if order<=0:
+      raise Exception( "Order has to be positive. Order 0 is a Finite Volume scheme. Use FV solver instead")
+    
     self._name                    = name
-    self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._patch_new               = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
-    self._spacetime_patch_overlap = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
-    self._Riemann_result          = peano4.datamodel.Patch( (2,order+1,order+1),           unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
+    self._patch                   = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._patch_new               = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
+    self._spacetime_patch_overlap = peano4.datamodel.Patch( (2*(order),order,order), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
+    self._Riemann_result          = peano4.datamodel.Patch( (2,order,order),         unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
     
     #self._patch_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     #self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
@@ -171,6 +174,7 @@ class ADERDG(object):
     self._Riemann_result.generator.receive_and_merge_condition  = "false"
 
     self.plot_description = ""
+    self.plot_metadata    = ""
     pass
 
   
@@ -290,15 +294,21 @@ class ADERDG(object):
     pass
   
   
-  def set_plot_description(self,description):
+  def set_plot_description(self,description,meta_data = ""):
     """
     
-     Use this one to set a description within the output patch file that tells
-     the vis solver what the semantics of the entries are. Typicallly, I use 
-     a comma-separated list here. 
+    description: String
+       Use this one to set a description within the output patch file that tells
+       the vis solver what the semantics of the entries are. Typically, I use 
+       a comma-separated list here.
+    
+    meta_data: String
+       Arbitrary text. 
     
     """
     self.plot_description = description
+    self.plot_metadata    = meta_data
+
     
   
   def add_actions_to_plot_solution(self, step):
@@ -306,13 +316,27 @@ class ADERDG(object):
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( filename="solution-" + self._name,         patch=self._patch,     dataset_name=self._unknown_identifier(), description=self.plot_description ) )
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( filename="updated-solution-" + self._name, patch=self._patch_new, dataset_name=self._unknown_identifier(), description=self.plot_description ) )
+    mapping = []    
+    for z in self._quadrature_points_over_unit_interval:
+      for y in self._quadrature_points_over_unit_interval:
+        for x in self._quadrature_points_over_unit_interval:
+          mapping.append( (x,y,z) )
+    
+    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+      filename="solution-" + self._name,         
+      patch=self._patch,     
+      dataset_name=self._unknown_identifier(), 
+      description=self.plot_description,
+      metadata=self.plot_metadata,
+      mapping=mapping,
+      plot_cell_data=False
+    ))
+    #step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( filename="updated-solution-" + self._name, patch=self._patch_new, dataset_name=self._unknown_identifier(), description=self.plot_description ) )
     #self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
     #self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
 
     if self._plot_grid_properties:    
-        step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid-" + self._name,None ))
+      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid-" + self._name,None ))
 
     pass
    

@@ -20,13 +20,62 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   
   
-  def __init__(self,filename,patch,dataset_name, description):
+  def __init__(self,filename,patch,dataset_name, description, plot_cell_data=True, metadata = "", mapping = []):
+    """
+    
+      plot_cell_data: Boolean
+        Shall I plot cell data or vertex data.
+    
+      description: String
+      
+      mapping: Series of d-tuples which describe how to distort quadrature/sampling
+        points within a reference cube/square. Can be empty alternatively.
+         
+    """
+    self._plot_cell_data           = plot_cell_data
+    
     self.d = {}
     self.d[ "FILENAME" ]           = filename
+
+    dofs_per_axis = 0    
+    if plot_cell_data:
+      dofs_per_axis = patch.dim[0]
+    else:
+      dofs_per_axis = patch.dim[0]+1
+      
+    self.d[ "DOFS_PER_AXIS" ]      = str(dofs_per_axis)
+      
     self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
-    self.d[ "DOFS_PER_AXIS" ]      = str(patch.dim[0])
     self.d[ "NAME" ]               = dataset_name
     self.d[ "DESCRIPTION" ]        = description
+    self.d[ "METADATA" ]           = metadata
+    if len(mapping)==0:
+      self.d[ "MAPPING_2D"]        = "double* mapping = nullptr;"
+      self.d[ "MAPPING_3D"]        = "double* mapping = nullptr;"
+    else:
+      counter = 0
+      self.d[ "MAPPING_2D"]        = "double mapping[" + str(2*dofs_per_axis*dofs_per_axis) + "] = {"
+      self.d[ "MAPPING_3D"]        = "double mapping[" + str(3*dofs_per_axis*dofs_per_axis*dofs_per_axis) + "] = {"
+      for i in mapping:
+        if counter>0:
+          separator = ", "
+        else:
+          separator = " "
+        if counter<dofs_per_axis*dofs_per_axis:
+          self.d[ "MAPPING_2D"]     += separator + str(i[0])
+          self.d[ "MAPPING_2D"]     += ", " + str(i[1])
+          self.d[ "MAPPING_2D"]     += "\n"
+        self.d[ "MAPPING_3D"]     += separator + str(i[0])
+        self.d[ "MAPPING_3D"]     += ", " + str(i[1])
+        if len(i)>2:
+          self.d[ "MAPPING_3D"]     += ", " + str(i[2])
+        else:
+          self.d[ "MAPPING_3D"]     += ", 0.0"
+        self.d[ "MAPPING_3D"]     += "\n"
+        counter += 1
+
+      self.d[ "MAPPING_2D"]        += "};"
+      self.d[ "MAPPING_3D"]        += "};"
         
     for i in patch.dim:
       if i!=patch.dim[0]:
@@ -79,7 +128,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     return False
 
 
-  __Template_TouchCellFirstTime = """ 
+  __Template_TouchCellFirstTime_CellPlot = """ 
   int vertexIndices[TwoPowerD];
   
   const double PatchScaling = 0.95;
@@ -104,7 +153,32 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 """
 
 
-  __Template_BeginTraversal = """
+  __Template_TouchCellFirstTime_VertexPlot = """ 
+  int vertexIndices[TwoPowerD];
+  
+  const double PatchScaling = 0.95;
+
+  assertion( _writer!=nullptr );
+  assertion( _dataWriter!=nullptr );
+  
+  const int patchIndex = _writer->plotPatch(
+    marker.x() - marker.h() * PatchScaling * 0.5,
+    marker.h() * PatchScaling
+  );
+ 
+  int vertexIndex  = _dataWriter->getFirstVertexWithinPatch(patchIndex);
+  int currentDoF = 0;
+  
+  dfor(k,{DOFS_PER_AXIS}) {{
+    double* data = fineGridCell{NAME}.value + currentDoF;
+    _dataWriter->plotVertex( vertexIndex, data );
+    vertexIndex++;
+    currentDoF += {UNKNOWNS};
+  }}
+"""
+
+
+  __Template_BeginTraversal_Generic = """
   static int rankLocalCounter = 0;
   static tarch::mpi::BooleanSemaphore booleanSemaphore("{FILENAME}");
   static bool calledBefore = false;
@@ -140,28 +214,55 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
     );
   }}
+  
+  #if Dimensions==2
+  {MAPPING_2D}
+  #else
+  {MAPPING_3D}
+  #endif
+"""
 
-  _dataWriter = _writer->createCellDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}" );
+
+
+  __Template_BeginTraversal_CellPlot = __Template_BeginTraversal_Generic + """
+  _dataWriter = _writer->createCellDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}", "{METADATA}", mapping );
+"""
+
+
+  __Template_BeginTraversal_VertexPlot = __Template_BeginTraversal_Generic + """
+  _dataWriter = _writer->createVertexDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}", "{METADATA}", mapping );
 """
 
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = self.__Template_TouchCellFirstTime.format(**self.d)
-    if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = self.__Template_BeginTraversal.format(**self.d)             
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME and self._plot_cell_data:
+      result = self.__Template_TouchCellFirstTime_CellPlot.format(**self.d)
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME and not self._plot_cell_data:
+      result = self.__Template_TouchCellFirstTime_VertexPlot.format(**self.d)
+    if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL and self._plot_cell_data:
+      result = self.__Template_BeginTraversal_CellPlot.format(**self.d)             
+    if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL and not self._plot_cell_data:
+      result = self.__Template_BeginTraversal_VertexPlot.format(**self.d)             
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = self.__Template_EndTraversal.format(**self.d)             
     return result
 
 
   def get_attributes(self):
-    return """
+    if self._plot_cell_data:
+      return """
     int                _treeNumber;
 
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                  _writer;
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter*  _dataWriter;
+"""
+    else:
+      return """
+    int                _treeNumber;
+
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                    _writer;
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter*  _dataWriter;
 """
 
 
