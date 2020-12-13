@@ -33,7 +33,7 @@
 
 
 
-struct {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}} {
+struct {{NAMESPACE | join("::")}}::{{CLASSNAME}} {
   #if PeanoDebug>=1
   private:
     tarch::la::Vector<Dimensions,double> _debugX;
