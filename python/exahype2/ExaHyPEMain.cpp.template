@@ -5,6 +5,7 @@
 #include "tarch/logging/Statistics.h"
 #include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/Core.h"
 #include "tarch/timing/Watch.h"
 #include "tarch/timing/Measurement.h"
 

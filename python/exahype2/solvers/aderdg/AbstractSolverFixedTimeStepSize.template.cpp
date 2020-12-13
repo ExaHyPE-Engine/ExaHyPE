@@ -52,7 +52,7 @@ double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMa
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
+  if ( tarch::la::smallerEquals(_maxH,tarch::la::max(volumeH)) ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
 

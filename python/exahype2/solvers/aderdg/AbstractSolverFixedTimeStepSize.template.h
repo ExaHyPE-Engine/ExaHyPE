@@ -126,11 +126,17 @@
   protected:
     static tarch::logging::Log  _log;
 
-    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
+    const int  _order;
+
+    /**
+     * Quadrature points over unit interval.
+     */
+    double     _quadraturePoints[{{ORDER}}+1]  = { {{ QUADRATURE_POINTS  | join(', ') }} };
+    double     _quadratureWeights[{{ORDER}}+1] = { {{ QUADRATURE_WEIGHTS | join(', ') }} };
 
     double     _timeStamp;
 
     SolverState  _solverState;
 
-    double     _maxH;
-    double     _minH;
+    const double     _maxH;
+    const double     _minH;

@@ -72,6 +72,8 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
 
     self.set_implementation(flux=flux,ncp=ncp)
+    
+    
     #self.set_update_cell_implementation(kernel_implementation=kernel_implementation)
 
     #self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
@@ -105,16 +107,17 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     if initial_conditions!=None: 
       self._initial_conditions_implementation         = initial_conditions
     
-    if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
-      self._rusanov_call = self.RusanovCallWithFlux
-    elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-      self._rusanov_call = self.RusanovCallWithNCP
-    elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-      self._rusanov_call = self.RusanovCallWithFluxAndNCP
-    else:
-      raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
+    #if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
+    #  self._rusanov_call = self.RusanovCallWithFlux
+    #elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
+    #  self._rusanov_call = self.RusanovCallWithNCP
+    #elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
+    #  self._rusanov_call = self.RusanovCallWithFluxAndNCP
+    #else:
+    #  raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
 
-    self._construct_template_update_cell()
+    #self._construct_template_update_cell()
+    pass
       
   
   def get_user_includes(self):
@@ -130,8 +133,7 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
         in/out argument
     
     """
-    d[ "TIME_STEP_SIZE" ]               = self._time_step_size
-
+    d[ "TIME_STEP_SIZE" ]                     = self._time_step_size
 
     d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
     d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation

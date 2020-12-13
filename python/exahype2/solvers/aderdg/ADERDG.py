@@ -11,6 +11,7 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 import exahype2.grid.AMROnPatch
 
 import jinja2
+import math
 
 from abc import abstractmethod
 
@@ -108,8 +109,9 @@ class ADERDG(object):
     """
     self._name                    = name
     self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._spacetime_patch_overlap = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._Riemann_result          = peano4.datamodel.Patch( (2,order+1,order+1),           unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
+    self._spacetime_patch_overlap = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
+    self._Riemann_result          = peano4.datamodel.Patch( (2,order+1,order+1),           unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
     
     #self._patch_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     #self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
@@ -123,10 +125,6 @@ class ADERDG(object):
 #include "observers/SolverRepository.h" 
 """
    
-
-    ##
-    ## Sollte alles auf not marker.isRefined() fuer cells stehen
-    ##
     self._guard_copy_new_face_data_into_face_data  = self._predicate_face_carrying_data()
     self._guard_adjust_cell                        = self._predicate_cell_carrying_data()
     self._guard_AMR                                = self._predicate_cell_carrying_data()
@@ -134,12 +132,27 @@ class ADERDG(object):
     self._guard_update_cell                        = self._predicate_cell_carrying_data()
     self._guard_handle_boundary                    = self._predicate_boundary_face_carrying_data()
 
+    self._order                = order
     self._min_h                = min_h
     self._max_h                = max_h 
     self._plot_grid_properties = plot_grid_properties
     
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
+    
+    #
+    # All order 3. @todo Dominic your scripts. 
+    #
+    self._quadrature_points_over_unit_interval = [
+      -1.0/5.0*math.sqrt(15) * 0.5 + 0.5,
+       0                      + 0.5, 
+       1.0/5.0*math.sqrt(15) * 0.5 + 0.5,
+    ]
+    self._quadrature_weights_over_unit_interval = [
+       5.0/9.0,
+       8.0/9.0, 
+       5.0/9.0
+    ]
     
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
@@ -404,6 +417,11 @@ class ADERDG(object):
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
+        
+    d["ORDER"]                          = self._order
+
+    d["QUADRATURE_POINTS"]              = self._quadrature_points_over_unit_interval
+    d["QUADRATURE_WEIGHTS"]             = self._quadrature_weights_over_unit_interval
         
     #if self._patch_overlap.dim[0]/2!=1:
     #  print( "ERROR: Finite Volume solver currently supports only a halo size of 1")

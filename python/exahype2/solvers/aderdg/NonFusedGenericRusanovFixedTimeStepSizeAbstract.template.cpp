@@ -3,7 +3,7 @@
 
 
 {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}():
-  _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+  _order( {{ORDER}} ),
   _timeStamp(0.0),
   _solverState(SolverState::GridConstruction),
   _maxH({{MAX_H}}),
@@ -26,6 +26,7 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startGr
 
 
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishGridInitialisationStep() {
+  _solverState = SolverState::Prediction;
 }
 
 
@@ -36,12 +37,31 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startTi
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  _solverState = SolverState::TimeStep;
 }
 
 
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishTimeStep() {
-  _timeStamp += {{TIME_STEP_SIZE}};
+  switch ( _solverState ) {
+    case SolverState::GridConstruction:
+      assertion(false);
+      break;
+    case SolverState::GridInitialisation:
+      _solverState = SolverState::Prediction;
+      break;
+    case SolverState::Prediction:
+      _solverState = SolverState::RiemannProblemSolve;
+      break;
+    case SolverState::RiemannProblemSolve:
+      _solverState = SolverState::Correction;
+      break;
+    case SolverState::Correction:
+      _solverState = SolverState::Prediction;
+      _timeStamp += {{TIME_STEP_SIZE}};
+      break;
+    case SolverState::Plotting:
+      assertion(false);
+      break;
+  }
 }
 
 
@@ -56,6 +76,7 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startPl
 
 
 void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishPlottingStep() {
+  _solverState = SolverState::Prediction;
 }
 
 
@@ -65,8 +86,12 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
       return "grid-construction";
     case SolverState::GridInitialisation:
       return "grid-initialisation";
-    case SolverState::TimeStep:
-      return "time-step";
+    case SolverState::Prediction:
+      return "prediction";
+    case SolverState::RiemannProblemSolve:
+      return "Riemann-problem-solve";
+    case SolverState::Correction:
+      return "correction";
     case SolverState::Plotting:
       return "plotting";
   }

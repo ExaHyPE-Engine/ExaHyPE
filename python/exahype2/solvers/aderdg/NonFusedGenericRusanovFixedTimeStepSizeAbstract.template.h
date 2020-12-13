@@ -38,7 +38,9 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
-      TimeStep,
+      Prediction,
+      RiemannProblemSolve,
+      Correction,
       Plotting
     };
 
