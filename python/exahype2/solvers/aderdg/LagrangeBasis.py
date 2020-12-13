@@ -120,11 +120,6 @@ class LagrangeBasis():
         """
         Evaluates the reference basis functions at point xi=0.0.
     
-        Args:
-           self._nodes:
-              Gauss-Legendre nodes (self._max_poly_order nodes).
-           self._max_poly_order:
-              Order of approximation corresponding to self._num_points nodal basis functions.
         Returns:
            phi:
               The reference basis functions evaluated at point xi=0.0.
@@ -136,14 +131,6 @@ class LagrangeBasis():
         """
         Computes some derivative values for debugging purposes.
     
-        Args:
-           MM:
-              The (reference) element mass matrix for a approximation of 
-              order self._max_poly_order.
-           Kxi:
-              The (reference) element stiffness matrix for a approximation of 
-              order self._max_poly_order.
-           
         Returns:
            dudx:
               Derivative values for debugging purposes.
