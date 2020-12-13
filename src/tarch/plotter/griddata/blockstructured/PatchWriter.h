@@ -137,6 +137,14 @@ class tarch::plotter::griddata::blockstructured::PatchWriter {
 
     /**
      * Caller has to destroy this instance manually., const std::string& description
+     *
+     * @param identifier  Name of your data. I recommend to stick to C++ identifier rules for
+     *   this one, i.e. no fancy chars and no spaces
+     * @param unknownsPerAxis   We plot a (logically) Cartesian piece of data. This is the number of
+     *   unknowns per axis
+     * @param recordsPerCell    Number of entries stores per unknown. Data is, by default, written
+     *   as AoS
+     * @param description
      */
     virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description ) = 0;
     virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData ) = 0;

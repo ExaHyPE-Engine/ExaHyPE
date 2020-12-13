@@ -26,7 +26,7 @@
 
 
 
-class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
   private:
     static tarch::logging::Log   _log;
 

@@ -4,11 +4,11 @@
 {{INCLUDES}}
 
 
-{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}() {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}() {
 }
 
 
-{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other) {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(const {{CLASSNAME}}& other) {
   #if PeanoDebug>=1
   _debugX = other._debugX;
   _debugH = other._debugH;
@@ -22,7 +22,7 @@
 }
 
 
-{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}& {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::operator=(const {{CLASSNAME}}& other) {
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}& {{NAMESPACE | join("::")}}::{{CLASSNAME}}::operator=(const {{CLASSNAME}}& other) {
   #if PeanoDebug>=1
   _debugX = other._debugX;
   _debugH = other._debugH;
@@ -37,7 +37,7 @@
 }
 
 
-std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::toString() const {
+std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream result;
   result << "(";
   #if PeanoDebug>=1
@@ -52,103 +52,103 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
 
 #if PeanoDebug>=1
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
   _debugX = data;
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
   _debugH = data;
 }
 
 
-tarch::la::Vector<Dimensions,double> {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getDebugX() const {
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
   return _debugX;
 }
 
 
-tarch::la::Vector<Dimensions,double> {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getDebugH() const {
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
   return _debugH;
 }
 #endif
 
 
 {% if DATA_ASSOCIATION == 1 -%}
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::send(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const peano4::datamanagement::VertexMarker& marker) {
   return {{SEND_CONDITION}};
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
   return {{RECEIVE_AND_MERGE_CONDITION}};
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
   return {{STORE_PERSISTENT_CONDITION}};
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
   return {{LOAD_PERSISTENT_CONDITION}};
 }
 {% endif -%}
 
 
 {% if DATA_ASSOCIATION == 2 -%}
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::FaceMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::send(const peano4::datamanagement::FaceMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const peano4::datamanagement::FaceMarker& marker) {
   return {{SEND_CONDITION}};
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) {
   return {{RECEIVE_AND_MERGE_CONDITION}};
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
   return {{STORE_PERSISTENT_CONDITION}};
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
   return {{LOAD_PERSISTENT_CONDITION}};
 }
 {% endif -%}
 
 
 {% if DATA_ASSOCIATION == 3 -%}
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::CellMarker& marker) {
   {{MERGE_METHOD_DEFINITION}}
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::send(const peano4::datamanagement::CellMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const peano4::datamanagement::CellMarker& marker) {
   return {{SEND_CONDITION}};
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::CellMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::CellMarker& marker) {
   return {{RECEIVE_AND_MERGE_CONDITION}};
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::storePersistently(const peano4::datamanagement::CellMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(const peano4::datamanagement::CellMarker& marker) {
   return {{STORE_PERSISTENT_CONDITION}};
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::CellMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::CellMarker& marker) {
   return {{LOAD_PERSISTENT_CONDITION}};
 }
 {% endif -%}
@@ -156,8 +156,8 @@ bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::loadPer
 
   
 #ifdef Parallel
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::initDatatype() {
-  {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}  instances[2];
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
+  {{NAMESPACE | join("::")}}::{{CLASSNAME}}  instances[2];
  
   #if PeanoDebug>=1
     MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE };
@@ -212,10 +212,10 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::initDat
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::shutdownDatatype() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {
   MPI_Type_free( &Datatype );
 }
   
 
-MPI_Datatype   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::Datatype;
+MPI_Datatype   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype;
 #endif

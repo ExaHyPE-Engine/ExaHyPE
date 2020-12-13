@@ -109,7 +109,7 @@ class ADERDG(object):
     """
     self._name                    = name
     self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
+    self._patch_new               = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
     self._spacetime_patch_overlap = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
     self._Riemann_result          = peano4.datamodel.Patch( (2,order+1,order+1),           unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
     
@@ -306,7 +306,10 @@ class ADERDG(object):
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( filename="solution-" + self._name, patch=self._patch, dataset_name=self._unknown_identifier(), description=self.plot_description ) )
+    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( filename="solution-" + self._name,         patch=self._patch,     dataset_name=self._unknown_identifier(), description=self.plot_description ) )
+    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( filename="updated-solution-" + self._name, patch=self._patch_new, dataset_name=self._unknown_identifier(), description=self.plot_description ) )
+    #self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
+    #self._patch                   = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
 
     if self._plot_grid_properties:    
         step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid-" + self._name,None ))
