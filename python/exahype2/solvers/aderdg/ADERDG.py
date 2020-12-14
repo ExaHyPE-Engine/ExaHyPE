@@ -167,7 +167,7 @@ class ADERDG(object):
     self.plot_metadata    = ""
     pass
   def __str__(self):
-    return "{}: {}".format(type(self).__name__,self.__dict__)
+    return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,self.__dict__)
   __repr__ = __str__
   
   def _predicate_face_carrying_data(self):

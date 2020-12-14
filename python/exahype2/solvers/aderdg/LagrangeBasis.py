@@ -25,7 +25,7 @@ class LagrangeBasis():
     for j in range(0,3):
       self._fine_grid_projector[j] = self._compute_fine_grid_projector(j)
   def __str__(self):
-    return "{}: {}".format(type(self).__name__,self.__dict__)
+    return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,self.__dict__)
   __repr__ = __str__
   @abstractmethod
   def _compute_nodes_and_weights(self,num_points):
