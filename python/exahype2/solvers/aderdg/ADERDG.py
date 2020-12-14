@@ -163,9 +163,9 @@ class ADERDG(object):
     self._auxiliary_variables  = auxiliary_variables
     
     if polynomials is Polynomials.Gauss_Legendre:
-        self._basis = GaussLegendreBasis(order+1)
+      self._basis = GaussLegendreBasis(order+1)
     elif polynomials is Polynomials.Gauss_Lobatto:
-        self._basis = GaussLobattoBasis(order+1)
+      self._basis = GaussLobattoBasis(order+1)
     
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
@@ -186,7 +186,10 @@ class ADERDG(object):
     self.plot_description = ""
     self.plot_metadata    = ""
     pass
- 
+  def __str__(self):
+    return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,self.__dict__)
+  __repr__ = __str__
+  
   def _predicate_face_carrying_data(self):
     return "not marker.isRefined()"
 
