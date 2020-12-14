@@ -18,7 +18,7 @@ from abc import abstractmethod
 
 from enum import IntEnum
 
-from LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
 class Polynomials(IntEnum):
   """
