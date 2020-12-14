@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking scr
 parser.add_argument("--h",              dest="h",              type=float, help="Mesh size",  default=0.01 )
 parser.add_argument("--d",              dest="dim",            type=int,   help="Dimensions", default=2 )
 parser.add_argument("--s",              dest="patchsize",      type=int,   help="Patch size", default=17 )
-parser.add_argument("--p",              dest="plot",           type=bool,  help="Plot final solution", default=False )
+parser.add_argument("--p",              dest="plot",     action="store_true",  help="Plot final solution", default=False )
 parser.add_argument("--n",              dest="number_of_time_steps",  type=int,  help="Number of timesteps", default=10 )
 parser.add_argument("--gpu",            dest="gpu",    action="store_true",      help="Use GPU", default=False )
 parser.add_argument("--m",               dest="mode",                     default="release", help="release|trace|asserts" )
