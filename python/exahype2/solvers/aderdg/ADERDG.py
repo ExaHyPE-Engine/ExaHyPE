@@ -80,9 +80,10 @@ class ADERDG(object):
   TemplateAdjustCell = """
   { 
     int index = 0;
+    tarch::la::Vector<Dimensions,double> x;
     dfor( quadraturePoint, {{ORDER}}+1 ) {
       for (int d=0; d<Dimensions; d++) {
-        x(d) = {{SOLVER_INSTANCE}}.quadraturePoints[quadraturePoint(d)] * marker.h(d);
+        x(d) = {{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
       }
       {{SOLVER_INSTANCE}}.adjustSolution(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,

@@ -57,8 +57,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     virtual double maxEigenvalue(
       double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
@@ -67,8 +66,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {% if FLUX_IMPLEMENTATION!="<none>" %}
     virtual void flux(
       double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
@@ -80,8 +78,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     virtual void nonconservativeProduct(
       double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]

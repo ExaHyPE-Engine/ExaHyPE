@@ -16,7 +16,7 @@
     virtual ::exahype2::RefinementCommand refinementCriterion(
       double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
@@ -30,8 +30,7 @@
      */
     virtual void adjustSolution(
       double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
@@ -45,8 +44,7 @@
     virtual void boundaryConditions(
       double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double * __restrict__ Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
@@ -123,17 +121,17 @@
     double getMinMeshSize() const override;
 
     SolverState  getSolverState() const;
-  protected:
-    static tarch::logging::Log  _log;
-
-    const int  _order;
+  public:
+    const int  Order;
 
     /**
      * Quadrature points over unit interval.
      */
-    double     _quadraturePoints[{{ORDER}}+1]  = { {{ QUADRATURE_POINTS  | join(', ') }} };
-    double     _quadratureWeights[{{ORDER}}+1] = { {{ QUADRATURE_WEIGHTS | join(', ') }} };
+    const double  QuadraturePoints[{{ORDER}}+1];
+    const double  QuadratureWeights[{{ORDER}}+1];
 
+  protected:
+    static tarch::logging::Log  _log;
     double     _timeStamp;
 
     SolverState  _solverState;

@@ -3,7 +3,9 @@
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  _order( {{ORDER}} ),
+  Order( {{ORDER}} ),
+  QuadraturePoints{ {{ QUADRATURE_POINTS  | join(', ') }} },
+  QuadratureWeights{ {{ QUADRATURE_WEIGHTS | join(', ') }} },
   _timeStamp(0.0),
   _solverState(SolverState::GridConstruction),
   _maxH({{MAX_H}}),
@@ -102,8 +104,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" %}
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal
 ) {
@@ -116,8 +117,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
- const tarch::la::Vector<Dimensions,double>&  faceCentre,
- const tarch::la::Vector<Dimensions,double>&  volumeH,
+ const tarch::la::Vector<Dimensions,double>&  x,
  double                                       t,
  int                                          normal,
  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
@@ -133,8 +133,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
