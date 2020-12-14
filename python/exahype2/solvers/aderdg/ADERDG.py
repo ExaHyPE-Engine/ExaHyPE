@@ -75,6 +75,25 @@ class ADERDG(object):
       tuple represents which data.   
   
   """
+  
+  
+  TemplateAdjustCell = """
+  { 
+    int index = 0;
+    dfor( quadraturePoint, {{ORDER}}+1 ) {
+      for (int d=0; d<Dimensions; d++) {
+        x(d) = {{SOLVER_INSTANCE}}.quadraturePoints[quadraturePoint(d)] * marker.h(d);
+      }
+      {{SOLVER_INSTANCE}}.adjustSolution(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+        x,
+        {{SOLVER_INSTANCE}}.getMinTimeStamp()
+      );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  } 
+"""
+
   def __init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties):
     """
   name: string
@@ -150,7 +169,7 @@ class ADERDG(object):
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
 
-    self._template_adjust_cell     = jinja2.Template( "" )
+    self._template_adjust_cell     = jinja2.Template( self.TemplateAdjustCell )
     self._template_AMR             = jinja2.Template( "" )
     self._template_handle_boundary = jinja2.Template( "" )
     self._template_update_cell     = jinja2.Template( "" )
@@ -269,11 +288,11 @@ class ADERDG(object):
     self.add_entries_to_text_replacement_dictionary(d)
     d["IS_GRID_CREATION"] = "true"
     
-    #step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-    #  self._patch,self._template_adjust_cell.render(**d),
-    #  self._guard_adjust_cell,
-    #  self._get_default_includes() + self.get_user_includes()
-    #))
+    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+      self._patch,self._template_adjust_cell.render(**d),
+      self._guard_adjust_cell,
+      self._get_default_includes() + self.get_user_includes()
+    ))
     #if evaluate_refinement_criterion:
     #  step.add_action_set( exahype2.grid.AMROnPatch(
     #    self._patch,self._template_AMR.render(**d),
