@@ -14,6 +14,9 @@ ExaHyPE2Sources = \
   PatchUtils.cpp \
   RefinementControl.cpp \
   UserInterface.cpp \
+  aderdg/BoundaryConditions.cpp \
+  aderdg/Generic.cpp \
+  aderdg/Rusanov.cpp \
   fv/BoundaryConditions.cpp \
   fv/Generic.cpp \
   fv/Rusanov.cpp
