@@ -13,7 +13,7 @@ UnitTests2d_SOURCES   = $(UnitTestsSources)
 
 
 UnitTests3d_CXXFLAGS  = -I$(top_builddir)/src  -DPeanoDebug=4 -DDimensions=3 -g3 -O0
-UnitTests3d_LDADD     = -lPeano4Core3d_debug -lTarch_debug -lExaHyPE2Core3d_debug
+UnitTests3d_LDADD     = -lPeano4Core3d_debug -lTarch_debug
 UnitTests3d_LDFLAGS   = -L$(top_builddir)/src -g3
 if UseExaHyPE
 UnitTests3d_LDADD     += -lExaHyPE2Core3d_debug
