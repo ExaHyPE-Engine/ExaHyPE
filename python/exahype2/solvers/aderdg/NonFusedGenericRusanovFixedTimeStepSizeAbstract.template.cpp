@@ -106,7 +106,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
-  int                                          normal
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
 }
@@ -119,7 +118,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
  const tarch::la::Vector<Dimensions,double>&  x,
  double                                       t,
- int                                          normal,
  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{FLUX_IMPLEMENTATION}}
@@ -135,7 +133,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
-  int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{NCP_IMPLEMENTATION}}

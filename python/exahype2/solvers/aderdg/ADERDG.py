@@ -114,6 +114,7 @@ class ADERDG(object):
         refinementCriterion = refinementCriterion and {{SOLVER_INSTANCE}}.refinementCriterion(
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
           x,
+          marker.h(),
           {{SOLVER_INSTANCE}}.getMinTimeStamp()
         );
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
@@ -201,8 +202,8 @@ class ADERDG(object):
       raise Exception( "Order has to be positive. Order 0 is a Finite Volume scheme. Use FV solver instead")
     
     self._name                    = name
-    self._DG_polynomial                   = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._DG_polynomial_new               = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
+    self._DG_polynomial           = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._DG_polynomial_new       = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
     self._face_spacetime_solution = peano4.datamodel.Patch( (2*(order),order,order), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
     self._Riemann_result          = peano4.datamodel.Patch( (2,order,order),         unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
     
@@ -317,7 +318,7 @@ class ADERDG(object):
 #include "SolverRepository.h"
 
 #include "exahype2/PatchUtils.h"
-#include "exahype2/fv/BoundaryConditions.h"
+#include "exahype2/aderdg/BoundaryConditions.h"
 """
 
 
@@ -368,12 +369,12 @@ class ADERDG(object):
       self._guard_adjust_cell,
       self._get_default_includes() + self.get_user_includes()
     ))
-    #if evaluate_refinement_criterion:
-    #  step.add_action_set( exahype2.grid.AMROnPatch(
-    #    self._DG_polynomial,self._template_AMR.render(**d),
-    #    "not marker.isRefined()", 
-    #    self._get_default_includes() + self.get_user_includes()
-    #  ))
+    if evaluate_refinement_criterion:
+      step.add_action_set( exahype2.grid.AMROnPatch(
+        self._DG_polynomial,self._template_AMR.render(**d),
+        "not marker.isRefined()", 
+        self._get_default_includes() + self.get_user_includes()
+      ))
     pass
   
   
@@ -444,16 +445,21 @@ class ADERDG(object):
     #  self._guard_project_DG_polynomial_onto_faces,
     #  self._get_default_includes() + self.get_user_includes()
     #))
-    #step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-    #  self._DG_polynomial,self._template_adjust_cell.render(**d),
-    #  self._guard_adjust_cell,
-    #  self._get_default_includes() + self.get_user_includes()
-    #))
-    #step.add_action_set( exahype2.grid.AMROnPatch(
-    #  self._DG_polynomial,self._template_AMR.render(**d),  
-    #  self._guard_AMR,
-    #  self._get_default_includes() + self.get_user_includes()
-    #))
+    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+      self._DG_polynomial,self._template_adjust_cell.render(**d),
+      self._guard_adjust_cell,
+      self._get_default_includes() + self.get_user_includes()
+    ))
+    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
+      self._DG_polynomial,self._template_update_cell.render(**d),
+      self._guard_adjust_cell,
+      self._get_default_includes() + self.get_user_includes()
+    ))
+    step.add_action_set( exahype2.grid.AMROnPatch(
+      self._DG_polynomial,self._template_AMR.render(**d),  
+      self._guard_AMR,
+      self._get_default_includes() + self.get_user_includes()
+    ))
     #step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
     #  self._DG_polynomial_overlap_new,
     #  self._DG_polynomial_overlap,

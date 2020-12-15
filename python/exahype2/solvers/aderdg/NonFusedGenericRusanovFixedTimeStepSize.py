@@ -18,42 +18,59 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
   """
 
   TemplateUpdateCell = """
-    {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
-      [&](
-        double                                       QL[],
-        double                                       QR[],
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       FL[],
-        double                                       FR[]
-      ) -> void {
-        {{SOLVER_INSTANCE}}.solveRiemannProblem(
-          QL, QR,
-          x, dx, t, dt, 
-          normal,
-          FL, FR
-        );
-      },
-      marker.x(),
-      marker.h(),
-      {{TIME_STAMP}},
-      {{TIME_STEP_SIZE}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      reconstructedPatch,
-      originalPatch
-    );
+    switch ({{SOLVER_INSTANCE}}.getSolverState() ) {
+      case {{SOLVER_NAME}}::SolverState::GridConstruction:
+        assertionMsg( false, "should not be entered" );
+        break;
+      case {{SOLVER_NAME}}::SolverState::GridInitialisation:
+        assertionMsg( false, "should not be entered" );
+        break;
+      case {{SOLVER_NAME}}::SolverState::Prediction:
+        {
+          #if Dimensions==2
+          double spaceTimeQ[ ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})  ];
+          #else
+          double spaceTimeQ[ ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})  ];
+          #endif
+          
+          ::exahype2::aderdg::spaceTimePredictor_GaussLegendre_AoS2d(
+             [&](
+               double * __restrict__                        Q, 
+               const tarch::la::Vector<Dimensions,double>&  x, 
+               double                                       t, 
+               double * __restrict__                        F
+             )->void {
+               {{SOLVER_INSTANCE}}.flux(Q,x,t,F);
+             },
+             marker.x(),
+             marker.h(),
+             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+             {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+             {{SOLVER_INSTANCE}}.QuadraturePoints,
+             {{SOLVER_INSTANCE}}.QuadratureWeights,
+             fineGridCell{{SOLVER_NAME}}Q.value,
+             spaceTimeQ
+          );
+        }
+        break;
+      case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
+        assertionMsg( false, "should not be entered" );
+        break;
+      case {{SOLVER_NAME}}::SolverState::Correction:
+        assertionMsg( false, "should not be entered" );
+        break;
+      case {{SOLVER_NAME}}::SolverState::Plotting:
+        assertionMsg( false, "should not be entered" );
+        break;
+    }
   """      
 
 
   def __init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False):
     """
 
-      Instantiate a generic FV scheme with an overlap of 1.
+      Instantiate ADER-DG in a non-fused variant
 
     """
     ADERDG.__init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties)
@@ -66,8 +83,10 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
-    #self._kernel_implementation               = kernel_implementation
 
+    self._template_update_cell     = jinja2.Template( self.TemplateUpdateCell )
+
+    # braucht kein Mensch
     self._rusanov_call = ""
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
 
@@ -145,3 +164,7 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     pass
 
 
+  def get_user_includes(self):
+    return """
+#include "exahype2/aderdg/Generic.h" 
+"""    

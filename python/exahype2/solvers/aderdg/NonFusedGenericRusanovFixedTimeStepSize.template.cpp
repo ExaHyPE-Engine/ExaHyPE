@@ -10,7 +10,7 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  cellH,
   double                                       t
 ) {
   logTraceInWith3Arguments( "refinementCriterion(...)", x, volumeH, t );
@@ -63,10 +63,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal
+  double                                       t
 )  {
-  logTraceInWith3Arguments( "maxEigenvalue(...)", x, t, normal );
+  logTraceInWith2Arguments( "maxEigenvalue(...)", x, t );
   // @todo implement
   logTraceOut( "maxEigenvalue(...)" );
 }
@@ -78,10 +77,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
-  int                                          normal,
   double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith3Arguments( "flux(...)", x, t, normal );
+  logTraceInWith2Arguments( "flux(...)", x, t );
   // @todo implement
   logTraceOut( "flux(...)" );
 }
@@ -94,10 +92,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
-  int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
-  logTraceInWith3Arguments( "nonconservativeProduct(...)", x, t, normal );
+  logTraceInWith2Arguments( "nonconservativeProduct(...)", x, t );
   // @todo implement
   logTraceOut( "nonconservativeProduct(...)" );
 }
