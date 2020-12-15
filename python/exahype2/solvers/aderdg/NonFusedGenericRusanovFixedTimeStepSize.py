@@ -52,6 +52,23 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
              fineGridCell{{SOLVER_NAME}}Q.value,
              spaceTimeQ
           );
+
+
+    //self._face_spacetime_solution = peano4.datamodel.Patch( (2*(order),order,order), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
+    //self._Riemann_result          = peano4.datamodel.Patch( (2,order,order),         unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
+
+
+          ::exahype2::aderdg::timeIntegration_GaussLegendre_AoS2d(
+             marker.x(),
+             marker.h(),
+             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+             {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+             {{SOLVER_INSTANCE}}.QuadraturePoints,
+             {{SOLVER_INSTANCE}}.QuadratureWeights,
+             spaceTimeQ,
+             fineGridCell{{SOLVER_NAME}}QNew.value
+          );
         }
         break;
       case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:

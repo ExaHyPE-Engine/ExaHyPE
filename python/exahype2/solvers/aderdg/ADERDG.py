@@ -290,6 +290,7 @@ class ADERDG(object):
       
     """
     datamodel.add_cell(self._DG_polynomial)
+    datamodel.add_cell(self._DG_polynomial_new)
     datamodel.add_face(self._face_spacetime_solution)
     datamodel.add_face(self._Riemann_result)
  
@@ -304,6 +305,7 @@ class ADERDG(object):
     
     """
     step.use_cell(self._DG_polynomial)
+    step.use_cell(self._DG_polynomial_new)
     step.use_face(self._face_spacetime_solution)
     step.use_face(self._Riemann_result)
 
