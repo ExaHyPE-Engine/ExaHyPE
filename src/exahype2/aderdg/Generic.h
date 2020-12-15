@@ -90,8 +90,8 @@ namespace exahype2 {
       int                                          order,
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      double * __restrict__ quadraturePoints1d,
-      double * __restrict__ quadratureWeights1d,
+      const double * __restrict__ quadraturePoints1d,
+      const double * __restrict__ quadratureWeights1d,
       double * __restrict__ Qin,
       double * __restrict__ QoutLeft,
       double * __restrict__ QoutBottom,
@@ -111,7 +111,7 @@ namespace exahype2 {
         double * __restrict__                        Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
-        double * __restrict__ F
+        double * __restrict__                        F
       ) >   flux,
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
       const tarch::la::Vector<Dimensions,double>&  cellSize,
@@ -120,8 +120,8 @@ namespace exahype2 {
       int                                          order,
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      double * __restrict__ quadraturePoints1d,
-      double * __restrict__ quadratureWeights1d,
+      const double * __restrict__ quadraturePoints1d,
+      const double * __restrict__ quadratureWeights1d,
       double * __restrict__ Qin,
       double * __restrict__ QoutLeft,
       double * __restrict__ QoutBottom,
@@ -133,6 +133,55 @@ namespace exahype2 {
       double * __restrict__ normalFluxTop
     );
 
+
+
+
+    /**
+     * Takes a predicted solution and projects the solution plus the
+     * flux onto the face. Generic extension of the previous routine
+     */
+    void addSpaceTimeRiemannSolutionToPrediction_GaussLegendre_AoS2d(
+      const tarch::la::Vector<Dimensions,double>&  cellCentre,
+      const tarch::la::Vector<Dimensions,double>&  cellSize,
+      double                                       t,
+      double                                       dt,
+      int                                          order,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      const double * __restrict__ quadraturePoints1d,
+      const double * __restrict__ quadratureWeights1d,
+      double * __restrict__ riemannSolutionLeft,
+      double * __restrict__ riemannSolutionBottom,
+      double * __restrict__ riemannSolutionRight,
+      double * __restrict__ riemannSolutionTop,
+      double * __restrict__ QNew
+    );
+
+
+    // @todo Have to think about this one
+    void solveSpaceTimeRiemannProblem_GaussLegendre_AoS2d(
+      std::function< void(
+        double * __restrict__ QL,
+        double * __restrict__ QR,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double * __restrict__ FL,
+        double * __restrict__ FR
+      ) >   splitRiemannSolve1d,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  faceSize,
+      double                                       t,
+      double                                       dt,
+      int                                          order,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      const double * __restrict__ quadraturePoints1d,
+      const double * __restrict__ quadratureWeights1d,
+      double * __restrict__ Qin
+    );
   }
 }
 

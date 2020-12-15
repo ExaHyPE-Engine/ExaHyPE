@@ -340,25 +340,6 @@ class ADERDG(object):
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
-    #step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-    #  self._DG_polynomial,self._template_adjust_cell.render(**d),
-    #  self._guard_adjust_cell,
-    #  self._get_default_includes() + self.get_user_includes()
-    #))
-    #step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
-    #  self._DG_polynomial,
-    #  self._DG_polynomial_overlap_new,
-    #  self._guard_project_DG_polynomial_onto_faces, 
-    #  self._get_default_includes() + self.get_user_includes()
-    #))
-    #step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
-    #  self._DG_polynomial_overlap_new,
-    #  self._DG_polynomial_overlap,
-    #  False,
-    #  self._guard_copy_new_face_data_into_face_data,
-    #  self._get_default_includes() + self.get_user_includes()
-    #))
-
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     d = {}
@@ -429,24 +410,6 @@ class ADERDG(object):
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     d["IS_GRID_CREATION"] = "false"
-
-
-    #step.add_action_set( peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
-    #  self._DG_polynomial,
-    #  self._DG_polynomial_overlap,
-    #  self._template_update_cell.render(**d),
-    #  self._template_handle_boundary.render(**d),
-    #  self._guard_update_cell,
-    #  self._guard_handle_boundary,
-    #  self._get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
-    #      self._reconstructed_array_memory_location
-    #)) 
-    #step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
-    #  self._DG_polynomial,
-    #  self._DG_polynomial_overlap_new,
-    #  self._guard_project_DG_polynomial_onto_faces,
-    #  self._get_default_includes() + self.get_user_includes()
-    #))
     step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
       self._DG_polynomial,self._template_adjust_cell.render(**d),
       self._guard_adjust_cell,
@@ -462,13 +425,6 @@ class ADERDG(object):
       self._guard_AMR,
       self._get_default_includes() + self.get_user_includes()
     ))
-    #step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
-    #  self._DG_polynomial_overlap_new,
-    #  self._DG_polynomial_overlap,
-    #  False,
-    #  self._guard_copy_new_face_data_into_face_data,
-    #  self._get_default_includes() + self.get_user_includes()
-    #))
     pass
 
 

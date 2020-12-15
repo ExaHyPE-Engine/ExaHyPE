@@ -17,6 +17,15 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
   
   """
 
+
+  TemplateRiemannSolve = """
+    // @todo Maybe have to switch to jinja2 here as well in the toolbox
+    //if ({{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
+     // @todo Have to think about this one
+    //}
+  """
+
+
   TemplateUpdateCell = """
     switch ({{SOLVER_INSTANCE}}.getSolverState() ) {
       case {{SOLVER_NAME}}::SolverState::GridConstruction:
@@ -53,10 +62,45 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
              spaceTimeQ
           );
 
-
-    //self._face_spacetime_solution = peano4.datamodel.Patch( (2*(order),order,order), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
-    //self._Riemann_result          = peano4.datamodel.Patch( (2,order,order),         unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
-
+          #if Dimensions==2
+          ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS2d(
+          #else
+          ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS3d(
+          #endif
+             [&](
+               double * __restrict__                        Q, 
+               const tarch::la::Vector<Dimensions,double>&  x, 
+               double                                       t, 
+               double * __restrict__                        F
+             )->void {
+               {{SOLVER_INSTANCE}}.flux(Q,x,t,F);
+             },
+             marker.x(),
+             marker.h(),
+             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+             {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+             {{SOLVER_INSTANCE}}.QuadraturePoints,
+             {{SOLVER_INSTANCE}}.QuadratureWeights,
+             spaceTimeQ,
+             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(0).value,
+             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(1).value,
+             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(2).value,
+             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(3).value,
+             #if Dimensions==3
+             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(4).value,
+             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(5).value,
+             #endif
+             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(0).value,
+             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(1).value,
+             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(2).value,
+             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(3).value
+             #if Dimensions==3
+             ,
+             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(4).value,
+             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(5).value
+             #endif
+          );
 
           ::exahype2::aderdg::timeIntegration_GaussLegendre_AoS2d(
              marker.x(),
@@ -72,10 +116,42 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
         }
         break;
       case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
-        assertionMsg( false, "should not be entered" );
         break;
       case {{SOLVER_NAME}}::SolverState::Correction:
-        assertionMsg( false, "should not be entered" );
+        {
+          #if Dimensions==2
+          ::exahype2::aderdg::addSpaceTimeRiemannSolutionToPrediction_GaussLegendre_AoS2d(
+          #else
+          ::exahype2::aderdg::addSpaceTimeRiemannSolutionToPrediction_GaussLegendre_AoS3d(
+          #endif
+            marker.x(),
+            marker.h(),
+            {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+            {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            {{SOLVER_INSTANCE}}.QuadraturePoints,
+            {{SOLVER_INSTANCE}}.QuadratureWeights,
+            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(0).value,
+            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(1).value,
+            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(2).value,
+            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(3).value,
+            #if Dimensions==3
+            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(4).value,
+            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(5).value,
+            #endif
+            fineGridCell{{SOLVER_NAME}}QNew.value
+          );
+
+          std::copy_n(
+            fineGridCell{{SOLVER_NAME}}QNew.value,
+            #if Dimensions==2
+            ({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+            #else
+            ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
+            #endif
+            fineGridCell{{SOLVER_NAME}}Q.value
+          );
+        }
         break;
       case {{SOLVER_NAME}}::SolverState::Plotting:
         assertionMsg( false, "should not be entered" );
@@ -91,6 +167,8 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
 
     """
     ADERDG.__init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties)
+
+    self._face_flux_along_normal = peano4.datamodel.Patch( (2*(order),order,order), unknowns+auxiliary_variables, self._unknown_identifier() + "FluxExtrapolation" )
 
     self._time_step_size = time_step_size
 
@@ -110,12 +188,8 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     self.set_implementation(flux=flux,ncp=ncp)
     
     
-    #self.set_update_cell_implementation(kernel_implementation=kernel_implementation)
-
-    #self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-    #self._patch_overlap.generator.receive_and_merge_condition  = self._predicate_face_carrying_data() + " and " \
-    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
-    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    #self._face_spacetime_solution.generator.send_condition               = "false"
+    #self._face_spacetime_solution.generator.receive_and_merge_condition  = "false"
     pass
 
   
@@ -154,12 +228,6 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
 
     #self._construct_template_update_cell()
     pass
-      
-  
-  def get_user_includes(self):
-    return """
-#include "exahype2/fv/Generic.h"
-"""    
     
   
   def add_entries_to_text_replacement_dictionary(self,d):
@@ -184,4 +252,27 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
   def get_user_includes(self):
     return """
 #include "exahype2/aderdg/Generic.h" 
+
+#include <algorithm>
 """    
+
+
+  def add_to_Peano4_datamodel( self, datamodel ):
+    ADERDG.add_to_Peano4_datamodel( self, datamodel )
+    datamodel.add_face(self._face_flux_along_normal)
+
+
+
+  def add_use_data_statements_to_Peano4_solver_step(self, step):
+    ADERDG.add_use_data_statements_to_Peano4_solver_step( self, step )
+    step.use_face(self._face_flux_along_normal)
+
+
+  def add_actions_to_perform_time_step(self, step):
+    ADERDG.add_actions_to_perform_time_step( self, step )
+ 
+    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnFace(
+      self._DG_polynomial,self.TemplateRiemannSolve,
+      "true",
+      self._get_default_includes() + self.get_user_includes()
+    ))
