@@ -30,6 +30,21 @@ class Polynomials(IntEnum):
   """
   Gauss_Legendre = 0,
   Gauss_Lobatto = 1
+  
+  
+class AMR(ActionSet):
+  def __init__(self,solver):
+    """
+   
+    solver: ADERDG
+      Reference to creating class 
+   
+    """
+    self._solver = solver
+    pass
+
+  
+  
 
 class ADERDG(object):
   """ 

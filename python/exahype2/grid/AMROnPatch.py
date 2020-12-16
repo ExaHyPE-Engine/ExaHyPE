@@ -1,23 +1,30 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-import peano4.toolbox.blockstructured.ApplyFunctorOnPatch
+from peano4.solversteps.ActionSet import ActionSet
 
 
-class AMROnPatch(peano4.toolbox.blockstructured.ApplyFunctorOnPatch):
+class AMROnPatch(ActionSet):
   """
-  
-   This is an extension of ApplyFunctorOnPatch which offers you an instance of 
-   RefinementControl which is eventually fed back to Peano such that it triggers
-   and realises the AMR.
-   
-   If you write a new solver, you will be asked to add action sets to the three
-   fundamental steps of ExaHyPE2 (grid construction, time stepping, plotting).
-   You can inject an instance of this class as action set.
+
+ 
   
   """
   def __init__(self,patch,functor_implementation,guard,additional_includes):
-    super(AMROnPatch,self).__init__(patch,functor_implementation,guard,additional_includes)
+    self.d = {}
+    if patch.dim[0] != patch.dim[1]:
+      print( "Error: Can only handle square patches." )
+      assert( patch.dim[0] == patch.dim[1] )
+      
+    self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
+    self.d[ "DOFS_PER_AXIS" ]      = str(patch.dim[0])
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(patch.no_of_unknowns * patch.dim[0] * patch.dim[0])
+    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(patch.no_of_unknowns * patch.dim[0] * patch.dim[0] * patch.dim[0])
+    self.d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + patch.name
+    self.d[ "FUNCTOR_IMPLEMENTATION" ]                       = functor_implementation
+    self.d[ "GUARD" ]                                        = guard
     
+    self.additional_includes = additional_includes
+
   
   def get_body_of_getGridControlEvents(self):
     return """

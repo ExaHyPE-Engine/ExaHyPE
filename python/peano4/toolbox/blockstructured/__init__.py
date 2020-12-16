@@ -2,7 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 from .ApplyFunctorOnPatch             import ApplyFunctorOnPatch
-from .ApplyFunctorOnFace              import ApplyFunctorOnFace 
 from .BackupPatchOverlap              import BackupPatchOverlap
 from .MPI                             import get_face_overlap_merge_implementation
 from .PlotPatchesInPeanoBlockFormat   import PlotPatchesInPeanoBlockFormat
