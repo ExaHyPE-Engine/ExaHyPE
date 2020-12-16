@@ -1,6 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 from .ADERDG  import ADERDG
+from .ADERDG  import AbstractADERDGActionSet
 from .PDETerms import PDETerms
 
 from peano4.solversteps.ActionSet import ActionSet
@@ -11,10 +12,7 @@ import exahype2
 import jinja2
 
 
-#
-# @todo Boundary treatment is missing. Could go in here
-#
-class ApplyRiemannSolveToFaces(ActionSet):
+class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
   TemplateRiemannSolve = jinja2.Template( """
     if ({{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
       // @todo Have to think about this one
@@ -46,24 +44,9 @@ class ApplyRiemannSolveToFaces(ActionSet):
   """)
 
   def __init__(self,solver):
-    """
-    
-    solver: NonFusedGenericRusanovFixedTimeStepSize
-      Reference to creating class 
-    
-    """
-    self._solver = solver
-    pass
+    AbstractADERDGActionSet.__init__(self,solver)
   
   
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
-
-
-  def user_should_modify_template(self):
-    return False
-
-
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
@@ -75,20 +58,8 @@ class ApplyRiemannSolveToFaces(ActionSet):
     return result
 
 
-  def get_includes(self):
-    return """
-#include <functional>
-""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
-
-
-
-class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
-  """
-  
-    Probably the simplest ADER-DG solver implementation you could think off. 
-  
-  """
-  TemplateUpdateCell = """
+class UpdateCell(AbstractADERDGActionSet):
+  TemplateUpdateCell = jinja2.Template( """
     switch ({{SOLVER_INSTANCE}}.getSolverState() ) {
       case {{SOLVER_NAME}}::SolverState::GridConstruction:
         assertionMsg( false, "should not be entered" );
@@ -219,7 +190,29 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
         assertionMsg( false, "should not be entered" );
         break;
     }
-  """      
+  """)    
+  
+  def __init__(self,solver):
+    AbstractADERDGActionSet.__init__(self,solver)
+    
+    
+  def get_body_of_operation(self,operation_name):
+    result = "\n"
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)      
+      result = self.TemplateUpdateCell.render(**d)
+      pass 
+    return result
+
+
+class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
+  """
+  
+    Probably the simplest ADER-DG solver implementation you could think off. 
+  
+  """
 
 
   def __init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False):
@@ -241,7 +234,8 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
 
-    self._template_update_cell     = jinja2.Template( self.TemplateUpdateCell )
+    self._action_set_update_cell = UpdateCell(self)
+    self._action_set_update_face = ApplyRiemannSolveToFaces(self)
 
     # braucht kein Mensch
     self._rusanov_call = ""

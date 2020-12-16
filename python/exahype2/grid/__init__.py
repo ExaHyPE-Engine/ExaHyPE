@@ -3,6 +3,5 @@
 from .SetLabels       import create_face_label
 from .EnclaveLabels   import create_enclave_cell_label 
 
-from .AMROnPatch      import AMROnPatch
 from .SetLabels       import SetLabels
 from .EnclaveLabels   import EnclaveLabels 

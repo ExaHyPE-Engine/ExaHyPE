@@ -178,8 +178,8 @@ class GenericRusanovFixedTimeStepSize( FV ):
     self.set_implementation(flux=flux,ncp=ncp)
     self.set_update_cell_implementation(kernel_implementation=kernel_implementation)
 
-    self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-    self._patch_overlap.generator.receive_and_merge_condition  = self._predicate_face_carrying_data() + " and " \
+    self._patch_overlap.generator.send_condition               = "not marker.isRefined() and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+    self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " \
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 

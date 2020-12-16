@@ -8,17 +8,17 @@ import peano4.datamodel
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
-import exahype2.grid.AMROnPatch
+from peano4.solversteps.ActionSet import ActionSet
 
 import jinja2
 import math
 
 from abc import abstractmethod
 
-
 from enum import IntEnum
 
 from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+
 
 class Polynomials(IntEnum):
   """
@@ -32,7 +32,7 @@ class Polynomials(IntEnum):
   Gauss_Lobatto = 1
   
   
-class AMR(ActionSet):
+class AbstractADERDGActionSet( ActionSet ):
   def __init__(self,solver):
     """
    
@@ -42,78 +42,25 @@ class AMR(ActionSet):
     """
     self._solver = solver
     pass
-
   
   
-
-class ADERDG(object):
-  """ 
-    An abstract ADER-DG solver
-
-    Our ADER-DG solver hijacks the patch-based data structures. Topologically,
-    this makes sense, as the Cartesian mesh is just distorted - depending on 
-    whether you use Gauss-Lobatto or Gauss-Legendre nodes. A big semantic 
-    difference can be found for the overlaps: We use an overlap of two but the 
-    layer closer to the actual patch hosts a nodal representation of the 
-    solution. The outer ghost layer holds a nodel representation of the solution
-    gradient along the boundary.
-    
-    Further to the width of the overlaps, our face data always is space-time.
-    For a global time stepping, this is not required, as we can directly apply
-    the space-time integral. For all other routines, it is essential.
-    
-    We use two overlaps: one with gradient and solution, and one with the 
-    outcome of the Riemann solve.
-  
-  
-    Parallelisation:
-
-    @todo Has to be updated
-        
-    I do equip both Q and NewQ with proper merge routines. However, all merge guards
-    are unset by default. If you need some data exchange, you have to activate
-    them manually.
-  
-  
-    Attributes:
-
-    @todo Has to be updated
-      
-    The guard variables are used within the templates and switch them on/off. By 
-    default, they all are true, i.e. the actions are triggered in every grid 
-    traversal an action in theory could be active.
-  
-  
-    plot_description: string
-      The description I use when I plot. By default, it is empty, but 
-      some solvers add a string here that explains which entry of the 
-      tuple represents which data.   
-  
-  """
-  
-  
-  TemplateAdjustCell = """
-  { 
-    int index = 0;
-    tarch::la::Vector<Dimensions,double> x;
-    dfor( quadraturePoint, {{ORDER}}+1 ) {
-      for (int d=0; d<Dimensions; d++) {
-        x(d) = {{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
-      }
-      {{SOLVER_INSTANCE}}.adjustSolution(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        x,
-        {{SOLVER_INSTANCE}}.getMinTimeStamp()
-      );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  } 
-"""
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
 
 
+  def user_should_modify_template(self):
+    return False
 
+
+  def get_includes(self):
+    return """
+#include <functional>
+""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
+
+
+class AMR(AbstractADERDGActionSet):
   TemplateAMR = """
-  { 
+  if (not marker.isRefined()) { 
     ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
     if (tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
@@ -143,17 +90,83 @@ class ADERDG(object):
       } 
     }
     
-    _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {{IS_GRID_CREATION}} );
+    _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion );
   } 
 """
 
 
+  def __init__(self,solver):
+    AbstractADERDGActionSet.__init__(self, solver)
 
-  """
   
-    The global periodic boundary conditions are set in the Constants.h. 
-   
-  """
+  def get_body_of_operation(self,operation_name):
+    result = "\n"
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)      
+      result = jinja2.Template( self.TemplateAMR ).render(**d)
+      pass 
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
+      result = """
+  _localRefinementControl.clear();
+"""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+      result = """
+  refinementControl.merge( _localRefinementControl );
+"""
+    return result
+
+
+  def get_body_of_getGridControlEvents(self):
+    return """
+  return refinementControl.getGridControlEvents();
+""" 
+
+  
+  def get_attributes(self):
+    return """
+    ::exahype2::RefinementControl         _localRefinementControl;
+"""
+
+
+
+class AdjustCell(AbstractADERDGActionSet):
+  TemplateAdjustCell = """
+  if (not marker.isRefined()) { 
+    int index = 0;
+    tarch::la::Vector<Dimensions,double> x;
+    dfor( quadraturePoint, {{ORDER}}+1 ) {
+      for (int d=0; d<Dimensions; d++) {
+        x(d) = {{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
+      }
+      {{SOLVER_INSTANCE}}.adjustSolution(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+        x,
+        {{SOLVER_INSTANCE}}.getMinTimeStamp()
+      );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  } 
+"""
+
+  
+  def __init__(self,solver):
+    AbstractADERDGActionSet.__init__(self, solver)
+
+  
+  def get_body_of_operation(self,operation_name):
+    result = "\n"
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)      
+      result = jinja2.Template(self.TemplateAdjustCell).render(**d)
+      pass 
+    return result
+
+
+class HandleBoundary(AbstractADERDGActionSet):
   TemplateHandleBoundary = """
     logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
     if (not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]) {
@@ -180,6 +193,45 @@ class ADERDG(object):
       ); */
     }
 """
+
+  
+  def __init__(self,solver):
+    AbstractADERDGActionSet.__init__(self, solver)
+
+  
+  def get_body_of_operation(self,operation_name):
+    result = "\n"
+    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)      
+      result = jinja2.Template(self.TemplateAdjustCell).render(**d)
+      pass 
+    return result
+
+
+class ADERDG(object):
+  """ 
+    An abstract ADER-DG solver
+
+    Our ADER-DG solver hijacks the patch-based data structures. Topologically,
+    this makes sense, as the Cartesian mesh is just distorted - depending on 
+    whether you use Gauss-Lobatto or Gauss-Legendre nodes. A big semantic 
+    difference can be found for the overlaps: We use an overlap of two but the 
+    layer closer to the actual patch hosts a nodal representation of the 
+    solution. The outer ghost layer holds a nodel representation of the solution
+    gradient along the boundary.
+    
+    Further to the width of the overlaps, our face data always is space-time.
+    For a global time stepping, this is not required, as we can directly apply
+    the space-time integral. For all other routines, it is essential.
+    
+    We use two overlaps: one with gradient and solution, and one with the 
+    outcome of the Riemann solve.
+  
+  """
+  
+
 
 
   def __init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties):
@@ -257,10 +309,11 @@ class ADERDG(object):
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
 
-    self._template_adjust_cell     = jinja2.Template( self.TemplateAdjustCell )
-    self._template_AMR             = jinja2.Template( self.TemplateAMR )
-    self._template_handle_boundary = jinja2.Template( self.TemplateHandleBoundary )
-    self._template_update_cell     = jinja2.Template( "" )
+    self._action_set_adjust_cell     = AdjustCell(self)
+    self._action_set_AMR             = AMR(self)
+    self._handle_boundary_action_set = AbstractADERDGActionSet(self)
+    self._action_set_update_cell     = None
+    self._action_set_update_face     = None
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     
@@ -273,9 +326,12 @@ class ADERDG(object):
     self.plot_description = ""
     self.plot_metadata    = ""
     pass
+  
+  
   def __str__(self):
     return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,self.__dict__)
   __repr__ = __str__
+  
   
   def _predicate_face_carrying_data(self):
     return "not marker.isRefined()"
@@ -354,25 +410,16 @@ class ADERDG(object):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
+    step.add_action_set( self._action_set_adjust_cell )
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
-    d["IS_GRID_CREATION"] = "true"
-    
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._DG_polynomial,self._template_adjust_cell.render(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    step.add_action_set( self._action_set_adjust_cell )
     if evaluate_refinement_criterion:
-      step.add_action_set( exahype2.grid.AMROnPatch(
-        self._DG_polynomial,self._template_AMR.render(**d),
-        "not marker.isRefined()", 
-        self._get_default_includes() + self.get_user_includes()
-      ))
+      step.add_action_set( self._action_set_AMR )
     pass
   
   
@@ -390,7 +437,6 @@ class ADERDG(object):
     """
     self.plot_description = description
     self.plot_metadata    = meta_data
-
     
   
   def add_actions_to_plot_solution(self, step):
@@ -424,22 +470,10 @@ class ADERDG(object):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
-    d["IS_GRID_CREATION"] = "false"
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._DG_polynomial,self._template_adjust_cell.render(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._DG_polynomial,self._template_update_cell.render(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( exahype2.grid.AMROnPatch(
-      self._DG_polynomial,self._template_AMR.render(**d),  
-      self._guard_AMR,
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    step.add_action_set( self._action_set_adjust_cell )
+    step.add_action_set( self._action_set_update_cell )
+    step.add_action_set( self._action_set_update_face )
+    step.add_action_set( self._action_set_AMR )
     pass
 
 

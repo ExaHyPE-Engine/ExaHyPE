@@ -4,6 +4,8 @@ from .FV                       import FV
  
 from .PDETerms import PDETerms
 
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructedArrayMemoryLocation
+
 import peano4
 import exahype2
 
