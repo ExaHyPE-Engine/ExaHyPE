@@ -144,7 +144,10 @@ class tarch::plotter::griddata::blockstructured::PatchWriter {
      *   unknowns per axis
      * @param recordsPerCell    Number of entries stores per unknown. Data is, by default, written
      *   as AoS
-     * @param description
+     * @param description       This is meta data, i.e. has no prescribed semanatics
+     * @param mapping           Array of positions within a unit cube/square. Is it an AoS of vectors
+     *   within the unit square which distorts all the unknowns within the mesh. Logically, all data
+     *   are Cartesian, but you might prefer Gauss Lobatto nodes, e.g.
      */
     virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description ) = 0;
     virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData ) = 0;

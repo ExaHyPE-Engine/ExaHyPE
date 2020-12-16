@@ -45,14 +45,14 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  cellH,
   double                                       t
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,tarch::la::max(volumeH)) ) {
+  if ( tarch::la::smallerEquals(_maxH,tarch::la::max(cellH)) ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
 
@@ -67,8 +67,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t
 ) {
   if (tarch::la::equals(t,0.0) ) {
@@ -83,8 +82,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   double * __restrict__ Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal
 ) {
