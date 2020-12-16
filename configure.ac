@@ -484,9 +484,9 @@ AC_OUTPUT(
   Makefile 
   src/Makefile 
   src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile
-  src/unittests/Makefile 
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile
+  src/unittests/Makefile 
 )
 

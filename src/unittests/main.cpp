@@ -8,6 +8,10 @@
 #include "peano4/peano.h"
 #include "peano4/parallel/Node.h"
 
+#include "../config.h"
+
+
+
 
 tarch::logging::Log _log("examples::unittests");
 
@@ -31,10 +35,12 @@ void runTests() {
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
   
+  #ifdef UseExaHyPE
   tests = exahype2::getUnitTests();
   tests->run();
   unitTestsErrors += tests->getNumberOfErrors();
   delete tests;
+  #endif
 
   if (unitTestsErrors != 0) {
     logError("main()", "unit tests failed. Quit.");
