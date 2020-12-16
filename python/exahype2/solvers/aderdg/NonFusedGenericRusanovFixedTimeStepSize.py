@@ -1,13 +1,85 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 from .ADERDG  import ADERDG
- 
 from .PDETerms import PDETerms
+
+from peano4.solversteps.ActionSet import ActionSet
 
 import peano4
 import exahype2
 
 import jinja2
+
+
+#
+# @todo Boundary treatment is missing. Could go in here
+#
+class ApplyRiemannSolveToFaces(ActionSet):
+  TemplateRiemannSolve = jinja2.Template( """
+    if ({{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
+      // @todo Have to think about this one
+      ::exahype2::aderdg::solveSpaceTimeRiemannProblem_GaussLegendre_AoS2d(
+        [&](
+          double * __restrict__ QL,
+          double * __restrict__ QR,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double * __restrict__ FL,
+          double * __restrict__ FR
+        )->void {
+        },
+        marker.x(),
+        marker.h(),
+        {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+        {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+        {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{SOLVER_INSTANCE}}.QuadraturePoints,
+        {{SOLVER_INSTANCE}}.QuadratureWeights,
+        marker.getSelectedFaceNumber() % Dimensions,
+        fineGridFace{{SOLVER_NAME}}QSolutionExtrapolation.value,
+        fineGridFace{{SOLVER_NAME}}QFluxExtrapolation.value,
+        fineGridFace{{SOLVER_NAME}}QRiemannSolveResult.value
+      );
+    }
+  """)
+
+  def __init__(self,solver):
+    """
+    
+    solver: NonFusedGenericRusanovFixedTimeStepSize
+      Reference to creating class 
+    
+    """
+    self._solver = solver
+    pass
+  
+  
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
+
+
+  def user_should_modify_template(self):
+    return False
+
+
+  def get_body_of_operation(self,operation_name):
+    result = "\n"
+    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)      
+      result = self.TemplateRiemannSolve.render(**d)
+      pass 
+    return result
+
+
+  def get_includes(self):
+    return """
+#include <functional>
+""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
+
 
 
 class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
@@ -16,16 +88,6 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     Probably the simplest ADER-DG solver implementation you could think off. 
   
   """
-
-
-  TemplateRiemannSolve = """
-    // @todo Maybe have to switch to jinja2 here as well in the toolbox
-    //if ({{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
-     // @todo Have to think about this one
-    //}
-  """
-
-
   TemplateUpdateCell = """
     switch ({{SOLVER_INSTANCE}}.getSolverState() ) {
       case {{SOLVER_NAME}}::SolverState::GridConstruction:
@@ -270,9 +332,4 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
 
   def add_actions_to_perform_time_step(self, step):
     ADERDG.add_actions_to_perform_time_step( self, step )
- 
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnFace(
-      self._DG_polynomial,self.TemplateRiemannSolve,
-      "true",
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    step.add_action_set( ApplyRiemannSolveToFaces(self) )

@@ -163,8 +163,7 @@ namespace exahype2 {
       std::function< void(
         double * __restrict__ QL,
         double * __restrict__ QR,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        double                                       volumeH,
+        const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         double                                       dt,
         int                                          normal,
@@ -180,7 +179,10 @@ namespace exahype2 {
       int                                          auxiliaryVariables,
       const double * __restrict__ quadraturePoints1d,
       const double * __restrict__ quadratureWeights1d,
-      double * __restrict__ Qin
+      int                         normal,
+      double * __restrict__       Q,
+      double * __restrict__       fluxAlongNormal,
+      double * __restrict__       riemannSolution
     );
   }
 }

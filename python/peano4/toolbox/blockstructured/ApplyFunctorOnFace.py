@@ -7,7 +7,8 @@ from peano4.solversteps.ActionSet import ActionSet
 class ApplyFunctorOnFace(ActionSet):
   """
   
-  This class plugs into the first access to a face and copies the data over
+  This class plugs into the first access to a face and applies the template
+  to this face.
   
   patch_overlap_in: peano4.datamodel.Patch
      Patch data associated with cell.
@@ -26,7 +27,8 @@ class ApplyFunctorOnFace(ActionSet):
   """
   
   
-  def __init__(self,patch_on_face,functor_implementation,guard,additional_includes,invoke_in_touch_first=True):
+  def __init__(self,patch_on_face,functor_implementation,additional_includes,invoke_in_touch_first=True):
+    raise Exception( "not properly implemented. Should automatically run over patch similar to other functor" )
     self.d = {}
     self.d[ "UNKNOWNS" ]           = str(patch_on_face.no_of_unknowns)
     self.d[ "DOFS_PER_AXIS" ]      = str(patch_on_face.dim[1])
