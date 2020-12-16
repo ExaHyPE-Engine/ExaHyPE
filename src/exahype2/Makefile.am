@@ -14,12 +14,11 @@ ExaHyPE2Sources = \
   PatchUtils.cpp \
   RefinementControl.cpp \
   UserInterface.cpp \
-  aderdg/BoundaryConditions.cpp \
-  aderdg/Generic.cpp \
-  aderdg/Rusanov.cpp \
+  UnitTests.cpp \
   fv/BoundaryConditions.cpp \
   fv/Generic.cpp \
-  fv/Rusanov.cpp
+  fv/Rusanov.cpp \
+  fv/tests/CopyPatchTest.cpp
 
 
  
