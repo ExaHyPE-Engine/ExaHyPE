@@ -445,6 +445,7 @@ AC_ARG_ENABLE(exahype,
   [ AC_MSG_CHECKING(for exahype); AC_MSG_RESULT(no); exahype=false ])
 AM_CONDITIONAL([UseExaHyPE],[test "x$exahype" = xtrue])
 if test "$exahype" != false; then
+  AC_DEFINE([UseExaHyPE], [1], [UseExaHyPE])
   if test "$loadbalancing_toolbox" == false; then
     AC_MSG_ERROR([ExaHyPE2 requires the load balancing toolbox])
   fi
