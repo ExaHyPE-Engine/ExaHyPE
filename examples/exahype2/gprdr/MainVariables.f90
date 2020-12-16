@@ -23,8 +23,8 @@
 #elif defined(Dim2)
     INTEGER, PARAMETER             	:: nDim = 2                   ! The number of space dimensions
 #endif
-	INTEGER, PARAMETER             	:: nAux = 15
-    INTEGER, PARAMETER             	:: nVar = 24                           ! The number of variables of the PDE system 
+	INTEGER, PARAMETER             	:: nAux = 16
+    INTEGER, PARAMETER             	:: nVar = 27                           ! The number of variables of the PDE system 
     INTEGER, PARAMETER 				:: nLin = 7
     !CHARACTER(LEN=20), PARAMETER	:: ICType='NLOPRUPTURE'
 	CHARACTER(LEN=20)				:: ICType
@@ -37,6 +37,11 @@
         INTEGER :: SubType                          ! Equation subtype
         ! Specific for rupture processes
         REAL :: EPSILON1
+!	REAL :: CoulombFLpar(10)    		! add new variables for Coulomb friction
+!	CoulombFLpar=0.
+!	CoulombFLpar(1)=0.6
+!	CoulombFLpar(2)=0.2
+!	CoulombFLpar(3)=0.5
         REAL    :: lam1,lam2, lambda1,mu1,mu2
         REAL(8), DIMENSION(9) :: F0
         REAL(8), DIMENSION(3) :: F0J

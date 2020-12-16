@@ -7,6 +7,8 @@
 
 #include "peano4/utils/Loop.h"
 
+#include "exahype2/NonCriticalAssertions.h"
+
 
 std::string exahype2::fv::plotVolume(
   double Q[],
@@ -19,6 +21,28 @@ std::string exahype2::fv::plotVolume(
 };
 
 
+void exahype2::fv::validatePatch(
+  double* __restrict__ Q,
+  int    unknowns,
+  int    auxiliaryVariables,
+  int    numberOfVolumesPerAxisInPatch,
+  int    haloSize,
+  const std::string& location
+) {
+  const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
+  dfor (k,PatchSize) {
+    int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
+	for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      nonCriticalAssertion7( std::isfinite(Q[index+i]), unknowns, auxiliaryVariables, numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
+	}
+  }
+}
+
+
+
+#if defined(GPUOffloading)
+#pragma omp declare target
+#endif
 void exahype2::fv::copyPatch(
   double* __restrict__ QinWithHalo,
   double* __restrict__ QOutWithoutHalo,
@@ -35,18 +59,8 @@ void exahype2::fv::copyPatch(
       QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
     }
   }
-}
-
 
 /*
-void exahype2::fv::gpu::copyPatch(
-  double* __restrict__ QinWithHalo,
-  double* __restrict__ QOutWithoutHalo,
-  int    unknowns,
-  int    auxiliaryVariables,
-  int    numberOfVolumesPerAxisInPatch,
-  int    haloSize
-) {
   #if Dimensions==2
   int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
   int destinationSerialised = 0;
@@ -77,8 +91,12 @@ void exahype2::fv::gpu::copyPatch(
     sourceSerialised += 2*haloSize+2*(numberOfVolumesPerAxisInPatch+haloSize*2);
   }
   #endif
+  */
 }
-*/
+#if defined(GPUOffloading)
+#pragma omp end declare target
+#endif
+
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(

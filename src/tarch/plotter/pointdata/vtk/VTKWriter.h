@@ -91,17 +91,17 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
     /**
      * @return Whether writer is ready to accept data.
      */
-    virtual bool isOpen();
+    bool isOpen() override;
 
     /**
      * Clear the writer, i.e. erase all the data. However, as the writer does
      * not track how many vertex and cell writers you've created, it's up to
      * you to ensure that none of these instances is left.
      */
-    virtual void clear();
+    void clear() override;
 
-    virtual int plotPoint(const tarch::la::Vector<2,double>& position);
-    virtual int plotPoint(const tarch::la::Vector<3,double>& position);
+    int plotPoint(const tarch::la::Vector<2,double>& position) override;
+    int plotPoint(const tarch::la::Vector<3,double>& position) override;
 
     /**
      * A writer to assign points a value.
@@ -125,9 +125,9 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
          *              used for the point.
          * @param value Value for the point.
          */
-        virtual void plot( int index, double value );
-        virtual void plot( int index, const tarch::la::Vector<2,double>& value );
-        virtual void plot( int index, const tarch::la::Vector<3,double>& value );
+        void plot( int index, double value ) override;
+        void plot( int index, const tarch::la::Vector<2,double>& value ) override;
+        void plot( int index, const tarch::la::Vector<3,double>& value ) override;
 
         /**
          * If you close your writer, each point has to be assigned a
@@ -151,13 +151,13 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
         /**
          * @see close()
          */
-        virtual void assignRemainingPointsDefaultValues();
+        void assignRemainingPointsDefaultValues() override;
     };
 
     /**
      * Caller has to destroy this instance manually.
      */
-    virtual PointWriter::PointDataWriter*    createPointDataWriter( const std::string& identifier, int recordsPerPoint );
+    PointWriter::PointDataWriter*    createPointDataWriter( const std::string& identifier, int recordsPerPoint ) override;
 };
 
 #endif

@@ -655,8 +655,13 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
        }
       self.d[ "name" ]                 = vertex.name
       output_file.write( self.TemplateEnterCell_VertexLoad_Prologue.format(**temp) )
+
     if len(self.vertices)>0:
-      self.__format_template_per_action(output_file, self.TemplateEnterCell_VertexLoad_MappingCall, False)
+      md = self.mkSubDict(["name",
+        "MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY",
+        ",MAPPING_SIGNATURE_COARSE_GRID_VERTICES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_FACES_ARGUMENTS,MAPPING_SIGNATURE_FINE_GRID_CELL_ARGUMENTS",
+        ])
+      self.__format_template_per_action(output_file, self.TemplateEnterCell_VertexLoad_MappingCall, False, manual_dict=md)
 
     for face in self.faces:
       temp = {
@@ -1295,7 +1300,7 @@ void {FULL_QUALIFIED_CLASSNAME}::deleteAllStacks() {{
     for face in self.faces:
       s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
     for vertex in self.vertices:
-      s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**{"DATASET":"DataRepository::_" + face.get_logical_type_name() + "Stack"})
+      s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Exchange.format(**{"DATASET":"DataRepository::_" + vertex.get_logical_type_name() + "Stack"})
     s+=  self.TemplateExchangeRoutines_streamDataFromSplittingTreeToNewTree_Epilogue.format({})
 
     s+=  self.TemplateExchangeRoutines_streamDataFromJoiningTreeToMasterTree_Prologue.format(**prolodict)
@@ -1411,4 +1416,3 @@ tarch::logging::Log {FULL_QUALIFIED_CLASSNAME}::_log( "{FULL_QUALIFIED_CLASSNAME
 
     self.__generate_header(overwrite,directory)
     self.__generate_implementation(overwrite,cpp_filename)
-

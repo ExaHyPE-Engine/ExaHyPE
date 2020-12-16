@@ -55,7 +55,7 @@ namespace tarch {
         const int   _id;
         int         _priority;
       public:
-        const int DefaultPriority = 0;
+        static constexpr int DefaultPriority = 0;
 
         Task( int id, int priority );
 

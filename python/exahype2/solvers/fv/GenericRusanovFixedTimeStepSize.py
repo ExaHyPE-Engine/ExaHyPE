@@ -219,7 +219,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
     else:
       raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
 
-    self.__construct_template_update_cell()
+    self._construct_template_update_cell()
     
   
   def set_update_cell_implementation(self,
@@ -233,7 +233,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
 
     self._reconstructed_array_memory_location = memory_location
     self._kernel_implementation               = kernel_implementation
-    self.__construct_template_update_cell()
+    self._construct_template_update_cell()
   
   
   def get_user_includes(self):
@@ -262,7 +262,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
     pass
 
 
-  def __construct_template_update_cell(self):
+  def _construct_template_update_cell(self):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)

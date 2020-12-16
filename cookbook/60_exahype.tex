@@ -150,7 +150,7 @@ You will have to befill it with the actual Physics---flux functions for example.
 Details are discussed in the Euler Jupyter notebook.
 
 
-\section{IO and logging}
+\section{IO, logging and initialisation}
 
 
 \ExaHyPE\ codes by default yield snapshots in \Peano's block format. 
@@ -183,6 +183,57 @@ The syntax of log filter files is discussed in Section
 \ref{section:logging:log-filter}.
 
 
+\paragraph{Solver initialisation}
+
+If you have a complex solver setup, you might want to run some complex
+initialisation at startup.
+However, important parts of the \ExaHyPE\ infrastructure might not be up yet
+when the solver's constructor is invoked.
+So it is generally not a good idea to add too much setup routines to the
+constructor.
+
+
+Each solver has eight further routines that are of interest to squeeze in any
+initialisation or global state update:
+
+\begin{itemize}
+  \item startGridConstructionStep
+  \item finishGridConstructionStep
+  \item startGridInitialisationStep
+  \item finishGridInitialisationStep
+  \item startTimeStep
+  \item finishTimeStep
+  \item startPlottingStep
+  \item finishPlottingStep   
+\end{itemize}
+
+
+\noindent
+If you plug into these, please ensure you continue to call the original
+(superclass) routine still.
+A typical pattern we've seen is to run some initialisation just prior to the
+first grid construction step:
+
+\begin{code}
+class MyClass ... {
+  void startGridConstructionStep() override;
+  ...
+};
+\end{code}
+
+
+
+\begin{code}
+void MyClass::startGridConstructionStep() {
+  // call superclass routine
+  AbstractMyClass::startGridConstructionStep();
+  static bool isInitialised = false;
+  if (not isInitialised) {
+    isInitialised = true;
+    // your initialisation
+  }
+};
+\end{code}
 
 \section{Running on a parallel computer}
 
@@ -243,6 +294,12 @@ systems.
 
 
 \section{GPU support}
+
+
+\begin{remark}
+ This section is not up-to-date anymore.
+\end{remark}
+
 
 \ExaHyPE\ supports GPUs via OpenMP 5.
 You have to follow the following steps:
