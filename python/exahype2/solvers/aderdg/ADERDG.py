@@ -446,9 +446,9 @@ class ADERDG(object):
     self.add_entries_to_text_replacement_dictionary(d)
     
     mapping = []    
-    for z in self._basis._nodes:
-      for y in self._basis._nodes:
-        for x in self._basis._nodes:
+    for z in self._basis.quadrature_points():
+      for y in self._basis.quadrature_points():
+        for x in self._basis.quadrature_points():
           mapping.append( (x,y,z) )
     
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 

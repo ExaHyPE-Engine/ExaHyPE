@@ -1,6 +1,6 @@
 import mpmath as mp
 import numpy as np
-from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto # quadrature_nodes by default in [-1,1]
+from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto # quadrature_points by default in [-1,1]
 
 from abc import abstractmethod
 
@@ -14,8 +14,8 @@ class LagrangeBasis():
   def __init__(self,num_points):
     self._num_points = num_points
     self._max_poly_order = num_points - 1
-    # quadrature_nodes, quadrature_weights
-    self._quadrature_nodes, self._quadrature_weights = self._compute_quadrature_nodes_and_quadrature_weights(num_points)
+    # quadrature_points, quadrature_weights
+    self._quadrature_points, self._quadrature_weights = self._compute_quadrature_points_and_quadrature_weights(num_points)
     # operators
     self._mass_matrix                = self._compute_mass_matrix()
     self._stiffness_matrix           = self._compute_stiffness_matrix()
@@ -30,7 +30,7 @@ class LagrangeBasis():
     return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,self.__dict__)
   __repr__ = __str__
   @abstractmethod
-  def _compute_quadrature_nodes_and_quadrature_weights(self,num_points):
+  def _compute_quadrature_points_and_quadrature_weights(self,num_points):
     """
     To be implemented by subclass.
     """
@@ -51,7 +51,7 @@ class LagrangeBasis():
     """
     phi  = [mp.mpf(1.)]*(self._num_points) 
     phi_xi = [mp.mpf(0.)]*(self._num_points)
-    xin = self._quadrature_nodes
+    xin = self._quadrature_points
     for m in range(0,self._num_points):
       for j in range(0,self._num_points):
         if j == m:
@@ -82,7 +82,7 @@ class LagrangeBasis():
     MM = [[mp.mpf(0) for _ in range(self._num_points)] for _ in range(self._num_points)]
     
     for i in range(0,self._num_points):
-      phi, _ = self._evaluate(self._quadrature_nodes[i])
+      phi, _ = self._evaluate(self._quadrature_points[i])
       for k in range(0,self._num_points):
         for l in range(0,self._num_points):
           MM[k][l] += self._quadrature_weights[i]*phi[k]*phi[l]
@@ -98,7 +98,7 @@ class LagrangeBasis():
     Kxi = [[mp.mpf(0) for _ in range(self._num_points)] for _ in range(self._num_points)]
        
     for i in range(0,self._num_points):
-      phi, phi_xi = self._evaluate(self._quadrature_nodes[i])
+      phi, phi_xi = self._evaluate(self._quadrature_points[i])
       for k in range(0,self._num_points):
         Kxi[k][i] = self._quadrature_weights[i]*phi_xi[k]*phi[i] 
     return Kxi
@@ -145,7 +145,7 @@ class LagrangeBasis():
   def _compute_fine_grid_projector(self, j):
     """
     Transforms the degrees of freedom located on a coarse grid edge
-    quadrature_nodes to degrees of freedoms located on quadrature_nodes of a fine grid edge.
+    quadrature_points to degrees of freedoms located on quadrature_points of a fine grid edge.
     The difference in levels is 1.
     
     Let us denote by P the  fine grid projector (= equidistantGridProjector). The fine grid DoF 
@@ -164,14 +164,14 @@ class LagrangeBasis():
     fineGridProjector = [[mp.mpf(0) for _ in range(self._num_points)] for _ in range(self._num_points)] # 4 x 4 for self._max_poly_order=3
     
     for i in range(0, self._num_points): # Eq. basis
-      phi_i, _ = self._evaluate((self._quadrature_nodes[i]+j)/mp.mpf(3.0)) # comma after phi_i is important
+      phi_i, _ = self._evaluate((self._quadrature_points[i]+j)/mp.mpf(3.0)) # comma after phi_i is important
       for m in range(0, self._num_points): # DG basis
         fineGridProjector[m][i] = phi_i[m]
     return fineGridProjector
   def _compute_equidistant_grid_projector(self):
     """
     Transforms the degrees of freedom located at non-equidistant Lagrange support points
-    quadrature_nodes to degrees of freedoms located at quadrature_nodes of an equidistant grid over (0,1).
+    quadrature_points to degrees of freedoms located at quadrature_points of an equidistant grid over (0,1).
     
     Let us denote by P the  projection operator (= equidistantGridProjector). The equidistant DoF 
     are computed according to:
@@ -180,7 +180,7 @@ class LagrangeBasis():
     
     Returns:
        equidistantGridProjector:
-        The corresponding degrees of freedom located at quadrature_nodes of an equidistant grid over (0,1).
+        The corresponding degrees of freedom located at quadrature_points of an equidistant grid over (0,1).
     """
     equidistantGridProjector = [[mp.mpf(0) for _ in range(self._num_points)] for _ in range(self._num_points)] # 4 x 4 for self._max_poly_order=3
     subxi = mp.linspace(mp.mpf(0.0), mp.mpf(1.0), self._num_points)
@@ -226,48 +226,57 @@ class LagrangeBasis():
             tmp1.append(tmp2)
          result.append(tmp1)
       return result 
-  
-  def _init_dictionary_with_default_parameters(self,d):
-    d["order".upper()]                      = self._max_poly_order
-    d["quadrature_nodes".upper()]           = self._render_tensor_1(self._quadrature_nodes)                
-    d["quadrature_weights".upper()]         = self._render_tensor_1(self._quadrature_weights)                
-    d["F0".upper()]                         = self._render_tensor_1(self._F0)                         
-    d["dudx".upper()]                       = self._render_tensor_2(self._dudx)                       
-    d["mass_matrix".upper()]                = self._render_tensor_2(self._mass_matrix)                
-    d["stiffness_matrix".upper()]           = self._render_tensor_2(self._stiffness_matrix)           
-    d["K1".upper()]                         = self._render_tensor_2(self._K1)                         
-    d["equidistant_grid_projector".upper()] = self._render_tensor_2(self._equidistant_grid_projector) 
-    d["fine_grid_projector".upper()]        = self._render_tensor_3(self._fine_grid_projector)        
 
-def _transform_and_sort_nodes_and_weights(quadrature_nodes,quadrature_weights):
+  def quadrature_points(self,render=True):
+    return self._render_tensor_1(self._quadrature_points) if render else self._quadrature_points
+  
+  def quadrature_weights(self,render=True):
+    return self._render_tensor_1(self._quadrature_weights) if render else self._quadrature_weights
+   
+  def _init_dictionary_with_default_parameters(self,d):
+    """
+    
+    """
+    d["ORDER"]                      = self._max_poly_order
+    d["QUADRATURE_POINTS"]          = self._render_tensor_1(self._quadrature_points)                
+    d["QUADRATURE_WEIGHTS"]         = self._render_tensor_1(self._quadrature_weights)                
+    d["F0"]                         = self._render_tensor_1(self._F0)                         
+    d["DUDX"]                       = self._render_tensor_2(self._dudx)                       
+    d["MASS_MATRIX"]                = self._render_tensor_2(self._mass_matrix)                
+    d["STIFFNESS_MATRIX"]           = self._render_tensor_2(self._stiffness_matrix)           
+    d["K1"]                         = self._render_tensor_2(self._K1)                         
+    d["EQUIDISTANT_GRID_PROJECTOR"] = self._render_tensor_2(self._equidistant_grid_projector) 
+    d["FINE_GRID_PROJECTOR"]        = self._render_tensor_3(self._fine_grid_projector)        
+
+def _transform_and_sort_points_and_weights(quadrature_points,quadrature_weights):
   """
-  Transform quadrature quadrature_nodes and quadrature_weights for interval [-1,1]
-  to quadrature_nodes and quadrature_weights for interval [0,1].
+  Transform quadrature quadrature_points and quadrature_weights for interval [-1,1]
+  to quadrature_points and quadrature_weights for interval [0,1].
   """
   transformed_quadrature_weights = []
-  transformed_quadrature_nodes   = []
+  transformed_quadrature_points   = []
   # weight
   for i,w in enumerate(quadrature_weights):
-    x = quadrature_nodes[i]
+    x = quadrature_points[i]
     wT = mp.mpf(w)/mp.mpf(2.0)
     xT = (mp.mpf(x)+mp.mpf(1.0))/mp.mpf(2.0)
     transformed_quadrature_weights.append(wT)
-    transformed_quadrature_nodes.append(xT)
+    transformed_quadrature_points.append(xT)
   # sort
-  sorted_transformed_quadrature_nodes = sorted(transformed_quadrature_nodes)
+  sorted_transformed_quadrature_points = sorted(transformed_quadrature_points)
   sorted_transformed_quadrature_weights = []
-  for i,xs in enumerate(sorted_transformed_quadrature_nodes):
-    n  = transformed_quadrature_nodes.index(xs) 
+  for i,xs in enumerate(sorted_transformed_quadrature_points):
+    n  = transformed_quadrature_points.index(xs) 
     ws = transformed_quadrature_weights[n]
     sorted_transformed_quadrature_weights.append(ws)
-  return sorted_transformed_quadrature_nodes, sorted_transformed_quadrature_weights
+  return sorted_transformed_quadrature_points, sorted_transformed_quadrature_weights
 
 class GaussLegendreBasis(LagrangeBasis):
-  def _compute_quadrature_nodes_and_quadrature_weights(self,num_points):
+  def _compute_quadrature_points_and_quadrature_weights(self,num_points):
     x, w = gauss_legendre(num_points,PREC_DIGITS)
-    return _transform_and_sort_nodes_and_weights(x,w)  
+    return _transform_and_sort_points_and_weights(x,w)  
 
 class GaussLobattoBasis(LagrangeBasis):
-  def _compute_quadrature_nodes_and_quadrature_weights(self,num_points):
+  def _compute_quadrature_points_and_quadrature_weights(self,num_points):
     x, w = gauss_lobatto(num_points,PREC_DIGITS)
-    return _transform_and_sort_nodes_and_weights(x,w)  
+    return _transform_and_sort_points_and_weights(x,w)  
