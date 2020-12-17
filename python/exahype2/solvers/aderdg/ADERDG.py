@@ -342,6 +342,7 @@ class ADERDG(object):
 
 
   def _predicate_cell_carrying_data(self):
+    # @todo(dominic): Depends on the cell type
     return "not marker.isRefined()"
   
   
@@ -537,11 +538,8 @@ class ADERDG(object):
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
-        
-    d["ORDER"]                          = self._order
 
-    d["QUADRATURE_POINTS"]              = self._basis._nodes
-    d["QUADRATURE_WEIGHTS"]             = self._basis._weights
+    self._basis._init_dictionary_with_default_parameters(d)        
         
     #if self._DG_polynomial_overlap.dim[0]/2!=1:
     #  print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
