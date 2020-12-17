@@ -77,6 +77,8 @@ std::string peano4::datamanagement::FaceMarker::toString() const {
       << ",h=" << _h
       << ",select=" << _select
       << ",is-cell-local=" << _cellIsLocal
+      << ",is-face-local=" << isLocal()
+      << ",is-face-refined=" << isRefined()
       << ")";
   return msg.str();
 }

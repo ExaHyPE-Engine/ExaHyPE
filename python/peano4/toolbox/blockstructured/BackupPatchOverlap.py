@@ -36,7 +36,7 @@ class BackupPatchOverlap(ActionSet):
     self.d[ "GUARD_PREDICATE" ]    = guard
     
     self.invoke_in_touch_first = invoke_in_touch_first
-    self._addition_includes    = additional_includes
+    self._additional_includes  = additional_includes
 
 
   def set_guard_predicate(self,guard):
@@ -98,4 +98,4 @@ class BackupPatchOverlap(ActionSet):
   def get_includes(self):
     return """
 #include "peano4/utils/Loop.h"
-""" + self._addition_includes
+""" + self._additional_includes

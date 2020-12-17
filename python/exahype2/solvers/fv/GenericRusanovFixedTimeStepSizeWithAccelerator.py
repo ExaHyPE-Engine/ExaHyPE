@@ -278,8 +278,10 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
 
 
   def set_update_cell_implementation(self,
-    kernel_implementation   = FV.CellUpdateImplementation_SplitLoop,
-    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete
+    kernel_implementation   = None,
+    memory_location         = None
+    #kernel_implementation   = FV.CellUpdateImplementation_SplitLoop,
+    #memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete
   ):
     if kernel_implementation != FV.CellUpdateImplementation_SplitLoop:
       raise Exception( "kernel implementation cannot be reconfigured for GPU/Accelerator FV solver" )

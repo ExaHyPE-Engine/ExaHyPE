@@ -16,6 +16,7 @@ from abc import abstractmethod
 from peano4.solversteps.ActionSet import ActionSet
 
 from peano4.toolbox.blockstructured.ProjectPatchOntoFaces import ProjectPatchOntoFaces
+from peano4.toolbox.blockstructured.BackupPatchOverlap    import BackupPatchOverlap
 
 
 class AbstractFVActionSet( ActionSet ):
@@ -41,6 +42,7 @@ class AbstractFVActionSet( ActionSet ):
   def get_includes(self):
     return """
 #include <functional>
+#include "exahype2/PatchUtils.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_includes() 
 
 
@@ -101,14 +103,14 @@ class AMROnPatch(AbstractFVActionSet):
     
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       d = {}
-      if self._solver.patch.dim[0] != self._solver.patch.dim[1]:
+      if self._solver._patch.dim[0] != self._solver._patch.dim[1]:
         raise Exception( "Error: Can only handle square patches." )
       
-      d[ "UNKNOWNS" ]           = str(self._solver.patch.no_of_unknowns)
-      d[ "DOFS_PER_AXIS" ]      = str(self._solver.patch.dim[0])
-      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver.patch.no_of_unknowns * self._solver.patch.dim[0] * self._solver.patch.dim[0])
-      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver.patch.no_of_unknowns * self._solver.patch.dim[0] * self._solver.patch.dim[0] * self._solver.patch.dim[0])
-      d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver.patch.name
+      d[ "UNKNOWNS" ]           = str(self._solver._patch.no_of_unknowns)
+      d[ "DOFS_PER_AXIS" ]      = str(self._solver._patch.dim[0])
+      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
+      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
+      d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver._patch.name
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)      
       result = jinja2.Template( self.TemplateAMR ).render(**d)
@@ -160,7 +162,11 @@ class HandleBoundary(AbstractFVActionSet):
    
   """
   TemplateHandleBoundary = """
-    logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
+    logDebug( 
+      "touchFaceFirstTime(...)", 
+      "label=" << fineGridFaceLabel.toString() << ", " << {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions] << 
+      ",marker=" << marker.toString()
+    );
     if (
       not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
       and
@@ -206,26 +212,33 @@ class HandleBoundary(AbstractFVActionSet):
     return result
 
 
+  def get_includes(self):
+    return """
+#include "exahype2/PatchUtils.h"
+#include "exahype2/fv/BoundaryConditions.h"
+""" + AbstractFVActionSet.get_includes(self) 
+
+
 class ProjectPatchOntoFaces( ProjectPatchOntoFaces ):
   def __init__(self,solver):
-    ProjectPatchOntoFaces.__init__(
+    peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
       self,
       solver._patch,
       solver._patch_overlap_new,
       "not marker.isRefined()", 
-      solver._get_default_includes() + self.get_user_includes()
+      solver._get_default_includes() + solver.get_user_includes()
     )
     
     
     
-class BackupPatchOverlap( peano4.toolbox.blockstructured.BackupPatchOverlap ):
+class CopyPatchOverlapIntoBackupOfOverlap( BackupPatchOverlap ):
   def __init__(self,solver):
-    peano4.toolbox.blockstructured.BackupPatchOverlap( 
+    BackupPatchOverlap.__init__(self, 
       solver._patch_overlap_new,
       solver._patch_overlap,
       False,
-      solver._guard_copy_new_face_data_into_face_data,
-      solver._get_default_includes() + self.get_user_includes()
+      "not marker.isRefined()", 
+      solver._get_default_includes() + solver.get_user_includes()
     )
     
 
@@ -247,33 +260,6 @@ class FV(object):
     are unset by default. If you need some data exchange, you have to activate
     them manually.
     
-  """
-  
-    
-  
-  
-  
-  
-  """
-  
-    This is the straightforward implementation.
-    
-  """
-  CellUpdateImplementation_NestedLoop = """
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d
-    #endif
-  """
-
-
-  CellUpdateImplementation_SplitLoop = """
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop
-    #endif
   """
   
       
@@ -328,8 +314,6 @@ class FV(object):
 #include "observers/SolverRepository.h" 
 """
    
-    self._guard_copy_new_face_data_into_face_data  = "not marker.isRefined()"
-
     self._min_h                = min_h
     self._max_h                = max_h 
     self._plot_grid_properties = plot_grid_properties
@@ -344,9 +328,8 @@ class FV(object):
     self._action_set_AMR                      = AMROnPatch(self)
     self._action_set_handle_boundary          = HandleBoundary(self)
     self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self)
-    self._action_set_backup_patch_overlap     = BackupPatchOverlap(self)
-    
-    self._action_set_update_cell     = jinja2.Template( "" )
+    self._action_set_copy_patch_overlap_into_backup_of_overlap     = CopyPatchOverlapIntoBackupOfOverlap(self)
+    self._action_set_update_cell              = None
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     
@@ -402,9 +385,6 @@ class FV(object):
 #include "peano4/utils/Loop.h"
 
 #include "SolverRepository.h"
-
-#include "exahype2/PatchUtils.h"
-#include "exahype2/fv/BoundaryConditions.h"
 """
 
 
@@ -422,7 +402,7 @@ class FV(object):
   def add_actions_to_init_grid(self, step):
     step.add_action_set( self._action_set_adjust_cell ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
-    step.add_action_set( self._action_set_backup_patch_overlap )
+    step.add_action_set( self._action_set_copy_patch_overlap_into_backup_of_overlap )
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -460,34 +440,12 @@ class FV(object):
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
-
-    step.add_action_set( peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
-      self._patch,
-      self._patch_overlap,
-      self._template_update_cell.render(**d),
-      self._template_handle_boundary.render(**d),
-      self._guard_update_cell,
-      self._guard_handle_boundary,
-      self._get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
-""",
-      self._reconstructed_array_memory_location
-    )) 
-    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
-      self._patch,
-      self._patch_overlap_new,
-      self._guard_project_patch_onto_faces,
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_adjust_cell )
+    step.add_action_set( self._action_set_update_cell )
+    step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
-    step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
-      self._patch_overlap_new,
-      self._patch_overlap,
-      False,
-      self._guard_copy_new_face_data_into_face_data,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    pass
+    step.add_action_set( self._action_set_copy_patch_overlap_into_backup_of_overlap )
 
 
   @abstractmethod

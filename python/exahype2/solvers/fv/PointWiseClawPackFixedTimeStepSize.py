@@ -110,7 +110,8 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
   
 
   
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop, discriminate_normal=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = None, discriminate_normal=False):
+    #def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop, discriminate_normal=False):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
@@ -170,8 +171,10 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
 
     
   def set_update_cell_implementation(self,
-    kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
-    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+    kernel_implementation   = None,
+    memory_location         = None
+    #kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
+    #memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
   ):
     if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
        memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \

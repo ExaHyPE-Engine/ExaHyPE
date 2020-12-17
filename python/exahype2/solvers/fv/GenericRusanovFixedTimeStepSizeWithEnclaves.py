@@ -113,7 +113,8 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
   """      
 
 
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop, memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, kernel_implementation = None, memory_location = None):
+    #def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop, memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete):
     """
     
     A fixed time stepping scheme with enclave tasking
@@ -338,8 +339,10 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
 
 
   def set_update_cell_implementation(self,
-    kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
-    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete
+    kernel_implementation   = None,
+    memory_location         = None
+    #kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
+    #memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete
   ):
     if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack:
       raise Exception( "Non-heap allocation chosen" )

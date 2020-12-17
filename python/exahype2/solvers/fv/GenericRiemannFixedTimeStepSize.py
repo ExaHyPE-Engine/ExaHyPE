@@ -58,7 +58,7 @@ class GenericRiemannFixedTimeStepSize( FV ):
   """      
 
 
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, plot_grid_properties=False):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
@@ -71,7 +71,10 @@ class GenericRiemannFixedTimeStepSize( FV ):
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
-    self._kernel_implementation               = kernel_implementation
+    
+    #, kernel_implementation = FV.CellUpdateImplementation_NestedLoop
+    #self._kernel_implementation               = kernel_implementation
+    self._kernel_implementation               = None
 
     self._rusanov_call = ""
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
@@ -109,7 +112,8 @@ class GenericRiemannFixedTimeStepSize( FV ):
     
   
   def set_update_cell_implementation(self,
-    kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
+    kernel_implementation   = None,
+    #kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
     memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
   ):
     if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
