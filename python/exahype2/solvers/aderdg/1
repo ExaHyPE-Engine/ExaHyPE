@@ -1,554 +1,281 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
-# use, please see the copyright notice at www.peano-framework.org
-import os
-
-import peano4
-import peano4.datamodel
-
-import peano4.output.Jinja2TemplatedHeaderFile
-import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
-
-from peano4.solversteps.ActionSet import ActionSet
-
-import jinja2
-import math
+import mpmath as mp
+import numpy as np
+from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto # quadrature_points by default in [-1,1]
 
 from abc import abstractmethod
 
-from enum import IntEnum
+PREC_DIGITS   = 256
+RENDER_DIGITS = 64
 
-from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+mp.dps    = PREC_DIGITS
+mp.pretty = False
 
-
-class Polynomials(IntEnum):
-  """
-  
-   Superclass has to be IntEnum, as I use this one within Jinja2 templates
-   where I struggled to compare against enum variants. I however can always
-   compare against integers.
-  
-  """
-  Gauss_Legendre = 0,
-  Gauss_Lobatto = 1
-  
-  
-class AbstractADERDGActionSet( ActionSet ):
-  def __init__(self,solver):
-    """
-   
-    solver: ADERDG
-      Reference to creating class 
-   
-    """
-    self._solver = solver
-    pass
-  
-  
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
-
-
-  def user_should_modify_template(self):
-    return False
-
-
-  def get_includes(self):
-    return """
-#include <functional>
-""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
-
-
-class AMR(AbstractADERDGActionSet):
-  TemplateAMR = """
-  if (not marker.isRefined()) { 
-    ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
-
-    if (tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
-      refinementCriterion = ::exahype2::RefinementCommand::Refine;
-    } 
-    else {
-      int index = 0;
-      tarch::la::Vector<Dimensions,double> x;
-      dfor( quadraturePoint, {{ORDER}}+1 ) {
-        for (int d=0; d<Dimensions; d++) {
-          x(d) = {{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
-        }
-        refinementCriterion = refinementCriterion and {{SOLVER_INSTANCE}}.refinementCriterion(
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-          x,
-          marker.h(),
-          {{SOLVER_INSTANCE}}.getMinTimeStamp()
-        );
-        index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-      }
-     
-      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < {{SOLVER_INSTANCE}}.getMinMeshSize() ) {
-        refinementCriterion = ::exahype2::RefinementCommand::Keep;
-      } 
-      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
-        refinementCriterion = ::exahype2::RefinementCommand::Keep;
-      } 
-    }
-    
-    _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion );
-  } 
-"""
-
-
-  def __init__(self,solver):
-    AbstractADERDGActionSet.__init__(self, solver)
-
-  
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
-      result = jinja2.Template( self.TemplateAMR ).render(**d)
-      pass 
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = """
-  _localRefinementControl.clear();
-"""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
-      result = """
-  refinementControl.merge( _localRefinementControl );
-"""
-    return result
-
-
-  def get_body_of_getGridControlEvents(self):
-    return """
-  return refinementControl.getGridControlEvents();
-""" 
-
-  
-  def get_attributes(self):
-    return """
-    ::exahype2::RefinementControl         _localRefinementControl;
-"""
-
-
-
-class AdjustCell(AbstractADERDGActionSet):
-  TemplateAdjustCell = """
-  if (not marker.isRefined()) { 
-    int index = 0;
-    tarch::la::Vector<Dimensions,double> x;
-    dfor( quadraturePoint, {{ORDER}}+1 ) {
-      for (int d=0; d<Dimensions; d++) {
-        x(d) = {{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
-      }
-      {{SOLVER_INSTANCE}}.adjustSolution(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        x,
-        {{SOLVER_INSTANCE}}.getMinTimeStamp()
-      );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  } 
-"""
-
-  
-  def __init__(self,solver):
-    AbstractADERDGActionSet.__init__(self, solver)
-
-  
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
-      result = jinja2.Template(self.TemplateAdjustCell).render(**d)
-      pass 
-    return result
-
-
-class HandleBoundary(AbstractADERDGActionSet):
-  TemplateHandleBoundary = """
-    logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
-    if (not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]) {
-/*      ::exahype2::fv::applyBoundaryConditions(
-        [&](
-          double                                       Qinside[],
-          double                                       Qoutside[],
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> void {
-          {{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
-        },  
-        marker.x(),
-        marker.h(),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        {{TIME_STEP_SIZE}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        marker.getSelectedFaceNumber(),
-        fineGridFace{{UNKNOWN_IDENTIFIER}}.value
-      ); */
-    }
-"""
-
-  
-  def __init__(self,solver):
-    AbstractADERDGActionSet.__init__(self, solver)
-
-  
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
-      result = jinja2.Template(self.TemplateAdjustCell).render(**d)
-      pass 
-    return result
-
-
-class ADERDG(object):
-  """ 
-    An abstract ADER-DG solver
-
-    Our ADER-DG solver hijacks the patch-based data structures. Topologically,
-    this makes sense, as the Cartesian mesh is just distorted - depending on 
-    whether you use Gauss-Lobatto or Gauss-Legendre nodes. A big semantic 
-    difference can be found for the overlaps: We use an overlap of two but the 
-    layer closer to the actual patch hosts a nodal representation of the 
-    solution. The outer ghost layer holds a nodel representation of the solution
-    gradient along the boundary.
-    
-    Further to the width of the overlaps, our face data always is space-time.
-    For a global time stepping, this is not required, as we can directly apply
-    the space-time integral. For all other routines, it is essential.
-    
-    We use two overlaps: one with gradient and solution, and one with the 
-    outcome of the Riemann solve.
-  
-  """
-  
-
-
-
-  def __init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties):
-    """
-  name: string
-     A unique name for the solver. This one will be used for all generated 
-     classes. Also the C++ object instance later on will incorporate this 
-     name.
-     
-  order: int
-     Order of the chosen polynomials.
-     
-  unknowns: int
-     Number of unknowns per Finite Volume voxel.
-     
-  auxiliary_variables: int 
-     Number of auxiliary variables per Finite Volume voxel. Eventually, both
-     unknowns and auxiliary_variables are merged into one big vector if we 
-     work with AoS. But the solver has to be able to distinguish them, as 
-     only the unknowns are subject to a hyperbolic formulation.
-     
-  polynomials: Polynomials
-     Type of polynomials used within the cell.
-  
-  min_h: double
-  
-  max_h: double
-  
-  plot_grid_properties: Boolean
-     Clarifies whether a dump of the data should be enriched with grid info
-     (such as enclave status flags), too.
+class LagrangeBasis():
  
-    """
-    if order<=0:
-      raise Exception( "Order has to be positive. Order 0 is a Finite Volume scheme. Use FV solver instead")
-    
-    self._name                    = name
-    self._DG_polynomial           = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._DG_polynomial_new       = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
-    self._face_spacetime_solution = peano4.datamodel.Patch( (2*(order),order,order), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
-    self._Riemann_result          = peano4.datamodel.Patch( (2,order,order),         unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
-    
-    #self._DG_polynomial_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
-    #self._DG_polynomial_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
-    
-    self._face_spacetime_solution.generator.includes     += """
-#include "peano4/utils/Loop.h"
-#include "observers/SolverRepository.h" 
-"""
-    self._Riemann_result.generator.includes += """
-#include "peano4/utils/Loop.h"
-#include "observers/SolverRepository.h" 
-"""
-   
-    self._guard_copy_new_face_data_into_face_data  = self._predicate_face_carrying_data()
-    self._guard_adjust_cell                        = self._predicate_cell_carrying_data()
-    self._guard_AMR                                = self._predicate_cell_carrying_data()
-    self._guard_project_DG_polynomial_onto_faces   = self._predicate_cell_carrying_data()
-    self._guard_update_cell                        = self._predicate_cell_carrying_data()
-    self._guard_handle_boundary                    = self._predicate_boundary_face_carrying_data()
-
-    self._order                = order
-    self._min_h                = min_h
-    self._max_h                = max_h 
-    self._plot_grid_properties = plot_grid_properties
-    
-    self._unknowns             = unknowns
-    self._auxiliary_variables  = auxiliary_variables
-    
-    if polynomials is Polynomials.Gauss_Legendre:
-      self._basis = GaussLegendreBasis(order+1)
-    elif polynomials is Polynomials.Gauss_Lobatto:
-      self._basis = GaussLobattoBasis(order+1)
-    
-    if min_h>max_h:
-       print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
-
-    self._action_set_adjust_cell     = AdjustCell(self)
-    self._action_set_AMR             = AMR(self)
-    self._handle_boundary_action_set = AbstractADERDGActionSet(self)
-    self._action_set_update_cell     = None
-    self._action_set_update_face     = None
-
-    self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-    
-    self._face_spacetime_solution.generator.send_condition               = "false"
-    self._face_spacetime_solution.generator.receive_and_merge_condition  = "false"
-
-    self._Riemann_result.generator.send_condition               = "false"
-    self._Riemann_result.generator.receive_and_merge_condition  = "false"
-
-    self.plot_description = ""
-    self.plot_metadata    = ""
-    pass
-  
-  
+  def __init__(self,num_points):
+    self._num_points = num_points
+    self._max_poly_order = num_points - 1
+    # quadrature_points, quadrature_weights
+    self._quadrature_points, self._quadrature_weights = self._compute_quadrature_points_and_quadrature_weights(num_points)
+    # operators
+    self._mass_matrix                = self._compute_mass_matrix()
+    self._stiffness_matrix           = self._compute_stiffness_matrix()
+    self._K1                         = self._compute_K1()
+    self._F0                         = self._compute_F0()
+    self._dudx                       = self._compute_discrete_derivative_operator()
+    self._equidistant_grid_projector = self._compute_equidistant_grid_projector()
+    self._fine_grid_projector        = [None]*3
+    for j in range(0,3):
+      self._fine_grid_projector[j] = self._compute_fine_grid_projector(j)
   def __str__(self):
     return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,self.__dict__)
   __repr__ = __str__
-  
-  
-  def _predicate_face_carrying_data(self):
-    return "not marker.isRefined()"
-
-
-  def _predicate_boundary_face_carrying_data(self):
-    return "not marker.isRefined() and fineGridFaceLabel.getBoundary()"
-
-
-  def _predicate_cell_carrying_data(self):
-    # @todo(dominic): Depends on the cell type
-    return "not marker.isRefined()"
-  
-  
-  def _unknown_identifier(self):
-    return self._name+"Q"
-  
-
-  def get_name_of_global_instance(self):
-    return "InstanceOf" + self._name
-
-  
-  def add_to_Peano4_datamodel( self, datamodel ):
-    """
-    
-      Add all required data to the Peano4 project's datamodel 
-      so it is properly built up
-      
-    """
-    datamodel.add_cell(self._DG_polynomial)
-    datamodel.add_cell(self._DG_polynomial_new)
-    datamodel.add_face(self._face_spacetime_solution)
-    datamodel.add_face(self._Riemann_result)
- 
- 
-  def add_use_data_statements_to_Peano4_solver_step(self, step):
-    """
-      Tell Peano what data to move around
-      
-      Inform Peano4 step which data are to be moved around via the 
-      use_cell and use_face commands. This operation is generic from
-      ExaHyPE's point of view, i.e. I use it for all grid sweep types. 
-    
-    """
-    step.use_cell(self._DG_polynomial)
-    step.use_cell(self._DG_polynomial_new)
-    step.use_face(self._face_spacetime_solution)
-    step.use_face(self._Riemann_result)
-
-  
-  def _get_default_includes(self):
-    return """
-#include "tarch/la/Vector.h" 
-
-#include "peano4/utils/Globals.h"
-#include "peano4/utils/Loop.h"
-
-#include "SolverRepository.h"
-
-#include "exahype2/PatchUtils.h"
-#include "exahype2/aderdg/BoundaryConditions.h"
-"""
-
-
   @abstractmethod
-  def get_user_includes(self):
+  def _compute_quadrature_points_and_quadrature_weights(self,num_points):
     """
-  
-    Use this to add include statements to the generated C++ code. Is there for
-    subclasses to hook in.
-  
+    To be implemented by subclass.
     """
-    return ""
+    assert False, "To be implemented by subclass."
   
+  def _transform_and_sort_points_and_weights(self,quadrature_points,quadrature_weights):
+    """
+    Transform quadrature quadrature_points and quadrature_weights for interval [-1,1]
+    to quadrature_points and quadrature_weights for interval [0,1].
+    """
+    transformed_quadrature_weights = []
+    transformed_quadrature_points   = []
+    # weight
+    for i,w in enumerate(quadrature_weights):
+      x = quadrature_points[i]
+      wT = mp.mpf(w)/mp.mpf(2.0)
+      xT = (mp.mpf(x)+mp.mpf(1.0))/mp.mpf(2.0)
+      transformed_quadrature_weights.append(wT)
+      transformed_quadrature_points.append(xT)
+    # sort
+    sorted_transformed_quadrature_points = sorted(transformed_quadrature_points)
+    sorted_transformed_quadrature_weights = []
+    for i,xs in enumerate(sorted_transformed_quadrature_points):
+      n  = transformed_quadrature_points.index(xs) 
+      ws = transformed_quadrature_weights[n]
+      sorted_transformed_quadrature_weights.append(ws)
+    return sorted_transformed_quadrature_points, sorted_transformed_quadrature_weights
+  def _evaluate(self,xi):
+    """
+    Evaluates a lagrange polynomial and its first derivative at a given point.
+    
+    Args:
+       xi:
+        The reference element point the basis functions are evaluated at.
+        Here, xi refers to the greek letter that is often used as a reference element coordinate.
+    Returns:
+       phi:
+        Basis function values.
+       phi_xi:
+        First derivatives of the basis functions.
+    """
+    phi  = [mp.mpf(1.)]*(self._num_points) 
+    phi_xi = [mp.mpf(0.)]*(self._num_points)
+    xin = self._quadrature_points
+    for m in range(0,self._num_points):
+      for j in range(0,self._num_points):
+        if j == m:
+          continue 
+        phi[m] = phi[m]*(xi-xin[j])/(xin[m]-xin[j])
+      for i in range(0,self._num_points):
+        if i == m:
+          continue
+        tmp = 1.;
+        for j in range(0,self._num_points):
+          if j == i:
+            continue
+          if j == m:
+            continue
+          tmp = tmp*(xi-xin[j])/(xin[m]-xin[j])
+        phi_xi[m] += tmp/(xin[m]-xin[i])
+    return phi, phi_xi  
+  def _compute_mass_matrix(self):
+    """
+    Computes the (reference) element mass matrix for an approximation of
+    order self._max_poly_order.
   
-  def add_actions_to_init_grid(self, step):
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
-    step.add_action_set( self._action_set_adjust_cell )
+    Returns:
+       M_xi:
+        The (reference) element mass matrix.
+    """
+    # init matrix with zeros
+    MM = [[mp.mpf(0) for _ in range(self._num_points)] for _ in range(self._num_points)]
+    
+    for i in range(0,self._num_points):
+      phi, _ = self._evaluate(self._quadrature_points[i])
+      for k in range(0,self._num_points):
+        for l in range(0,self._num_points):
+          MM[k][l] += self._quadrature_weights[i]*phi[k]*phi[l]
+    return MM
+  def _compute_stiffness_matrix(self):
+    """
+    Computes the (reference) element stiffness matrix for an approximation of order self._max_poly_order.
+    Returns:
+       K_xi:
+        The (reference) element stiffness matrix.
+    """
+    # init matrix with zero
+    Kxi = [[mp.mpf(0) for _ in range(self._num_points)] for _ in range(self._num_points)]
+       
+    for i in range(0,self._num_points):
+      phi, phi_xi = self._evaluate(self._quadrature_points[i])
+      for k in range(0,self._num_points):
+        Kxi[k][i] = self._quadrature_weights[i]*phi_xi[k]*phi[i] 
+    return Kxi
+  def _compute_K1(self):
+    """
+    Computes the difference between the reference element mass operator 
+    evaluated at point xi=1.0 and the element stiffness matrix.
+    
+    Returns:
+       K1:
+        delta between the reference element mass operator and the element stiffness matrix
+    """
+    phi1, _ = self._evaluate(1.0)
+    FRm = [[mp.mpf(0) for _ in range(self._num_points)] for _ in range(self._num_points)]
+    
+    for k in range(0, self._num_points):
+      for l in range(0, self._num_points):
+        FRm[k][l] = phi1[k]*phi1[l] 
+    
+    K1 = np.subtract(FRm,self._stiffness_matrix)
+    return K1    
+      
+  def _compute_F0(self):
+    """
+    Evaluates the reference basis functions at point xi=0.0.
+  
+    Returns:
+       phi:
+        The reference basis functions evaluated at point xi=0.0.
+    """
+    phi, _ = self._evaluate(mp.mpf(0.0))
+    return phi     
+      
+  def _compute_discrete_derivative_operator(self):
+    """
+    Computes some derivative values for debugging purposes.
+  
+    Returns:
+       dudx:
+        Derivative values for debugging purposes.
+    """
+    dudx = np.dot(mp.inverse(self._mass_matrix).tolist(),np.transpose(self._stiffness_matrix))
+    return dudx
+  def _compute_fine_grid_projector(self, j):
+    """
+    Transforms the degrees of freedom located on a coarse grid edge
+    quadrature_points to degrees of freedoms located on quadrature_points of a fine grid edge.
+    The difference in levels is 1.
+    
+    Let us denote by P the  fine grid projector (= equidistantGridProjector). The fine grid DoF 
+    are computed according to:
+    
+    u^{fine;j}_i =  sum_{m} P^{j}_im u^{coarse}_m
+     
+    Args:
+      j:
+      subinterval index
+    
+    Returns:
+       fineGridProjector:
+        Operator to express polynomial function associated with original interval with basis functions associated with subinterval j
+    """
+    fineGridProjector = [[mp.mpf(0) for _ in range(self._num_points)] for _ in range(self._num_points)] # 4 x 4 for self._max_poly_order=3
+    
+    for i in range(0, self._num_points): # Eq. basis
+      phi_i, _ = self._evaluate((self._quadrature_points[i]+j)/mp.mpf(3.0)) # comma after phi_i is important
+      for m in range(0, self._num_points): # DG basis
+        fineGridProjector[m][i] = phi_i[m]
+    return fineGridProjector
+  def _compute_equidistant_grid_projector(self):
+    """
+    Transforms the degrees of freedom located at non-equidistant Lagrange support points
+    quadrature_points to degrees of freedoms located at quadrature_points of an equidistant grid over (0,1).
+    
+    Let us denote by P the  projection operator (= equidistantGridProjector). The equidistant DoF 
+    are computed according to:
+    
+    u^eq_i =  sum_{m} P_im u^DG_m
+    
+    Returns:
+       equidistantGridProjector:
+        The corresponding degrees of freedom located at quadrature_points of an equidistant grid over (0,1).
+    """
+    equidistantGridProjector = [[mp.mpf(0) for _ in range(self._num_points)] for _ in range(self._num_points)] # 4 x 4 for self._max_poly_order=3
+    subxi = mp.linspace(mp.mpf(0.0), mp.mpf(1.0), self._num_points)
+    
+    for i in range(0, self._num_points): # Eq. basis
+      phi_i, _ = self._evaluate(subxi[i]) # comma after phi_i is important
+      for m in range(0, self._num_points): # DG basis
+        equidistantGridProjector[m][i] = phi_i[m]
+    return equidistantGridProjector
 
-    
-  def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
-    step.add_action_set( self._action_set_adjust_cell )
-    if evaluate_refinement_criterion:
-      step.add_action_set( self._action_set_AMR )
-    pass
-  
-  
-  def set_plot_description(self,description,meta_data = ""):
+  def _render_tensor_1(self,tensor):
     """
-    
-    description: String
-       Use this one to set a description within the output patch file that tells
-       the vis solver what the semantics of the entries are. Typically, I use 
-       a comma-separated list here.
-    
-    meta_data: String
-       Arbitrary text. 
-    
+    :param tensor: list or numpy vector storing  mpmath numbers
     """
-    self.plot_description = description
-    self.plot_metadata    = meta_data
-    
+    result = []
+    for elem in tensor:
+      result.append(mp.nstr(elem,n=RENDER_DIGITS))
+    return result
   
-  def add_actions_to_plot_solution(self, step):
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
-    
-    mapping = []    
-    for z in self._basis.quadrature_nodes():
-      for y in self._basis.quadrature_nodes():
-        for x in self._basis.quadrature_nodes():
-          mapping.append( (x,y,z) )
-    
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
-      filename="solution-" + self._name,         
-      patch=self._DG_polynomial,     
-      dataset_name=self._unknown_identifier(), 
-      description=self.plot_description,
-      metadata=self.plot_metadata,
-      mapping=mapping,
-      plot_cell_data=False
-    ))
+  def _render_tensor_2(self,tensor):
+    """
+    :param tensor: nested list or numpy matrix storing  mpmath numbers
+    """
+    result = []
+    for row in tensor:
+       resultRow = []
+       for elem in row:
+          resultRow.append(mp.nstr(elem,n=RENDER_DIGITS))
+       result.append(resultRow)
+    return result 
 
-    if self._plot_grid_properties:    
-      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid-" + self._name,None ))
+  def _render_tensor_3(self,tensor):
+      """
+      :param tensor: nested list or numpy matrix storing  mpmath numbers
+      """
+      result = []
+      for r1 in tensor:
+         tmp1 = []
+         for r2 in r1:
+            tmp2 = []
+            for elem in r2:
+              tmp2.append(mp.nstr(elem,n=RENDER_DIGITS))
+            tmp1.append(tmp2)
+         result.append(tmp1)
+      return result 
 
-    pass
+  def quadrature_points(self,render=True):
+    return self._render_tensor_1(self._quadrature_points) if render else self._quadrature_points
+  
+  def quadrature_weights(self,render=True):
+    return self._render_tensor_1(self._quadrature_weights) if render else self._quadrature_weights
    
- 
-  def add_actions_to_perform_time_step(self, step):
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
-    step.add_action_set( self._action_set_adjust_cell )
-    step.add_action_set( self._action_set_update_cell )
-    step.add_action_set( self._action_set_update_face )
-    step.add_action_set( self._action_set_AMR )
-    pass
-
-
-  @abstractmethod
-  def add_entries_to_text_replacement_dictionary(self,d):
-    pass  
-
-  
-  def add_implementation_files_to_project(self,namespace,output):
-    """
-    
-     The ExaHyPE2 project will call this operation when it sets 
-     up the overall environment.
-     
-     
-     
-     output: peano4.output.Output
-      
-    """
-
-    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
-    
-    abstractHeaderDictionary = {}
-    implementationDictionary = {}
-    self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
-    self._init_dictionary_with_default_parameters(implementationDictionary)
-    self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
-    self.add_entries_to_text_replacement_dictionary(implementationDictionary)
-        
-    generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      templatefile_prefix + "Abstract.template.h",
-      templatefile_prefix + "Abstract.template.cpp",
-      "Abstract" + self._name, 
-      namespace,
-      ".", 
-      abstractHeaderDictionary,
-      True)
-    generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      templatefile_prefix + ".template.h",
-      templatefile_prefix + ".template.cpp",
-      self._name, 
-      namespace,
-      ".", 
-      implementationDictionary,
-      False)
-
-    output.add( generated_abstract_header_file )
-    output.add( generated_solver_files )
-    output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
-    output.makefile.add_cpp_file( self._name + ".cpp" )
-
-
   def _init_dictionary_with_default_parameters(self,d):
     """
     
     """
-    #d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._DG_polynomial.dim[0]
-    #d["HALO_SIZE"]                      = int(self._DG_polynomial_overlap.dim[0]/2)
-    d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
-    d["SOLVER_NAME"]                    = self._name
-    d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
-    d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
-    d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
+    d["ORDER"]                      = self._max_poly_order
+    d["QUADRATURE_POINTS"]          = self._render_tensor_1(self._quadrature_points)                
+    d["QUADRATURE_WEIGHTS"]         = self._render_tensor_1(self._quadrature_weights)                
+    d["F0"]                         = self._render_tensor_1(self._F0)                         
+    d["DUDX"]                       = self._render_tensor_2(self._dudx)                       
+    d["MASS_MATRIX"]                = self._render_tensor_2(self._mass_matrix)                
+    d["STIFFNESS_MATRIX"]           = self._render_tensor_2(self._stiffness_matrix)           
+    d["K1"]                         = self._render_tensor_2(self._K1)                         
+    d["EQUIDISTANT_GRID_PROJECTOR"] = self._render_tensor_2(self._equidistant_grid_projector) 
+    d["FINE_GRID_PROJECTOR"]        = self._render_tensor_3(self._fine_grid_projector)        
 
-    self._basis._init_dictionary_with_default_parameters(d)        
-        
-    #if self._DG_polynomial_overlap.dim[0]/2!=1:
-    #  print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
-    #d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
-    #d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
-    #d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
-    #d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
-    #d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
-    #d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
-    d[ "MAX_H"] = self._min_h
-    d[ "MIN_H"] = self._max_h
- 
+class GaussLegendreBasis(LagrangeBasis):
+  def _compute_quadrature_points_and_quadrature_weights(self,num_points):
+    return gauss_legendre(num_points,PREC_DIGITS)
+
+class GaussLobattoBasis(LagrangeBasis):
+  def _compute_quadrature_points_and_quadrature_weights(self,num_points):
+    return gauss_lobatto(num_points,PREC_DIGITS)
