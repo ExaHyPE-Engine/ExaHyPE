@@ -293,7 +293,16 @@ class GenericRusanovFixedTimeStepSize( FV ):
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
+
+    self._patch_overlap.generator.store_persistent_condition   = "true"
+    self._patch_overlap.generator.load_persistent_condition    = "true"
+
+    self._patch_overlap.generator.send_condition               = "true"
+    self._patch_overlap.generator.receive_and_merge_condition  = "true"
     
+    #self._patch_overlap_new.generator.store_persistent_condition   = "true"
+    #self._patch_overlap_new.generator.load_persistent_condition    = "true"
+
     self.set_implementation(flux=flux,ncp=ncp)
 
 

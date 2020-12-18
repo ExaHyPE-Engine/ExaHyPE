@@ -231,7 +231,7 @@ class ProjectPatchOntoFaces( ProjectPatchOntoFaces ):
     
     
     
-class CopyPatchOverlapIntoBackupOfOverlap( BackupPatchOverlap ):
+class CopyNewPatchOverlapIntoCurrentOverlap( BackupPatchOverlap ):
   def __init__(self,solver):
     BackupPatchOverlap.__init__(self, 
       solver._patch_overlap_new,
@@ -328,7 +328,7 @@ class FV(object):
     self._action_set_AMR                      = AMROnPatch(self)
     self._action_set_handle_boundary          = HandleBoundary(self)
     self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self)
-    self._action_set_copy_patch_overlap_into_backup_of_overlap     = CopyPatchOverlapIntoBackupOfOverlap(self)
+    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self)
     self._action_set_update_cell              = None
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
@@ -338,6 +338,12 @@ class FV(object):
 
     self._patch_overlap_new.generator.send_condition               = "false"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "false"
+
+    self._patch_overlap.generator.store_persistent_condition   = "false"
+    self._patch_overlap.generator.load_persistent_condition    = "false"
+
+    self._patch_overlap_new.generator.store_persistent_condition   = "false"
+    self._patch_overlap_new.generator.load_persistent_condition    = "false"
 
     self.plot_description = ""
     pass
@@ -402,7 +408,7 @@ class FV(object):
   def add_actions_to_init_grid(self, step):
     step.add_action_set( self._action_set_adjust_cell ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
-    step.add_action_set( self._action_set_copy_patch_overlap_into_backup_of_overlap )
+    step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -445,7 +451,7 @@ class FV(object):
     step.add_action_set( self._action_set_update_cell )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
-    step.add_action_set( self._action_set_copy_patch_overlap_into_backup_of_overlap )
+    step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
 
 
   @abstractmethod
