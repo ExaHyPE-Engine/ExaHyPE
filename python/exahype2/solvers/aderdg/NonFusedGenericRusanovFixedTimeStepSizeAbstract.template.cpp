@@ -4,8 +4,7 @@
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   Order( {{ORDER}} ),
-  QuadraturePoints{ {{ QUADRATURE_POINTS  | join(', ') }} },
-  QuadratureWeights{ {{ QUADRATURE_WEIGHTS | join(', ') }} },
+{{BASIS_INITIALIZERS | indent(2,True) }}
   _timeStamp(0.0),
   _solverState(SolverState::GridConstruction),
   _maxH({{MAX_H}}),

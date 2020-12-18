@@ -122,13 +122,12 @@
 
     SolverState  getSolverState() const;
   public:
-    const int  Order;
+    const int Order;
 
     /**
-     * Quadrature points over unit interval.
+     * Quadrature points, derivative operators, and various projectors for (1D) unit interval.
      */
-    const double  QuadraturePoints[{{ORDER}}+1];
-    const double  QuadratureWeights[{{ORDER}}+1];
+{{BASIS_DECLARATIONS | indent(4,True) }}
 
   protected:
     static tarch::logging::Log  _log;
