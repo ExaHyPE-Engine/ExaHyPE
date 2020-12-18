@@ -1,7 +1,16 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers.fv
-import exahype2.solvers.aderdg
+
+havenumpy=False
+try:
+    import numpy
+    havenumpy=True
+except ImportError:
+    print("Numpy is not available, not loading aderdg")
+
+if havenumpy:
+    import exahype2.solvers.aderdg
 import exahype2.grid
 
 
