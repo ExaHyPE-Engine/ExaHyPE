@@ -315,7 +315,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         and
         inVertexStack!=peano4::grid::TraversalObserver::NoData
         and
-        {full_qualified_type}::loadPersistently(marker)
+        (not peano4::grid::PeanoCurve::isInOutStack(inVertexStack) or {full_qualified_type}::loadPersistently(marker))
       ) {{
         assertion4( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inVertexStack))->empty(), event.toString(), peano4::datamanagement::VertexMarker(event).toString(), _spacetreeId, inVertexStack);
         data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inVertexStack))->pop();
@@ -429,7 +429,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         and
         inFaceStack!=peano4::grid::TraversalObserver::NoData
         and
-        {full_qualified_type}::loadPersistently(marker)
+        (not peano4::grid::PeanoCurve::isInOutStack(inFaceStack) or {full_qualified_type}::loadPersistently(marker))
       ) {{
         assertion4( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inFaceStack))->empty(), event.toString(), peano4::datamanagement::FaceMarker(event).toString(), _spacetreeId,inFaceStack );
         data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inFaceStack))->pop();
@@ -544,7 +544,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       and
       inCellStack!=peano4::grid::TraversalObserver::NoData
       and
-      {full_qualified_type}::loadPersistently(marker)
+      (not peano4::grid::PeanoCurve::isInOutStack(inCellStack) or {full_qualified_type}::loadPersistently(marker))
     ) {{
       assertion3( not DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inCellStack))->empty(), event.toString(), _spacetreeId, inCellStack);
       data = DataRepository::_{logical_type_name}Stack.getForPop( DataRepository::DataKey(_spacetreeId,inCellStack))->pop();
@@ -772,7 +772,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
       and
       outCellStack!=peano4::grid::TraversalObserver::NoData
       and
-      {full_qualified_type}::storePersistently(marker)
+      (not peano4::grid::PeanoCurve::isInOutStack(inCellStack) or {full_qualified_type}::storePersistently(marker))
     ) {{
       DataRepository::_{logical_type_name}Stack.getForPush( DataRepository::DataKey(_spacetreeId,outCellStack))->push( view.get(0) );
     }}
@@ -863,7 +863,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
         and
         outFaceStack!=peano4::grid::TraversalObserver::NoData
         and
-        {full_qualified_type}::storePersistently(marker)
+        (not peano4::grid::PeanoCurve::isInOutStack(outFaceStack) or {full_qualified_type}::storePersistently(marker))
       ) {{
         DataRepository::_{logical_type_name}Stack.getForPush( DataRepository::DataKey(_spacetreeId,outFaceStack))->push(data);
       }}
@@ -949,7 +949,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
         and
         outVertexStack!=peano4::grid::TraversalObserver::NoData
         and
-        {full_qualified_type}::storePersistently(marker)
+        (not peano4::grid::PeanoCurve::isInOutStack(outVertexStack) or {full_qualified_type}::storePersistently(marker))
       ) {{
         DataRepository::_{logical_type_name}Stack.getForPush(DataRepository::DataKey(_spacetreeId,outVertexStack))->push(data);
       }}
