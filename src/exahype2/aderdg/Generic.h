@@ -12,7 +12,7 @@
 #include <functional>
 #include <string>
 
-
+// @todo: only 2D case considered atm
 namespace exahype2 {
   namespace aderdg {
     /**
@@ -37,7 +37,20 @@ namespace exahype2 {
     );
 
     /**
-     * @param Qout  Space-time polynomial
+     * Spans a cell-local space-time solution, the space-time predictor.
+     *  
+     * @param[in]    flux                pointwise flux function
+     * @param[in]    cellCentre          centre of the cell
+     * @param[in]    cellSize            extents of the cell
+     * @param[in]    t                   time stamp associated with old solution
+     * @param[in]    dt                  time step size
+     * @param[in]    order               polynomial order
+     * @param[in]    unknowns            number of unknowns / evolved quantities
+     * @param[in]    auxiliaryVariables  number of auxiliary variables (material parameters etc.)
+     * @param[in]    quadraturePoints1d  @todo 
+     * @param[in]    quadratureWeights1d @todo
+     * @param[in]    Qin  the (time-independent, spatially-varying) old solution
+     * @param[inout] Qout cell-local space-time predictor polynomial (evolution in the small)
      */
     void spaceTimePredictor_GaussLegendre_AoS2d(
       std::function< void(
@@ -59,10 +72,21 @@ namespace exahype2 {
       double * __restrict__ Qout
     );
 
-
     /**
      * @param Qin  Space-time polynomial from spaceTimePredictor_GaussLegendre_AoS2d()
-     * @param Qout Space polynomial for future time step (integrated prediction)
+     * @param Qout volume flux contribution to future time step (integrated predicted flux)
+     * @param cellCentre
+     * @param cellSize
+     * @param t
+     * @param dt
+     * @param order
+     * @param unknowns
+     * @param auxiliaryVariables
+     * @param quadraturePoints1d
+     * @param quadratureWeights1d
+     *
+     * @param Qin  Space-time polynomial from spaceTimePredictor_GaussLegendre_AoS2d()
+     * @param Qout new solution if (integrated predicted flux)
      */
     void timeIntegration_GaussLegendre_AoS2d(
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
@@ -78,9 +102,23 @@ namespace exahype2 {
       double * __restrict__ Qout
     );
 
-
     /**
-     * Take solution and project it onto boundary
+     * Take 2D prediction and project it onto a cell's four boundaries.
+     *
+     * @param cellCentre
+     * @param cellSize
+     * @param t
+     * @param dt
+     * @param order
+     * @param unknowns
+     * @param auxiliaryVariables
+     * @param quadraturePoints1d
+     * @param quadratureWeights1d
+     * @param Qin  Space-time polynomial
+     * @param QoutLeft
+     * @param QoutBottom
+     * @param QoutRight
+     * @param QoutTop
      */
     void projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS2d(
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
@@ -99,12 +137,29 @@ namespace exahype2 {
       double * __restrict__ QoutTop
     );
 
-
     /**
      * Takes a predicted solution and projects the solution plus the
      * flux onto the face. Generic extension of the previous routine
      *
+     * @param flux
+     * @param cellCentre
+     * @param cellSize
+     * @param t
+     * @param dt
+     * @param order
+     * @param unknowns
+     * @param auxiliaryVariables
+     * @param quadraturePoints1d
+     * @param quadratureWeights1d
      * @param Qin  Space-time polynomial
+     * @param QoutLeft
+     * @param QoutBottom
+     * @param QoutRight
+     * @param QoutTop
+     * @param normalFluxLeft
+     * @param normalFluxBottom
+     * @param normalFluxRight
+     * @param normalFluxTop
      */
     void projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS2d(
       std::function< void(
@@ -134,11 +189,24 @@ namespace exahype2 {
     );
 
 
-
-
     /**
      * Takes a predicted solution and projects the solution plus the
      * flux onto the face. Generic extension of the previous routine
+     *
+     * @param cellCentre
+     * @param cellSize
+     * @param t
+     * @param dt
+     * @param order
+     * @param unknowns
+     * @param auxiliaryVariables
+     * @param quadraturePoints1d
+     * @param quadratureWeights1d
+     * @param riemannSolutionLeft
+     * @param riemannSolutionBottom
+     * @param riemannSolutionRight
+     * @param riemannSolutionTop
+     * @param QNew
      */
     void addSpaceTimeRiemannSolutionToPrediction_GaussLegendre_AoS2d(
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
@@ -158,7 +226,22 @@ namespace exahype2 {
     );
 
 
-    // @todo Have to think about this one
+    /* @todo Have to think about this one
+     * @param splitRiemannSolve1d
+     * @param faceCentre
+     * @param faceSize
+     * @param t
+     * @param dt
+     * @param order
+     * @param unknowns
+     * @param auxiliaryVariables
+     * @param quadraturePoints1d
+     * @param quadratureWeights1d
+     * @param normal
+     * @param Q
+     * @param fluxAlongNormal
+     * @param riemannSolution
+     */
     void solveSpaceTimeRiemannProblem_GaussLegendre_AoS2d(
       std::function< void(
         double * __restrict__ QL,
@@ -187,6 +270,7 @@ namespace exahype2 {
   }
 }
 
+// templates
+#include "Generic.cpph"
 
 #endif
-
