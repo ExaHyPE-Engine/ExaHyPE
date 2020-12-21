@@ -29,7 +29,7 @@ void exahype2::fv::tests::CopyPatchTest::testMe() {
   }
 
  
-  std::cerr << "Now the alternative implementation without dfor\n"; 
+  //std::cerr << "Now the alternative implementation without dfor\n"; 
   #if Dimensions==2
   int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
   int destinationSerialised = 0;
@@ -61,12 +61,14 @@ void exahype2::fv::tests::CopyPatchTest::testMe() {
 
   for (size_t idx=0;idx< thesource.size();++idx)
   {
-     if (thesource[idx]!=thesource2[idx]) std::cerr <<" source error at " << idx <<"\n";
+     validateEquals(thesource[idx], thesource2[idx]);
+     //if (thesource[idx]!=thesource2[idx]) std::cerr <<" source error at " << idx <<"\n";
   }
   
   for (size_t idx=0;idx< dest.size();++idx)
   {
-     if (dest[idx]!=dest2[idx]) std::cerr <<" dest error at " << idx <<"\n";
+     validateEquals(dest[idx], dest2[idx]);
+     //if (dest[idx]!=dest2[idx]) std::cerr <<" dest error at " << idx <<"\n";
   }
 
 }
