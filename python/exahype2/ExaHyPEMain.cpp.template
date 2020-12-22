@@ -120,6 +120,9 @@ bool selectNextAlgorithmicStep() {{
       logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << observers::getMinMeshSize() << " reached with h_min=" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() );
       gridConstructed = true;
       addGridSweepWithoutGridRefinementNext = false;
+      
+      logInfo( "selectNextAlgorithmicStep()", "switch off load balancing manually (to be removed in later releases)" );
+      observers::loadBalancer.enable(false);
     }}
     else if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4
