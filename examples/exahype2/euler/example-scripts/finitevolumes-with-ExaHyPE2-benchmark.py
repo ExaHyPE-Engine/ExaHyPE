@@ -28,7 +28,7 @@ python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
 
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
-parser.add_argument("--load-balancing-quality", dest="load_balancing_quality", type=float, required=True, help="Load balancing quality (something between 0 and 1; 1 is optimal)" )
+parser.add_argument("--load-balancing-quality", dest="load_balancing_quality", type=float, default=0.9, help="Load balancing quality (something between 0 and 1; 1 is optimal)" )
 parser.add_argument("--h",               dest="h",              type=float, required=True, help="Mesh size" )
 parser.add_argument("--j",               dest="j",              type=int, default=4, help="Parallel builds" )
 parser.add_argument("--d",               dest="dim",            type=int, default=2, help="Dimensions" )
@@ -37,7 +37,7 @@ parser.add_argument("--t",               dest="timesteps",      type=int, defaul
 parser.add_argument("--p",               dest="peanodir",                 default="../../../", help="Peano4 directory" )
 parser.add_argument("--c",               dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("--o",               dest="out",             default="peano4", help="Executable name" )
-parser.add_argument("--f",               dest="force",             default=False, action="store_true", help="Allow overwriting of output file." )
+parser.add_argument("--f",               dest="force",           default=False, action="store_true", help="Allow overwriting of output file." )
 parser.add_argument("--gpu",             dest="GPU",             default=False, action="store_true", help="Use GPU features." )
 args = parser.parse_args()
 
