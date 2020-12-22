@@ -51,16 +51,17 @@ void exahype2::fv::copyPatch(
   int    numberOfVolumesPerAxisInPatch,
   int    haloSize
 ) {
-  dfor(k,numberOfVolumesPerAxisInPatch) {
-    tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
-    int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
-    int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
-    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-      QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
-    }
-  }
 
-/*
+  //dfor(k,numberOfVolumesPerAxisInPatch) {
+    //tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
+    //int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
+    //int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
+    //for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      //QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
+    //}
+  //}
+
+
   #if Dimensions==2
   int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
   int destinationSerialised = 0;
@@ -88,10 +89,9 @@ void exahype2::fv::copyPatch(
       }
       sourceSerialised += 2*haloSize;
     }
-    sourceSerialised += 2*haloSize+2*(numberOfVolumesPerAxisInPatch+haloSize*2);
+    sourceSerialised += 2*haloSize+2*(numberOfVolumesPerAxisInPatch+haloSize*2) -2;
   }
   #endif
-  */
 }
 #if defined(GPUOffloading)
 #pragma omp end declare target
