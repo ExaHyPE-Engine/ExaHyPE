@@ -48,7 +48,7 @@ class AbstractFVActionSet( ActionSet ):
 
 class AMROnPatch(AbstractFVActionSet):
   TemplateAMR = """  
-  if (not marker.isRefined()) { 
+  if ({{PREDICATE}}) { 
     ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
     if (tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
@@ -79,8 +79,9 @@ class AMROnPatch(AbstractFVActionSet):
   """
   
     
-  def __init__(self,solver):
+  def __init__(self,solver, predicate):
     AbstractFVActionSet.__init__(self,solver)
+    self._predicate = predicate
 
   
   def get_body_of_getGridControlEvents(self):
@@ -111,6 +112,7 @@ class AMROnPatch(AbstractFVActionSet):
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver._patch.name
+      d[ "PREDICATE" ]          = self._predicate
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)      
       result = jinja2.Template( self.TemplateAMR ).render(**d)
@@ -126,7 +128,7 @@ class AMROnPatch(AbstractFVActionSet):
 
 class AdjustPatch(AbstractFVActionSet):
   TemplateAdjustCell = """
-  if (not marker.isRefined()) { 
+  if ({{PREDICATE}}) { 
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       {{SOLVER_INSTANCE}}.adjustSolution(
@@ -140,8 +142,9 @@ class AdjustPatch(AbstractFVActionSet):
   } 
 """
   
-  def __init__(self,solver):
+  def __init__(self,solver,predicate):
     AbstractFVActionSet.__init__(self,solver)
+    self._predicate = predicate
 
 
   def get_body_of_operation(self,operation_name):
@@ -149,7 +152,8 @@ class AdjustPatch(AbstractFVActionSet):
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "PREDICATE" ] = self._predicate      
       result = jinja2.Template(self.TemplateAdjustCell).render(**d)
       pass 
     return result
@@ -168,6 +172,8 @@ class HandleBoundary(AbstractFVActionSet):
       ",marker=" << marker.toString()
     );
     if (
+      {{PREDICATE}}
+      and
       not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
       and
       not marker.isRefined() 
@@ -197,8 +203,9 @@ class HandleBoundary(AbstractFVActionSet):
       );
     }
 """
-  def __init__(self,solver):
+  def __init__(self,solver,predicate):
     AbstractFVActionSet.__init__(self,solver)
+    self._predicate = predicate
 
 
   def get_body_of_operation(self,operation_name):
@@ -206,7 +213,8 @@ class HandleBoundary(AbstractFVActionSet):
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "PREDICATE" ] = self._predicate      
       result = jinja2.Template(self.TemplateHandleBoundary).render(**d)
       pass 
     return result
@@ -220,24 +228,24 @@ class HandleBoundary(AbstractFVActionSet):
 
 
 class ProjectPatchOntoFaces( ProjectPatchOntoFaces ):
-  def __init__(self,solver):
+  def __init__(self,solver, predicate):
     peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
       self,
       solver._patch,
       solver._patch_overlap_new,
-      "not marker.isRefined()", 
+      predicate, 
       solver._get_default_includes() + solver.get_user_includes()
     )
     
     
     
 class CopyNewPatchOverlapIntoCurrentOverlap( BackupPatchOverlap ):
-  def __init__(self,solver):
+  def __init__(self,solver, predicate):
     BackupPatchOverlap.__init__(self, 
       solver._patch_overlap_new,
       solver._patch_overlap,
       False,
-      "not marker.isRefined()", 
+      predicate,
       solver._get_default_includes() + solver.get_user_includes()
     )
     
@@ -324,11 +332,11 @@ class FV(object):
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
 
-    self._action_set_adjust_cell              = AdjustPatch(self)
-    self._action_set_AMR                      = AMROnPatch(self)
-    self._action_set_handle_boundary          = HandleBoundary(self)
-    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self)
-    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self)
+    self._action_set_adjust_cell              = AdjustPatch(self, "not marker.isRefined()")
+    self._action_set_AMR                      = AMROnPatch(self, "not marker.isRefined()")
+    self._action_set_handle_boundary          = HandleBoundary(self, "not marker.isRefined()")
+    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self, "not marker.isRefined()")
+    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self, "not marker.isRefined()")
     self._action_set_update_cell              = None
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack

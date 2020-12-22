@@ -39,6 +39,7 @@ parser.add_argument("--c",               dest="configuredir",             defaul
 parser.add_argument("--o",               dest="out",             default="peano4", help="Executable name" )
 parser.add_argument("--f",               dest="force",           default=False, action="store_true", help="Allow overwriting of output file." )
 parser.add_argument("--gpu",             dest="GPU",             default=False, action="store_true", help="Use GPU features." )
+parser.add_argument("--dt",              dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
@@ -123,7 +124,7 @@ else:
 project.set_global_simulation_parameters(
   dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
   time_step_size * args.timesteps, # end time
-  0.0, 0                           # snapshots
+  0.0, args.plot_snapshot_interval      # snapshots
 )
 
 

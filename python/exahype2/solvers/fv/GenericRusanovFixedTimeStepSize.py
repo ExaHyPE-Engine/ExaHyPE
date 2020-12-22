@@ -294,21 +294,22 @@ class GenericRusanovFixedTimeStepSize( FV ):
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
 
+    # @todo
+    # Diese Zeile funktioniert nicht. Sie muesste eigentlich ifUnrefined() or isRefining() heissen,
+    # aber das unterstuetz ich noch net. Wenn man das hier hochzieht, dann kann man unten sogar evtl
+    # immer true sagen. In der Zukunft muss marker eben auch diese zwei ...ing Zustaende kennen
     self._patch_overlap.generator.store_persistent_condition   = "true"
     self._patch_overlap.generator.load_persistent_condition    = "true"
 
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
-    
-    #self._patch_overlap_new.generator.store_persistent_condition   = "true"
-    #self._patch_overlap_new.generator.load_persistent_condition    = "true"
 
     self.set_implementation(flux=flux,ncp=ncp)
 
 
   def set_implementation(self,
     flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
-    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack,
+    memory_location         = None,
     use_split_loop          = False
   ):
     """
@@ -320,6 +321,8 @@ class GenericRusanovFixedTimeStepSize( FV ):
       
       Please note that not all options are supported by all solvers. You 
       cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
+      
+      This routine should be the very last invoked by the constructor.
     """
     if flux!=None:
       self._flux_implementation                       = flux
