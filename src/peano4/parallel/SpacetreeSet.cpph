@@ -291,7 +291,7 @@ void peano4::parallel::SpacetreeSet::exchangeAllPeriodicBoundaryDataStacks( Cont
          stackContainer.getForPush(sourceStackKey)->toString()
       );
 
-      assertion3( stackContainer.getForPush(sourceStackKey.first,targetStack)->empty(), sourceStackKey.first, sourceStackKey.second, targetStack );
+      assertion4( stackContainer.getForPush(sourceStackKey.first,targetStack)->empty(), sourceStackKey.first, sourceStackKey.second, targetStack, stackContainer.getForPush(sourceStackKey.first,targetStack)->size() );
       stackContainer.getForPush(sourceStackKey.first,targetStack)->clone( *stackContainer.getForPush(sourceStackKey) );
       stackContainer.getForPush(sourceStackKey)->clear();
     }
