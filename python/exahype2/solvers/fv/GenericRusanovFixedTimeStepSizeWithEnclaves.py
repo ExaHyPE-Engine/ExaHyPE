@@ -57,13 +57,11 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = """
-    Diese Validierung schlaegt fehl und es ist mir noch nicht klar, warum
-    // 
     ::exahype2::fv::validatePatch(
       reconstructedPatch,
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
       1, // halo
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
     ); // previous time step has to be valid

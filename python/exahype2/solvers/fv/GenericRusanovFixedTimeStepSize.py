@@ -14,29 +14,20 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
-  """
-  
-    This is the straightforward implementation.
-    
-  """
-  CellUpdateImplementation_NestedLoop = """
+  RusanovCallOverPatch = """
+    {% if USE_SPLIT_LOOP %}
     #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
     #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
     #endif
-  """
-
-
-  CellUpdateImplementation_SplitLoop = """
+    {% else % }
     #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
     #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
     #endif
-  """
-  
-  RusanovCallWithFlux = """
+    {% endif % }
       [&](
         double                                       QL[],
         double                                       QR[],
@@ -58,116 +49,13 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       F[]
           ) -> void {
-            {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
-          },
-          [] (
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-          ) -> double {
-            return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-          },
-          QL, QR, x, dx, t, dt, normal,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR
-        );
-      },
-"""
-
-
-  """
-  
-    Flux is empty here.
-    
-  """
-  RusanovCallWithNCP = """
-      [&](
-        double                                       QL[],
-        double                                       QR[],
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       FL[],
-        double                                       FR[]
-      ) -> void {
-        ::exahype2::fv::splitRusanov1d(
-          [] (
-           double * __restrict__ Q,
-           const tarch::la::Vector<Dimensions,double>&  faceCentre,
-           const tarch::la::Vector<Dimensions,double>&  volumeH,
-           double                                       t,
-           double                                       dt,
-           int                                          normal,
-           double * __restrict__                        F
-          ) -> void {
+            {% if FLUX_IMPLEMENTATION=="<none>" %}
             for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
-          },
-          [] (
-            double                                       Q[],
-            double                                       gradQ[][Dimensions],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       BgradQ[]
-          ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
-          },
-          [] (
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-          ) -> double {
-            return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-          },
-          QL, QR, x, dx, t, dt, normal,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR
-        );
-      },
-"""
-
-
-  """
-  
-    Combination of the two previous ones.
-    
-  """
-  RusanovCallWithFluxAndNCP = """
-      [&](
-        double                                       QL[],
-        double                                       QR[],
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       FL[],
-        double                                       FR[]
-      ) -> void {
-        ::exahype2::fv::splitRusanov1d(
-          [] (
-           double * __restrict__ Q,
-           const tarch::la::Vector<Dimensions,double>&  faceCentre,
-           const tarch::la::Vector<Dimensions,double>&  volumeH,
-           double                                       t,
-           double                                       dt,
-           int                                          normal,
-           double * __restrict__                        F
-          ) -> void {
+            {% else %}
             {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+            {% endif %}
           },
+          {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
             double                                       Q[],
             double                                       gradQ[][Dimensions],
@@ -180,6 +68,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           ) -> void {
             {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
           },
+          {% endif %}
           [] (
             double                                       Q[],
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -196,11 +85,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           FL,FR
         );
       },
-"""
-
-
- 
-  FunctionCallArguments = """
       marker.x(),
       marker.h(),
       {{TIME_STAMP}},
@@ -214,31 +98,15 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 
   def __init__(self,solver):
-    if solver._use_split_loop:
-      loop_body = self.CellUpdateImplementation_SplitLoop
-    else:
-      loop_body = self.CellUpdateImplementation_NestedLoop
-    
-    loop_body += "("
-    
-    if solver._flux_implementation!=PDETerms.None_Implementation   and solver._ncp_implementation==PDETerms.None_Implementation:
-      loop_body += self.RusanovCallWithFlux
-    elif solver._flux_implementation==PDETerms.None_Implementation and solver._ncp_implementation!=PDETerms.None_Implementation:
-      loop_body += self.RusanovCallWithNCP
-    elif solver._flux_implementation!=PDETerms.None_Implementation and solver._ncp_implementation!=PDETerms.None_Implementation:
-      loop_body += self.RusanovCallWithFluxAndNCP
-    
-    loop_body += self.FunctionCallArguments
-    loop_body += ");"
-    
     d = {}
     solver._init_dictionary_with_default_parameters(d)
-    solver.add_entries_to_text_replacement_dictionary(d)      
+    solver.add_entries_to_text_replacement_dictionary(d)   
+    d[ "USE_SPLIT_LOOP" ] = solver._use_split_loop
 
     ReconstructPatchAndApplyFunctor.__init__(self,
       solver._patch,
       solver._patch_overlap,
-      jinja2.Template( loop_body ).render(**d),
+      jinja2.Template( RusanovCallOverPatch ).render(**d),
       solver._reconstructed_array_memory_location,
       "not marker.isRefined()"
     )
