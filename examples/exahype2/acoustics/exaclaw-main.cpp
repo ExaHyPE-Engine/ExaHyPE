@@ -5,6 +5,7 @@
 #include "tarch/logging/Statistics.h"
 #include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/multicore/Core.h"
 #include "tarch/timing/Watch.h"
 #include "tarch/timing/Measurement.h"
 
@@ -119,6 +120,9 @@ bool selectNextAlgorithmicStep() {
       logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << observers::getMinMeshSize() << " reached with h_min=" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() );
       gridConstructed = true;
       addGridSweepWithoutGridRefinementNext = false;
+      
+      logInfo( "selectNextAlgorithmicStep()", "switch off load balancing manually (to be removed in later releases)" );
+      observers::loadBalancer.enable(false);
     }
     else if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4
@@ -320,6 +324,7 @@ int main(int argc, char** argv) {
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
   peano4::fillLookupTables();
+  
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
