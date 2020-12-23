@@ -21,13 +21,13 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     #else
     ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
     #endif
-    {% else % }
+    {% else %}
     #if Dimensions==2
     ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
     #else
     ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
     #endif
-    {% endif % }
+    {% endif %}
       [&](
         double                                       QL[],
         double                                       QR[],
@@ -94,6 +94,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       reconstructedPatch,
       originalPatch
+    );
   """ 
 
 
@@ -106,7 +107,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     ReconstructPatchAndApplyFunctor.__init__(self,
       solver._patch,
       solver._patch_overlap,
-      jinja2.Template( RusanovCallOverPatch ).render(**d),
+      jinja2.Template( self.RusanovCallOverPatch ).render(**d),
       solver._reconstructed_array_memory_location,
       "not marker.isRefined()"
     )
@@ -154,23 +155,23 @@ class GenericRusanovFixedTimeStepSize( FV ):
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
 
-    self._patch_overlap.generator.send_condition               = "not marker.isRefined() and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-    self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " \
+    self._patch_overlap.generator.store_persistent_condition   = "not marker.isRefined() and " + \
+      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+    self._patch_overlap.generator.load_persistent_condition  = "not marker.isRefined() and " \
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    self._patch_overlap.generator.send_condition               = "true"
+    self._patch_overlap.generator.receive_and_merge_condition  = "true"
+    #self._patch_overlap.generator.send_condition               = "not marker.isRefined() and " + \
+    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
+    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::CreateGridButPostponeRefinement"
+    #self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " \
+    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
+    #   "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::CreateGridButPostponeRefinement and " + \
+    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
-
-    # @todo
-    # Diese Zeile funktioniert nicht. Sie muesste eigentlich ifUnrefined() or isRefining() heissen,
-    # aber das unterstuetz ich noch net. Wenn man das hier hochzieht, dann kann man unten sogar evtl
-    # immer true sagen. In der Zukunft muss marker eben auch diese zwei ...ing Zustaende kennen
-    self._patch_overlap.generator.store_persistent_condition   = "true"
-    self._patch_overlap.generator.load_persistent_condition    = "true"
-
-    self._patch_overlap.generator.send_condition               = "true"
-    self._patch_overlap.generator.receive_and_merge_condition  = "true"
 
     self.set_implementation(flux=flux,ncp=ncp)
 

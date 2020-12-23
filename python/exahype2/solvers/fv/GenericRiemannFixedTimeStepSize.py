@@ -4,29 +4,30 @@ from .FV                       import FV
  
 from .PDETerms import PDETerms
 
-from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructedArrayMemoryLocation
-
 import peano4
 import exahype2
 
 import jinja2
 
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
-class GenericRiemannFixedTimeStepSize( FV ):
-  """
-  
-    Probably the simplest solver you could think off. There's a few
-    interesting things to try out with this one nevertheless: You 
-    can inject symbolic flux/pde term implementations, or you can 
-    alter the implementation variant of the cell update kernel. The
-    latter can be combined with different dynamic memory allocation 
-    schemes and thus offers quite some opportunities to tweak and 
-    tune things. 
-  
-  """
 
-  TemplateUpdateCell = """
-    {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
+
+class UpdateCell(ReconstructPatchAndApplyFunctor):
+  RiemannCallOverPatch = """
+    {% if USE_SPLIT_LOOP %}
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
+    #endif
+    {% else %}
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+    #endif
+    {% endif %}
       [&](
         double                                       QL[],
         double                                       QR[],
@@ -55,7 +56,44 @@ class GenericRiemannFixedTimeStepSize( FV ):
       reconstructedPatch,
       originalPatch
     );
-  """      
+  """ 
+
+
+  def __init__(self,solver):
+    d = {}
+    solver._init_dictionary_with_default_parameters(d)
+    solver.add_entries_to_text_replacement_dictionary(d)   
+    d[ "USE_SPLIT_LOOP" ] = solver._use_split_loop
+
+    ReconstructPatchAndApplyFunctor.__init__(self,
+      solver._patch,
+      solver._patch_overlap,
+      jinja2.Template( self.RiemannCallOverPatch ).render(**d),
+      solver._reconstructed_array_memory_location,
+      "not marker.isRefined()"
+    )
+    
+    self._solver = solver
+  
+  
+  def get_includes(self):
+    return """
+#include "exahype2/fv/BoundaryConditions.h"
+""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
+  
+  
+class GenericRiemannFixedTimeStepSize( FV ):
+  """
+  
+    Probably the simplest solver you could think off. There's a few
+    interesting things to try out with this one nevertheless: You 
+    can inject symbolic flux/pde term implementations, or you can 
+    alter the implementation variant of the cell update kernel. The
+    latter can be combined with different dynamic memory allocation 
+    schemes and thus offers quite some opportunities to tweak and 
+    tune things. 
+  
+  """
 
 
   def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, plot_grid_properties=False):
@@ -72,25 +110,25 @@ class GenericRiemannFixedTimeStepSize( FV ):
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
     
-    #, kernel_implementation = FV.CellUpdateImplementation_NestedLoop
-    #self._kernel_implementation               = kernel_implementation
-    self._kernel_implementation               = None
-
-    self._rusanov_call = ""
-    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-
-    self.set_implementation()
-    self.set_update_cell_implementation(kernel_implementation=kernel_implementation)
-
-    self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-    self._patch_overlap.generator.receive_and_merge_condition  = self._predicate_face_carrying_data() + " and " \
+    self._patch_overlap.generator.store_persistent_condition   = "not marker.isRefined() and " + \
+      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+    self._patch_overlap.generator.load_persistent_condition  = "not marker.isRefined() and " \
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
       "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    self._patch_overlap.generator.send_condition               = "true"
+    self._patch_overlap.generator.receive_and_merge_condition  = "true"
 
-    pass
+    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+    self._use_split_loop                      = False
+
+    self.set_implementation()
 
 
-  def set_implementation(self,boundary_conditions=None,refinement_criterion=None,initial_conditions=None):
+  def set_implementation(self,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
+    memory_location         = None,
+    use_split_loop          = False
+  ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs 
       that you have to befill manually. If you pass in None_Implementation, it 
@@ -108,22 +146,18 @@ class GenericRiemannFixedTimeStepSize( FV ):
     if initial_conditions!=None: 
       self._initial_conditions_implementation         = initial_conditions
     
-    self._construct_template_update_cell()
-    
-  
-  def set_update_cell_implementation(self,
-    kernel_implementation   = None,
-    #kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
-    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-  ):
-    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
-       memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+    if memory_location!=None:
+      self._reconstructed_array_memory_location = memory_location
+    if use_split_loop!=None:
+      self._use_split_loop = use_split_loop
+
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
-    self._reconstructed_array_memory_location = memory_location
-    self._kernel_implementation               = kernel_implementation
-    self._construct_template_update_cell()
+    self._action_set_update_cell = UpdateCell(self)
+    
   
   
   def get_user_includes(self):
@@ -140,24 +174,9 @@ class GenericRiemannFixedTimeStepSize( FV ):
     
     """
     d[ "TIME_STEP_SIZE" ]               = self._time_step_size
+    d[ "TIME_STAMP" ]                   = d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
 
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
 
-    pass
-
-
-  def _construct_template_update_cell(self):
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
-    d[ "LOOP_OVER_PATCH_FUNCTION_CALL" ] = self._kernel_implementation
-    d[ "TIME_STAMP" ]                   = "{{SOLVER_INSTANCE}}.getMinTimeStamp()"
-    d[ "RUSANOV_ON_FACE"]               = self._rusanov_call
-      
-    temp = jinja2.Template( self.TemplateUpdateCell ).render(d);
-    self._template_update_cell      = jinja2.Template( temp ); 
-  
-  
-  
