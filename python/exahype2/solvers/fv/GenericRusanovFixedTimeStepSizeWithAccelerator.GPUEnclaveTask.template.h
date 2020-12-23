@@ -41,8 +41,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
     static tarch::logging::Log                   _log;
 
     const ::peano4::datamanagement::CellMarker   _marker;
-    double*                                      _inputValues;
-    double*                                      _outputValues;
+    double* __restrict__                         _reconstructedPatch;
 
   public:
     static void runComputeKernelsOnSkeletonCell(double* __restrict__  reconstructedPatch, const ::peano4::datamanagement::CellMarker& marker, double* __restrict__  targetPatch);

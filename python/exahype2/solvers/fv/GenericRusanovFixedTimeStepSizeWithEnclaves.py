@@ -14,6 +14,8 @@ from .GenericRusanovFixedTimeStepSize import UpdateCell
 
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
+import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
+
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
