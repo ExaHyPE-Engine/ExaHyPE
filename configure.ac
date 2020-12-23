@@ -445,6 +445,7 @@ AC_ARG_ENABLE(exahype,
   [ AC_MSG_CHECKING(for exahype); AC_MSG_RESULT(no); exahype=false ])
 AM_CONDITIONAL([UseExaHyPE],[test "x$exahype" = xtrue])
 if test "$exahype" != false; then
+  AC_DEFINE([UseExaHyPE], [1], [UseExaHyPE])
   if test "$loadbalancing_toolbox" == false; then
     AC_MSG_ERROR([ExaHyPE2 requires the load balancing toolbox])
   fi
@@ -483,9 +484,9 @@ AC_OUTPUT(
   Makefile 
   src/Makefile 
   src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile
-  src/unittests/Makefile 
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile
+  src/unittests/Makefile 
 )
 

@@ -46,7 +46,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap,functor_implementation,touch_face_first_time_functor,guard_cell_operation,guard_face_operation,additional_includes,reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.CallStack):
+  def __init__(self,patch,patch_overlap,functor_implementation,reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.Heap,guard="true"):
     """
 
   patch: peano4.datamodel.Patch
@@ -88,6 +88,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       print( "Error: Patch of overlap and patch of cell have to match" )
       assert( patch_overlap.dim[1] == patch.dim[0] )
       
+    self.d[ "GUARD" ]              = guard
+
     self.d[ "UNKNOWNS" ]           = str(int(patch.no_of_unknowns))
     self.d[ "DOFS_PER_AXIS" ]      = str(int(patch.dim[0]))
     self.d[ "OVERLAP" ]            = str(int(patch_overlap.dim[0]/2))
@@ -107,10 +109,6 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.d[ "ASSERTION_WITH_7_ARGUMENTS" ] = "assertion7"
     
     self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = functor_implementation
-    self.d[ "FACE_FUNCTOR_IMPLEMENTATION" ] = touch_face_first_time_functor
-
-    self.d[ "GUARD_CELL_OPERATION" ]                 = guard_cell_operation
-    self.d[ "GUARD_FACE_OPERATION" ]                 = guard_face_operation
 
     if reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
@@ -166,38 +164,17 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = ""
 
 
-    self.additional_includes                         = additional_includes
-    self.additional_attributes                       = ""
-
-
   def get_constructor_body(self):
     return """  _treeNumber = treeNumber;
 """    
 
-  
-  def get_destructor_body(self):
-    return ""
-
-
-  def get_body_of_getGridControlEvents(self):
-    return "  return std::vector< peano4::grid::GridControlEvent >();\n" 
-
-
+ 
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
 
 
   def user_should_modify_template(self):
     return False
-
-
-  __Template_TouchFaceFirstTime = """
-  if ( {GUARD_FACE_OPERATION} ) {{
-    logTraceInWith2Arguments( "touchFaceFirstTime(...)", marker.toString(), marker.isLocal() );
-    {FACE_FUNCTOR_IMPLEMENTATION}
-    logTraceOut( "touchFaceFirstTime(...)" );
-  }}
-"""
 
 
   __Template_TouchCellFirstTime = """
@@ -216,7 +193,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     return result;
   }};
 
-  if ({GUARD_CELL_OPERATION}) {{
+  if ({GUARD}) {{
     logTraceInWith1Argument( "touchCellFirstTime(...)", marker.toString() );
 
     {CREATE_RECONSTRUCTED_PATCH}
@@ -282,9 +259,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     double* originalPatch = {CELL_ACCESSOR}.value;
     {CELL_FUNCTOR_IMPLEMENTATION}
     
-    
     {DESTROY_RECONSTRUCTED_PATCH}
-    
     
     logTraceOut( "touchCellFirstTime(...)" );
   }}
@@ -296,16 +271,12 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       result = self.__Template_TouchCellFirstTime.format(**self.d)
       pass 
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = self.__Template_TouchFaceFirstTime.format(**self.d)
-      pass 
-    
     return result
 
 
   def get_attributes(self):
     return """int  _treeNumber;
-""" + self.additional_attributes   
+"""   
 
 
   def get_includes(self):
@@ -313,4 +284,4 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 #include <functional>
 #include "peano4/utils/Loop.h"
 #include "tarch/multicore/Core.h"
-""" + self.additional_includes
+"""

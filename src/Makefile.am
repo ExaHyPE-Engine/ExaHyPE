@@ -6,7 +6,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 # configure.ac script and rerun the whole autotool pipeline (see comment 
 # within configure.ac as well as its very last line).
 #
-SUBDIRS = . convert
+SUBDIRS = . 
 
 if UseToolboxFiniteElements
 SUBDIRS += toolbox/finiteelements
@@ -20,7 +20,7 @@ if UseExaHyPE
 SUBDIRS += toolbox/loadbalancing exahype2
 endif
 
-SUBDIRS += unittests 
+SUBDIRS += unittests convert
 
 #
 # I want Peano4 to be as fast as possible and thus build it as static library

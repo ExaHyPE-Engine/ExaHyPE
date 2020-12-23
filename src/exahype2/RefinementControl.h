@@ -112,8 +112,7 @@ class exahype2::RefinementControl {
     void addCommand(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
-      exahype2::RefinementCommand                  command,
-      bool                                         invokedByGridConstruction
+      exahype2::RefinementCommand                  command
     );
 
     void merge( const RefinementControl& control );

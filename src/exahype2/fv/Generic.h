@@ -26,7 +26,11 @@ namespace exahype2 {
     );
 
     /**
-     * Just runs over the patch and ensures that no entry is non or infinite.
+     * Just runs over the patch and ensures that no entry is non or infinite. In
+     * ExaHyPE, we primarily work with split approaches. That is, diagonal halo
+     * entries are never initialised properly: We can copy over the face-connected
+     * data, but we lack information through the diagonals. This routine takes
+     * this into account when it validates the entries.
      *
      * @param location String that tells system from where this routine got called
      */
@@ -36,7 +40,7 @@ namespace exahype2 {
       int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize,
-	  const std::string& location = ""
+      const std::string& location = ""
     );
 
     #if defined(GPUOffloading)

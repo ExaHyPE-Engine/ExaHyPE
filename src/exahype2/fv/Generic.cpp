@@ -29,15 +29,27 @@ void exahype2::fv::validatePatch(
   int    haloSize,
   const std::string& location
 ) {
+  #if PeanoDebug>0
   const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
   dfor (k,PatchSize) {
     int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
-	for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-      nonCriticalAssertion7( std::isfinite(Q[index+i]), unknowns, auxiliaryVariables, numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
-	}
-  }
-}
 
+    // It is a diagonal entry if this counter is bigger than 1. If it equals
+    // 0, it is interior. If it equals 1, then this is a face-connected halo
+    // entry.
+    int isDiagonal = tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1);
+
+    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      nonCriticalAssertion7(
+        (haloSize>0 and isDiagonal>1) or
+        std::isfinite(Q[index+i]),
+        unknowns,
+        auxiliaryVariables,
+        numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
+    }
+  }
+  #endif
+}
 
 
 #if defined(GPUOffloading)
@@ -385,6 +397,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
   static tarch::logging::Log _log( "exahype2::fv" );
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
+  assertionMsg( false, "ich glaube diese Variante ist buggy. Muessen wir erst testen. Kann auch an den OpenMP-Pragmas liegen. Mit LLVM gehts aber eh net, insofern kann man es auch gleich ordentlich umschreiben" );
   assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
 
   tarch::la::Vector<Dimensions,double> volumeH = exahype2::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);
@@ -499,6 +512,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
   static tarch::logging::Log _log( "exahype2::fv" );
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
+  assertionMsg( false, "ich glaube diese Variante ist buggy. Muessen wir erst testen. Kann auch an den OpenMP-Pragmas liegen. Mit LLVM gehts aber eh net, insofern kann man es auch gleich ordentlich umschreiben" );
   assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
 
   tarch::la::Vector<Dimensions,double> volumeH = exahype2::getVolumeSize(patchSize, numberOfVolumesPerAxisInPatch);

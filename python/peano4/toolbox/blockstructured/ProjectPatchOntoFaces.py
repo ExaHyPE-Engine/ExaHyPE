@@ -35,7 +35,7 @@ class ProjectPatchOntoFaces(ActionSet):
       
     self.d[ "UNKNOWNS" ]           = str(patch.no_of_unknowns)
     self.d[ "DOFS_PER_AXIS" ]      = str(patch.dim[0])
-    self.d[ "OVERLAP" ]            = str(patch_overlap.dim[0]/2)
+    self.d[ "OVERLAP" ]            = str(int(patch_overlap.dim[0]/2))
     self.d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + patch_overlap.name
     self.d[ "CELL_ACCESSOR" ]      = "fineGridCell" + patch.name
     self.d[ "GUARD" ]                                        = guard

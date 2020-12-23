@@ -19,7 +19,7 @@ FORTRAN_SOURCES={% for item in FORTRAN_SOURCES -%} {{item+" "}} {%- endfor %}
 
 CXX_OBJS=$(subst .cpp,.o,$(CXX_SOURCES))
 FORTRAN_OBJS=$(subst .f,.o,$(subst .f90,.o,$(FORTRAN_SOURCES)))
-
+FORTRAN_MODULE_OBJS={% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".o") +" "}} {%- endfor %}
 
 all: solver
 
@@ -33,7 +33,8 @@ all: solver
 
     
 {% for module in FORTRAN_MODULES -%} 
-{{module | replace(".f90", ".mod")}}: {{module | replace(".f90", ".o") + "\n" }}  
+.NOTPARALLEL: {{module | replace(".f90", ".mod") }}
+{{module | replace(".f90", ".mod")}}: {{module | replace(".f90", ".o") + "\n\n" }}  
 {%- endfor %}
 
 
@@ -43,14 +44,11 @@ all: solver
 # per step if they are not required anymore. That is: left libraries can
 # depend objects right but not the other way round.
 #
-solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS) 
-	$(CXX) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(LIBS) -o {{EXECUTABLENAME}} 
+solver: {% for module in FORTRAN_MODULES -%} {{module | replace(".f90", ".mod") +" "}} {%- endfor %} $(CXX_OBJS) $(FORTRAN_OBJS)
+	$(CXX) $(FORTRAN_MODULE_OBJS) $(FORTRAN_OBJS) $(CXX_OBJS) $(LDFLAGS) $(GPU_OBJS) $(LIBS) -o {{EXECUTABLENAME}} 
 
     
 clean:
-	rm -f $(CXX_OBJS) $(FORTRAN_OBJS)
-	{% for module in FORTRAN_MODULES -%} 
-	rm -f {{module | replace(".f90", ".o") + "\n\t"}}  
-	{%- endfor %}
+	rm -f $(CXX_OBJS) $(FORTRAN_OBJS) $(FORTRAN_MODULE_OBJS)
 	rm -f *.mod
 	rm -f {{EXECUTABLENAME}}

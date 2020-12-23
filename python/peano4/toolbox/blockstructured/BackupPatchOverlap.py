@@ -30,13 +30,13 @@ class BackupPatchOverlap(ActionSet):
     self.d = {}
     self.d[ "UNKNOWNS" ]           = str(patch_overlap_in.no_of_unknowns)
     self.d[ "DOFS_PER_AXIS" ]      = str(patch_overlap_in.dim[1])
-    self.d[ "OVERLAP" ]            = str(patch_overlap_in.dim[0]/2)
+    self.d[ "OVERLAP" ]            = str(int(patch_overlap_in.dim[0]/2))
     self.d[ "FACES_ACCESSOR_IN" ]  = "fineGridFace"  + patch_overlap_in.name
     self.d[ "FACES_ACCESSOR_OUT" ] = "fineGridFace"  + patch_overlap_out.name
     self.d[ "GUARD_PREDICATE" ]    = guard
     
     self.invoke_in_touch_first = invoke_in_touch_first
-    self._addition_includes    = additional_includes
+    self._additional_includes  = additional_includes
 
 
   def set_guard_predicate(self,guard):
@@ -98,4 +98,4 @@ class BackupPatchOverlap(ActionSet):
   def get_includes(self):
     return """
 #include "peano4/utils/Loop.h"
-""" + self._addition_includes
+""" + self._additional_includes
