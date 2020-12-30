@@ -15,6 +15,23 @@
 // @todo: only 2D case considered atm
 namespace exahype2 {
   namespace aderdg {
+    // bodies 
+      
+    /**
+     * @name Utility bodies
+     */
+    //@{
+    GPUCallableMethod void exahype2::aderdg::clearAll_body_AoS(
+      double *   __restrict__ data,
+      const int               stride,
+      const int               linearisedIndex) {
+    GPUCallableMethod void exahype2::aderdg::clearRange_body_AoS(
+      double *   __restrict__ data,
+      const int               range,
+      const int               stride,
+      const int               linearisedIndex) {
+    //@}
+    
     /**
      * Just runs over the patch and ensures that no entry is non or infinite.
      *
@@ -269,8 +286,5 @@ namespace exahype2 {
     );
   }
 }
-
-// templates
-#include "Generic.cpph"
 
 #endif
