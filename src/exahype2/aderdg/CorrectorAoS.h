@@ -6,6 +6,8 @@ namespace exahype2 {
    * 
    * Writes to a single spatial degree of freedom.
    *
+   * @note Directly run after Picard iterations in order to not store predictor.
+   *
    * @param flux
    * @param UOut
    * @param QIn
@@ -20,7 +22,6 @@ namespace exahype2 {
    * @param nodesPerAxis
    * @param unknowns
    * @param strideQ
-   * @param strideRhs
    * @param linearisedIndex
    */
   GPUCallableMethod void corrector_addFluxContributions_body_AoS(
@@ -42,13 +43,14 @@ namespace exahype2 {
       const int                  nodesPerAxis,
       const int                  unknowns,
       const int                  strideQ,
-      const int                  strideRhs,
       const int                  linearisedIndex);
   
   /**
    * @brief Add source contributions to the solution.
    *
    * Writes to a single spatial degree of freedom.
+   *
+   * @note Directly run after Picard iterations in order to not store predictor.
    *
    * @param algebraicSource
    * @param UOut
@@ -63,7 +65,6 @@ namespace exahype2 {
    * @param nodesPerAxis
    * @param unknowns
    * @param strideQ
-   * @param strideRhs
    * @param linearisedIndex
    */
   GPUCallableMethod void corrector_addSourceContribution_body_AoS(
@@ -84,13 +85,14 @@ namespace exahype2 {
       const int                                   nodesPerAxis,
       const int                                   unknowns,
       const int                                   strideQ,
-      const int                                   strideRhs,
       const int                                   linearisedIndex);
   
   /**
    * @brief Add nonconservative product contributions to the solution.
    *
    * Writes to a single spatial degree of freedom.
+   *
+   * @note Directly run after Picard iterations in order to not store predictor.
    *
    * @param nonconservativeProduct
    * @param UOut
@@ -106,7 +108,7 @@ namespace exahype2 {
    * @param dt
    * @param nodesPerAxis
    * @param unknowns
-   * @param strideRhs
+   * @param strideQ
    * @param linearisedIndex
    */
   GPUCallableMethod void corrector_addNcpContribution_body_AoS(
@@ -129,7 +131,33 @@ namespace exahype2 {
       const double                                dt,
       const int                                   nodesPerAxis,
       const int                                   unknowns,
-      const int                                   strideRhs,
+      const int                                   strideQ,
       const int                                   linearisedIndex);
+   
+   /**
+    * @brief Add Riemann flux contributions to the solution.
+    * 
+    * Writes to a single spatial degree of freedom.
+    *
+    * @param UOut
+    * @param riemannResultIn
+    * @param weights
+    * @param FCoeff
+    * @param invDx
+    * @param nodesPerAxis
+    * @param unknowns
+    * @param strideQ
+    * @param linearisedIndex
+    */
+   GPUCallableMethod void corrector_addRiemannContributions_body_AoS(
+       double * __restrict__       UOut,
+       const double * __restrict__ riemannResultIn,
+       const double * __restrict__ weights,
+       const double * __restrict__ FCoeff[2],
+       const double                invDx,
+       const int                   nodesPerAxis,
+       const int                   unknowns,
+       const int                   strideQ,
+       const int                   linearisedIndex):
   }
 }

@@ -1,5 +1,8 @@
 #include "CorrectorAoS.h"
+
 #include "tarch/la/Vector.h"
+
+#include "KernelUtils.h"
 
 GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS(
     std::function< void(
@@ -22,7 +25,6 @@ GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS
     const int                  nodesPerAxis,
     const int                  unknowns,
     const int                  strideQ,
-    const int                  strideRhs,
     const int                  linearisedIndex) {
   tarch::la::Vector<Dimensions+1,int> strides = getStrides(nodesPerAxis,false);
   tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(linearisedIndex,strides);
@@ -45,7 +47,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS
 
         flux( Q, x, time, d-1, FAux); 
         for (int var=0; var < unknowns; var++) {
-          UOut[ linearisedIndex*strideRhs+var ] += coeff * FAux[ var ]; // note: different vs predictor flux computation
+          UOut[ linearisedIndex*strideQ+var ] += coeff * FAux[ var ]; // note: different vs predictor flux computation
         }
       }
     }
@@ -71,7 +73,6 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContribution_body_Ao
     const int                                   nodesPerAxis,
     const int                                   unknowns,
     const int                                   strideQ,
-    const int                                   strideRhs,
     const int                                   linearisedIndex) {
   const tarch::la::Vector<Dimensions+1,int>     index  = delineariseIndex(linearisedIndex,getStrides(nodesPerAxis,false));
   const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
@@ -86,7 +87,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContribution_body_Ao
     
     const double coeff = dt * weights[it];
     for (int var = 0; var < unknowns; var++) {
-      UOut[ linearisedIndex*strideRhs ] += coeff * SAux[var];
+      UOut[ linearisedIndex*strideQ ] += coeff * SAux[var];
     }
   }
 }
@@ -112,7 +113,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addNcpContribution_body_AoS(
     const double                                dt,
     const int                                   nodesPerAxis,
     const int                                   unknowns,
-    const int                                   strideRhs,
+    const int                                   strideQ,
     const int                                   linearisedIndex) {
   const tarch::la::Vector<Dimensions+1,int>     index  = delineariseIndex(linearisedIndex,getStrides(nodesPerAxis,false));
   const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
@@ -129,7 +130,33 @@ GPUCallableMethod void exahype2::aderdg::corrector_addNcpContribution_body_AoS(
     
      const double coeff = dt * weights[it];
     for(int var=0; var<unknowns; var++) {
-      UOut[ linearisedIndex*strideRhs + var ] += coeff * SAux[var];
+      UOut[ linearisedIndex*strideQ + var ] += coeff * SAux[var];
     }
   }
+}
+
+GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_AoS(
+  double * __restrict__       UOut,
+  const double * __restrict__ riemannResultIn,
+  const double * __restrict__ weights,
+  const double * __restrict__ FCoeff[2],
+  const double                invDx,
+  const int                   nodesPerAxis
+  const int                   unknowns,
+  const int                   strideQ,
+  const int                   linearisedIndex) {
+  tarch::la::Vector<Dimensions+1,int> index = delineariseIndex(linearisedIndex,getStrides(nodesPerAxis,false));
+  
+  for (int d=0; d < Dimensions; d++) {
+    for (int lr=0; lr<2; lr++) {
+      const int linearisedIndexFace = mapCellIndexToLinearisedCellHullIndex(index,d,lr,nodesPerAxis);
+
+      for (int id=0; id < nodesPerAxis; id++) { 
+        const double coeff0 = dt * FCoeff[lr][index[d+1]] * invDx/*[d]*/;
+        for (int var=0; var < unknowns; var++) {
+          UOut[ linearisedIndex*strideQ + var ] += coeff * riemannResultIn[ (linearisedIndexFace*nodesPerAxis + id)*strideQ + var ]; 
+        }
+      }
+    }
+  } 
 }
