@@ -1,0 +1,148 @@
+#include "KernelUtils.h"
+
+GPUCallableMethod int exahype2::aderdg::getNodesPerCell(int nodesPerAxis) {
+  int nodesPerCell = 1;
+  for ( int d = 0; d < Dimensions; d++ ) { nodesPerCell *= nodesPerAxis; }
+  return nodesPerCell;
+}
+
+GPUCallableMethod int exahype2::aderdg::getSpaceTimeNodesPerCell(int nodesPerAxis) {
+  int nodesPerCell = 1;
+  for ( int d = 0; d < Dimensions+1; d++ ) { nodesPerCell *= nodesPerAxis; }
+  return nodesPerCell;
+}
+
+GPUCallableMethod tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::getStrides(
+   int nodesPerAxis,
+   bool strides4SpaceTimeQuantity = true
+) {
+  tarch::la::Vector<Dimensions+1,int> strides(1);
+  for ( int d = 0; d < Dimensions; d++ ) { 
+    strides[d+1] *= strides[d]*nodesPerAxis;
+  }
+  if ( !strides4SpaceTimeQuantity ) {
+    for ( int d = 0; d < Dimensions+1; d++ ) { 
+      strides[d] /= nodesPerAxis;
+    }
+  }
+  return strides;
+}
+
+GPUCallableMethod int exahype2::aderdg::lineariseIndex(
+   const tarch::la::Vector<Dimensions+1,int>& index,
+   const tarch::la::Vector<Dimensions+1,int>& strides,
+) {
+  int linearisedIndex = 0;
+  for ( int d = 0; d < Dimensions+1; d++ ) { // t -> x -> y -> z
+    linearisedIndex += stride[d]*index[d];
+  }
+  return linearisedIndex;
+}
+  
+GPUCallableMethod tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::delineariseIndex(
+  int linearisedIndex,
+  const tarch::la::Vector<Dimensions+1,int> strides) {
+  tarch::la::Vector<Dimensions+1,int> index(-1); // valid index component values are non-negative
+  int tmp = 0;
+  if ( stride[0] > 0 ) {
+    for ( int d = Dimensions; d >= 0; d-- ) { // z -> y -> x -> t
+      index[d] = (linearisedIndex - tmp) / stride[d]; 
+      tmp += stride[d]*id; // iz -> iy -> ix -> it
+    }
+  } else {
+    for ( int d = Dimensions; d >= 1; d-- ) { // z -> y -> x
+      index[d] = (linearisedIndex - tmp) / stride[d]; 
+      tmp += stride[d]*id; // iz -> iy -> ix
+    }
+  }
+  return index;
+}
+  
+GPUCallableMethod tarch::la::Vector<Dimensions,double> int exahype2::aderdg::getCoordinates(
+  const tarch::la::Vector<Dimensions+1,int> index,
+  const tarch::la::Vector<Dimensions+1,int> centre,
+  const double                              dx,
+  const double                              t, 
+  const double                              dt, 
+  const double* __restrict__                nodes) {
+  tarch::la::Vector<Dimensions+1, double> coords;
+
+  coords[0]= t;
+  if ( index[0] >= 0 ) {
+    coords[0] + nodes[index[0]] * dt;
+  } 
+  for ( int d = 1; d < Dimensions+1; d++ ) { // x -> y -> z
+    coords[d] = centre[d-1] + dx/*[d-1]*/ * (nodes[index[d]] - 0.5);
+  }
+  return coords;
+}
+
+GPUCallableMethod tarch::la::Vector<Dimensions,double> exahype2::aderdg::getCoordinatesOnFace(
+  const tarch::la::Vector<Dimensions+1,int> indexOnFace,
+  const tarch::la::Vector<Dimensions+1,int> faceCentre,
+  const int                                 direction,
+  const double                              dx,
+  const double                              t, 
+  const double                              dt, 
+  const double* __restrict__                nodes) {
+  tarch::la::Vector<Dimensions+1, double> coords =
+    getCoordinates(indexOnFace,faceCentre,direction,dx,t,dt,nodes);
+  coord[direction+1] = faceCentre[direction];
+  return coords;
+}
+
+GPUCallableMethod int exahype2::aderdg::mapCellIndexToLinearisedHullIndex(
+  const tarch::la::Vector<Dimensions+1,int> indexCell,
+  const int                                 direction,
+  const int                                 orientation,
+  const int                                 nodesPerAxis,
+) {
+  // freeze spatial dimension direction (indexCell[direction+1])
+  int linearisedIndexFace = 0;
+  int stride = 1;
+  for ( e=0; e < Dimensions; e++ ) { // ordering (fastest running left): (y,z), (x,z), (x,y)
+    if ( e != direction ) {
+      linearisedIndexFace += stride*indexCell[e+1];
+      stride *= nodesPerAxis;
+    }
+  }
+  const int faceOffset = ( direction*2 + orientation ) * stride; // stride = nodesPerAxis^{direction-1}
+  linearisedIndexFace += faceOffset;
+  return linearisedIndexFace;
+}
+
+GPUCallableMethod int exahype2::aderdg::mapSpaceTimeFaceIndexToLinearisedCellIndex(
+  const tarch::la::Vector<Dimensions+1,int> indexFace,
+  const int                                 direction,
+  const int                                 id,
+  const int                                 nodesPerAxis,
+) {
+  tarch::la::Vector<Dimensions+1,int> indexCell(-1);
+  indexCell[0] = indexFace[0];
+  const int i = 1;
+  for ( int e = 0; e < Dimensions; e++) {
+    if ( e != direction ) {
+      indexCell[e+1] = indexFace[i++];
+    }
+  }
+  indexCell[direction+1] = id;
+  return lineariseIndex(indexCell,getStrides());
+}
+
+GPUCallableMethod size_t exahype2::aderdg::alignment() {
+  //return 64;
+  return -1;
+}
+
+GPUCallableMethod size_t exahype2::aderdg::paddedSize(size_t numElements, size_t sizeofType=sizeof(double)) {
+  //int align = alignment() / sizeofType; // 8 elements per cache line for double 
+  //return ( ( numElements + align - 1 ) / align ) * align;  // @todo: padding
+  return numElements;
+}
+
+double* exahype2::aderdg::allocateBuffer_cpu(size_t unpaddedSizeMultiplier, size_t paddedSizeMultiplier) {
+  //double* ptr = nullptr;
+  //int ierr = posix_memalign( (void**) &ptr, alignment(), sizeof(double) * unpaddedSizeMultiplier * paddedSizeMultiplier );
+  //return ptr;
+  return new double[ unpaddedSizeMultiplier * paddedSizeMultiplier ]; 
+}
