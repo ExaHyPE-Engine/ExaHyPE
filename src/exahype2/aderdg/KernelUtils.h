@@ -52,7 +52,7 @@ namespace exahype2 {
       * @param index t-,x-,y-, and z-direction (reference coordinates) components of delinearised scalar index
       * @note coords[0] = t if if t-direction component of index is negative.
       */
-     GPUCallableMethod tarch::la::Vector<Dimensions,double> int getCoordinates(
+     GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinates(
        const tarch::la::Vector<Dimensions+1,int> index,
        const tarch::la::Vector<Dimensions+1,int> centre,
        const double                              dx,
@@ -67,7 +67,7 @@ namespace exahype2 {
       * @param direction encodes direction of face normal (x: 0, y: 1, z: 2)
       * @note coords[0] = t if if t-direction component of index is negative.
       */
-     GPUCallableMethod tarch::la::Vector<Dimensions,double> getCoordinatesOnFace(
+     GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinatesOnFace(
        const tarch::la::Vector<Dimensions+1,int> indexOnFace,
        const tarch::la::Vector<Dimensions+1,int> faceCentre,
        const int                                 direction,

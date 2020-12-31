@@ -1,3 +1,5 @@
+#include "tarch/la/Vector.h"
+
 namespace exahype2 {
   namespace aderdg {
 
