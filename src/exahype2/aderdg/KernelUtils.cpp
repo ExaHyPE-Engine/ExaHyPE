@@ -43,7 +43,7 @@ namespace exahype2 {
       
     GPUCallableMethod tarch::la::Vector<Dimensions+1,int> delineariseIndex(
       int linearisedIndex,
-      const tarch::la::Vector<Dimensions+1,int> strides) {
+      const tarch::la::Vector<Dimensions+1,int>& strides) {
       tarch::la::Vector<Dimensions+1,int> index(-1); // valid index component values are non-negative
       int tmp = 0;
       if ( strides[0] > 0 ) {
@@ -61,8 +61,8 @@ namespace exahype2 {
     }
       
     GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinates(
-      const tarch::la::Vector<Dimensions+1,int> index,
-      const tarch::la::Vector<Dimensions+1,int> centre,
+      const tarch::la::Vector<Dimensions+1,int>& index,
+      const tarch::la::Vector<Dimensions,double>& centre,
       const double                              dx,
       const double                              t, 
       const double                              dt, 
@@ -80,8 +80,8 @@ namespace exahype2 {
     }
     
     GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinatesOnFace(
-      const tarch::la::Vector<Dimensions+1,int> indexOnFace,
-      const tarch::la::Vector<Dimensions+1,int> faceCentre,
+      const tarch::la::Vector<Dimensions+1,int>& indexOnFace,
+      const tarch::la::Vector<Dimensions,double>& faceCentre,
       const int                                 direction,
       const double                              dx,
       const double                              t, 
@@ -94,7 +94,7 @@ namespace exahype2 {
     }
     
     GPUCallableMethod int mapCellIndexToLinearisedHullIndex(
-      const tarch::la::Vector<Dimensions+1,int> indexCell,
+      const tarch::la::Vector<Dimensions+1,int>& indexCell,
       const int                                 direction,
       const int                                 orientation,
       const int                                 nodesPerAxis
@@ -114,7 +114,7 @@ namespace exahype2 {
     }
     
     GPUCallableMethod int mapSpaceTimeFaceIndexToLinearisedCellIndex(
-      const tarch::la::Vector<Dimensions+1,int> indexFace,
+      const tarch::la::Vector<Dimensions+1,int>& indexFace,
       const int                                 direction,
       const int                                 id,
       const int                                 nodesPerAxis

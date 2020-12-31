@@ -44,7 +44,7 @@ namespace exahype2 {
       */
      GPUCallableMethod tarch::la::Vector<Dimensions+1,int> delineariseIndex(
        int linearisedIndex,
-       const tarch::la::Vector<Dimensions+1,int> strides);       
+       const tarch::la::Vector<Dimensions+1,int>& strides);       
      
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
@@ -53,12 +53,12 @@ namespace exahype2 {
       * @note coords[0] = t if if t-direction component of index is negative.
       */
      GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinates(
-       const tarch::la::Vector<Dimensions+1,int> index,
-       const tarch::la::Vector<Dimensions+1,int> centre,
-       const double                              dx,
-       const double                              t, 
-       const double                              dt, 
-       const double* __restrict__                nodes);
+       const tarch::la::Vector<Dimensions+1,int>&  index,
+       const tarch::la::Vector<Dimensions,double>& centre,
+       const double                                dx,
+       const double                                t, 
+       const double                                dt, 
+       const double* __restrict__                  nodes);
      
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
@@ -68,13 +68,13 @@ namespace exahype2 {
       * @note coords[0] = t if if t-direction component of index is negative.
       */
      GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinatesOnFace(
-       const tarch::la::Vector<Dimensions+1,int> indexOnFace,
-       const tarch::la::Vector<Dimensions+1,int> faceCentre,
-       const int                                 direction,
-       const double                              dx,
-       const double                              t, 
-       const double                              dt, 
-       const double* __restrict__                nodes);
+       const tarch::la::Vector<Dimensions+1,int>& indexOnFace,
+       const tarch::la::Vector<Dimensions,double>& faceCentre,
+       const int                                   direction,
+       const double                                dx,
+       const double                                t, 
+       const double                                dt, 
+       const double* __restrict__                  nodes);
      
      /**
       * @param direction   coordinate direction of the (reference) element face normal (0: 
@@ -82,7 +82,7 @@ namespace exahype2 {
       * @note Result must be scaled additionally by nodesPerAxis if it used to access space-time quantities.
       */
      GPUCallableMethod int mapCellIndexToLinearisedHullIndex(
-       const tarch::la::Vector<Dimensions+1,int> indexCell,
+       const tarch::la::Vector<Dimensions+1,int>& indexCell,
        const int                                 direction,
        const int                                 orientation,
        const int                                 nodesPerAxis);
@@ -93,7 +93,7 @@ namespace exahype2 {
       * @return linearised cell index 
       */
      GPUCallableMethod int mapSpaceTimeFaceIndexToLinearisedCellIndex(
-       const tarch::la::Vector<Dimensions+1,int> indexFace,
+       const tarch::la::Vector<Dimensions+1,int>& indexFace,
        const int                                 direction,
        const int                                 id,
        const int                                 nodesPerAxis);

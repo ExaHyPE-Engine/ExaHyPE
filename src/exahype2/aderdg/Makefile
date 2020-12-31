@@ -16,3 +16,6 @@ $(OBJECTS): %.o: %.cpp
 compile: $(OBJECTS)
 	@echo "building"
 	@echo $(SOURCES)
+
+clean:
+	rm -f $(OBJECTS)
