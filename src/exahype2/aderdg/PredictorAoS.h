@@ -23,9 +23,9 @@ namespace exahype2 {
       const double* __restrict__ UIn,
       const int                  nodesPerAxis,
       const int                  strideQ,
-      const int                  linearisedIndex);
+      const int                  scalarIndex);
       for (int var = 0; var < strideQ; var++) {
-        Qout[ linearisedIndex*strideQ + var ] = UIn[ ( linearisedIndex / nodesPerAxis )*strideQ + var ];
+        Qout[ scalarIndex*strideQ + var ] = UIn[ ( scalarIndex / nodesPerAxis )*strideQ + var ];
       }
     }
     
@@ -49,7 +49,7 @@ namespace exahype2 {
       const double* __restrict__ FLCoeff,
       const int                  nodesPerAxis,
       const int                  strideQ,
-      const int                  linearisedIndex);
+      const int                  scalarIndex);
     
     /**
      * \brief Add flux contributions to RHS during STP Picard loop.
@@ -71,7 +71,7 @@ namespace exahype2 {
      * @param[in] nodesPerAxis
      * @param[in] strideQ
      * @param[in] strideRhs
-     * @param[in] linearisedIndex
+     * @param[in] scalarIndex
     */
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
         std::function< void(
@@ -93,7 +93,7 @@ namespace exahype2 {
         const int                                     unknowns,
         const int                                     strideQ,
         const int                                     strideRhs,
-        const int                                     linearisedIndex);
+        const int                                     scalarIndex);
     
     /**
      * \brief Add source contributions to RHS during STP Picard loop.
@@ -114,7 +114,7 @@ namespace exahype2 {
      * @param[in] nodesPerAxis
      * @param[in] strideQ
      * @param[in] strideRhs
-     * @param[in] linearisedIndex
+     * @param[in] scalarIndex
      */
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
         std::function< void(
@@ -135,7 +135,7 @@ namespace exahype2 {
         const int                                  unknowns,
         const int                                  strideQ,
         const int                                  strideRhs,
-        const int                                  linearisedIndex);
+        const int                                  scalarIndex);
     
     /**
      * 
@@ -161,7 +161,7 @@ namespace exahype2 {
       const int                                   unknowns,
       const int                                   strideRhs,
       const int                                   strideQ,
-      const int                                   linearisedIndex);
+      const int                                   scalarIndex);
     
     /**
      * Invert the Picard space-time system to compute the next solution.  
@@ -201,7 +201,7 @@ namespace exahype2 {
      * @param nodesPerAxis
      * @param unknowns
      * @param strideQ
-     * @param linearisedIndexHull
+     * @param scalarIndexHull
      */
     GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
       double * __restrict__       QHullOut,
@@ -211,7 +211,7 @@ namespace exahype2 {
       const int                   nodesPerAxis,
       const int                   unknowns,
       const int                   strideQ,
-      const int                   linearisedIndexHull);
+      const int                   scalarIndexHull);
 
   } // aderdg
 } // exahype2

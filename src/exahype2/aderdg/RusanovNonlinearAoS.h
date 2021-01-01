@@ -23,7 +23,7 @@ namespace exahype2 {
      * @param unknowns
      * @param strideQ
      * @param direction
-     * @param linearisedIndexFace
+     * @param scalarIndexFace
      */
     GPUCallableMethod void rusanovNonlinear_maxEigenvalue_body_AoS(
         std::function< double(
@@ -43,7 +43,7 @@ namespace exahype2 {
         const int                                   strideQ,
         const int                                   strideF,
         const int                                   direction,
-        const int                                   linearisedIndexFace);
+        const int                                   scalarIndexFace);
     
     /** 
      * compute fluxes (and fluctuations for non-conservative PDEs)
@@ -75,7 +75,7 @@ namespace exahype2 {
         const int                                   strideQ,
         const int                                   strideF,
         const int                                   direction,
-        const int                                   linearisedIndexFace);
+        const int                                   scalarIndexFace);
     
     /** 
      * compute fluxes (and fluctuations for non-conservative PDEs)
@@ -110,7 +110,7 @@ namespace exahype2 {
         const int                                   strideQ,
         const int                                   strideF,
         const int                                   direction,
-        const int                                   linearisedIndexFace);
+        const int                                   scalarIndexFace);
 
   }
 }

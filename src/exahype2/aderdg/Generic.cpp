@@ -31,7 +31,7 @@ void exahype2::aderdg::validatePatch(
 ) {
 //  const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
 //  dfor (k,PatchSize) {
-//    int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
+//    int index = peano4::utils::dScalar(k,PatchSize) * (unknowns+auxiliaryVariables);
 //	for (int i=0; i<unknowns+auxiliaryVariables; i++) {
 //      nonCriticalAssertion7( std::isfinite(Q[index+i]), unknowns, auxiliaryVariables, numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
 //	}
@@ -53,8 +53,8 @@ void exahype2::aderdg::copyPatch(
 ) {
 //  dfor(k,numberOfVolumesPerAxisInPatch) {
 //    tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
-//    int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
-//    int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
+//    int sourceSerialised      = peano4::utils::dScalar(source,numberOfVolumesPerAxisInPatch+haloSize*2);
+//    int destinationSerialised = peano4::utils::dScalar(k,numberOfVolumesPerAxisInPatch);
 //    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
 //      QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
 //    }

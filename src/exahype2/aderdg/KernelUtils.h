@@ -34,22 +34,22 @@ namespace exahype2 {
         const tarch::la::Vector<Dimensions+1,int>& strides);
        
      /**
-      * @param linearisedIndex index that we want to delinearise 
+      * @param scalarIndex index that we want to delinearise 
       * @param strides strides per direction (t,x,y,z).
       *
-      * @return index that is delinearised account to the strides
+      * @return index that is descalar account to the strides
       *
       * @note index[0] (time index) is -1 if strides[0]=0. The latter implies that we work with a time-invariant field.
       * @seee getStrides(nodesPerAxis,strides4SpaceTimeQuantity)
       */
      GPUCallableMethod tarch::la::Vector<Dimensions+1,int> delineariseIndex(
-       int linearisedIndex,
+       int scalarIndex,
        const tarch::la::Vector<Dimensions+1,int>& strides);       
      
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
       * @return a tuple (t,x,y,z) where the t-component has index 0.
-      * @param index t-,x-,y-, and z-direction (reference coordinates) components of delinearised scalar index
+      * @param index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index
       * @note coords[0] = t if if t-direction component of index is negative.
       */
      GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinates(
@@ -63,7 +63,7 @@ namespace exahype2 {
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
       * @return a tuple (t,x,y,z) where the t-component has index 0.
-      * @param index t-,x-,y-, and z-direction (reference coordinates) components of delinearised scalar index
+      * @param index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index
       * @param direction encodes direction of face normal (x: 0, y: 1, z: 2)
       * @note coords[0] = t if if t-direction component of index is negative.
       */
@@ -81,7 +81,7 @@ namespace exahype2 {
       * @param orientation orientation of the (reference) element face normal (0: negative, 1: positive).
       * @note Result must be scaled additionally by nodesPerAxis if it used to access space-time quantities.
       */
-     GPUCallableMethod int mapCellIndexToLinearisedHullIndex(
+     GPUCallableMethod int mapCellIndexToScalarHullIndex(
        const tarch::la::Vector<Dimensions+1,int>& indexCell,
        const int                                 direction,
        const int                                 orientation,
@@ -90,9 +90,9 @@ namespace exahype2 {
      /**
       * @param direction   coordinate direction of the (reference) element face normal (0: 
       * @param orientation orientation of the (reference) element face normal (0: negative, 1: positive).
-      * @return linearised cell index 
+      * @return scalar cell index 
       */
-     GPUCallableMethod int mapSpaceTimeFaceIndexToLinearisedCellIndex(
+     GPUCallableMethod int mapSpaceTimeFaceIndexToScalarCellIndex(
        const tarch::la::Vector<Dimensions+1,int>& indexFace,
        const int                                 direction,
        const int                                 id,
@@ -133,7 +133,7 @@ namespace exahype2 {
      * @param[in] unknowns
      * @param[in] strideQ
      * @param[in] strideGradQ
-     * @param[in] linearisedIndex
+     * @param[in] scalarIndex
      * @param[in] gradQAux
      */
     GPUCallableMethod void gradient_AoS(
@@ -142,7 +142,7 @@ namespace exahype2 {
       const double               invDx,
       const int                  nodesPerAxis,
       const int                  strideQ,
-      const int                  linearisedIndex,
+      const int                  scalarIndex,
       double* __restrict__       gradQAux);
      
      /** alignment in bytes

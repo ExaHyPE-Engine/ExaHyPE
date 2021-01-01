@@ -12,9 +12,9 @@ namespace exahype2 {
     GPUCallableMethod void clearAll_body_AoS(
       double *  __restrict__ data,
       const int              stride,
-      const int              linearisedIndex) {
+      const int              scalarIndex) {
       for (int elem = 0; elem < stride; elem++) {
-        data[ linearisedIndex*stride + elem ] = 0.0;
+        data[ scalarIndex*stride + elem ] = 0.0;
       }
     }
     
@@ -22,9 +22,9 @@ namespace exahype2 {
       double *  __restrict__ data,
       const int              range,
       const int              stride,
-      const int              linearisedIndex) {
+      const int              scalarIndex) {
       for (int elem = 0; elem < range; elem++) {
-        data[ linearisedIndex*stride + elem ] = 0.0;
+        data[ scalarIndex*stride + elem ] = 0.0;
       }
     }
     
@@ -35,9 +35,9 @@ namespace exahype2 {
       const double* __restrict__ UIn,
       const int                  nodesPerAxis,
       const int                  strideQ,
-      const int                  linearisedIndex) {
+      const int                  scalarIndex) {
       for (int var = 0; var < strideQ; var++) {
-        Qout[ linearisedIndex*strideQ + var ] = UIn[ ( linearisedIndex / nodesPerAxis )*strideQ + var ];
+        Qout[ scalarIndex*strideQ + var ] = UIn[ ( scalarIndex / nodesPerAxis )*strideQ + var ];
       }
     }
     
@@ -48,12 +48,12 @@ namespace exahype2 {
       const int                  nodesPerAxis,
       const int                  strideQ,
       const int                  strideRhs,
-      const int                  linearisedIndex) {
-      const int it = delineariseIndex(linearisedIndex,getStrides(nodesPerAxis))[0];
+      const int                  scalarIndex) {
+      const int it = delineariseIndex(scalarIndex,getStrides(nodesPerAxis))[0];
       const double coeff = FLCoeff[ it ];
       
       for (int var = 0; var < strideQ; var++) {
-        rhsOut[ linearisedIndex*strideRhs + var ] = coeff * UIn[ ( linearisedIndex / nodesPerAxis ) * strideQ + var ];
+        rhsOut[ scalarIndex*strideRhs + var ] = coeff * UIn[ ( scalarIndex / nodesPerAxis ) * strideQ + var ];
       }
     }
     
@@ -79,9 +79,9 @@ namespace exahype2 {
         const int                                     unknowns,
         const int                                     strideQ,
         const int                                     strideRhs,
-        const int                                     linearisedIndex) {
+        const int                                     scalarIndex) {
       const tarch::la::Vector<Dimensions+1,int> strides   = getStrides(nodesPerAxis);
-      const tarch::la::Vector<Dimensions+1,int> index     = delineariseIndex(linearisedIndex,strides);
+      const tarch::la::Vector<Dimensions+1,int> index     = delineariseIndex(scalarIndex,strides);
       const tarch::la::Vector<Dimensions+1,double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
       const tarch::la::Vector<Dimensions,double> x(&coords[1]);
       const double time = coords[0];
@@ -93,10 +93,10 @@ namespace exahype2 {
           
         for ( int a = 0; a < nodesPerAxis; a++ ) { // further collapsing causes data races, synchronization or GPU shared mem usage required
           const double coeff = coeff0 * Kxi[ a*nodesPerAxis + index[d] ];
-          const double * Q = &QIn[ ( linearisedIndex + (a - index[d])*strides[d] )*strideQ ];
+          const double * Q = &QIn[ ( scalarIndex + (a - index[d])*strides[d] )*strideQ ];
           flux(Q, x, time, d-1, FAux);
           for (int var=0; var < unknowns; var++) {
-            rhsOut[ linearisedIndex*strideRhs+var ] -= coeff * FAux[ var ];
+            rhsOut[ scalarIndex*strideRhs+var ] -= coeff * FAux[ var ];
           }
         }
       }
@@ -122,19 +122,19 @@ namespace exahype2 {
         const int                                  unknowns,
         const int                                  strideQ,
         const int                                  strideRhs,
-        const int                                  linearisedIndex) {
-      const tarch::la::Vector<Dimensions+1,int>     index  = delineariseIndex(linearisedIndex, getStrides(nodesPerAxis));
+        const int                                  scalarIndex) {
+      const tarch::la::Vector<Dimensions+1,int>     index  = delineariseIndex(scalarIndex, getStrides(nodesPerAxis));
       const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
       const tarch::la::Vector<Dimensions, double> x( ( coords.data() + 1 ) );
       const double time = coords[0];
       
       const double coeff = dt * weights[index[0]];
       
-      const double* Q = &QIn[ linearisedIndex*strideQ ];
+      const double* Q = &QIn[ scalarIndex*strideQ ];
     
       algebraicSource(Q, x, time, SAux);
       for (int var = 0; var < unknowns; var++) {
-        rhsOut[ linearisedIndex*strideRhs ] += coeff * SAux[var];
+        rhsOut[ scalarIndex*strideRhs ] += coeff * SAux[var];
       }
     }
     
@@ -161,9 +161,9 @@ namespace exahype2 {
       const int                                   unknowns,
       const int                                   strideRhs,
       const int                                   strideQ,
-      const int                                   linearisedIndex) {
+      const int                                   scalarIndex) {
       tarch::la::Vector<Dimensions+1,int> strides = getStrides(nodesPerAxis);
-      tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(linearisedIndex,strides);
+      tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(scalarIndex,strides);
       const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
       const tarch::la::Vector<Dimensions, double> x( ( coords.data() + 1 ) );
       const double time = coords[0];
@@ -172,12 +172,12 @@ namespace exahype2 {
  
       const double coeff = dt * weights[index[0]];
       
-      gradient_AoS(QIn,dudx,invDx,nodesPerAxis,strideQ,linearisedIndex,gradQAux);           
+      gradient_AoS(QIn,dudx,invDx,nodesPerAxis,strideQ,scalarIndex,gradQAux);           
       
-      const double* Q = &QIn [ linearisedIndex*strideQ ];
+      const double* Q = &QIn [ scalarIndex*strideQ ];
       nonconservativeProduct(Q, (double (*)[Dimensions]) gradQAux, x, time, SAux );
       for(int var=0; var < unknowns; var++) {
-        rhsOut[ linearisedIndex*strideRhs + var ] += coeff * SAux[var];
+        rhsOut[ scalarIndex*strideRhs + var ] += coeff * SAux[var];
       }
     }
     
@@ -190,25 +190,25 @@ namespace exahype2 {
       const int                   unknowns,
       const int                   strideQ,
       const int                   strideRhs,
-      const int                   linearisedIndex) {
-      const int it = delineariseIndex(linearisedIndex,getStrides(nodesPerAxis))[0];
+      const int                   scalarIndex) {
+      const int it = delineariseIndex(scalarIndex,getStrides(nodesPerAxis))[0];
        
       squaredResiduumOut = 0.0; 
       for (int var = 0; var < unknowns; var++) {
         double Q_new = 0;
-        //const double coeff = iweight * rhsIn[ linearisedIndex*strideRhs + var ]; 
-        const double coeff = rhsIn[ linearisedIndex*strideRhs + var ]; 
+        //const double coeff = iweight * rhsIn[ scalarIndex*strideRhs + var ]; 
+        const double coeff = rhsIn[ scalarIndex*strideRhs + var ]; 
         // @todo: check if operator is correct
         for (int a = 0; a < nodesPerAxis; a++) { // matmul time
           Q_new += coeff * iK1[ it*nodesPerAxis + a ]; // note: iK1 is already the transposed inverse of K1
         }
-        const double difference = Q_new - QOut[ linearisedIndex*strideQ + var ]; 
+        const double difference = Q_new - QOut[ scalarIndex*strideQ + var ]; 
         squaredResiduumOut += difference * difference;
-        QOut[ linearisedIndex*strideQ + var ] = Q_new;
+        QOut[ scalarIndex*strideQ + var ] = Q_new;
         
         //@todo: enable in CPU version
-        //assertion3( !std::isnan( Q[ linearisedIndex ] ), linearisedIndex, dt, invDx );
-        //assertion3( !std::isnan(Q_new), linearisedIndex, dt, invDx );
+        //assertion3( !std::isnan( Q[ scalarIndex ] ), scalarIndex, dt, invDx );
+        //assertion3( !std::isnan(Q_new), scalarIndex, dt, invDx );
       }
     
       // @todo: Get feedback from M.D.
@@ -246,23 +246,23 @@ namespace exahype2 {
         const int                   unknowns,
         const int                   auxiliaryVariables,
         const int                   strideQ,
-        const int                   linearisedIndexHull) {
+        const int                   scalarIndexHull) {
       const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
-      const tarch::la::Vector<Dimensions+1,int> indexQHull = delineariseIndex(linearisedIndexHull,strides); // (t,y,z,face) , (t,x,z,face), (t,x,y,face)
+      const tarch::la::Vector<Dimensions+1,int> indexQHull = delineariseIndex(scalarIndexHull,strides); // (t,y,z,face) , (t,x,z,face), (t,x,y,face)
      
       const int d  = indexQHull[Dimensions] / 2;
       const int lr = indexQHull[Dimensions] - 2*d;
     
       // clear
       for (int var=0; var < unknowns; var++) {
-        QHullOut[ linearisedIndexHull * strideQ + var ] = 0.0; 
+        QHullOut[ scalarIndexHull * strideQ + var ] = 0.0; 
       }
       for (int id=0; id<nodesPerAxis; id++) {
-        const int linearisedIndexQ = mapSpaceTimeFaceIndexToLinearisedCellIndex(indexQHull,d,lr,id);
+        const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr,id);
     
         const double coeff = FCoeff[lr][id];
         for (int var=0; var < unknowns; var++) {
-          QHullOut[ linearisedIndexHull * strideQ + var ] += coeff * QIn[ linearisedIndexQ*strideQ + var ]; 
+          QHullOut[ scalarIndexHull * strideQ + var ] += coeff * QIn[ scalarIndexQ*strideQ + var ]; 
         }
       }
     }

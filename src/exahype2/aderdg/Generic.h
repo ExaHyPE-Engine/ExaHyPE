@@ -24,12 +24,12 @@ namespace exahype2 {
     GPUCallableMethod void exahype2::aderdg::clearAll_body_AoS(
       double *   __restrict__ data,
       const int               stride,
-      const int               linearisedIndex) {
+      const int               scalarIndex) {
     GPUCallableMethod void exahype2::aderdg::clearRange_body_AoS(
       double *   __restrict__ data,
       const int               range,
       const int               stride,
-      const int               linearisedIndex) {
+      const int               scalarIndex) {
     //@}
     
     /**

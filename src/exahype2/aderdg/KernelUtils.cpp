@@ -34,26 +34,26 @@ namespace exahype2 {
        const tarch::la::Vector<Dimensions+1,int>& index,
        const tarch::la::Vector<Dimensions+1,int>& strides
     ) {
-      int linearisedIndex = 0;
+      int scalarIndex = 0;
       for ( int d = 0; d < Dimensions+1; d++ ) { // t -> x -> y -> z
-        linearisedIndex += strides[d]*index[d];
+        scalarIndex += strides[d]*index[d];
       }
-      return linearisedIndex;
+      return scalarIndex;
     }
       
     GPUCallableMethod tarch::la::Vector<Dimensions+1,int> delineariseIndex(
-      int linearisedIndex,
+      int scalarIndex,
       const tarch::la::Vector<Dimensions+1,int>& strides) {
       tarch::la::Vector<Dimensions+1,int> index(-1); // valid index component values are non-negative
       int tmp = 0;
       if ( strides[0] > 0 ) {
         for ( int d = Dimensions; d >= 0; d-- ) { // z -> y -> x -> t
-          index[d] = (linearisedIndex - tmp) / strides[d]; 
+          index[d] = (scalarIndex - tmp) / strides[d]; 
           tmp += strides[d]*index[d]; // iz -> iy -> ix -> it
         }
       } else {
         for ( int d = Dimensions; d >= 1; d-- ) { // z -> y -> x
-          index[d] = (linearisedIndex - tmp) / strides[d]; 
+          index[d] = (scalarIndex - tmp) / strides[d]; 
           tmp += strides[d]*index[d]; // iz -> iy -> ix
         }
       }
@@ -93,27 +93,27 @@ namespace exahype2 {
       return coords;
     }
     
-    GPUCallableMethod int mapCellIndexToLinearisedHullIndex(
+    GPUCallableMethod int mapCellIndexToScalarHullIndex(
       const tarch::la::Vector<Dimensions+1,int>& indexCell,
       const int                                 direction,
       const int                                 orientation,
       const int                                 nodesPerAxis
     ) {
       // freeze spatial dimension direction (indexCell[direction+1])
-      int linearisedIndexFace = 0;
+      int scalarIndexFace = 0;
       int stride = 1;
       for ( int e=0; e < Dimensions; e++ ) { // ordering (fastest running left): (y,z), (x,z), (x,y)
         if ( e != direction ) {
-          linearisedIndexFace += stride*indexCell[e+1];
+          scalarIndexFace += stride*indexCell[e+1];
           stride *= nodesPerAxis;
         }
       }
       const int faceOffset = ( direction*2 + orientation ) * stride; // stride = nodesPerAxis^{direction-1}
-      linearisedIndexFace += faceOffset;
-      return linearisedIndexFace;
+      scalarIndexFace += faceOffset;
+      return scalarIndexFace;
     }
     
-    GPUCallableMethod int mapSpaceTimeFaceIndexToLinearisedCellIndex(
+    GPUCallableMethod int mapSpaceTimeFaceIndexToScalarCellIndex(
       const tarch::la::Vector<Dimensions+1,int>& indexFace,
       const int                                 direction,
       const int                                 id,
@@ -137,17 +137,17 @@ namespace exahype2 {
       const double               invDx,
       const int                  nodesPerAxis,
       const int                  strideQ,
-      const int                  linearisedIndex,
+      const int                  scalarIndex,
       double* __restrict__       gradQ) {
       const tarch::la::Vector<Dimensions+1,int> strides = getStrides(nodesPerAxis);
-      const tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(linearisedIndex, strides);
+      const tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(scalarIndex, strides);
       
       for ( int d = 0; d < Dimensions; d++ ) { // x -> y -> z
         for (int a=0; a < nodesPerAxis; a++) { 
           const double coeff = invDx/*[d]*/ * dudx[ a*nodesPerAxis + index[d+1] ];
           for (int var=0; var < strideQ; var++) {
-            //gradQ[ d*Dimensions + var ] += coeff * QIn[ ( linearisedIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
-            gradQ[ d + var*Dimensions ] += coeff * QIn[ ( linearisedIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
+            //gradQ[ d*Dimensions + var ] += coeff * QIn[ ( scalarIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
+            gradQ[ d + var*Dimensions ] += coeff * QIn[ ( scalarIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
           }
         }
       }

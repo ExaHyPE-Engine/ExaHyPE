@@ -25,7 +25,7 @@ namespace exahype2 {
    * @param nodesPerAxis
    * @param unknowns
    * @param strideQ
-   * @param linearisedIndex
+   * @param scalarIndex
    */
   GPUCallableMethod void corrector_addFluxContributions_body_AoS(
       std::function< void(
@@ -48,7 +48,7 @@ namespace exahype2 {
       const int                  nodesPerAxis,
       const int                  unknowns,
       const int                  strideQ,
-      const int                  linearisedIndex);
+      const int                  scalarIndex);
   
   /**
    * @brief Add source contributions to the solution.
@@ -70,7 +70,7 @@ namespace exahype2 {
    * @param nodesPerAxis
    * @param unknowns
    * @param strideQ
-   * @param linearisedIndex
+   * @param scalarIndex
    */
   GPUCallableMethod void corrector_addSourceContribution_body_AoS(
       std::function< void(
@@ -91,7 +91,7 @@ namespace exahype2 {
       const int                                   nodesPerAxis,
       const int                                   unknowns,
       const int                                   strideQ,
-      const int                                   linearisedIndex);
+      const int                                   scalarIndex);
   
   /**
    * @brief Add nonconservative product contributions to the solution.
@@ -115,7 +115,7 @@ namespace exahype2 {
    * @param nodesPerAxis
    * @param unknowns
    * @param strideQ
-   * @param linearisedIndex
+   * @param scalarIndex
    */
   GPUCallableMethod void corrector_addNcpContribution_body_AoS(
       std::function< void(
@@ -139,7 +139,7 @@ namespace exahype2 {
       const int                                   nodesPerAxis,
       const int                                   unknowns,
       const int                                   strideQ,
-      const int                                   linearisedIndex);
+      const int                                   scalarIndex);
    
    /**
     * @brief Add Riemann flux contributions to the solution.
@@ -154,7 +154,7 @@ namespace exahype2 {
     * @param nodesPerAxis
     * @param unknowns
     * @param strideQ
-    * @param linearisedIndex
+    * @param scalarIndex
     */
    GPUCallableMethod void corrector_addRiemannContributions_body_AoS(
       double * __restrict__       UOut,
@@ -166,7 +166,7 @@ namespace exahype2 {
       const int                   nodesPerAxis,
       const int                   unknowns,
       const int                   strideQ,
-      const int                   linearisedIndex);
+      const int                   scalarIndex);
   
   }
 }
