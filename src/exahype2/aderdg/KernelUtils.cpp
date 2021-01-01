@@ -130,6 +130,28 @@ namespace exahype2 {
       indexCell[direction+1] = id;
       return lineariseIndex(indexCell,getStrides(nodesPerAxis));
     }
+
+    GPUCallableMethod void gradient_AoS(
+      const double* __restrict__ QIn,
+      const double* __restrict__ dudx,
+      const double               invDx,
+      const int                  nodesPerAxis,
+      const int                  strideQ,
+      const int                  linearisedIndex,
+      double* __restrict__       gradQ) {
+      const tarch::la::Vector<Dimensions+1,int> strides = getStrides(nodesPerAxis);
+      const tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(linearisedIndex, strides);
+      
+      for ( int d = 0; d < Dimensions; d++ ) { // x -> y -> z
+        for (int a=0; a < nodesPerAxis; a++) { 
+          const double coeff = invDx/*[d]*/ * dudx[ a*nodesPerAxis + index[d+1] ];
+          for (int var=0; var < strideQ; var++) {
+            //gradQ[ d*Dimensions + var ] += coeff * QIn[ ( linearisedIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
+            gradQ[ d + var*Dimensions ] += coeff * QIn[ ( linearisedIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
+          }
+        }
+      }
+    }
     
     GPUCallableMethod size_t alignment() {
       //return 64;

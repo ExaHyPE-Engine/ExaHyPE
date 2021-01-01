@@ -1,4 +1,5 @@
 #include "tarch/la/Vector.h"
+#include <functional>
 
 namespace exahype2 {
   namespace aderdg {
@@ -28,17 +29,19 @@ namespace exahype2 {
    */
   GPUCallableMethod void corrector_addFluxContributions_body_AoS(
       std::function< void(
-        double * __restrict__                       Q,
+        const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         int                                         normal,
+        double * __restrict__                       F
       ) >                        flux,
       double* __restrict__       UOut, 
       const double* __restrict__ QIn,
+      double* __restrict__       FAux, // must be allocated per thread as size is runtime parameter
       const double* __restrict__ nodes,
       const double* __restrict__ weights,
       const double* __restrict__ Kxi,
-      const double               centre,
+      const double               cellCentre,
       const double               dx,
       const double               t,
       const double               dt,
@@ -71,9 +74,10 @@ namespace exahype2 {
    */
   GPUCallableMethod void corrector_addSourceContribution_body_AoS(
       std::function< void(
-        double * __restrict__                       Q,
+        const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
+        double * __restrict__                       S
       ) >                                         algebraicSource,
       double* __restrict__                        UOut,
       double* __restrict__                        SAux,
@@ -115,15 +119,16 @@ namespace exahype2 {
    */
   GPUCallableMethod void corrector_addNcpContribution_body_AoS(
       std::function< void(
-        double * __restrict__                       Q,
+        const double * __restrict__                 Q,
         double                                      gradQ[][Dimensions],
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
+        double * __restrict__                       BgradQ
       ) >                                         nonconservativeProduct,
       double* __restrict__                        UOut,
+      double* __restrict__                        gradQAux,
+      double* __restrict__                        SAux,
       const double* __restrict__                  QIn,
-      const double* __restrict__                  gradQAux,
-      const double* __restrict__                  SAux,
       const double* __restrict__                  nodes,
       const double* __restrict__                  weights,
       const double* __restrict__                  dudx,
@@ -152,14 +157,16 @@ namespace exahype2 {
     * @param linearisedIndex
     */
    GPUCallableMethod void corrector_addRiemannContributions_body_AoS(
-       double * __restrict__       UOut,
-       const double * __restrict__ riemannResultIn,
-       const double * __restrict__ weights,
-       const double * __restrict__ FCoeff[2],
-       const double                invDx,
-       const int                   nodesPerAxis,
-       const int                   unknowns,
-       const int                   strideQ,
-       const int                   linearisedIndex):
+      double * __restrict__       UOut,
+      const double * __restrict__ riemannResultIn,
+      const double * __restrict__ weights,
+      const double * __restrict__ FCoeff[2],
+      const double                invDx,
+      const double                dt,
+      const int                   nodesPerAxis,
+      const int                   unknowns,
+      const int                   strideQ,
+      const int                   linearisedIndex);
+  
   }
 }

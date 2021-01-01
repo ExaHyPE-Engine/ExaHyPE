@@ -10,12 +10,12 @@ SOURCES = $(shell find . -name "*AoS.cpp")
 SOURCES += KernelUtils.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
-$(OBJECTS): %.o: %.cpp
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
-
 compile: $(OBJECTS)
 	@echo "building"
 	@echo $(SOURCES)
+
+$(OBJECTS): %.o: %.cpp
+	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
 	rm -f $(OBJECTS)

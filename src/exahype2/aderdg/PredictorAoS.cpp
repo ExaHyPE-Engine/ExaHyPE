@@ -128,30 +128,6 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addSource
   }
 }
 
-GPUCallableMethod void exahype2::aderdg::gradient_AoS(
-  const double* __restrict__ QIn,
-  const double* __restrict__ dudx,
-  const double               invDx,
-  const int                  nodesPerAxis,
-  const int                  unknowns,
-  const int                  strideQ,
-  const int                  strideGradQ,
-  const int                  linearisedIndex,
-  double* __restrict__       gradQAux) {
-  const tarch::la::Vector<Dimensions+1,int> strides = getStrides(nodesPerAxis);
-  const tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(linearisedIndex, strides);
-  
-  for ( int d = 0; d < Dimensions; d++ ) { // x -> y -> z
-    for (int a=0; a < nodesPerAxis; a++) { 
-      const coeff = invDx/*[d]*/ * dudx[ a ][ index[d+1] ];
-      for (int var=0; var < unknowns; var++) {
-        //gradQ[ d*Dimensions+var ] += coeff * QIn[ ( linearisedIndex + (a-index[d+1])*strides[d+1] )*stridesQ + var ]; 
-        gradQ[ d + var*Dimensions ] += coeff * QIn[ ( linearisedIndex + (a-index[d+1])*strides[d+1] )*stridesQ + var ]; 
-      }
-    }
-  }
-}
-
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
   std::function< void(
     double * __restrict__                       Q,

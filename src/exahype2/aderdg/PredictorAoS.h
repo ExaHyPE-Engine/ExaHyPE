@@ -138,55 +138,6 @@ namespace exahype2 {
         const int                                  linearisedIndex);
     
     /**
-     * @brief Computes the gradient at a given (space-time) quadrature point.
-     *
-     * Computes
-     *
-     * u(x,y,z) = sum_ijk u_j phi_i(x) phi_j(y) phi_k(z)
-     *
-     * => (d/dx u) (x,y,z) = sum_ijk u_ijk (d/dx phi_i)(x) phi_j(y) phi_k(z)
-     *    (d/dy u) (x,y,z) = sum_ijk u_ijk phi_i(x) (d/dy phi_j)(y) phi_k(z)
-     *    (d/dz u) (x,y,z) = sum_ijk u_ijk phi_i(x) phi_k(y) (d/dz phi_k)(z) 
-     *
-     * Lagrange basis property simplifies this to:
-     * 
-     * => (d/dx u) (x_a,y_i,z_k) = sum_a u_ijk (d/dx phi_i)(x_a)
-     *    (d/dy u) (x_i,y_a,z_k) = sum_a u_ijk (d/dy phi_j)(y_a)
-     *    (d/dz u) (x_i,y_j,z_a) = sum_a u_ijk (d/dz phi_k)(z_a) 
-     *
-     * For elements that do not equal the unit cube, we write:
-     * 
-     * => (d/dx u) (x_a,y_i,z_k) = sum_a u_ajk 1/lx * (d/dx phi_i)(x_a)
-     *    (d/dy u) (x_i,y_a,z_k) = sum_a u_iak 1/ly * (d/dy phi_j)(y_a)
-     *    (d/dz u) (x_i,y_j,z_a) = sum_a u_ija 1/lz * (d/dz phi_k)(z_a)
-     * 
-     * where lx,ly,lz are the lengths of the element.
-     *
-     * @note Assumes degrees of freedom are stored in order (iz,iy,ix,it)
-     * @note This function assumes that the gradient zeroed out
-     *
-     * @param[in] QIn
-     * @param[in] dudx
-     * @param[in] invDx
-     * @param[in] nodesPerAxis
-     * @param[in] unknowns
-     * @param[in] strideQ
-     * @param[in] strideGradQ
-     * @param[in] linearisedIndex
-     * @param[in] gradQAux
-     */
-    GPUCallableMethod void gradient_AoS(
-      const double* __restrict__ QIn,
-      const double* __restrict__ dudx,
-      const double               invDx,
-      const int                  nodesPerAxis,
-      const int                  unknowns,
-      const int                  strideQ,
-      const int                  strideGradQ,
-      const int                  linearisedIndex,
-      double* __restrict__       gradQAux);
-    
-    /**
      * 
      */
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
