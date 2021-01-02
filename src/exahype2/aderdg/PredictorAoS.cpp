@@ -143,20 +143,20 @@ namespace exahype2 {
           double                                      t,
           double * __restrict__                       S
         ) >   algebraicSource,
-        double* __restrict__                       rhsOut,
-        double* __restrict__                       SAux,
-        const double* __restrict__                 QIn,
-        const double* __restrict__                 nodes,
-        const double* __restrict__                 weights,
-        const tarch::la::Vector<Dimensions,double> cellCentre,
-        const double                               dx,
-        const double                               t,
-        const double                               dt,
-        const int                                  nodesPerAxis,
-        const int                                  unknowns,
-        const int                                  strideQ,
-        const int                                  strideRhs,
-        const int                                  scalarIndex) {
+        double* __restrict__                        rhsOut,
+        double* __restrict__                        SAux,
+        const double* __restrict__                  QIn,
+        const double* __restrict__                  nodes,
+        const double* __restrict__                  weights,
+        const tarch::la::Vector<Dimensions,double>& cellCentre,
+        const double                                dx,
+        const double                                t,
+        const double                                dt,
+        const int                                   nodesPerAxis,
+        const int                                   unknowns,
+        const int                                   strideQ,
+        const int                                   strideRhs,
+        const int                                   scalarIndex) {
       const tarch::la::Vector<Dimensions+1,int>     index  = delineariseIndex(scalarIndex, getStrides(nodesPerAxis));
       const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
       const tarch::la::Vector<Dimensions, double> x( ( coords.data() + 1 ) );
@@ -348,7 +348,26 @@ namespace exahype2 {
        }
     }
     
-    __global__ void spaceTimePredictor_PicardLoop_assembleRhs_krnl_AoS() {
+    __global__ void spaceTimePredictor_PicardLoop_assembleRhs_krnl_AoS(
+      double * __restrict__                       rhsOut, 
+      double * __restrict__                       SAux,
+      double * __restrict__                       gradQAux,
+      double * __restrict__                       FAux, 
+      const double * __restrict__                 QIn, 
+      const double * __restrict__                 weights,
+      const double * __restrict__                 nodes,
+      const double * __restrict__                 Kxi,
+      const double * __restrict__                 FLCoeff,
+      const double * __restrict__                 dudx, 
+      const double                                dx,
+      const tarch::la::Vector<Dimensions,double>& cellCentre,
+      const double                                t,
+      const double                                dt,
+      const int                                   nodesPerAxis,
+      const int                                   unknowns,
+      const int                                   strideQ,
+      const int                                   strideRhs,
+      const int                                   scalarIndex) {
        const int spaceTimeNodesPerCell = getSpaceTimeNodesPerCell(nodesPerAxis);
        const int scalarIndexCell       = threadIdx.x + blockDim.x * blockIdx.x;
        
