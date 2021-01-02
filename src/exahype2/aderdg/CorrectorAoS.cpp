@@ -8,6 +8,9 @@
 namespace exahype2 { 
   namespace aderdg {
 
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void corrector_addFluxContributions_body_AoS(
         std::function< void(
           const double * __restrict__                 Q,
@@ -57,19 +60,25 @@ namespace exahype2 {
         }
       }
     }
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
-    GPUCallableMethod void corrector_addSourceContribution_body_AoS(
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
+    GPUCallableMethod void corrector_addSourceContributions_body_AoS(
         std::function< void(
           const double * __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
           double * __restrict__                       S
         ) >                                         algebraicSource,
-        double* __restrict__                        UOut,
-        double* __restrict__                        SAux,
-        const double* __restrict__                  QIn,
-        const double* __restrict__                  nodes,
-        const double* __restrict__                  weights,
+        double * __restrict__                       UOut,
+        double * __restrict__                       SAux,
+        const double * __restrict__                 QIn,
+        const double * __restrict__                 nodes,
+        const double * __restrict__                 weights,
         const tarch::la::Vector<Dimensions,double>& cellCentre,
         const double                                dx,
         const double                                t,
@@ -95,8 +104,14 @@ namespace exahype2 {
         }
       }
     }
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
-    GPUCallableMethod void corrector_addNcpContribution_body_AoS(
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
+    GPUCallableMethod void corrector_addNcpContributions_body_AoS(
         std::function< void(
           const double * __restrict__                 Q,
           double                                      gradQ[][Dimensions],
@@ -104,13 +119,13 @@ namespace exahype2 {
           double                                      t,
           double * __restrict__                       BgradQ
         ) >                                         nonconservativeProduct,
-        double* __restrict__                        UOut,
-        double* __restrict__                        gradQAux,
-        double* __restrict__                        SAux,
-        const double* __restrict__                  QIn,
-        const double* __restrict__                  nodes,
-        const double* __restrict__                  weights,
-        const double* __restrict__                  dudx,
+        double * __restrict__                       UOut,
+        double * __restrict__                       gradQAux,
+        double * __restrict__                       SAux,
+        const double * __restrict__                 QIn,
+        const double * __restrict__                 nodes,
+        const double * __restrict__                 weights,
+        const double * __restrict__                 dudx,
         const tarch::la::Vector<Dimensions,double>& cellCentre,
         const double                                dx,
         const double                                t,
@@ -140,7 +155,13 @@ namespace exahype2 {
         }
       }
     }
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void corrector_addRiemannContributions_body_AoS(
       double * __restrict__       UOut,
       const double * __restrict__ riemannResultIn,
@@ -165,8 +186,11 @@ namespace exahype2 {
             }
           }
         }
-      } 
+      }
     }
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
 
   }
 }

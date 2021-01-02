@@ -1,5 +1,8 @@
-#include "Generic.h"
+//#include "Generic.h"
+
 #include "tarch/la/Vector.h"
+
+#include <functional>
 
 namespace exahype2 {
   namespace aderdg {
@@ -16,18 +19,19 @@ namespace exahype2 {
      * @param[in] UIn
      * @param[in] nodesPerAxis
      * @param[in] unknowns
-     * @param[in] auxiliaryVariables
      */
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void spaceTimePredictor_initialGuess_body_AoS(
       double*       __restrict__ Qout,
       const double* __restrict__ UIn,
       const int                  nodesPerAxis,
       const int                  strideQ,
       const int                  scalarIndex);
-      for (int var = 0; var < strideQ; var++) {
-        Qout[ scalarIndex*strideQ + var ] = UIn[ ( scalarIndex / nodesPerAxis )*strideQ + var ];
-      }
-    }
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     /**
      * \brief Initialise RHS of Picard iterations.
@@ -43,13 +47,20 @@ namespace exahype2 {
      * @param nodesPerAxis
      * @param strideQ
      */
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
-      double* __restrict__       rhsOut,
-      const double* __restrict__ UIn,
-      const double* __restrict__ FLCoeff,
+      double * __restrict__       rhsOut,
+      const double * __restrict__ UIn,
+      const double * __restrict__ FLCoeff,
       const int                  nodesPerAxis,
       const int                  strideQ,
+      const int                  strideRhs,
       const int                  scalarIndex);
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     /**
      * \brief Add flux contributions to RHS during STP Picard loop.
@@ -73,27 +84,35 @@ namespace exahype2 {
      * @param[in] strideRhs
      * @param[in] scalarIndex
     */
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
         std::function< void(
-          double * __restrict__                       Q,
+          const double * __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
           int                                         normal,
+          double * __restrict__                       F
         ) >   flux,
         double* __restrict__                          rhsOut, 
         double* __restrict__                          FAux, 
+        const double* __restrict__                    QIn, 
         const double* __restrict__                    nodes,
         const double* __restrict__                    weights,
         const double* __restrict__                    Kxi,
+        const tarch::la::Vector<Dimensions,double>&   cellCentre,
+        const double                                  dx,
         const double                                  t,
         const double                                  dt,
-        const tarch::la::Vector<Dimensions+1,double>& centre,
-        const double                                  invDx,
         const int                                     nodesPerAxis,
         const int                                     unknowns,
         const int                                     strideQ,
         const int                                     strideRhs,
         const int                                     scalarIndex);
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     /**
      * \brief Add source contributions to RHS during STP Picard loop.
@@ -116,11 +135,15 @@ namespace exahype2 {
      * @param[in] strideRhs
      * @param[in] scalarIndex
      */
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
         std::function< void(
-          double * __restrict__                       Q,
+          const double * __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
+          double * __restrict__                       S
         ) >   algebraicSource,
         double* __restrict__                       rhsOut,
         double* __restrict__                       SAux,
@@ -136,32 +159,43 @@ namespace exahype2 {
         const int                                  strideQ,
         const int                                  strideRhs,
         const int                                  scalarIndex);
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     /**
      * 
      */
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
       std::function< void(
-        double * __restrict__                       Q,
+        const double * __restrict__                 Q,
         double                                      gradQ[][Dimensions],
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
+        double * __restrict__                       BgradQ
       ) >                                         nonconservativeProduct,
-      double* __restrict__                        rhsOut,
-      double* __restrict__                        gradQAux,
-      double* __restrict__                        SAux,
-      const double* __restrict__                  QIn,
-      const double* __restrict__                  nodes,
-      const double* __restrict__                  weights,
+      double * __restrict__                       rhsOut,
+      double * __restrict__                       gradQAux,
+      double * __restrict__                       SAux,
+      const double * __restrict__                 QIn,
+      const double * __restrict__                 nodes,
+      const double * __restrict__                 weights,
+      const double * __restrict__                 dudx, 
       const tarch::la::Vector<Dimensions,double>& cellCentre,
       const double                                dx,
       const double                                t,
       const double                                dt,
       const int                                   nodesPerAxis,
       const int                                   unknowns,
-      const int                                   strideRhs,
       const int                                   strideQ,
+      const int                                   strideRhs,
       const int                                   scalarIndex);
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     /**
      * Invert the Picard space-time system to compute the next solution.  
@@ -178,6 +212,9 @@ namespace exahype2 {
      * @param unknowns
      * @param strideQ
      */
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_invert_body_AoS(
       double * __restrict__       QOut,
       double&                     squaredResiduumOut,
@@ -185,7 +222,12 @@ namespace exahype2 {
       const double * __restrict__ iK1,
       const int                   nodesPerAxis,
       const int                   unknowns,
-      const int                   strideQ);
+      const int                   strideQ,
+      const int                   strideRhs,
+      const int                   scalarIndex);
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     //@}
 
@@ -203,6 +245,9 @@ namespace exahype2 {
      * @param strideQ
      * @param scalarIndexHull
      */
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
       double * __restrict__       QHullOut,
       const double * __restrict__ QIn,
@@ -212,6 +257,9 @@ namespace exahype2 {
       const int                   unknowns,
       const int                   strideQ,
       const int                   scalarIndexHull);
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
 
   } // aderdg
 } // exahype2
