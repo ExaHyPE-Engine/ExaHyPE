@@ -25,6 +25,9 @@ namespace exahype2 {
      * @param direction
      * @param scalarIndexFace
      */
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void rusanovNonlinear_maxEigenvalue_body_AoS(
         std::function< double(
           double * __restrict__                        Q,
@@ -44,11 +47,17 @@ namespace exahype2 {
         const int                                   strideF,
         const int                                   direction,
         const int                                   scalarIndexFace);
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     /** 
      * compute fluxes (and fluctuations for non-conservative PDEs)
      * @note Zero out FLOut/FROut arrays before.
      */
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void rusanovNonlinear_riemannFlux_body_AoS(
         std::function< void(
           double * __restrict__                        Q,
@@ -76,12 +85,18 @@ namespace exahype2 {
         const int                                   strideF,
         const int                                   direction,
         const int                                   scalarIndexFace);
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
-    /** 
-     * compute fluxes (and fluctuations for non-conservative PDEs)
-     * @note Zero out gradient and FLOut, FROut or call flux function before.
-     * @todo also offer an option with a only the flux
-     */
+     /** 
+      * compute fluxes (and fluctuations for non-conservative PDEs)
+      * @note Zero out gradient and FLOut, FROut or call flux function before.
+      * @todo also offer an option with a only the flux
+      */
+     #if defined(GPUOffloading)
+     #pragma omp declare target
+     #endif
      GPUCallableMethod void rusanovNonlinear_addNcpContributionsToRiemannFlux_body_AoS(
         std::function< void(
           double * __restrict__                       Q,
@@ -111,6 +126,9 @@ namespace exahype2 {
         const int                                   strideF,
         const int                                   direction,
         const int                                   scalarIndexFace);
+     #if defined(GPUOffloading)
+     #pragma omp end declare target
+     #endif
 
   }
 }

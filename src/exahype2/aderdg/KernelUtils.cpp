@@ -3,18 +3,27 @@
 namespace exahype2 {
   namespace aderdg {
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod int getNodesPerCell(int nodesPerAxis) {
       int nodesPerCell = 1;
       for ( int d = 0; d < Dimensions; d++ ) { nodesPerCell *= nodesPerAxis; }
       return nodesPerCell;
     }
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod int getSpaceTimeNodesPerCell(int nodesPerAxis) {
       int nodesPerCell = 1;
       for ( int d = 0; d < Dimensions+1; d++ ) { nodesPerCell *= nodesPerAxis; }
       return nodesPerCell;
     }
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod tarch::la::Vector<Dimensions+1,int> getStrides(
        int nodesPerAxis,
        bool strides4SpaceTimeQuantity) {
@@ -30,6 +39,9 @@ namespace exahype2 {
       return strides;
     }
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod int lineariseIndex(
        const tarch::la::Vector<Dimensions+1,int>& index,
        const tarch::la::Vector<Dimensions+1,int>& strides
@@ -41,6 +53,9 @@ namespace exahype2 {
       return scalarIndex;
     }
       
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod tarch::la::Vector<Dimensions+1,int> delineariseIndex(
       int scalarIndex,
       const tarch::la::Vector<Dimensions+1,int>& strides) {
@@ -60,6 +75,9 @@ namespace exahype2 {
       return index;
     }
       
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinates(
       const tarch::la::Vector<Dimensions+1,int>& index,
       const tarch::la::Vector<Dimensions,double>& centre,
@@ -79,6 +97,9 @@ namespace exahype2 {
       return coords;
     }
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinatesOnFace(
       const tarch::la::Vector<Dimensions+1,int>& indexOnFace,
       const tarch::la::Vector<Dimensions,double>& faceCentre,
@@ -93,6 +114,9 @@ namespace exahype2 {
       return coords;
     }
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod int mapCellIndexToScalarHullIndex(
       const tarch::la::Vector<Dimensions+1,int>& indexCell,
       const int                                 direction,
@@ -113,6 +137,9 @@ namespace exahype2 {
       return scalarIndexFace;
     }
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod int mapSpaceTimeFaceIndexToScalarCellIndex(
       const tarch::la::Vector<Dimensions+1,int>& indexFace,
       const int                                 direction,
@@ -131,6 +158,9 @@ namespace exahype2 {
       return lineariseIndex(indexCell,getStrides(nodesPerAxis));
     }
 
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void gradient_AoS(
       const double* __restrict__ QIn,
       const double* __restrict__ dudx,
@@ -153,11 +183,17 @@ namespace exahype2 {
       }
     }
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod size_t alignment() {
       //return 64;
       return -1;
     }
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod size_t paddedSize(size_t numElements, size_t sizeofType) {
       //int align = alignment() / sizeofType; // 8 elements per cache line for double 
       //return ( ( numElements + align - 1 ) / align ) * align;  // @todo: padding

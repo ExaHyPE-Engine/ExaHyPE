@@ -5,6 +5,9 @@
 namespace exahype2 {
   namespace aderdg {
 
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void rusanovNonlinear_maxEigenvalue_body_AoS(
         std::function< double(
           const double * __restrict__                 Q,
@@ -37,7 +40,13 @@ namespace exahype2 {
       // hyperbolic eigenvalues
       smax = std::max( smax, maxAbsoluteEigenvalue( &QLR[lr][ scalarIndexFace*strideQ ], x, time, direction ) );
     }
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void rusanovNonlinear_riemannFlux_body_AoS(
         std::function< void(
           const double * __restrict__                 Q,
@@ -83,16 +92,24 @@ namespace exahype2 {
         for (int var = 0; var < unknowns; var++) {
           FLOut[ scalarIndexFace*strideF + var ] += coeff1 * (FRAux[ var ] + FLAux[ var ]);
         }
+        
         for (int var = 0; var < unknowns; var++) {
           FLOut[ scalarIndexFace*strideF + var ] -= coeff2 * (QRIn[ offsetQ + var ] - QLIn[ offsetQ + var ]);
         }
       }
+      
       // copy FLOut to FROut
       for (int var = 0; var < unknowns; var++) {
         FROut[ scalarIndexFace*strideF + var ] = FLOut[ scalarIndexFace*strideF + var ]; 
       }
     }
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     
+    #if defined(GPUOffloading)
+    #pragma omp declare target
+    #endif
     GPUCallableMethod void rusanovNonlinear_addNcpContributionsToRiemannFlux_body_AoS(
         std::function< void(
           double * __restrict__                       Q,
@@ -136,9 +153,11 @@ namespace exahype2 {
           gradQAux[ Dimensions*var + direction ] = QRIn[ offsetQ + var ] - QLIn[ offsetQ + var ];
         }
         
+        
         for (int var=0; var < strideQ; var++) {
           QAvgAux[var] = 0.5 * (QRIn[ offsetQ + var ] + QLIn[ offsetQ + var ]);
         }
+        
           
         nonconservativeProduct(QAvgAux, (double (*)[Dimensions]) gradQAux, x, time, direction, SAux);
     
@@ -146,11 +165,14 @@ namespace exahype2 {
         for (int var = 0; var < unknowns; var++) {
           FROut[ scalarIndexFace*strideF + var ] -= coeff * SAux[var];
         }
+        
         for (int var = 0; var < unknowns; var++) {
           FLOut[ scalarIndexFace*strideF + var ] += coeff * SAux[var];
         }
       }
     }
-
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
   }
 }
