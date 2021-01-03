@@ -43,9 +43,10 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
 double examples::exahype2::euler::ADERDGEuler::maxEigenvalue(
   double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t
+  double                                       t,
+  int                                          normal
 )  {
-  logTraceInWith2Arguments( "maxEigenvalue(...)", x, t );
+  logTraceInWith3Arguments( "maxEigenvalue(...)", x, t, normal );
 
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -55,22 +56,18 @@ double examples::exahype2::euler::ADERDGEuler::maxEigenvalue(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  // Three different directions
-  const double u_n1 = Q[0 + 1] * irho;
-  const double u_n2 = Q[1 + 1] * irho;
-  const double u_n3 = Q[2 + 1] * irho;
+  const double u_n = Q[normal + 1] * irho;
   const double c   = std::sqrt(gamma * p * irho);
 
-  double result = std::max( 
-//    #if Dimensions==3
-//    std::abs(u_n3-c),
-//    std::abs(u_n3+c)
-//    #endif
-//    std::abs(u_n2-c),
-//    std::abs(u_n2+c)
-    std::abs(u_n1-c),
-    std::abs(u_n1+c)
-  );
+  double lambda[5];
+
+  lambda[0]  = u_n - c;
+  lambda[1]  = u_n;
+  lambda[2]  = u_n;
+  lambda[3]  = u_n;
+  lambda[4]  = u_n + c;
+
+  double result = std::max( std::abs(lambda[0]), std::abs(lambda[4]) );
 
   logTraceOutWith1Argument( "maxEigenvalue(...)", result );
   return result;
@@ -83,10 +80,11 @@ void examples::exahype2::euler::ADERDGEuler::flux(
   double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
+  int                                          normal,
   double * __restrict__ F // F[5]
 )  {
-  logTraceInWith2Arguments( "flux(...)", x, t );
-/*
+  logTraceInWith3Arguments( "flux(...)", x, t, normal );
+
   assertion4( normal>=0, faceCentre, volumeH, t, normal );
   assertion4( normal<Dimensions, faceCentre, volumeH, t, normal);
   nonCriticalAssertion9( Q[0]==Q[0], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
@@ -140,7 +138,7 @@ void examples::exahype2::euler::ADERDGEuler::flux(
   nonCriticalAssertion( F[2]==F[2] );
   nonCriticalAssertion( F[3]==F[3] );
   nonCriticalAssertion( F[4]==F[4] );
-  */
+
   logTraceOut( "flux(...)" );
 }
 
