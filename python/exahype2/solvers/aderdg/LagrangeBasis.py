@@ -20,15 +20,15 @@ class LagrangeBasis():
     # quadrature_points, quadrature_weights
     self.__quadrature_points, self.__quadrature_weights = self._compute_quadrature_points_and_weights(num_points)
     # operators
-    self.__mass_matrix                 = self.__compute_mass_matrix()
-    self.__stiffness_matrix            = self.__compute_stiffness_matrix()
-    self.__K1                          = self.__compute_K1()
-    self.__inv_K1                      = mp.inverse(self.__K1).tolist()
-    self.__basis_function_values_left  = self.__evaluate(mp.mpf(0.0))
-    self.__basis_function_values_right = self.__evaluate(mp.mpf(1.0))
-    self.__dudx                        = self.__compute_discrete_derivative_operator()
-    self.__equidistant_grid_projector  = self.__compute_equidistant_grid_projector()
-    self.__fine_grid_projector         = [None]*3
+    self.__mass_matrix                   = self.__compute_mass_matrix()
+    self.__stiffness_matrix              = self.__compute_stiffness_matrix()
+    self.__K1                            = self.__compute_K1()
+    self.__inv_K1                        = mp.inverse(self.__K1).tolist()
+    self.__basis_function_values_left,_  = self.__evaluate(mp.mpf(0.0))
+    self.__basis_function_values_right,_ = self.__evaluate(mp.mpf(1.0))
+    self.__dudx                          = self.__compute_discrete_derivative_operator()
+    self.__equidistant_grid_projector    = self.__compute_equidistant_grid_projector()
+    self.__fine_grid_projector           = [None]*3
     for j in range(0,3):
       self.__fine_grid_projector[j] = self.__compute_fine_grid_projector(j)
   def __str__(self):
