@@ -241,6 +241,17 @@ and
      const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
      const std::string ConsumerTaskCountStatisticsIdentifier( "tarch::multicore::consumer-tasks");
      const std::string TasksPerConsumerRunStatisticsIdentifier( "tarch::multicore::tasks-per-consumer-run");
+     
+     enum class MemoryLocation {
+       Heap,
+       Accelerator
+     };
+     double* allocateMemory(int size, MemoryLocation location = MemoryLocation::Accelerator);
+     void freeMemory(double* data, MemoryLocation location);
+ 
+     #if !defined(UseAMD)
+     #define GPUCallableMethod
+     #endif
   }
 }
 

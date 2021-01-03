@@ -19,6 +19,7 @@
 #include <cuda.h>
 #endif
 
+// @todo I guess this has to be removed
 #if defined(UseAMD)
 #include "hip/hip_runtime.h"
 #include "hip/hip_runtime_api.h"
