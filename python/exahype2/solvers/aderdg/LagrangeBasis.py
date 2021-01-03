@@ -366,15 +366,15 @@ class LagrangeBasis():
       var_key  = "_LagrangeBasis__" + var # prefix for privat variables of class LagrangeBasis
       var_name = snake_to_camel(var) # C++ name
       if var in ["quadrature_points","quadrature_weights","basis_function_values_left","basis_function_values_right"]:
-          basisDeclarations += "const double {var_name}[{{order}}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))
       elif var in ["fine_grid_projector"]:
-          basisDeclarations += "const double {var_name}[3][{{order}}+1][{{order+1}}];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_3(getattr(self,var_key))))
       else:
-          basisDeclarations += "const double {var_name}[{{order}}+1][{{order+1}}];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key))))
     

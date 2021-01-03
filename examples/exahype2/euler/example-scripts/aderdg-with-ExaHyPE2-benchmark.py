@@ -23,7 +23,7 @@ print( """
 Please call this script from the directory hosting the Makefile and the
 sources. Typically, I invoke the script via
 
-python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
+python3 example-scripts/aderdg-with-ExaHyPE2-benchmark.py arguments
 """)
 
 
@@ -63,13 +63,13 @@ print("Executable: {}".format(args.out))
 # Create a project and configure it to end up in a subnamespace (and thus
 # subdirectory). 
 #
-project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", executable=args.out )
+project = exahype2.Project( ["examples", "exahype2", "euler"], "aderdg", ".", executable=args.out )
 
 
 #
 # Add the Finite Volumes solver
 #
-patch_size     = 17
+order          = 7
 unknowns       = 5
 time_step_size = 0.000001
 min_h          = args.h
@@ -85,6 +85,7 @@ max_h          = args.h
 thesolver = None
 if args.GPU:
   print("Turning on OpenMP for GPUs")
+  raise Exception( "not yet supported" )
   thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator(
     "EulerOnGPU",
     patch_size,
@@ -95,15 +96,13 @@ if args.GPU:
   )
 
 else:
-  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
-    "Euler",
-    patch_size,
-    unknowns, 0,
-    min_h, max_h,
-    time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  print( "Have to introduce enclaves again" )
+  thesolver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
+    "ADERDGEuler", order, unknowns, 0, #auxiliary_variables
+    exahype2.solvers.aderdg.Polynomials.Gauss_Legendre, 
+    min_h, max_h, time_step_size
   )
-
+  thesolver.set_plot_description( "0: Density, (1,2,3): Velocities, 4: Energy")
 
 project.add_solver( thesolver )
 
