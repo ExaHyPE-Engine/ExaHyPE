@@ -24,18 +24,21 @@ namespace exahype2 {
     #if defined(GPUOffloading)
     #pragma omp declare target
     #endif
-    GPUCallableMethod void exahype2::aderdg::clearAll_body_AoS(
+    GPUCallableMethod void clearAll_body_AoS(
       double *   __restrict__ data,
       const int               stride,
-      const int               scalarIndex) {
-    #if defined(GPUOffloading)
-    #pragma omp declare target
-    #endif
-    GPUCallableMethod void exahype2::aderdg::clearRange_body_AoS(
+      const int               scalarIndex
+	);
+    
+    GPUCallableMethod void clearRange_body_AoS(
       double *   __restrict__ data,
       const int               range,
       const int               stride,
-      const int               scalarIndex) {
+      const int               scalarIndex
+	);
+    #if defined(GPUOffloading)
+    #pragma omp end declare target
+    #endif
     //@}
     
     /**
