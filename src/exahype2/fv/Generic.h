@@ -71,6 +71,9 @@ namespace exahype2 {
      * background is given in its ExaHyPE chapter, but the really interesting
      * details are discussed within the Finite Volume chapter.
      */
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
     void applySplit1DRiemannToPatch_Overlap1AoS2d(
       std::function< void(
         double * __restrict__ QL,
@@ -93,6 +96,9 @@ namespace exahype2 {
       double * __restrict__ Qin,
       double * __restrict__ Qout
     );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
 
 
     void applySplit1DRiemannToPatch_Overlap1AoS3d(
