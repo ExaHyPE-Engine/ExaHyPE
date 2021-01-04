@@ -71,17 +71,8 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
 
   std::copy_n( storedData.second, storedData.first, destination );
 
-  ::exahype2::fv::validatePatch(
-		  destination,
-    64,
-    0,
-    6,
-    0,
-    std::string(__FILE__) + ": " + std::to_string(__LINE__)
-  ); // previous time step has to be valid
-
-  tarch::multicore::freeMemory( storedData.second, tarch::multicore::MemoryLocation::Heap );
-  logInfo( "waitForTaskToTerminateAndCopyResultOver()", "delivered outcome of task " << number << " (" << storedData.first << " entries copied over)");
+  tarch::freeMemory( storedData.second, tarch::MemoryLocation::Heap );
+  logDebug( "waitForTaskToTerminateAndCopyResultOver()", "delivered outcome of task " << number << " (" << storedData.first << " entries copied over)");
 }
 
 

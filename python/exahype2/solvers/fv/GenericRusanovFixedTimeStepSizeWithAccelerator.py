@@ -1,6 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from .FV                       import FV
+from .FV                       import *
  
 from .PDETerms import PDETerms
 
@@ -11,219 +11,67 @@ import jinja2
 
 from .GenericRusanovFixedTimeStepSizeWithEnclaves import GenericRusanovFixedTimeStepSizeWithEnclaves 
 
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
-class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeStepSizeWithEnclaves ):
+
+class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = """
-  if (marker.isSkeletonCell()) {
-    // @todo Holger: Das bleibt auf der CPU. Also eigentlich kein Grund, es zu 
-    //  aendern. Wenn Du allerdings den GPU Task generierst, kannste das in der
-    //  Theorie auch generien. Wie gesagt - glaube das braucht es nicht.
-    {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
-      [&](
-        double                                       QL[],
-        double                                       QR[],
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       FL[],
-        double                                       FR[]
-      ) -> void {
-        ::exahype2::fv::splitRusanov1d(
-          {{RUSANOV_ON_FACE}},
-          {{EIGENVALUES}},
-          QL, QR, x, dx, t, dt, normal,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR
-        );
-      },
-      marker.x(),
-      marker.h(),
-      {{TIME_STAMP}},
-      {{TIME_STEP_SIZE}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    ::exahype2::fv::validatePatch(
+      reconstructedPatch,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      reconstructedPatch,
-      originalPatch
-    );
-    
-    ::tarch::multicore::freeMemory(reconstructedPatch, ::tarch::multicore::MemoryLocation::Accelerator);
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      1, // halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    ); // previous time step has to be valid
+  
+  if (marker.isSkeletonCell()) {
+    tasks::{{GPU_ENCLAVE_TASK_NAME}}::runComputeKernelsOnSkeletonCell( reconstructedPatch, marker, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
   }
   else { // is an enclave cell
-    const int gpuTaskId = tarch::multicore::reserveTaskNumber();
-    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( gpuTaskId );
-     
-    // @todo Holger: The two functions have to go to the GPU - later as indepenent tasks 
-    
-    #if Dimensions==2
-    const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #elif Dimensions==3
-    const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #endif
-    double* destinationPatchOnGPU = ::tarch::multicore::allocateMemory(destinationPatchSize, ::tarch::multicore::MemoryLocation::Accelerator);
-
-    const double timeStamp = {{SOLVER_INSTANCE}}.getMinTimeStamp();
-    
-    //#if defined(GPUOffloading)
-    #pragma omp target map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
-    {
-    //#endif
-    ::exahype2::fv::copyPatch(
-      reconstructedPatch,
-      destinationPatchOnGPU,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1 // halo size
+    tasks::{{GPU_ENCLAVE_TASK_NAME}}* newEnclaveTask = new tasks::{{GPU_ENCLAVE_TASK_NAME}}(
+      marker,
+      reconstructedPatch
     );
-}
-    
-    {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
-      [&](
-          double                                       QL[],
-          double                                       QR[],
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       dx,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double                                       FL[],
-          double                                       FR[]
-        ) -> void {
-          ::exahype2::fv::splitRusanov1d(
-            {{RUSANOV_ON_FACE}},
-            {{EIGENVALUES}},
-            QL, QR, x, dx, t, dt, normal,
-            {{NUMBER_OF_UNKNOWNS}},
-            {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            FL,FR
-          );
-        },
-        marker.x(),
-        marker.h(),
-        timeStamp,
-        {{TIME_STEP_SIZE}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        reconstructedPatch,
-        destinationPatchOnGPU
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+    peano4::parallel::Tasks spawn( 
+      newEnclaveTask,
+      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
+      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithAccelerator" )
     );
-//    #if defined(GPUOffloading)
-//    }
-//    #endif
-    
-    
-    // get stuff explicitly back from GPU, as it will be stored
-    // locally for a while
-    double* destinationPatchOnCPU = ::tarch::multicore::allocateMemory(destinationPatchSize, ::tarch::multicore::MemoryLocation::Heap);
-    std::copy_n(destinationPatchOnGPU,destinationPatchSize,destinationPatchOnCPU);
-    ::tarch::multicore::freeMemory(reconstructedPatch,    ::tarch::multicore::MemoryLocation::Accelerator);
-    ::tarch::multicore::freeMemory(destinationPatchOnGPU, ::tarch::multicore::MemoryLocation::Accelerator);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(gpuTaskId,destinationPatchSize,destinationPatchOnCPU);
   }
   """      
-
-
-  RusanovCallWithFlux = """
-          [] (
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       F[]
-          ) -> void {
-            {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F );
-          }
-"""
-
-
-  """
   
-    Flux is empty here.
-    
-  """
-  RusanovCallWithNCP = """
-          [] (
-           double * __restrict__ Q,
-           const tarch::la::Vector<Dimensions,double>&  faceCentre,
-           const tarch::la::Vector<Dimensions,double>&  volumeH,
-           double                                       t,
-           double                                       dt,
-           int                                          normal,
-           double * __restrict__                        F
-          ) -> void {
-            for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
-          },
-          [] (
-            double                                       Q[],
-            double                                       gradQ[][Dimensions],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       BgradQ[]
-          ) -> void {
-            {{SOLVER_NAME}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
-          }
-"""
-
-
-  """
   
-    Combination of the two previous ones.
+  def __init__(self,solver,use_split_loop=False):
+    d = {}
+    solver._init_dictionary_with_default_parameters(d)
+    solver.add_entries_to_text_replacement_dictionary(d)
+    d["USE_SPLIT_LOOP"] = use_split_loop      
+    d["GPU_ENCLAVE_TASK_NAME"] = solver._GPU_enclave_task_name()
     
-  """
-  RusanovCallWithFluxAndNCP = """
-          [] (
-           double * __restrict__ Q,
-           const tarch::la::Vector<Dimensions,double>&  faceCentre,
-           const tarch::la::Vector<Dimensions,double>&  volumeH,
-           double                                       t,
-           double                                       dt,
-           int                                          normal,
-           double * __restrict__                        F
-          ) -> void {
-            {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F );
-          },
-          [] (
-            double                                       Q[],
-            double                                       gradQ[][Dimensions],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       BgradQ[]
-          ) -> void {
-            {{SOLVER_NAME}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
-          }
+    self._solver = solver
+    
+    ReconstructPatchAndApplyFunctor.__init__(self,
+      solver._patch,
+      solver._patch_overlap,
+      jinja2.Template( self.TemplateUpdateCell ).render(**d),
+      solver._reconstructed_array_memory_location,
+      "not marker.isRefined() and (" + \
+      "observers::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
+      "observers::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
+      ")"
+    )
+    self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
+
+
+  def get_includes(self):
+    return ReconstructPatchAndApplyFunctor.get_includes(self) + """
+#include "tasks/""" + self._solver._GPU_enclave_task_name() + """.h"    
 """
 
 
-
-  EigenvaluesCall = """
-          [] (
-            double                                       Q[],
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-          ) -> double {
-            return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-          }
-"""
-
-
+class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeStepSizeWithEnclaves ):
   """
   
    This is a specialisation of the enclave tasking that works with accelerators
@@ -234,65 +82,53 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     GenericRusanovFixedTimeStepSizeWithEnclaves.__init__(self, 
       name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, 
       flux, ncp, 
-      plot_grid_properties,
-      FV.CellUpdateImplementation_SplitLoop, #, kernel_implementation
-      peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete
+      plot_grid_properties
     )
-    
-
-  #def set_implementation(self,flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None):
-  #  """
-  #    Redefinition to ensure that we use our Riemann solver ingredient calls
-  #  """
-  #  GenericRusanovFixedTimeStepSizeWithEnclaves.set_implementation(self,flux,ncp,eigenvalues,boundary_conditions,refinement_criterion,initial_conditions)
-
-  #  if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
-  #    self._rusanov_call = self.RusanovCallWithFlux
-  #  elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-  #    self._rusanov_call = self.RusanovCallWithNCP
-  #  elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-  #    self._rusanov_call = self.RusanovCallWithFluxAndNCP
-  #  else:
-  #    raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
-
-  #  self._construct_template_update_cell()
 
 
-  def _construct_template_update_cell(self):
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
-    d[ "LOOP_OVER_PATCH_FUNCTION_CALL" ] = self._kernel_implementation
-    d[ "TIME_STAMP" ]                   = "{{SOLVER_INSTANCE}}.getMinTimeStamp()"
-    d[ "EIGENVALUES"]                   = self.EigenvaluesCall
-
-    if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
-      d[ "RUSANOV_ON_FACE"] = self.RusanovCallWithFlux
-    elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-      d[ "RUSANOV_ON_FACE"] = self.RusanovCallWithNCP
-    elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-      d[ "RUSANOV_ON_FACE"] = self.RusanovCallWithFluxAndNCP
-      
-    temp = jinja2.Template( self.TemplateUpdateCell ).render(d);
-    self._template_update_cell      = jinja2.Template( temp ); 
-
-
-  def set_update_cell_implementation(self,
-    kernel_implementation   = FV.CellUpdateImplementation_SplitLoop,
-    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete
+  def set_implementation(self,
+    flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
+    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
+    use_split_loop          = False
   ):
-    if kernel_implementation != FV.CellUpdateImplementation_SplitLoop:
-      raise Exception( "kernel implementation cannot be reconfigured for GPU/Accelerator FV solver" )
-    if memory_location != peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      raise Exception( "memory selector cannot be reset to non-accelerator memory" )
+    """
+     Call implementation configuration of master class, but exchange the actual compute kernel
+    """
+    GenericRusanovFixedTimeStepSizeWithEnclaves.set_implementation(self,
+      flux, ncp, eigenvalues, boundary_conditions, refinement_criterion, initial_conditions,
+      memory_location, use_split_loop)
 
-    GenericRusanovFixedTimeStepSizeWithEnclaves.set_update_cell_implementation(self,
-      FV.CellUpdateImplementation_SplitLoop,
-      peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete)
-
-  
-  def get_user_includes(self):
-    return GenericRusanovFixedTimeStepSizeWithEnclaves.get_user_includes(self) + """
-#include <algorithm>
-"""    
+    self._action_set_update_cell = UpdateCellWithEnclavesOnAccelerator(self)
     
+    
+  def _GPU_enclave_task_name(self):
+    return self._name + "GPUEnclaveTask"
+
+
+  def add_implementation_files_to_project(self,namespace,output):
+    """
+    
+      Add the enclave task for the GPU  
+      
+    """
+    GenericRusanovFixedTimeStepSizeWithEnclaves.add_implementation_files_to_project(self,namespace,output)
+
+    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
+
+    implementationDictionary = {}
+    self._init_dictionary_with_default_parameters(implementationDictionary)
+    self.add_entries_to_text_replacement_dictionary(implementationDictionary)
+
+    task_name = self._GPU_enclave_task_name()
+    generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+      templatefile_prefix + ".GPUEnclaveTask.template.h",
+      templatefile_prefix + ".GPUEnclaveTask.template.cpp",
+      task_name, 
+      namespace + [ "tasks" ],
+      "tasks", 
+      implementationDictionary,
+      True)
+
+    output.add( generated_solver_files )
+    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
+        

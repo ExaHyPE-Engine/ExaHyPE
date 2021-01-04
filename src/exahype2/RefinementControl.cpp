@@ -60,10 +60,9 @@ std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControl::getG
 void exahype2::RefinementControl::addCommand(
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
-  exahype2::RefinementCommand                  command,
-  bool                                         invokedByGridConstruction
+  exahype2::RefinementCommand                  command
 ) {
-  logTraceInWith4Arguments( "addCommand()", x, h, ::toString(command), invokedByGridConstruction );
+  logTraceInWith3Arguments( "addCommand()", x, h, ::toString(command) );
   switch (command) {
     case ::exahype2::RefinementCommand::Refine:
       {
@@ -85,9 +84,6 @@ void exahype2::RefinementControl::addCommand(
     case ::exahype2::RefinementCommand::Keep:
       break;
     case ::exahype2::RefinementCommand::Coarsen:
-      if (not invokedByGridConstruction) {
-        assertionMsg(false, "not implemented yet");
-      }
       break;
   }
   logTraceOutWith1Argument( "addCommand()", _newEvents.size() );

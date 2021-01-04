@@ -5,8 +5,103 @@ from .FV                       import FV
 from .PDETerms import PDETerms
 
 import peano4
+import exahype2
 
 import jinja2
+
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+
+
+
+class UpdateCell(ReconstructPatchAndApplyFunctor):
+  RiemannCallOverPatch = """
+    {% if USE_SPLIT_LOOP %}
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
+    #endif
+    {% else %}
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+    #endif
+    {% endif %}
+      [&](
+        double                                       QL[],
+        double                                       QR[],
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double                                       FL[],
+        double                                       FR[]
+      ) -> void {
+        double wave[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]; 
+        double speed[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]; 
+
+        int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
+        int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+        int num_waves = {{NUMBER_OF_UNKNOWNS}}; 
+
+        {{CLAWPACK_RIEMANN_SOLVER}}_(
+          {%if DISCRIMINATE_NORMAL %}
+            &normal,
+          {% endif %}   
+          &num_eqn,
+          &num_aux,
+          &num_waves, 
+          QL,                                 // double* q_l 
+          QR,                                 // double* q_r
+          QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
+          QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
+          wave,
+          speed,
+          FL,                                 // double* amdq
+          FR                                  // double* apdq
+        );
+
+        for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
+          FR[i] = -FR[i];
+        }
+      },
+      marker.x(),
+      marker.h(),
+      {{TIME_STAMP}},
+      {{TIME_STEP_SIZE}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      reconstructedPatch,
+      originalPatch
+    );
+  """ 
+
+
+  def __init__(self,solver):
+    d = {}
+    solver._init_dictionary_with_default_parameters(d)
+    solver.add_entries_to_text_replacement_dictionary(d)   
+    d[ "USE_SPLIT_LOOP" ] = solver._use_split_loop
+
+    ReconstructPatchAndApplyFunctor.__init__(self,
+      solver._patch,
+      solver._patch_overlap,
+      jinja2.Template( self.RiemannCallOverPatch ).render(**d),
+      solver._reconstructed_array_memory_location,
+      "not marker.isRefined()"
+    )
+    
+    self._solver = solver
+  
+  
+  def get_includes(self):
+    return """
+#include "exahype2/fv/BoundaryConditions.h"
+""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
+
 
 
 #! =====================================================
@@ -55,62 +150,9 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
   """
   
   
-  TemplateUpdateCell = """
-    {{LOOP_OVER_PATCH_FUNCTION_CALL}}(
-      [&](
-        double                                       QL[],
-        double                                       QR[],
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       FL[],
-        double                                       FR[]
-      ) -> void {
-        double wave[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]; 
-        double speed[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]; 
-
-        int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
-        int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-        int num_waves = {{NUMBER_OF_UNKNOWNS}}; 
-
-        {{CLAWPACK_RIEMANN_SOLVER}}_(
-          {%if DISCRIMINATE_NORMAL %}
-            &normal,
-          {% endif %}   
-          &num_eqn,
-          &num_aux,
-          &num_waves, 
-          QL,                                 // double* q_l 
-          QR,                                 // double* q_r
-          QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
-          QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
-          wave,
-          speed,
-          FL,                                 // double* amdq
-          FR                                  // double* apdq
-        );
-
-        for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
-          FR[i] = -FR[i];
-        }
-      },
-      marker.x(),
-      marker.h(),
-      {{SOLVER_INSTANCE}}.getMinTimeStamp(),
-      {{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      reconstructedPatch,
-      originalPatch
-    );
-  """      
-  
 
   
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = FV.CellUpdateImplementation_NestedLoop, discriminate_normal=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = None, discriminate_normal=False):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
@@ -125,7 +167,6 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
         can misuse 1d solvers.  
       
     """
-    #super(GenericRusanovFVFixedTimeStepSize,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux, ncp, plot_grid_properties)
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
     
     self._time_step_size = time_step_size
@@ -133,29 +174,31 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
-    self._kernel_implementation               = kernel_implementation
-
-    self.set_implementation()
-    self.set_update_cell_implementation(kernel_implementation=kernel_implementation)
-
-    self._patch_overlap.generator.send_condition               = self._predicate_face_carrying_data() + " and observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-    self._patch_overlap.generator.receive_and_merge_condition  = self._predicate_face_carrying_data() + " and " \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
     self.clawpack_Riemann_solver             = clawpack_Riemann_solver 
     self.Riemann_solver_implementation_files = Riemann_solver_implementation_files
     
-    self._template_update_cell      = jinja2.Template( self.TemplateUpdateCell ); 
-    
     self._discriminate_normal = discriminate_normal
     
-    pass
-  
-  
+    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+    self._use_split_loop                      = False
+
+    self._patch_overlap.generator.store_persistent_condition   = "not marker.isRefined() and " + \
+      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+    self._patch_overlap.generator.load_persistent_condition  = "not marker.isRefined() and " \
+      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
+      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    self._patch_overlap.generator.send_condition               = "true"
+    self._patch_overlap.generator.receive_and_merge_condition  = "true"
+
+    self.set_implementation()
 
 
-  def set_implementation(self,boundary_conditions=None,refinement_criterion=None,initial_conditions=None):
+  def set_implementation(self,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
+    memory_location         = None,
+    use_split_loop          = False
+  ):
     """
     
       Pass in None if you don't want to overwrite any default.
@@ -168,18 +211,18 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     if initial_conditions!=None: 
       self._initial_conditions_implementation         = initial_conditions
 
-    
-  def set_update_cell_implementation(self,
-    kernel_implementation   = FV.CellUpdateImplementation_NestedLoop,
-    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-  ):
-    if memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
-       memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+    if memory_location!=None:
+      self._reconstructed_array_memory_location = memory_location
+    if use_split_loop!=None:
+      self._use_split_loop = use_split_loop
+
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
-    self._reconstructed_array_memory_location = memory_location
-    self._kernel_implementation               = kernel_implementation
+    self._action_set_update_cell = UpdateCell(self)
+
 
   
   def add_entries_to_text_replacement_dictionary(self,d):
@@ -190,9 +233,9 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     
     """
     d[ "TIME_STEP_SIZE" ]         = self._time_step_size
+    d[ "TIME_STAMP" ]                   = d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
     
     d[ "CLAWPACK_RIEMANN_SOLVER"]        = self.clawpack_Riemann_solver
-    d[ "LOOP_OVER_PATCH_FUNCTION_CALL" ] = self._kernel_implementation
 
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation

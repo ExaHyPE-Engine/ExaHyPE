@@ -58,7 +58,7 @@ void exahype2::fv::splitRusanov1d(
   for (int unknown=0; unknown<unknowns; unknown++) {
     FL[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
     FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
-    assertionEquals( FL[unknown], FR[unknown]);
+    nonCriticalAssertion2( FL[unknown]==FR[unknown], FL[unknown], FR[unknown]);
   }
 };
 

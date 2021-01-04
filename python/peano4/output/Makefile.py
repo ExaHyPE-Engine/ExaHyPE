@@ -279,7 +279,7 @@ did search for a file """ + input_file )
     if not module_file.endswith( ".f90" ):
       print( "Warning: Fortran module file does not have extension .f90 (" + module_file + ") and translation thus might fail" )
     self.d["FORTRAN_MODULES"].append( module_file )
-    self.fortranfiles.append( module_file )
+    #self.fortranfiles.append( module_file )
 
 
   def add_Fortran_modules(self,module_files):

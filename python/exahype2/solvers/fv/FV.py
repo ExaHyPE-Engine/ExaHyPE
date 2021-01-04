@@ -9,121 +9,46 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
-import exahype2.grid.AMROnPatch
-
 import jinja2
 
 from abc import abstractmethod
 
+from peano4.solversteps.ActionSet import ActionSet
 
-class FV(object):
-  """ 
-    An abstract finite volume solver step sizes that works on patch-based
-    AMR with a halo layer of one.
-  
-    We use two overlaps in this case: the standard one and one we call new. In the
-    time stepping, we use the new one to project our data to. Then we roll it over
-    at the end of the iteration. This way, we ensure that the one from the previous
-    iteration is not overwritten by some adjacent cell halfway through the 
-    computation.
-  
-  
-    Parallelisation:
-    
-    I do equip both Q and NewQ with proper merge routines. However, all merge guards
-    are unset by default. If you need some data exchange, you have to activate
-    them manually.
-  
-  
-    Attributes:
-  
-    The guard variables are used within the templates and switch them on/off. By 
-    default, they all are true, i.e. the actions are triggered in every grid 
-    traversal an action in theory could be active.
-  
-    
-    _guard_copy_new_face_data_into_face_data: C++ string describing a predicate
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      The routine triggers the roll-over, i.e. the actual commit of 
-      a new time step. It is the final operation per face per grid
-      sweep. 
-      
+from peano4.toolbox.blockstructured.ProjectPatchOntoFaces import ProjectPatchOntoFaces
+from peano4.toolbox.blockstructured.BackupPatchOverlap    import BackupPatchOverlap
 
-    _guard_handle_boundary: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      Updates the boundary. By definition, boundary cells in the domain
-      are skeleton cells. Furthermore, the initialiation/setting of 
-      boundary conditions only has to happen once per time step. We 
-      hence trigger this routine for skeletons in the primary sweeps.
 
-    _guard_project_patch_onto_faces: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      This routine guards the mapping of an updated cell content onto a
-      cell's faces. The destination in QNew, i.e. is not "seen" by 
-      others unless the faces' new data are committed. Therefore, I 
-      trigger this routine in the primary sweep for skeleton cells and
-      in the secondary  sweep for enclave cells. The primary calls 
-      ensure that data are mapped onto the faces before faces are 
-      exchanged with neighbour partitions.
-      
-    _guard_handle_cell: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      Actual FV kernel invocation.
-      
-    _patch_overlap.generator.send_condition: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      Send out the faces in the grid initialisation. There's no need to 
-      send out data in other iterations, as all data exchange is 
-      realised through the QNew field. This is different to the plain
-      FV realisation, where data exchange happens through Q: The enclave
-      tasking exchanges QNew and then rolls data over from QNew into Q.
-      The plain FV scheme rolls over QNew into Q and then exchanges the
-      data.
-    
-    _patch_overlap.generator: string
-      See documentation of _patch_overlap.generator.send_condition.
-      
-    _patch_overlap.generator.merge_method_definition: string
-      The merge routines are set to the standard patch conditions for
-      both NewQ and Q. However, they are all by default disabled, as 
-      different solvers exchange either Q or NewQ. You have to enable
-      them explicitly if you need a boundary merger.
+class AbstractFVActionSet( ActionSet ):
+  def __init__(self,solver):
+    """
+   
+    solver: ADERDG
+      Reference to creating class 
+   
+    """
+    self._solver = solver
+    pass
+  
+  
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
 
-    _guard_AMR: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      AMR is active throughout the grid construction. After that, it is
-      only available for skeleton cells.
-    
-    _patch_overlap_new.generator.send_condition: string
-      This is a predicate, i.e. identifies in C code when to trigger 
-      the underlying activity.
-      See discussion of _patch_overlap.generator.send_condition for 
-      details. As we effectively disable the data exchange for Q and
-      instead ask for data exchange of QNew, we have to add merge 
-      operations to QNew.
-      
-    _patch_overlap_new.generator.receive_and_merge_condition: string
-      See _patch_overlap_new.generator.send_condition.
-      
-    _patch_overlap_new.generator.merge_method_definition: string
-      See _patch_overlap_new.generator.send_condition.
-  
-    plot_description: string
-      The description I use when I plot. By default, it is empty, but 
-      some solvers add a string here that explains which entry of the 
-      tuple represents which data.   
-  
-  
-  """
-  
-  TemplateAMR = """
-  { 
+
+  def user_should_modify_template(self):
+    return False
+
+
+  def get_includes(self):
+    return """
+#include <functional>
+#include "exahype2/PatchUtils.h"
+""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
+
+
+class AMROnPatch(AbstractFVActionSet):
+  TemplateAMR = """  
+  if ({{PREDICATE}}) { 
     ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
     if (tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
@@ -149,19 +74,112 @@ class FV(object):
       } 
     }
     
-    _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {{IS_GRID_CREATION}} );
+    _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion );
+  }
+  """
+  
+    
+  def __init__(self,solver, predicate):
+    AbstractFVActionSet.__init__(self,solver)
+    self._predicate = predicate
+
+  
+  def get_body_of_getGridControlEvents(self):
+    return """
+  return refinementControl.getGridControlEvents();
+""" 
+
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
+      result = """
+  _localRefinementControl.clear();
+"""
+
+    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+      result = """
+  refinementControl.merge( _localRefinementControl );
+"""
+    
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      if self._solver._patch.dim[0] != self._solver._patch.dim[1]:
+        raise Exception( "Error: Can only handle square patches." )
+      
+      d[ "UNKNOWNS" ]           = str(self._solver._patch.no_of_unknowns)
+      d[ "DOFS_PER_AXIS" ]      = str(self._solver._patch.dim[0])
+      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
+      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
+      d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver._patch.name
+      d[ "PREDICATE" ]          = self._predicate
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)      
+      result = jinja2.Template( self.TemplateAMR ).render(**d)
+
+    return result
+
+
+  def get_attributes(self):
+    return """
+    ::exahype2::RefinementControl         _localRefinementControl;
+"""
+
+
+class AdjustPatch(AbstractFVActionSet):
+  TemplateAdjustCell = """
+  if ({{PREDICATE}}) { 
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      {{SOLVER_INSTANCE}}.adjustSolution(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+        ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
+        ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        {{SOLVER_INSTANCE}}.getMinTimeStamp()
+      );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
   } 
 """
-     
   
+  def __init__(self,solver,predicate):
+    AbstractFVActionSet.__init__(self,solver)
+    self._predicate = predicate
+
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "PREDICATE" ] = self._predicate      
+      result = jinja2.Template(self.TemplateAdjustCell).render(**d)
+      pass 
+    return result
+
+
+class HandleBoundary(AbstractFVActionSet):
   """
   
     The global periodic boundary conditions are set in the Constants.h. 
    
   """
   TemplateHandleBoundary = """
-    logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
-    if (not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]) {
+    logDebug( 
+      "touchFaceFirstTime(...)", 
+      "label=" << fineGridFaceLabel.toString() << ", " << {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions] << 
+      ",marker=" << marker.toString()
+    );
+    if (
+      {{PREDICATE}}
+      and
+      not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
+      and
+      not marker.isRefined() 
+      and 
+      fineGridFaceLabel.getBoundary()
+    ) {
       ::exahype2::fv::applyBoundaryConditions(
         [&](
           double                                       Qinside[],
@@ -185,44 +203,71 @@ class FV(object):
       );
     }
 """
-  
-  
-  TemplateAdjustCell = """
-  { 
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      {{SOLVER_INSTANCE}}.adjustSolution(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
-        ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp()
-      );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  } 
-"""
-  
-  
-  """
-  
-    This is the straightforward implementation.
+  def __init__(self,solver,predicate):
+    AbstractFVActionSet.__init__(self,solver)
+    self._predicate = predicate
+
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "PREDICATE" ] = self._predicate      
+      result = jinja2.Template(self.TemplateHandleBoundary).render(**d)
+      pass 
+    return result
+
+
+  def get_includes(self):
+    return """
+#include "exahype2/PatchUtils.h"
+#include "exahype2/fv/BoundaryConditions.h"
+""" + AbstractFVActionSet.get_includes(self) 
+
+
+class ProjectPatchOntoFaces( ProjectPatchOntoFaces ):
+  def __init__(self,solver, predicate):
+    peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
+      self,
+      solver._patch,
+      solver._patch_overlap_new,
+      predicate, 
+      solver._get_default_includes() + solver.get_user_includes()
+    )
     
-  """
-  CellUpdateImplementation_NestedLoop = """
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d
-    #endif
-  """
+    
+    
+class CopyNewPatchOverlapIntoCurrentOverlap( BackupPatchOverlap ):
+  def __init__(self,solver, predicate):
+    BackupPatchOverlap.__init__(self, 
+      solver._patch_overlap_new,
+      solver._patch_overlap,
+      False,
+      predicate,
+      solver._get_default_includes() + solver.get_user_includes()
+    )
+    
 
-
-  CellUpdateImplementation_SplitLoop = """
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop
-    #endif
+class FV(object):
+  """ 
+    An abstract finite volume solver step sizes that works on patch-based
+    AMR with a halo layer of one.
+  
+    We use two overlaps in this case: the standard one and one we call new. In the
+    time stepping, we use the new one to project our data to. Then we roll it over
+    at the end of the iteration. This way, we ensure that the one from the previous
+    iteration is not overwritten by some adjacent cell halfway through the 
+    computation.
+  
+  
+    Parallelisation:
+    
+    I do equip both Q and NewQ with proper merge routines. However, all merge guards
+    are unset by default. If you need some data exchange, you have to activate
+    them manually.
+    
   """
   
       
@@ -277,17 +322,6 @@ class FV(object):
 #include "observers/SolverRepository.h" 
 """
    
-
-    ##
-    ## Sollte alles auf not marker.isRefined() fuer cells stehen
-    ##
-    self._guard_copy_new_face_data_into_face_data  = self._predicate_face_carrying_data()
-    self._guard_adjust_cell                        = self._predicate_cell_carrying_data()
-    self._guard_AMR                                = self._predicate_cell_carrying_data()
-    self._guard_project_patch_onto_faces           = self._predicate_cell_carrying_data()
-    self._guard_update_cell                        = self._predicate_cell_carrying_data()
-    self._guard_handle_boundary                    = self._predicate_boundary_face_carrying_data()
-
     self._min_h                = min_h
     self._max_h                = max_h 
     self._plot_grid_properties = plot_grid_properties
@@ -298,11 +332,12 @@ class FV(object):
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
 
-    self._template_adjust_cell     = jinja2.Template(self.TemplateAdjustCell)
-    self._template_AMR             = jinja2.Template(self.TemplateAMR)
-    self._template_handle_boundary = jinja2.Template(self.TemplateHandleBoundary)
-    
-    self._template_update_cell     = jinja2.Template( "" )
+    self._action_set_adjust_cell              = AdjustPatch(self, "not marker.isRefined()")
+    self._action_set_AMR                      = AMROnPatch(self, "not marker.isRefined()")
+    self._action_set_handle_boundary          = HandleBoundary(self, "not marker.isRefined()")
+    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self, "not marker.isRefined()")
+    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self, "not marker.isRefined()")
+    self._action_set_update_cell              = None
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     
@@ -312,21 +347,15 @@ class FV(object):
     self._patch_overlap_new.generator.send_condition               = "false"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "false"
 
+    self._patch_overlap.generator.store_persistent_condition   = "false"
+    self._patch_overlap.generator.load_persistent_condition    = "false"
+
+    self._patch_overlap_new.generator.store_persistent_condition   = "false"
+    self._patch_overlap_new.generator.load_persistent_condition    = "false"
+
     self.plot_description = ""
     pass
 
-  
-  def _predicate_face_carrying_data(self):
-    return "not marker.isRefined()"
-
-
-  def _predicate_boundary_face_carrying_data(self):
-    return "not marker.isRefined() and fineGridFaceLabel.getBoundary()"
-
-
-  def _predicate_cell_carrying_data(self):
-    return "not marker.isRefined()"
-  
   
   def _unknown_identifier(self):
     return self._name+"Q"
@@ -370,9 +399,6 @@ class FV(object):
 #include "peano4/utils/Loop.h"
 
 #include "SolverRepository.h"
-
-#include "exahype2/PatchUtils.h"
-#include "exahype2/fv/BoundaryConditions.h"
 """
 
 
@@ -388,48 +414,15 @@ class FV(object):
   
   
   def add_actions_to_init_grid(self, step):
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
-
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self._template_adjust_cell.render(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
-      self._patch,
-      self._patch_overlap_new,
-      self._guard_project_patch_onto_faces, 
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
-      self._patch_overlap_new,
-      self._patch_overlap,
-      False,
-      self._guard_copy_new_face_data_into_face_data,
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    step.add_action_set( self._action_set_adjust_cell ) 
+    step.add_action_set( self._action_set_project_patch_onto_faces )
+    step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
-    d = {}
-    self._init_dictionary_with_default_parameters(d)
-    self.add_entries_to_text_replacement_dictionary(d)
-    d["IS_GRID_CREATION"] = "true"
-    
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self._template_adjust_cell.render(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
+    step.add_action_set( self._action_set_adjust_cell )
     if evaluate_refinement_criterion:
-      step.add_action_set( exahype2.grid.AMROnPatch(
-        self._patch,self._template_AMR.render(**d),
-        "not marker.isRefined()", 
-        self._get_default_includes() + self.get_user_includes()
-      ))
-    pass
+      step.add_action_set( self._action_set_AMR )
   
   
   def set_plot_description(self,description):
@@ -460,44 +453,13 @@ class FV(object):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
-    d["IS_GRID_CREATION"] = "false"
 
-
-    step.add_action_set( peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor(
-      self._patch,
-      self._patch_overlap,
-      self._template_update_cell.render(**d),
-      self._template_handle_boundary.render(**d),
-      self._guard_update_cell,
-      self._guard_handle_boundary,
-      self._get_default_includes() + self.get_user_includes() + """#include "exahype2/NonCriticalAssertions.h" 
-""",
-      self._reconstructed_array_memory_location
-    )) 
-    step.add_action_set( peano4.toolbox.blockstructured.ProjectPatchOntoFaces(
-      self._patch,
-      self._patch_overlap_new,
-      self._guard_project_patch_onto_faces,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( peano4.toolbox.blockstructured.ApplyFunctorOnPatch(
-      self._patch,self._template_adjust_cell.render(**d),
-      self._guard_adjust_cell,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( exahype2.grid.AMROnPatch(
-      self._patch,self._template_AMR.render(**d),  
-      self._guard_AMR,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    step.add_action_set( peano4.toolbox.blockstructured.BackupPatchOverlap(
-      self._patch_overlap_new,
-      self._patch_overlap,
-      False,
-      self._guard_copy_new_face_data_into_face_data,
-      self._get_default_includes() + self.get_user_includes()
-    ))
-    pass
+    step.add_action_set( self._action_set_handle_boundary )
+    step.add_action_set( self._action_set_adjust_cell )
+    step.add_action_set( self._action_set_update_cell )
+    step.add_action_set( self._action_set_project_patch_onto_faces )
+    step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
 
 
   @abstractmethod
