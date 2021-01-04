@@ -5,7 +5,7 @@
 namespace exahype2 {
   namespace aderdg {
 
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void rusanovNonlinear_maxEigenvalue_body_AoS(
@@ -40,11 +40,11 @@ namespace exahype2 {
       // hyperbolic eigenvalues
       smax = std::max( smax, maxAbsoluteEigenvalue( &QLR[lr][ scalarIndexFace*strideQ ], x, time, direction ) );
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void rusanovNonlinear_riemannFlux_body_AoS(
@@ -103,11 +103,11 @@ namespace exahype2 {
         FROut[ scalarIndexFace*strideF + var ] = FLOut[ scalarIndexFace*strideF + var ]; 
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void rusanovNonlinear_addNcpContributionsToRiemannFlux_body_AoS(
@@ -171,7 +171,7 @@ namespace exahype2 {
         }
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
   }

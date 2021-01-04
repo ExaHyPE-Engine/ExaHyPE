@@ -46,7 +46,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
 
 
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
@@ -59,7 +59,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
   // @todo implement
   return 0.0;
 }
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 {% endif %}
@@ -81,7 +81,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 {% endif %}
 
 {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
@@ -94,14 +94,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 ) {
   // @todo implement
 }
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
@@ -115,7 +115,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
 ) {
   // @todo implement
 }
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 {% endif %}

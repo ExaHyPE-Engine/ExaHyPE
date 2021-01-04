@@ -52,7 +52,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
 
 
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     static double maxEigenvalue(
@@ -62,7 +62,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       double                                       t,
       int                                          normal
     );
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     {% endif %}
@@ -81,7 +81,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
 
 
     {% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     static void flux(
@@ -92,13 +92,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     );
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     {% endif %}
 
     {% if NCP_IMPLEMENTATION=="<user-defined>" %}
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
@@ -110,7 +110,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     );
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     {% endif %}

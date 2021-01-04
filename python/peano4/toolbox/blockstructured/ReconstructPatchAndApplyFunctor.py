@@ -130,18 +130,18 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     double* reconstructedPatch;
     #if Dimensions==2
-    reconstructedPatch = ::tarch::multicore::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::multicore::MemoryLocation::Heap);
+    reconstructedPatch = ::tarch::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::Heap);
     #elif Dimensions==3
-    reconstructedPatch = ::tarch::multicore::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::multicore::MemoryLocation::Heap);
+    reconstructedPatch = ::tarch::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::Heap);
     #endif
 """    
     elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     double* reconstructedPatch;
     #if Dimensions==2
-    reconstructedPatch = ::tarch::multicore::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::multicore::MemoryLocation::Accelerator);
+    reconstructedPatch = ::tarch::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
     #elif Dimensions==3
-    reconstructedPatch = ::tarch::multicore::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::multicore::MemoryLocation::Accelerator);
+    reconstructedPatch = ::tarch::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
     #endif
 """    
     else:  
@@ -154,11 +154,11 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
 """    
     elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch:
       self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
-    ::tarch::multicore::freeMemory(reconstructedPatch, tarch::multicore::MemoryLocation::Heap );
+    ::tarch::freeMemory(reconstructedPatch, tarch::MemoryLocation::Heap );
 """    
     elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator:
       self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
-    ::tarch::multicore::freeMemory(reconstructedPatch, tarch::multicore::MemoryLocation::Accelerator );
+    ::tarch::freeMemory(reconstructedPatch, tarch::MemoryLocation::ManagedAcceleratorMemory );
 """    
     else:
       self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = ""

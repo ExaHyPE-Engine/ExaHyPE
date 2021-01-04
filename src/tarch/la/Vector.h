@@ -68,7 +68,7 @@ std::string toString( const tarch::la::Vector<Size,Scalar>&  vector );
  *
  * 
  */
-#ifdef GPUOffloading
+#ifdef OpenMPGPUOffloading
 #pragma omp declare target
 #endif
 template<int Size, typename Scalar>
@@ -128,7 +128,7 @@ struct tarch::la::Vector {
       __attribute__((always_inline))
       #endif
       {
-        #if !defined(GPUOffloading)
+        #if !defined(OpenMPGPUOffloading)
         assertion3 ( index >= 0, index, Size, ::toString(*this) );
         assertion4 ( index < Size, index, Size, ::toString(*this), "you may not take the indexth entry from a vector with only Size components" );
         #endif
@@ -146,7 +146,7 @@ struct tarch::la::Vector {
       __attribute__((always_inline))
       #endif
       {
-        #if !defined(GPUOffloading)
+        #if !defined(OpenMPGPUOffloading)
         assertion3 ( index >= 0, index, Size, toString(*this) );
         assertion3 ( index < Size, index, Size, toString(*this) );
         #endif
@@ -163,7 +163,7 @@ struct tarch::la::Vector {
       __attribute__((always_inline))
       #endif
       {
-        #if !defined(GPUOffloading)
+        #if !defined(OpenMPGPUOffloading)
         assertion3 ( index >= 0, index, Size, toString(*this) );
         assertion3 ( index < Size, index, Size, toString(*this) );
         #endif
@@ -180,7 +180,7 @@ struct tarch::la::Vector {
      __attribute__((always_inline))
      #endif
      {
-       #if !defined(GPUOffloading)
+       #if !defined(OpenMPGPUOffloading)
        assertion3 ( index >= 0, index, Size, toString(*this) );
        assertion3 ( index < Size, index, Size, toString(*this) );
        #endif
@@ -206,7 +206,7 @@ struct tarch::la::Vector {
 #include "tarch/la/Vector.cpph"
 
 
-#ifdef GPUOffloading
+#ifdef OpenMPGPUOffloading
 #pragma omp end declare target
 #endif
 
@@ -250,7 +250,7 @@ tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::
  * significantly. However, I did encounter numerous problems
  * whenever I tried to use it in combination with GPUs.
  */
-#if !defined(GPUOffloading)
+#if !defined(OpenMPGPUOffloading)
 namespace tarch {
   namespace la {
     extern template

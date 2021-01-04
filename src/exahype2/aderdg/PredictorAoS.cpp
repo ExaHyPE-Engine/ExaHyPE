@@ -7,7 +7,7 @@
 namespace exahype2 {
   namespace aderdg {
 
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void clearAll_body_AoS(
@@ -18,11 +18,11 @@ namespace exahype2 {
         data[ scalarIndex*stride + elem ] = 0.0;
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void clearRange_body_AoS(
@@ -34,13 +34,13 @@ namespace exahype2 {
         data[ scalarIndex*stride + elem ] = 0.0;
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
     // @todo put utility functions at top to right location
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_initialGuess_body_AoS(
@@ -54,11 +54,11 @@ namespace exahype2 {
       }
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
@@ -77,11 +77,11 @@ namespace exahype2 {
       }
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
@@ -129,11 +129,11 @@ namespace exahype2 {
       }
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
@@ -171,11 +171,11 @@ namespace exahype2 {
         rhsOut[ scalarIndex*strideRhs ] += coeff * SAux[var];
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
@@ -220,11 +220,11 @@ namespace exahype2 {
         rhsOut[ scalarIndex*strideRhs + var ] += coeff * SAux[var];
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_invert_body_AoS(
@@ -287,11 +287,11 @@ namespace exahype2 {
       */
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
@@ -323,7 +323,7 @@ namespace exahype2 {
         }
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
 

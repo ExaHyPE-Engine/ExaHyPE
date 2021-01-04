@@ -8,7 +8,7 @@
 namespace exahype2 { 
   namespace aderdg {
 
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void corrector_addFluxContributions_body_AoS(
@@ -60,11 +60,11 @@ namespace exahype2 {
         }
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void corrector_addSourceContributions_body_AoS(
@@ -104,11 +104,11 @@ namespace exahype2 {
         }
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void corrector_addNcpContributions_body_AoS(
@@ -155,11 +155,11 @@ namespace exahype2 {
         }
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void corrector_addRiemannContributions_body_AoS(
@@ -188,7 +188,7 @@ namespace exahype2 {
         }
       }
     }
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
 

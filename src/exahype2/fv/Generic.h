@@ -43,7 +43,7 @@ namespace exahype2 {
       const std::string& location = ""
     );
 
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     void copyPatch(
@@ -54,7 +54,7 @@ namespace exahype2 {
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize
     );
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
 

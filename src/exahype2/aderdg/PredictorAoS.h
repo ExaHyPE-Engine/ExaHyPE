@@ -20,7 +20,7 @@ namespace exahype2 {
      * @param[in] nodesPerAxis
      * @param[in] unknowns
      */
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_initialGuess_body_AoS(
@@ -29,7 +29,7 @@ namespace exahype2 {
       const int                  nodesPerAxis,
       const int                  strideQ,
       const int                  scalarIndex);
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
@@ -47,7 +47,7 @@ namespace exahype2 {
      * @param nodesPerAxis
      * @param strideQ
      */
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
@@ -58,7 +58,7 @@ namespace exahype2 {
       const int                  strideQ,
       const int                  strideRhs,
       const int                  scalarIndex);
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
@@ -84,7 +84,7 @@ namespace exahype2 {
      * @param[in] strideRhs
      * @param[in] scalarIndex
     */
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
@@ -110,7 +110,7 @@ namespace exahype2 {
         const int                                     strideQ,
         const int                                     strideRhs,
         const int                                     scalarIndex);
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
@@ -135,7 +135,7 @@ namespace exahype2 {
      * @param[in] strideRhs
      * @param[in] scalarIndex
      */
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
@@ -159,14 +159,14 @@ namespace exahype2 {
         const int                                   strideQ,
         const int                                   strideRhs,
         const int                                   scalarIndex);
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
     /**
      * 
      */
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
@@ -193,7 +193,7 @@ namespace exahype2 {
       const int                                   strideQ,
       const int                                   strideRhs,
       const int                                   scalarIndex);
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
@@ -212,7 +212,7 @@ namespace exahype2 {
      * @param unknowns
      * @param strideQ
      */
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_invert_body_AoS(
@@ -225,7 +225,7 @@ namespace exahype2 {
       const int                   strideQ,
       const int                   strideRhs,
       const int                   scalarIndex);
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     
@@ -245,7 +245,7 @@ namespace exahype2 {
      * @param strideQ
      * @param scalarIndexHull
      */
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
@@ -257,7 +257,7 @@ namespace exahype2 {
       const int                   unknowns,
       const int                   strideQ,
       const int                   scalarIndexHull);
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
 

@@ -3,7 +3,7 @@
 namespace exahype2 {
   namespace aderdg {
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod int getNodesPerCell(int nodesPerAxis) {
@@ -12,7 +12,7 @@ namespace exahype2 {
       return nodesPerCell;
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod int getSpaceTimeNodesPerCell(int nodesPerAxis) {
@@ -21,7 +21,7 @@ namespace exahype2 {
       return nodesPerCell;
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod tarch::la::Vector<Dimensions+1,int> getStrides(
@@ -39,7 +39,7 @@ namespace exahype2 {
       return strides;
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod int lineariseIndex(
@@ -53,7 +53,7 @@ namespace exahype2 {
       return scalarIndex;
     }
       
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod tarch::la::Vector<Dimensions+1,int> delineariseIndex(
@@ -75,7 +75,7 @@ namespace exahype2 {
       return index;
     }
       
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinates(
@@ -97,7 +97,7 @@ namespace exahype2 {
       return coords;
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod tarch::la::Vector<Dimensions+1,double> getCoordinatesOnFace(
@@ -114,7 +114,7 @@ namespace exahype2 {
       return coords;
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod int mapCellIndexToScalarHullIndex(
@@ -137,7 +137,7 @@ namespace exahype2 {
       return scalarIndexFace;
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod int mapSpaceTimeFaceIndexToScalarCellIndex(
@@ -158,7 +158,7 @@ namespace exahype2 {
       return lineariseIndex(indexCell,getStrides(nodesPerAxis));
     }
 
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void gradient_AoS(
@@ -183,7 +183,7 @@ namespace exahype2 {
       }
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod size_t alignment() {
@@ -191,7 +191,7 @@ namespace exahype2 {
       return -1;
     }
     
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod size_t paddedSize(size_t numElements, size_t sizeofType) {

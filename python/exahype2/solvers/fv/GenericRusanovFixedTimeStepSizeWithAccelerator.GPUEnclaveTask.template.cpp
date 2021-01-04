@@ -122,7 +122,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 
   const double timeStamp = observers::{{SOLVER_INSTANCE}}.getMinTimeStamp();
 
-  #if defined(GPUOffloading)
+  #if defined(OpenMPGPUOffloading)
   #pragma omp target map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
   {
   #endif
@@ -215,7 +215,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
     _reconstructedPatch,
     destinationPatchOnGPU
   );
-  #if defined(GPUOffloading)
+  #if defined(OpenMPGPUOffloading)
   }
   #endif
 

@@ -241,18 +241,39 @@ and
      const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
      const std::string ConsumerTaskCountStatisticsIdentifier( "tarch::multicore::consumer-tasks");
      const std::string TasksPerConsumerRunStatisticsIdentifier( "tarch::multicore::tasks-per-consumer-run");
-     
-     enum class MemoryLocation {
-       Heap,
-       Accelerator
-     };
-     double* allocateMemory(int size, MemoryLocation location = MemoryLocation::Accelerator);
-     void freeMemory(double* data, MemoryLocation location);
- 
+      
      #if !defined(UseAMD)
-     #define GPUCallableMethod
+     #endif
+     
+     
+     #if defined(GPUOffloading) and defined(UseAMD)
+       #define  GPUCallableMethod __global__ __device__
+       #undef   OpenMPGPUOffloading
+     #elif defined(GPUOffloading) and defined(SharedOMP)
+       #define  GPUCallableMethod
+       #define  OpenMPGPUOffloading
+     #elif defined(GPUOffloading)
+       #error GPU Offloading without HIP and OpenMP requested. Not supported
+     #else
+      #define  GPUCallableMethod 
+      #undef   OpenMPGPUOffloading
      #endif
   }
+
+  enum class MemoryLocation {
+	/**
+	 * Create data on the heap of the local device. That is, if you run
+	 * on an accelerator, use the accelerator's heap. If you invoke it 
+	 * on the host, use the host's accelerator.
+	 */
+    Heap,
+    /**
+	 * To be used on host only.
+	 */
+    ManagedAcceleratorMemory
+  };
+  double* allocateMemory(int size, MemoryLocation location);
+  void freeMemory(double* data, MemoryLocation location);
 }
 
 #endif

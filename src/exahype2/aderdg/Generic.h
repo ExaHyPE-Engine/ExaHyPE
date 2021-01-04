@@ -21,7 +21,7 @@ namespace exahype2 {
      * @name Utility bodies
      */
     //@{
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod void clearAll_body_AoS(
@@ -36,7 +36,7 @@ namespace exahype2 {
       const int               stride,
       const int               scalarIndex
 	);
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     //@}
