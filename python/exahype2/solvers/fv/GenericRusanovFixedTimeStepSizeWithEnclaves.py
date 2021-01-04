@@ -516,7 +516,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.EnclaveLabels.get_attribute_name(self._name)
 
-
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "FREE_SKELETON_MEMORY" ] = "delete[] reconstructedPatch;"
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
