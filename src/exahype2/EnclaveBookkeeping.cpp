@@ -71,7 +71,7 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
 
   std::copy_n( storedData.second, storedData.first, destination );
 
-  tarch::multicore::freeMemory( storedData.second, tarch::multicore::MemoryLocation::Heap );
+  tarch::freeMemory( storedData.second, tarch::MemoryLocation::Heap );
   logDebug( "waitForTaskToTerminateAndCopyResultOver()", "delivered outcome of task " << number << " (" << storedData.first << " entries copied over)");
 }
 

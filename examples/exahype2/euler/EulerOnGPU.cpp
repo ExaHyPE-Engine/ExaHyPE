@@ -40,7 +40,7 @@ void examples::exahype2::euler::EulerOnGPU::adjustSolution(
 
 
 
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
 double examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
@@ -76,7 +76,7 @@ double examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
 
   return std::max(lambda[0],lambda[4]);
 }
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 
@@ -112,7 +112,7 @@ void examples::exahype2::euler::EulerOnGPU::boundaryConditions(
 
 
 
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
 void examples::exahype2::euler::EulerOnGPU::flux(
@@ -161,7 +161,7 @@ void examples::exahype2::euler::EulerOnGPU::flux(
         break;
   }
 }
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 

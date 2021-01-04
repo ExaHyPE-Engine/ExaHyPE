@@ -52,7 +52,7 @@ void exahype2::fv::validatePatch(
 }
 
 
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
 void exahype2::fv::copyPatch(
@@ -105,7 +105,7 @@ void exahype2::fv::copyPatch(
   }
   #endif
 }
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 

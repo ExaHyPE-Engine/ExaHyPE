@@ -1,5 +1,5 @@
 import mpmath as mp
-import numpy as np
+#import numpy as np
 from sympy.integrals.quadrature import gauss_legendre, gauss_lobatto # quadrature_points by default in [-1,1]
 
 from abc import abstractmethod
@@ -20,14 +20,15 @@ class LagrangeBasis():
     # quadrature_points, quadrature_weights
     self.__quadrature_points, self.__quadrature_weights = self._compute_quadrature_points_and_weights(num_points)
     # operators
-    self.__mass_matrix                 = self.__compute_mass_matrix()
-    self.__stiffness_matrix            = self.__compute_stiffness_matrix()
-    self.__K1                          = self.__compute_K1()
-    self.__basis_function_values_left  = self.__evaluate(mp.mpf(0.0))
-    self.__basis_function_values_right = self.__evaluate(mp.mpf(1.0))
-    self.__dudx                        = self.__compute_discrete_derivative_operator()
-    self.__equidistant_grid_projector  = self.__compute_equidistant_grid_projector()
-    self.__fine_grid_projector         = [None]*3
+    self.__mass_matrix                   = self.__compute_mass_matrix()
+    self.__stiffness_matrix              = self.__compute_stiffness_matrix()
+    self.__K1                            = self.__compute_K1()
+    self.__inv_K1                        = mp.inverse(self.__K1).tolist()
+    self.__basis_function_values_left,_  = self.__evaluate(mp.mpf(0.0))
+    self.__basis_function_values_right,_ = self.__evaluate(mp.mpf(1.0))
+    self.__dudx                          = self.__compute_discrete_derivative_operator()
+    self.__equidistant_grid_projector    = self.__compute_equidistant_grid_projector()
+    self.__fine_grid_projector           = [None]*3
     for j in range(0,3):
       self.__fine_grid_projector[j] = self.__compute_fine_grid_projector(j)
   def __str__(self):
@@ -76,35 +77,65 @@ class LagrangeBasis():
     """
     Computes the (reference) element mass matrix for an approximation of
     order self.__max_poly_order.
+
+    We evaluate the scalar product:
+
+    (phi_i, phi_j)_[0,1], i,j = 1 ... N > 0 
+
+    where phi_i,phi_j are Lagrange basis functions associated with
+    N support points x_i and x_j within the unit-interval.
+    They are polynomials of maximum order N-1.
+
+    We evaluate the scalar product via a degree N Gauss quadrature rule that uses basis function support points 
+    as evaluation points.
+    If we use Legendre nodes as support points, this is an exact evaluation if
+    we use Lobatto nodes, this is an approximation.
   
-    Returns:
-       M_xi:
-        The (reference) element mass matrix.
+    :note:
+
+    :return: The (reference) element mass matrix. Exact for Gauss-Legrende nodes, inexact for Gauss-Lobatto (diagnoal lumping).
     """
     # init matrix with zeros
     MM = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
-    
+   
     for i in range(0,self.__num_points):
-      phi, _ = self.__evaluate(self.__quadrature_points[i])
-      for k in range(0,self.__num_points):
-        for l in range(0,self.__num_points):
-          MM[k][l] += self.__quadrature_weights[i]*phi[k]*phi[l]
+      MM[i][i] = self.__quadrature_weights[i]
+ 
+    #for i in range(0,self.__num_points):
+    #  phi, _ = self.__evaluate(self.__quadrature_points[i])
+    #  for k in range(0,self.__num_points):
+    #    for l in range(0,self.__num_points):
+    #      MM[k][l] += self.__quadrature_weights[i]*phi[k]*phi[l]
     return MM
 
   def __compute_stiffness_matrix(self):
     """
     Computes the (reference) element stiffness matrix for an approximation of order self.__max_poly_order.
-    Returns:
-       K_xi:
-        The (reference) element stiffness matrix.
+    
+    Computes:
+
+    K_ij = <d/dx phi_i, phi_j>_[0,1] = w_j (d/dx phi_j) (x_i) 
+    
+    where phi_i,phi_j are Lagrange basis functions associated with
+    N support points x_i and x_j within the unit-interval.
+    They are polynomials of maximum order N-1.
+
+    :note: Exact for both Lobatto and Legendre nodes due to the reduced degree in one scalar product operand.
+
+    :return: The (reference) element stiffness matrix.
     """
     # init matrix with zero
     Kxi = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
+    
+    for j in range(0,self.__num_points):
+      phi, phi_xi = self.__evaluate(self.__quadrature_points[j])
+      for i in range(0,self.__num_points):
+        Kxi[i][j] = self.__quadrature_weights[j]*phi_xi[i]
        
-    for i in range(0,self.__num_points):
-      phi, phi_xi = self.__evaluate(self.__quadrature_points[i])
-      for k in range(0,self.__num_points):
-        Kxi[k][i] = self.__quadrature_weights[i]*phi_xi[k]*phi[i] 
+    #for i in range(0,self.__num_points):
+    #  phi, phi_xi = self.__evaluate(self.__quadrature_points[i])
+    #  for k in range(0,self.__num_points):
+    #    Kxi[k][i] = self.__quadrature_weights[i]*phi_xi[k]*phi[i] 
     return Kxi
 
   def __compute_K1(self):
@@ -112,29 +143,73 @@ class LagrangeBasis():
     Computes the difference between the reference element mass operator 
     evaluated at point xi=1.0 and the element stiffness matrix.
     
-    Returns:
-       K1:
-        delta between the reference element mass operator and the element stiffness matrix
+    :return: delta between the reference element mass operator at point xi=1.0 and the element stiffness matrix 
     """
     phi1, _ = self.__evaluate(1.0)
-    FRm = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
-    
+    Kxi = self.__stiffness_matrix    
+
+    K1  = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
+    #FRm = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
+
     for k in range(0, self.__num_points):
       for l in range(0, self.__num_points):
-        FRm[k][l] = phi1[k]*phi1[l] 
+        #FRm[k][l] = phi1[k]*phi1[l]
+        K1[k][l]  = phi1[k]*phi1[l] - Kxi[k][l]
     
-    K1 = np.subtract(FRm,self.__stiffness_matrix)
+    #K1_orig = np.subtract(FRm,self.__stiffness_matrix)
+    #for k in range(0, self.__num_points):
+    #  for l in range(0, self.__num_points):
+    #    print(K1[k][l] - K1_orig[k][l])
+   
     return K1    
       
   def __compute_discrete_derivative_operator(self):
     """
-    Computes some derivative values for debugging purposes.
-  
-    Returns:
-       dudx:
-        Derivative values for debugging purposes.
+    Computes basis function derivatives at each support point.
+    Transposes the resulting operator.
+
+    u = sum_i u_i phi_i
+
+    => d/dx u = sum_j (d/dx phi_j) u_j   
+   
+    To construct the gradient field, we make the ansatz:
+
+    grad u = sum_i g_i phi_i
+
+    =>
+
+    g_i = ( d/dx u, phi_i )_[0,1] / (phi_i,phi_i)_[0,1] = sum_j (d/dx phi_j, phi_i)_[0,1] / w_i
+ 
+        = w_i (d/dx phi_j) (x_i) / w_i = (d/dx phi_j) (x_i)
+
+        = DUDX^T 
+ 
+    where DUDX is the operator computed by this function:
+
+    DUDX_ij = (d/dx phi_i) (x_j) 
+    
+    It can be further written as
+
+    DUDX_ij = 1/w_i * K^T_ij
+
+    where the stiffness matrix K is defined as 
+
+    K_ij = <d/dx phi_i, phi_j>_[0,1] = w_j (d/dx phi_j) (x_i) 
+ 
+    :return: transposed derivative operator
+
+    :note: If you want to use this operator to compute the gradient of the solution,
+    you need to use the transpose.
     """
-    dudx = np.dot(mp.inverse(self.__mass_matrix).tolist(),np.transpose(self.__stiffness_matrix))
+    # matmul
+    # @todo: get rid of this numpy dependency, as mass matrix is diagonal
+    #dudx_orig  = np.dot(mp.inverse(self.__mass_matrix).tolist(),np.transpose(self.__stiffness_matrix))
+    dudx = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
+    for i in range(0, self.__num_points):
+      phi, phi_xi = self.__evaluate(self.__quadrature_points[i])
+      for j in range(0, self.__num_points):
+        dudx[i][j] = phi_xi[j]
+        #print(dudx[i][j] - dudx_orig[i][j])
     return dudx
 
   def __compute_fine_grid_projector(self, j):
@@ -287,37 +362,26 @@ class LagrangeBasis():
 
     basisDeclarations = ""
     basisInitializers = ""
-    for var in ["quadrature_points","quadrature_weights","basis_function_values_left","basis_function_values_right","dudx","mass_matrix","stiffness_matrix","K1","equidistant_grid_projector","fine_grid_projector"]:
+    for var in ["quadrature_points","quadrature_weights","basis_function_values_left","basis_function_values_right","dudx","mass_matrix","stiffness_matrix","inv_K1","equidistant_grid_projector","fine_grid_projector"]:
       var_key  = "_LagrangeBasis__" + var # prefix for privat variables of class LagrangeBasis
       var_name = snake_to_camel(var) # C++ name
       if var in ["quadrature_points","quadrature_weights","basis_function_values_left","basis_function_values_right"]:
-          basisDeclarations += "const double {var_name}[{{order}}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))
       elif var in ["fine_grid_projector"]:
-          basisDeclarations += "const double {var_name}[3][{{order}}+1][{{order+1}}];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_3(getattr(self,var_key))))
       else:
-          basisDeclarations += "const double {var_name}[{{order}}+1][{{order+1}}];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key))))
     
     d["ORDER"]              = self.__max_poly_order
     d["BASIS_DECLARATIONS"] = basisDeclarations  
     d["BASIS_INITIALIZERS"] = basisInitializers  
-    
-    #d["QUADRATURE_POINTS"]           = __render_tensor_1(self.__quadrature_points)                
-    #d["QUADRATURE_WEIGHTS"]          = __render_tensor_1(self.__quadrature_weights)                
-    #d["BASIS_FUNCTION_VALUES_LEFT"]  = __render_tensor_1(self.__basis_function_values_left)                         
-    #d["BASIS_FUNCTION_VALUES_RIGHT"] = __render_tensor_1(self.__basis_function_values_right)                         
-    #d["DUDX"]                        = __render_tensor_2(self.__dudx)                       
-    #d["MASS_MATRIX"]                 = __render_tensor_2(self.__mass_matrix)                
-    #d["STIFFNESS_MATRIX"]            = __render_tensor_2(self.__stiffness_matrix)           
-    #d["K1"]                          = __render_tensor_2(self.__K1)                         
-    #d["EQUIDISTANT_GRID_PROJECTOR"]  = __render_tensor_2(self.__equidistant_grid_projector) 
-    #d["FINE_GRID_PROJECTOR"]         = __render_tensor_3(self.__fine_grid_projector)        
-
+   
   # public
   def quadrature_points(self,render=True):
     return LagrangeBasis.__render_tensor_1(self.__quadrature_points) if render else self.__quadrature_points

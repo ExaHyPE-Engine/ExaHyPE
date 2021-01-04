@@ -37,14 +37,14 @@ namespace exahype2 {
    *
    * @see getVolumeSize()
    */
-  #if defined(GPUOffloading)
+  #if defined(OpenMPGPUOffloading)
   #pragma omp declare target
   #endif
   double  getVolumeLength(
     const tarch::la::Vector<Dimensions,double>&  h,
     int                                          numberOfVolumesPerAxisInPatch
   );
-  #if defined(GPUOffloading)
+  #if defined(OpenMPGPUOffloading)
   #pragma omp end declare target
   #endif
 
