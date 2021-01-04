@@ -3,6 +3,8 @@
 #include "tarch/multicore/Core.h"
 
 
+#include "exahype2/fv/Generic.h"
+
 
 tarch::logging::Log  exahype2::EnclaveTask::_log( "exahype2::EnclaveTask" );
 
@@ -26,10 +28,10 @@ exahype2::EnclaveTask::EnclaveTask(
 
 bool exahype2::EnclaveTask::run() {
   logTraceIn( "run()" );
-  _outputValues = tarch::multicore::allocateMemory( _numberOfResultValues, tarch::multicore::MemoryLocation::Heap );
+  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
   _functor(_inputValues,_outputValues,_marker);
-  tarch::multicore::freeMemory(_inputValues,tarch::multicore::MemoryLocation::Heap );
+  tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
 
   EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues);
   logTraceOut( "run()" );

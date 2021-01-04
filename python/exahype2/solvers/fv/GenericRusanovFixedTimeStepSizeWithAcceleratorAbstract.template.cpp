@@ -2,7 +2,7 @@
 
 
 
-{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::{{CLASSNAME}}():
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
   _timeStamp(0.0),
   _solverState(SolverState::GridConstruction),
@@ -12,27 +12,27 @@
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startGridConstructionStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
   assertion( _solverState == SolverState::GridConstruction );
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishGridConstructionStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridConstructionStep() {
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startGridInitialisationStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
   assertion( _solverState == SolverState::GridConstruction );
   _solverState = SolverState::GridInitialisation;
   logDebug( "startGridInitialisationStep(...)", "new state is " << toString(_solverState) );
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishGridInitialisationStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startTimeStep(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStamp,
   double globalMaxTimeStamp,
   double globalMinTimeStepSize,
@@ -58,14 +58,14 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startTi
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishTimeStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if ( _solverState == SolverState::Secondary ) {
     _timeStamp += {{TIME_STEP_SIZE}};
   }
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startPlottingStep(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStamp,
   double globalMaxTimeStamp,
   double globalMinTimeStepSize,
@@ -80,11 +80,11 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::startPl
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::finishPlottingStep() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {
 }
 
 
-std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::toString(SolverState state) {
+std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState state) {
   switch (state) {
     case SolverState::GridConstruction:
       return "grid-construction";
@@ -106,10 +106,10 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
 
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEigenvalue(
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -118,17 +118,17 @@ double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::maxEi
 ) {
   {{EIGENVALUES_IMPLEMENTATION}}
 }
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::flux(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
  const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -138,17 +138,17 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::flux(
 ) {
   {{FLUX_IMPLEMENTATION}}
 }
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 {% endif %}
 
 
 {% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::nonconservativeProduct(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -159,7 +159,7 @@ void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::noncons
 ) {
   {{NCP_IMPLEMENTATION}}
 }
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 {% endif %}

@@ -11,7 +11,11 @@
 #include <algorithm>
 
 
-tarch::logging::Log  exahype2::EnclaveBookkeeping::_log( "exahype2::EnclaveBookkeeping" );
+#include "exahype2/fv/Generic.h"
+
+
+tarch::logging::Log
+exahype2::EnclaveBookkeeping::_log( "exahype2::EnclaveBookkeeping" );
 
 const std::string exahype2::EnclaveBookkeeping::MemoryAllocationsInLookupTableIdentifier( "exahype2::EnclaveBookkeeping::memory-allocations" );
 const std::string exahype2::EnclaveBookkeeping::LookupMissesIdentifier( "exahype2::EnclaveBookkeeping::lookup-misses" );
@@ -66,7 +70,8 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
   tarch::multicore::releaseTaskNumber(number);
 
   std::copy_n( storedData.second, storedData.first, destination );
-  tarch::multicore::freeMemory( storedData.second, tarch::multicore::MemoryLocation::Heap );
+
+  tarch::freeMemory( storedData.second, tarch::MemoryLocation::Heap );
   logDebug( "waitForTaskToTerminateAndCopyResultOver()", "delivered outcome of task " << number << " (" << storedData.first << " entries copied over)");
 }
 

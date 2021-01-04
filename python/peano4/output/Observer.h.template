@@ -27,7 +27,7 @@
 {%- endfor %}
 
 
-class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public peano4::grid::TraversalObserver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public peano4::grid::TraversalObserver {
   public:
     /**
      * Logging device

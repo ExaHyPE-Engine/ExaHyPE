@@ -26,18 +26,6 @@ namespace {
 }
 
 
-
-
-double* tarch::multicore::allocateMemory(int size, MemoryLocation location) {
-  return new double[size];
-}
-
-
-void tarch::multicore::freeMemory(double* data, MemoryLocation location) {
-  delete[] data;
-}
-
-
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 

@@ -34,7 +34,7 @@
 
 
 
-class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public ::exahype2::Solver {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
     enum class SolverState {
       GridConstruction,
@@ -58,7 +58,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
      * @return Max eigenvalue. Result has to be positive, so we are actually speaking
      *   about the maximum absolute eigenvalue.
      */
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     static double maxEigenvalue(
@@ -68,14 +68,14 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       double                                       t,
       int                                          normal
     );
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     {% endif %}
 
 
     {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     static void flux(
@@ -86,14 +86,14 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     );
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     {% endif %}
 
 
     {% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
@@ -105,7 +105,7 @@ class {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}: public
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     );
-    #if defined(GPUOffloading)
+    #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
     {% endif %}

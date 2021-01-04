@@ -137,6 +137,17 @@ class tarch::plotter::griddata::blockstructured::PatchWriter {
 
     /**
      * Caller has to destroy this instance manually., const std::string& description
+     *
+     * @param identifier  Name of your data. I recommend to stick to C++ identifier rules for
+     *   this one, i.e. no fancy chars and no spaces
+     * @param unknownsPerAxis   We plot a (logically) Cartesian piece of data. This is the number of
+     *   unknowns per axis
+     * @param recordsPerCell    Number of entries stores per unknown. Data is, by default, written
+     *   as AoS
+     * @param description       This is meta data, i.e. has no prescribed semanatics
+     * @param mapping           Array of positions within a unit cube/square. Is it an AoS of vectors
+     *   within the unit square which distorts all the unknowns within the mesh. Logically, all data
+     *   are Cartesian, but you might prefer Gauss Lobatto nodes, e.g.
      */
     virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description ) = 0;
     virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description, const std::string& metaData ) = 0;

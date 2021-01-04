@@ -1,4 +1,4 @@
-#if !defined(GPUOffloading)
+#if !defined(OpenMPGPUOffloading)
 #include "tarch/Assertions.h"
 #endif
 
@@ -39,7 +39,7 @@ template<int Size, typename Scalar>
 tarch::la::Vector<Size,Scalar>&  tarch::la::Vector<Size,Scalar>::operator= (
   const Vector<Size,Scalar>&  toAssign
 ) {
-  #if !defined(GPUOffloading)
+  #if !defined(OpenMPGPUOffloading)
   assertion(this != &toAssign);
   #endif
 
@@ -58,7 +58,7 @@ tarch::la::Vector<Size,Scalar>::Vector (
   const Vector<Size,Scalar>& toCopy
 ):
   _values() {
-  #if !defined(GPUOffloading)
+  #if !defined(OpenMPGPUOffloading)
   assertion(this != &toCopy);
   #endif
  

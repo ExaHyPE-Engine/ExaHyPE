@@ -17,6 +17,7 @@ class EnclaveLabels(ActionSet):
   
   """
   def __init__(self, solver_name):
+    ActionSet.__init__(self)
     self._solver_name = solver_name
     pass
 

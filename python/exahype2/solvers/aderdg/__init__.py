@@ -2,8 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .PDETerms                                       import PDETerms
 
-evtl net
+from .ADERDG                                         import Polynomials
 
-
-from .AbstractAoSWithOverlap1                        import AbstractAoSWithOverlap1         
-from .GenericRusanovFixedTimeStepSize                import GenericRusanovFixedTimeStepSize
+from .NonFusedGenericRusanovFixedTimeStepSize        import NonFusedGenericRusanovFixedTimeStepSize

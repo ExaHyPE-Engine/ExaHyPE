@@ -3,52 +3,52 @@
 
 
 #if PeanoDebug>=1
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugX( const tarch::la::Vector<Dimensions,double>& data ) {
   _debugX = data;
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setDebugH( const tarch::la::Vector<Dimensions,double>& data ) {
   _debugH = data;
 }
 
 
-tarch::la::Vector<Dimensions,double> {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getDebugX() const {
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugX() const {
   return _debugX;
 }
 
 
-tarch::la::Vector<Dimensions,double> {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getDebugH() const {
+tarch::la::Vector<Dimensions,double> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getDebugH() const {
   return _debugH;
 }
 #endif
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker) {
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::send(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::send(const peano4::datamanagement::VertexMarker& marker) {
   return false;
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveAndMerge(const peano4::datamanagement::VertexMarker& marker) {
   return false;
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::storePersistently(const peano4::datamanagement::VertexMarker& marker) {
   return true;
 }
 
 
-bool {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::datamanagement::VertexMarker& marker) {
   return true;
 }
 
 
-std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::toString() const {
+std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream msg;
   msg << "(#" << size();
   #if PeanoDebug>=1
@@ -61,19 +61,19 @@ std::string {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::
 
 
 #ifdef Parallel
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::initDatatype() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
 }
 
 
-void {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::shutdownDatatype() {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {
 }
 
 
-MPI_Datatype   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::Datatype;
+MPI_Datatype   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype;
 #endif
 
 
-double {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::getMinCutOffRadius() const {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCutOffRadius() const {
   double result = std::numeric_limits<double>::max();
   for (auto& p: *this) {
     result = std::min( result, p->getCutOffRadius() );
