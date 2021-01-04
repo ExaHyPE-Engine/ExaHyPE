@@ -266,7 +266,7 @@ did search for a file """ + input_file )
       self.add_Fortran_file(i)
 
 
-  def add_Fortran_module(self,module_file):
+  def add_Fortran_module(self,module_file,force=False):
     """
 
      Add a Fortran module
@@ -274,12 +274,27 @@ did search for a file """ + input_file )
      module_file: String
        Filename of a Fortran source code file which hosts a module. It should
        have the extension .f90 or similar.
+       
+     force: Boolean
+       Enforce that Fortran module is added even though it might already be in
+       the list.
 
     """
     if not module_file.endswith( ".f90" ):
       print( "Warning: Fortran module file does not have extension .f90 (" + module_file + ") and translation thus might fail" )
-    self.d["FORTRAN_MODULES"].append( module_file )
-    #self.fortranfiles.append( module_file )
+    if module_file in self.d["FORTRAN_MODULES"] and not force:
+      print( """Fortran module file 
+""" + module_file + """
+is already in module file list. Did not add it once more. You can overwrite 
+this default behaviour via the force attribute in add_Fortran_module(). If 
+you create multiple Peano 4 makefiles in a row (as you change parameters, e.g.)
+then this message can typically be ignored.
+""" )
+    elif module_file in self.d["FORTRAN_MODULES"] and force:
+      print( "Fortran module file " + module_file + " is already in module file list but force flag is set. Add it" )
+      self.d["FORTRAN_MODULES"].append( module_file )
+    else:
+      self.d["FORTRAN_MODULES"].append( module_file )
 
 
   def add_Fortran_modules(self,module_files):
