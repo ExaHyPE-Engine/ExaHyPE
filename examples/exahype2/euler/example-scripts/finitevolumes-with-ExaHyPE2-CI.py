@@ -115,8 +115,10 @@ peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
 if args.gpu:
   if args.mode != "release":
     peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core2d_{}_a-Generic.o".format(args.mode) )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core2d_{}_a-Rusanov.o".format(args.mode) )
   else:
     peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core2d_a-Generic.o" )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core2d_a-Rusanov.o" )
 
 peano4_project.generate()
 #peano4_project.build(make_clean_first=True, number_of_parallel_builds=1)
