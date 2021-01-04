@@ -134,8 +134,11 @@ class Makefile(object):
     self.d["CXXFLAGS"]      = value
 
 
-  def add_CXX_flag(self,value):
-    self.d["CXXFLAGS"]     += " " + value
+  def add_CXX_flag(self,value,force=False):
+    if value in self.d["CXXFLAGS"] and not force:
+      print( "CXXFLAG " + value + " is already in list of flags. Ignored as force attribute is not set" )
+    else:
+      self.d["CXXFLAGS"]     += " " + value
 
 
   def set_Fortran_compiler(self,value):
@@ -146,8 +149,11 @@ class Makefile(object):
     self.d["FCFLAGS"]       = value
 
 
-  def add_Fortran_flag(self,value):
-    self.d["FCFLAGS"]      += " " + value
+  def add_Fortran_flag(self,value,force=False):
+    if value in self.d["FCFLAGS"] and not force:
+      print( "FCFLAGS " + value + " is already in list of flags. Ignored as force attribute is not set" )
+    else:
+      self.d["FCFLAGS"]      += " " + value
 
 
   def add_linker_flag(self,value):
@@ -182,18 +188,18 @@ class Makefile(object):
           self.d["FC"] = compiler
         if re.search( "CXXFLAGS *=", line) and line.startswith( "CXXFLAGS" ):
           flags = line.split("=",1)[1].strip()
-          self.d["CXXFLAGS"] += flags
-          self.d["CXXFLAGS"] += " "
+          for i in flags.split( " " ):
+            self.add_CXX_flag(i)
         if re.search( "FCFLAGS *=", line) and line.startswith( "FCFLAGS" ):
           flags = line.split("=",1)[1].strip()
-          self.d["FCFLAGS"] += flags
-          self.d["FCFLAGS"] += " "
+          for i in flags.split( " " ):
+            self.add_Fortran_flag(i)
         if re.search( "LDFLAGS *=", line) and line.startswith( "LDFLAGS" ):
           flags = line.split("=",1)[1].strip()
-          self.d["LDFLAGS"] += flags
-          self.d["LDFLAGS"] += " "
+          for i in flags.split( " " ):
+            self.add_linker_flag(i)
         if re.search( "LIBS *=", line) and line.startswith( "LIBS" ):
-          flags = line.split("=",1)[1].strip()
+          self.d["LIBS"] += " "
           self.d["LIBS"] += flags
           self.d["LIBS"] += " "
       self.d["CONFIGUREPATH"] = directory
