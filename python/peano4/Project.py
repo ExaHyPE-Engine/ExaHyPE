@@ -65,14 +65,18 @@ class Project (object):
   def cleanup(self):
     """
       This routine has to be called after you've generated your code.
-    """
-    self.is_generated = False
-    self.is_built     = False
-    
+    """    
+    self.output.clear()
     self.datamodel.clear()       
     self.solversteps.clear()
-    self.output.clear()
 
+    self.main         = peano4.runner.DefaultSequence(self) 
+
+    self.is_generated = False
+    self.is_built     = False
+
+    self.constants  = peano4.output.Constants(self)
+    
     
   def generate(self, overwrite=peano4.output.Overwrite.Default, throw_away_data_after_generation=False):
     """
