@@ -80,9 +80,10 @@ class UpdateCell(AbstractADERDGActionSet):
                double * __restrict__                        Q, 
                const tarch::la::Vector<Dimensions,double>&  x, 
                double                                       t, 
+               int                                          normal,
                double * __restrict__                        F
              )->void {
-               {{SOLVER_INSTANCE}}.flux(Q,x,t,F);
+               {{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
              },
              marker.x(),
              marker.h(),
@@ -104,9 +105,10 @@ class UpdateCell(AbstractADERDGActionSet):
                double * __restrict__                        Q, 
                const tarch::la::Vector<Dimensions,double>&  x, 
                double                                       t, 
+               int                                          normal,
                double * __restrict__                        F
              )->void {
-               {{SOLVER_INSTANCE}}.flux(Q,x,t,F);
+               {{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
              },
              marker.x(),
              marker.h(),

@@ -83,6 +83,7 @@ namespace exahype2 {
         double * __restrict__                        Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+		int                                          normal,
         double * __restrict__ F
       ) >   flux,
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
@@ -192,6 +193,7 @@ namespace exahype2 {
         double * __restrict__                        Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
+		int                                          normal,
         double * __restrict__                        F
       ) >   flux,
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
