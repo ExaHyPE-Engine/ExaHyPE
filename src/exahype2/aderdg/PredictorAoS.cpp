@@ -4,6 +4,8 @@
 
 #include "tarch/la/Vector.h"
 
+#include "tarch/logging/Log.h"
+
 namespace exahype2 {
   namespace aderdg {
 
@@ -44,13 +46,13 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_initialGuess_body_AoS(
-      double *       __restrict__ Qout,
+      double *       __restrict__ QOut,
       const double * __restrict__ UIn,
       const int                   nodesPerAxis,
       const int                   strideQ,
       const int                   scalarIndex) {
       for (int var = 0; var < strideQ; var++) {
-        Qout[ scalarIndex*strideQ + var ] = UIn[ ( scalarIndex / nodesPerAxis )*strideQ + var ];
+        QOut[ scalarIndex*strideQ + var ] = UIn[ ( scalarIndex / nodesPerAxis )*strideQ + var ];
       }
     }
     
@@ -297,8 +299,7 @@ namespace exahype2 {
     GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
         double * __restrict__       QHullOut,
         const double * __restrict__ QIn,
-        const double * __restrict__ FCoeff[2],
-        const double                invDx,
+        const double * __restrict__ FLRCoeff[2],
         const int                   nodesPerAxis,
         const int                   unknowns,
         const int                   strideQ,
@@ -317,7 +318,7 @@ namespace exahype2 {
       for (int id=0; id<nodesPerAxis; id++) {
         const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr,id);
     
-        const double coeff = FCoeff[lr][id];
+        const double coeff = FLRCoeff[lr][id];
         for (int var=0; var < unknowns; var++) {
           QHullOut[ scalarIndexHull * strideQ + var ] += coeff * QIn[ scalarIndexQ*strideQ + var ]; 
         }
@@ -331,7 +332,7 @@ namespace exahype2 {
 
     // kernels
     __global__ void spaceTimePredictor_initialGuess_krnl_AoS(
-      double *       __restrict__ Qout,
+      double *       __restrict__ QOut,
       const double * __restrict__ UIn,
       const int                   nodesPerAxis,
       const int                   strideQ) {
@@ -340,7 +341,7 @@ namespace exahype2 {
      
       if ( scalarIndexCell < spaceTimeNodesPerCell ) {
         spaceTimePredictor_initialGuess_body_AoS(
-          Qout,
+          QOut,
           UIn,
           nodesPerAxis,
           strideQ,
@@ -391,7 +392,7 @@ namespace exahype2 {
       const int                                   strideRhs,
       const bool                                  callFlux,
       const bool                                  callSource,
-      const bool                                  callNonConservativeProduct) {
+      const bool                                  callNonconservativeProduct) {
       const int spaceTimeNodesPerCell = getSpaceTimeNodesPerCell(nodesPerAxis);
       const int scalarIndexCell       = threadIdx.x + blockDim.x * blockIdx.x;
       
@@ -446,7 +447,7 @@ namespace exahype2 {
               strideRhs,
               scalarIndex);
           }
-          if ( callNonConservativeProduct ) { 
+          if ( callNonconservativeProduct ) { 
             clearAll_body_AoS( SAux, strideS, 0 );
             clearAll_body_AoS( gradQAux, strideGradQ, 0 );
             
@@ -522,20 +523,21 @@ namespace exahype2 {
      __global__ void spaceTimePredictor_extrapolate_krnl_AoS(
         double * __restrict__       QHullOut,
         const double * __restrict__ QIn,
-        const double * __restrict__ FCoeff[2],
-        const double                invDx,
+        const double * __restrict__ FLCoeff,
+        const double * __restrict__ FRCoeff,
         const int                   nodesPerAxis,
         const int                   unknowns,
         const int                   strideQ) {
        const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * 2 * Dimensions;
-        
+       
+      const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
+ 
        const int scalarIndexHull = threadIdx.x + blockDim.x * blockIdx.x;
-       if ( globaThreadIdx < spaceTimeNodesOnCellHull ) {
+       if ( scalarIndexHull < spaceTimeNodesOnCellHull ) {
          spaceTimePredictor_extrapolate_body_AoS(
            QHullOut,
            QIn,
-           FCoeff,
-           invDx,
+           FLRCoeff,
            nodesPerAxis,
            unknowns,
            strideQ,
@@ -586,11 +588,11 @@ namespace exahype2 {
       const double                                atol,
       const bool                                  callFlux,
       const bool                                  callSource,
-      const bool                                  callNonConservativeProduct) {
-      const int spaceTimeNodesPerCell = getSpaceTimeNodesPerCell(nodesPerAxis);
-      const int scalarIndexCell       = threadIdx.x + blockDim.x * blockIdx.x;
-      
+      const bool                                  callNonconservativeProduct) {
       const int nodesPerAxis = order+1;
+
+      const int spaceTimeNodesPerCell = getSpaceTimeNodesPerCell(nodesPerAxis);
+      
       const int strideQ      = unknowns+auxiliaryVariables;
       const int strideRhs    = unknowns;
       const int strideS      = unknowns;
@@ -606,7 +608,7 @@ namespace exahype2 {
       // initial guess  
       for ( unsigned int scalarIndexCell = 0; scalarIndexCell < spaceTimeNodesPerCell; scalarIndexCell++ ) {
         spaceTimePredictor_initialGuess_body_AoS(
-          Qout,
+          QOut,
           UIn,
           nodesPerAxis,
           strideQ,
@@ -614,7 +616,7 @@ namespace exahype2 {
       }
     
       int iter = 0;
-      for ( ; iter < nodesPerAxis; iter++ ) {
+      for ( ;iter < nodesPerAxis; iter++ ) {
         for ( unsigned int scalarIndexCell = 0; scalarIndexCell < spaceTimeNodesPerCell; scalarIndexCell++ ) {
           spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
             rhs,
@@ -626,12 +628,12 @@ namespace exahype2 {
             scalarIndexCell);
 
           if ( callFlux ) { 
-            clearAll_body_AoS( FAux[ scalarIndexCell*strideF ], strideF, 0 );
+            clearAll_body_AoS( &FAux[ scalarIndexCell*strideF ], strideF, 0 );
             
             spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS(
               flux,
               rhs, 
-              FAux[ scalarIndexCell*strideF ], 
+              &FAux[ scalarIndexCell*strideF ], 
               QOut, 
               nodes,
               weights,
@@ -647,12 +649,12 @@ namespace exahype2 {
               scalarIndexCell);
           }
           if ( callSource ) { 
-            clearAll_body_AoS( SAux[ scalarIndexCell*strideS ], strideS, 0 );
+            clearAll_body_AoS( &SAux[ scalarIndexCell*strideS ], strideS, 0 );
             
             spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
               algebraicSource,
               rhs,
-              SAux[ scalarIndexCell*strideS ],
+              &SAux[ scalarIndexCell*strideS ],
               QOut,
               nodes,
               weights,
@@ -666,15 +668,15 @@ namespace exahype2 {
               strideRhs,
               scalarIndexCell);
           }
-          if ( callNonConservativeProduct ) { 
-            clearAll_body_AoS( SAux[ scalarIndexCell*strideS ], strideS, 0 );
-            clearAll_body_AoS( gradQAux[ scalarIndexCell*strideGradQ ], strideGradQ, 0 );
+          if ( callNonconservativeProduct ) { 
+            clearAll_body_AoS( &SAux[ scalarIndexCell*strideS ], strideS, 0 );
+            clearAll_body_AoS( &gradQAux[ scalarIndexCell*strideGradQ ], strideGradQ, 0 );
             
             spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
               nonconservativeProduct,
               rhs,
-              gradQAux[ scalarIndexCell*strideGradQ ],
-              SAux[ scalarIndexCell*strideS ],
+              &gradQAux[ scalarIndexCell*strideGradQ ],
+              &SAux[ scalarIndexCell*strideS ],
               QOut,
               nodes,
               weights,
@@ -705,14 +707,13 @@ namespace exahype2 {
             strideQ,
             strideRhs,
             scalarIndexCell);
-          sq_res += quaredResiduum;
+          sq_res += squaredResiduum;
         }
 
         // 4. Exit condition
-        if ( atol > 0 ) {
-          if (sq_res < atol * atol) {
-            iter = nodesPerAxis + 1; // break
-          }
+        if ( atol > 0 && sq_res < atol * atol) {
+          iter = nodesPerAxis + 1; // break
+        }
         if (iter == nodesPerAxis) { // No convergence after last iteration
           static tarch::logging::Log _log("kernels::aderdg::generic::c");
           logWarning("aderPicardLoopNonlinear(...)","|res|^2=" << sq_res << " > |atol|^2=" << atol * atol << " after "
@@ -725,6 +726,34 @@ namespace exahype2 {
       delete [] FAux;
       delete [] SAux;
       delete [] gradQAux;
+    }
+    
+    void spaceTimePredictor_extrapolate_cpu_AoS(
+        double * __restrict__       QHullOut,
+        const double * __restrict__ QIn,
+        const double * __restrict__ FLCoeff,
+        const double * __restrict__ FRCoeff,
+        const int                   order,
+        const int                   unknowns,
+        const int                   auxiliaryVariables) {
+      const int nodesPerAxis = order + 1;
+      
+      const int strideQ = unknowns+auxiliaryVariables;
+  
+      const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * 2 * Dimensions;
+      
+      const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
+ 
+      for ( unsigned int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
+        spaceTimePredictor_extrapolate_body_AoS(
+          QHullOut,
+          QIn,
+          FLRCoeff,
+          nodesPerAxis,
+          unknowns,
+          strideQ,
+          scalarIndexHull);
+      }
     }
   }
 }
