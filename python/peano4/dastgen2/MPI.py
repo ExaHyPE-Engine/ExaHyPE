@@ -15,8 +15,8 @@ class MPI(object):
     
   @param dof_association Should be of type DoFAssociation
   """
-  def __init__(self, dof_association):
-    self._dof_association = dof_association
+  def __init__(self, dof_association_):
+    self.dof_association = dof_association_
     pass
 
 
@@ -30,7 +30,7 @@ class MPI(object):
 #include "tarch/services/ServiceRepository.h"
 #include "peano4/utils/Globals.h"
 """
-    if self._dof_association!=DoFAssociation.Generic:
+    if self.dof_association!=DoFAssociation.Generic:
       result += """
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
@@ -49,7 +49,7 @@ class MPI(object):
 #endif
     """
     
-    if self._dof_association==DoFAssociation.Vertex:
+    if self.dof_association==DoFAssociation.Vertex:
       result += """
     void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker);
     
@@ -58,7 +58,7 @@ class MPI(object):
     static bool storePersistently(const peano4::datamanagement::VertexMarker& marker);
     static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
 """ 
-    elif self._dof_association==DoFAssociation.Face:
+    elif self.dof_association==DoFAssociation.Face:
       result += """
     void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker);
 
@@ -67,7 +67,7 @@ class MPI(object):
     static bool storePersistently(const peano4::datamanagement::FaceMarker& marker);
     static bool loadPersistently(const peano4::datamanagement::FaceMarker& marker);
 """ 
-    elif self._dof_association==DoFAssociation.Cell:
+    elif self.dof_association==DoFAssociation.Cell:
       result += """
     void merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker);
 
@@ -77,7 +77,7 @@ class MPI(object):
     static bool loadPersistently(const peano4::datamanagement::CellMarker& marker);
 """ 
       pass
-    elif self._dof_association==DoFAssociation.Generic or self._dof_association==DoFAssociation.Global:
+    elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
       pass
     else:
       assert False
@@ -146,7 +146,7 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
     """
 
 
-    if self._dof_association==DoFAssociation.Vertex:
+    if self.dof_association==DoFAssociation.Vertex:
       result += """
 void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
 }
@@ -173,7 +173,7 @@ bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagem
 
 
 """ 
-    elif self._dof_association==DoFAssociation.Face:
+    elif self.dof_association==DoFAssociation.Face:
       result += """
 void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
 }
@@ -198,7 +198,7 @@ bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagem
   return true;
 }
 """ 
-    elif self._dof_association==DoFAssociation.Cell:
+    elif self.dof_association==DoFAssociation.Cell:
       result += """
 void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker) {
 }
@@ -223,7 +223,7 @@ bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagem
   return true;
 }
 """      
-    elif self._dof_association==DoFAssociation.Generic or self._dof_association==DoFAssociation.Global:
+    elif self.dof_association==DoFAssociation.Generic or self.dof_association==DoFAssociation.Global:
       pass
     else:
       assert False

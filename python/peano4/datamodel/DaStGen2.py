@@ -72,6 +72,12 @@ class DaStGen2(DoF):
     #@todo ifdef PeanoDebug
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugX", "Dimensions" ) )
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugH", "Dimensions" ) )
+    
+    self._dastgen2_aspect = dastgen2.aspects.MPI()
+    self._peano4_aspect   = peano4.dastgen2.MPI(peano4.datamodel.DoFAssociation.Undef)
+
+    self.data.add_aspect( self._dastgen2_aspect )
+    self.data.add_aspect( self._peano4_aspect )
 
 
   def configure(self,namespace,association):
@@ -82,9 +88,18 @@ class DaStGen2(DoF):
       hook into this routine. In theory, I could add the DaStGen2 MPI aspect 
       straightaway (in the constructor), but I decided to do so in one place. 
       
+      
+      Implementation detail
+      
+      It is important that we add the aspect once when we initialise the code and 
+      then reconfigure it. I had the commented out version before, but that one
+      adds an aspect everytime configure() is called and thus causes issues as 
+      aspects might be added multiple times.
+      
     """
     super(DaStGen2, self).configure(namespace,association)
-    self.data.add_aspect( dastgen2.aspects.MPI() )
-    self.data.add_aspect( peano4.dastgen2.MPI(association) )
+    #self.data.add_aspect( dastgen2.aspects.MPI() )
+    #self.data.add_aspect( peano4.dastgen2.MPI(association) )
+    self._peano4_aspect.dof_association = association
     
 

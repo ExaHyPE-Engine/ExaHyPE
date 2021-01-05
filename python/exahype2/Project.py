@@ -168,7 +168,6 @@ class Project(object):
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
     
 
-
   def __configure_makefile(self):
     self._project.output.makefile.set_dimension(self._dimensions)
     self._project.output.makefile.set_executable_name(self._executable_name)
@@ -244,6 +243,8 @@ class Project(object):
      the opportunity to insert a few "empty"ish traversals in-between.
      
     """
+    self._project.cleanup()
+
     self.__export_constants()
     self.__configure_makefile()
     
@@ -252,9 +253,7 @@ class Project(object):
     create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
     plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
     perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
-    
-    self._project.cleanup()
-    
+        
     self._project.solversteps.add_step(create_grid)
     self._project.solversteps.add_step(init_grid)
     self._project.solversteps.add_step(create_grid_but_postpone_refinement)
