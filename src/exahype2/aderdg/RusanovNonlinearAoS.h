@@ -28,7 +28,7 @@ namespace exahype2 {
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    GPUCallableMethod void rusanovNonlinear_maxEigenvalue_body_AoS(
+    GPUCallableMethod void rusanovNonlinear_maxAbsoluteEigenvalue_body_AoS(
         std::function< double(
           double * __restrict__                        Q,
           const tarch::la::Vector<Dimensions,double>&  x,
@@ -68,11 +68,11 @@ namespace exahype2 {
         ) >                                         flux,
         double * __restrict__                       FLOut,
         double * __restrict__                       FROut,
-        const double * __restrict__                 QLIn, 
-        const double * __restrict__                 QRIn, 
         double * __restrict__                       FLAux,
         double * __restrict__                       FRAux,
-        const double&                               smax,
+        const double * __restrict__                 QLIn, 
+        const double * __restrict__                 QRIn, 
+        const double                                smax,
         const double * __restrict__                 nodes, 
         const double * __restrict__                 weights, 
         const double                                t,
@@ -129,6 +129,25 @@ namespace exahype2 {
      #if defined(OpenMPGPUOffloading)
      #pragma omp end declare target
      #endif
+    
+     double rusanovNonlinear_maxAbsoluteEigenvalue_loop_AoS(
+        std::function< double(
+          const double * __restrict__                 Q,
+          const tarch::la::Vector<Dimensions,double>& x,
+          double                                      t,
+          const int                                   direction
+        ) >                                         maxAbsoluteEigenvalue,
+        const double * __restrict__                 QL,
+        const double * __restrict__                 QR,
+        const double * __restrict__                 nodes,
+        const double                                t,
+        const double                                dt,
+        const tarch::la::Vector<Dimensions,double>& faceCentre,
+        const double                                dx,
+        const int                                   order,
+        const int                                   unknowns,
+        const int                                   auxiliaryVariables,
+        const int                                   direction);
 
   }
 }
