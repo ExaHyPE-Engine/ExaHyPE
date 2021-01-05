@@ -39,8 +39,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         double                                       FL[],
         double                                       FR[]
       ) -> void {
-        double wave[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]; 
-        double speed[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]; 
+        double wave[{{NUMBER_OF_UNKNOWNS}}][{{NUMBER_OF_UNKNOWNS}}]; 
+        double speed[{{NUMBER_OF_UNKNOWNS}}]; 
 
         int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
         int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
