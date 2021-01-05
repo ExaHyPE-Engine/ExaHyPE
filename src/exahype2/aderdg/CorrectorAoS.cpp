@@ -1,9 +1,11 @@
 #include "CorrectorAoS.h"
 //#include <functional>
 
-#include "tarch/la/Vector.h"
-
 #include "KernelUtils.h"
+
+#include "Generic.h"
+
+#include "tarch/la/Vector.h"
 
 namespace exahype2 { 
   namespace aderdg {
@@ -18,21 +20,21 @@ namespace exahype2 {
           double                                      t,
           int                                         normal,
           double * __restrict__                       F
-        ) >                        flux,
-        double* __restrict__       UOut, 
-        const double* __restrict__ QIn,
-        double* __restrict__       FAux, // must be allocated per thread as size is runtime parameter
-        const double* __restrict__ nodes,
-        const double* __restrict__ weights,
-        const double* __restrict__ Kxi,
-        const double               cellCentre,
-        const double               dx,
-        const double               t,
-        const double               dt,
-        const int                  nodesPerAxis,
-        const int                  unknowns,
-        const int                  strideQ,
-        const int                  scalarIndex) {
+        ) >                                         flux,
+        double* __restrict__                        UOut, 
+        const double* __restrict__                  QIn,
+        double* __restrict__                        FAux, // must be allocated per thread as size is runtime parameter
+        const double* __restrict__                  nodes,
+        const double* __restrict__                  weights,
+        const double* __restrict__                  Kxi,
+        const tarch::la::Vector<Dimensions,double>& cellCentre,
+        const double                                dx,
+        const double                                t,
+        const double                                dt,
+        const int                                   nodesPerAxis,
+        const int                                   unknowns,
+        const int                                   strideQ,
+        const int                                   scalarIndex) {
       tarch::la::Vector<Dimensions+1,int> strides = getStrides(nodesPerAxis,false);
       tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(scalarIndex,strides);
       const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
@@ -166,23 +168,26 @@ namespace exahype2 {
       double * __restrict__       UOut,
       const double * __restrict__ riemannResultIn,
       const double * __restrict__ weights,
-      const double * __restrict__ FCoeff[2],
-      const double                invDx,
+      const double * __restrict__ FLRCoeff[2],
+      const double                dx,
       const double                dt,
       const int                   nodesPerAxis,
       const int                   unknowns,
       const int                   strideQ,
-      const int                   scalarIndex) {
-      const tarch::la::Vector<Dimensions+1,int> index = delineariseIndex(scalarIndex,getStrides(nodesPerAxis,false));
+      const int                   strideRiemannResult,
+      const int                   scalarIndexCell) {
+      const tarch::la::Vector<Dimensions+1,int> index = delineariseIndex(scalarIndexCell,getStrides(nodesPerAxis,false));
+      
+      const double invDx = 1.0/dx;
       
       for (int d=0; d < Dimensions; d++) {
         for (int lr=0; lr<2; lr++) {
-          const int scalarIndexFace = mapCellIndexToScalarHullIndex(index,d,lr,nodesPerAxis);
+          const int scalarIndexCellFace = mapCellIndexToScalarHullIndex(index,d,lr,nodesPerAxis);
     
           for (int id=0; id < nodesPerAxis; id++) { 
-            const double coeff = dt * FCoeff[lr][index[d+1]] * invDx/*[d]*/;
+            const double coeff = dt * FLRCoeff[lr][index[d+1]] * invDx/*[d]*/;
             for (int var=0; var < unknowns; var++) {
-              UOut[ scalarIndex*strideQ + var ] += coeff * riemannResultIn[ (scalarIndexFace*nodesPerAxis + id)*strideQ + var ]; 
+              UOut[ scalarIndexCell*strideQ + var ] += coeff * riemannResultIn[ (scalarIndexCellFace*nodesPerAxis + id)*strideRiemannResult + var ]; 
             }
           }
         }
@@ -191,6 +196,162 @@ namespace exahype2 {
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
+    
+    // CPU launchers
+    void corrector_addCellContributions_loop_AoS(
+      std::function< void(
+        const double * __restrict__                 Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        int                                         normal,
+        double * __restrict__                       F
+      ) >   flux,
+      std::function< void(
+        const double * __restrict__                 Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        double * __restrict__                       S
+      ) >   algebraicSource,
+      std::function< void(
+        const double * __restrict__                 Q,
+        double                                      gradQ[][Dimensions],
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        double * __restrict__                       BgradQ
+      ) >                                         nonconservativeProduct,
+      double * __restrict__                       UOut, 
+      const double * __restrict__                 QIn, 
+      const double * __restrict__                 weights,
+      const double * __restrict__                 nodes,
+      const double * __restrict__                 Kxi,
+      const double * __restrict__                 dudx, 
+      const tarch::la::Vector<Dimensions,double>& cellCentre,
+      const double                                dx,
+      const double                                t,
+      const double                                dt,
+      const int                                   order,
+      const int                                   unknowns,
+      const int                                   auxiliaryVariables,
+      const bool                                  callFlux,
+      const bool                                  callSource,
+      const bool                                  callNonconservativeProduct) {
+      const int nodesPerAxis = order+1;
 
+      const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+      
+      const int strideQ      = unknowns+auxiliaryVariables;
+      const int strideRhs    = unknowns;
+      const int strideS      = unknowns;
+      const int strideF      = unknowns;
+      const int strideGradQ  = strideQ*Dimensions; // gradient of auxiliary variables needed for some apps
+      
+      double* SAux     = new double[nodesPerCell*strideS]{0.0};
+      double* gradQAux = new double[nodesPerCell*strideGradQ]{0.0};
+      double* FAux     = new double[nodesPerCell*strideF]{0.0}; 
+      
+      for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
+        if ( callFlux ) { 
+          clearAll_body_AoS( FAux, strideF, scalarIndexCell );
+          
+          corrector_addFluxContributions_body_AoS(
+            flux,
+            UOut, 
+            QIn,
+            &FAux[ scalarIndexCell*strideF ],
+            nodes,
+            weights,
+            Kxi,
+            cellCentre,
+            dx,
+            t,
+            dt,
+            nodesPerAxis,
+            unknowns,
+            strideQ,
+            scalarIndexCell);
+        }
+        if ( callSource ) { 
+          clearAll_body_AoS( SAux, strideS, scalarIndexCell );
+          
+          corrector_addSourceContributions_body_AoS(
+            algebraicSource,
+            UOut,
+            &SAux[ scalarIndexCell*strideS ],
+            QIn,
+            nodes,
+            weights,
+            cellCentre,
+            dx,
+            t,
+            dt,
+            nodesPerAxis,
+            unknowns,
+            strideQ,
+            scalarIndexCell);
+        }
+        if ( callNonconservativeProduct ) { 
+          clearAll_body_AoS( SAux, strideS, scalarIndexCell );
+          clearAll_body_AoS( gradQAux, strideGradQ, scalarIndexCell );
+          
+          corrector_addNcpContributions_body_AoS(
+            nonconservativeProduct,
+            UOut,
+            &gradQAux[ scalarIndexCell*strideGradQ ],
+            &SAux[ scalarIndexCell*strideS ],
+            QIn,
+            nodes,
+            weights,
+            dudx,
+            cellCentre,
+            dx,
+            t,
+            dt,
+            nodesPerAxis,
+            unknowns,
+            strideQ,
+            scalarIndexCell);
+        }
+      } // scalarIndexCell
+      
+      delete [] FAux;
+      delete [] SAux;
+      delete [] gradQAux;
+    }
+    
+    void corrector_addRiemannContributions_loop_AoS(
+      double * __restrict__       UOut,
+      const double * __restrict__ riemannResultIn,
+      const double * __restrict__ weights,
+      const double * __restrict__ FLCoeff,
+      const double * __restrict__ FRCoeff,
+      const double                dx,
+      const double                dt,
+      const int                   order,
+      const int                   unknowns,
+      const int                   auxiliaryVariables) {
+      const int nodesPerAxis = order+1;
+
+      const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+      
+      const int strideQ             = unknowns+auxiliaryVariables;
+      const int strideRiemannResult = unknowns;
+      
+      const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
+     
+      for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
+        corrector_addRiemannContributions_body_AoS(
+          UOut,
+          riemannResultIn,
+          weights,
+          FLRCoeff,
+          dx,
+          dt,
+          nodesPerAxis,
+          unknowns,
+          strideQ,
+          strideRiemannResult,
+          scalarIndexCell);
+      }
+    }
   }
 }

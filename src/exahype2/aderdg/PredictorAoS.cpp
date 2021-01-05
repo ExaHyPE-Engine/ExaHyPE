@@ -2,6 +2,8 @@
 
 #include "KernelUtils.h"
 
+#include "Generic.h"
+
 #include "tarch/la/Vector.h"
 
 #include "tarch/logging/Log.h"
@@ -9,39 +11,6 @@
 namespace exahype2 {
   namespace aderdg {
 
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    GPUCallableMethod void clearAll_body_AoS(
-      double *  __restrict__ data,
-      const int              stride,
-      const int              scalarIndex) {
-      for (int elem = 0; elem < stride; elem++) {
-        data[ scalarIndex*stride + elem ] = 0.0;
-      }
-    }
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    GPUCallableMethod void clearRange_body_AoS(
-      double *  __restrict__ data,
-      const int              range,
-      const int              stride,
-      const int              scalarIndex) {
-      for (int elem = 0; elem < range; elem++) {
-        data[ scalarIndex*stride + elem ] = 0.0;
-      }
-    }
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    
-    // @todo put utility functions at top to right location
-    
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -301,7 +270,6 @@ namespace exahype2 {
         const double * __restrict__ QIn,
         const double * __restrict__ FLRCoeff[2],
         const int                   nodesPerAxis,
-        const int                   unknowns,
         const int                   strideQ,
         const int                   scalarIndexHull) {
       const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
@@ -310,16 +278,11 @@ namespace exahype2 {
       const int d  = indexQHull[Dimensions] / 2;
       const int lr = indexQHull[Dimensions] - 2*d;
     
-      // clear
-      for (int var=0; var < unknowns; var++) {
-        QHullOut[ scalarIndexHull * strideQ + var ] = 0.0; 
-      }
-      
       for (int id=0; id<nodesPerAxis; id++) {
         const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr,id);
     
         const double coeff = FLRCoeff[lr][id];
-        for (int var=0; var < unknowns; var++) {
+        for (int var=0; var < strideQ; var++) {
           QHullOut[ scalarIndexHull * strideQ + var ] += coeff * QIn[ scalarIndexQ*strideQ + var ]; 
         }
       }
@@ -549,7 +512,7 @@ namespace exahype2 {
     #endif
      
     // CPU launchers
-    void spaceTimePredictor_PicardLoop_cpu_AoS(
+    void spaceTimePredictor_PicardLoop_loop_AoS(
       std::function< void(
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
@@ -628,7 +591,7 @@ namespace exahype2 {
             scalarIndexCell);
 
           if ( callFlux ) { 
-            clearAll_body_AoS( &FAux[ scalarIndexCell*strideF ], strideF, 0 );
+            clearAll_body_AoS( FAux, strideF, scalarIndexCell );
             
             spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS(
               flux,
@@ -649,7 +612,7 @@ namespace exahype2 {
               scalarIndexCell);
           }
           if ( callSource ) { 
-            clearAll_body_AoS( &SAux[ scalarIndexCell*strideS ], strideS, 0 );
+            clearAll_body_AoS( SAux, strideS, scalarIndexCell );
             
             spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
               algebraicSource,
@@ -669,8 +632,8 @@ namespace exahype2 {
               scalarIndexCell);
           }
           if ( callNonconservativeProduct ) { 
-            clearAll_body_AoS( &SAux[ scalarIndexCell*strideS ], strideS, 0 );
-            clearAll_body_AoS( &gradQAux[ scalarIndexCell*strideGradQ ], strideGradQ, 0 );
+            clearAll_body_AoS( SAux, strideS, scalarIndexCell );
+            clearAll_body_AoS( gradQAux, strideGradQ, scalarIndexCell );
             
             spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
               nonconservativeProduct,
@@ -728,7 +691,7 @@ namespace exahype2 {
       delete [] gradQAux;
     }
     
-    void spaceTimePredictor_extrapolate_cpu_AoS(
+    void spaceTimePredictor_extrapolate_loop_AoS(
         double * __restrict__       QHullOut,
         const double * __restrict__ QIn,
         const double * __restrict__ FLCoeff,
@@ -745,12 +708,12 @@ namespace exahype2 {
       const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
       for ( unsigned int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
+        clearAll_body_AoS( QHullOut, strideQ, scalarIndexHull );
         spaceTimePredictor_extrapolate_body_AoS(
           QHullOut,
           QIn,
           FLRCoeff,
           nodesPerAxis,
-          unknowns,
           strideQ,
           scalarIndexHull);
       }

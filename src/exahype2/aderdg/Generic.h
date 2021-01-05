@@ -28,14 +28,14 @@ namespace exahype2 {
       double *   __restrict__ data,
       const int               stride,
       const int               scalarIndex
-	);
+	  );
     
     GPUCallableMethod void clearRange_body_AoS(
       double *   __restrict__ data,
       const int               range,
       const int               stride,
       const int               scalarIndex
-	);
+	  );
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif

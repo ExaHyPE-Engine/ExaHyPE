@@ -1,5 +1,3 @@
-//#include "Generic.h"
-
 #include "tarch/la/Vector.h"
 
 #include <functional>
@@ -252,7 +250,6 @@ namespace exahype2 {
       const double * __restrict__ QIn,
       const double * __restrict__ FLRCoeff[2],
       const int                   nodesPerAxis,
-      const int                   unknowns,
       const int                   strideQ,
       const int                   scalarIndexHull);
     #if defined(OpenMPGPUOffloading)
@@ -285,7 +282,7 @@ namespace exahype2 {
      * @param[in] callSource call the algebraicSource function
      * @param[in] callNonconservativeProduct call the nonconservativeProduct
      */ 
-    void spaceTimePredictor_PicardLoop_cpu_AoS(
+    void spaceTimePredictor_PicardLoop_loop_AoS(
       std::function< void(
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
@@ -337,7 +334,7 @@ namespace exahype2 {
      * @param[in] unknowns
      * @param[in] auxiliaryVariables
      */ 
-    void spaceTimePredictor_extrapolate_cpu_AoS(
+    void spaceTimePredictor_extrapolate_loop_AoS(
         double * __restrict__       QHullOut,
         const double * __restrict__ QIn,
         const double * __restrict__ FLCoeff,

@@ -36,6 +36,34 @@ void exahype2::aderdg::validatePatch(
 	}
   }
 }
+    
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+GPUCallableMethod void exahype2::aderdg::clearAll_body_AoS(
+  double *  __restrict__ data,
+  const int              stride,
+  const int              scalarIndex) {
+  for (int elem = 0; elem < stride; elem++) {
+    data[ scalarIndex*stride + elem ] = 0.0;
+  }
+}
+
+GPUCallableMethod void exahype2::aderdg::clearRange_body_AoS(
+  double *  __restrict__ data,
+  const int              range,
+  const int              stride,
+  const int              scalarIndex) {
+  for (int elem = 0; elem < range; elem++) {
+    data[ scalarIndex*stride + elem ] = 0.0;
+  }
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
+    
+    // @todo put utility functions at top to right location
+    
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
