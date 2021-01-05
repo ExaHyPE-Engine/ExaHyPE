@@ -61,12 +61,13 @@ namespace exahype2 {
     /**
      * Is a face loop-based implementation of a split 1d Riemann.
      *
-     * You are given two arrays: The reconstructed one and Qout. Qout has the
+     * You are given two arrays: The Qin and Qout. Qout has the
      * dimensions numberOfVolumesPerAxisInPatch x 
-     * numberOfVolumesPerAxisInPatch. The reconstructed patch Qin has the 
+     * numberOfVolumesPerAxisInPatch x (unknowns+aux variables). Qin has the 
      * dimensions (numberOfVolumesPerAxisInPatch+1) x
-     * (numberOfVolumesPerAxisInPatch+1). The data within the patch is stored 
-     * as AoS.
+     * (numberOfVolumesPerAxisInPatch+1) x (unknowns + aux variables). The data
+     * within both patches is stored as AoS. So the input data Qin is the patch
+     * plus a halo of one cell. The output data is a patch only.
      * 
      * The routine runs over all faces within the input array and computes how 
      * much flows through these faces. It calls splitRiemannSolve1d() per face. 
@@ -87,7 +88,7 @@ namespace exahype2 {
      * We touch a face (see red one in sketch), e.g., and add the outcome to 
      * the volume of the left and right neighbour. Obviously, special care is 
      * required for the very left and very right face. They have a left and 
-     * right adjacent volume in the preimage which feeds into the Riemann 
+     * right adjacent volume in the preimage (Qin) which feeds into the Riemann 
      * solve, but the image hosts only the left or right volume.
      */
     void applySplit1DRiemannToPatch_Overlap1AoS2d(
