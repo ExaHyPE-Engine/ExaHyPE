@@ -138,6 +138,24 @@ namespace exahype2 {
     );
 
 
+    /**
+     * The routine has exactly the same semantics as applySplit1DRiemannToPatch_Overlap1AoS2d()
+     * but runs through the faces slightly differently. 
+     *
+     * @image html applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop.png
+     *
+     * As in applySplit1DRiemannToPatch_Overlap1AoS2d(), we have two big
+     * blocks. The first one runs through all vertical faces, the second one 
+     * through all horizontal ones. Each block now runs through the whole data
+     * twice though with a spacing of two and an offset of 0 or 1. That is, 
+     * we run through every second face (faces 0, 2, 4 along the x-axis) and 
+     * then through the other ones (1,3,5,...). 
+     *
+     * Each face writes to its left and right adjacent volume in Qout. As we
+     * skip every second face, we know that all writes are parallel. No race
+     * conditions can arise. That is: Though we now run through the data structure
+     * twice, we can process the for loops embarassingly parallel.
+     */
     void applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
       std::function< void(
         double * __restrict__ QL,
