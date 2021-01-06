@@ -392,7 +392,7 @@ class ADERDG(object):
 #include "SolverRepository.h"
 
 #include "exahype2/PatchUtils.h"
-#include "exahype2/aderdg/BoundaryConditions.h"
+#include "exahype2/aderdg/RusanovNonlinearAoS.h"
 """
 
 
