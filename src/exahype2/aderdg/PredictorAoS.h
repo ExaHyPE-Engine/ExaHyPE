@@ -277,7 +277,6 @@ namespace exahype2 {
     GPUCallableMethod void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
       double * __restrict__       QHullOut,
       const double * __restrict__ QIn,
-      const double * __restrict__ FLRCoeff[2],
       const int                   nodesPerAxis,
       const int                   strideQ,
       const int                   scalarIndexHull);
