@@ -21,7 +21,7 @@ namespace exahype2 {
      * @return Data of one volume as tuple.
      */
     std::string plotVolume(
-      double Q[],
+      const double* __restrict__ Q,
       int    unknowns
     );
 
@@ -35,7 +35,7 @@ namespace exahype2 {
      * @param location String that tells system from where this routine got called
      */
     void validatePatch(
-      double* __restrict__ Q,
+      const double* __restrict__ Q,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
@@ -47,8 +47,8 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     void copyPatch(
-      double* __restrict__ QinWithHalo,
-      double* __restrict__ QOutWithoutHalo,
+      const double* __restrict__  QinWithHalo,
+      double* __restrict__        QOutWithoutHalo,
       int    unknowns,
       int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
@@ -96,8 +96,8 @@ namespace exahype2 {
     #endif
     void applySplit1DRiemannToPatch_Overlap1AoS2d(
       std::function< void(
-        double * __restrict__ QL,
-        double * __restrict__ QR,
+        const double * __restrict__ QL,
+        const double * __restrict__ QR,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         double                                       volumeH,
         double                                       t,
@@ -113,8 +113,8 @@ namespace exahype2 {
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      double * __restrict__ Qin,
-      double * __restrict__ Qout
+      const double * __restrict__                  Qin,
+      double * __restrict__                        Qout
     );
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
@@ -123,8 +123,8 @@ namespace exahype2 {
 
     void applySplit1DRiemannToPatch_Overlap1AoS3d(
       std::function< void(
-        double * __restrict__ QL,
-        double * __restrict__ QR,
+        const double * __restrict__ QL,
+        const double * __restrict__ QR,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         double                                       volumeH,
         double                                       t,
@@ -140,8 +140,8 @@ namespace exahype2 {
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      double * __restrict__ Qin,
-      double * __restrict__ Qout
+      const double * __restrict__                  Qin,
+      double * __restrict__                        Qout
     );
 
 
@@ -168,8 +168,8 @@ namespace exahype2 {
     #endif
     void applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
       std::function< void(
-        double * __restrict__ QL,
-        double * __restrict__ QR,
+        const double * __restrict__ QL,
+        const double * __restrict__ QR,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         double                                       volumeH,
         double                                       t,
@@ -185,8 +185,8 @@ namespace exahype2 {
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      double * __restrict__ Qin,
-      double * __restrict__ Qout
+      const double * __restrict__                  Qin,
+      double * __restrict__                        Qout
     );
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
@@ -195,8 +195,8 @@ namespace exahype2 {
 
     void applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
       std::function< void(
-        double * __restrict__ QL,
-        double * __restrict__ QR,
+        const double * __restrict__ QL,
+        const double * __restrict__ QR,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         double                                       volumeH,
         double                                       t,
@@ -212,8 +212,8 @@ namespace exahype2 {
       int                                          numberOfVolumesPerAxisInPatch,
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      double * __restrict__ Qin,
-      double * __restrict__ Qout
+      const double * __restrict__                  Qin,
+      double * __restrict__                        Qout
     );
   }
 }

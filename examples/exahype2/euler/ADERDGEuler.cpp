@@ -7,7 +7,7 @@ tarch::logging::Log   examples::exahype2::euler::ADERDGEuler::_log( "examples::e
 
 
 void examples::exahype2::euler::ADERDGEuler::adjustSolution(
-  double * __restrict__ Q, // Q[5+0],
+  double * __restrict__ Q,  // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t
 ) {
@@ -41,7 +41,7 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
 
 
 double examples::exahype2::euler::ADERDGEuler::maxEigenvalue(
-  double * __restrict__ Q, // Q[5+0],
+  const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal
@@ -77,7 +77,7 @@ double examples::exahype2::euler::ADERDGEuler::maxEigenvalue(
 
 
 void examples::exahype2::euler::ADERDGEuler::flux(
-  double * __restrict__ Q, // Q[5+0],
+  const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal,
@@ -145,8 +145,8 @@ void examples::exahype2::euler::ADERDGEuler::flux(
 
 
 void examples::exahype2::euler::ADERDGEuler::boundaryConditions(
-  double * __restrict__ Qinside, // Qinside[5+0]
-  double * __restrict__ Qoutside, // Qoutside[5+0]
+  const double * __restrict__ Qinside, // Qinside[5+0]
+  const double * __restrict__ Qoutside, // Qoutside[5+0]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal

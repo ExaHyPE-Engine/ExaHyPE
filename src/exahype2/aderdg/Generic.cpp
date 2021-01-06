@@ -36,7 +36,7 @@ void exahype2::aderdg::validatePatch(
 	}
   }
 }
-
+    
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -48,6 +48,7 @@ void exahype2::aderdg::copyPatch(
   int    numberOfVolumesPerAxisInPatch,
   int    haloSize
 ) {
+  assertion(false);
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target

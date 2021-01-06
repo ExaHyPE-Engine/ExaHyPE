@@ -47,6 +47,7 @@ class examples::exahype2::loh1::LOH1: public examples::exahype2::loh1::AbstractL
 
   public:
     virtual void adjustSolution(
+  double * __restrict__ Q,
       double                                       Q[9+4],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -62,8 +63,8 @@ class examples::exahype2::loh1::LOH1: public examples::exahype2::loh1::AbstractL
     ) override;
 
     void boundaryConditions(
-      double                                       Qinside[13],
-      double                                       Qoutside[13],
+      const double* __restrict__                   Qinside, // [13]
+      double* __restrict__                         Qoutside, // [13]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -72,7 +73,7 @@ class examples::exahype2::loh1::LOH1: public examples::exahype2::loh1::AbstractL
 
     void nonconservativeProduct(
       double                                       Q[13],
-      double                                       gradQ[13][Dimensions],
+      const double                                       gradQ[13][Dimensions],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,

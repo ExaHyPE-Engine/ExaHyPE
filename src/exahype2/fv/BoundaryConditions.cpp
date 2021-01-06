@@ -9,8 +9,8 @@
 
 void exahype2::fv::applyBoundaryConditions(
   std::function< void(
-    double                                       Qinside[],
-    double                                       Qoutside[],
+    const double* __restrict__                   Qinside,
+    double * __restrict__                        Qoutside,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
@@ -24,7 +24,7 @@ void exahype2::fv::applyBoundaryConditions(
   int                                          numberOfVolumesPerAxisInPatch,
   int                                          unknowns,
   int                                          faceNumber,
-  double                                       Q[]
+  double* __restrict__                         Q
 ) {
   static tarch::logging::Log _log( "exahype2::fv" );
 

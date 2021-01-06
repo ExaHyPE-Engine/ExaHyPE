@@ -166,50 +166,6 @@ class AdjustCell(AbstractADERDGActionSet):
     return result
 
 
-class HandleBoundary(AbstractADERDGActionSet):
-  TemplateHandleBoundary = """
-    logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
-    if (not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]) {
-/*      ::exahype2::fv::applyBoundaryConditions(
-        [&](
-          double                                       Qinside[],
-          double                                       Qoutside[],
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> void {
-          {{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
-        },  
-        marker.x(),
-        marker.h(),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        {{TIME_STEP_SIZE}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        marker.getSelectedFaceNumber(),
-        fineGridFace{{UNKNOWN_IDENTIFIER}}.value
-      ); */
-    }
-"""
-
-  
-  def __init__(self,solver):
-    AbstractADERDGActionSet.__init__(self, solver)
-
-  
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
-      result = jinja2.Template(self.TemplateAdjustCell).render(**d)
-      pass 
-    return result
-
-
 class ADERDG(object):
   """ 
     An abstract ADER-DG solver
@@ -291,7 +247,6 @@ class ADERDG(object):
     self._guard_AMR                                = self._predicate_cell_carrying_data()
     self._guard_project_DG_polynomial_onto_faces   = self._predicate_cell_carrying_data()
     self._guard_update_cell                        = self._predicate_cell_carrying_data()
-    self._guard_handle_boundary                    = self._predicate_boundary_face_carrying_data()
 
     self._order                = order
     self._min_h                = min_h
@@ -311,7 +266,6 @@ class ADERDG(object):
 
     self._action_set_adjust_cell     = AdjustCell(self)
     self._action_set_AMR             = AMR(self)
-    self._handle_boundary_action_set = AbstractADERDGActionSet(self)
     self._action_set_update_cell     = None
     self._action_set_update_face     = None
 
@@ -335,10 +289,6 @@ class ADERDG(object):
   
   def _predicate_face_carrying_data(self):
     return "not marker.isRefined()"
-
-
-  def _predicate_boundary_face_carrying_data(self):
-    return "not marker.isRefined() and fineGridFaceLabel.getBoundary()"
 
 
   def _predicate_cell_carrying_data(self):
@@ -392,7 +342,7 @@ class ADERDG(object):
 #include "SolverRepository.h"
 
 #include "exahype2/PatchUtils.h"
-#include "exahype2/aderdg/BoundaryConditions.h"
+#include "exahype2/aderdg/RusanovNonlinearAoS.h"
 """
 
 

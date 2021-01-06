@@ -14,7 +14,7 @@
 #endif
 void exahype2::fv::splitRusanov1d(
   std::function< void(
-    double * __restrict__ Q,
+    const double * __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
@@ -23,15 +23,15 @@ void exahype2::fv::splitRusanov1d(
     double * __restrict__ F
   ) >   flux,
   std::function< double(
-    double * __restrict__ Q,
+    const double * __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal
   ) >   maxEigenvalue,
-  double * __restrict__ QL,
-  double * __restrict__ QR,
+  const double * __restrict__ QL,
+  const double * __restrict__ QR,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       dx,
   double                                       t,
@@ -81,9 +81,10 @@ void exahype2::fv::splitRusanov1d(
 #pragma omp end declare target
 #endif
 
+
 void exahype2::fv::splitRusanov1d(
    std::function< void(
-    double * __restrict__ Q,
+    const double * __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
@@ -92,8 +93,8 @@ void exahype2::fv::splitRusanov1d(
     double * __restrict__ F
   ) >   flux,
   std::function< void(
-    double * __restrict__ Q,
-    double                                       gradQ[][Dimensions],
+    const double * __restrict__                  Q,
+    const double                                 gradQ[][Dimensions],
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
@@ -102,15 +103,15 @@ void exahype2::fv::splitRusanov1d(
     double * __restrict__ BgradQ
   ) >   nonconservativeProduct,
   std::function< double(
-    double * __restrict__ Q,
+    const double * __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
     const tarch::la::Vector<Dimensions,double>&  volumeH,
     double                                       t,
     double                                       dt,
     int                                          normal
   ) >   maxEigenvalue,
-  double * __restrict__ QL,
-  double * __restrict__ QR,
+  const double * __restrict__ QL,
+  const double * __restrict__ QR,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       dx,
   double                                       t,

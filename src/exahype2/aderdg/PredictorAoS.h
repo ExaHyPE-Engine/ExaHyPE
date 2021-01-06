@@ -1,4 +1,5 @@
-//#include "Generic.h"
+#ifndef _EXAHYPE2_ADERDG_PREDICTOR_AOS_H_
+#define _EXAHYPE2_ADERDG_PREDICTOR_AOS_H_
 
 #include "tarch/la/Vector.h"
 
@@ -11,7 +12,7 @@ namespace exahype2 {
      */
     //@{
     /**
-     * \brief Initial guess for Q before STP Picard loop. 
+     * @brief Initial guess for Q before STP Picard loop. 
      * 
      * This body writes to a single space-time volume coefficient.  
      *
@@ -34,7 +35,7 @@ namespace exahype2 {
     #endif
     
     /**
-     * \brief Initialise RHS of Picard iterations.
+     * @brief Initialise RHS of Picard iterations.
      * 
      * Initialise the right-hand of the equation system that is inverted in every step of the 
      * predictor's Picard loop.
@@ -63,7 +64,7 @@ namespace exahype2 {
     #endif
     
     /**
-     * \brief Add flux contributions to RHS during STP Picard loop.
+     * @brief Add flux contributions to RHS during STP Picard loop.
      * 
      * This body writes to a single space-time volume coefficient.  
      *
@@ -115,7 +116,7 @@ namespace exahype2 {
     #endif
     
     /**
-     * \brief Add source contributions to RHS during STP Picard loop.
+     * @brief Add source contributions to RHS during STP Picard loop.
      * 
      * This body writes to a single space-time volume coefficient.  
      * 
@@ -238,8 +239,7 @@ namespace exahype2 {
      * 
      * @param QHullOut
      * @param QIn
-     * @param FCoeff
-     * @param invDx
+     * @param FLRCoeff Basis functions evaluated at reference coordinates 0.0 (L,component 0) and 1.0 (R, component 1).
      * @param nodesPerAxis
      * @param unknowns
      * @param strideQ
@@ -251,15 +251,159 @@ namespace exahype2 {
     GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
       double * __restrict__       QHullOut,
       const double * __restrict__ QIn,
-      const double * __restrict__ FCoeff[2],
-      const double                invDx,
+      const double * __restrict__ FLRCoeff[2],
       const int                   nodesPerAxis,
-      const int                   unknowns,
+      const int                   strideQ,
+      const int                   scalarIndexHull);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+    
+    /**
+     * Extrapolate the predictor onto DoF associated with the 
+     * faces of a cell (cell hull). These serve as Riemann
+     * solver inputs.
+     * 
+     * Simplified version of spaceTimePredictor_extrapolate_body_AoS specifically for Lobatto nodes.
+     * 
+     * @param QHullOut
+     * @param QIn
+     * @param FLRCoeff Basis functions evaluated at reference coordinates 0.0 (L,component 0) and 1.0 (R, component 1).
+     * @param nodesPerAxis
+     * @param unknowns
+     * @param strideQ
+     * @param scalarIndexHull
+     */
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    GPUCallableMethod void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
+      double * __restrict__       QHullOut,
+      const double * __restrict__ QIn,
+      const int                   nodesPerAxis,
       const int                   strideQ,
       const int                   scalarIndexHull);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
 
+    /**
+     * @brief Compute the space-time predictor (Qout) from the current solution (UIn). 
+     * 
+     * @param[in] flux
+     * @param[in] algebraicSource
+     * @param[in] nonconservativeProduct
+     * @param[inout] QOut
+     * @param[in] UIn
+     * @param[in] weights
+     * @param[in] nodes
+     * @param[in] Kxi
+     * @param[in] iK1
+     * @param[in] FLCoeff
+     * @param[in] dudx
+     * @param[in] dx
+     * @param[in] cellCentre
+     * @param[in] t
+     * @param[in] dt
+     * @param[in] order
+     * @param[in] unknowns
+     * @param[in] auxiliaryVariables
+     * @param[in] atol
+     * @param[in] callFlux call the flux function
+     * @param[in] callSource call the algebraicSource function
+     * @param[in] callNonconservativeProduct call the nonconservativeProduct
+     */ 
+    void spaceTimePredictor_PicardLoop_loop_AoS(
+      std::function< void(
+        const double * __restrict__                 Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        int                                         normal,
+        double * __restrict__                       F
+      ) >   flux,
+      std::function< void(
+        const double * __restrict__                 Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        double * __restrict__                       S
+      ) >   algebraicSource,
+      std::function< void(
+        const double * __restrict__                 Q,
+        double                                      gradQ[][Dimensions],
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        double * __restrict__                       BgradQ
+      ) >                                         nonconservativeProduct,
+      double * __restrict__                       QOut, 
+      const double * __restrict__                 UIn, 
+      const double * __restrict__                 weights,
+      const double * __restrict__                 nodes,
+      const double * __restrict__                 Kxi,
+      const double * __restrict__                 iK1,
+      const double * __restrict__                 FLCoeff,
+      const double * __restrict__                 dudx, 
+      const double                                dx,
+      const tarch::la::Vector<Dimensions,double>& cellCentre,
+      const double                                t,
+      const double                                dt,
+      const int                                   order,
+      const int                                   unknowns,
+      const int                                   auxiliaryVariables,
+      const double                                atol,
+      const bool                                  callFlux,
+      const bool                                  callSource,
+      const bool                                  callNonconservativeProduct);
+
+    /**
+     * @brief Extrapolate all of cell's predictor DOF to the hull of the element.
+     *
+     * @note This version works for Gauss-Legendre and Gauss-Lobatto nodes.
+     *
+     * @param[inout] QHullOut
+     * @param[in] QIn
+     * @param[in] FLCoeff
+     * @param[in] FRCoeff
+     * @param[in] order
+     * @param[in] unknowns
+     * @param[in] auxiliaryVariables
+     */ 
+    void spaceTimePredictor_extrapolate_loop_AoS(
+        double * __restrict__       QHullOut,
+        const double * __restrict__ QIn,
+        const double * __restrict__ FLCoeff,
+        const double * __restrict__ FRCoeff,
+        const int                   order,
+        const int                   unknowns,
+        const int                   auxiliaryVariables);
+    
+    /**
+     * @brief Extrapolate all of cell's predictor DOF to the hull of the element.
+     *
+     * @note assumes that Gauss-Lobatto nodes are used as support points for the basis functions.
+     *       In this case, the outermost nodes are located directly at the boundary of 
+     *       the reference element. Boundary-extrapolation thus becomes a simple copy of some predictor coefficients.
+     * @note FLCoeff,FRCoeff are arguments in order to have the same signature as
+     *       the generic routine. They are not actually needed.
+     * @see spaceTimePredictor_extrapolate_loop_AoS, spaceTimePredictor_extrapolate_body_AoS, spaceTimePredictor_extrapolate_Lobatto_body_AoS
+     *
+     * @param[inout] QHullOut
+     * @param[in] QIn
+     * @param[in] FLCoeff
+     * @param[in] FRCoeff
+     * @param[in] order
+     * @param[in] unknowns
+     * @param[in] auxiliaryVariables
+     */ 
+    void spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
+        double * __restrict__       QHullOut,
+        const double * __restrict__ QIn,
+        const double * __restrict__ FLCoeff,
+        const double * __restrict__ FRCoeff,
+        const int                   order,
+        const int                   unknowns,
+        const int                   auxiliaryVariables);
+
   } // aderdg
 } // exahype2
+
+#endif

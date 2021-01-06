@@ -10,7 +10,7 @@ tarch::la::Vector<Size,Scalar>::Vector ():
 
 
 template<int Size, typename Scalar>
-tarch::la::Vector<Size,Scalar>::Vector(Scalar* values) {
+tarch::la::Vector<Size,Scalar>::Vector(const Scalar* values) {
   for (int i=0; i<Size; i++) {
     _values[i] = *(values+i);
   }
