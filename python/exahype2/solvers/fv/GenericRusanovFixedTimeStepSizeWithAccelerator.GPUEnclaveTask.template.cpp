@@ -8,19 +8,19 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(double* __restrict__  reconstructedPatch, const ::peano4::datamanagement::CellMarker& marker, double* __restrict__  targetPatch) {
-  {% if USE_SPLIT_LOOP %}
   #if Dimensions==2
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
   #else
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
   #endif
-  {% else %}
-  #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-  #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-  #endif
-  {% endif %}
+  //{% if USE_SPLIT_LOOP %}
+  //{% else %}
+  //#if Dimensions==2
+  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+  //#else
+  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+  //#endif
+  //{% endif %}
     [&](
       double                                       QL[],
       double                                       QR[],
@@ -151,19 +151,19 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   tarch::la::Vector<Dimensions,double> myh = {h0,h1,h2};
   #endif
 
-  {% if USE_SPLIT_LOOP %}
   #if Dimensions==2
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
   #else
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
   #endif
-  {% else %}
-  #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-  #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-  #endif
-  {% endif %}
+  //{% if USE_SPLIT_LOOP %}
+  //{% else %}
+  //#if Dimensions==2
+  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+  //#else
+  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+  //#endif
+  //{% endif %}
     [&](
       double                                       QL[],
       double                                       QR[],

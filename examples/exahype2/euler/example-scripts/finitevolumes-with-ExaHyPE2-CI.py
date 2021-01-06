@@ -67,6 +67,7 @@ if args.gpu:
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
+  solver._use_split_loop=True
 else:
   solver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
     "Euler",
