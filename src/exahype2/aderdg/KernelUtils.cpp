@@ -108,9 +108,21 @@ namespace exahype2 {
       const double                              t, 
       const double                              dt, 
       const double* __restrict__                nodes) {
-      tarch::la::Vector<Dimensions+1, double> coords =
-        getCoordinates(indexOnFace,faceCentre,dx,t,dt,nodes);
-      coords[direction+1] = faceCentre[direction];
+      tarch::la::Vector<Dimensions+1, double> coords;
+    
+      coords[0]= t;
+      if ( indexOnFace[0] >= 0 ) {
+        coords[0] + nodes[indexOnFace[0]] * dt;
+      }
+      int e = 1;
+      for ( int d = 1; d < Dimensions+1; d++ ) { // x -> y -> z
+        if ( d-1 == direction ) { 
+          coords[d] = faceCentre[d-1];
+        } else { 
+          coords[d] = faceCentre[d-1] + dx/*[d-1]*/ * (nodes[indexOnFace[e]] - 0.5);
+        }
+        e++;
+      }
       return coords;
     }
     
