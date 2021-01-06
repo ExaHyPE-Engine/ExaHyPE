@@ -51,8 +51,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * 1d Riemann solve
      */
     virtual void solveRiemannProblem(
-      double * __restrict__ QL,
-      double * __restrict__ QR,
+      const double * __restrict__ QL,
+      const double * __restrict__ QR,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       double                                       volumeH,
       double                                       t,

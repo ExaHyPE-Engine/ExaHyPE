@@ -31,7 +31,7 @@ class examples::exahype2::gprdr::GPRDR: public AbstractGPRDR {
 
     
     void adjustSolution(
-      double * __restrict__ Q, // Q[27+3],
+      double * __restrict__ Q,  // Q[27+3],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
@@ -41,7 +41,7 @@ class examples::exahype2::gprdr::GPRDR: public AbstractGPRDR {
 
     /*
     virtual double maxEigenvalue(
-      double * __restrict__ Q, // Q[27+3],
+      const double * __restrict__ Q, // Q[27+3],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -50,7 +50,7 @@ class examples::exahype2::gprdr::GPRDR: public AbstractGPRDR {
 
     
     void flux(
-      double * __restrict__ Q, // Q[27+3],
+      const double * __restrict__ Q, // Q[27+3],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -61,8 +61,8 @@ class examples::exahype2::gprdr::GPRDR: public AbstractGPRDR {
 
     
     void nonconservativeProduct(
-      double * __restrict__ Q, // Q[27+3],
-      double                                       gradQ[27+3][Dimensions],
+      const double * __restrict__ Q, // Q[27+3],
+      const double                                       gradQ[27+3][Dimensions],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -72,8 +72,8 @@ class examples::exahype2::gprdr::GPRDR: public AbstractGPRDR {
 
     
     void solveRiemannProblem(
-       double * __restrict__ QL,
-       double * __restrict__ QR,
+       const double * __restrict__ QL,
+       const double * __restrict__ QR,
        const tarch::la::Vector<Dimensions,double>&  faceCentre,
        double                                       volumeH,
        double                                       t,

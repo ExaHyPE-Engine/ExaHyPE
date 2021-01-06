@@ -42,7 +42,7 @@ examples::exahype2::swe::AbstractSWE::SolverState examples::exahype2::swe::Abstr
 
 
 ::exahype2::RefinementCommand examples::exahype2::swe::AbstractSWE::refinementCriterion(
-  double * __restrict__ Q, // Q[3+1],
+  const double * __restrict__ Q, // Q[3+1],
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
@@ -62,7 +62,8 @@ examples::exahype2::swe::AbstractSWE::SolverState examples::exahype2::swe::Abstr
 
 
 void examples::exahype2::swe::AbstractSWE::adjustSolution(
-  double * __restrict__ Q, // Q[3+1],
+  double * __restrict__ Q,
+  const double * __restrict__ Q, // Q[3+1],
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
@@ -82,8 +83,8 @@ void examples::exahype2::swe::AbstractSWE::adjustSolution(
 
 
 void examples::exahype2::swe::AbstractSWE::boundaryConditions(
-  double * __restrict__ Qinside, // Qinside[3+1]
-  double * __restrict__ Qoutside, // Qoutside[3+1]
+  const double * __restrict__ Qinside, // Qinside[3+1]
+  const double * __restrict__ Qoutside, // Qoutside[3+1]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

@@ -119,8 +119,8 @@ void examples::exahype2::gprdr::GPRDR::adjustSolution(
 
 
 void examples::exahype2::gprdr::GPRDR::solveRiemannProblem(
-   double * __restrict__ QL,
-   double * __restrict__ QR,
+   const double * __restrict__ QL,
+   const double * __restrict__ QR,
    const tarch::la::Vector<Dimensions,double>&  faceCentre,
    double                                       volumeH,
    double                                       t,
@@ -134,7 +134,7 @@ void examples::exahype2::gprdr::GPRDR::solveRiemannProblem(
 
 
 /*double examples::exahype2::gprdr::GPRDR::maxEigenvalue(
-  double * __restrict__ Q,
+  const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -159,7 +159,7 @@ void examples::exahype2::gprdr::GPRDR::solveRiemannProblem(
 
 
 void examples::exahype2::gprdr::GPRDR::flux(
-  double * __restrict__ Q,
+  const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -182,8 +182,8 @@ void examples::exahype2::gprdr::GPRDR::flux(
 
 
 void examples::exahype2::gprdr::GPRDR::nonconservativeProduct(
-  double * __restrict__ Q,
-  double                                       gradQ[27+3][Dimensions],
+  const double * __restrict__ Q,
+  const double                                       gradQ[27+3][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

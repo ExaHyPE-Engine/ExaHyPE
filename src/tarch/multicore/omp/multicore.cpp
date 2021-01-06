@@ -1,5 +1,6 @@
 #include "tarch/multicore/multicore.h"
 
+
 #if defined(SharedOMP)
 
 #if defined(OpenMPGPUOffloading)

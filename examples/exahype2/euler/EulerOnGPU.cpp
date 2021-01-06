@@ -13,7 +13,7 @@ tarch::logging::Log   examples::exahype2::euler::EulerOnGPU::_log( "examples::ex
 
 
 void examples::exahype2::euler::EulerOnGPU::adjustSolution(
-  double * __restrict__ Q, // Q[5+0],
+  double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
@@ -44,7 +44,7 @@ void examples::exahype2::euler::EulerOnGPU::adjustSolution(
 #pragma omp declare target
 #endif
 double examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
-  double * __restrict__ Q, // Q[5+0],
+  const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -84,8 +84,8 @@ double examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
 
 
 void examples::exahype2::euler::EulerOnGPU::boundaryConditions(
-  double * __restrict__ Qinside, // Qinside[5+0]
-  double * __restrict__ Qoutside, // Qoutside[5+0]
+  const double * __restrict__ Qinside, // Qinside[5+0]
+  const double * __restrict__ Qoutside, // Qoutside[5+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -116,7 +116,7 @@ void examples::exahype2::euler::EulerOnGPU::boundaryConditions(
 #pragma omp declare target
 #endif
 void examples::exahype2::euler::EulerOnGPU::flux(
- double * __restrict__ Q, // Q[5+0],
+ const double * __restrict__ Q, // Q[5+0],
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
  const tarch::la::Vector<Dimensions,double>&  volumeH,
  double                                       t,

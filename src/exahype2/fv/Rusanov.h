@@ -23,7 +23,7 @@ namespace exahype2 {
 #endif
     void splitRusanov1d(
       std::function< void(
-        double * __restrict__ Q,
+        const double * __restrict__ Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
@@ -32,15 +32,15 @@ namespace exahype2 {
         double * __restrict__ F
       ) >   flux,
       std::function< double(
-        double * __restrict__ Q,
+        const double * __restrict__ Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
         int                                          normal
       ) >   eigenvalues,
-      double * __restrict__ QL,
-      double * __restrict__ QR,
+      const double * __restrict__ QL,
+      const double * __restrict__ QR,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       dx,
       double                                       t,
@@ -61,7 +61,7 @@ namespace exahype2 {
      */
     void splitRusanov1d(
       std::function< void(
-        double * __restrict__ Q,
+        const double * __restrict__ Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
@@ -70,8 +70,8 @@ namespace exahype2 {
         double * __restrict__ F
       ) >   flux,
       std::function< void(
-        double * __restrict__ Q,
-        double                                       gradQ[][Dimensions],
+        const double * __restrict__                  Q,
+        const double                                 gradQ[][Dimensions],
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
@@ -80,15 +80,15 @@ namespace exahype2 {
         double * __restrict__ BgradQ
       ) >   nonconservativeProduct,
       std::function< double(
-        double * __restrict__ Q,
+        const double * __restrict__ Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
         double                                       dt,
         int                                          normal
       ) >   eigenvalues,
-      double * __restrict__ QL,
-      double * __restrict__ QR,
+      const double * __restrict__ QL,
+      const double * __restrict__ QR,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       dx,
       double                                       t,
@@ -102,7 +102,5 @@ namespace exahype2 {
   }
 }
 
-
-//#include "Rusanov.cpph"
 
 #endif

@@ -7,7 +7,7 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 
 
 void examples::exahype2::euler::Euler::adjustSolution(
-  double Q[5],
+  double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
@@ -39,7 +39,7 @@ void examples::exahype2::euler::Euler::adjustSolution(
 
 
 double examples::exahype2::euler::Euler::maxEigenvalue(
-  double                                       Q[5],
+  const double* __restrict__  Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -73,7 +73,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
 
 
 void examples::exahype2::euler::Euler::flux(
-  double                                       Q[5],
+  const double* __restrict__  Q,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -140,8 +140,8 @@ void examples::exahype2::euler::Euler::flux(
 
 
 void examples::exahype2::euler::Euler::boundaryConditions(
-  double                                       Qinside[5],
-  double                                       Qoutside[5],
+  const double* __restrict__  Qinside,
+  double* __restrict__  Qoutside,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

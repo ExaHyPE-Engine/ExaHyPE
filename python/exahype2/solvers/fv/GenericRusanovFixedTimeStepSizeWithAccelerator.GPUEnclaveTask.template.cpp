@@ -22,8 +22,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
   //#endif
   //{% endif %}
     [&](
-      double                                       QL[],
-      double                                       QR[],
+      const double* __restrict__                   QL,
+      const double* __restrict__                   QR,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       dx,
       double                                       t,
@@ -34,7 +34,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
     ) -> void {
       ::exahype2::fv::splitRusanov1d(
         [] (
-         double * __restrict__ Q,
+         const double* __restrict__                   Q,
          const tarch::la::Vector<Dimensions,double>&  faceCentre,
          const tarch::la::Vector<Dimensions,double>&  volumeH,
          double                                       t,
@@ -50,8 +50,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
         },
         {% if NCP_IMPLEMENTATION!="<none>" %}
         [] (
-          double                                       Q[],
-          double                                       gradQ[][Dimensions],
+          const double* __restrict__                   Q,
+          const double                                       gradQ[][Dimensions],
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -63,7 +63,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
         },
         {% endif %}
         [] (
-          double                                       Q[],
+          const double* __restrict__                   Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -165,8 +165,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   //#endif
   //{% endif %}
     [&](
-      double                                       QL[],
-      double                                       QR[],
+      const double* __restrict__                   QL,
+      const double* __restrict__                   QR,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       dx,
       double                                       t,
@@ -177,7 +177,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
     ) -> void {
       ::exahype2::fv::splitRusanov1d(
         [] (
-          double * __restrict__ Q,
+          const double* __restrict__                   Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -193,8 +193,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
         },
         {% if NCP_IMPLEMENTATION!="<none>" %}
         [] (
-          double                                       Q[],
-          double                                       gradQ[][Dimensions],
+          const double* __restrict__                   Q,
+          const double                                       gradQ[][Dimensions],
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -206,7 +206,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
         },
         {% endif %}
         [] (
-          double                                       Q[],
+          const double* __restrict__                   Q,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,

@@ -30,7 +30,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_adjustSolution_body_AoS(
   const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
   const tarch::la::Vector<Dimensions, double>   x( ( coords.data() + 1 ) );
  
-  adjustSolution( &UOut[ scalarIndex * strideQ ], x, t);
+  adjustSolution(&UOut[ scalarIndex * strideQ ], x, t);
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target

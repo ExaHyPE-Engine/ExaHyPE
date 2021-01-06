@@ -22,7 +22,7 @@
 tarch::logging::Log   examples::exahype2::ccz4::CCZ4::_log( "examples::exahype2::ccz4::CCZ4" );
 
 void gaugeWave(
-  double * __restrict__ Q, // Q[64+0],
+  const double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double t
@@ -61,7 +61,7 @@ void gaugeWave(
  * the initialisation request to the Fortran routines.
  */
 void examples::exahype2::ccz4::CCZ4::adjustSolution(
-  double * __restrict__ Q, // Q[64+0],
+  double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t
@@ -99,7 +99,7 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
 
 
 double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
-  double * __restrict__ Q, // Q[64+0],
+  const double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -137,8 +137,8 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
 
 
 void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
-  double * __restrict__ Q, // Q[64+0],
-  double                                       gradQ[64+0][Dimensions],
+  const double * __restrict__ Q, // Q[64+0],
+  const double                                       gradQ[64+0][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -165,8 +165,8 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 
 
 void examples::exahype2::ccz4::CCZ4::boundaryConditions(
-  double * __restrict__ Qinside, // Qinside[64+0]
-  double * __restrict__ Qoutside, // Qoutside[64+0]
+  const double * __restrict__ Qinside, // Qinside[64+0]
+  const double * __restrict__ Qoutside, // Qoutside[64+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

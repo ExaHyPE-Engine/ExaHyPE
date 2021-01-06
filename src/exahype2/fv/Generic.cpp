@@ -22,7 +22,7 @@ void __throw_bad_function_call() {};
 
 
 std::string exahype2::fv::plotVolume(
-  double Q[],
+  const double* __restrict__ Q,
   int    unknowns
 ) {
   std::string result = "(" + std::to_string(Q[0]);
@@ -30,13 +30,14 @@ std::string exahype2::fv::plotVolume(
   result += ")";
   return result;
 }
-;
 
-void
-exahype2::fv::validatePatch (double *__restrict__ Q, int unknowns,
-                             int auxiliaryVariables,
-                             int numberOfVolumesPerAxisInPatch, int haloSize,
-                             const std::string &location) {
+
+void exahype2::fv::validatePatch (
+  const double *__restrict__ Q, int unknowns,
+  int auxiliaryVariables,
+  int numberOfVolumesPerAxisInPatch, int haloSize,
+  const std::string &location
+) {
 #if PeanoDebug>0
   const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
   dfor (k,PatchSize) {
@@ -62,9 +63,9 @@ exahype2::fv::validatePatch (double *__restrict__ Q, int unknowns,
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void
-exahype2::fv::copyPatch (double *__restrict__ QinWithHalo,
-                         double *__restrict__ QOutWithoutHalo, int unknowns,
+void exahype2::fv::copyPatch (
+  const double *__restrict__ QinWithHalo,
+  double *__restrict__ QOutWithoutHalo, int unknowns,
                          int auxiliaryVariables,
                          int numberOfVolumesPerAxisInPatch, int haloSize) {
 
@@ -133,18 +134,18 @@ exahype2::fv::copyPatch (double *__restrict__ QinWithHalo,
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void
-exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
-    std::function<
-        void
-        (double *__restrict__ QL, double *__restrict__ QR,
+void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
+  std::function< void(
+    const double *__restrict__ QL,
+    const double *__restrict__ QR,
          const tarch::la::Vector<Dimensions, double> &faceCentre,
          double volumeH, double t, double dt, int normal,
          double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
-    const tarch::la::Vector<Dimensions, double> &patchCentre,
-    const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
-    int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
-    double *__restrict__ Qin, double *__restrict__ Qout) {
+  const tarch::la::Vector<Dimensions, double> &patchCentre,
+  const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
+  int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
+  const double *__restrict__ Qin, double *__restrict__ Qout
+) {
 #if !defined(OpenMPGPUOffloading)
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
@@ -255,16 +256,17 @@ exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
-  std::function<
-        void
-        (double *__restrict__ QL, double *__restrict__ QR,
+  std::function<void(
+    const double *__restrict__ QL,
+    const double *__restrict__ QR,
          const tarch::la::Vector<Dimensions, double> &faceCentre,
          double volumeH, double t, double dt, int normal,
   double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
   const tarch::la::Vector<Dimensions, double> &patchCentre,
   const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
   int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
-  double *__restrict__ Qin, double *__restrict__ Qout
+  const double *__restrict__ Qin,
+  double *__restrict__       Qout
 ) {
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
@@ -419,14 +421,17 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
-  std::function< void(double *__restrict__ QL, double *__restrict__ QR,
+  std::function< void(
+    const double *__restrict__ QL,
+    const double *__restrict__ QR,
          const tarch::la::Vector<Dimensions, double> &faceCentre,
          double volumeH, double t, double dt, int normal,
   double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
   const tarch::la::Vector<Dimensions, double> &patchCentre,
   const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
   int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
-  double *__restrict__ Qin, double *__restrict__ Qout
+  const double *__restrict__  Qin,
+  double *__restrict__        Qout
 ) {
 #if !defined(OpenMPGPUOffloading)
   static tarch::logging::Log _log ("exahype2::fv");
@@ -528,21 +533,22 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
   ::tarch::freeMemory(numericalFluxR, tarch::MemoryLocation::Heap);
   logTraceOut( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)" );
 #endif
-
 }
 
-void
-exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
-    std::function<
-        void
-        (double *__restrict__ QL, double *__restrict__ QR,
-         const tarch::la::Vector<Dimensions, double> &faceCentre,
-         double volumeH, double t, double dt, int normal,
-         double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
+
+void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
+    std::function<void(
+      const double *__restrict__ QL,
+      const double *__restrict__ QR,
+      const tarch::la::Vector<Dimensions, double> &faceCentre,
+      double volumeH, double t, double dt, int normal,
+      double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
     const tarch::la::Vector<Dimensions, double> &patchCentre,
     const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
     int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
-    double *__restrict__ Qin, double *__restrict__ Qout) {
+    const double *__restrict__   Qin,
+    double *__restrict__         Qout
+) {
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 

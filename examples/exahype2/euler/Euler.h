@@ -29,14 +29,14 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
 
   public:
     void adjustSolution(
-      double                                       Q[5],
+      double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
     )  override;
 
     virtual double maxEigenvalue(
-      double                                       Q[5],
+      const double* __restrict__  Q,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -44,8 +44,8 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
     )  override;
 
     virtual void boundaryConditions(
-      double                                       Qinside[5],
-      double                                       Qoutside[5],
+      const double * __restrict__ Qinside, // Qinside[5+0]
+      double * __restrict__ Qoutside, // Qoutside[5+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -55,7 +55,7 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
 
     
     void flux(
-      double                                       Q[5],
+      const double* __restrict__  Q,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,

@@ -182,8 +182,8 @@ class HandleBoundary(AbstractFVActionSet):
     ) {
       ::exahype2::fv::applyBoundaryConditions(
         [&](
-          double                                       Qinside[],
-          double                                       Qoutside[],
+          const double * __restrict__                  Qinside,
+          double * __restrict__                        Qoutside,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,

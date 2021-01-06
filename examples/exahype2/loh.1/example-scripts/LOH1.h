@@ -34,6 +34,7 @@ class examples::exahype2::loh1::LOH1: public AbstractLOH1 {
     )  override;
 
     void adjustSolution(
+  double * __restrict__ Q,
       double                                       Q[9+4],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -63,7 +64,7 @@ class examples::exahype2::loh1::LOH1: public AbstractLOH1 {
     
     void nonconservativeProduct(
       double                                       Q[9+4],
-      double                                       gradQ[9+4][Dimensions],
+      const double                                       gradQ[9+4][Dimensions],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,

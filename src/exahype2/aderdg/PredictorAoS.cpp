@@ -12,7 +12,7 @@
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_initialGuess_body_AoS(
-  double *       __restrict__ QOut,
+  const double * __restrict__ QOut,
   const double * __restrict__ UIn,
   const int                   nodesPerAxis,
   const int                   strideQ,
@@ -312,7 +312,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
 
 // kernels
 __global__ void exahype2::aderdg::spaceTimePredictor_initialGuess_krnl_AoS(
-  double *       __restrict__ QOut,
+  const double * __restrict__ QOut,
   const double * __restrict__ UIn,
   const int                   nodesPerAxis,
   const int                   strideQ) {
