@@ -1,5 +1,7 @@
 #include "RusanovNonlinearAoS.h"
 
+#include "Generic.h"
+
 #include "KernelUtils.h"
 
 namespace exahype2 {
@@ -253,19 +255,79 @@ namespace exahype2 {
       const int                                   order,
       const int                                   unknowns,
       const int                                   auxiliaryVariables,
-      const int                                   direction) {
+      const int                                   direction,
+      const bool                                  callFlux,
+      const bool                                  callNonconservativeProduct) {
       const unsigned int nodesPerAxis = order + 1;
 
-      const unsigned int strideQ = unknowns + auxiliaryVariables; 
-      const unsigned int strideF = unknowns;
+      const int strideQ     = unknowns+auxiliaryVariables;
+      const int strideS     = unknowns;
+      const int strideF     = unknowns;
+      const int strideGradQ = strideQ*Dimensions; // gradient of auxiliary variables needed for some apps
 
       const unsigned int nodesOnFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis; // nodesPerAxis^(d-1)
 
       const double* QLR[2] = {QLIn,QRIn};
+      
+      double* FAux     = new double[2*nodesOnFace*strideF]{0.0}; 
+      double* QAvgAux  = new double[nodesOnFace*strideQ]{0.0};
+      double* SAux     = new double[nodesOnFace*strideS]{0.0};
+      double* gradQAux = new double[nodesOnFace*strideGradQ]{0.0};
  
       for ( unsigned int scalarIndexFace = 0; scalarIndexFace < nodesOnFace; scalarIndexFace++ ) {
-         
+        if ( callFlux ) {
+          rusanovNonlinear_riemannFlux_body_AoS(
+            flux,
+            FLOut,
+            FROut,
+            &FAux[ scalarIndexFace*2*strideF ],
+            &FAux[ scalarIndexFace*2*strideF + strideF ],
+            QLIn, 
+            QRIn, 
+            smax,
+            nodes, 
+            weights, 
+            t,
+            dt,
+            faceCentre,
+            dx,
+            nodesPerAxis,
+            unknowns,
+            strideQ,
+            strideF,
+            direction,
+            scalarIndexFace);
+        }
+        if ( callNonconservativeProduct ) {
+          rusanovNonlinear_addNcpContributionsToRiemannFlux_body_AoS(
+            nonconservativeProduct,
+            FLOut,
+            FROut,
+            &QAvgAux[ scalarIndexFace*strideQ ],
+            &gradQAux[ scalarIndexFace*strideGradQ ],
+            &SAux[ scalarIndexFace*strideS ],
+            QLIn, 
+            QRIn, 
+            smax,
+            nodes, 
+            weights, 
+            t,
+            dt,
+            faceCentre,
+            dx,
+            nodesPerAxis,
+            unknowns,
+            strideQ,
+            strideF,
+            direction,
+            scalarIndexFace);
+        }
       }
+
+      delete [] FAux;
+      delete [] QAvgAux;
+      delete [] SAux;
+      delete [] gradQAux;
     }  
   }
 }

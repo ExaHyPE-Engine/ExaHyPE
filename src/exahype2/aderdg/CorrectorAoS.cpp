@@ -245,9 +245,9 @@ namespace exahype2 {
       const int strideF      = unknowns;
       const int strideGradQ  = strideQ*Dimensions; // gradient of auxiliary variables needed for some apps
       
+      double* FAux     = new double[nodesPerCell*strideF]{0.0}; 
       double* SAux     = new double[nodesPerCell*strideS]{0.0};
       double* gradQAux = new double[nodesPerCell*strideGradQ]{0.0};
-      double* FAux     = new double[nodesPerCell*strideF]{0.0}; 
       
       for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
         if ( callFlux ) { 
