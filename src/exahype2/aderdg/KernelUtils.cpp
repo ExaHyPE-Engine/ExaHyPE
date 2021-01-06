@@ -171,8 +171,13 @@ namespace exahype2 {
       double* __restrict__       gradQ) {
       const tarch::la::Vector<Dimensions+1,int> strides = getStrides(nodesPerAxis);
       const tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(scalarIndex, strides);
-      
+
       for ( int d = 0; d < Dimensions; d++ ) { // x -> y -> z
+        // zero
+        for (int var=0; var < strideQ; var++) {
+          gradQ[ d + var*Dimensions ] = 0.0;
+        }
+        // sum up
         for (int a=0; a < nodesPerAxis; a++) { 
           const double coeff = invDx/*[d]*/ * dudx[ a*nodesPerAxis + index[d+1] ];
           for (int var=0; var < strideQ; var++) {

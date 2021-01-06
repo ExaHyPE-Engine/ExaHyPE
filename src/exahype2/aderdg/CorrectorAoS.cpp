@@ -251,8 +251,6 @@ namespace exahype2 {
       
       for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
         if ( callFlux ) { 
-          clearAll_body_AoS( FAux, strideF, scalarIndexCell );
-          
           corrector_addFluxContributions_body_AoS(
             flux,
             UOut, 
@@ -271,8 +269,6 @@ namespace exahype2 {
             scalarIndexCell);
         }
         if ( callSource ) { 
-          clearAll_body_AoS( SAux, strideS, scalarIndexCell );
-          
           corrector_addSourceContributions_body_AoS(
             algebraicSource,
             UOut,
@@ -290,9 +286,6 @@ namespace exahype2 {
             scalarIndexCell);
         }
         if ( callNonconservativeProduct ) { 
-          clearAll_body_AoS( SAux, strideS, scalarIndexCell );
-          clearAll_body_AoS( gradQAux, strideGradQ, scalarIndexCell );
-          
           corrector_addNcpContributions_body_AoS(
             nonconservativeProduct,
             UOut,

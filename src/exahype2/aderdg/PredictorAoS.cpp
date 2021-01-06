@@ -370,7 +370,6 @@ namespace exahype2 {
           scalarIndex);
 
           if ( callFlux ) { 
-            clearAll_body_AoS( FAux, strideF, 0 );
             
             spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS(
               flux,
@@ -391,7 +390,6 @@ namespace exahype2 {
               scalarIndex);
           }
           if ( callSource ) { 
-            clearAll_body_AoS( SAux, strideS, 0 );
             
             spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
               algebraicSource,
@@ -411,8 +409,6 @@ namespace exahype2 {
               scalarIndex);
           }
           if ( callNonconservativeProduct ) { 
-            clearAll_body_AoS( SAux, strideS, 0 );
-            clearAll_body_AoS( gradQAux, strideGradQ, 0 );
             
             spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
               nonconservativeProduct,
@@ -591,8 +587,6 @@ namespace exahype2 {
             scalarIndexCell);
 
           if ( callFlux ) { 
-            clearAll_body_AoS( FAux, strideF, scalarIndexCell );
-            
             spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS(
               flux,
               rhs, 
@@ -612,8 +606,6 @@ namespace exahype2 {
               scalarIndexCell);
           }
           if ( callSource ) { 
-            clearAll_body_AoS( SAux, strideS, scalarIndexCell );
-            
             spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
               algebraicSource,
               rhs,
@@ -632,9 +624,6 @@ namespace exahype2 {
               scalarIndexCell);
           }
           if ( callNonconservativeProduct ) { 
-            clearAll_body_AoS( SAux, strideS, scalarIndexCell );
-            clearAll_body_AoS( gradQAux, strideGradQ, scalarIndexCell );
-            
             spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
               nonconservativeProduct,
               rhs,
@@ -708,7 +697,6 @@ namespace exahype2 {
       const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
       for ( unsigned int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
-        clearAll_body_AoS( QHullOut, strideQ, scalarIndexHull );
         spaceTimePredictor_extrapolate_body_AoS(
           QHullOut,
           QIn,
