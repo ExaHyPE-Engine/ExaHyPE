@@ -336,6 +336,7 @@ if test "$gpu" == nvidia; then
     AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
 fi
+AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$gpu" = xnvidia ])
 
 
 
