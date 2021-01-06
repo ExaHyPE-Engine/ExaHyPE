@@ -1,3 +1,6 @@
+#ifndef EXAHYPE2_ADERDG_PREDICTOR_AOS_H
+#define EXAHYPE2_ADERDG_PREDICTOR_AOS_H
+
 #include "tarch/la/Vector.h"
 
 #include <functional>
@@ -402,3 +405,5 @@ namespace exahype2 {
 
   } // aderdg
 } // exahype2
+
+#endif

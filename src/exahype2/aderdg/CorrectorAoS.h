@@ -1,3 +1,6 @@
+#ifndef EXAHYPE2_ADERDG_CORRECTOR_AOS_H
+#define EXAHYPE2_ADERDG_CORRECTOR_AOS_H
+
 #include "tarch/la/Vector.h"
 
 #include <functional>
@@ -323,3 +326,5 @@ namespace exahype2 {
   
   }
 }
+
+#endif

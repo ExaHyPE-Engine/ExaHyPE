@@ -1,3 +1,6 @@
+#ifndef EXAHYPE2_ADERDG_KERNEL_UTILS_H
+#define EXAHYPE2_ADERDG_KERNEL_UTILS_H
+
 #include "tarch/la/Vector.h"
 
 namespace exahype2 {
@@ -193,3 +196,5 @@ namespace exahype2 {
     
   } // aderdg
 } // exahype2
+
+#endif
