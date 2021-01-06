@@ -273,6 +273,11 @@ namespace exahype2 {
         double                                      t,
         double * __restrict__                       BgradQ
       ) >                                         nonconservativeProduct,
+      std::function< void(
+        double * __restrict__                       Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t
+      ) >                                         adjustSolution,
       double * __restrict__                       UOut, 
       const double * __restrict__                 QIn, 
       const double * __restrict__                 weights,
