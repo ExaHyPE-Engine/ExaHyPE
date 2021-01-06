@@ -12,8 +12,10 @@ namespace exahype2 {
      * @note: Different to the ExaHyPE1 implementation, we compute the
      * maximum of the absolute values of the eigenvalues using
      * all space-time quadrature points.
+     *
+     * @return the largest absolute eigenvalue
+     *
      * @param maxAbsoluteEigenvalue
-     * @param smax
      * @param QLR,
      * @param t
      * @param dt
@@ -28,13 +30,12 @@ namespace exahype2 {
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    GPUCallableMethod void rusanovNonlinear_maxAbsoluteEigenvalue_body_AoS(
+    GPUCallableMethod double rusanovNonlinear_maxAbsoluteEigenvalue_body_AoS(
         std::function< double(
           double * __restrict__                        Q,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t
         ) >                                         maxAbsoluteEigenvalue,
-        double&                                     smax,
         const double * __restrict__                 QLR[2],
         const double * __restrict__                 nodes,
         const double                                t,

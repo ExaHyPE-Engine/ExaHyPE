@@ -10,14 +10,13 @@ namespace exahype2 {
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    GPUCallableMethod void rusanovNonlinear_maxAbsoluteEigenvalue_body_AoS(
+    GPUCallableMethod double rusanovNonlinear_maxAbsoluteEigenvalue_body_AoS(
         std::function< double(
           const double * __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
           const int                                   direction
         ) >                                         maxAbsoluteEigenvalue,
-        double&                                     smax,
         const double * __restrict__                 QLR[2],
         const double * __restrict__                 nodes,
         const double                                t,
@@ -40,7 +39,8 @@ namespace exahype2 {
       const int lr = indexQFace[Dimensions];
      
       // hyperbolic eigenvalues
-      smax = std::max( smax, maxAbsoluteEigenvalue( &QLR[lr][ scalarIndexFace*strideQ ], x, time, direction ) );
+      return maxAbsoluteEigenvalue( &QLR[lr][ scalarIndexFace*strideQ ], x, time, direction );
+      // @todo: check this value is > 0.
     }
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
@@ -204,22 +204,21 @@ namespace exahype2 {
      
       double maxAbsEigenvalue = 0.0;  // strictly positive
       for ( unsigned int scalarIndexFace = 0; scalarIndexFace < spaceTimeNodesOnInterface; scalarIndexFace++ ) {
-        double smax = 0.0; // strictly positive
-        rusanovNonlinear_maxAbsoluteEigenvalue_body_AoS(
-          maxAbsoluteEigenvalue,
-          smax,
-          QLR,
-          nodes,
-          t,
-          dt,
-          faceCentre,
-          dx,
-          nodesPerAxis,
-          unknowns,
-          strideQ,
-          strideF,
-          direction,
-          scalarIndexFace);
+        const double smax = 
+          rusanovNonlinear_maxAbsoluteEigenvalue_body_AoS(
+            maxAbsoluteEigenvalue,
+            QLR,
+            nodes,
+            t,
+            dt,
+            faceCentre,
+            dx,
+            nodesPerAxis,
+            unknowns,
+            strideQ,
+            strideF,
+            direction,
+            scalarIndexFace);
         maxAbsEigenvalue = std::max( maxAbsEigenvalue, smax );
       } 
       return maxAbsEigenvalue;
@@ -266,8 +265,6 @@ namespace exahype2 {
       const int strideGradQ = strideQ*Dimensions; // gradient of auxiliary variables needed for some apps
 
       const unsigned int nodesOnFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis; // nodesPerAxis^(d-1)
-
-      const double* QLR[2] = {QLIn,QRIn};
       
       double* FAux     = new double[2*nodesOnFace*strideF]{0.0}; 
       double* QAvgAux  = new double[nodesOnFace*strideQ]{0.0};
@@ -329,5 +326,6 @@ namespace exahype2 {
       delete [] SAux;
       delete [] gradQAux;
     }  
+  
   }
 }
