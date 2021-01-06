@@ -287,6 +287,26 @@ namespace exahype2 {
         }
       }
     }
+    
+    GPUCallableMethod void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
+        double * __restrict__       QHullOut,
+        const double * __restrict__ QIn,
+        const int                   nodesPerAxis,
+        const int                   strideQ,
+        const int                   scalarIndexHull) {
+      const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
+      const tarch::la::Vector<Dimensions+1,int> indexQHull = delineariseIndex(scalarIndexHull,strides); // (t,y,z,face) , (t,x,z,face), (t,x,y,face)
+     
+      const int d  = indexQHull[Dimensions] / 2;
+      const int lr = indexQHull[Dimensions] - 2*d;
+    
+      const int id = ( lr == 0 ) ? 0 : (nodesPerAxis-1);
+      const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
+    
+      for (int var=0; var < strideQ; var++) {
+        QHullOut[ scalarIndexHull * strideQ + var ] = QIn[ scalarIndexQ*strideQ + var ]; 
+      }
+    }
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -706,5 +726,32 @@ namespace exahype2 {
           scalarIndexHull);
       }
     }
+    
+    void spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
+        double * __restrict__       QHullOut,
+        const double * __restrict__ QIn,
+        const double * __restrict__ FLCoeff, // just to have same signature as other routine
+        const double * __restrict__ FRCoeff, // just to have same signature as other routine
+        const int                   order,
+        const int                   unknowns,
+        const int                   auxiliaryVariables) {
+      const int nodesPerAxis = order + 1;
+      
+      const int strideQ = unknowns+auxiliaryVariables;
+  
+      const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * 2 * Dimensions;
+      
+      const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
+ 
+      for ( unsigned int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
+        spaceTimePredictor_extrapolate_Lobatto_body_AoS(
+          QHullOut,
+          QIn,
+          nodesPerAxis,
+          strideQ,
+          scalarIndexHull);
+      }
+    }
+
   }
 }

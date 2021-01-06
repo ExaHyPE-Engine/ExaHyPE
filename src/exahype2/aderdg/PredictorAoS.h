@@ -255,6 +255,35 @@ namespace exahype2 {
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
+    
+    /**
+     * Extrapolate the predictor onto DoF associated with the 
+     * faces of a cell (cell hull). These serve as Riemann
+     * solver inputs.
+     * 
+     * Simplified version of spaceTimePredictor_extrapolate_body_AoS specifically for Lobatto nodes.
+     * 
+     * @param QHullOut
+     * @param QIn
+     * @param FLRCoeff Basis functions evaluated at reference coordinates 0.0 (L,component 0) and 1.0 (R, component 1).
+     * @param nodesPerAxis
+     * @param unknowns
+     * @param strideQ
+     * @param scalarIndexHull
+     */
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    GPUCallableMethod void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
+      double * __restrict__       QHullOut,
+      const double * __restrict__ QIn,
+      const double * __restrict__ FLRCoeff[2],
+      const int                   nodesPerAxis,
+      const int                   strideQ,
+      const int                   scalarIndexHull);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
 
     /**
      * @brief Compute the space-time predictor (Qout) from the current solution (UIn). 
@@ -326,6 +355,8 @@ namespace exahype2 {
     /**
      * @brief Extrapolate all of cell's predictor DOF to the hull of the element.
      *
+     * @note This version works for Gauss-Legendre and Gauss-Lobatto nodes.
+     *
      * @param[inout] QHullOut
      * @param[in] QIn
      * @param[in] FLCoeff
@@ -335,6 +366,33 @@ namespace exahype2 {
      * @param[in] auxiliaryVariables
      */ 
     void spaceTimePredictor_extrapolate_loop_AoS(
+        double * __restrict__       QHullOut,
+        const double * __restrict__ QIn,
+        const double * __restrict__ FLCoeff,
+        const double * __restrict__ FRCoeff,
+        const int                   order,
+        const int                   unknowns,
+        const int                   auxiliaryVariables);
+    
+    /**
+     * @brief Extrapolate all of cell's predictor DOF to the hull of the element.
+     *
+     * @note assumes that Gauss-Lobatto nodes are used as support points for the basis functions.
+     *       In this case, the outermost nodes are located directly at the boundary of 
+     *       the reference element. Boundary-extrapolation thus becomes a simple copy of some predictor coefficients.
+     * @note FLCoeff,FRCoeff are arguments in order to have the same signature as
+     *       the generic routine. They are not actually needed.
+     * @see spaceTimePredictor_extrapolate_loop_AoS, spaceTimePredictor_extrapolate_body_AoS, spaceTimePredictor_extrapolate_Lobatto_body_AoS
+     *
+     * @param[inout] QHullOut
+     * @param[in] QIn
+     * @param[in] FLCoeff
+     * @param[in] FRCoeff
+     * @param[in] order
+     * @param[in] unknowns
+     * @param[in] auxiliaryVariables
+     */ 
+    void spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
         double * __restrict__       QHullOut,
         const double * __restrict__ QIn,
         const double * __restrict__ FLCoeff,
