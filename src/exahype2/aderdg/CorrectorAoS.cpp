@@ -9,6 +9,35 @@
 
 namespace exahype2 { 
   namespace aderdg {
+    
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    GPUCallableMethod void corrector_adjustSolution_body_AoS(
+        std::function< void(
+          double * __restrict__                       Q,
+          const tarch::la::Vector<Dimensions,double>& x,
+          double                                      t
+        ) >                                         adjustSolution,
+        double * __restrict__                       UOut,
+        const double * __restrict__                 nodes,
+        const tarch::la::Vector<Dimensions,double>& cellCentre,
+        const double                                dx,
+        const double                                t,
+        const double                                dt,
+        const int                                   nodesPerAxis,
+        const int                                   unknowns,
+        const int                                   strideQ,
+        const int                                   scalarIndex) {
+      const tarch::la::Vector<Dimensions+1,int>     index  = delineariseIndex(scalarIndex,getStrides(nodesPerAxis,false));
+      const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
+      const tarch::la::Vector<Dimensions, double>   x( ( coords.data() + 1 ) );
+     
+      adjustSolution( &UOut[ scalarIndex * strideQ ], x, t);
+    }
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
 
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -219,6 +248,11 @@ namespace exahype2 {
         double                                      t,
         double * __restrict__                       BgradQ
       ) >                                         nonconservativeProduct,
+      std::function< void(
+        double * __restrict__                       Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t
+      ) >                                         adjustSolution,
       double * __restrict__                       UOut, 
       const double * __restrict__                 QIn, 
       const double * __restrict__                 weights,
@@ -304,6 +338,19 @@ namespace exahype2 {
             strideQ,
             scalarIndexCell);
         }
+   
+        corrector_adjustSolution_body_AoS(
+          adjustSolution,
+          UOut,
+          nodes,
+          cellCentre,
+          dx,
+          t,
+          dt,
+          nodesPerAxis,
+          unknowns,
+          strideQ,
+          scalarIndexCell);
       } // scalarIndexCell
       
       delete [] FAux;

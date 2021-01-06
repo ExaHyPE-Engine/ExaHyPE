@@ -740,8 +740,6 @@ namespace exahype2 {
       const int strideQ = unknowns+auxiliaryVariables;
   
       const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * 2 * Dimensions;
-      
-      const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
       for ( unsigned int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
         spaceTimePredictor_extrapolate_Lobatto_body_AoS(

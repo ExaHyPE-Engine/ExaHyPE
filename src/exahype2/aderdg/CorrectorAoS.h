@@ -4,6 +4,40 @@
 
 namespace exahype2 {
   namespace aderdg {
+    
+    /**
+     * @brief Modify the solution at the given coordinates and time.
+     * 
+     * Writes to a single spatial degree of freedom.
+     *
+     * @param[in] adjustSolution
+     * @param[inout] UOut
+     * @param[in] nodes
+     * @param[in] cellCentre
+     * @param[in] dx
+     * @param[in] t
+     * @param[in] dt
+     * @param[in] nodesPerAxis
+     * @param[in] unknowns
+     * @param[in] strideQ
+     * @param[in] scalarIndex
+     */ 
+     GPUCallableMethod void corrector_adjustSolution_body_AoS(
+        std::function< void(
+          double * __restrict__                       Q,
+          const tarch::la::Vector<Dimensions,double>& x,
+          double                                      t
+        ) >                                         adjustSolution,
+        double * __restrict__                       UOut,
+        const double * __restrict__                 nodes,
+        const tarch::la::Vector<Dimensions,double>& cellCentre,
+        const double                                dx,
+        const double                                t,
+        const double                                dt,
+        const int                                   nodesPerAxis,
+        const int                                   unknowns,
+        const int                                   strideQ,
+        const int                                   scalarIndex);
 
     /**
      * @brief Add space-time volume flux contributions to the solution.
