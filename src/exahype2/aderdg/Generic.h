@@ -15,32 +15,6 @@
 // @todo: only 2D case considered atm
 namespace exahype2 {
   namespace aderdg {
-    // bodies 
-      
-    /**
-     * @name Utility bodies
-     */
-    //@{
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    GPUCallableMethod void clearAll_body_AoS(
-      double *   __restrict__ data,
-      const int               stride,
-      const int               scalarIndex
-	  );
-    
-    GPUCallableMethod void clearRange_body_AoS(
-      double *   __restrict__ data,
-      const int               range,
-      const int               stride,
-      const int               scalarIndex
-	  );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    //@}
-    
     /**
      * Just runs over the patch and ensures that no entry is non or infinite.
      *
@@ -51,7 +25,7 @@ namespace exahype2 {
       int    unknowns,
       int    auxiliaryVariables,
       int    order,
-	  const std::string& location = ""
+  	  const std::string& location = ""
     );
 
     void spacetimePatch(
@@ -83,7 +57,7 @@ namespace exahype2 {
         double * __restrict__                        Q,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
-		int                                          normal,
+    		int                                          normal,
         double * __restrict__ F
       ) >   flux,
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
