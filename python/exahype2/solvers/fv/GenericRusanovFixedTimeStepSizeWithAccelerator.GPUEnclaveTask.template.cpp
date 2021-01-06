@@ -8,19 +8,19 @@ tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPA
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(double* __restrict__  reconstructedPatch, const ::peano4::datamanagement::CellMarker& marker, double* __restrict__  targetPatch) {
-  {% if USE_SPLIT_LOOP %}
   #if Dimensions==2
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
   #else
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
   #endif
-  {% else %}
-  #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-  #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-  #endif
-  {% endif %}
+  //{% if USE_SPLIT_LOOP %}
+  //{% else %}
+  //#if Dimensions==2
+  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+  //#else
+  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+  //#endif
+  //{% endif %}
     [&](
       double                                       QL[],
       double                                       QR[],
@@ -111,19 +111,27 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
 
+  // Sadly we cannot directly give the target region a vector due to 'non-trivially copyable'
+  double x0 = _marker.x()[0];
+  double x1 = _marker.x()[1];
+  double h0 = _marker.h()[0];
+  double h1 = _marker.h()[1];
+
   #if Dimensions==2
   const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
   const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
   #elif Dimensions==3
   const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
   const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+  double x2 = _marker.x()[2];
+  double h2 = _marker.h()[2];
   #endif
-  double* destinationPatchOnGPU = ::tarch::multicore::allocateMemory(destinationPatchSize, ::tarch::multicore::MemoryLocation::Accelerator);
+  double* destinationPatchOnGPU = ::tarch::allocateMemory(destinationPatchSize, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
 
   const double timeStamp = observers::{{SOLVER_INSTANCE}}.getMinTimeStamp();
 
   #if defined(OpenMPGPUOffloading)
-  #pragma omp target map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
+  #pragma omp target map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(to:_reconstructedPatch[0:sourcePatchSize])
   {
   #endif
   ::exahype2::fv::copyPatch(
@@ -135,19 +143,27 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
     1 // halo size
   );
 
-  {% if USE_SPLIT_LOOP %}
+  #if Dimensions==2
+  tarch::la::Vector<Dimensions,double> myx = {x0,x1};
+  tarch::la::Vector<Dimensions,double> myh = {h0,h1};
+  #elif Dimensions==3
+  tarch::la::Vector<Dimensions,double> myx = {x0,x1,x2};
+  tarch::la::Vector<Dimensions,double> myh = {h0,h1,h2};
+  #endif
+
   #if Dimensions==2
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
   #else
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
   #endif
-  {% else %}
-  #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-  #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-  #endif
-  {% endif %}
+  //{% if USE_SPLIT_LOOP %}
+  //{% else %}
+  //#if Dimensions==2
+  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+  //#else
+  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+  //#endif
+  //{% endif %}
     [&](
       double                                       QL[],
       double                                       QR[],
@@ -205,8 +221,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
         FL,FR
       );
     },
-    _marker.x(),
-    _marker.h(),
+    myx, //_marker.x(),
+    myh, //_marker.h(),
     timeStamp,
     {{TIME_STEP_SIZE}},
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -222,14 +238,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 
   // get stuff explicitly back from GPU, as it will be stored
   // locally for a while
-  double* destinationPatchOnCPU = ::tarch::multicore::allocateMemory(destinationPatchSize, ::tarch::multicore::MemoryLocation::Heap);
+  double* destinationPatchOnCPU = ::tarch::allocateMemory(destinationPatchSize, ::tarch::MemoryLocation::Heap);
   std::copy_n(destinationPatchOnGPU,destinationPatchSize,destinationPatchOnCPU);
 
   // Free data given in from calling routine (requires pointer name without underscore)
   double* reconstructedPatch = _reconstructedPatch;
   {{FREE_SKELETON_MEMORY}}
 
-  ::tarch::multicore::freeMemory(destinationPatchOnGPU, ::tarch::multicore::MemoryLocation::Accelerator);
+  ::tarch::freeMemory(destinationPatchOnGPU, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
   ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),destinationPatchSize,destinationPatchOnCPU);
   logTraceOut( "run()" );
   return false;

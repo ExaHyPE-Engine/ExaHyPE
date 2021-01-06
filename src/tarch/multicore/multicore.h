@@ -272,8 +272,14 @@ and
 	 */
     ManagedAcceleratorMemory
   };
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
   double* allocateMemory(int size, MemoryLocation location);
   void freeMemory(double* data, MemoryLocation location);
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 }
 
 #endif

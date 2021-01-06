@@ -18,7 +18,8 @@ ExaHyPE2Sources = \
   fv/BoundaryConditions.cpp \
   fv/Generic.cpp \
   fv/Rusanov.cpp \
-  fv/tests/CopyPatchTest.cpp
+  fv/tests/CopyPatchTest.cpp \
+  fv/tests/applySplit1DRiemannToPatch_Overlap1AoSTest.cpp
 
 
  
