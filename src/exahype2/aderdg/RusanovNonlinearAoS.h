@@ -23,6 +23,9 @@ namespace exahype2 {
      * @param[in] orientation
      * @param[in] scalarIndexFace
      */
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
     void rusanovNonlinear_setBoundaryState_body_AoS(
       std::function< void(
         const double * __restrict__                 QIn,
@@ -42,8 +45,10 @@ namespace exahype2 {
       const int                                   unknowns,
       const int                                   strideQ,
       const int                                   direction,
-      const int                                   orientation,
       const int                                   scalarIndexFace);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
 
     /** 
      * Determines the maximum absolute value among the eigenvalues computed 
@@ -101,12 +106,19 @@ namespace exahype2 {
     #endif
     GPUCallableMethod void rusanovNonlinear_riemannFlux_body_AoS(
         std::function< void(
-          double * __restrict__                        Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) >                                         flux,
+          const double * __restrict__                 Q,
+          const tarch::la::Vector<Dimensions,double>& x,
+          double                                      t,
+          int                                         normal,
+          double * __restrict__                       F
+        ) >                                         fluxL,
+        std::function< void(
+          const double * __restrict__                 Q,
+          const tarch::la::Vector<Dimensions,double>& x,
+          double                                      t,
+          int                                         normal,
+          double * __restrict__                       F
+        ) >                                         fluxR,
         double * __restrict__                       FLOut,
         double * __restrict__                       FROut,
         double * __restrict__                       FLAux,
@@ -170,6 +182,26 @@ namespace exahype2 {
      #if defined(OpenMPGPUOffloading)
      #pragma omp end declare target
      #endif
+    
+     void rusanovNonlinear_setBoundaryState_loop_AoS(
+       std::function< void(
+         const double * __restrict__                 QIn,
+         const tarch::la::Vector<Dimensions,double>& x,
+         double                                      t,
+         int                                         normal,
+         double * __restrict__                       OOut
+       ) >                                         boundaryState,
+       double * __restrict__                       QOut,
+       const double * __restrict__                 QIn,
+       const double * __restrict__                 nodes,
+       const double                                t,
+       const double                                dt,
+       const tarch::la::Vector<Dimensions,double>& faceCentre,
+       const double                                dx,
+       const int                                   order,
+       const int                                   unknowns,
+       const int                                   auxiliaryVariables,
+       const int                                   direction);
     
      double rusanovNonlinear_maxAbsoluteEigenvalue_loop_AoS(
         std::function< double(
