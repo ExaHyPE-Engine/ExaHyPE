@@ -5,6 +5,9 @@
 
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 tarch::la::Vector<Dimensions,double>  exahype2::getVolumeSize(
   const tarch::la::Vector<Dimensions,double>&  h,
   int                                          numberOfVolumesPerAxisInPatch
@@ -20,8 +23,14 @@ tarch::la::Vector<Dimensions,double>  exahype2::getVolumeSize(
 
   return volumeSize;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 double  exahype2::getVolumeLength(
   const tarch::la::Vector<Dimensions,double>&  h,
   int                                          numberOfVolumesPerAxisInPatch
@@ -32,6 +41,9 @@ double  exahype2::getVolumeLength(
 
   return h(0)/numberOfVolumesPerAxisInPatch;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 tarch::la::Vector<Dimensions,double>  exahype2::getVolumeCentre(

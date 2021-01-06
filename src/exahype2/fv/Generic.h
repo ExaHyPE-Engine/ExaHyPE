@@ -91,6 +91,9 @@ namespace exahype2 {
      * right adjacent volume in the preimage (Qin) which feeds into the Riemann 
      * solve, but the image hosts only the left or right volume.
      */
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
     void applySplit1DRiemannToPatch_Overlap1AoS2d(
       std::function< void(
         double * __restrict__ QL,
@@ -113,6 +116,9 @@ namespace exahype2 {
       double * __restrict__ Qin,
       double * __restrict__ Qout
     );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
 
 
     void applySplit1DRiemannToPatch_Overlap1AoS3d(

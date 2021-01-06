@@ -67,6 +67,7 @@ if args.gpu:
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
+  solver._use_split_loop=True
 else:
   solver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
     "Euler",
@@ -114,9 +115,15 @@ peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
 if args.gpu:
   if args.mode != "release":
-    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core2d_{}_a-Generic.o".format(args.mode) )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core{}d_{}_a-Generic.o".format(args.dim, args.mode) )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core{}d_{}_a-Rusanov.o".format(args.dim, args.mode) )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/libExaHyPE2Core{}d_{}_a-PatchUtils.o".format(args.dim, args.mode) )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/tarch/multicore/omp/libTarch_{}_a-multicore.o".format(args.mode) )
   else:
-    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core2d_a-Generic.o" )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core{}d_a-Generic.o".format(args.dim) )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core{}d_a-Rusanov.o".format(args.dim) )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/libExaHyPE2Core{}d_a-PatchUtils.o".format(args.dim) )
+    peano4_project.output.makefile.add_gpu_object( "../../../src/tarch/multicore/omp/libTarch_a-multicore.o")
 
 peano4_project.generate()
 #peano4_project.build(make_clean_first=True, number_of_parallel_builds=1)

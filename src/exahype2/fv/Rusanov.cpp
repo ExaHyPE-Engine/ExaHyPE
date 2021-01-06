@@ -9,6 +9,9 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
+#if defined(GPUOffloading)
+#pragma omp declare target
+#endif
 void exahype2::fv::splitRusanov1d(
   std::function< void(
     double * __restrict__ Q,
@@ -42,8 +45,13 @@ void exahype2::fv::splitRusanov1d(
   assertion(normal>=0);
   assertion(normal<Dimensions);
 
-  double fluxFL[unknowns];
-  double fluxFR[unknowns];
+#if defined(GPUOffloading)
+  double * fluxFL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::ManagedAcceleratorMemory);
+  double * fluxFR = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::ManagedAcceleratorMemory);
+#else
+  double * fluxFL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
+  double * fluxFR = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
+#endif
   flux(QL,x,dx,t,dt,normal,fluxFL);
   flux(QR,x,dx,t,dt,normal,fluxFR);
 
@@ -60,8 +68,18 @@ void exahype2::fv::splitRusanov1d(
     FR[unknown] = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
     nonCriticalAssertion2( FL[unknown]==FR[unknown], FL[unknown], FR[unknown]);
   }
-};
 
+#if defined(GPUOffloading)
+  ::tarch::freeMemory(fluxFL, tarch::MemoryLocation::ManagedAcceleratorMemory);
+  ::tarch::freeMemory(fluxFR, tarch::MemoryLocation::ManagedAcceleratorMemory);
+#else
+  ::tarch::freeMemory(fluxFL, tarch::MemoryLocation::Heap);
+  ::tarch::freeMemory(fluxFR, tarch::MemoryLocation::Heap);
+#endif
+};
+#if defined(GPUOffloading)
+#pragma omp end declare target
+#endif
 
 void exahype2::fv::splitRusanov1d(
    std::function< void(

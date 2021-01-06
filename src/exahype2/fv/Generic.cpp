@@ -9,11 +9,24 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 
-std::string
-exahype2::fv::plotVolume (double Q[], int unknowns) {
-  std::string result = "(" + std::to_string (Q[0]);
-  for (int i = 1; i < unknowns; i++)
-    result += "," + std::to_string (Q[i]);
+
+// This is a fantastic hack
+#if defined(OpenMPGPUOffloading)
+namespace std
+{
+#pragma omp declare target
+void __throw_bad_function_call() {};
+#pragma omp  end declare target
+}
+#endif
+
+
+std::string exahype2::fv::plotVolume(
+  double Q[],
+  int    unknowns
+) {
+  std::string result = "(" + std::to_string(Q[0]);
+  for (int i=1; i<unknowns; i++) result += "," + std::to_string(Q[i]);
   result += ")";
   return result;
 }
@@ -131,14 +144,20 @@ exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
     double *__restrict__ Qin, double *__restrict__ Qout) {
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
-
   assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
+#endif
 
   tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
-  double numericalFluxL[unknowns]; // helper out variable
-  double numericalFluxR[unknowns]; // helper out variable
+#if defined(GPUOffloading)
+  double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::ManagedAcceleratorMemory);
+  double * numericalFluxR = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::ManagedAcceleratorMemory);
+#else
+  double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
+  double * numericalFluxR = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
+#endif
+
 
   for (int x = 0; x <= numberOfVolumesPerAxisInPatch; x++) {
     #ifdef SharedOMP
@@ -214,8 +233,21 @@ exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
     }
   }
 
+#if defined(GPUOffloading)
+  ::tarch::freeMemory(numericalFluxL, tarch::MemoryLocation::ManagedAcceleratorMemory);
+  ::tarch::freeMemory(numericalFluxR, tarch::MemoryLocation::ManagedAcceleratorMemory);
+#else
+  ::tarch::freeMemory(numericalFluxL, tarch::MemoryLocation::Heap);
+  ::tarch::freeMemory(numericalFluxR, tarch::MemoryLocation::Heap);
+#endif
+
+#if !defined(GPUOffloading)
   logTraceOut( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)" );
+#endif
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
