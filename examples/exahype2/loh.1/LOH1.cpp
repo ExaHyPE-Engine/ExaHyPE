@@ -25,8 +25,8 @@ tarch::logging::Log   examples::exahype2::loh1::LOH1::_log( "examples::exahype2:
 //}
 
 void examples::exahype2::loh1::LOH1::prescribeGaussianWave(
-    const tarch::la::Vector<Dimensions,double>&  x,
-		double Q[]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double Q[]
 ) {
   double center_curve[3];
 
@@ -61,8 +61,7 @@ void examples::exahype2::loh1::LOH1::prescribeGaussianWave(
 
 
 void examples::exahype2::loh1::LOH1::adjustSolution(
-  double * __restrict__ Q,
-  double Q[13],
+  double * __restrict__                        Q, // [13]
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
@@ -79,7 +78,7 @@ void examples::exahype2::loh1::LOH1::adjustSolution(
 
 
 double examples::exahype2::loh1::LOH1::maxEigenvalue(
-  double                                       Q[13],
+  const double* __restrict__                   Q, // [13]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -111,8 +110,8 @@ double examples::exahype2::loh1::LOH1::maxEigenvalue(
 
 
 void examples::exahype2::loh1::LOH1::boundaryConditions(
-  double                                       Qinside[13],
-  double                                       Qoutside[13],
+  const double * __restrict__                  Qinside,
+  double * __restrict__                        Qoutside,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -138,21 +137,20 @@ void examples::exahype2::loh1::LOH1::boundaryConditions(
   Qoutside[ s.cp  ]   = Qinside[ s.cp  ];
   Qoutside[ s.cs  ]   = Qinside[ s.cs  ];
 
-  assertion2(std::isfinite(1.0/Qoutside[s.rho]),
-             "rho_i is not finite",Qoutside[s.rho]);
+  assertion2(std::isfinite(1.0/Qoutside[s.rho]), "rho_i is not finite",Qoutside[s.rho]);
   
   logTraceOut( "boundaryConditions(...)" );
 }
 
 
 void examples::exahype2::loh1::LOH1::nonconservativeProduct(
-  double                                       Q[13],
-  const double                                       gradQ[13][Dimensions],
+  const double * __restrict__                  Q, // [9+4],
+  const double                                 gradQ[13][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double                                       BgradQ[13]
+  double * __restrict__ BgradQ // BgradQ[13]
 ) {
   logTraceIn( "nonconservativeProduct(...)" );
  
