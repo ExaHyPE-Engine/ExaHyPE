@@ -79,51 +79,47 @@ void exahype2::fv::copyPatch (
   //}
 
 #if Dimensions==2
-  int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
-  int destinationSerialised = 0;
-  // @todo To make this work, we have to eliminate the increments.
-  //       Instead, we have to recompute the indices directly.
-  //
-  // #ifdef SharedOMP
-  // #pragma omp parallel for collapse(3)
-  // #endif
-  for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
-    for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
-      for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-        QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
+  #ifdef SharedOMP
+  #pragma omp parallel for collapse(3)
+  #endif
+  for (int y=0; y<numberOfVolumesPerAxisInPatch; y++)
+  {
+    for (int x=0; x<numberOfVolumesPerAxisInPatch; x++)
+    {
+      for (int i=0; i<unknowns+auxiliaryVariables; i++)
+      {
+        int sourceIndex      = (y+1)*(numberOfVolumesPerAxisInPatch+ 3*haloSize) + x - y;
+        int destinationIndex = y*numberOfVolumesPerAxisInPatch + x;
+        QOutWithoutHalo[destinationIndex*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceIndex*(unknowns+auxiliaryVariables)+i];
       }
-      int sourceIndex      = 14; // hier muss die direkte Berechnung rein
-      int destinationIndex = 14; // hier muss die direkte Berechnung rein
-      assertionEquals(sourceIndex,sourceSerialised);
-      assertionEquals(destinationIndex,destinationSerialised); // fliegt raus, sobald validate
-      sourceSerialised++;  // fliegt raus, sobald validate
-      destinationSerialised++;
     }
-    sourceSerialised += 2*haloSize;
   }
   #else
   int sourceSerialised = (numberOfVolumesPerAxisInPatch + haloSize * 2)
       * (numberOfVolumesPerAxisInPatch + haloSize * 2)
       + numberOfVolumesPerAxisInPatch + haloSize * 2 + haloSize;
-  int destinationSerialised = 0;
-  // #ifdef SharedOMP
-  // #pragma omp parallel for collapse(4)
-  // #endif
-  for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        for (int i = 0; i < unknowns + auxiliaryVariables; i++) {
-          QOutWithoutHalo[destinationSerialised
-              * (unknowns + auxiliaryVariables) + i] =
-              QinWithHalo[sourceSerialised * (unknowns + auxiliaryVariables) + i];
+
+
+
+  int helper = numberOfVolumesPerAxisInPatch+haloSize*2;
+  #ifdef SharedOMP
+  #pragma omp parallel for collapse(4)
+  #endif
+  for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+  {
+    for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+    {
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      {
+        for (int i = 0; i < unknowns + auxiliaryVariables; i++)
+        {
+           int mydest = z*numberOfVolumesPerAxisInPatch*numberOfVolumesPerAxisInPatch + y*numberOfVolumesPerAxisInPatch + x;
+           int mysrc  = z*helper*helper + y*helper + x + sourceSerialised;
+
+           QOutWithoutHalo[mydest * (unknowns + auxiliaryVariables) + i] = QinWithHalo[mysrc * (unknowns + auxiliaryVariables) + i];
         }
-        sourceSerialised++;
-        destinationSerialised++;
       }
-      sourceSerialised += 2 * haloSize;
     }
-    sourceSerialised += 2 * haloSize
-        + 2 * (numberOfVolumesPerAxisInPatch + haloSize * 2) - 2;
   }
 #endif
 }
