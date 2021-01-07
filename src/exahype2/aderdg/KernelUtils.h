@@ -25,8 +25,8 @@ namespace exahype2 {
      *
      * (0,1,nodesPerAxis,nodesPerAxis^2) for strides (t,x,y,z).
      *   
-     * @param strides4SpaceTimeQuantity generate strides for space-time quantity (default=true).
-     * @param nodesPerAxis              nodes per coordinate axis
+     * @param[in] strides4SpaceTimeQuantity generate strides for space-time quantity (default=true).
+     * @param[in] nodesPerAxis              nodes per coordinate axis nodes/Lagrange basis functions per coordinate axis (order+1)
      * @return Strides per direction (t,x,y,z), where t-direction stride has index 0.
      */
      #if defined(OpenMPGPUOffloading)
@@ -37,8 +37,8 @@ namespace exahype2 {
         bool strides4SpaceTimeQuantity = true);
      
      /**
-      * @param linearises the index with the given strides.
-      * @param strides strides per direction (t,x,y,z).
+      * @param[in] linearises the index with the given strides.
+      * @param[in] strides strides per direction (t,x,y,z). time stamp
       * @note if stride[0] = 0 this implies that we have no time-index 
       */
      #if defined(OpenMPGPUOffloading)
@@ -49,8 +49,8 @@ namespace exahype2 {
         const tarch::la::Vector<Dimensions+1,int>& strides);
        
      /**
-      * @param scalarIndex index that we want to delinearise 
-      * @param strides strides per direction (t,x,y,z).
+      * @param[in] scalarIndex index that we want to delinearise 
+      * @param[in] strides strides per direction (t,x,y,z). time stamp
       *
       * @return index that is descalar account to the strides
       *
@@ -67,7 +67,7 @@ namespace exahype2 {
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
       * @return a tuple (t,x,y,z) where the t-component has index 0.
-      * @param index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index
+      * @param[in] index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index time stamp
       * @note coords[0] = t if if t-direction component of index is negative.
       */
      #if defined(OpenMPGPUOffloading)
@@ -84,8 +84,8 @@ namespace exahype2 {
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
       * @return a tuple (t,x,y,z) where the t-component has index 0.
-      * @param index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index
-      * @param direction encodes direction of face normal (x: 0, y: 1, z: 2)
+      * @param[in] index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index time stamp
+      * @param[in] direction encodes direction of face normal (x: 0, y: 1, z: 2)
       * @note coords[0] = t if if t-direction component of index is negative.
       */
      #if defined(OpenMPGPUOffloading)
@@ -101,8 +101,8 @@ namespace exahype2 {
        const double* __restrict__                  nodes);
      
      /**
-      * @param direction   coordinate direction of the (reference) element face normal (0: 
-      * @param orientation orientation of the (reference) element face normal (0: negative, 1: positive).
+      * @param[in] direction   coordinate direction of the (reference) element face normal (0: 
+      * @param[in] orientation orientation of the (reference) element face normal (0: negative, 1: positive).
       * @note Result must be scaled additionally by nodesPerAxis if it used to access space-time quantities.
       */
      #if defined(OpenMPGPUOffloading)
@@ -115,8 +115,8 @@ namespace exahype2 {
        const int                                 nodesPerAxis);
      
      /**
-      * @param direction   coordinate direction of the (reference) element face normal (0: 
-      * @param orientation orientation of the (reference) element face normal (0: negative, 1: positive).
+      * @param[in] direction   coordinate direction of the (reference) element face normal (0: 
+      * @param[in] orientation orientation of the (reference) element face normal (0: negative, 1: positive).
       * @return scalar cell index 
       */
      #if defined(OpenMPGPUOffloading)
@@ -157,10 +157,10 @@ namespace exahype2 {
      * @note This function assumes that the gradient zeroed out
      *
      * @param[in] QIn
-     * @param[in] dudx
+     * @param[in] dudx derivative operator; size: (order+1)*(order+1)
      * @param[in] invDx
-     * @param[in] nodesPerAxis
-     * @param[in] unknowns
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
      * @param[in] strideQ
      * @param[in] strideGradQ
      * @param[in] scalarIndex
