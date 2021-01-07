@@ -7,7 +7,7 @@ PEANO_HOME = /home/dominic/Documents/code/ExaHyPE2/Peano
 INCLUDES = -I$(PEANO_HOME)/src/
 
 SOURCES = $(shell find . -name "*AoS.cpp")
-SOURCES += KernelUtils.cpp
+SOURCES += KernelUtils.cpp Generic.cpp
 OBJECTS = $(SOURCES:.cpp=.o)
 
 compile: $(OBJECTS)

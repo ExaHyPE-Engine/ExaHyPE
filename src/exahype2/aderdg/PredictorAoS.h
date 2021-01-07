@@ -18,8 +18,8 @@ namespace exahype2 {
      *
      * @param[in] Qout
      * @param[in] UIn
-     * @param[in] nodesPerAxis
-     * @param[in] unknowns
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -42,11 +42,11 @@ namespace exahype2 {
      *
      * This body writes to a single space-time volume coefficient.  
      *
-     * @param rhsOut
-     * @param UIn
-     * @param FLCoeff
-     * @param nodesPerAxis
-     * @param strideQ
+     * @param[inout] rhsOut
+     * @param[in] UIn
+     * @param[in] FLCoeff values of basis functions evaluated at x=0.0 (left); size: order+1
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] strideQ
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -72,15 +72,15 @@ namespace exahype2 {
      * @param[in] rhsOut
      * @param[in] FAux
      * @param[in] QIn
-     * @param[in] nodes
-     * @param[in] weights
-     * @param[in] Kxi
-     * @param[in] t
-     * @param[in] dt
+     * @param[in] nodes quadrature nodes; size: (order+1)
+     * @param[in] weights quadrature weights; size: (order+1)
+     * @param[in] Kxi stiffness matrix; size: (order+1)*(order+1)
+     * @param[in] t time stamp
+     * @param[in] dt time step size
      * @param[in] centre
-     * @param[in] invDx
-     * @param[in] unknowns
-     * @param[in] nodesPerAxis
+     * @param[in] dx
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
      * @param[in] strideQ
      * @param[in] strideRhs
      * @param[in] scalarIndex
@@ -124,14 +124,14 @@ namespace exahype2 {
      * @param[in] rhsOut
      * @param[in] SAux
      * @param[in] QIn
-     * @param[in] nodes
-     * @param[in] weights
+     * @param[in] nodes quadrature nodes; size: (order+1)
+     * @param[in] weights quadrature weights; size: (order+1)
      * @param[in] cellCentre
-     * @param[in] dx
-     * @param[in] t
-     * @param[in] dt
-     * @param[in] unknowns
-     * @param[in] nodesPerAxis
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] t time stamp
+     * @param[in] dt time step size
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
      * @param[in] strideQ
      * @param[in] strideRhs
      * @param[in] scalarIndex
@@ -205,13 +205,13 @@ namespace exahype2 {
      * this kernel cannot be fused with the other space-time predictor Picard loop kernel bodies due to the neighbour lookups
      * of flux and gradient.
      * 
-     * @param QOut
-     * @param squaredResiduumOut
-     * @param rhsIn
-     * @param iK1
-     * @param nodesPerAxis
-     * @param unknowns
-     * @param strideQ
+     * @param[inout] QOut
+     * @param[inout] squaredResiduumOut
+     * @param[in] rhsIn
+     * @param[in] iK1 inverse of the predictor left-hand side operator; size: (order+1)*(order+1)
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] strideQ
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -237,13 +237,13 @@ namespace exahype2 {
      * faces of a cell (cell hull). These serve as Riemann
      * solver inputs.
      * 
-     * @param QHullOut
-     * @param QIn
-     * @param FLRCoeff Basis functions evaluated at reference coordinates 0.0 (L,component 0) and 1.0 (R, component 1).
-     * @param nodesPerAxis
-     * @param unknowns
-     * @param strideQ
-     * @param scalarIndexHull
+     * @param[inout] QHullOut
+     * @param[in] QIn
+     * @param[in] FLRCoeff Basis functions evaluated at reference coordinates 0.0 (L,component 0) and 1.0 (R, component 1).
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] strideQ
+     * @param[in] scalarIndexHull
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -266,13 +266,13 @@ namespace exahype2 {
      * 
      * Simplified version of spaceTimePredictor_extrapolate_body_AoS specifically for Lobatto nodes.
      * 
-     * @param QHullOut
-     * @param QIn
-     * @param FLRCoeff Basis functions evaluated at reference coordinates 0.0 (L,component 0) and 1.0 (R, component 1).
-     * @param nodesPerAxis
-     * @param unknowns
-     * @param strideQ
-     * @param scalarIndexHull
+     * @param[inout] QHullOut
+     * @param[in] QIn
+     * @param[in] FLRCoeff Basis functions evaluated at reference coordinates 0.0 (L,component 0) and 1.0 (R, component 1).
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] strideQ
+     * @param[in] scalarIndexHull
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -295,19 +295,19 @@ namespace exahype2 {
      * @param[in] nonconservativeProduct
      * @param[inout] QOut
      * @param[in] UIn
-     * @param[in] weights
-     * @param[in] nodes
-     * @param[in] Kxi
-     * @param[in] iK1
-     * @param[in] FLCoeff
-     * @param[in] dudx
-     * @param[in] dx
+     * @param[in] weights quadrature weights; size: (order+1)
+     * @param[in] nodes quadrature nodes; size: (order+1)
+     * @param[in] Kxi stiffness matrix; size: (order+1)*(order+1)
+     * @param[in] iK1 inverse of the predictor left-hand side operator; size: (order+1)*(order+1)
+     * @param[in] FLCoeff values of basis functions evaluated at x=0.0 (left); size: order+1
+     * @param[in] dudx derivative operator; size: (order+1)*(order+1)
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
      * @param[in] cellCentre
-     * @param[in] t
-     * @param[in] dt
-     * @param[in] order
-     * @param[in] unknowns
-     * @param[in] auxiliaryVariables
+     * @param[in] t time stamp
+     * @param[in] dt time step size
+     * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      * @param[in] atol
      * @param[in] callFlux call the flux function
      * @param[in] callSource call the algebraicSource function
@@ -361,11 +361,11 @@ namespace exahype2 {
      *
      * @param[inout] QHullOut
      * @param[in] QIn
-     * @param[in] FLCoeff
-     * @param[in] FRCoeff
-     * @param[in] order
-     * @param[in] unknowns
-     * @param[in] auxiliaryVariables
+     * @param[in] FLCoeff values of basis functions evaluated at x=0.0 (left); size: order+1
+     * @param[in] FRCoeff values of basis functions evaluated at x=1.0 (right); size: order+1
+     * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */ 
     void spaceTimePredictor_extrapolate_loop_AoS(
         double * __restrict__       QHullOut,
@@ -388,11 +388,11 @@ namespace exahype2 {
      *
      * @param[inout] QHullOut
      * @param[in] QIn
-     * @param[in] FLCoeff
-     * @param[in] FRCoeff
-     * @param[in] order
-     * @param[in] unknowns
-     * @param[in] auxiliaryVariables
+     * @param[in] FLCoeff values of basis functions evaluated at x=0.0 (left); size: order+1
+     * @param[in] FRCoeff values of basis functions evaluated at x=1.0 (right); size: order+1
+     * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */ 
     void spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
         double * __restrict__       QHullOut,
