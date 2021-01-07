@@ -47,8 +47,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
-  const double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const double * __restrict__ Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  double * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
