@@ -51,7 +51,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
         {% if NCP_IMPLEMENTATION!="<none>" %}
         [] (
           const double* __restrict__                   Q,
-          const double                                       gradQ[][Dimensions],
+          const double * __restrict__                  dQdn,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -59,7 +59,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
           int                                          normal,
           double                                       BgradQ[]
         ) -> void {
-          observers::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+          observers::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
         },
         {% endif %}
         [] (
@@ -194,7 +194,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
         {% if NCP_IMPLEMENTATION!="<none>" %}
         [] (
           const double* __restrict__                   Q,
-          const double                                       gradQ[][Dimensions],
+          const double* __restrict__                   dQdn,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -202,7 +202,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
           int                                          normal,
           double                                       BgradQ[]
         ) -> void {
-          {{SOLVER_NAME}}::nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+          {{SOLVER_NAME}}::nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
         },
         {% endif %}
         [] (

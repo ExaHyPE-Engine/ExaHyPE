@@ -137,8 +137,8 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
 
 
 void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[64+0],
-  const double                                       gradQ[64+0][Dimensions],
+  const double * __restrict__                  Q, // Q[64+0],
+  const double * __restrict__                  dQdn, // [64+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -147,11 +147,16 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 ) {
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
 
+  assertion( normal>=0 );
+  assertion( normal<Dimensions );
+
   double gradQSerialised[64*3];
   for (int i=0; i<64; i++) {
-    gradQSerialised[i+0*64] = gradQ[i][0];
-    gradQSerialised[i+1*64] = gradQ[i][1];
-    gradQSerialised[i+2*64] = gradQ[i][2];
+    gradQSerialised[i+0*64] = 0.0;
+    gradQSerialised[i+1*64] = 0.0;
+    gradQSerialised[i+2*64] = 0.0;
+
+    gradQSerialised[i+normal*64] = dQdn[i];
   }
   pdencp_(BgradQ, Q, gradQSerialised);
 
