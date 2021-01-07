@@ -12,7 +12,7 @@
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_initialGuess_body_AoS(
-  const double * __restrict__ QOut,
+  double * __restrict__       QOut,
   const double * __restrict__ UIn,
   const int                   nodesPerAxis,
   const int                   strideQ,

@@ -29,8 +29,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     #endif
     {% endif %}
       [&](
-        double                                       QL[],
-        double                                       QR[],
+        const double * __restrict__                  QL,
+        const double * __restrict__                  QR,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       dx,
         double                                       t,
@@ -41,7 +41,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ) -> void {
         ::exahype2::fv::splitRusanov1d(
           [] (
-            double                                       Q[],
+            const double * __restrict__                  Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -57,7 +57,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           },
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
-            double                                       Q[],
+            const double * __restrict__                  Q,
             double                                       gradQ[][Dimensions],
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -70,7 +70,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           },
           {% endif %}
           [] (
-            double                                       Q[],
+            const double * __restrict__                  Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,

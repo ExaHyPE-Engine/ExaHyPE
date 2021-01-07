@@ -126,6 +126,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 {% endif %}
 {% endif %}
 
+{% if FLUX_IMPLEMENTATION!="<none>" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryFlux(
+ const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+ const tarch::la::Vector<Dimensions,double>&  x,
+ double                                       t,
+ int                                          normal,
+ double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+) {
+  flux(Q,x,t,normal,F);
+}
+{% endif %}
 
 {% if NCP_IMPLEMENTATION!="<none>" %}
 {% if NCP_IMPLEMENTATION!="<user-defined>" %}
@@ -134,7 +145,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   const double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
-  int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{NCP_IMPLEMENTATION}}

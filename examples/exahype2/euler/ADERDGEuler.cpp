@@ -7,9 +7,9 @@ tarch::logging::Log   examples::exahype2::euler::ADERDGEuler::_log( "examples::e
 
 
 void examples::exahype2::euler::ADERDGEuler::adjustSolution(
-  double * __restrict__ Q,  // Q[5+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t
+  double * __restrict__                       Q,  // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      t
 ) {
   logTraceInWith2Arguments( "adjustSolution(...)", x, t );
   if (tarch::la::equals(t,0.0) ) {
@@ -41,10 +41,10 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
 
 
 double examples::exahype2::euler::ADERDGEuler::maxEigenvalue(
-  const double * __restrict__ Q, // Q[5+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal
+  const double * __restrict__                 Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      t,
+  int                                         normal
 )  {
   logTraceInWith3Arguments( "maxEigenvalue(...)", x, t, normal );
 
@@ -77,11 +77,11 @@ double examples::exahype2::euler::ADERDGEuler::maxEigenvalue(
 
 
 void examples::exahype2::euler::ADERDGEuler::flux(
-  const double * __restrict__ Q, // Q[5+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal,
-  double * __restrict__ F // F[5]
+  const double * __restrict__                 Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      t,
+  int                                         normal,
+  double * __restrict__                       F // F[5]
 )  {
   logTraceInWith3Arguments( "flux(...)", x, t, normal );
 
@@ -145,8 +145,8 @@ void examples::exahype2::euler::ADERDGEuler::flux(
 
 
 void examples::exahype2::euler::ADERDGEuler::boundaryConditions(
-  const double * __restrict__ Qinside, // Qinside[5+0]
-  const double * __restrict__ Qoutside, // Qoutside[5+0]
+  double * __restrict__                        Qinside, // Qinside[5+0]
+  double * __restrict__                        Qoutside, // Qoutside[5+0]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal

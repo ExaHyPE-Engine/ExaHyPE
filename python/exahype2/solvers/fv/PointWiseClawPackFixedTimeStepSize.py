@@ -29,8 +29,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     #endif
     {% endif %}
       [&](
-        double                                       QL[],
-        double                                       QR[],
+        const double * __restrict__                  QL,
+        const double * __restrict__                  QR,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       dx,
         double                                       t,

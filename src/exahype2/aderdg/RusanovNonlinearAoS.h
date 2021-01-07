@@ -13,7 +13,7 @@ namespace exahype2 {
      *
      * @param[in] boundaryState
      * @param[inout] QOut
-     * @param[in] QIn
+     * @param[inout] QIn
      * @param[in] nodes
      * @param[in] t
      * @param[in] dt
@@ -31,14 +31,14 @@ namespace exahype2 {
     #endif
     void rusanovNonlinear_setBoundaryState_body_AoS(
       std::function< void(
-        const double * __restrict__                 QIn,
+        double * __restrict__                       QInside,
+        double * __restrict__                       OOutside,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
-        int                                         normal,
-        double * __restrict__                       OOut
+        int                                         normal
       ) >                                         boundaryState,
       double * __restrict__                       QOut,
-      const double * __restrict__                 QIn,
+      double * __restrict__                       QIn,
       const double * __restrict__                 nodes,
       const double                                t,
       const double                                dt,
@@ -188,14 +188,14 @@ namespace exahype2 {
     
      void rusanovNonlinear_setBoundaryState_loop_AoS(
        std::function< void(
-         const double * __restrict__                 QIn,
+         double * __restrict__                       QInside,
+         double * __restrict__                       OOutside,
          const tarch::la::Vector<Dimensions,double>& x,
          double                                      t,
-         int                                         normal,
-         double * __restrict__                       OOut
+         int                                         normal
        ) >                                         boundaryState,
        double * __restrict__                       QOut,
-       const double * __restrict__                 QIn,
+       double * __restrict__                       QIn,
        const double * __restrict__                 nodes,
        const double                                t,
        const double                                dt,

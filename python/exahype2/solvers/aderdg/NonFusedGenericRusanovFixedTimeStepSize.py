@@ -25,8 +25,8 @@ class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
 /*      
       ::exahype2::aderdg::solveSpaceTimeRiemannProblem_GaussLegendre_AoS2d(
         [&](
-          double * __restrict__ QL,
-          double * __restrict__ QR,
+          double * __restrict__                        QL,
+          double * __restrict__                        QR,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           double                                       dt,
@@ -128,10 +128,10 @@ class UpdateCell(AbstractADERDGActionSet):
             fineGridCell{{SOLVER_NAME}}Q.value,   // QIn
             {{SOLVER_INSTANCE}}.QuadratureWeights,
             {{SOLVER_INSTANCE}}.QuadraturePoints,
-            nullptr, //                 Kxi,
-            nullptr, // iK1,
-            nullptr, // FLCoeff,
-            nullptr, // dudx, 
+            {{SOLVER_INSTANCE}}.StiffnessOperator,             // Kxi,
+            {{SOLVER_INSTANCE}}.InvertedPredictorLhsOperator, // iK1,
+            {{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,      // FLCoeff,
+            {{SOLVER_INSTANCE}}.DerivativeOperator,   // dudx, 
             marker.h()(0), // we assume cubic/square cells
             marker.x(),
             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
