@@ -22,7 +22,7 @@
 tarch::logging::Log   examples::exahype2::ccz4::CCZ4::_log( "examples::exahype2::ccz4::CCZ4" );
 
 void gaugeWave(
-  const double * __restrict__ Q, // Q[64+0],
+  double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double t
@@ -165,8 +165,8 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 
 
 void examples::exahype2::ccz4::CCZ4::boundaryConditions(
-  const double * __restrict__ Qinside, // Qinside[64+0]
-  const double * __restrict__ Qoutside, // Qoutside[64+0]
+  const double * __restrict__                  Qinside, // Qinside[64+0]
+  double * __restrict__                        Qoutside, // Qoutside[64+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
