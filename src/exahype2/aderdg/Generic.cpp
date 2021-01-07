@@ -31,9 +31,9 @@ void exahype2::aderdg::validatePatch(
   const int numberOfNodesPerAxisInPatch = order + 1;
   dfor (k,numberOfNodesPerAxisInPatch) {
     int index = peano4::utils::dLinearised(k,numberOfNodesPerAxisInPatch) * (unknowns+auxiliaryVariables);
-	  for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-        nonCriticalAssertion7( std::isfinite(UIn[index+i]), unknowns, auxiliaryVariables, numberOfNodesPerAxisInPatch, haloSize, k, i, location );
-	  }
+    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      nonCriticalAssertion6( std::isfinite(UIn[index+i]), unknowns, auxiliaryVariables, order, k, i, location );
+    }
   }
 }
 
@@ -47,9 +47,9 @@ void exahype2::aderdg::validateSpacetimePatch(
   const int numberOfNodesPerAxisInPatch = order + 1;
   dfor (k,numberOfNodesPerAxisInPatch) {
     int index = peano4::utils::dLinearised(k,numberOfNodesPerAxisInPatch) * (unknowns+auxiliaryVariables);
-	  for (int i=0; i<numberOfNodesPerAxisInPatch*(unknowns+auxiliaryVariables); i++) {
-        nonCriticalAssertion7( std::isfinite(QIn[index+i]), unknowns, auxiliaryVariables, numberOfNodesPerAxisInPatch, haloSize, k, i, location );
-	  }
+    for (int i=0; i<numberOfNodesPerAxisInPatch*(unknowns+auxiliaryVariables); i++) {
+      nonCriticalAssertion6( std::isfinite(QIn[index+i]), unknowns, auxiliaryVariables, order, k, i, location );
+    }
   }
 }
     

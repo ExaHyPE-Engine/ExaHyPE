@@ -145,7 +145,7 @@ void examples::exahype2::euler::ADERDGEuler::flux(
 
 
 void examples::exahype2::euler::ADERDGEuler::boundaryConditions(
-  double * __restrict__                        Qinside, // Qinside[5+0]
+  const double * __restrict__                  Qinside, // Qinside[5+0]
   double * __restrict__                        Qoutside, // Qoutside[5+0]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
