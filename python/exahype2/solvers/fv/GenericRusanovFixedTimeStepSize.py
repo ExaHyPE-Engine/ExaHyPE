@@ -58,7 +58,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
             const double * __restrict__                  Q,
-            double                                       gradQ[][Dimensions],
+            const double * __restrict__                  dQdn,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -66,7 +66,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (

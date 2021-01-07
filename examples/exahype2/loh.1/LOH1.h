@@ -69,7 +69,7 @@ class examples::exahype2::loh1::LOH1: public examples::exahype2::loh1::AbstractL
 
     void nonconservativeProduct(
       const double * __restrict__                  Q, // [9+4],
-      const double                                 gradQ[13][Dimensions],
+      const double * __restrict__                  dQdn, // [9+4],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
