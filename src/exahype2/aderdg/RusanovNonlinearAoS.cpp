@@ -9,14 +9,14 @@
 #endif
 GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_setBoundaryState_body_AoS(
   std::function< void(
-    const double * __restrict__                 QIn,
+    double * __restrict__                       QInside,
+    double * __restrict__                       OOutside,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
-    int                                         normal,
-    double * __restrict__                       OOut
+    int                                         normal
   ) >                                         boundaryState,
   double * __restrict__                       QOut,
-  const double * __restrict__                 QIn,
+  double * __restrict__                       QIn,
   const double * __restrict__                 nodes,
   const double                                t,
   const double                                dt,
@@ -34,7 +34,7 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_setBoundaryState_body_
   const tarch::la::Vector<Dimensions,double> x(&coords[1]);
   const double time = coords[0];
 
-  boundaryState( &QIn[ scalarIndexFace*strideQ ], x, time, direction, &QOut[ scalarIndexFace*strideQ ] );
+  boundaryState( &QIn[ scalarIndexFace*strideQ ], &QOut[ scalarIndexFace*strideQ ], x, time, direction );
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
@@ -48,7 +48,7 @@ GPUCallableMethod double exahype2::aderdg::rusanovNonlinear_maxAbsoluteEigenvalu
     const double * __restrict__                 Q,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
-    const int                                   direction
+    const int                                   normal
   ) >                                         maxAbsoluteEigenvalue,
   const double * __restrict__                 QLR[2],
   const double * __restrict__                 nodes,
@@ -185,6 +185,11 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_addNcpContributionsToR
   const tarch::la::Vector<Dimensions+1,double> coords = 
     getCoordinatesOnFace(indexQFace,faceCentre,direction,dx,t,dt,nodes);
   const tarch::la::Vector<Dimensions,double> x(&coords[1]);
+    
+  // zero gradient, especially components in other normal direction
+  for (int i=0; i < Dimensions*strideQ; i++) {
+    gradQAux[ i ] = 0.0;
+  }
 
   for (int it = 0; it < nodesPerAxis; it++) { // time integration
     const int offsetQ  = (scalarIndexFace*nodesPerAxis + it)*strideQ;
@@ -219,14 +224,14 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_addNcpContributionsToR
 
 void exahype2::aderdg::rusanovNonlinear_setBoundaryState_loop_AoS(
   std::function< void(
-    const double * __restrict__                 QIn,
+    double * __restrict__                       QInside,
+    double * __restrict__                       OOutside,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
-    int                                         normal,
-    double * __restrict__                       OOut
+    int                                         normal
   ) >                                         boundaryState,
   double * __restrict__                       QOut,
-  const double * __restrict__                 QIn,
+  double * __restrict__                       QIn,
   const double * __restrict__                 nodes,
   const double                                t,
   const double                                dt,
@@ -265,7 +270,7 @@ double exahype2::aderdg::rusanovNonlinear_maxAbsoluteEigenvalue_loop_AoS(
     const double * __restrict__                 Q,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
-    const int                                   direction
+    int                                         normal
   ) >                                         maxAbsoluteEigenvalue,
   const double * __restrict__                 QL,
   const double * __restrict__                 QR,
