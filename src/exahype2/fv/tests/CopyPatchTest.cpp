@@ -17,6 +17,7 @@ void exahype2::fv::tests::CopyPatchTest::testMe() {
   int    auxiliaryVariables(2);
   int    numberOfVolumesPerAxisInPatch(17);
   int    haloSize(1);
+  // NOTE: the test does not work for halosize !=1
   double*  QinWithHalo;
   double* QOutWithoutHalo;
   std::vector<int> thesource, dest, thesource2, dest2;
@@ -27,48 +28,42 @@ void exahype2::fv::tests::CopyPatchTest::testMe() {
     thesource.push_back(sourceSerialised);
     dest.push_back(destinationSerialised);
   }
-
  
-  //std::cerr << "Now the alternative implementation without dfor\n"; 
   #if Dimensions==2
-  int sourceSerialised      = numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
-  int destinationSerialised = 0;
+  int sourceSerialised      = numberOfVolumesPerAxisInPatch + 3*haloSize;
+  int offset = numberOfVolumesPerAxisInPatch;
   for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
     for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
-      thesource2.push_back(sourceSerialised);
-      dest2.push_back(destinationSerialised);
-      sourceSerialised++;
-      destinationSerialised++;
+      thesource2.push_back((y+1)*(offset+3*haloSize) + x - y);
+      dest2.push_back(y*offset+x);
     }
-    sourceSerialised += 2*haloSize;
   }
   #else
-  int sourceSerialised      = (numberOfVolumesPerAxisInPatch+haloSize*2)*(numberOfVolumesPerAxisInPatch+haloSize*2) + numberOfVolumesPerAxisInPatch+haloSize*2+haloSize;
-  int destinationSerialised = 0;
+  int offset  = numberOfVolumesPerAxisInPatch;
+  int offset2 = (numberOfVolumesPerAxisInPatch+haloSize*2)*(numberOfVolumesPerAxisInPatch+haloSize*2) + numberOfVolumesPerAxisInPatch+haloSize*2 + haloSize;
+  int offset3 = numberOfVolumesPerAxisInPatch+haloSize*2;
   for (int z=0; z<numberOfVolumesPerAxisInPatch; z++) {
     for (int y=0; y<numberOfVolumesPerAxisInPatch; y++) {
       for (int x=0; x<numberOfVolumesPerAxisInPatch; x++) {
-        thesource2.push_back(sourceSerialised);
-        dest2.push_back(destinationSerialised);
-        sourceSerialised++;
-        destinationSerialised++;
+         int mydest = z*offset*offset + y*offset + x;
+         int mysrc  = z*offset3*offset3 + y*offset3 + x +offset2;
+        thesource2.push_back(mysrc);
+        dest2.push_back(mydest);
       }
-      sourceSerialised += 2*haloSize;
     }
-    sourceSerialised += 2*haloSize+2*(numberOfVolumesPerAxisInPatch+haloSize*2)-2;
   }
   #endif
 
   for (size_t idx=0;idx< thesource.size();++idx)
   {
+     if (thesource[idx]!=thesource2[idx]) std::cerr <<" source error at " << idx <<"\n";
      validateEquals(thesource[idx], thesource2[idx]);
-     //if (thesource[idx]!=thesource2[idx]) std::cerr <<" source error at " << idx <<"\n";
   }
   
   for (size_t idx=0;idx< dest.size();++idx)
   {
+     if (dest[idx]!=dest2[idx]) std::cerr <<" dest error at " << idx <<"\n";
      validateEquals(dest[idx], dest2[idx]);
-     //if (dest[idx]!=dest2[idx]) std::cerr <<" dest error at " << idx <<"\n";
   }
 
 }
