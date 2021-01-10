@@ -308,6 +308,53 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
 #pragma omp end declare target
 #endif
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
+  double * __restrict__       UOut,
+  const double * __restrict__ QIn,
+  const double * __restrict__ FRCoeff,
+  const double                nodesPerAxis,
+  const int                   strideQ,
+  const int                   scalarIndexCell) {
+  // clear
+  for (int var = 0; var < strideQ; var++ ) {
+    UOut[ scalarIndexCell ] = 0;
+  }
+  // compute
+  for (int it = 0; it < nodesPerAxis; it++ ) {
+    const int indexQ = (scalarIndexCell*nodesPerAxis + it)*strideQ;
+    const double coeff = FRCoeff[it];
+    for (int var = 0; var < strideQ; var++ ) {
+      UOut[ scalarIndexCell + var ] += coeff * QIn[ indexQ + var ];
+    }
+  }
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
+
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_body_AoS(
+  double * __restrict__       UOut,
+  const double * __restrict__ QIn,
+  const double * __restrict__ FRCoeff,
+  const double                nodesPerAxis,
+  const int                   strideQ,
+  const int                   scalarIndexCell) {
+ const int it = nodesPerAxis-1;
+ const int indexQ = (scalarIndexCell*nodesPerAxis + it)*strideQ;
+ for (int var = 0; var < strideQ; var++ ) {
+   UOut[ scalarIndexCell + var ] = QIn[ indexQ + var ];
+ }
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
+
 #if defined(__HIPCC__) or defined(__NVCC__)
 
 // kernels
@@ -745,5 +792,53 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
       nodesPerAxis,
       strideQ,
       scalarIndexHull);
+  }
+}
+    
+void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
+  double * __restrict__       UOut,
+  const double * __restrict__ QIn,
+  const double * __restrict__ FRCoeff,
+  const int                   order,
+  const int                   unknowns,
+  const int                   auxiliaryVariables) {
+  const int nodesPerAxis = order + 1;
+  
+  const int strideQ = unknowns+auxiliaryVariables;
+  
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+ 
+  for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
+    exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
+      UOut,
+      QIn,
+      FRCoeff,
+      nodesPerAxis,
+      strideQ,
+      scalarIndexCell);
+  }
+}
+
+void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_loop_AoS(
+  double * __restrict__       UOut,
+  const double * __restrict__ QIn,
+  const double * __restrict__ FRCoeff,
+  const int                   order,
+  const int                   unknowns,
+  const int                   auxiliaryVariables) {
+  const int nodesPerAxis = order + 1;
+  
+  const int strideQ = unknowns+auxiliaryVariables;
+  
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+ 
+  for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
+    exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_body_AoS(
+      UOut,
+      QIn,
+      FRCoeff,
+      nodesPerAxis,
+      strideQ,
+      scalarIndexCell);
   }
 }
