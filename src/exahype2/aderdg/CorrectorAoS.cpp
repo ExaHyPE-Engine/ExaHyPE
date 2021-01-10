@@ -142,9 +142,10 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_A
 GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
     std::function< void(
       const double * __restrict__                 Q,
-      double                                      gradQ[][Dimensions],
+      double * __restrict__                       dQ_or_dQdn,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
+      int                                         normal,
       double * __restrict__                       BgradQ
     ) >                                         nonconservativeProduct,
     double * __restrict__                       UOut,
@@ -172,14 +173,15 @@ GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
     const int scalarIndexQ = scalarIndex*nodesPerAxis + it; 
     
     gradient_AoS( QIn, dudx, invDx, nodesPerAxis, strideQ, scalarIndexQ, gradQAux );
-    
     const double time = t + nodes[it] * dt; 
     const double* Q   = &QIn[ scalarIndexQ*strideQ ];
-    nonconservativeProduct( Q, (double (*)[Dimensions]) gradQAux, x, time, SAux );
     
-     const double coeff = dt * weights[it];
-    for(int var=0; var<unknowns; var++) {
-      UOut[ scalarIndex*strideQ + var ] += coeff * SAux[var];
+    const double coeff = dt * weights[it];
+    for ( int direction = 0; direction < Dimensions; direction++ ) {
+      nonconservativeProduct( Q,  &gradQAux[ direction*strideQ ], x, time, direction, SAux );
+      for(int var=0; var<unknowns; var++) {
+        UOut[ scalarIndex*strideQ + var ] += coeff * SAux[var];
+      }
     }
   }
 }
@@ -240,9 +242,10 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
   ) >   algebraicSource,
   std::function< void(
     const double * __restrict__                 Q,
-    double                                      gradQ[][Dimensions],
+    double * __restrict__                       dQ_or_dQdn,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
+    int                                         normal,
     double * __restrict__                       BgradQ
   ) >                                         nonconservativeProduct,
   std::function< void(

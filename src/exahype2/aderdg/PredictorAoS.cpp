@@ -149,9 +149,10 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addSource
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
   std::function< void(
     const double * __restrict__                 Q,
-    double                                      gradQ[][Dimensions],
+    double * __restrict__                       dQ_or_dQdn,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
+    int                                         normal,
     double * __restrict__                       BgradQ
   ) >                                         nonconservativeProduct,
   double * __restrict__                       rhsOut,
@@ -183,9 +184,11 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addNcpCon
   gradient_AoS(QIn,dudx,invDx,nodesPerAxis,strideQ,scalarIndex,gradQAux);           
   
   const double* Q = &QIn [ scalarIndex*strideQ ];
-  nonconservativeProduct(Q, (double (*)[Dimensions]) gradQAux, x, time, SAux );
-  for(int var=0; var < unknowns; var++) {
-    rhsOut[ scalarIndex*strideRhs + var ] += coeff * SAux[var];
+  for ( int direction = 0; direction < Dimensions; direction++ ) {
+    nonconservativeProduct(Q, &gradQAux[ direction*strideQ ], x, time, direction, SAux );
+    for(int var=0; var < unknowns; var++) {
+      rhsOut[ scalarIndex*strideRhs + var ] += coeff * SAux[var];
+    }
   }
 }
 #if defined(OpenMPGPUOffloading)
@@ -392,9 +395,10 @@ __global__ void exahype2::aderdg::spaceTimePredictor_PicardLoop_assembleRhs_krnl
   ) >   algebraicSource,
   std::function< void(
     const double * __restrict__                 Q,
-    double                                      gradQ[][Dimensions],
+    double * __restrict__                       dQ_or_dQdn,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
+    int                                         normal,
     double * __restrict__                       BgradQ
   ) >                                         nonconservativeProduct,
   double * __restrict__                       rhsOut, 
@@ -588,9 +592,10 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
   ) >   algebraicSource,
   std::function< void(
     const double * __restrict__                 Q,
-    double                                      gradQ[][Dimensions],
+    double * __restrict__                       dQ_or_dQdn,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
+    int                                         normal,
     double * __restrict__                       BgradQ
   ) >                                         nonconservativeProduct,
   double * __restrict__                       QOut, 

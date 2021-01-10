@@ -154,7 +154,7 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_riemannFlux_body_AoS(
 GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_addNcpContributionsToRiemannFlux_body_AoS(
     std::function< void(
       double * __restrict__                       Q,
-      double                                      gradQ[][Dimensions],
+      double * __restrict__                       dQ_or_dQdn,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       int                                         normal,
@@ -163,7 +163,7 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_addNcpContributionsToR
     double * __restrict__                       FLOut,
     double * __restrict__                       FROut,
     double * __restrict__                       QAvgAux,
-    double * __restrict__                       gradQAux,
+    double * __restrict__                       dQAux,
     double * __restrict__                       SAux,
     const double * __restrict__                 QLIn, 
     const double * __restrict__                 QRIn, 
@@ -186,16 +186,11 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_addNcpContributionsToR
     getCoordinatesOnFace(indexQFace,faceCentre,direction,dx,t,dt,nodes);
   const tarch::la::Vector<Dimensions,double> x(&coords[1]);
     
-  // zero gradient, especially components in other normal direction
-  for (int i=0; i < Dimensions*strideQ; i++) {
-    gradQAux[ i ] = 0.0;
-  }
-
   for (int it = 0; it < nodesPerAxis; it++) { // time integration
     const int offsetQ  = (scalarIndexFace*nodesPerAxis + it)*strideQ;
     
     for (int var=0; var < strideQ; var++) {
-      gradQAux[ Dimensions*var + direction ] = QRIn[ offsetQ + var ] - QLIn[ offsetQ + var ];
+      dQAux[ var ] = QRIn[ offsetQ + var ] - QLIn[ offsetQ + var ];
     }
     
     for (int var=0; var < strideQ; var++) {
@@ -203,7 +198,7 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_addNcpContributionsToR
     }
     
     const double time = t + nodes[it] * dt;
-    nonconservativeProduct(QAvgAux, (double (*)[Dimensions]) gradQAux, x, time, direction, SAux);
+    nonconservativeProduct(QAvgAux,  dQAux, x, time, direction, SAux);
 
     const double coeff = weights[it] * 0.5;
     for (int var = 0; var < unknowns; var++) {
@@ -329,7 +324,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
   ) >                                         boundaryFlux,
   std::function< void(
     double * __restrict__                       Q,
-    double                                      gradQ[][Dimensions],
+    double * __restrict__                       dQ_or_dQdn,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal,
@@ -356,10 +351,10 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
   const bool                                  callNonconservativeProduct) {
   const unsigned int nodesPerAxis = order + 1;
 
-  const int strideQ     = unknowns+auxiliaryVariables;
-  const int strideS     = unknowns;
-  const int strideF     = unknowns;
-  const int strideGradQ = strideQ*Dimensions; // gradient of auxiliary variables needed for some apps
+  const int strideQ  = unknowns+auxiliaryVariables;
+  const int strideS  = unknowns;
+  const int strideF  = unknowns;
+  const int strideDQ = strideQ; // gradient of auxiliary variables needed for some apps
 
   const unsigned int spaceTimeNodesOnFace = getNodesPerCell(nodesPerAxis); // nodesPerAxis^(d-1)
   const unsigned int nodesOnFace          = spaceTimeNodesOnFace/nodesPerAxis; // nodesPerAxis^(d-1)
@@ -367,7 +362,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
   double * FAux     = new double[2*nodesOnFace*strideF]{0.0}; 
   double * QAvgAux  = new double[nodesOnFace*strideQ]{0.0};
   double * SAux     = new double[nodesOnFace*strideS]{0.0};
-  double * gradQAux = new double[nodesOnFace*strideGradQ]{0.0};
+  double * dQAux    = new double[nodesOnFace*strideDQ]{0.0};
   double * FBndAux  = new double[nodesOnFace*strideF]{0.0};
   
   for ( unsigned int scalarIndexFace = 0; scalarIndexFace < nodesOnFace; scalarIndexFace++ ) {
@@ -401,7 +396,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
         ( leftCellIsOutside ) ? FBndAux : FLOut,
         ( rightCellIsOutside ) ? FBndAux : FROut,
         &QAvgAux[ scalarIndexFace*strideQ ],
-        &gradQAux[ scalarIndexFace*strideGradQ ],
+        &dQAux[ scalarIndexFace*strideDQ ],
         &SAux[ scalarIndexFace*strideS ],
         QLIn, 
         QRIn, 
@@ -424,5 +419,5 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
   delete [] FAux;
   delete [] QAvgAux;
   delete [] SAux;
-  delete [] gradQAux;
+  delete [] dQAux;
 }  

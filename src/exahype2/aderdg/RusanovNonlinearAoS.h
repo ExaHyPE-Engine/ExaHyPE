@@ -176,7 +176,7 @@ namespace exahype2 {
      GPUCallableMethod void rusanovNonlinear_addNcpContributionsToRiemannFlux_body_AoS(
         std::function< void(
           double * __restrict__                       Q,
-          double                                      gradQ[][Dimensions],
+          double * __restrict__                       dQ_or_dQdn,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
           int                                         normal,
@@ -320,7 +320,7 @@ namespace exahype2 {
       ) >                                         boundaryFlux,
       std::function< void(
         double * __restrict__                       Q,
-        double                                      gradQ[][Dimensions],
+        double * __restrict__                       dQ_or_dQdn,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         int                                         normal,
