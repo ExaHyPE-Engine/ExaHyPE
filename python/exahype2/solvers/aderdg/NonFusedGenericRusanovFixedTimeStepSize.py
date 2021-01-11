@@ -89,7 +89,7 @@ class UpdateCell(AbstractADERDGActionSet):
 //CorrectorAoS.h:    void corrector_addRiemannContributions_loop_AoS(RusanovNonlinearAoS.h:     void rusanovNonlinear_setBoundaryState_loop_AoS(
 //RusanovNonlinearAoS.h:     double rusanovNonlinear_maxAbsoluteEigenvalue_loop_AoS(
 //RusanovNonlinearAoS.h:    void rusanovNonlinear_loop_AoS(
-  
+
           ::exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
             [&](
               const double * __restrict__                 Q,
@@ -195,6 +195,16 @@ class UpdateCell(AbstractADERDGActionSet):
              fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(5).value
              #endif
           );
+          */
+          
+          
+          
+             CorrectorAoS
+             
+             
+             
+                void corrector_addCellContributions_loop_AoS(
+
 
           ::exahype2::aderdg::timeIntegration_GaussLegendre_AoS2d(
              marker.x(),
@@ -207,7 +217,6 @@ class UpdateCell(AbstractADERDGActionSet):
              spaceTimeQ,
              fineGridCell{{SOLVER_NAME}}QNew.value
           );
-          */
         }
         break;
       case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:

@@ -478,7 +478,6 @@ class FV(object):
      output: peano4.output.Output
       
     """
-
     templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
     
     abstractHeaderDictionary = {}

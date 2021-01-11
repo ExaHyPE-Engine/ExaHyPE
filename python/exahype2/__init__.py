@@ -2,6 +2,8 @@
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers.fv
 
+import exahype2.gpu
+
 havenumpy=False
 try:
     import numpy
