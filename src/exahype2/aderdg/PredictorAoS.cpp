@@ -592,7 +592,7 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
   ) >   algebraicSource,
   std::function< void(
     const double * __restrict__                 Q,
-    double * __restrict__                       dQ_or_dQdn,
+    const double * __restrict__                 dQ_or_dQdn,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal,

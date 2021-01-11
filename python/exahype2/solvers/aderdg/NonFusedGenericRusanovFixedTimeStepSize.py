@@ -114,13 +114,14 @@ class UpdateCell(AbstractADERDGActionSet):
             },
             [&](
               const double * __restrict__                 Q,
-              double                                      gradQ[][Dimensions],
+              const double * __restrict__                 dQdn,
               const tarch::la::Vector<Dimensions,double>& x,
               double                                      t,
+              int                                         normal,
               double * __restrict__                       BgradQ
             )->void {
               {% if NCP_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,gradQ,x,t,normal,BgradQ);
+              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQdn,x,t,normal,BgradQ);
               {% endif %}
             },
             spaceTimeQ,                           // QOut
@@ -199,12 +200,7 @@ class UpdateCell(AbstractADERDGActionSet):
           
           
           
-             CorrectorAoS
-             
-             
-             
-                void corrector_addCellContributions_loop_AoS(
-
+/*
 
           ::exahype2::aderdg::timeIntegration_GaussLegendre_AoS2d(
              marker.x(),
@@ -217,6 +213,10 @@ class UpdateCell(AbstractADERDGActionSet):
              spaceTimeQ,
              fineGridCell{{SOLVER_NAME}}QNew.value
           );
+          
+          
+          */
+          
         }
         break;
       case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
