@@ -459,6 +459,9 @@ namespace exahype2 {
     
     /** 
      * @brief Extrapolates the predictor to t+dt. 
+     *
+     * The output variable QIn will be completely overwritten. QIn is the space-time
+     * polynomial.
      * 
      * @param[inout] UOut
      * @param[in] QIn

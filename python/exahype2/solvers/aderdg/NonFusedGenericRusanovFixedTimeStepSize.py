@@ -161,62 +161,14 @@ class UpdateCell(AbstractADERDGActionSet):
           #else
           ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS3d(
           #endif
-             [&](
-               double * __restrict__                        Q, 
-               const tarch::la::Vector<Dimensions,double>&  x, 
-               double                                       t, 
-               int                                          normal,
-               double * __restrict__                        F
-             )->void {
-               {{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
-             },
-             marker.x(),
-             marker.h(),
-             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-             {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-             {{SOLVER_INSTANCE}}.QuadraturePoints,
-             {{SOLVER_INSTANCE}}.QuadratureWeights,
-             spaceTimeQ,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(0).value,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(1).value,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(2).value,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(3).value,
-             #if Dimensions==3
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(4).value,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(5).value,
-             #endif
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(0).value,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(1).value,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(2).value,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(3).value
-             #if Dimensions==3
-             ,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(4).value,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(5).value
-             #endif
-          );
           */
           
-          
-          
-/*
-
-          ::exahype2::aderdg::timeIntegration_GaussLegendre_AoS2d(
-             marker.x(),
-             marker.h(),
-             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-             {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-             {{SOLVER_INSTANCE}}.QuadraturePoints,
-             {{SOLVER_INSTANCE}}.QuadratureWeights,
-             spaceTimeQ,
-             fineGridCell{{SOLVER_NAME}}QNew.value
+          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
+            fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
+            spaceTimeQ,                           // QIn
+            {{SOLVER_INSTANCE}}.QuadratureWeights,
+            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
           );
-          
-          
-          */
-          
         }
         break;
       case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
