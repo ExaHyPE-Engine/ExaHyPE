@@ -145,11 +145,11 @@ void examples::exahype2::euler::ADERDGEuler::flux(
 
 
 void examples::exahype2::euler::ADERDGEuler::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[5+0]
-  double * __restrict__                        Qoutside, // Qoutside[5+0]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal
+  double * __restrict__                       Qinside, // Qinside[5+0]
+  double * __restrict__                       Qoutside, // Qoutside[5+0]
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      t,
+  int                                         normal
 ) {
   logTraceInWith3Arguments( "boundaryConditions(...)", x, t, normal );
 
