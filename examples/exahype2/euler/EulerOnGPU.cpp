@@ -1,5 +1,6 @@
 #include "EulerOnGPU.h"
 #include "exahype2/RefinementControl.h"
+
 #include "Constants.h"
 #include "exahype2/NonCriticalAssertions.h"
 
@@ -20,7 +21,6 @@ void examples::exahype2::euler::EulerOnGPU::adjustSolution(
 ) {
   logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
   if (tarch::la::equals(t,0.0) ) {
-    logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );
     // initial conditions
     bool isInTheCentre = ( tarch::la::norm2( volumeX-tarch::la::Vector<Dimensions,double>(0.5) ) < 0.05 );
     //bool isInTheCentre = x(0)<=0.5;
@@ -32,7 +32,7 @@ void examples::exahype2::euler::EulerOnGPU::adjustSolution(
     Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
   }
   else {
-    // other stuff
+    // Earthquakes might like to add stuff here or binary neutron star
   }
   logTraceOut( "adjustSolution(...)" );
 }
@@ -50,10 +50,8 @@ double examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
   double                                       t,
   int                                          normal
 ) {
+
   // We should have a GPU assertion which is automatically removed
-  assertion(normal>=0);
-  assertion(normal<Dimensions);
-  assertion4( Q[0]>0.0, faceCentre, volumeH, t, normal );
 
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -90,9 +88,10 @@ void examples::exahype2::euler::EulerOnGPU::boundaryConditions(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
-) {
-  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
+)
+{
 
+  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[0]==Qinside[0], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[1]==Qinside[1], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[2]==Qinside[2], faceCentre, volumeH, t, normal );
@@ -100,6 +99,7 @@ void examples::exahype2::euler::EulerOnGPU::boundaryConditions(
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
   nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
+
 
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];
@@ -122,7 +122,8 @@ void examples::exahype2::euler::EulerOnGPU::flux(
  double                                       t,
  int                                          normal,
  double * __restrict__ F // F[5]
-) {
+)
+{
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -160,6 +161,7 @@ void examples::exahype2::euler::EulerOnGPU::flux(
         }
         break;
   }
+
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
