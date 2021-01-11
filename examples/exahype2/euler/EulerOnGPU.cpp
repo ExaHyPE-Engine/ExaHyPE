@@ -82,8 +82,8 @@ double examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
 
 
 void examples::exahype2::euler::EulerOnGPU::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[5+0]
-  double * __restrict__                        Qoutside, // Qoutside[5+0]
+  const double * __restrict__                  Qinside,    // Qinside[5+0]
+  double * __restrict__                        Qoutside,   // Qoutside[5+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

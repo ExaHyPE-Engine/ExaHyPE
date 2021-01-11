@@ -74,7 +74,7 @@ class Makefile(object):
     self.d["FCFLAGS"]  += " -I" + path
 
 
-  def add_gpu_object(self, object_path=""):
+  def add_gpu_object(self, object_path):
     """
     This is a temporary fix for GPU offloading with OpenMP and LLVM and will
     be required ntil linking to static libraries is supported. We need to
@@ -83,6 +83,7 @@ class Makefile(object):
     objects must be left of the static libs later.
     """
     self.d["GPUOBJS"] += " {}".format(object_path)
+
 
   def add_library(self, library_name, library_path="" ):
     """

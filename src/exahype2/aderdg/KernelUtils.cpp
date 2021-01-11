@@ -190,8 +190,8 @@ GPUCallableMethod void exahype2::aderdg::gradient_AoS(
     for (int a=0; a < nodesPerAxis; a++) { 
       const double coeff = invDx/*[d]*/ * dudx[ a*nodesPerAxis + index[d+1] ];
       for (int var=0; var < strideQ; var++) {
-        //gradQ[ d*Dimensions + var ] += coeff * QIn[ ( scalarIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
-        gradQ[ d + var*Dimensions ] += coeff * QIn[ ( scalarIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
+        gradQ[ d*strideQ + var ] += coeff * QIn[ ( scalarIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
+        //gradQ[ d + var*Dimensions ] += coeff * QIn[ ( scalarIndex + (a-index[d+1])*strides[d+1] )*strideQ + var ]; 
       }
     }
   }

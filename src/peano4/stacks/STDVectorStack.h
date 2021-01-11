@@ -55,6 +55,11 @@ class peano4::stacks::STDVectorStack {
      */
     std::vector< T >   _data;
 
+    /**
+     * Identifies top element of stack. In C++ style, it points to the next new
+     * element on the stack, i.e. it is the same as the stack size. Initially, it
+     * is zero.
+     */
     int                _currentElement;
 
   protected:
@@ -310,8 +315,9 @@ class peano4::stacks::STDVectorStack {
 
       _currentElement+=numberOfElements;
 
-      if (static_cast<int>(_data.size())<_currentElement) {
+      if (static_cast<int>(_data.size())<=_currentElement) {
         _data.resize(_currentElement);
+        assertion(static_cast<int>(_data.size())>=_currentElement);
       }
 
       return result;

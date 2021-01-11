@@ -14,13 +14,13 @@ namespace exahype2 {
      * @param[in] boundaryState
      * @param[inout] QOut
      * @param[inout] QIn
-     * @param[in] nodes
-     * @param[in] t
-     * @param[in] dt
+     * @param[in] nodes quadrature nodes; size: (order+1)
+     * @param[in] t time stamp
+     * @param[in] dt time step size
      * @param[in] faceCentre
-     * @param[in] dx
-     * @param[in] nodesPerAxis
-     * @param[in] unknowns
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
      * @param[in] strideQ
      * @param[in] direction
      * @param[in] orientation
@@ -63,17 +63,17 @@ namespace exahype2 {
      *
      * @return the largest absolute eigenvalue
      *
-     * @param maxAbsoluteEigenvalue
-     * @param QLR,
-     * @param t
-     * @param dt
-     * @param faceCentre
-     * @param dx
-     * @param nodesPerAxis
-     * @param unknowns
-     * @param strideQ
-     * @param direction
-     * @param scalarIndexFace
+     * @param[in] maxAbsoluteEigenvalue
+     * @param[in] QLR,
+     * @param[in] t time stamp
+     * @param[in] dt time step size
+     * @param[in] faceCentre
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] strideQ
+     * @param[in] direction
+     * @param[in] scalarIndexFace
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -146,9 +146,29 @@ namespace exahype2 {
     #endif
     
      /** 
-      * compute fluxes (and fluctuations for non-conservative PDEs)
-      * @note Zero out gradient and FLOut, FROut or call flux function before.
-      * @todo also offer an option with a only the flux
+      * @brief Add nonconservative product contributions to the (possibly trivial)  Riemann flux.
+      *
+      * @param[in] nonconservativeProduct
+      * @param[inout] FLOut
+      * @param[inout] FROut
+      * @param[in] QAvgAux
+      * @param[in] gradQAux
+      * @param[in] SAux
+      * @param[in] QLIn
+      * @param[in] QRIn
+      * @param[in] smax
+      * @param[in] nodes quadrature nodes; size: (order+1)
+      * @param[in] weights quadrature weights; size: (order+1)
+      * @param[in] t time stamp
+      * @param[in] dt time step size
+      * @param[in] faceCentre
+      * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+      * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+      * @param[in] unknowns the number of PDE unknowns that we evolve
+      * @param[in] strideQ
+      * @param[in] strideF
+      * @param[in] direction
+      * @param[in] scalarIndexFace
       */
      #if defined(OpenMPGPUOffloading)
      #pragma omp declare target
@@ -156,7 +176,7 @@ namespace exahype2 {
      GPUCallableMethod void rusanovNonlinear_addNcpContributionsToRiemannFlux_body_AoS(
         std::function< void(
           double * __restrict__                       Q,
-          double                                      gradQ[][Dimensions],
+          double * __restrict__                       dQ_or_dQdn,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
           int                                         normal,
@@ -185,7 +205,25 @@ namespace exahype2 {
      #if defined(OpenMPGPUOffloading)
      #pragma omp end declare target
      #endif
-    
+   
+     // launchers
+
+     /**
+      * Prescribe boundary values (QOut) and overwrite interior values (QInside). 
+      *
+      * @param[in] boundaryState
+      * @param[inout] QOutside
+      * @param[inout] QInside
+      * @param[in] nodes quadrature nodes; size: (order+1)
+      * @param[in] t time stamp
+      * @param[in] dt time step size
+      * @param[in] faceCentre
+      * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+      * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
+      * @param[in] unknowns the number of PDE unknowns that we evolve
+      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
+      * @param[in] direction
+      */
      void rusanovNonlinear_setBoundaryState_loop_AoS(
        std::function< void(
          double * __restrict__                       QInside,
@@ -194,8 +232,8 @@ namespace exahype2 {
          double                                      t,
          int                                         normal
        ) >                                         boundaryState,
-       double * __restrict__                       QOut,
-       double * __restrict__                       QIn,
+       double * __restrict__                       QOutside,
+       double * __restrict__                       QInside,
        const double * __restrict__                 nodes,
        const double                                t,
        const double                                dt,
@@ -206,6 +244,22 @@ namespace exahype2 {
        const int                                   auxiliaryVariables,
        const int                                   direction);
     
+    /**
+     * @brief Determine the eigenvalue with the largest absolute value among the predictor
+     * that two neighbouring cells extrapolated to a common interface.
+     * @return maxAbsoluteEigenvalue
+     * @param[in] QL
+     * @param[in] QR
+     * @param[in] nodes quadrature nodes; size: (order+1)
+     * @param[in] t time stamp
+     * @param[in] dt time step size
+     * @param[in] faceCentre
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
+     * @param[in] direction
+     */
      double rusanovNonlinear_maxAbsoluteEigenvalue_loop_AoS(
         std::function< double(
           const double * __restrict__                 Q,
@@ -224,7 +278,31 @@ namespace exahype2 {
         const int                                   unknowns,
         const int                                   auxiliaryVariables,
         const int                                   direction);
-    
+
+    /**
+     * @brief Apply a Rusanov Riemann solver to the pair of extrapolated predictor
+     * values from two neighbouring cells.  
+     *
+     * @param[inout] FLOut
+     * @param[inout] FROut
+     * @param[in] QLIn
+     * @param[in] QRIn
+     * @param[in] smax
+     * @param[in] nodes quadrature nodes; size: (order+1)
+     * @param[in] weights quadrature weights; size: (order+1)
+     * @param[in] t time stamp
+     * @param[in] dt time step size
+     * @param[in] faceCentre
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
+     * @param[in] direction
+     * @param[in] leftCellIsOutside
+     * @param[in] rightCellIsOutside
+     * @param[in] callFlux
+     * @param[in] callNonconservativeProduct
+     */
     void rusanovNonlinear_loop_AoS(
       std::function< void(
         const double * __restrict__                 Q,
@@ -242,7 +320,7 @@ namespace exahype2 {
       ) >                                         boundaryFlux,
       std::function< void(
         double * __restrict__                       Q,
-        double                                      gradQ[][Dimensions],
+        double * __restrict__                       dQ_or_dQdn,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         int                                         normal,

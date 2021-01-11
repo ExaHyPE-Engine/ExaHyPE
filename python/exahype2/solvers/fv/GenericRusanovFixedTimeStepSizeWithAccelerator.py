@@ -132,3 +132,4 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
 
+    exahype2.gpu.add_exahype_objects(output.makefile)

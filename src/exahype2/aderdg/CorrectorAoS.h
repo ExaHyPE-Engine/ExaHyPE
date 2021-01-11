@@ -15,13 +15,13 @@ namespace exahype2 {
      *
      * @param[in] adjustSolution
      * @param[inout] UOut
-     * @param[in] nodes
+     * @param[in] nodes quadrature nodes; size: (order+1)
      * @param[in] cellCentre
-     * @param[in] dx
-     * @param[in] t
-     * @param[in] dt
-     * @param[in] nodesPerAxis
-     * @param[in] unknowns
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] t time stamp
+     * @param[in] dt time step size
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
      * @param[in] strideQ
      * @param[in] scalarIndex
      */ 
@@ -49,21 +49,21 @@ namespace exahype2 {
      *
      * @note Directly run after Picard iterations in order to not store predictor.
      *
-     * @param flux
-     * @param UOut
-     * @param QIn
-     * @param FAux
-     * @param nodes
-     * @param weights
-     * @param Kxi
-     * @param cellCentre
-     * @param dx
-     * @param t
-     * @param dt
-     * @param nodesPerAxis
-     * @param unknowns
-     * @param strideQ
-     * @param scalarIndex
+     * @param[in] flux
+     * @param[inout] UOut
+     * @param[in] QIn
+     * @param[inout] FAux
+     * @param[in] nodes quadrature nodes; size: (order+1)
+     * @param[in] weights quadrature weights; size: (order+1)
+     * @param[in] Kxi stiffness matrix; size: (order+1)*(order+1)
+     * @param[in] cellCentre
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] t time stamp
+     * @param[in] dt time step size
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] strideQ
+     * @param[in] scalarIndex
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -101,20 +101,20 @@ namespace exahype2 {
      *
      * @note Directly run after Picard iterations in order to not store predictor.
      *
-     * @param algebraicSource
-     * @param UOut
-     * @param SAux
-     * @param QIn
-     * @param nodes
-     * @param weights
-     * @param cellCentre
-     * @param dx
-     * @param t
-     * @param dt
-     * @param nodesPerAxis
-     * @param unknowns
-     * @param strideQ
-     * @param scalarIndex
+     * @param[in] algebraicSource
+     * @param[inout] UOut
+     * @param[inout] SAux
+     * @param[in] QIn
+     * @param[in] nodes quadrature nodes; size: (order+1)
+     * @param[in] weights quadrature weights; size: (order+1)
+     * @param[in] cellCentre
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] t time stamp
+     * @param[in] dt time step size
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] strideQ
+     * @param[in] scalarIndex
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -150,22 +150,22 @@ namespace exahype2 {
       *
       * @note Directly run after Picard iterations in order to not store predictor.
       *
-      * @param nonconservativeProduct
-      * @param UOut
-      * @param QIn
-      * @param gradQAux
-      * @param SAux
-      * @param nodes
-      * @param weights
-      * @param dudx
-      * @param cellCentre
-      * @param dx
-      * @param t
-      * @param dt
-      * @param nodesPerAxis
-      * @param unknowns
-      * @param strideQ
-      * @param scalarIndex
+      * @param[in] nonconservativeProduct
+      * @param[inout] UOut
+      * @param[in] QIn
+      * @param[inout] gradQAux
+      * @param[inout] SAux
+      * @param[in] nodes quadrature nodes; size: (order+1)
+      * @param[in] weights quadrature weights; size: (order+1)
+      * @param[in] dudx derivative operator; size: (order+1)*(order+1)
+      * @param[in] cellCentre
+      * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+      * @param[in] t time stamp
+      * @param[in] dt time step size
+      * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+      * @param[in] unknowns the number of PDE unknowns that we evolve
+      * @param[in] strideQ
+      * @param[in] scalarIndex
       */
      #if defined(OpenMPGPUOffloading)
      #pragma omp declare target
@@ -173,9 +173,10 @@ namespace exahype2 {
      GPUCallableMethod void corrector_addNcpContributions_body_AoS(
        std::function< void(
          const double * __restrict__                 Q,
-         double                                      gradQ[][Dimensions],
+         double * __restrict__                       dQ_or_dQdn,
          const tarch::la::Vector<Dimensions,double>& x,
          double                                      t,
+         int                                         normal,
          double * __restrict__                       BgradQ
        ) >                                         nonconservativeProduct,
        double* __restrict__                        UOut,
@@ -202,15 +203,15 @@ namespace exahype2 {
      * 
      * Writes to a single spatial degree of freedom.
      *
-     * @param UOut
-     * @param riemannResultIn
-     * @param weights
-     * @param FCoeff
-     * @param dx
-     * @param nodesPerAxis
-     * @param unknowns
-     * @param strideQ
-     * @param scalarIndex
+     * @param[inout] UOut
+     * @param[in] riemannResultIn
+     * @param[in] weights quadrature weights; size: (order+1)
+     * @param[in] FCoeff
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] strideQ
+     * @param[in] scalarIndex
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -240,17 +241,17 @@ namespace exahype2 {
       * @param[in] nonconservativeProduct
       * @param[inout] UOut
       * @param[in] QIn
-      * @param[in] weights
-      * @param[in] nodes
-      * @param[in] Kxi
-      * @param[in] dudx
+      * @param[in] weights quadrature weights; size: (order+1)
+      * @param[in] nodes quadrature nodes; size: (order+1)
+      * @param[in] Kxi stiffness matrix; size: (order+1)*(order+1)
+      * @param[in] dudx derivative operator; size: (order+1)*(order+1)
       * @param[in] cellCentre
-      * @param[in] dx
-      * @param[in] t
-      * @param[in] dt
-      * @param[in] order
-      * @param[in] unknowns
-      * @param[in] auxiliaryVariables
+      * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+      * @param[in] t time stamp
+      * @param[in] dt time step size
+      * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
+      * @param[in] unknowns the number of PDE unknowns that we evolve
+      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
       * @param[in] callFlux
       * @param[in] callSource
       * @param[in] callNonconservativeProduct
@@ -271,9 +272,10 @@ namespace exahype2 {
       ) >   algebraicSource,
       std::function< void(
         const double * __restrict__                 Q,
-        double                                      gradQ[][Dimensions],
+        double * __restrict__                       dQ_or_dQdn,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
+        int                                         normal,
         double * __restrict__                       BgradQ
       ) >                                         nonconservativeProduct,
       std::function< void(
@@ -303,14 +305,14 @@ namespace exahype2 {
      * 
      * @param[inout] UOut
      * @param[in] riemannResultIn
-     * @param[in] weights
-     * @param[in] FLCoeff
-     * @param[in] FRCoeff
-     * @param[in] dx
-     * @param[in] dt
-     * @param[in] order
-     * @param[in] unknowns
-     * @param[in] auxiliaryVariables
+     * @param[in] weights quadrature weights; size: (order+1)
+     * @param[in] FLCoeff values of basis functions evaluated at x=0.0 (left); size: order+1
+     * @param[in] FRCoeff values of basis functions evaluated at x=1.0 (right); size: order+1
+     * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
+     * @param[in] dt time step size
+     * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */
     void corrector_addRiemannContributions_loop_AoS(
       double * __restrict__       UOut,

@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from .ADERDG  import ADERDG
-from .ADERDG  import AbstractADERDGActionSet
+from .ADERDG   import ADERDG
+from .ADERDG   import AbstractADERDGActionSet
 from .PDETerms import PDETerms
 
 from peano4.solversteps.ActionSet import ActionSet
@@ -20,9 +20,7 @@ class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
 
       //not marker.isRefined() and fineGridFaceLabel.getBoundary()
 // fehlt noch
-
-
-/*      
+/*
       ::exahype2::aderdg::solveSpaceTimeRiemannProblem_GaussLegendre_AoS2d(
         [&](
           double * __restrict__                        QL,
@@ -47,7 +45,8 @@ class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
         fineGridFace{{SOLVER_NAME}}QFluxExtrapolation.value,
         fineGridFace{{SOLVER_NAME}}QRiemannSolveResult.value
       );
-*/  
+*/      
+      
     }   
   """)
 
@@ -90,7 +89,7 @@ class UpdateCell(AbstractADERDGActionSet):
 //CorrectorAoS.h:    void corrector_addRiemannContributions_loop_AoS(RusanovNonlinearAoS.h:     void rusanovNonlinear_setBoundaryState_loop_AoS(
 //RusanovNonlinearAoS.h:     double rusanovNonlinear_maxAbsoluteEigenvalue_loop_AoS(
 //RusanovNonlinearAoS.h:    void rusanovNonlinear_loop_AoS(
-          
+
           ::exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
             [&](
               const double * __restrict__                 Q,
@@ -115,13 +114,14 @@ class UpdateCell(AbstractADERDGActionSet):
             },
             [&](
               const double * __restrict__                 Q,
-              double                                      gradQ[][Dimensions],
+              const double * __restrict__                 dQ_or_dQdn,
               const tarch::la::Vector<Dimensions,double>& x,
               double                                      t,
+              int                                         normal,
               double * __restrict__                       BgradQ
             )->void {
               {% if NCP_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,gradQ,x,t,normal,BgradQ);
+              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
               {% endif %}
             },
             spaceTimeQ,                           // QOut
@@ -161,54 +161,14 @@ class UpdateCell(AbstractADERDGActionSet):
           #else
           ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS3d(
           #endif
-             [&](
-               double * __restrict__                        Q, 
-               const tarch::la::Vector<Dimensions,double>&  x, 
-               double                                       t, 
-               int                                          normal,
-               double * __restrict__                        F
-             )->void {
-               {{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
-             },
-             marker.x(),
-             marker.h(),
-             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-             {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-             {{SOLVER_INSTANCE}}.QuadraturePoints,
-             {{SOLVER_INSTANCE}}.QuadratureWeights,
-             spaceTimeQ,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(0).value,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(1).value,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(2).value,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(3).value,
-             #if Dimensions==3
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(4).value,
-             fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(5).value,
-             #endif
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(0).value,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(1).value,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(2).value,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(3).value
-             #if Dimensions==3
-             ,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(4).value,
-             fineGridFaces{{SOLVER_NAME}}QFluxExtrapolation(5).value
-             #endif
-          );
-
-          ::exahype2::aderdg::timeIntegration_GaussLegendre_AoS2d(
-             marker.x(),
-             marker.h(),
-             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-             {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-             {{SOLVER_INSTANCE}}.QuadraturePoints,
-             {{SOLVER_INSTANCE}}.QuadratureWeights,
-             spaceTimeQ,
-             fineGridCell{{SOLVER_NAME}}QNew.value
-          );
           */
+          
+          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
+            fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
+            spaceTimeQ,                           // QIn
+            {{SOLVER_INSTANCE}}.QuadratureWeights,
+            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
+          );
         }
         break;
       case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
@@ -300,7 +260,7 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     """
     ADERDG.__init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties)
 
-    self._face_flux_along_normal = peano4.datamodel.Patch( (2*(order),order,order), unknowns+auxiliary_variables, self._unknown_identifier() + "FluxExtrapolation" )
+    #self._face_flux_along_normal = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "FluxExtrapolation" )
 
     self._time_step_size = time_step_size
 
@@ -396,13 +356,13 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
 
   def add_to_Peano4_datamodel( self, datamodel ):
     ADERDG.add_to_Peano4_datamodel( self, datamodel )
-    datamodel.add_face(self._face_flux_along_normal)
+    #datamodel.add_face(self._face_flux_along_normal)
 
 
 
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     ADERDG.add_use_data_statements_to_Peano4_solver_step( self, step )
-    step.use_face(self._face_flux_along_normal)
+    #step.use_face(self._face_flux_along_normal)
 
 
   def add_actions_to_perform_time_step(self, step):
