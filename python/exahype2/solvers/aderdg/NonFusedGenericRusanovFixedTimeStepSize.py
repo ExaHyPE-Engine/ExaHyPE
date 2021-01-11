@@ -114,14 +114,14 @@ class UpdateCell(AbstractADERDGActionSet):
             },
             [&](
               const double * __restrict__                 Q,
-              const double * __restrict__                 dQdn,
+              const double * __restrict__                 dQ_or_dQdn,
               const tarch::la::Vector<Dimensions,double>& x,
               double                                      t,
               int                                         normal,
               double * __restrict__                       BgradQ
             )->void {
               {% if NCP_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQdn,x,t,normal,BgradQ);
+              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
               {% endif %}
             },
             spaceTimeQ,                           // QOut
