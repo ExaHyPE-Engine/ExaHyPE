@@ -3,6 +3,7 @@
 
 #include <algorithm>
 
+#include "exahype2/fv/Rusanov.h"
 
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
@@ -13,14 +14,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
   #else
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
   #endif
-  //{% if USE_SPLIT_LOOP %}
-  //{% else %}
-  //#if Dimensions==2
-  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-  //#else
-  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-  //#endif
-  //{% endif %}
     [&](
       const double* __restrict__                   QL,
       const double* __restrict__                   QR,
@@ -151,90 +144,17 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   tarch::la::Vector<Dimensions,double> myh = {h0,h1,h2};
   #endif
 
-  #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-  #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-  #endif
-  //{% if USE_SPLIT_LOOP %}
-  //{% else %}
-  //#if Dimensions==2
-  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-  //#else
-  //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-  //#endif
-  //{% endif %}
-    [&](
-      const double* __restrict__                   QL,
-      const double* __restrict__                   QR,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       dx,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double                                       FL[],
-      double                                       FR[]
-    ) -> void {
-      ::exahype2::fv::splitRusanov1d(
-        [] (
-          const double* __restrict__                   Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__                        F
-        ) -> void {
-          {% if FLUX_IMPLEMENTATION=="<none>" %}
-          for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
-          {% else %}
-          {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F );
-          {% endif %}
-        },
-        {% if NCP_IMPLEMENTATION!="<none>" %}
-        [] (
-          const double* __restrict__                   Q,
-          const double* __restrict__                   dQdn,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double                                       BgradQ[]
-        ) -> void {
-          {{SOLVER_NAME}}::nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
-        },
-        {% endif %}
-        [] (
-          const double* __restrict__                   Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> double {
-          return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-        },
-        QL, QR, x, dx, t, dt, normal,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        FL,FR
-      );
-    },
+  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
     myx, //_marker.x(),
     myh, //_marker.h(),
     timeStamp,
     {{TIME_STEP_SIZE}},
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
     _reconstructedPatch,
     destinationPatchOnGPU
-  );
+    );
   #if defined(OpenMPGPUOffloading)
   }
   #endif
-
 
   // get stuff explicitly back from GPU, as it will be stored
   // locally for a while

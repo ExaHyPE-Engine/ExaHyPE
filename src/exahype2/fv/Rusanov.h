@@ -5,6 +5,7 @@
 
 
 
+#include "../PatchUtils.h"
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/multicore/multicore.h"
@@ -15,6 +16,185 @@
 
 namespace exahype2 {
   namespace fv {
+
+
+    //*
+     //The routine has exactly the same semantics as applySplit1DRiemannToPatch_Overlap1AoS2d()
+     //but runs through the faces slightly differently.
+
+     //@image html applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop.png
+
+     //As in applySplit1DRiemannToPatch_Overlap1AoS2d(), we have two big
+     //blocks. The first one runs through all vertical faces, the second one
+     //through all horizontal ones. Each block now runs through the whole data
+     //twice though with a spacing of two and an offset of 0 or 1. That is,
+     //we run through every second face (faces 0, 2, 4 along the x-axis) and
+     //then through the other ones (1,3,5,...).
+
+     //Each face writes to its left and right adjacent volume in Qout. As we
+     //skip every second face, we know that all writes are parallel. No race
+     //conditions can arise. That is: Though we now run through the data structure
+     //twice, we can process the for loops embarassingly parallel.
+     //
+     //
+     //
+     // NOTE: we decided to have a dedicated split loop implementation for the
+     // Rusanov solver as all attempts to offload the original bit using functors failed.
+     // One benefit here is that the helper variables are on the stack.
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    template<
+      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      typename SOLVER>
+    void applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop_Rusanov(
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
+      double                                       dt,
+      const double * __restrict__                  Qin,
+      double * __restrict__                        Qout
+    )
+    {
+      for (int shift = 0; shift < 2; shift++)
+      {
+        #ifdef SharedOMP
+        #pragma omp parallel for simd collapse(2)
+        #endif
+        for (int x = shift; x <= numberOfVolumesPerAxisInPatch; x += 2)
+        {
+          for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+          {
+            const int leftVoxelInPreimage  = x +      (y + 1) * (2 + numberOfVolumesPerAxisInPatch);
+            const int rightVoxelInPreimage = x + 1  + (y + 1) * (2 + numberOfVolumesPerAxisInPatch);
+
+            const int leftVoxelInImage     = x - 1 + y * numberOfVolumesPerAxisInPatch;
+            const int rightVoxelInImage    = x     + y * numberOfVolumesPerAxisInPatch;
+
+            tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (patchSize, numberOfVolumesPerAxisInPatch);
+            tarch::la::Vector<Dimensions, double> volumeX = patchCentre - 0.5 * patchSize;
+
+            volumeX (0) += x * volumeH (0);
+            volumeX (1) += (y + 0.5) * volumeH (1);
+
+            auto QL = Qin + leftVoxelInPreimage  * (unknowns + auxiliaryVariables);
+            auto QR = Qin + rightVoxelInPreimage * (unknowns + auxiliaryVariables);
+            auto xx = volumeX;
+            auto dx = volumeH(0);
+            int normal = 0;
+
+            double fluxFL[unknowns];
+            double fluxFR[unknowns];
+
+            SOLVER::flux( QL, x, dx, t, normal, fluxFL );
+            SOLVER::flux( QR, x, dx, t, normal, fluxFR );
+
+            double lambdaMaxL = SOLVER::maxEigenvalue(QL,x,dx,t,normal);
+            double lambdaMaxR = SOLVER::maxEigenvalue(QR,x,dx,t,normal);
+
+            double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+
+
+            for (int unknown = 0; unknown < unknowns; unknown++)
+            {
+              if (x > 0)
+              {
+                double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                Qout[leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown]  -= dt / volumeH (0) * fl;
+              }
+              if (x < numberOfVolumesPerAxisInPatch)
+              {
+                double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                Qout[rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
+              }
+            }
+          }
+        }
+      }
+
+      // Iterate over other normal
+      for (int shift = 0; shift < 2; shift++)
+      {
+        #ifdef SharedOMP
+        #pragma omp parallel for simd collapse(2)
+        #endif
+        for (int y = shift; y <= numberOfVolumesPerAxisInPatch; y += 2)
+        {
+          for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+          {
+            const int lowerVoxelInPreimage = x + 1  +       y * (2 + numberOfVolumesPerAxisInPatch);
+            const int upperVoxelInPreimage = x + 1  + (y + 1) * (2 + numberOfVolumesPerAxisInPatch);
+            const int lowerVoxelInImage    = x      + (y - 1) *      numberOfVolumesPerAxisInPatch ;
+            const int upperVoxelInImage    = x      +       y *      numberOfVolumesPerAxisInPatch ;
+
+            tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (patchSize, numberOfVolumesPerAxisInPatch);
+            tarch::la::Vector<Dimensions, double> volumeX = patchCentre - 0.5 * patchSize;
+            volumeX (0) += (x + 0.5) * volumeH (0);
+            volumeX (1) +=         y * volumeH (1);
+
+            auto QL = Qin + lowerVoxelInPreimage  * (unknowns + auxiliaryVariables);
+            auto QR = Qin + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
+            auto xx = volumeX;
+            auto dx = volumeH(0);
+            int normal = 1;
+
+            double fluxFL[unknowns];
+            double fluxFR[unknowns];
+
+            SOLVER::flux( QL, x, dx, t, normal, fluxFL );
+            SOLVER::flux( QR, x, dx, t, normal, fluxFR );
+
+            double lambdaMaxL = SOLVER::maxEigenvalue(QL,x,dx,t,normal);
+            double lambdaMaxR = SOLVER::maxEigenvalue(QR,x,dx,t,normal);
+            double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+
+            for (int unknown = 0; unknown < unknowns; unknown++)
+            {
+              if (y > 0)
+              {
+                double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                Qout[lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
+              }
+              if (y < numberOfVolumesPerAxisInPatch)
+              {
+                double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                Qout[upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
+              }
+            }
+          }
+        }
+      }
+    };
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    template<
+      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      typename T>
+    void applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop_Rusanov(
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
+      double                                       dt,
+      const double * __restrict__                  Qin,
+      double * __restrict__                        Qout
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+
+
+
+
+
     /**
      * 1d Riemann accepting a flux and eigenvalue function.
      */
