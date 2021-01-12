@@ -21,10 +21,11 @@ import argparse
 
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
+parser.add_argument("--t",              dest="timestep",              type=float, help="Size of time step",  default=0.000001 )
 parser.add_argument("--h",              dest="h",              type=float, help="Mesh size",  default=0.01 )
 parser.add_argument("--d",              dest="dim",            type=int,   help="Dimensions", default=2 )
 parser.add_argument("--s",              dest="patchsize",      type=int,   help="Patch size", default=17 )
-parser.add_argument("--p",              dest="plot",     action="store_true",  help="Plot final solution", default=False )
+parser.add_argument("--p",              dest="plot",     type=float,  help="Plot interval", default=None )
 parser.add_argument("--n",              dest="number_of_time_steps",  type=int,  help="Number of timesteps", default=10 )
 parser.add_argument("--gpu",            dest="gpu",    action="store_true",      help="Use GPU", default=False )
 parser.add_argument("--m",               dest="mode",                     default="release", help="release|trace|asserts" )
@@ -48,7 +49,7 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 #
 patch_size     = args.patchsize
 unknowns       = 5
-time_step_size = 0.000001
+time_step_size = args.timestep
 min_h          = args.h
 max_h          = args.h
 
@@ -95,13 +96,14 @@ else:
 # Lets configure some global parameters
 #
 plot_interval = 0.0
-if args.plot:
-  plot_interval = 0.1
+if args.plot is not None:
+  plot_interval = args.plot
+  print("Will to {} snapshots ({} / {})".format(time_step_size * args.number_of_time_steps/args.plot, args.plot, time_step_size * args.number_of_time_steps))
 end_time = time_step_size * args.number_of_time_steps
 project.set_global_simulation_parameters(
   dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
   end_time,           # end time
-  end_time, plot_interval                        # snapshots
+  0, plot_interval                        # snapshots
 )
 
 
