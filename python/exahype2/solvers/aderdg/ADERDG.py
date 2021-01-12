@@ -17,7 +17,7 @@ from abc import abstractmethod
 
 from enum import IntEnum
 
-from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+from exahype2.solvers.dg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
 
 class Polynomials(IntEnum):
@@ -260,6 +260,8 @@ class ADERDG(object):
       self._basis = GaussLegendreBasis(order+1)
     elif polynomials is Polynomials.Gauss_Lobatto:
       self._basis = GaussLobattoBasis(order+1)
+    else:
+      raise Exception( "No proper basis chosen" )
     
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )

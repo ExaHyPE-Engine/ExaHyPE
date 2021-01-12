@@ -12,7 +12,7 @@ except ImportError:
 
 if havenumpy:
     import exahype2.solvers.aderdg
-    #import exahype2.solvers.dg
+    import exahype2.solvers.dg
     
 import exahype2.grid
 import exahype2.gpu

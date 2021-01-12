@@ -86,9 +86,10 @@ thesolver = None
 if rk_order==1:
   print("Replace generic RK(x) scheme with explicit Euler")
   thesolver = exahype2.solvers.dg.GenericRusanovExplicitEulerFixedTimeStepSize(
-    "Euler",
+    "ADERDGEuler",
     dg_order,
     unknowns, 0,
+    exahype2.solvers.dg.Polynomials.Gauss_Legendre,
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
