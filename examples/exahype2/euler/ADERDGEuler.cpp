@@ -40,7 +40,7 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
     Q[1] = 0.;
     Q[2] = 0.;
     Q[3] = 0.;
-    #if DIMENSIONS==2
+    #if Dimensions==2
     const double norm2Squared = (x[0]-x0[0])*(x[0]-x0[0]) + (x[1]-x0[1])*(x[1]-x0[1]);
     #else
     const double norm2Squared = (x[0]-x0[0])*(x[0]-x0[0]) + (x[1]-x0[1])*(x[1]-x0[1]) + (x[2]-x0[2])*(x[2]-x0[2]);
