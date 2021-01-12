@@ -33,6 +33,7 @@ class Makefile(object):
     self.d["DIM"]              = "2"
     self.d["CONFIGUREPATH"]    = "."
     self.d["EXECUTABLENAME"]   = "peano4"
+    self.d["LIBRARY_POSTFIX"]  = ""
     self.d["FORTRAN_MODULES"]  = []
     self.set_mode( CompileMode.Debug )
     self.clear_files()
