@@ -42,7 +42,7 @@
      * to the Riemann solver, i.e. flux and eigenvalues.
      */
     virtual void boundaryConditions(
-      const double * __restrict__                 Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double * __restrict__                       Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       double * __restrict__                       Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,

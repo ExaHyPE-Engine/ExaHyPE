@@ -24,7 +24,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     """
     
       plot_cell_data: Boolean
-        Shall I plot cell data or vertex data.
+        Shall I plot cell data or vertex data. If you map the patches onto
+        vertex data, then I have to decrease the dofs pre axis, as we basically
+        plot the dual grid.
     
       description: String
       
@@ -41,7 +43,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     if plot_cell_data:
       dofs_per_axis = patch.dim[0]
     else:
-      dofs_per_axis = patch.dim[0]+1
+      dofs_per_axis = patch.dim[0]-1
+
       
     self.d[ "DOFS_PER_AXIS" ]      = str(dofs_per_axis)
       

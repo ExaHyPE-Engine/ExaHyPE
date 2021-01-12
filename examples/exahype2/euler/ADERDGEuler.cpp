@@ -15,6 +15,7 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
   if (tarch::la::equals(t,0.0) ) {
     logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );
 
+/*
     #if Dimensions==2
     tarch::la::Vector<Dimensions,double> circleCentre = {0.2,0.5};
     #else
@@ -30,7 +31,22 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
     Q[2] = 0;
     Q[3] = 0;
     Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
-  }
+*/
+    constexpr double gamma = 1.4;
+    constexpr double width = 0.25;
+    constexpr double x0[3] = { 0.5, 0.5, 0.5 };
+
+    Q[0] = 1.;
+    Q[1] = 0.;
+    Q[2] = 0.;
+    Q[3] = 0.;
+    #if Dimensions==2
+    const double norm2Squared = (x[0]-x0[0])*(x[0]-x0[0]) + (x[1]-x0[1])*(x[1]-x0[1]);
+    #else
+    const double norm2Squared = (x[0]-x0[0])*(x[0]-x0[0]) + (x[1]-x0[1])*(x[1]-x0[1]) + (x[2]-x0[2])*(x[2]-x0[2]);
+    #endif
+    Q[4] = 1. / (gamma - 1) + // pressure is set to one
+        exp(-std::sqrt(norm2Squared) / pow(width, Dimensions)) * 2;  }
   else {
     // other stuff
   }
@@ -145,11 +161,11 @@ void examples::exahype2::euler::ADERDGEuler::flux(
 
 
 void examples::exahype2::euler::ADERDGEuler::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[5+0]
-  double * __restrict__                        Qoutside, // Qoutside[5+0]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal
+  const double * __restrict__                 Qinside, // Qinside[5+0]
+  double * __restrict__                       Qoutside, // Qoutside[5+0]
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      t,
+  int                                         normal
 ) {
   logTraceInWith3Arguments( "boundaryConditions(...)", x, t, normal );
 

@@ -2,18 +2,20 @@
 # use, please see the copyright notice at www.peano-framework.org
 import exahype2.solvers.fv
 
-import exahype2.gpu
-
 havenumpy=False
 try:
     import numpy
     havenumpy=True
 except ImportError:
+    print("Numpy is not available, not loading dg")
     print("Numpy is not available, not loading aderdg")
 
 if havenumpy:
     import exahype2.solvers.aderdg
+    import exahype2.solvers.dg
+    
 import exahype2.grid
+import exahype2.gpu
 
 
 from .ExaHyPEMain import ExaHyPEMain
