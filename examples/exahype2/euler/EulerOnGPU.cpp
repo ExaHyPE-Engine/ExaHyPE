@@ -22,7 +22,7 @@ void examples::exahype2::euler::EulerOnGPU::adjustSolution(
   logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
   if (tarch::la::equals(t,0.0) ) {
     // initial conditions
-    bool isInTheCentre = ( tarch::la::norm2( volumeX-tarch::la::Vector<Dimensions,double>(0.5) ) < 0.05 );
+    bool isInTheCentre = ( tarch::la::norm2( volumeX-tarch::la::Vector<Dimensions,double>(0.5) ) < 0.05 ); // TODO should 0.05 not depend on size of stuff??
     //bool isInTheCentre = x(0)<=0.5;
     //bool isInTheCentre = x(1)<=0.5;
     Q[0] = 0.1;  // rho
@@ -64,15 +64,7 @@ double examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
   const double u_n = Q[normal + 1] * irho;
   const double c   = std::sqrt(gamma * p * irho);
 
-  double lambda[5];
-
-  lambda[0]  = u_n - c;
-  lambda[1]  = u_n;
-  lambda[2]  = u_n;
-  lambda[3]  = u_n;
-  lambda[4]  = u_n + c;
-
-  return std::max(lambda[0],lambda[4]);
+  return std::max( std::abs(u_n - c), std::abs(u_n + c) );
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
@@ -166,6 +158,3 @@ void examples::exahype2::euler::EulerOnGPU::flux(
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
-
-
-

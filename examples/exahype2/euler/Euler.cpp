@@ -15,6 +15,8 @@ void examples::exahype2::euler::Euler::adjustSolution(
   if (tarch::la::equals(t,0.0) ) {
     logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );
 
+    // Manual offset to make the wave originate slightly to the left of the center --- helps
+    // to detect if wave is moving to the left or right
     #if Dimensions==2
     tarch::la::Vector<Dimensions,double> circleCentre = {0.2,0.5};
     #else
@@ -59,16 +61,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   const double u_n = Q[normal + 1] * irho;
   const double c   = std::sqrt(gamma * p * irho);
 
-  double lambda[5];
-
-  lambda[0]  = u_n - c;
-  lambda[1]  = u_n;
-  lambda[2]  = u_n;
-  lambda[3]  = u_n;
-  lambda[4]  = u_n + c;
-
-  double result = std::max( std::abs(lambda[0]), std::abs(lambda[4]) );
-  return result;
+  return std::max( std::abs(u_n - c), std::abs(u_n + c) );
 }
 
 
