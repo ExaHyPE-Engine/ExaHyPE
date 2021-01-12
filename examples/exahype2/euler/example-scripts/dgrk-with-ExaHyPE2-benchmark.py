@@ -38,7 +38,6 @@ parser.add_argument("--p",               dest="peanodir",                 defaul
 parser.add_argument("--c",               dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("--o",               dest="out",             default="peano4", help="Executable name" )
 parser.add_argument("--f",               dest="force",           default=False, action="store_true", help="Allow overwriting of output file." )
-parser.add_argument("--gpu",             dest="GPU",             default=False, action="store_true", help="Use GPU features." )
 parser.add_argument("--dt",              dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 args = parser.parse_args()
 
@@ -69,7 +68,8 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "aderdg", ".", ex
 #
 # Add the Finite Volumes solver
 #
-order          = 7
+dg_order       = 7
+rk_order       = 1
 unknowns       = 5
 time_step_size = 0.000001
 min_h          = args.h
@@ -83,12 +83,11 @@ max_h          = args.h
 
 
 thesolver = None
-if args.GPU:
-  print("Turning on OpenMP for GPUs")
-  raise Exception( "not yet supported" )
-  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator(
-    "EulerOnGPU",
-    patch_size,
+if rk_order==1:
+  print("Replace generic RK(x) scheme with explicit Euler")
+  thesolver = exahype2.solvers.dg.GenericRusanovExplicitEulerFixedTimeStepSize(
+    "Euler",
+    dg_order,
     unknowns, 0,
     min_h, max_h,
     time_step_size,
@@ -96,13 +95,10 @@ if args.GPU:
   )
 
 else:
-  print( "Have to introduce enclaves again" )
-  thesolver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
-    "ADERDGEuler", order, unknowns, 0, #auxiliary_variables
-    exahype2.solvers.aderdg.Polynomials.Gauss_Legendre, 
-    min_h, max_h, time_step_size
-  )
-  thesolver.set_plot_description( "0: Density, (1,2,3): Velocities, 4: Energy")
+  raise Exception( "doesn't work yet")
+  pass
+    
+thesolver.set_plot_description( "0: Density, (1,2,3): Velocities, 4: Energy")
 
 project.add_solver( thesolver )
 
