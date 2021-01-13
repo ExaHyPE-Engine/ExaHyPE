@@ -115,17 +115,6 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
 project.set_Peano4_installation("../../..", build_mode)
 peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
-if args.gpu:
-  if args.mode != "release":
-    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core{}d_{}_a-Generic.o".format(args.dim, args.mode) )
-    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core{}d_{}_a-Rusanov.o".format(args.dim, args.mode) )
-    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/libExaHyPE2Core{}d_{}_a-PatchUtils.o".format(args.dim, args.mode) )
-    peano4_project.output.makefile.add_gpu_object( "../../../src/tarch/multicore/omp/libTarch_{}_a-multicore.o".format(args.mode) )
-  else:
-    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core{}d_a-Generic.o".format(args.dim) )
-    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/fv/libExaHyPE2Core{}d_a-Rusanov.o".format(args.dim) )
-    peano4_project.output.makefile.add_gpu_object( "../../../src/exahype2/libExaHyPE2Core{}d_a-PatchUtils.o".format(args.dim) )
-    peano4_project.output.makefile.add_gpu_object( "../../../src/tarch/multicore/omp/libTarch_a-multicore.o")
 
 peano4_project.generate()
 #peano4_project.build(make_clean_first=True, number_of_parallel_builds=1)
