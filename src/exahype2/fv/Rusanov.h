@@ -76,10 +76,12 @@ namespace exahype2 {
      
             tarch::la::Vector<Dimensions,double> volumeH;
 
+            // getVolumeSize
             for (int d=0; d<Dimensions; d++) {
               volumeH(d) = patchSize(d)/numberOfVolumesPerAxisInPatch;
             }
 
+            // Assignment vectorA = vectorB - 0.5*vectorC
             tarch::la::Vector<Dimensions, double> volumeX;
             for (int d=0; d<Dimensions; d++) {
              volumeX(d) = patchCentre(d) - 0.5 * patchSize(d);
@@ -90,9 +92,9 @@ namespace exahype2 {
 
             auto QL = Qin + leftVoxelInPreimage  * (unknowns + auxiliaryVariables);
             auto QR = Qin + rightVoxelInPreimage * (unknowns + auxiliaryVariables);
+            
             tarch::la::Vector<Dimensions, double> xx = {volumeX(0), volumeX(1)};
-            //auto xx = volumeX;
-            //auto xx = volumeX;
+            
             auto dx = volumeH(0);
             int normal = 0;
 
@@ -163,7 +165,7 @@ namespace exahype2 {
 
             auto QL = Qin + lowerVoxelInPreimage  * (unknowns + auxiliaryVariables);
             auto QR = Qin + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
-            //auto xx = volumeX;
+            
             tarch::la::Vector<Dimensions, double> xx = {volumeX(0), volumeX(1)};
             auto dx = volumeH(0);
             int normal = 1;
