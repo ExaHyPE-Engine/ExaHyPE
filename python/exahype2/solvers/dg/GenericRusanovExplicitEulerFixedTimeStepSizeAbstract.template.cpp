@@ -27,7 +27,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridInitialisationStep() {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishGridInitialisationStep() {
-  _solverState = SolverState::Prediction;
+  _solverState = SolverState::VolumeAndBoundaryIntegral;
 }
 
 
@@ -47,16 +47,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       assertion(false);
       break;
     case SolverState::GridInitialisation:
-      _solverState = SolverState::Prediction;
+      _solverState = SolverState::VolumeAndBoundaryIntegral;
       break;
-    case SolverState::Prediction:
-      _solverState = SolverState::RiemannProblemSolve;
+    case SolverState::VolumeAndBoundaryIntegral:
+      _solverState = SolverState::TimeStep;
       break;
-    case SolverState::RiemannProblemSolve:
-      _solverState = SolverState::Correction;
-      break;
-    case SolverState::Correction:
-      _solverState = SolverState::Prediction;
+    case SolverState::TimeStep:
+      _solverState = SolverState::VolumeAndBoundaryIntegral;
       _timeStamp += {{TIME_STEP_SIZE}};
       break;
     case SolverState::Plotting:
@@ -77,7 +74,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishPlottingStep() {
-  _solverState = SolverState::Prediction;
+  _solverState = SolverState::VolumeAndBoundaryIntegral;
 }
 
 
@@ -87,12 +84,10 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-construction";
     case SolverState::GridInitialisation:
       return "grid-initialisation";
-    case SolverState::Prediction:
-      return "prediction";
-    case SolverState::RiemannProblemSolve:
-      return "Riemann-problem-solve";
-    case SolverState::Correction:
-      return "correction";
+    case SolverState::VolumeAndBoundaryIntegral:
+      return "volume-and-boundary-integral";
+    case SolverState::TimeStep:
+      return "time-step";
     case SolverState::Plotting:
       return "plotting";
   }

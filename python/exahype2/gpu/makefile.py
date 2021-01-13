@@ -17,10 +17,9 @@ def add_exahype_objects(makefile):
   
   """
   dim            = makefile.d["DIM"]
-  mode           = makefile.d["LIBRARY_POSTFIX"]
 
-  makefile.add_gpu_object( "$(PEANO_SOURCE_PATH)/exahype2/fv/libExaHyPE2Core{}d{}_a-Generic.o".format( dim, mode) )
-  makefile.add_gpu_object( "$(PEANO_SOURCE_PATH)/exahype2/fv/libExaHyPE2Core{}d{}_a-Rusanov.o".format(dim, mode) )
-  makefile.add_gpu_object( "$(PEANO_SOURCE_PATH)/exahype2/libExaHyPE2Core{}d{}_a-PatchUtils.o".format(dim, mode) )
-  makefile.add_gpu_object( "$(PEANO_SOURCE_PATH)/tarch/multicore/omp/libTarch{}_a-multicore.o".format(mode) )
+  makefile.add_gpu_object( "$(PEANO_SOURCE_PATH)/exahype2/fv/libExaHyPE2Core{}d$(LIBRARY_POSTFIX)_a-Generic.o".format( dim) )
+  makefile.add_gpu_object( "$(PEANO_SOURCE_PATH)/exahype2/fv/libExaHyPE2Core{}d$(LIBRARY_POSTFIX)_a-Rusanov.o".format(dim) )
+  makefile.add_gpu_object( "$(PEANO_SOURCE_PATH)/exahype2/libExaHyPE2Core{}d$(LIBRARY_POSTFIX)_a-PatchUtils.o".format(dim) )
+  makefile.add_gpu_object( "$(PEANO_SOURCE_PATH)/tarch/multicore/omp/libTarch$(LIBRARY_POSTFIX)_a-multicore.o" )
 
