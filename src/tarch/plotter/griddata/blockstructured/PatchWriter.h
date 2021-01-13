@@ -146,7 +146,7 @@ class tarch::plotter::griddata::blockstructured::PatchWriter {
      *   as AoS
      * @param description       This is meta data, i.e. has no prescribed semanatics
      * @param mapping           Array of positions within a unit cube/square. Is it an AoS of vectors
-     *   within the unit square which distorts all the unknowns within the mesh. Logically, all data
+     *   within the unit square which distorts all the vertices within the mesh. Logically, all data
      *   are Cartesian, but you might prefer Gauss Lobatto nodes, e.g.
      */
     virtual CellDataWriter*    createCellDataWriter( const std::string& identifier, int unknownsPerAxis, int recordsPerCell, const std::string& description ) = 0;

@@ -49,6 +49,7 @@ class UpdateCell(AbstractDGActionSet):
         break;
       case {{SOLVER_NAME}}::SolverState::VolumeAndBoundaryIntegral:
         {
+          dg::
         }
         break;
       case {{SOLVER_NAME}}::SolverState::TimeStep:

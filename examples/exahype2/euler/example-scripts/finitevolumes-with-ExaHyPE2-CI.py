@@ -119,4 +119,5 @@ peano4_project.output.makefile.parse_configure_script_outcome( "../../.." )
 peano4_project.generate()
 #peano4_project.build(make_clean_first=True, number_of_parallel_builds=1)
 
+print( "Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")
 

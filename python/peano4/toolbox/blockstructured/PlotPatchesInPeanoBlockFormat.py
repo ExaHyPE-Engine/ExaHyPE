@@ -40,10 +40,10 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     self.d[ "FILENAME" ]           = filename
 
     dofs_per_axis = 0    
-    if plot_cell_data:
-      dofs_per_axis = patch.dim[0]
-    else:
-      dofs_per_axis = patch.dim[0]-1
+    #if plot_cell_data:
+    dofs_per_axis = patch.dim[0]
+    #else:
+    #  dofs_per_axis = patch.dim[0]-1
 
       
     self.d[ "DOFS_PER_AXIS" ]      = str(dofs_per_axis)
