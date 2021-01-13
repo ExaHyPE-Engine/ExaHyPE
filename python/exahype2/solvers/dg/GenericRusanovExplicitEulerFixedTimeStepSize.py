@@ -14,40 +14,13 @@ import jinja2
 
 class ApplyRiemannSolveToFaces(AbstractDGActionSet):
   TemplateRiemannSolve = jinja2.Template( """
+/*
     if ({{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
       // @todo Have to think about this one
 
 
       //not marker.isRefined() and fineGridFaceLabel.getBoundary()
-// fehlt noch
-/*
-      ::exahype2::aderdg::solveSpaceTimeRiemannProblem_GaussLegendre_AoS2d(
-        [&](
-          double * __restrict__                        QL,
-          double * __restrict__                        QR,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__ FL,
-          double * __restrict__ FR
-        )->void {
-        },
-        marker.x(),
-        marker.h(),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-        {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-        {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{SOLVER_INSTANCE}}.QuadraturePoints,
-        {{SOLVER_INSTANCE}}.QuadratureWeights,
-        marker.getSelectedFaceNumber() % Dimensions,
-        fineGridFace{{SOLVER_NAME}}QSolutionExtrapolation.value,
-        fineGridFace{{SOLVER_NAME}}QFluxExtrapolation.value,
-        fineGridFace{{SOLVER_NAME}}QRiemannSolveResult.value
-      );
 */      
-      
-    }   
   """)
 
   def __init__(self,solver):
@@ -74,141 +47,12 @@ class UpdateCell(AbstractDGActionSet):
       case {{SOLVER_NAME}}::SolverState::GridInitialisation:
         assertionMsg( false, "should not be entered" );
         break;
-      case {{SOLVER_NAME}}::SolverState::Prediction:
+      case {{SOLVER_NAME}}::SolverState::VolumeAndBoundaryIntegral:
         {
-          #if Dimensions==2
-          double spaceTimeQ[ ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})  ];
-          #else
-          double spaceTimeQ[ ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})  ];
-          #endif
-
-
-//PredictorAoS.h:    void spaceTimePredictor_PicardLoop_loop_AoS(
-//PredictorAoS.h:    void spaceTimePredictor_extrapolate_loop_AoS(         // Funktioniert fuer Legendre und Lobatto
-//PredictorAoS.h:    void spaceTimePredictor_extrapolate_Lobatto_loop_AoS( // Optimierung fuer LobattoCorrectorAoS.h:    void corrector_addCellContributions_loop_AoS(
-//CorrectorAoS.h:    void corrector_addRiemannContributions_loop_AoS(RusanovNonlinearAoS.h:     void rusanovNonlinear_setBoundaryState_loop_AoS(
-//RusanovNonlinearAoS.h:     double rusanovNonlinear_maxAbsoluteEigenvalue_loop_AoS(
-//RusanovNonlinearAoS.h:    void rusanovNonlinear_loop_AoS(
-
-          ::exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
-            [&](
-              const double * __restrict__                 Q,
-              const tarch::la::Vector<Dimensions,double>& x,
-              double                                      t,
-              int                                         normal,
-              double * __restrict__                       F
-            )->void {
-              {% if FLUX_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
-              {% endif %}
-            },
-            [&](
-              const double * __restrict__                 Q,
-              const tarch::la::Vector<Dimensions,double>& x,
-              double                                      t,
-              double * __restrict__                       S
-            )->void {
-              {% if SOURCES_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.algebraicSource(Q,x,t,S);
-              {% endif %}
-            },
-            [&](
-              const double * __restrict__                 Q,
-              const double * __restrict__                 dQ_or_dQdn,
-              const tarch::la::Vector<Dimensions,double>& x,
-              double                                      t,
-              int                                         normal,
-              double * __restrict__                       BgradQ
-            )->void {
-              {% if NCP_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
-              {% endif %}
-            },
-            spaceTimeQ,                           // QOut
-            fineGridCell{{SOLVER_NAME}}Q.value,   // QIn
-            {{SOLVER_INSTANCE}}.QuadratureWeights,
-            {{SOLVER_INSTANCE}}.QuadraturePoints,
-            {{SOLVER_INSTANCE}}.StiffnessOperator,             // Kxi,
-            {{SOLVER_INSTANCE}}.InvertedPredictorLhsOperator, // iK1,
-            {{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,      // FLCoeff,
-            {{SOLVER_INSTANCE}}.DerivativeOperator,   // dudx, 
-            marker.h()(0), // we assume cubic/square cells
-            marker.x(),
-            {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-            {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            1e-8,  // atol,
-            {% if FLUX_IMPLEMENTATION!="<none>" %}
-            true,
-            {% else %}
-            false,
-            {% endif %}
-            {% if SOURCES_IMPLEMENTATION!="<none>" %}
-            true,
-            {% else %}
-            false,
-            {% endif %}
-            {% if NCP_IMPLEMENTATION!="<none>" %}
-            true
-            {% else %}
-            false
-            {% endif %}
-          );
-
-/*          
-          #if Dimensions==2
-          ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS2d(
-          #else
-          ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS3d(
-          #endif
-          */
-          
-          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
-            fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
-            spaceTimeQ,                           // QIn
-            {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
-          );
         }
         break;
-      case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
-        break;
-      case {{SOLVER_NAME}}::SolverState::Correction:
+      case {{SOLVER_NAME}}::SolverState::TimeStep:
         {
-/*        
-          #if Dimensions==2
-          ::exahype2::aderdg::addSpaceTimeRiemannSolutionToPrediction_GaussLegendre_AoS2d(
-          #else
-          ::exahype2::aderdg::addSpaceTimeRiemannSolutionToPrediction_GaussLegendre_AoS3d(
-          #endif
-            marker.x(),
-            marker.h(),
-            {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-            {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            {{SOLVER_INSTANCE}}.QuadraturePoints,
-            {{SOLVER_INSTANCE}}.QuadratureWeights,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(0).value,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(1).value,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(2).value,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(3).value,
-            #if Dimensions==3
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(4).value,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(5).value,
-            #endif
-            fineGridCell{{SOLVER_NAME}}QNew.value
-          );
-
-          std::copy_n(
-            fineGridCell{{SOLVER_NAME}}QNew.value,
-            #if Dimensions==2
-            ({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
-            #else
-            ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
-            #endif
-            fineGridCell{{SOLVER_NAME}}Q.value
-          );
-        */
         }
         break;
       case {{SOLVER_NAME}}::SolverState::Plotting:
