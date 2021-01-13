@@ -87,57 +87,6 @@ class Project(object):
     self._build_mode          = mode
 
 
-  def __get_library_postfix( self ):
-    """
-    
-    Libraries in ExaHyPE 2 always end with 2d_debug or 3d_trace. This 
-    operation gives you back the respective postfix. There are two 
-    variants of this routine. One accepts a dimension, the other one
-    does not, i.e. accepts None. This is important as some libraries are dimension-generic
-    while others are not. Therefore, some have the 2d/3d postfix and 
-    others lack it.
-
-    mode is from peano4.output.CompileMode
-    dimensions either None or something smaller zero (takes project's
-      dimension) or a particular dimension
-    
-    """
-    result = ""
-    result += str(self._dimensions) + "d"
-
-    if self._build_mode==peano4.output.CompileMode.Debug:
-        result += self.LibraryDebug
-    if self._build_mode==peano4.output.CompileMode.Trace:
-        result += self.LibraryTrace
-    if self._build_mode==peano4.output.CompileMode.Asserts:
-        result += self.LibraryAsserts
-    if self._build_mode==peano4.output.CompileMode.Release:
-        result += self.LibraryRelease
-    return result
-
-
-  def __get_ExaHyPE_library( self ):
-    """
-
-    Returns the core ExaHyPE library against which to link
-         
-    mode is from peano4.output.CompileMode
-    
-    """
-    return "ExaHyPE2Core" + self.__get_library_postfix()
-
-
-  def __get_load_balancing_library( self ):
-    """
-
-    Returns the core ExaHyPE library against which to link
-         
-    mode is from peano4.output.CompileMode
-    
-    """
-    return "ToolboxLoadBalancing" + self.__get_library_postfix()
-
-
   def add_solver(self,solver):
     self._solvers.append( solver )
 
@@ -298,8 +247,8 @@ class Project(object):
 
     # maybe use ..
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
-    self._project.output.makefile.add_library( self.__get_ExaHyPE_library(),        self._Peano_src_directory + "/src/exahype2" )
-    self._project.output.makefile.add_library( self.__get_load_balancing_library(), self._Peano_src_directory + "/src/toolbox/loadbalancing" )
+    self._project.output.makefile.add_library( "ExaHyPE2Core$(DIMENSIONS)d$(LIBRARY_POSTFIX)",          self._Peano_src_directory + "/src/exahype2" )
+    self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
     self._project.output.makefile.set_mode(self._build_mode)
 
     return self._project
