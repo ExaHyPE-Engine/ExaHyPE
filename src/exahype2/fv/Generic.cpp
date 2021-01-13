@@ -9,6 +9,12 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 
+// This is another fantastic hack
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+void abort() {};
+#pragma omp  end declare target
+#endif
 
 // This is a fantastic hack
 #if defined(OpenMPGPUOffloading)
