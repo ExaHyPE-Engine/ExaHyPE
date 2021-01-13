@@ -10,11 +10,17 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     GPUCallableMethod int getNodesPerCell(int nodesPerAxis);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
   
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod int getSpaceTimeNodesPerCell(int nodesPerAxis);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
   
     /**
      * If the stride is used for a space-time quantity, then this function generates:
@@ -35,6 +41,9 @@ namespace exahype2 {
      GPUCallableMethod tarch::la::Vector<Dimensions+1,int> getStrides(
         int nodesPerAxis,
         bool strides4SpaceTimeQuantity = true);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
       * @param[in] linearises the index with the given strides.
@@ -47,6 +56,9 @@ namespace exahype2 {
      GPUCallableMethod int lineariseIndex(
         const tarch::la::Vector<Dimensions+1,int>& index,
         const tarch::la::Vector<Dimensions+1,int>& strides);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
        
      /**
       * @param[in] scalarIndex index that we want to delinearise 
@@ -63,6 +75,9 @@ namespace exahype2 {
      GPUCallableMethod tarch::la::Vector<Dimensions+1,int> delineariseIndex(
        int scalarIndex,
        const tarch::la::Vector<Dimensions+1,int>& strides);       
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
@@ -80,6 +95,9 @@ namespace exahype2 {
        const double                                t, 
        const double                                dt, 
        const double* __restrict__                  nodes);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
@@ -99,6 +117,9 @@ namespace exahype2 {
        const double                                t, 
        const double                                dt, 
        const double* __restrict__                  nodes);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
       * @param[in] direction   coordinate direction of the (reference) element face normal (0: 
@@ -113,6 +134,9 @@ namespace exahype2 {
        const int                                 direction,
        const int                                 orientation,
        const int                                 nodesPerAxis);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
       * @param[in] direction   coordinate direction of the (reference) element face normal (0: 
@@ -127,6 +151,9 @@ namespace exahype2 {
        const int                                 direction,
        const int                                 id,
        const int                                 nodesPerAxis);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     /**
      * @brief Computes the gradient at a given (space-time) quadrature point.
@@ -177,6 +204,9 @@ namespace exahype2 {
       const int                  strideQ,
       const int                  scalarIndex,
       double* __restrict__       gradQAux);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /** alignment in bytes
      */
@@ -184,11 +214,17 @@ namespace exahype2 {
      #pragma omp declare target
      #endif
      GPUCallableMethod size_t alignment();
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      #if defined(OpenMPGPUOffloading)
      #pragma omp declare target
      #endif
      GPUCallableMethod size_t paddedSize(size_t numElements, size_t sizeofType=sizeof(double));
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
  
      double* allocateBuffer_cpu(size_t unpaddedSizeMultiplier, size_t paddedSizeMultiplier);  
      

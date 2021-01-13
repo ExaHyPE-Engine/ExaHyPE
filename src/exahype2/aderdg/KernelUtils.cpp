@@ -8,6 +8,9 @@ GPUCallableMethod int exahype2::aderdg::getNodesPerCell(int nodesPerAxis) {
   for ( int d = 0; d < Dimensions; d++ ) { nodesPerCell *= nodesPerAxis; }
   return nodesPerCell;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -17,6 +20,9 @@ GPUCallableMethod int exahype2::aderdg::getSpaceTimeNodesPerCell(int nodesPerAxi
   for ( int d = 0; d < Dimensions+1; d++ ) { nodesPerCell *= nodesPerAxis; }
   return nodesPerCell;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -35,6 +41,9 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::getStrid
   }
   return strides;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -49,6 +58,9 @@ GPUCallableMethod int exahype2::aderdg::lineariseIndex(
   }
   return scalarIndex;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
   
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -71,6 +83,9 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,int> exahype2::aderdg::delinear
   }
   return index;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
   
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -93,6 +108,9 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCo
   }
   return coords;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -122,6 +140,9 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCo
   }
   return coords;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -145,6 +166,9 @@ GPUCallableMethod int exahype2::aderdg::mapCellIndexToScalarHullIndex(
   scalarIndexFace += faceOffset;
   return scalarIndexFace;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -166,6 +190,9 @@ GPUCallableMethod int exahype2::aderdg::mapSpaceTimeFaceIndexToScalarCellIndex(
   indexCell[direction+1] = id;
   return lineariseIndex(indexCell,getStrides(nodesPerAxis));
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -196,6 +223,9 @@ GPUCallableMethod void exahype2::aderdg::gradient_AoS(
     }
   }
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -204,6 +234,9 @@ GPUCallableMethod size_t exahype2::aderdg::alignment() {
   //return 64;
   return -1;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -213,6 +246,9 @@ GPUCallableMethod size_t exahype2::aderdg::paddedSize(size_t numElements, size_t
   //return ( ( numElements + align - 1 ) / align ) * align;  // @todo: padding
   return numElements;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 double* exahype2::aderdg::allocateBuffer_cpu(size_t unpaddedSizeMultiplier, size_t paddedSizeMultiplier) {
   //double* ptr = nullptr;
