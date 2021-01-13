@@ -36,9 +36,29 @@ class OutputFileParser(object):
     self.unknowns = 0
     self.description      = ""
     self.cell_data        = []
+    self.is_data_associated_to_cell = None
     self.dimensions       = -1
     self.set_identifier   = set_identifier
     self.subdomain_number = subdomain_number
+    self.mapping          = []
+    
+    
+  def _initialise_default_mapping_if_no_mapping_specified(self):
+    volumes_per_axis = self.dof
+    if self.is_data_associated_to_cell:
+      volumes_per_axis += 1
+    if self.mapping==[] and self.dimensions==2:
+      for y in range(volumes_per_axis):
+        for x in range(volumes_per_axis):
+          self.mapping.append(x*1.0/volumes_per_axis)
+          self.mapping.append(y*1.0/volumes_per_axis)
+    if self.mapping==[] and self.dimensions==3:
+      for z in range(volumes_per_axis):
+        for y in range(volumes_per_axis):
+          for x in range(volumes_per_axis):
+            self.mapping.append(x*1.0/volumes_per_axis)
+            self.mapping.append(y*1.0/volumes_per_axis)
+            self.mapping.append(z*1.0/volumes_per_axis)
     
     
   def __parse_meta_data_line(self, line):
@@ -52,6 +72,9 @@ class OutputFileParser(object):
         print( "Warning: data description field " + self.description + " holds \" which might lead to issues with VTK's XML export. Remove them" )
         self.description = self.description.replace( "\"", "" )
       pass   
+    if "mapping" in line:
+      values = line.strip().split("mapping")[1]
+      self.mapping = np.fromstring(values, dtype=float, sep=' ')
 
     
   def parse_file(self):
@@ -69,7 +92,6 @@ class OutputFileParser(object):
     print("Reading "+ self.file_path + " as subdomain " + str(self.subdomain_number) )
     
     with open(self.file_path, 'r') as data_file:
-            
       for this_line in data_file:
         this_line = this_line.strip()
           
@@ -78,13 +100,20 @@ class OutputFileParser(object):
         
         #Read out meta data  
         if this_line.startswith("begin cell-metadata") and ( self.set_identifier=="" or this_line.endswith('"'+self.set_identifier+'"' )):
+          self.is_data_associated_to_cell = True
           line = data_file.readline().strip()
           while not "end cell-metadata" in line:
             self.__parse_meta_data_line( line )
             line = data_file.readline().strip()
+
+        if this_line.startswith("begin vertex-metadata") and ( self.set_identifier=="" or this_line.endswith('"'+self.set_identifier+'"' )):
+          self.is_data_associated_to_cell = False
+          line = data_file.readline().strip()
+          while not "end vertex-metadata" in line:
+            self.__parse_meta_data_line( line )
+            line = data_file.readline().strip()
           
-        elif this_line.startswith("begin patch"):
-        
+        elif this_line.startswith("begin patch"):        
           #Get patch offset
           this_line = data_file.readline().strip()
           line = this_line.strip().split()           
@@ -113,6 +142,12 @@ class OutputFileParser(object):
           if this_line.startswith("begin cell-values") and ( self.set_identifier=="" or this_line.endswith('"'+self.set_identifier+'"')):
             this_line = data_file.readline()
             values = np.fromstring(this_line, dtype=float, sep=' ')
+
+          if this_line.startswith("begin vertex-values") and ( self.set_identifier=="" or this_line.endswith('"'+self.set_identifier+'"')):
+            this_line = data_file.readline()
+            values = np.fromstring(this_line, dtype=float, sep=' ')
             
           #Add patch to list
           self.cell_data.append(Patch(offset, size, values, self.subdomain_number))   
+      self._initialise_default_mapping_if_no_mapping_specified()
+      

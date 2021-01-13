@@ -9,7 +9,7 @@ import multiprocessing
 
 
 
-def prepare2Dpatches(cell_data, dof, unknowns, depth_scaling, description):
+def prepare2Dpatches(cell_data, dof, unknowns, depth_scaling, description, is_data_associated_to_cell, mapping):
   """
     Prepare 2D patches in grid for rendering 
     
@@ -42,10 +42,7 @@ def prepare2Dpatches(cell_data, dof, unknowns, depth_scaling, description):
   else:                  
     data.SetName("Unknowns (..., subdomain)" )
 
-  count = 0
-
   for p in range( len(cell_data) ):
-
     patch_x_0 = cell_data[p].offset[0]
     patch_y_0 = cell_data[p].offset[1]
     patch_x_1 = cell_data[p].offset[0] + cell_data[p].size[0]
@@ -53,45 +50,54 @@ def prepare2Dpatches(cell_data, dof, unknowns, depth_scaling, description):
 
     z = cell_data[p].size[0] * depth_scaling
 
-    cell_length = cell_data[p].size[0]/float(dof)
-    cell_height = cell_data[p].size[1]/float(dof) 
+    volumes_in_patch_per_axis = dof
+    if not is_data_associated_to_cell:
+      volumes_in_patch_per_axis -= 1
 
-    for k in range(dof):
-      for l in range(dof):
-        cell_number = k*dof + l
-    
-        x_0 = patch_x_0 + l*cell_length
-        y_0 = patch_y_0 + k*cell_height
-        x_1 = x_0 + cell_length
-        y_1 = y_0 + cell_height
-       
-        points.InsertNextPoint([x_0, y_0, z])
-        points.InsertNextPoint([x_1, y_0, z])
-        points.InsertNextPoint([x_0, y_1, z])
-        points.InsertNextPoint([x_1, y_1, z])
-
-
-        this_cell = cells.InsertNextCell(4)    
-        cells.InsertCellPoint(count)
-        cells.InsertCellPoint(count+1)
-        cells.InsertCellPoint(count+2)
-        cells.InsertCellPoint(count+3)
+    mapping_count = 0
+    for k in range(volumes_in_patch_per_axis+1):
+      for l in range(volumes_in_patch_per_axis+1):
+        x = patch_x_0 + mapping[mapping_count]*cell_data[p].size[0]
+        mapping_count+=1
+        y = patch_y_0 + mapping[mapping_count]*cell_data[p].size[1]
+        mapping_count+=1
+        points.InsertNextPoint([x, y, z])
           
-        new_data = [x for x in cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns] ]
-        new_data.append(cell_data[p].subdomain_number)
-        data.InsertNextTuple(new_data)
+    for k in range(volumes_in_patch_per_axis):
+      for l in range(volumes_in_patch_per_axis):
+        this_cell = cells.InsertNextCell(4)    
+        cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+0)*(volumes_in_patch_per_axis+1)+l+0)
+        cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+0)*(volumes_in_patch_per_axis+1)+l+1)
+        cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+1)*(volumes_in_patch_per_axis+1)+l+0)
+        cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+1)*(volumes_in_patch_per_axis+1)+l+1)
+        
+    if is_data_associated_to_cell:
+      for k in range(volumes_in_patch_per_axis):
+        for l in range(volumes_in_patch_per_axis):
+          cell_number = k*dof + l
+          new_data = [x for x in cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns] ]
+          new_data.append(cell_data[p].subdomain_number)
+          data.InsertNextTuple(new_data)
+    else:
+      for k in range(volumes_in_patch_per_axis+1):
+        for l in range(volumes_in_patch_per_axis+1):
+          vertex_number = k*(volumes_in_patch_per_axis+1) + l
+          new_data = [x for x in cell_data[p].values[vertex_number*unknowns:vertex_number*unknowns+unknowns] ]
+          new_data.append(cell_data[p].subdomain_number)
+          data.InsertNextTuple(new_data)
   
-        count = count+4
-
+  if is_data_associated_to_cell:
+    grid.GetCellData().SetScalars(data)
+  else:
+    grid.GetPointData().SetScalars(data)
   grid.SetPoints(points)
   grid.SetCells(paraview.vtk.VTK_PIXEL, cells)
-  grid.GetCellData().SetScalars(data)
 
   return grid
 
 
 
-def prepare3Dpatches(cell_data, dof, unknowns, description):
+def prepare3Dpatches(cell_data, dof, unknowns, description, is_data_associated_to_cell, mapping):
   """
     Prepare 3D patches in grid for rendering 
     
@@ -124,8 +130,6 @@ def prepare3Dpatches(cell_data, dof, unknowns, description):
   else:                  
     data.SetName("Unknowns (..., subdomain)" )
 
-  count = 0
-
   for p in range(len(cell_data)):
 
     patch_x_0 = cell_data[p].offset[0]
@@ -135,51 +139,60 @@ def prepare3Dpatches(cell_data, dof, unknowns, description):
     patch_y_1 = cell_data[p].offset[1] + cell_data[p].size[1]
     patch_z_1 = cell_data[p].offset[2] + cell_data[p].size[2]
     
-    cell_length = cell_data[p].size[0]/float(dof)
-    cell_height = cell_data[p].size[1]/float(dof) 
-    cell_depth  = cell_data[p].size[2]/float(dof) 
+    volumes_in_patch_per_axis = dof
+    if not is_data_associated_to_cell:
+      volumes_in_patch_per_axis -= 1
 
-    for k in range(dof):
-      for l in range(dof):
-        for m in range(dof):
-    
-          cell_number = k*dof*dof + l*dof + m
-    
-          x_0 = patch_x_0 + m*cell_length
-          y_0 = patch_y_0 + l*cell_height
-          z_0 = patch_z_0 + k*cell_depth
-          x_1 = x_0 + cell_length
-          y_1 = y_0 + cell_height
-          z_1 = z_0 + cell_depth
-       
-          points.InsertNextPoint([x_0, y_0, z_0])
-          points.InsertNextPoint([x_1, y_0, z_0])
-          points.InsertNextPoint([x_0, y_0, z_1])
-          points.InsertNextPoint([x_1, y_0, z_1])
-          points.InsertNextPoint([x_0, y_1, z_0])
-          points.InsertNextPoint([x_1, y_1, z_0])
-          points.InsertNextPoint([x_0, y_1, z_1])
-          points.InsertNextPoint([x_1, y_1, z_1])
+    mapping_count = 0
+    for k in range(volumes_in_patch_per_axis+1):
+      for l in range(volumes_in_patch_per_axis+1):
+        for m in range(volumes_in_patch_per_axis+1):
+          x = patch_x_0 + mapping[mapping_count]*cell_data[p].size[0]
+          mapping_count+=1
+          y = patch_y_0 + mapping[mapping_count]*cell_data[p].size[1]
+          mapping_count+=1
+          y = patch_z_0 + mapping[mapping_count]*cell_data[p].size[2]
+          mapping_count+=1
+          points.InsertNextPoint([x, y, z])
 
+    for k in range(volumes_in_patch_per_axis):
+      for l in range(volumes_in_patch_per_axis):
+        for m in range(volumes_in_patch_per_axis):
           this_cell = cells.InsertNextCell(8)    
-          cells.InsertCellPoint(count)
-          cells.InsertCellPoint(count+1)
-          cells.InsertCellPoint(count+2)
-          cells.InsertCellPoint(count+3)
-          cells.InsertCellPoint(count+4)
-          cells.InsertCellPoint(count+5)
-          cells.InsertCellPoint(count+6)
-          cells.InsertCellPoint(count+7)
-
-          new_data = [x for x in cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns] ]
-          new_data.append(cell_data[p].subdomain_number)
-          data.InsertNextTuple(new_data)
+          cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+0)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(l+0)*(volumes_in_patch_per_axis+1)+m+0)
+          cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+0)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(l+0)*(volumes_in_patch_per_axis+1)+m+1)
+          cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+0)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(l+1)*(volumes_in_patch_per_axis+1)+m+0)
+          cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+0)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(l+1)*(volumes_in_patch_per_axis+1)+m+1)
+          cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(l+0)*(volumes_in_patch_per_axis+1)+m+0)
+          cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(l+0)*(volumes_in_patch_per_axis+1)+m+1)
+          cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(l+1)*(volumes_in_patch_per_axis+1)+m+0)
+          cells.InsertCellPoint(p*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(k+1)*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1)+(l+1)*(volumes_in_patch_per_axis+1)+m+1)
+          
+          
+    if is_data_associated_to_cell:
+      for k in range(volumes_in_patch_per_axis):
+        for l in range(volumes_in_patch_per_axis):
+          for m in range(volumes_in_patch_per_axis):
+            cell_number = k*dof*dof + l*dof + m
+            new_data = [x for x in cell_data[p].values[cell_number*unknowns:cell_number*unknowns+unknowns] ]
+            new_data.append(cell_data[p].subdomain_number)
+            data.InsertNextTuple(new_data)
+    else: 
+      for k in range(volumes_in_patch_per_axis+1):
+        for l in range(volumes_in_patch_per_axis+1):
+          for m in range(volumes_in_patch_per_axis+1):
+            vertex_number = k*(volumes_in_patch_per_axis+1)*(volumes_in_patch_per_axis+1) + l*(volumes_in_patch_per_axis+1) + m
+            new_data = [x for x in cell_data[p].values[vertex_number*unknowns:vertex_number*unknowns+unknowns] ]
+            new_data.append(cell_data[p].subdomain_number)
+            data.InsertNextTuple(new_data)
              
-          count = count+8
 
+  if is_data_associated_to_cell:
+    grid.GetCellData().SetScalars(data)
+  else:
+    grid.GetPointData().SetScalars(data)
   grid.SetPoints(points)
   grid.SetCells(paraview.vtk.VTK_VOXEL, cells)
-  grid.GetCellData().SetScalars(data)
 
   return grid
 
@@ -218,7 +231,7 @@ def render_single_file(filename, identifier, display_as_tree = True, filter=None
   
   parser = OutputFileParser(filename,identifier,0)
   parser.parse_file()
-  cell_data, dimensions, dof, unknowns, description = parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description
+  cell_data, dimensions, dof, unknowns, description, is_data_associated_to_cell, mapping = parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description, parser.is_data_associated_to_cell, parser.mapping
   
   if dimensions != 2 and dimensions != 3:
     print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
@@ -242,11 +255,11 @@ def render_single_file(filename, identifier, display_as_tree = True, filter=None
       cell_data, dof, unknowns, dimensions = p.render(cell_data, dof, unknowns, dimensions)
 
   if dimensions == 2 and display_as_tree:
-    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description) 
+    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description, is_data_associated_to_cell, mapping) 
   elif dimensions == 2 and not display_as_tree:
-    grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description) 
+    grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description, is_data_associated_to_cell, mapping) 
   else: # Tested above that it can only be 2 or 3
-    grid = prepare3Dpatches(cell_data, dof, unknowns, description) 
+    grid = prepare3Dpatches(cell_data, dof, unknowns, description, is_data_associated_to_cell, mapping) 
   
   return grid
 
@@ -336,7 +349,7 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
   print( "All individual files are parsed" )
     
   for parser in parsers:
-    snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description = parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description
+    snapshot_cell_data, snapshot_dimensions, snapshot_dof, snapshot_unknowns, description, is_data_associated_to_cell, mapping = parser.cell_data, parser.dimensions, parser.dof, parser.unknowns, parser.description, parser.is_data_associated_to_cell, parser.mapping
 
     if snapshot_dimensions != 2 and snapshot_dimensions != 3:
       print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
@@ -392,11 +405,11 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
   print( "Parsing complete. Convert into VTK data structures" )
 
   if dimensions == 2 and display_as_tree:
-    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description ) 
+    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description, is_data_associated_to_cell, mapping ) 
   elif dimensions == 2 and not display_as_tree:
-    grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description) 
+    grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description, is_data_associated_to_cell, mapping) 
   else: # Tested above that it can only be 2 or 3
-    grid = prepare3Dpatches(cell_data, dof, unknowns, description) 
+    grid = prepare3Dpatches(cell_data, dof, unknowns, description, is_data_associated_to_cell, mapping) 
 
   return grid
       

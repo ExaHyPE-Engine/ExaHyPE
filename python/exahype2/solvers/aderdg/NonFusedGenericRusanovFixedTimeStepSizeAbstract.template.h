@@ -108,7 +108,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {% endif %}
 
 
-    {% include "../dg/AbstractSolverFixedTimeStepSize.template.h" %}
+    {% include "AbstractSolverFixedTimeStepSize.template.h" %}
 };
 
 

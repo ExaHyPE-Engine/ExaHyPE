@@ -123,11 +123,11 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::~PeanoTextP
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::writeMapping(int totalEntries, double* values) {
   if (values!=nullptr) {
-    _snapshotFileOut << "  begin mapping" << std::endl;
+    _snapshotFileOut << "  mapping ";
     for (int i=0; i<totalEntries * _dimensions; i++) {
       _snapshotFileOut << " " << values[i];
     }
-    _snapshotFileOut << std::endl << "  end mapping" << std::endl;
+    _snapshotFileOut << std::endl;
   }
 }
 
