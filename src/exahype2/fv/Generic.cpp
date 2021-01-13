@@ -9,7 +9,6 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 
-
 // This is a fantastic hack
 #if defined(OpenMPGPUOffloading)
 namespace std
@@ -19,6 +18,14 @@ void __throw_bad_function_call() {};
 #pragma omp  end declare target
 }
 #endif
+
+// This is another hack
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+void abort() {};
+#pragma omp  end declare target
+#endif
+
 
 
 std::string exahype2::fv::plotVolume(

@@ -73,15 +73,28 @@ namespace exahype2 {
             const int leftVoxelInImage     = x - 1 + y * numberOfVolumesPerAxisInPatch;
             const int rightVoxelInImage    = x     + y * numberOfVolumesPerAxisInPatch;
 
-            tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (patchSize, numberOfVolumesPerAxisInPatch);
-            tarch::la::Vector<Dimensions, double> volumeX = patchCentre - 0.5 * patchSize;
+     
+            tarch::la::Vector<Dimensions,double> volumeH;
+
+            // getVolumeSize
+            for (int d=0; d<Dimensions; d++) {
+              volumeH(d) = patchSize(d)/numberOfVolumesPerAxisInPatch;
+            }
+
+            // Assignment vectorA = vectorB - 0.5*vectorC
+            tarch::la::Vector<Dimensions, double> volumeX;
+            for (int d=0; d<Dimensions; d++) {
+             volumeX(d) = patchCentre(d) - 0.5 * patchSize(d);
+            }
 
             volumeX (0) += x * volumeH (0);
             volumeX (1) += (y + 0.5) * volumeH (1);
 
             auto QL = Qin + leftVoxelInPreimage  * (unknowns + auxiliaryVariables);
             auto QR = Qin + rightVoxelInPreimage * (unknowns + auxiliaryVariables);
-            auto xx = volumeX;
+            
+            tarch::la::Vector<Dimensions, double> xx = {volumeX(0), volumeX(1)};
+            
             auto dx = volumeH(0);
             int normal = 0;
 
@@ -129,14 +142,31 @@ namespace exahype2 {
             const int lowerVoxelInImage    = x      + (y - 1) *      numberOfVolumesPerAxisInPatch ;
             const int upperVoxelInImage    = x      +       y *      numberOfVolumesPerAxisInPatch ;
 
-            tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (patchSize, numberOfVolumesPerAxisInPatch);
-            tarch::la::Vector<Dimensions, double> volumeX = patchCentre - 0.5 * patchSize;
+            //tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (patchSize, numberOfVolumesPerAxisInPatch);
+            //tarch::la::Vector<Dimensions, double> volumeX = patchCentre - 0.5 * patchSize;
+
+
+            tarch::la::Vector<Dimensions,double> volumeH;
+
+            for (int d=0; d<Dimensions; d++) {
+              volumeH(d) = patchSize(d)/numberOfVolumesPerAxisInPatch;
+            }
+
+            tarch::la::Vector<Dimensions, double> volumeX;
+            for (int d=0; d<Dimensions; d++) {
+             volumeX(d) = patchCentre(d) - 0.5 * patchSize(d);
+            }
+
+
+
+
             volumeX (0) += (x + 0.5) * volumeH (0);
             volumeX (1) +=         y * volumeH (1);
 
             auto QL = Qin + lowerVoxelInPreimage  * (unknowns + auxiliaryVariables);
             auto QR = Qin + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
-            auto xx = volumeX;
+            
+            tarch::la::Vector<Dimensions, double> xx = {volumeX(0), volumeX(1)};
             auto dx = volumeH(0);
             int normal = 1;
 
