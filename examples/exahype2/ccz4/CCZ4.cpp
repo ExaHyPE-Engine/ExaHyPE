@@ -7,6 +7,7 @@
  * routines written in Fortran.
  */
 #include "PDE.h"
+#include "Properties.h"
 
 /**
  * This file is automatically created by Peano. I need it to interact with
@@ -68,6 +69,9 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
 ) {
   logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
   if (tarch::la::equals(t,0.0) ) {
+      const char* name = "GaugeWave";
+      int length = strlen(name);
+      initparameters_(&length, name);
     // initial conditions      
     if ( Scenario=="gaugewave-c++" ) {
           gaugeWave(Q, volumeX, volumeH, t);
