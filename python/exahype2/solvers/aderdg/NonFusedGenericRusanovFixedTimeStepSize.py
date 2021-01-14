@@ -163,11 +163,13 @@ class UpdateCell(AbstractADERDGActionSet):
           #endif
           */
           
-          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
+          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
             fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
             spaceTimeQ,                           // QIn
             {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
+            {{ORDER}}, 
+            {{NUMBER_OF_UNKNOWNS}}, 
+            {{NUMBER_OF_AUXILIARY_VARIABLES}}
           );
         }
         break;
