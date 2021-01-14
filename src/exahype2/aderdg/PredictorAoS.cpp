@@ -323,14 +323,14 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_bo
   const int                   scalarIndexCell) {
   // clear
   for (int var = 0; var < strideQ; var++ ) {
-    UOut[ scalarIndexCell ] = 0;
+    UOut[ scalarIndexCell*strideQ + var ] = 0;
   }
   // compute
   for (int it = 0; it < nodesPerAxis; it++ ) {
     const int indexQ = (scalarIndexCell*nodesPerAxis + it)*strideQ;
     const double coeff = FRCoeff[it];
     for (int var = 0; var < strideQ; var++ ) {
-      UOut[ scalarIndexCell + var ] += coeff * QIn[ indexQ + var ];
+      UOut[ scalarIndexCell*strideQ + var ] += coeff * QIn[ indexQ + var ];
     }
   }
 }
@@ -351,7 +351,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lo
  const int it = nodesPerAxis-1;
  const int indexQ = (scalarIndexCell*nodesPerAxis + it)*strideQ;
  for (int var = 0; var < strideQ; var++ ) {
-   UOut[ scalarIndexCell + var ] = QIn[ indexQ + var ];
+   UOut[ scalarIndexCell*strideQ + var ] = QIn[ indexQ + var ];
  }
 }
 #if defined(OpenMPGPUOffloading)
