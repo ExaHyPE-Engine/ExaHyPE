@@ -136,7 +136,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addSource
 
   algebraicSource(Q, x, time, SAux);
   for (int var = 0; var < unknowns; var++) {
-    rhsOut[ scalarIndex*strideRhs ] += coeff * SAux[var];
+    rhsOut[ scalarIndex*strideRhs + var ] += coeff * SAux[var];
   }
 }
 #if defined(OpenMPGPUOffloading)
@@ -531,7 +531,7 @@ __global__ void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_krnl_AoS(
    }
   
    // below: (unoptimised) block-wide reduction; final result computed on host (as result is needed on host side)
-   sdata[ scalarIndexCell ] = squaredResiduumOut;
+   sdata[ threadIdxInBlock ] = squaredResiduumOut;
    __syncthreads();
 
    for (unsigned int s = 1; s < blockDim.x; s *= 2) {

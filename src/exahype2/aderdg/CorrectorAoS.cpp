@@ -128,7 +128,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_A
     
     const double coeff = dt * weights[it];
     for (int var = 0; var < unknowns; var++) {
-      UOut[ scalarIndex*strideQ ] += coeff * SAux[var];
+      UOut[ scalarIndex*strideQ + var ] += coeff * SAux[var];
     }
   }
 }
