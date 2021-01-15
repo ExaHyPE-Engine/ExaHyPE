@@ -74,7 +74,8 @@ bool selectNextAlgorithmicStep() {{
   static bool   haveReceivedNoncriticialAssertion           = false;
   static bool   addGridSweepWithoutGridRefinementNext       = false;
   static int    iterationsWithoutGridRefinement             = 0;
-  static int    iterationsWithGridRefinementSinceLastRefinement  = 0;
+  //@todo
+  //static int    iterationsWithGridRefinementSinceLastRefinement  = 0;
   static int    initGridIterations                               = 0;
   static tarch::la::Vector<Dimensions,double> minH               = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
 
@@ -124,6 +125,8 @@ bool selectNextAlgorithmicStep() {{
       logInfo( "selectNextAlgorithmicStep()", "switch off load balancing manually (to be removed in later releases)" );
       observers::loadBalancer.enable(false);
     }}
+/*
+ @todo 
     else if (
       peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()>=4
       and
@@ -135,6 +138,7 @@ bool selectNextAlgorithmicStep() {{
       gridConstructed = true;
       addGridSweepWithoutGridRefinementNext = false;
     }}
+*/
     else {{
       logDebug( "selectNextAlgorithmicStep()", "finest mesh resolution of " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() << " does not yet meet mesh requirements of " << observers::getMinMeshSize() );
     }}
@@ -152,27 +156,34 @@ bool selectNextAlgorithmicStep() {{
       iterationsWithoutGridRefinement = 0;
     }}
 
-    const int MaxIterationsWithoutGridRefinement = ThreePowerD;
+    // use a double, so I can "elegantly" do some intermediate steps
+    static int maxNumberOfLocalSpacetrees         = 0;
     if ( tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < tarch::la::max( minH ) ) {{
       minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
       logDebug( "selectNextAlgorithmicStep()", "mesh has refined, so reset minH=" << minH << " and postpone further refinement" );
-      iterationsWithGridRefinementSinceLastRefinement = 0;
+// @todo 
+      //iterationsWithGridRefinementSinceLastRefinement = 0;
       addGridSweepWithoutGridRefinementNext           = true;
     }}
     else {{
-      if (not addGridSweepWithoutGridRefinementNext) iterationsWithGridRefinementSinceLastRefinement++;
+// @todo
+     // if (not addGridSweepWithoutGridRefinementNext) iterationsWithGridRefinementSinceLastRefinement++;
 
-      if (observers::loadBalancer.hasSplitRecently() and iterationsWithoutGridRefinement<MaxIterationsWithoutGridRefinement) {{
-        logInfo( "selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement" );
+      if (observers::loadBalancer.hasSplitRecently() and peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>=maxNumberOfLocalSpacetrees) {{
+        logInfo( "selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement (former max tree count " << maxNumberOfLocalSpacetrees << ", current count " << peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() << ")" );
         addGridSweepWithoutGridRefinementNext = true;
       }} 
-      else if (observers::loadBalancer.hasSplitRecently() and iterationsWithoutGridRefinement>=MaxIterationsWithoutGridRefinement) {{
-        logInfo( "selectNextAlgorithmicStep()", "mesh has rebalanced recently but I've done so many iterations without refinement that I insert one refinement next" );
+      else if (observers::loadBalancer.hasSplitRecently()) {{
+        logInfo( "selectNextAlgorithmicStep()", "mesh wanted to rebalance recently but it seems splits have been unsuccessful" );
         addGridSweepWithoutGridRefinementNext = false;
       }}
       else {{
-        logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so refine mesh further in next sweep" );
+        logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so study whether to refine mesh further in next sweep" );
         addGridSweepWithoutGridRefinementNext = false;
+      }}
+
+      if (static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size())>maxNumberOfLocalSpacetrees) {{
+        maxNumberOfLocalSpacetrees += 1;
       }}
     }}
 
