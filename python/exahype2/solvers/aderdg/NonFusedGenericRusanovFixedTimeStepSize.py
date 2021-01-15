@@ -126,8 +126,8 @@ class UpdateCell(AbstractADERDGActionSet):
             },
             spaceTimeQ,                           // QOut
             fineGridCell{{SOLVER_NAME}}Q.value,   // QIn
-            {{SOLVER_INSTANCE}}.QuadratureWeights,
             {{SOLVER_INSTANCE}}.QuadraturePoints,
+            {{SOLVER_INSTANCE}}.QuadratureWeights,
             {{SOLVER_INSTANCE}}.StiffnessOperator,             // Kxi,
             {{SOLVER_INSTANCE}}.InvertedPredictorLhsOperator, // iK1,
             {{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,      // FLCoeff,
@@ -136,23 +136,13 @@ class UpdateCell(AbstractADERDGActionSet):
             marker.x(),
             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            {{ORDER}}, 
+            {{NUMBER_OF_UNKNOWNS}}, 
+            {{NUMBER_OF_AUXILIARY_VARIABLES}},
             1e-8,  // atol,
-            {% if FLUX_IMPLEMENTATION!="<none>" %}
-            true,
-            {% else %}
-            false,
-            {% endif %}
-            {% if SOURCES_IMPLEMENTATION!="<none>" %}
-            true,
-            {% else %}
-            false,
-            {% endif %}
-            {% if NCP_IMPLEMENTATION!="<none>" %}
-            true
-            {% else %}
-            false
-            {% endif %}
+            {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},
+            {{ "true" if SOURCES_IMPLEMENTATION!="<none>" else "false" }},
+            {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}
           );
 
 /*          
