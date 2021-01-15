@@ -87,7 +87,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addFluxCo
     const double coeff0 = dt * invDx/*[d-1]*/ * weights[index[0]] / weights[index[d]];
       
     for ( int a = 0; a < nodesPerAxis; a++ ) { // further collapsing causes data races, synchronization or GPU shared mem usage required
-      const double coeff = coeff0 * Kxi[ a*nodesPerAxis + index[d] ];
+      const double coeff = coeff0 * Kxi[ a*nodesPerAxis + index[d] ]; // @todo: provide transposed variant
       const double * Q = &QIn[ ( scalarIndex + (a - index[d])*strides[d] )*strideQ ];
       flux(Q, x, time, d-1, FAux);
       for (int var=0; var < unknowns; var++) {
@@ -600,8 +600,8 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
   ) >                                         nonconservativeProduct,
   double * __restrict__                       QOut, 
   const double * __restrict__                 UIn, 
-  const double * __restrict__                 weights,
   const double * __restrict__                 nodes,
+  const double * __restrict__                 weights,
   const double * __restrict__                 Kxi,
   const double * __restrict__                 iK1,
   const double * __restrict__                 FLCoeff,
