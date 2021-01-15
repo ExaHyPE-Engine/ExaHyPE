@@ -19,7 +19,6 @@ namespace exahype2 {
      * @param[in] cellCentre
      * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
      * @param[in] t time stamp
-     * @param[in] dt time step size
      * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
      * @param[in] unknowns the number of PDE unknowns that we evolve
      * @param[in] strideQ
@@ -36,7 +35,6 @@ namespace exahype2 {
         const tarch::la::Vector<Dimensions,double>& cellCentre,
         const double                                dx,
         const double                                t,
-        const double                                dt,
         const int                                   nodesPerAxis,
         const int                                   unknowns,
         const int                                   strideQ,

@@ -132,8 +132,8 @@ class UpdateCell(AbstractADERDGActionSet):
             {{SOLVER_INSTANCE}}.InvertedPredictorLhsOperator, // iK1,
             {{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,      // FLCoeff,
             {{SOLVER_INSTANCE}}.DerivativeOperator,   // dudx, 
-            marker.h()(0), // we assume cubic/square cells
             marker.x(),
+            marker.h()(0), // we assume cubic/square cells
             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
             {{ORDER}}, 
