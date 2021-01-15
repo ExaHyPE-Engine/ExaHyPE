@@ -26,7 +26,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_adjustSolution_body_AoS(
     const int                                   strideQ,
     const int                                   scalarIndex) {
   const tarch::la::Vector<Dimensions+1,int>     index  = delineariseIndex(scalarIndex,getStrides(nodesPerAxis,false));
-  const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
+  const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,0,nodes);
   const tarch::la::Vector<Dimensions, double>   x( ( coords.data() + 1 ) );
  
   adjustSolution(&UOut[ scalarIndex * strideQ ], x, t);
