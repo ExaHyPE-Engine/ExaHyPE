@@ -50,23 +50,47 @@ namespace exahype2 {
       int                                          auxiliaryVariables,
       typename SOLVER>
     void applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop_Rusanov(
-      const tarch::la::Vector<Dimensions,double>&  patchCentre,
-      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      const tarch::la::Vector<Dimensions,double>&  thepatchCentre,
+      const tarch::la::Vector<Dimensions,double>&  thepatchSize,
       double                                       t,
       double                                       dt,
       const double * __restrict__                  Qin,
       double * __restrict__                        Qout
     )
     {
+
+
+      // Sadly we cannot directly give the target region a vector due to 'non-trivially copyable'
+      double x0 = thepatchCentre[0];
+      double x1 = thepatchCentre[1];
+      double h0 = thepatchSize[0];
+      double h1 = thepatchSize[1];
+#if Dimensions==3
+      double x2 = thepatchCentre[2];
+      double h2 = thepatchSize[2];
+#endif
+
+
       for (int shift = 0; shift < 2; shift++)
       {
         #ifdef SharedOMP
-        #pragma omp parallel for simd collapse(2)
+           #if defined(OpenMPGPUOffloading)
+           #pragma omp target
+           #endif
+        #pragma omp parallel for collapse(2)
         #endif
+
         for (int x = shift; x <= numberOfVolumesPerAxisInPatch; x += 2)
         {
           for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
           {
+        #if Dimensions==2
+        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1};
+        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1};
+        #elif Dimensions==3
+        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
+        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
+        #endif
             const int leftVoxelInPreimage  = x +      (y + 1) * (2 + numberOfVolumesPerAxisInPatch);
             const int rightVoxelInPreimage = x + 1  + (y + 1) * (2 + numberOfVolumesPerAxisInPatch);
 
@@ -74,9 +98,9 @@ namespace exahype2 {
             const int rightVoxelInImage    = x     + y * numberOfVolumesPerAxisInPatch;
 
      
-            tarch::la::Vector<Dimensions,double> volumeH;
 
             // getVolumeSize
+            tarch::la::Vector<Dimensions,double> volumeH;
             for (int d=0; d<Dimensions; d++) {
               volumeH(d) = patchSize(d)/numberOfVolumesPerAxisInPatch;
             }
@@ -131,23 +155,29 @@ namespace exahype2 {
       for (int shift = 0; shift < 2; shift++)
       {
         #ifdef SharedOMP
-        #pragma omp parallel for simd collapse(2)
+           #if defined(OpenMPGPUOffloading)
+           #pragma omp target
+           #endif
+        #pragma parallel for collapse(2)
         #endif
         for (int y = shift; y <= numberOfVolumesPerAxisInPatch; y += 2)
         {
           for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
           {
+        #if Dimensions==2
+        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1};
+        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1};
+        #elif Dimensions==3
+        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
+        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
+        #endif
             const int lowerVoxelInPreimage = x + 1  +       y * (2 + numberOfVolumesPerAxisInPatch);
             const int upperVoxelInPreimage = x + 1  + (y + 1) * (2 + numberOfVolumesPerAxisInPatch);
             const int lowerVoxelInImage    = x      + (y - 1) *      numberOfVolumesPerAxisInPatch ;
             const int upperVoxelInImage    = x      +       y *      numberOfVolumesPerAxisInPatch ;
 
-            //tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (patchSize, numberOfVolumesPerAxisInPatch);
-            //tarch::la::Vector<Dimensions, double> volumeX = patchCentre - 0.5 * patchSize;
-
 
             tarch::la::Vector<Dimensions,double> volumeH;
-
             for (int d=0; d<Dimensions; d++) {
               volumeH(d) = patchSize(d)/numberOfVolumesPerAxisInPatch;
             }
@@ -156,9 +186,6 @@ namespace exahype2 {
             for (int d=0; d<Dimensions; d++) {
              volumeX(d) = patchCentre(d) - 0.5 * patchSize(d);
             }
-
-
-
 
             volumeX (0) += (x + 0.5) * volumeH (0);
             volumeX (1) +=         y * volumeH (1);
