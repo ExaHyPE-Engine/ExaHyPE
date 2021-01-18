@@ -127,7 +127,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   nvtxRangePushA("copyPatch");
 #endif
 
-#pragma omp target enter data map(to:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
+// the first one should be alloc: not to:
+#pragma omp target enter data map(alloc:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
 
   ::exahype2::fv::copyPatch(
     reconstructedPatch,
@@ -154,7 +155,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   nvtxRangePop();
 #endif
 
-#pragma omp target exit data map(from:destinationPatchOnGPU[0:destinationPatchSize])
+#pragma omp target exit data map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(delete:reconstructedPatch[0:sourcePatchSize])
 
 
   // get stuff explicitly back from GPU, as it will be stored
@@ -162,13 +163,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   double* destinationPatchOnCPU = ::tarch::allocateMemory(destinationPatchSize, ::tarch::MemoryLocation::Heap);
   std::copy_n(destinationPatchOnGPU,destinationPatchSize,destinationPatchOnCPU);
 
-  // Free data given in from calling routine (requires pointer name without underscore)
-  //double* reconstructedPatch = _reconstructedPatch;
-  // this causes problems --- fixing this will probably get rid of the GPU memory leak
-  //{{FREE_SKELETON_MEMORY}}
+  {{FREE_SKELETON_MEMORY}}
 
-  // segfaults
-  //::tarch::freeMemory(destinationPatchOnGPU, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
   ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),destinationPatchSize,destinationPatchOnCPU);
   logTraceOut( "run()" );
   return false;
