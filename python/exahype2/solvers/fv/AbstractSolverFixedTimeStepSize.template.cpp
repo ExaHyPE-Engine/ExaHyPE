@@ -69,7 +69,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
+  double                                       t,
+  double                                       dt
 ) {
   if (tarch::la::equals(t,0.0) ) {
     {{INITIAL_CONDITIONS_IMPLEMENTATION}}
