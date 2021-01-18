@@ -99,7 +99,7 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
       nonCriticalAssertion4( std::isfinite(S[i]), i, volumeX, volumeH, t );
       Q[i] += dt * S[i];
     }
-    enforceccz4constraints_(Q); // "cleans" Q, but knows nothing about S
+    // enforceccz4constraints_(Q); // "cleans" Q, but knows nothing about S
   }
   logTraceOut( "adjustSolution(...)" );
 }

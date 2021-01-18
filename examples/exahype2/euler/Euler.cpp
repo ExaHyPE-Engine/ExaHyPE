@@ -10,7 +10,8 @@ void examples::exahype2::euler::Euler::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
-  double                                       t
+  double                                       t,
+  double                                       dt
 ) {
   if (tarch::la::equals(t,0.0) ) {
     logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );

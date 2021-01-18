@@ -8,18 +8,14 @@
 tarch::logging::Log   examples::exahype2::euler::EulerOnGPU::_log( "examples::exahype2::euler::EulerOnGPU" );
 
 
-
-
-
-
-
 void examples::exahype2::euler::EulerOnGPU::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
+  double                                       t,
+  double                                       dt
 ) {
-  logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
+  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
     // initial conditions
     bool isInTheCentre = ( tarch::la::norm2( volumeX-tarch::la::Vector<Dimensions,double>(0.5) ) < 0.05 ); // TODO should 0.05 not depend on size of stuff??
