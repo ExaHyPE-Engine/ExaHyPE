@@ -56,33 +56,37 @@ void gaugeWave(
   Q[59] = 1.0;
 }
 
-/**
- * I don't adjust the solution, but I adjust the solution in the very
- * first time step, i.e. I impose initial conditions. For this, I forward
- * the initialisation request to the Fortran routines.
- */
+
+examples::exahype2::ccz4::CCZ4::CCZ4() {
+  if ( Scenario=="gaugewave-c++" ) {
+    const char* name = "GaugeWave";
+    int length = strlen(name);
+    initparameters_(&length, name);
+  }
+  else {
+    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
+  }
+}
+
+
 void examples::exahype2::ccz4::CCZ4::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
+  double                                       t,
+  double                                       dt
 ) {
-  logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
+  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
-      const char* name = "GaugeWave";
-      int length = strlen(name);
-      initparameters_(&length, name);
-    // initial conditions      
     if ( Scenario=="gaugewave-c++" ) {
-          gaugeWave(Q, volumeX, volumeH, t);
+      gaugeWave(Q, volumeX, volumeH, t);
     }
     else {
-
-          double width = volumeH(0);
-          double t     = 0.0;
-          double dt    = 0.0001;
-          logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
-      }
+      double width = volumeH(0);
+      double t     = 0.0;
+      double dt    = 0.0001;
+      logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
+    }
   }
   else{
     for(int i=0; i<64; i++){
@@ -90,11 +94,12 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
     }
     double S[64];
     memset(S, 0, 64*sizeof(double));
-    pdesource_(S,Q);
+    pdesource_(S,Q);    //  S(Q)
     for(int i=0; i<64; i++){
       nonCriticalAssertion4( std::isfinite(S[i]), i, volumeX, volumeH, t );
+      Q[i] += dt * S[i];
     }
-    enforceccz4constraints_(Q);
+    // enforceccz4constraints_(Q); // "cleans" Q, but knows nothing about S
   }
   logTraceOut( "adjustSolution(...)" );
 }

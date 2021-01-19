@@ -32,9 +32,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
+  double                                       t,
+  double                                       dt
 ) {
-  logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
+  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
     // initial conditions
   }

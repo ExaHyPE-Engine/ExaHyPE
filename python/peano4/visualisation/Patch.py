@@ -33,3 +33,7 @@ class Patch(object):
     self.values    = values
     self.subdomain_number = subdomain_number
       
+      
+  def __str__(self):
+    return "(" + str(self.offset) + "x" + str(self.size) + "," + str(self.values) + "," + str(self.subdomain_number) + ")"
+

@@ -32,7 +32,8 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
+      double                                       t,
+      double                                       dt
     )  override;
 
     virtual double maxEigenvalue(

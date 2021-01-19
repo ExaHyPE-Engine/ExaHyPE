@@ -151,7 +151,7 @@ def prepare3Dpatches(cell_data, dof, unknowns, description, is_data_associated_t
           mapping_count+=1
           y = patch_y_0 + mapping[mapping_count]*cell_data[p].size[1]
           mapping_count+=1
-          y = patch_z_0 + mapping[mapping_count]*cell_data[p].size[2]
+          z = patch_z_0 + mapping[mapping_count]*cell_data[p].size[2]
           mapping_count+=1
           points.InsertNextPoint([x, y, z])
 

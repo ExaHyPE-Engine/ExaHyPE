@@ -8,18 +8,14 @@
 tarch::logging::Log   examples::exahype2::euler::EulerOnGPU::_log( "examples::exahype2::euler::EulerOnGPU" );
 
 
-
-
-
-
-
 void examples::exahype2::euler::EulerOnGPU::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
+  double                                       t,
+  double                                       dt
 ) {
-  logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
+  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
     // initial conditions
     bool isInTheCentre = ( tarch::la::norm2( volumeX-tarch::la::Vector<Dimensions,double>(0.5) ) < 0.05 ); // TODO should 0.05 not depend on size of stuff??
@@ -124,35 +120,14 @@ void examples::exahype2::euler::EulerOnGPU::flux(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  switch (normal) {
-    case 0:
-        {
-          F[0] = Q[1];
-          F[1] = irho*Q[1]*Q[1] + p;
-          F[2] = irho*Q[2]*Q[1];
-          F[3] = irho*Q[3]*Q[1];
-          F[4] = irho*(Q[4]+p)*Q[1];
-        }
-        break;
-    case 1:
-        {
-          F[0] = Q[2];
-          F[1] = irho*Q[1]*Q[2];
-          F[2] = irho*Q[2]*Q[2] + p;
-          F[3] = irho*Q[3]*Q[2];
-          F[4] = irho*(Q[4]+p)*Q[2];
-        }
-        break;
-    case 2:
-        {
-          F[0] = Q[3];
-          F[1] = irho*Q[1]*Q[3];
-          F[2] = irho*Q[2]*Q[3];
-          F[3] = irho*Q[3]*Q[3] + p;
-          F[4] = irho*(Q[4]+p)*Q[3];
-        }
-        break;
-  }
+  const double coeff = irho*Q[normal+1];
+  F[0] = coeff*Q[0];
+  F[1] = coeff*Q[1];
+  F[2] = coeff*Q[2];
+  F[3] = coeff*Q[3];
+  F[4] = coeff*Q[4];
+  F[normal+1] += p;
+  F[4]        += coeff*p;
 
 }
 #if defined(OpenMPGPUOffloading)

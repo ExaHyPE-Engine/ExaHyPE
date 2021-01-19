@@ -11,9 +11,9 @@ import argparse
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Peano 4 - pvserver render script')
-  parser.add_argument("--filter-fine-grid", dest="filter_fine_grid", action="store_true", default=True, help="Display only fine grid" )
-  parser.add_argument("--render",   dest="render",  action="store_true", default=False, help="Skip interactive rendering" )
-  parser.add_argument("--convert",  dest="convert", action="store_true", default=True,  help="Convert into native vtk files" )
+  parser.add_argument("--no-filter-fine-grid", dest="filter_fine_grid", action="store_false", help="Display only fine grid" )
+  parser.add_argument("--render",              dest="render",           action="store_true",  help="Skip interactive rendering" )
+  parser.add_argument("--no-convert",          dest="convert",          action="store_false", help="Convert into native vtk files" )
   parser.add_argument(dest="filename", help="Input file name" )
   args = parser.parse_args()
 

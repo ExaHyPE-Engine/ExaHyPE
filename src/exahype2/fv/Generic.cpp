@@ -87,6 +87,9 @@ void exahype2::fv::copyPatch (
 
 #if Dimensions==2
   #ifdef SharedOMP
+     #if defined(OpenMPGPUOffloading)
+     #pragma omp target
+     #endif
   #pragma omp parallel for collapse(3)
   #endif
   for (int y=0; y<numberOfVolumesPerAxisInPatch; y++)
@@ -101,7 +104,7 @@ void exahype2::fv::copyPatch (
       }
     }
   }
-  #else
+#else
   int sourceSerialised = (numberOfVolumesPerAxisInPatch + haloSize * 2)
       * (numberOfVolumesPerAxisInPatch + haloSize * 2)
       + numberOfVolumesPerAxisInPatch + haloSize * 2 + haloSize;
@@ -110,6 +113,9 @@ void exahype2::fv::copyPatch (
 
   int helper = numberOfVolumesPerAxisInPatch+haloSize*2;
   #ifdef SharedOMP
+     #if defined(OpenMPGPUOffloading)
+     #pragma omp target
+     #endif
   #pragma omp parallel for collapse(4)
   #endif
   for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
