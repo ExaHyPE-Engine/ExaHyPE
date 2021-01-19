@@ -104,27 +104,27 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
       false
     );
   
-  // print test data 
-  std::cout << "\ntest data (QOut):\n\n";
-  for (int i = 0; i < nodesPerAxis3; i++) {
-    for (int m=0; m < unknowns; m++) {
-      const int i_QOut_testdata = i*unknowns  + m;
-      std::cout << std::setprecision(3) << spaceTimePredictor_PicardLoop_QOut[i_QOut_testdata] << " ";
-    }
-    std::cout << "\n";
-  }
-  std::cout << std::flush;
-  
-  // print result
-  std::cout << "\nresult (QOut):\n\n";
-  for (int i = 0; i < nodesPerAxis3; i++) {
-    for (int m=0; m < unknowns; m++) {
-      const int i_QOut = i*unknowns  + m;
-      std::cout << std::setprecision(3) << QOut[i_QOut] << " ";
-    }
-    std::cout << "\n";
-  }
-  std::cout << std::flush;
+  //// print test data 
+  //std::cout << "\ntest data (QOut):\n\n";
+  //for (int i = 0; i < nodesPerAxis3; i++) {
+  //  for (int m=0; m < unknowns; m++) {
+  //    const int i_QOut_testdata = i*unknowns  + m;
+  //    std::cout << std::setprecision(3) << spaceTimePredictor_PicardLoop_QOut[i_QOut_testdata] << " ";
+  //  }
+  //  std::cout << "\n";
+  //}
+  //std::cout << std::flush;
+  //
+  //// print result
+  //std::cout << "\nresult (QOut):\n\n";
+  //for (int i = 0; i < nodesPerAxis3; i++) {
+  //  for (int m=0; m < unknowns; m++) {
+  //    const int i_QOut = i*unknowns  + m;
+  //    std::cout << std::setprecision(3) << QOut[i_QOut] << " ";
+  //  }
+  //  std::cout << "\n";
+  //}
+  //std::cout << std::flush;
   
   for (int i = 0; i < nodesPerAxis3; i++) {
     for (int m=0; m < unknowns; m++) {

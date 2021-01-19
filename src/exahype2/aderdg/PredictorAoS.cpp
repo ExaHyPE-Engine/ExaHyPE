@@ -36,10 +36,10 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_initialis
   const int                   nodesPerAxis,
   const int                   strideQ,
   const int                   strideRhs,
-  const int                   scalarIndex) {
+  const int                   scalarIndex) {  
   const int it = delineariseIndex(scalarIndex,getStrides(nodesPerAxis))[0];
-  const double coeff = FLCoeff[ it ];
   
+  const double coeff = FLCoeff[ it ];
   for (int var = 0; var < strideQ; var++) {
     rhsOut[ scalarIndex*strideRhs + var ] = coeff * UIn[ ( scalarIndex / nodesPerAxis ) * strideQ + var ];
   }
@@ -209,20 +209,19 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_bo
   const int                   strideRhs,
   const int                   scalarIndex) {
   const int it = delineariseIndex(scalarIndex,getStrides(nodesPerAxis))[0];
-   
+    
   squaredResiduumOut = 0.0; 
   for (int var = 0; var < unknowns; var++) {
     double Q_new = 0;
-    //const double coeff = iweight * rhsIn[ scalarIndex*strideRhs + var ]; 
-    const double coeff = rhsIn[ scalarIndex*strideRhs + var ]; 
-    // @todo: check if operator is correct
     for (int a = 0; a < nodesPerAxis; a++) { // matmul time
-      Q_new += coeff * iK1[ it*nodesPerAxis + a ]; // note: iK1 is already the transposed inverse of K1
+      const double rhsVal = rhsIn[ (scalarIndex + (a-it)*1) * strideRhs + var ]; 
+      Q_new += rhsVal * iK1[ it*nodesPerAxis + a ]; // note: iK1 is already the transposed inverse of K1
     }
-    
-    const double difference = Q_new - QOut[ scalarIndex*strideQ + var ]; 
+   
+    const int indexQ = scalarIndex*strideQ + var; 
+    const double difference = Q_new - QOut[ indexQ ]; 
     squaredResiduumOut += difference * difference;
-    QOut[ scalarIndex*strideQ + var ] = Q_new;
+    QOut[ indexQ ] = Q_new;
     
     //@todo: enable in CPU version
     //assertion3( !std::isnan( Q[ scalarIndex ] ), scalarIndex, dt, invDx );
