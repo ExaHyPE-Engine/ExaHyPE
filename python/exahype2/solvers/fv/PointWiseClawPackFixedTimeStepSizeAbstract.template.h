@@ -31,7 +31,7 @@
  * error codes anyway, so it does not really make a difference.
  */
 {% if DISCRIMINATE_NORMAL==True -%}
-  extern "C" int {{CLAWPACK_RIEMANN_SOLVER}}_(int* ixy, int* num_eqn, int* num_aux, int* num_waves, double* q_l, double* q_r, double* aux_l, double* aux_r, double wave[3][3], double* s, double* amdq, double* apdq);
+  extern "C" int {{CLAWPACK_RIEMANN_SOLVER}}_(int* ixy, int* num_eqn, int* num_aux, int* num_waves, const double * __restrict__ q_l, const double * __restrict__ q_r, const double * __restrict__ aux_l, const double * __restrict__ aux_r, double wave[3][3], double* s, double* amdq, double* apdq);
 {% else -%}
    extern "C" int {{CLAWPACK_RIEMANN_SOLVER}}_(int* num_eqn, int* num_aux, int* num_waves, double* q_l, double* q_r, double* aux_l, double* aux_r, double* wave, double* s, double* amdq, double* apdq);
 {% endif %}
