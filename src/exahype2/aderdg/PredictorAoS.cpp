@@ -265,7 +265,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_bo
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS(
-    double * __restrict__       QHullOut,
+    double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const double * __restrict__ FLRCoeff[2],
     const int                   nodesPerAxis,
@@ -273,22 +273,23 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS
     const int                   scalarIndexHull) {
   const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
   const tarch::la::Vector<Dimensions+1,int> indexQHull = delineariseIndex(scalarIndexHull,strides); // (t,y,z,face) , (t,x,z,face), (t,x,y,face)
- 
-  const int d  = indexQHull[Dimensions] / 2;
-  const int lr = indexQHull[Dimensions] - 2*d;
+
+  const int faceIndex = indexQHull[Dimensions]; 
+  const int d  = faceIndex / 2;
+  const int lr = faceIndex - 2*d;
 
   for (int id=0; id<nodesPerAxis; id++) {
-    const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr,id);
+    const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
     const double coeff = FLRCoeff[lr][id];
     for (int var=0; var < strideQ; var++) {
-      QHullOut[ scalarIndexHull * strideQ + var ] += coeff * QIn[ scalarIndexQ*strideQ + var ]; 
+      QHullOut[ faceIndex ][ scalarIndexHull*strideQ + var ] += coeff * QIn[ scalarIndexQ*strideQ + var ]; 
     }
   }
 }
 
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_body_AoS(
-    double * __restrict__       QHullOut,
+    double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const int                   nodesPerAxis,
     const int                   strideQ,
@@ -296,14 +297,15 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
   const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
   const tarch::la::Vector<Dimensions+1,int> indexQHull = delineariseIndex(scalarIndexHull,strides); // (t,y,z,face) , (t,x,z,face), (t,x,y,face)
  
-  const int d  = indexQHull[Dimensions] / 2;
-  const int lr = indexQHull[Dimensions] - 2*d;
+  const int faceIndex = indexQHull[Dimensions]; 
+  const int d  = faceIndex / 2;
+  const int lr = faceIndex - 2*d;
 
   const int id = ( lr == 0 ) ? 0 : (nodesPerAxis-1);
   const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
   for (int var=0; var < strideQ; var++) {
-    QHullOut[ scalarIndexHull * strideQ + var ] = QIn[ scalarIndexQ*strideQ + var ]; 
+    QHullOut[ faceIndex ][ scalarIndexHull*strideQ + var ] = QIn[ scalarIndexQ*strideQ + var ]; 
   }
 }
 #if defined(OpenMPGPUOffloading)
@@ -749,7 +751,7 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
 }
 
 void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
-    double * __restrict__       QHullOut,
+    double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const double * __restrict__ FLCoeff,
     const double * __restrict__ FRCoeff,
@@ -776,7 +778,7 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
 }
 
 void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
-    double * __restrict__       QHullOut,
+    double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const double * __restrict__ FLCoeff, // just to have same signature as other routine
     const double * __restrict__ FRCoeff, // just to have same signature as other routine

@@ -250,7 +250,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
-      double * __restrict__       QHullOut,
+      double * __restrict__       QHullOut[Dimensions*2],
       const double * __restrict__ QIn,
       const double * __restrict__ FLRCoeff[2],
       const int                   nodesPerAxis,
@@ -279,7 +279,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
-      double * __restrict__       QHullOut,
+      double * __restrict__       QHullOut[Dimensions*2],
       const double * __restrict__ QIn,
       const int                   nodesPerAxis,
       const int                   strideQ,
@@ -422,7 +422,7 @@ namespace exahype2 {
      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */ 
     void spaceTimePredictor_extrapolate_loop_AoS(
-        double * __restrict__       QHullOut,
+        double * __restrict__       QHullOut[Dimensions*2],
         const double * __restrict__ QIn,
         const double * __restrict__ FLCoeff,
         const double * __restrict__ FRCoeff,
@@ -449,7 +449,7 @@ namespace exahype2 {
      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */ 
     void spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
-        double * __restrict__       QHullOut,
+        double * __restrict__       QHullOut[Dimensions*2],
         const double * __restrict__ QIn,
         const double * __restrict__ FLCoeff,
         const double * __restrict__ FRCoeff,
