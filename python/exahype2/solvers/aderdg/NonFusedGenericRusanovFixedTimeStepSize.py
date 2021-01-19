@@ -209,11 +209,27 @@ class UpdateCell(AbstractADERDGActionSet):
             {{NUMBER_OF_AUXILIARY_VARIABLES}},                            //  auxiliaryVariables,
             {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},   //  callFlux,
             {{ "true" if SOURCES_IMPLEMENTATION!="<none>" else "false" }},//  callSource,
-            {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }});   //  callNonconservativeProduct);
+            {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}     //  callNonconservativeProduct
+          );
 */ 
           ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
             fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
             spaceTimeQ,                           // QIn
+            {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+            {{ORDER}}, 
+            {{NUMBER_OF_UNKNOWNS}}, 
+            {{NUMBER_OF_AUXILIARY_VARIABLES}}
+          );
+
+          #if Dimensions == 2
+          double* QHullOut[Dimensions*2] = {{ '{' }}{%- for i in range(0,4) -%}fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation({{i}}).value{{ "," if not loop.last }}{%- endfor -%}{{ '}' }};
+          #else
+          double* QHullOut[Dimensions*2] = {{ '{' }}{%- for i in range(0,6) -%}fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation({{i}}).value{{ "," if not loop.last }}{%- endfor -%}{{ '}' }};
+          #endif 
+          ::exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
+            QHullOut,
+            spaceTimeQ,                           // QIn
+            {{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
             {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
             {{ORDER}}, 
             {{NUMBER_OF_UNKNOWNS}}, 

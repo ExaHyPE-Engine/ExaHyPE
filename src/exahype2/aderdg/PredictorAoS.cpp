@@ -275,8 +275,10 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS
   const tarch::la::Vector<Dimensions+1,int> indexQHull = delineariseIndex(scalarIndexHull,strides); // (t,y,z,face) , (t,x,z,face), (t,x,y,face)
 
   const int faceIndex = indexQHull[Dimensions]; 
-  const int d  = faceIndex / 2;
-  const int lr = faceIndex - 2*d;
+  const int lr  = faceIndex / Dimensions;
+  const int d   = faceIndex - Dimensions*lr;
+  //const int d  = faceIndex / 2;
+  //const int lr = faceIndex - 2*d;
 
   for (int id=0; id<nodesPerAxis; id++) {
     const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
@@ -298,8 +300,10 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
   const tarch::la::Vector<Dimensions+1,int> indexQHull = delineariseIndex(scalarIndexHull,strides); // (t,y,z,face) , (t,x,z,face), (t,x,y,face)
  
   const int faceIndex = indexQHull[Dimensions]; 
-  const int d  = faceIndex / 2;
-  const int lr = faceIndex - 2*d;
+  const int lr  = faceIndex / Dimensions;
+  const int d   = faceIndex - Dimensions*lr;
+  //const int d  = faceIndex / 2;
+  //const int lr = faceIndex - 2*d;
 
   const int id = ( lr == 0 ) ? 0 : (nodesPerAxis-1);
   const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );

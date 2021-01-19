@@ -227,8 +227,8 @@ class ADERDG(object):
     self._name                             = name
     self._DG_polynomial                    = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
     self._DG_polynomial_new                = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
-    self._face_spacetime_solution          = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
-    self._Riemann_result                   = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
+    self._face_spacetime_solution          = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" ) # replicated
+    self._Riemann_result                   = peano4.datamodel.Patch( (1*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
     
     #self._DG_polynomial_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
     #self._DG_polynomial_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
