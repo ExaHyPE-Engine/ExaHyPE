@@ -1057,7 +1057,7 @@ void peano4::grid::Spacetree::loadVertices(
     }
     logDebug(
       "loadVertices(...)",
-  	  "handled " << toString(type) << " vertex " << vertexIndex << " at " << vertexPositionWithinPatch << ": " <<
+      "handled " << toString(type) << " vertex " << vertexIndex << " at " << vertexPositionWithinPatch << ": " <<
       fineGridVertices[ peano4::utils::dLinearised(vertexIndex) ].toString()
     );
 
