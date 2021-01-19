@@ -17,6 +17,8 @@
 
 #include "tarch/services/ServiceRepository.h"
 
+#include "tarch/timing/Watch.h"
+
 
 tarch::logging::Log peano4::parallel::SpacetreeSet::_log( "peano4::parallel::SpacetreeSet" );
 
@@ -555,6 +557,8 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   }
   logTraceOut( "traverse(TraversalObserver&)-secondary" );
 
+  tarch::timing::Watch dataExchangeTime("peano4::parallel::SpacetreeSet", "traverse", false );
+
   exchangeVerticalDataBetweenTrees(observer);
 
   logTraceInWith1Argument( "traverse(TraversalObserver&)-tertiary", tertiaryTasks.size() );
@@ -566,10 +570,11 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   }
   logTraceOut( "traverse(TraversalObserver&)-tertiary" );
 
-  // Ensure that there's a consumer task around. Well, at least one.
-  tarch::multicore::processPendingTasks(0);
-
   exchangeHorizontalDataBetweenTrees(observer);
+
+  dataExchangeTime.stop();
+
+  logInfo( "traverse(TraversalObserver&)", "wait for MPI messages for " << dataExchangeTime.getCPUTime() << "s" );
 
   _state = SpacetreeSetState::Waiting;
 

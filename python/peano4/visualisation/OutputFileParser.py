@@ -27,6 +27,9 @@ class OutputFileParser(object):
         
       unknowns: Integer
         Number of unknowns per patch volume    
+        
+      mapping: series of d-dimensional duples
+        Distorts the domain
     
   """
   
@@ -44,21 +47,21 @@ class OutputFileParser(object):
     
     
   def _initialise_default_mapping_if_no_mapping_specified(self):
-    volumes_per_axis = self.dof
+    vertices_per_axis = self.dof
     if self.is_data_associated_to_cell:
-      volumes_per_axis += 1
+      vertices_per_axis += 1
     if self.mapping==[] and self.dimensions==2:
-      for y in range(volumes_per_axis):
-        for x in range(volumes_per_axis):
-          self.mapping.append(x*1.0/volumes_per_axis)
-          self.mapping.append(y*1.0/volumes_per_axis)
+      for y in range(vertices_per_axis):
+        for x in range(vertices_per_axis):
+          self.mapping.append(x*1.0/(vertices_per_axis-1))
+          self.mapping.append(y*1.0/(vertices_per_axis-1))
     if self.mapping==[] and self.dimensions==3:
-      for z in range(volumes_per_axis):
-        for y in range(volumes_per_axis):
-          for x in range(volumes_per_axis):
-            self.mapping.append(x*1.0/volumes_per_axis)
-            self.mapping.append(y*1.0/volumes_per_axis)
-            self.mapping.append(z*1.0/volumes_per_axis)
+      for z in range(vertices_per_axis):
+        for y in range(vertices_per_axis):
+          for x in range(vertices_per_axis):
+            self.mapping.append(x*1.0/(vertices_per_axis-1))
+            self.mapping.append(y*1.0/(vertices_per_axis-1))
+            self.mapping.append(z*1.0/(vertices_per_axis-1))
     
     
   def __parse_meta_data_line(self, line):

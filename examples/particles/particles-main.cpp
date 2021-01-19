@@ -106,8 +106,8 @@ int main(int argc, char** argv) {
     examples::particles::observers::Plot observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     logInfo( "main()", "dumped initial condition" )
-    for (int i=0; i<100; i++) {
-      for (int j=0; j<10; j++) {
+    for (int i=0; i<3; i++) {
+      for (int j=0; j<2; j++) {
         examples::particles::observers::MoveParticles observer;
         peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
       }

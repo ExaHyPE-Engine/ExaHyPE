@@ -5,10 +5,15 @@
 
 
 #include "tarch/logging/Log.h"
+
 #include "tarch/services/Service.h"
-#include "peano4/maps/maps.h"
+
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/BooleanSemaphore.h"
+
+#include "peano4/maps/maps.h"
+
 #include "Tasks.h"
 #include "TreeManagementMessage.h"
 
