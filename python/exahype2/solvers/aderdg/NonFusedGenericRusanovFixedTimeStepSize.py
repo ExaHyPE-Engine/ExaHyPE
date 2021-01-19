@@ -152,15 +152,73 @@ class UpdateCell(AbstractADERDGActionSet):
           ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS3d(
           #endif
           */
-          
-          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
-            fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
-            spaceTimeQ,                           // QIn
-            {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-            {{ORDER}}, 
-            {{NUMBER_OF_UNKNOWNS}}, 
-            {{NUMBER_OF_AUXILIARY_VARIABLES}}
-          );
+         
+          ::exahype2::aderdg::corrector_addCellContributions_loop_AoS(
+            [&](
+              const double * __restrict__                 Q,
+              const tarch::la::Vector<Dimensions,double>& x,
+              double                                      t,
+              int                                         normal,
+              double * __restrict__                       F
+            )->void {
+              {% if FLUX_IMPLEMENTATION!="<none>" %}
+              {{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+              {% endif %}
+            },
+            [&](
+              const double * __restrict__                 Q,
+              const tarch::la::Vector<Dimensions,double>& x,
+              double                                      t,
+              double * __restrict__                       S
+            )->void {
+              {% if SOURCES_IMPLEMENTATION!="<none>" %}
+              {{SOLVER_INSTANCE}}.algebraicSource(Q,x,t,S);
+              {% endif %}
+            },
+            [&](
+              const double * __restrict__                 Q,
+              const double * __restrict__                 dQ_or_dQdn,
+              const tarch::la::Vector<Dimensions,double>& x,
+              double                                      t,
+              int                                         normal,
+              double * __restrict__                       BgradQ
+            )->void {
+              {% if NCP_IMPLEMENTATION!="<none>" %}
+              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
+              {% endif %}
+            },
+            [&](
+              double * __restrict__                       Q,
+              const tarch::la::Vector<Dimensions,double>& x,
+              double                                      t
+            )->void {
+              //{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
+            },
+            fineGridCell{{SOLVER_NAME}}Q.value,                           //  UOut,
+            spaceTimeQ,                                                   //  QIn,
+            {{SOLVER_INSTANCE}}.QuadraturePoints,                         //  nodes,
+            {{SOLVER_INSTANCE}}.QuadratureWeights,                        //  weights,
+            {{SOLVER_INSTANCE}}.StiffnessOperator,                        //  Kxi,
+            {{SOLVER_INSTANCE}}.DerivativeOperator,                       //  dudx,
+            marker.x(),                                                   //  cellCentre,
+            marker.h()(0),                                                //  dx,
+            {{SOLVER_INSTANCE}}.getMinTimeStamp(),                        //  t,
+            {{SOLVER_INSTANCE}}.getMinTimeStepSize(),                     //  dt,
+            {{ORDER}},                                                    //  order,
+            {{NUMBER_OF_UNKNOWNS}},                                       //  unknowns,
+            {{NUMBER_OF_AUXILIARY_VARIABLES}},                            //  auxiliaryVariables,
+            {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},   //  callFlux,
+            {{ "true" if SOURCES_IMPLEMENTATION!="<none>" else "false" }},//  callSource,
+            {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }});   //  callNonconservativeProduct);
+ 
+          //::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
+          //  fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
+          //  spaceTimeQ,                           // QIn
+          //  {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+          //  {{ORDER}}, 
+          //  {{NUMBER_OF_UNKNOWNS}}, 
+          //  {{NUMBER_OF_AUXILIARY_VARIABLES}}
+          //);
         }
         break;
       case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
