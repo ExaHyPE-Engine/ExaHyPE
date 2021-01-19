@@ -84,8 +84,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     #endif
     {% endif %}
       [&](
-        double                                       QL[],
-        double                                       QR[],
+        const double* __restrict__                   QL,
+        const double* __restrict__                   QR,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       dx,
         double                                       t,
@@ -96,7 +96,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       ) -> void {
         ::exahype2::fv::splitRusanov1d(
           [] (
-           double * __restrict__ Q,
+           const double * __restrict__ Q,
            const tarch::la::Vector<Dimensions,double>&  faceCentre,
            const tarch::la::Vector<Dimensions,double>&  volumeH,
            double                                       t,
@@ -112,8 +112,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
           },
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
-            double                                       Q[],
-            double                                       gradQ[][Dimensions],
+            const double* __restrict__                   Q,
+            const double * __restrict__                  dQdn,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -121,11 +121,11 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
-            double                                       Q[],
+            const double* __restrict__                   Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -178,8 +178,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       #endif
       {% endif %}
         [&](
-          double                                       QL[],
-          double                                       QR[],
+          const double* __restrict__                   QL,
+          const double* __restrict__                   QR,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       dx,
           double                                       t,
@@ -190,7 +190,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
         ) -> void {
         ::exahype2::fv::splitRusanov1d(
           [] (
-           double * __restrict__ Q,
+           const double * __restrict__ Q,
            const tarch::la::Vector<Dimensions,double>&  faceCentre,
            const tarch::la::Vector<Dimensions,double>&  volumeH,
            double                                       t,
@@ -206,8 +206,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
           },
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
-            double                                       Q[],
-            double                                       gradQ[][Dimensions],
+            const double* __restrict__                   Q,
+            const double * __restrict__                  dQdn,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -215,11 +215,11 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
-            double                                       Q[],
+            const double* __restrict__                   Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,

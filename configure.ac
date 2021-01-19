@@ -169,14 +169,14 @@ AS_IF([test "x${ax_cv_cxx_compiler_vendor}" = xintel],
 
 AS_IF([test "x${ax_cv_cxx_compiler_vendor}" = xgnu], 
 [
-  AX_COMPARE_VERSION( $ax_cv_cxx_compiler_version, [ge], [9.3.0], , [ AC_MSG_ERROR([GNU compiler version ($ax_cv_cxx_compiler_version) too bold. Use at least 9.3.0. Switch compiler through CXX flag.]) ])
+  AX_COMPARE_VERSION( $ax_cv_cxx_compiler_version, [ge], [9.3.0], , [ AC_MSG_ERROR([GNU compiler version ($ax_cv_cxx_compiler_version) too old. Use at least 9.3.0. Switch compiler through CXX flag.]) ])
   found_compiler_type=true
 ]
 )
 
 AS_IF([test "x${ax_cv_cxx_compiler_vendor}" = xclang], 
 [
-  AX_COMPARE_VERSION( $ax_cv_cxx_compiler_version, [ge], [9.0.0], , [ AC_MSG_ERROR([LLVM compiler version ($ax_cv_cxx_compiler_version) too bold. Use at least 9.0.0. Switch compiler through CXX flag.]) ])
+  AX_COMPARE_VERSION( $ax_cv_cxx_compiler_version, [ge], [9.0.0], , [ AC_MSG_ERROR([LLVM compiler version ($ax_cv_cxx_compiler_version) too old. Use at least 9.0.0. Switch compiler through CXX flag.]) ])
   found_compiler_type=true
 ]
 )
@@ -336,6 +336,7 @@ if test "$gpu" == nvidia; then
     AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
 fi
+AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$gpu" = xnvidia ])
 
 
 

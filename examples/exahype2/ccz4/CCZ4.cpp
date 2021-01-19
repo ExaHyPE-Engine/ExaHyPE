@@ -7,6 +7,7 @@
  * routines written in Fortran.
  */
 #include "PDE.h"
+#include "Properties.h"
 
 /**
  * This file is automatically created by Peano. I need it to interact with
@@ -55,30 +56,37 @@ void gaugeWave(
   Q[59] = 1.0;
 }
 
-/**
- * I don't adjust the solution, but I adjust the solution in the very
- * first time step, i.e. I impose initial conditions. For this, I forward
- * the initialisation request to the Fortran routines.
- */
+
+examples::exahype2::ccz4::CCZ4::CCZ4() {
+  if ( Scenario=="gaugewave-c++" ) {
+    const char* name = "GaugeWave";
+    int length = strlen(name);
+    initparameters_(&length, name);
+  }
+  else {
+    std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
+  }
+}
+
+
 void examples::exahype2::ccz4::CCZ4::adjustSolution(
-  double * __restrict__ Q, // Q[64+0],
+  double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
+  double                                       t,
+  double                                       dt
 ) {
-  logTraceInWith3Arguments( "adjustSolution(...)", volumeX, volumeH, t );
+  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
-    // initial conditions      
     if ( Scenario=="gaugewave-c++" ) {
-          gaugeWave(Q, volumeX, volumeH, t);
+      gaugeWave(Q, volumeX, volumeH, t);
     }
     else {
-
-          double width = volumeH(0);
-          double t     = 0.0;
-          double dt    = 0.0001;
-          logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
-      }
+      double width = volumeH(0);
+      double t     = 0.0;
+      double dt    = 0.0001;
+      logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
+    }
   }
   else{
     for(int i=0; i<64; i++){
@@ -86,11 +94,12 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
     }
     double S[64];
     memset(S, 0, 64*sizeof(double));
-    pdesource_(S,Q);
+    pdesource_(S,Q);    //  S(Q)
     for(int i=0; i<64; i++){
       nonCriticalAssertion4( std::isfinite(S[i]), i, volumeX, volumeH, t );
+      Q[i] += dt * S[i];
     }
-    enforceccz4constraints_(Q);
+    // enforceccz4constraints_(Q); // "cleans" Q, but knows nothing about S
   }
   logTraceOut( "adjustSolution(...)" );
 }
@@ -99,7 +108,7 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
 
 
 double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
-  double * __restrict__ Q, // Q[64+0],
+  const double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -137,8 +146,8 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
 
 
 void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
-  double * __restrict__ Q, // Q[64+0],
-  double                                       gradQ[64+0][Dimensions],
+  const double * __restrict__                  Q, // Q[64+0],
+  const double * __restrict__                  dQdn, // [64+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -147,11 +156,16 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 ) {
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
 
+  assertion( normal>=0 );
+  assertion( normal<Dimensions );
+
   double gradQSerialised[64*3];
   for (int i=0; i<64; i++) {
-    gradQSerialised[i+0*64] = gradQ[i][0];
-    gradQSerialised[i+1*64] = gradQ[i][1];
-    gradQSerialised[i+2*64] = gradQ[i][2];
+    gradQSerialised[i+0*64] = 0.0;
+    gradQSerialised[i+1*64] = 0.0;
+    gradQSerialised[i+2*64] = 0.0;
+
+    gradQSerialised[i+normal*64] = dQdn[i];
   }
   pdencp_(BgradQ, Q, gradQSerialised);
 
@@ -165,8 +179,8 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 
 
 void examples::exahype2::ccz4::CCZ4::boundaryConditions(
-  double * __restrict__ Qinside, // Qinside[64+0]
-  double * __restrict__ Qoutside, // Qoutside[64+0]
+  const double * __restrict__                  Qinside, // Qinside[64+0]
+  double * __restrict__                        Qoutside, // Qoutside[64+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

@@ -57,6 +57,7 @@ class {FULL_QUALIFIED_CLASSNAME} {{
     );
 
     void adjustSolution(
+  double * __restrict__ Q,
       double* Q,
       const tarch::la::Vector<Dimensions,double>&  cellCentre,
       const tarch::la::Vector<Dimensions,double>&  cellH,

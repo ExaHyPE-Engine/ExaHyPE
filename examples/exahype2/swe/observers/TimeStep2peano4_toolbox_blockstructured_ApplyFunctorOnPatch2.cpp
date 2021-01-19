@@ -167,6 +167,7 @@ void examples::exahype2::swe::observers::TimeStep2peano4_toolbox_blockstructured
     int index = 0;
     dfor( volume, 11 ) {
       InstanceOfSWE.adjustSolution(
+  double * __restrict__ Q,
         fineGridCellSWEQ.value + index,
         ::exahype2::getVolumeCentre( marker.x(), marker.h(), 11, volume), 
         ::exahype2::getVolumeSize( marker.h(), 11 ),

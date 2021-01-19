@@ -24,6 +24,7 @@ tarch::logging::Log   examples::exahype2::finitevolumes::MHD::_log( "examples::e
 
 
 void examples::exahype2::finitevolumes::MHD::adjustSolution(
+  double * __restrict__ Q,
   double Q[9],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,

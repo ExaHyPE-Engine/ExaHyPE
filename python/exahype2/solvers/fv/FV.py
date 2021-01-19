@@ -135,7 +135,8 @@ class AdjustPatch(AbstractFVActionSet):
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
         ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
         ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp()
+        {{SOLVER_INSTANCE}}.getMinTimeStamp(),
+        {{SOLVER_INSTANCE}}.getMinTimeStepSize()
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
@@ -182,8 +183,8 @@ class HandleBoundary(AbstractFVActionSet):
     ) {
       ::exahype2::fv::applyBoundaryConditions(
         [&](
-          double                                       Qinside[],
-          double                                       Qoutside[],
+          const double * __restrict__                  Qinside,
+          double * __restrict__                        Qoutside,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -478,7 +479,6 @@ class FV(object):
      output: peano4.output.Output
       
     """
-
     templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
     
     abstractHeaderDictionary = {}

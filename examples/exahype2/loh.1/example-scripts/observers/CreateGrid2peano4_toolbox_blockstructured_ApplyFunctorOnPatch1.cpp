@@ -169,6 +169,7 @@ void examples::exahype2::loh1::observers::CreateGrid2peano4_toolbox_blockstructu
     int index = 0;
     dfor( volume, 5 ) {
       InstanceOfLOH1.adjustSolution(
+  double * __restrict__ Q,
         fineGridCellLOH1Q.value + index,
         ::exahype2::getVolumeCentre( marker.x(), marker.h(), 5, volume), 
         ::exahype2::getVolumeSize( marker.h(), 5 ),

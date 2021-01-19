@@ -22,19 +22,22 @@ tarch::logging::Log   examples::exahype2::loh1::::_log( "examples::exahype2::loh
 
 
 void examples::exahype2::loh1::::adjustSolution(
+  double * __restrict__ Q,
   double Q[9+4],
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
 ) {
-  logTraceInWith3Arguments( "adjustSolution(...)", x, h, t );
+  logTraceInWith3Arguments( "adjustSolution(
+  double * __restrict__ Q,...)", x, h, t );
   if (tarch::la::equals(t,0.0) ) {
     // initial conditions
   }
   else {
     // other stuff
   }
-  logTraceOut( "adjustSolution(...)" );
+  logTraceOut( "adjustSolution(
+  double * __restrict__ Q,...)" );
 }
 
 

@@ -27,18 +27,20 @@ class ExtractFineGridFilter( Filter ):
   
   
   def __patches_overlap(self,a,b,dimensions):
+    result = False
     if dimensions==3:
-      return a.offset[0] + a.size[0] >= b.offset[0] and \
-             a.offset[1] + a.size[1] >= b.offset[1] and \
-             a.offset[2] + a.size[2] >= b.offset[2] and \
-             a.offset[0] <= b.offset[0] + b.size[0] and \
-             a.offset[1] <= b.offset[1] + b.size[1] and \
-             a.offset[2] <= b.offset[2] + b.size[2]
+      result = a.offset[0] + a.size[0] > b.offset[0] and \
+             a.offset[1] + a.size[1] > b.offset[1] and \
+             a.offset[2] + a.size[2] > b.offset[2] and \
+             a.offset[0] < b.offset[0] + b.size[0] and \
+             a.offset[1] < b.offset[1] + b.size[1] and \
+             a.offset[2] < b.offset[2] + b.size[2]
     else:
-      return a.offset[0] + a.size[0] >= b.offset[0] and \
-             a.offset[1] + a.size[1] >= b.offset[1] and \
-             a.offset[0] <= b.offset[0] + b.size[0] and \
-             a.offset[1] <= b.offset[1] + b.size[1] 
+      result = a.offset[0] + a.size[0] > b.offset[0] and \
+             a.offset[1] + a.size[1] > b.offset[1] and \
+             a.offset[0] < b.offset[0] + b.size[0] and \
+             a.offset[1] < b.offset[1] + b.size[1] 
+    return result
   
   
   def render(self,cell_data, dof, unknowns, dimensions):

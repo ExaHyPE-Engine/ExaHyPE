@@ -89,7 +89,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
   def set_implementation(self,
     flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
     memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
-    use_split_loop          = False
+    use_split_loop          = True
   ):
     """
      Call implementation configuration of master class, but exchange the actual compute kernel
@@ -98,7 +98,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
       flux, ncp, eigenvalues, boundary_conditions, refinement_criterion, initial_conditions,
       memory_location, use_split_loop)
 
-    self._action_set_update_cell = UpdateCellWithEnclavesOnAccelerator(self)
+    self._action_set_update_cell = UpdateCellWithEnclavesOnAccelerator(self, use_split_loop=True)
     
     
   def _GPU_enclave_task_name(self):
@@ -131,4 +131,5 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
 
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
-        
+
+    exahype2.gpu.add_exahype_objects(output.makefile)

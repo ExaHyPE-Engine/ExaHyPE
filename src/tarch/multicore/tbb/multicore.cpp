@@ -1,4 +1,5 @@
 #include "tarch/multicore/multicore.h"
+#include "config.h"
 
 #if defined(SharedTBB)
 double* tarch::allocateMemory(int size, MemoryLocation location) {

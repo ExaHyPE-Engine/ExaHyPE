@@ -15,10 +15,16 @@ ExaHyPE2Sources = \
   RefinementControl.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
+  aderdg/CorrectorAoS.cpp \
+  aderdg/Generic.cpp \
+  aderdg/KernelUtils.cpp \
+  aderdg/PredictorAoS.cpp \
+  aderdg/RusanovNonlinearAoS.cpp \
   fv/BoundaryConditions.cpp \
   fv/Generic.cpp \
   fv/Rusanov.cpp \
-  fv/tests/CopyPatchTest.cpp
+  fv/tests/CopyPatchTest.cpp \
+  fv/tests/applySplit1DRiemannToPatch_Overlap1AoSTest.cpp
 
 
  
