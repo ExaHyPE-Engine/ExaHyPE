@@ -158,7 +158,7 @@ namespace exahype2 {
            #if defined(OpenMPGPUOffloading)
            #pragma omp target
            #endif
-        #pragma parallel for collapse(2)
+        #pragma omp parallel for collapse(2)
         #endif
         for (int y = shift; y <= numberOfVolumesPerAxisInPatch; y += 2)
         {
