@@ -1,5 +1,3 @@
-#if 0
-
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "ADERDGTest.h"
@@ -9,13 +7,13 @@
 
 
 void exahype2::aderdg::tests::ADERDGTest::run() {
+  validate(false);
   // testMethod (testConstruction);
 }
 
 
 void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loop() {
-  logInfo( "testSpaceTimePredictorNonlinear()", "Test space time predictor nonlinear, ORDER=3, DIM=2" );
-
+  /*
   // geometry
   const tarch::la::Vector<DIMENSIONS, double> x(0.0, 0.0);
   const double dx = 5e-02;
@@ -116,6 +114,7 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
           eps, i);
     }
   }
+  */
 }
 
 exahype2::aderdg::tests::ADERDGTest::ADERDGTest():
@@ -231,7 +230,6 @@ exahype2::aderdg::tests::ADERDGTest::ADERDGTest():
     2.57000000000000,  0.999999999999999, 0.100000000000000, 0.200000000000000,
     0.299999999999999, 2.57000000000000,  0.999999999999999, 0.100000000000000,
     0.200000000000000, 0.300000000000000, 2.57000000000000,  0.999999999999999,
-    0.100000000000000, 0.200000000000000, 0.300000000000000, 2.57000000000000} {}
+    0.100000000000000, 0.200000000000000, 0.300000000000000, 2.57000000000000}
+{
 }
-
-#endif

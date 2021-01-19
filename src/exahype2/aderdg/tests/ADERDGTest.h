@@ -1,5 +1,3 @@
-#if 0
-
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #ifndef _EXAHYPE2_ADERDG_TESTS_ADERDGTEST_H_
@@ -10,7 +8,7 @@
 namespace exahype2 {
   namespace aderdg {
     namespace tests {
-      class ADEiRDGTest;
+      class ADERDGTest;
     }
   }
 }
@@ -18,8 +16,7 @@ namespace exahype2 {
 /**
  * Provides tests for types Vector, DynamicVector and all Vector functionality.
  */
-class exahype2::aderdg::tests::ADERDGTest : public tarch::tests::TestCase
-{
+class exahype2::aderdg::tests::ADERDGTest : public tarch::tests::TestCase {
 private:
 
   /**
@@ -62,16 +59,9 @@ public:
   /**
    * This routine is triggered by the TestCaseCollection
    */
-  virtual void run();
-
-  /**
-   * Setup your test case.
-   */
-  virtual void setUp() {};
+  void run() override;
 };
 
 
 
 #endif /* _EXAHYPE2_ADERDG_TESTS_ADERDGTEST_H_ */
-
-#endif
