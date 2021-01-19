@@ -151,8 +151,8 @@ class UpdateCell(AbstractADERDGActionSet):
           #else
           ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS3d(
           #endif
-          */
-         
+*/
+/*         
           ::exahype2::aderdg::corrector_addCellContributions_loop_AoS(
             [&](
               const double * __restrict__                 Q,
@@ -210,15 +210,15 @@ class UpdateCell(AbstractADERDGActionSet):
             {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},   //  callFlux,
             {{ "true" if SOURCES_IMPLEMENTATION!="<none>" else "false" }},//  callSource,
             {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }});   //  callNonconservativeProduct);
- 
-          //::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
-          //  fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
-          //  spaceTimeQ,                           // QIn
-          //  {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-          //  {{ORDER}}, 
-          //  {{NUMBER_OF_UNKNOWNS}}, 
-          //  {{NUMBER_OF_AUXILIARY_VARIABLES}}
-          //);
+*/ 
+          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
+            fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
+            spaceTimeQ,                           // QIn
+            {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+            {{ORDER}}, 
+            {{NUMBER_OF_UNKNOWNS}}, 
+            {{NUMBER_OF_AUXILIARY_VARIABLES}}
+          );
         }
         break;
       case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
