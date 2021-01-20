@@ -183,11 +183,9 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
 
-    self._patch_overlap.generator.store_persistent_condition   = "not marker.isRefined() and " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-    self._patch_overlap.generator.load_persistent_condition  = "not marker.isRefined() and " \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
+    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
+
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
 

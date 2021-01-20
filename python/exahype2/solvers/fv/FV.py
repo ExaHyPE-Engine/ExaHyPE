@@ -335,9 +335,9 @@ class FV(object):
 
     self._action_set_adjust_cell              = AdjustPatch(self, "not marker.isRefined()")
     self._action_set_AMR                      = AMROnPatch(self, "not marker.isRefined()")
-    self._action_set_handle_boundary          = HandleBoundary(self, "not marker.isRefined()")
-    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self, "not marker.isRefined()")
-    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self, "not marker.isRefined()")
+    self._action_set_handle_boundary          = HandleBoundary(self, self._store_face_data_default_predicate() )
+    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
+    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
     self._action_set_update_cell              = None
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack

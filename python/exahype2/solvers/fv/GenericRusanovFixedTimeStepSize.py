@@ -155,12 +155,8 @@ class GenericRusanovFixedTimeStepSize( FV ):
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
 
-    # @todo Raus. Dafure gibt es eine Routine
-    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-    self._patch_overlap.generator.load_persistent_condition  = self._load_face_data_default_predicate() + " and " \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
+    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
       
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
