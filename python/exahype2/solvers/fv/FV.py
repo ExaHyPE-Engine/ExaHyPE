@@ -51,25 +51,25 @@ class AMROnPatch(AbstractFVActionSet):
   if ({{PREDICATE}}) { 
     ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
-    if (tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+    if (tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
       refinementCriterion = ::exahype2::RefinementCommand::Refine;
     } 
     else {
       int index = 0;
       dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-        refinementCriterion = refinementCriterion and {{SOLVER_INSTANCE}}.refinementCriterion(
+        refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
           ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
           ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-          {{SOLVER_INSTANCE}}.getMinTimeStamp()
+          repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
         );
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
       }
      
-      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < {{SOLVER_INSTANCE}}.getMinMeshSize() ) {
+      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.getMinMeshSize() ) {
         refinementCriterion = ::exahype2::RefinementCommand::Keep;
       } 
-      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
         refinementCriterion = ::exahype2::RefinementCommand::Keep;
       } 
     }
@@ -86,7 +86,7 @@ class AMROnPatch(AbstractFVActionSet):
   
   def get_body_of_getGridControlEvents(self):
     return """
-  return refinementControl.getGridControlEvents();
+  return repositories::refinementControl.getGridControlEvents();
 """ 
 
 
@@ -99,7 +99,7 @@ class AMROnPatch(AbstractFVActionSet):
 
     if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = """
-  refinementControl.merge( _localRefinementControl );
+  repositories::refinementControl.merge( _localRefinementControl );
 """
     
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
@@ -131,12 +131,12 @@ class AdjustPatch(AbstractFVActionSet):
   if ({{PREDICATE}}) { 
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      {{SOLVER_INSTANCE}}.adjustSolution(
+      repositories::{{SOLVER_INSTANCE}}.adjustSolution(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
         ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
         ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        {{SOLVER_INSTANCE}}.getMinTimeStepSize()
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize()
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
@@ -169,13 +169,13 @@ class HandleBoundary(AbstractFVActionSet):
   TemplateHandleBoundary = """
     logDebug( 
       "touchFaceFirstTime(...)", 
-      "label=" << fineGridFaceLabel.toString() << ", " << {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions] << 
+      "label=" << fineGridFaceLabel.toString() << ", " << repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions] << 
       ",marker=" << marker.toString()
     );
     if (
       {{PREDICATE}}
       and
-      not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
+      not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
       and
       not marker.isRefined() 
       and 
@@ -191,11 +191,11 @@ class HandleBoundary(AbstractFVActionSet):
           double                                       dt,
           int                                          normal
         ) -> void {
-          {{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
+          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
         },  
         marker.x(),
         marker.h(),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp(),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
         {{TIME_STEP_SIZE}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -316,11 +316,11 @@ class FV(object):
     
     self._patch_overlap.generator.includes     += """
 #include "peano4/utils/Loop.h"
-#include "observers/SolverRepository.h" 
+#include "repositories/SolverRepository.h" 
 """
     self._patch_overlap_new.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "observers/SolverRepository.h" 
+#include "repositories/SolverRepository.h" 
 """
    
     self._min_h                = min_h
@@ -335,12 +335,15 @@ class FV(object):
 
     self._action_set_adjust_cell              = AdjustPatch(self, "not marker.isRefined()")
     self._action_set_AMR                      = AMROnPatch(self, "not marker.isRefined()")
-    self._action_set_handle_boundary          = HandleBoundary(self, "not marker.isRefined()")
-    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self, "not marker.isRefined()")
-    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self, "not marker.isRefined()")
+    self._action_set_handle_boundary          = HandleBoundary(self, self._store_face_data_default_predicate() )
+    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
+    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
     self._action_set_update_cell              = None
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+
+    self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate()
+    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate()
     
     self._patch_overlap.generator.send_condition               = "false"
     self._patch_overlap.generator.receive_and_merge_condition  = "false"
@@ -354,9 +357,41 @@ class FV(object):
     self._patch_overlap_new.generator.store_persistent_condition   = "false"
     self._patch_overlap_new.generator.load_persistent_condition    = "false"
 
+    self._patch.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+    self._patch_overlap.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+    self._patch_overlap_new.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+
     self.plot_description = ""
     pass
 
+
+  def _store_cell_data_default_predicate(self):
+    return "not marker.isRefined() " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+  
+  
+  def _load_cell_data_default_predicate(self):
+    return "not marker.isRefined() " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+
+
+  def _store_face_data_default_predicate(self):
+    return "not marker.isRefined() " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+  
+  
+  def _load_face_data_default_predicate(self):
+    return "not marker.isRefined() " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+  
   
   def _unknown_identifier(self):
     return self._name+"Q"
@@ -399,7 +434,7 @@ class FV(object):
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
 
-#include "SolverRepository.h"
+#include "repositories/SolverRepository.h"
 """
 
 

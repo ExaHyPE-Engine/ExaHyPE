@@ -36,18 +36,28 @@ namespace peano4 {
      * remove overlaps and fuse individual requests. The consolidation
      * algorithm is pretty primitive:
      *
-     * - We remove the first event from the input sequence and hold it.
-     * - We check it against all remaining elements from the input set. If
-     *   they fit together, merge into the one currently held and remove the
-     *   other one from the input.
-     * - Once we've run through the input set, dump the one orginally taken
-     *   from the input set (and maybe merged with others) and place it in
-     *   the output set.
-     * - If we have been able to merge any two events in the input set, we
-     *   call the routine again (tail recursion). This is important as the
-     *   merger of two regions might yield a new region which is adjacent to
-     *   another big region which can be merged.
+     * - We create a new (empty) result list.
+     * - We iterate over the input list. 
+     * - Per entry, we check it against all elements that have already been
+     *   added ot the result set. 
+     *   -- If the current one is adjacent to an element from the output set,
+     *      and if both trigger the same kind of refinement, we enlarge the 
+     *      element that is already in the result set and memorise that we 
+     *      have "inserted" something into the output. We can immediately 
+     *      terminate our run-through through the output.
+     *   -- If a refinement entry in the input sequence overlaps with an 
+     *      erase entry in the output (or the other way round), we keep the 
+     *      refinement only. We can immediately terminate our run-through 
+     *      through the output.
+     *   -- If an entry from the input set has not triggered any modification
+     *      of an entry in the output set, we append it to the output set.
+     * - If changes have been made, i.e. if the output set is smaller than 
+     *   the input set, then we rerun the algorithm recursively again. Due to
+     *   mergers, four adjacent blocks might now form two bigger blocks which 
+     *   in turn can be merged once again.
      *
+     * <h2> Two boxes can be merged into one </h2>
+     * 
      * The "next to each other" implementation is again simplistic: We
      * construct the bounding box around two events and compare its volume
      * to the sum of the volumes of the two elements. If the bounding box
