@@ -45,7 +45,7 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     template<
-      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          numVPAIP, // numberofVolumesPerAxisInPatch
       int                                          unknowns,
       int                                          auxiliaryVariables,
       typename SOLVER>
@@ -59,17 +59,11 @@ namespace exahype2 {
     )
     {
 
-
       // Sadly we cannot directly give the target region a vector due to 'non-trivially copyable'
       double x0 = thepatchCentre[0];
       double x1 = thepatchCentre[1];
       double h0 = thepatchSize[0];
       double h1 = thepatchSize[1];
-#if Dimensions==3
-      double x2 = thepatchCentre[2];
-      double h2 = thepatchSize[2];
-#endif
-
 
       for (int shift = 0; shift < 2; shift++)
       {
@@ -80,44 +74,30 @@ namespace exahype2 {
         #pragma omp parallel for collapse(2)
         #endif
 
-        for (int x = shift; x <= numberOfVolumesPerAxisInPatch; x += 2)
+        for (int x = shift; x <= numVPAIP; x += 2)
         {
-          for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+          for (int y = 0; y < numVPAIP; y++)
           {
-        #if Dimensions==2
-        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1};
-        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1};
-        #elif Dimensions==3
-        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
-        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
-        #endif
-            const int leftVoxelInPreimage  = x +      (y + 1) * (2 + numberOfVolumesPerAxisInPatch);
-            const int rightVoxelInPreimage = x + 1  + (y + 1) * (2 + numberOfVolumesPerAxisInPatch);
+            tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1};
+            tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1};
 
-            const int leftVoxelInImage     = x - 1 + y * numberOfVolumesPerAxisInPatch;
-            const int rightVoxelInImage    = x     + y * numberOfVolumesPerAxisInPatch;
+            const int leftVoxelInPreimage  = x +      (y + 1) * (2 + numVPAIP);
+            const int rightVoxelInPreimage = x + 1  + (y + 1) * (2 + numVPAIP);
 
-     
+            const int leftVoxelInImage     = x - 1 + y * numVPAIP;
+            const int rightVoxelInImage    = x     + y * numVPAIP;
+
 
             // getVolumeSize
-            tarch::la::Vector<Dimensions,double> volumeH;
-            for (int d=0; d<Dimensions; d++) {
-              volumeH(d) = patchSize(d)/numberOfVolumesPerAxisInPatch;
-            }
-
+            tarch::la::Vector<2,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP};
             // Assignment vectorA = vectorB - 0.5*vectorC
-            tarch::la::Vector<Dimensions, double> volumeX;
-            for (int d=0; d<Dimensions; d++) {
-             volumeX(d) = patchCentre(d) - 0.5 * patchSize(d);
-            }
+            tarch::la::Vector<Dimensions, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1)};
 
-            volumeX (0) += x * volumeH (0);
-            volumeX (1) += (y + 0.5) * volumeH (1);
+            volumeX(0) += x * volumeH (0);
+            volumeX(1) += (y + 0.5) * volumeH (1);
 
             auto QL = Qin + leftVoxelInPreimage  * (unknowns + auxiliaryVariables);
             auto QR = Qin + rightVoxelInPreimage * (unknowns + auxiliaryVariables);
-            
-            tarch::la::Vector<Dimensions, double> xx = {volumeX(0), volumeX(1)};
             
             auto dx = volumeH(0);
             int normal = 0;
@@ -125,14 +105,14 @@ namespace exahype2 {
             double fluxFL[unknowns];
             double fluxFR[unknowns];
 
-            SOLVER::flux( QL, x, dx, t, normal, fluxFL );
-            SOLVER::flux( QR, x, dx, t, normal, fluxFR );
+            // The arguments don't make any sense
+            SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+            SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
 
-            double lambdaMaxL = SOLVER::maxEigenvalue(QL,x,dx,t,normal);
-            double lambdaMaxR = SOLVER::maxEigenvalue(QR,x,dx,t,normal);
+            double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
+            double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
 
             double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
-
 
             for (int unknown = 0; unknown < unknowns; unknown++)
             {
@@ -141,7 +121,7 @@ namespace exahype2 {
                 double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
                 Qout[leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown]  -= dt / volumeH (0) * fl;
               }
-              if (x < numberOfVolumesPerAxisInPatch)
+              if (x < numVPAIP)
               {
                 double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
                 Qout[rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
@@ -160,32 +140,21 @@ namespace exahype2 {
            #endif
         #pragma omp parallel for collapse(2)
         #endif
-        for (int y = shift; y <= numberOfVolumesPerAxisInPatch; y += 2)
+        for (int y = shift; y <= numVPAIP; y += 2)
         {
-          for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+          for (int x = 0; x < numVPAIP; x++)
           {
-        #if Dimensions==2
-        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1};
-        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1};
-        #elif Dimensions==3
-        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
-        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
-        #endif
-            const int lowerVoxelInPreimage = x + 1  +       y * (2 + numberOfVolumesPerAxisInPatch);
-            const int upperVoxelInPreimage = x + 1  + (y + 1) * (2 + numberOfVolumesPerAxisInPatch);
-            const int lowerVoxelInImage    = x      + (y - 1) *      numberOfVolumesPerAxisInPatch ;
-            const int upperVoxelInImage    = x      +       y *      numberOfVolumesPerAxisInPatch ;
+            tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1};
+            tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1};
+            const int lowerVoxelInPreimage = x + 1  +       y * (2 + numVPAIP);
+            const int upperVoxelInPreimage = x + 1  + (y + 1) * (2 + numVPAIP);
+            const int lowerVoxelInImage    = x      + (y - 1) *      numVPAIP ;
+            const int upperVoxelInImage    = x      +       y *      numVPAIP ;
 
-
-            tarch::la::Vector<Dimensions,double> volumeH;
-            for (int d=0; d<Dimensions; d++) {
-              volumeH(d) = patchSize(d)/numberOfVolumesPerAxisInPatch;
-            }
-
-            tarch::la::Vector<Dimensions, double> volumeX;
-            for (int d=0; d<Dimensions; d++) {
-             volumeX(d) = patchCentre(d) - 0.5 * patchSize(d);
-            }
+            // getVolumeSize
+            tarch::la::Vector<2,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP};
+            // Assignment vectorA = vectorB - 0.5*vectorC
+            tarch::la::Vector<Dimensions, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1)};
 
             volumeX (0) += (x + 0.5) * volumeH (0);
             volumeX (1) +=         y * volumeH (1);
@@ -193,18 +162,17 @@ namespace exahype2 {
             auto QL = Qin + lowerVoxelInPreimage  * (unknowns + auxiliaryVariables);
             auto QR = Qin + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
             
-            tarch::la::Vector<Dimensions, double> xx = {volumeX(0), volumeX(1)};
             auto dx = volumeH(0);
             int normal = 1;
 
             double fluxFL[unknowns];
             double fluxFR[unknowns];
 
-            SOLVER::flux( QL, x, dx, t, normal, fluxFL );
-            SOLVER::flux( QR, x, dx, t, normal, fluxFR );
+            SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+            SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
 
-            double lambdaMaxL = SOLVER::maxEigenvalue(QL,x,dx,t,normal);
-            double lambdaMaxR = SOLVER::maxEigenvalue(QR,x,dx,t,normal);
+            double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
+            double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
             double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
             for (int unknown = 0; unknown < unknowns; unknown++)
@@ -214,7 +182,7 @@ namespace exahype2 {
                 double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
                 Qout[lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
               }
-              if (y < numberOfVolumesPerAxisInPatch)
+              if (y < numVPAIP)
               {
                 double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
                 Qout[upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
@@ -232,18 +200,221 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     template<
-      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          numVPAIP,
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      typename T>
+      typename SOLVER>
     void applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop_Rusanov(
-      const tarch::la::Vector<Dimensions,double>&  patchCentre,
-      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      const tarch::la::Vector<Dimensions,double>&  thepatchCentre,
+      const tarch::la::Vector<Dimensions,double>&  thepatchSize,
       double                                       t,
       double                                       dt,
       const double * __restrict__                  Qin,
       double * __restrict__                        Qout
-    );
+    )
+    {
+
+      // Sadly we cannot directly give the target region a vector due to 'non-trivially copyable'
+      double x0 = thepatchCentre[0];
+      double x1 = thepatchCentre[1];
+      double x2 = thepatchCentre[2];
+      double h0 = thepatchSize[0];
+      double h1 = thepatchSize[1];
+      double h2 = thepatchSize[2];
+
+      for (int shift = 0; shift < 2; shift++)
+      {
+        #ifdef SharedOMP
+           #if defined(OpenMPGPUOffloading)
+           #pragma omp target
+           #endif
+        #pragma omp parallel for collapse(3)
+        #endif
+        for (int x = shift; x <= numVPAIP; x += 2)
+        {
+          for (int z = 0; z < numVPAIP; z++)
+          {
+            for (int y = 0; y < numVPAIP; y++)
+            {
+              tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
+              tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
+
+              const int leftVoxelInPreimage  = x      + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+              const int rightVoxelInPreimage = x + 1  + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+              const int leftVoxelInImage     = x - 1  +       y * numVPAIP       +       z * numVPAIP * numVPAIP;
+              const int rightVoxelInImage    = x      +       y * numVPAIP       +       z * numVPAIP * numVPAIP;
+
+              // getVolumeSize
+              tarch::la::Vector<2,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP,patchSize(2)/numVPAIP};
+              // Assignment vectorA = vectorB - 0.5*vectorC
+              tarch::la::Vector<Dimensions, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1), patchCentre(2)-0.5*patchSize(2)};
+
+              volumeX (0) += x * volumeH (0);
+              volumeX (1) += (y + 0.5) * volumeH (1);
+              volumeX (2) += (z + 0.5) * volumeH (2);
+
+              auto QL = Qin + leftVoxelInPreimage  * (unknowns + auxiliaryVariables);
+              auto QR = Qin + rightVoxelInPreimage * (unknowns + auxiliaryVariables);
+
+              auto dx = volumeH(0);
+              int normal = 0;
+
+              double fluxFL[unknowns];
+              double fluxFR[unknowns];
+
+              SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+              SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+
+              double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
+              double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
+              double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+
+              for (int unknown = 0; unknown < unknowns; unknown++)
+              {
+                if (x > 0)
+                {
+                  double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  Qout[leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown]  -= dt / volumeH (0) * fl;
+                }
+                if (x < numVPAIP)
+                {
+                  double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  Qout[rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      for (int shift = 0; shift < 2; shift++)
+      {
+        #ifdef SharedOMP
+           #if defined(OpenMPGPUOffloading)
+           #pragma omp target
+           #endif
+        #pragma omp parallel for collapse(3)
+        #endif
+        for (int y = shift; y <= numVPAIP; y += 2)
+        {
+          for (int z = 0; z < numVPAIP; z++)
+          {
+            for (int x = 0; x < numVPAIP; x++)
+            {
+              tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
+              tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
+
+              const int lowerVoxelInPreimage = x + 1 +       y * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+              const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+              const int lowerVoxelInImage    = x     + (y - 1) * numVPAIP       + z * numVPAIP * numVPAIP;
+              const int upperVoxelInImage = x + y * numVPAIP                    + z * numVPAIP * numVPAIP;
+
+              tarch::la::Vector<2,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP,patchSize(2)/numVPAIP};
+              tarch::la::Vector<Dimensions, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1), patchCentre(2)-0.5*patchSize(2)};
+
+              volumeX(0) += (x + 0.5) * volumeH(0);
+              volumeX(1) +=         y * volumeH(1);
+              volumeX(2) += (z + 0.5) * volumeH(2);
+
+              auto QL = Qin + lowerVoxelInPreimage * (unknowns + auxiliaryVariables);
+              auto QR = Qin + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
+
+              auto dx = volumeH(0);
+              int normal = 1;
+
+              double fluxFL[unknowns];
+              double fluxFR[unknowns];
+
+              SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+              SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+
+              double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
+              double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
+              double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+
+
+              for (int unknown = 0; unknown < unknowns; unknown++)
+              {
+                if (y > 0)
+                {
+                  double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  Qout[lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
+                }
+                if (y < numVPAIP)
+                {
+                  double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  Qout[upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      for (int shift = 0; shift < 2; shift++)
+      {
+        #ifdef SharedOMP
+           #if defined(OpenMPGPUOffloading)
+           #pragma omp target
+           #endif
+        #pragma omp parallel for collapse(3)
+        #endif
+        for (int z = shift; z <= numVPAIP; z += 2)
+        {
+          for (int y = 0; y < numVPAIP; y++)
+          {
+            for (int x = 0; x < numVPAIP; x++)
+            {
+              tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
+              tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
+
+              const int lowerVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) +       z * (2 + numVPAIP) * (2 + numVPAIP);
+              const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+              const int lowerVoxelInImage = x + y * numVPAIP                    + (z - 1) * numVPAIP * numVPAIP;
+              const int upperVoxelInImage = x + y * numVPAIP                    +       z * numVPAIP * numVPAIP;
+
+              tarch::la::Vector<2,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP,patchSize(2)/numVPAIP};
+              tarch::la::Vector<Dimensions, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1), patchCentre(2)-0.5*patchSize(2)};
+
+              volumeX(0) += (x + 0.5) * volumeH(0);
+              volumeX(1) += (y + 0.5) * volumeH(1);
+              volumeX(2) +=         z * volumeH(2);
+
+              auto QL = Qin + lowerVoxelInPreimage * (unknowns + auxiliaryVariables);
+              auto QR = Qin + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
+
+              auto dx = volumeH(0);
+              int normal = 2;
+
+              double fluxFL[unknowns];
+              double fluxFR[unknowns];
+
+              SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+              SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+
+              double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
+              double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
+              double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+
+
+              for (int unknown = 0; unknown < unknowns; unknown++)
+              {
+                if (z > 0)
+                {
+                  double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  Qout[lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
+                }
+                if (z < numVPAIP)
+                {
+                  double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  Qout[upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
+                }
+              }
+            }
+          }
+        }
+      }
+    };
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
