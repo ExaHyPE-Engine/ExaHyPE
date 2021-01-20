@@ -142,7 +142,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 #ifdef UseNVIDIA
   nvtxRangePushA("Rusanov");
 #endif
+  #if Dimensions==2
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
+  #elif Dimensions==3
+  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
+  #endif
     _marker.x(),
     _marker.h(),
     timeStamp,
@@ -155,6 +159,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   nvtxRangePop();
 #endif
 
+  // Ab hier ist run , ^^^ alles in ctor
 #pragma omp target exit data map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(delete:reconstructedPatch[0:sourcePatchSize])
 
 
