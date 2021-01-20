@@ -17,7 +17,7 @@ class StepsToStepRepository(object):
     self.d["STEP_RETURN_CASE"]   = ""
 
   def __get_full_namespace(self):
-    return self.steps._namespace + [ "observers" ]
+    return self.steps._namespace + [ "repositories" ]
 
   def __get_class_name(self):
     return "StepRepository"

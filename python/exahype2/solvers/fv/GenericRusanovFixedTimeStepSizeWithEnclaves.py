@@ -19,7 +19,7 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
-  if ( marker.isEnclaveCell() and not marker.isRefined() and {{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
+  if ( marker.isEnclaveCell() and not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
 
     if ( taskNumber>=0 ) {
@@ -107,7 +107,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             {% if FLUX_IMPLEMENTATION=="<none>" %}
             for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
             {% else %}
-            {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
           {% if NCP_IMPLEMENTATION!="<none>" %}
@@ -121,7 +121,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
+            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
@@ -132,7 +132,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             double                                       dt,
             int                                          normal
           ) -> double {
-            return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
           },
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
@@ -201,7 +201,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             {% if FLUX_IMPLEMENTATION=="<none>" %}
             for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
             {% else %}
-            {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
           {% if NCP_IMPLEMENTATION!="<none>" %}
@@ -215,7 +215,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
+            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
@@ -226,7 +226,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             double                                       dt,
             int                                          normal
           ) -> double {
-            return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
           },
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
@@ -293,7 +293,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
-#include "SolverRepository.h"
+#include "repositories/SolverRepository.h"
 """
 
 
@@ -416,10 +416,10 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
     self._patch_overlap.generator.includes  += """
-#include "../observers/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """    
     self._patch_overlap_new.generator.includes  += """
-#include "../observers/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """    
 
     self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined() and " + primary_or_initialisation_sweep_predicate)
@@ -502,7 +502,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     
     """
     d[ "TIME_STEP_SIZE" ] = self._time_step_size
-    d[ "TIME_STAMP" ]     = d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
+    d[ "TIME_STAMP" ]     = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
     
     d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
     d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation

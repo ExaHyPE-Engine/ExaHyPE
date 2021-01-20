@@ -184,10 +184,10 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     self._use_split_loop                      = False
 
     self._patch_overlap.generator.store_persistent_condition   = "not marker.isRefined() and " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
     self._patch_overlap.generator.load_persistent_condition  = "not marker.isRefined() and " \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
 
@@ -232,8 +232,8 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
         in/out argument
     
     """
-    d[ "TIME_STEP_SIZE" ]         = self._time_step_size
-    d[ "TIME_STAMP" ]                   = d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
+    d[ "TIME_STEP_SIZE" ]                = self._time_step_size
+    d[ "TIME_STAMP" ]                    = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
     
     d[ "CLAWPACK_RIEMANN_SOLVER"]        = self.clawpack_Riemann_solver
 

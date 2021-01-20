@@ -43,7 +43,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
           {% if FLUX_IMPLEMENTATION=="<none>" %}
           for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
           {% else %}
-          observers::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+          repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
           {% endif %}
         },
         {% if NCP_IMPLEMENTATION!="<none>" %}
@@ -57,7 +57,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
           int                                          normal,
           double                                       BgradQ[]
         ) -> void {
-          observers::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
         },
         {% endif %}
         [] (
@@ -68,7 +68,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
           double                                       dt,
           int                                          normal
         ) -> double {
-          return observers::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
         },
         QL, QR, x, dx, t, dt, normal,
         {{NUMBER_OF_UNKNOWNS}},
@@ -78,8 +78,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
     },
     marker.x(),
     marker.h(),
-    observers::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-    observers::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+    repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+    repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
     {{NUMBER_OF_UNKNOWNS}},
     {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -120,7 +120,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   double destinationPatchOnGPU[destinationPatchSize]; // This works now since we know the array size at compile time (maybe later this needs to be on Heap)
   double * reconstructedPatch = _reconstructedPatch; // Fixes omp restrictions
 
-  const double timeStamp = observers::{{SOLVER_INSTANCE}}.getMinTimeStamp();
+  const double timeStamp = repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp();
 
 
 #ifdef UseNVIDIA

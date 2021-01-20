@@ -63,7 +63,7 @@ class AMR(AbstractADERDGActionSet):
   if (not marker.isRefined()) { 
     ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
-    if (tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+    if (tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
       refinementCriterion = ::exahype2::RefinementCommand::Refine;
     } 
     else {
@@ -71,21 +71,21 @@ class AMR(AbstractADERDGActionSet):
       tarch::la::Vector<Dimensions,double> x;
       dfor( quadraturePoint, {{ORDER}}+1 ) {
         for (int d=0; d<Dimensions; d++) {
-          x(d) = {{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
+          x(d) = repositories::{{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
         }
-        refinementCriterion = refinementCriterion and {{SOLVER_INSTANCE}}.refinementCriterion(
+        refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
           x,
           marker.h(),
-          {{SOLVER_INSTANCE}}.getMinTimeStamp()
+          repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
         );
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
       }
      
-      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < {{SOLVER_INSTANCE}}.getMinMeshSize() ) {
+      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.getMinMeshSize() ) {
         refinementCriterion = ::exahype2::RefinementCommand::Keep;
       } 
-      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
         refinementCriterion = ::exahype2::RefinementCommand::Keep;
       } 
     }
@@ -138,12 +138,12 @@ class AdjustCell(AbstractADERDGActionSet):
     tarch::la::Vector<Dimensions,double> x;
     dfor( quadraturePoint, {{ORDER}}+1 ) {
       for (int d=0; d<Dimensions; d++) {
-        x(d) = {{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
+        x(d) = repositories::{{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
       }
-      {{SOLVER_INSTANCE}}.adjustSolution(
+      repositories::{{SOLVER_INSTANCE}}.adjustSolution(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
         x,
-        {{SOLVER_INSTANCE}}.getMinTimeStamp()
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
