@@ -9,8 +9,8 @@ patch files:
 
 \begin{enumerate}
   \item You visualise them directly within Paraview (Section~\ref{label:postprocessing:display-in-paraview}).
-  \item You use a Python-based visualisation suite from the command line. The steps 
-  are the same as in Section~\ref{label:postprocessing:display-in-paraview}.
+  \item You use a Python-based visualisation suite from the command line
+  (Section~\ref{label:postprocessing:convert-with-paraview}).
   \item You convert the patch files via a C++ command line tool into VTK and
   postprocess the data from there
   (Section~\ref{section:postprocessing:command-line}).
@@ -54,7 +54,7 @@ On some systems, Paraview seems to
 only know its internal libraries, so you have to add these manually. On my
 system, I use
   \begin{code}
-export PYTHONPATH=../../../python:/usr/lib/python3/dist-packages  
+export PYTHONPATH=.../Peano/python:/usr/lib/python3/dist-packages  
   \end{code}
 The latter holds \texttt{jinja2} on my system.
 
@@ -189,7 +189,48 @@ Study the source code for further details.
 
 
 
-\section{Offline/command-line conversion}
+\section{Offline/command line conversion with Python/Paraview}
+\label{label:postprocessing:convert-with-paraview}
+
+\begin{remark}
+ This is my favourite starting point for data if I'm interested in whole movies
+ and not only particular snapshots. It is inconvenient for large datasets, as 
+ it is too slow. For large datasets, you might have to move on to a conversion
+ via the precompiled scripts (Section
+ \ref{section:postprocessing:command-line}).
+\end{remark}
+
+
+\noindent
+The command line, Python-based conversion of \Peano\ works if and only if you
+have Paraview plus Python installed.
+First, ensure \Peano's visulisation component is in your Python path:
+\begin{code}
+export PYTHONPATH=.../Peano/python  
+\end{code}
+
+\noindent
+or
+
+\begin{code}
+export PYTHONPATH=.../Peano/python:/usr/lib/python3/dist-packages  
+\end{code}
+
+
+\noindent
+After that, use the conversion script there to translate your
+\texttt{peano-patch-file}. It is important that you interpret this script
+through \texttt{pvpython}:
+
+\begin{code}
+pvpython .../Peano/python/peano4/visualisation/render.py 
+\end{code}
+
+\noindent
+You should see a usage message now. 
+
+
+\section{Offline/command-line conversion (executable)}
 \label{section:postprocessing:command-line}
 
 
@@ -283,46 +324,12 @@ A standard postprocessing workflow on the command line reads as follows:
   \item Use Paraview or VisIt to display the vtu file.
 \end{enumerate}
 
-%   \item If you configure with \texttt{--with-vtk}, but the makefile cannot find
-%   the headers, you have to add the correct search path\footnote.
-%   You can either set the
-% \begin{code}
-% export CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:/usr/include/vtk
-% \end{code}
-%   or you set the corresponding environment variable prior to the configure
-%   script. I always recommend that latter route, as our Python API inherits all of the configure
-%   variables, i.e.~it will then know where to search for VTK:
-% \begin{code}
-% export CXXFLAGS=$CXXFLAGS:"-I/usr/local/include/vtk-8.90"
-% \end{code}
-%   The first setting btw stems from a Fedora system, the latter example from an
-%   Ubuntu installation, while OpenSUSE in our test farm got the includes
-%   automatically right.
+\begin{remark}
+ Unfortunately, our C++ conversion kernels do not offer all the functionality we
+ now find within the Python-based tools. Things alike mesh distortion are
+ missing here.
+\end{remark}
 
-
-%  Depending on the version chosen, \Peano\ will try to link against a different
-%  set of library files.
-    
-% -with-vtk-version=
-
-
-  
-  
-  
-  
-%   Many VTK installations append the version number to the library, i.e.~they create a library \texttt{libvtkCommonCore-8.90.so} instead of
-%   \texttt{libvtkCommonCore.so} if you use VTK 8.9. 
-%   \Peano tries to detect this version number automatically but in case it fails,
-%   you can use the options \texttt{--with-vtk=<path>} and \texttt{--with-vtk-version=<MAJOR.MINORS>}
-%   to specify exactly the Peano version you want to use.
-%   If you are not sure, run \texttt{find / -name libvtk*.so} and see what it finds. 
-%   %After that, tell the
-%   %configuration explicitly which VTK extension to use:
-%   %\begin{code}
-%   %--with-vtk-version=8.90
-%   %\end{code}
-%   BTW: Not all Linux distributions install VTK with these extensions, so you
-%   have to check manually on your system.
 
     
 \section{Tweaking your pictures}
