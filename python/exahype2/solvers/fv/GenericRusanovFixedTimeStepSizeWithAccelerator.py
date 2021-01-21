@@ -58,8 +58,8 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
       jinja2.Template( self.TemplateUpdateCell ).render(**d),
       solver._reconstructed_array_memory_location,
       "not marker.isRefined() and (" + \
-      "observers::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
-      "observers::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
+      "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
+      "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
     )
     self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)

@@ -36,9 +36,9 @@ parser.add_argument("--m",               dest="mode",                     defaul
 parser.add_argument("--t",               dest="timesteps",      type=int, default=10, help="Number of timesteps" )
 parser.add_argument("--p",               dest="peanodir",                 default="../../../", help="Peano4 directory" )
 parser.add_argument("--c",               dest="configuredir",             default="../../../", help="Location of configure" )
-parser.add_argument("--o",               dest="out",             default="peano4", help="Executable name" )
-parser.add_argument("--f",               dest="force",           default=False, action="store_true", help="Allow overwriting of output file." )
-parser.add_argument("--gpu",             dest="GPU",             default=False, action="store_true", help="Use GPU features." )
+parser.add_argument("--o",               dest="out",                      default="peano4", help="Executable name" )
+parser.add_argument("--f",               dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
+parser.add_argument("--type",            dest="type",                     choices=["default", "enclave", "gpu"], default="default", help="Pick implementation variant" )
 parser.add_argument("--dt",              dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 args = parser.parse_args()
 
@@ -83,7 +83,7 @@ max_h          = args.h
 
 
 thesolver = None
-if args.GPU:
+if args.type=="gpu":
   print("Turning on OpenMP for GPUs")
   thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator(
     "EulerOnGPU",
@@ -93,9 +93,17 @@ if args.GPU:
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
-
-else:
+elif args.type=="enclave":
   thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+    "Euler",
+    patch_size,
+    unknowns, 0,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
+elif args.type=="default":
+  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize(
     "Euler",
     patch_size,
     unknowns, 0,

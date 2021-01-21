@@ -39,7 +39,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         double                                       FL[],
         double                                       FR[]
       ) -> void {
-        {{SOLVER_INSTANCE}}.solveRiemannProblem(
+        repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem(
           QL, QR,
           x, dx, t, dt, 
           normal,
@@ -110,11 +110,9 @@ class GenericRiemannFixedTimeStepSize( FV ):
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
     
-    self._patch_overlap.generator.store_persistent_condition   = "not marker.isRefined() and " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-    self._patch_overlap.generator.load_persistent_condition  = "not marker.isRefined() and " \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
+    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
+    
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
 
@@ -174,7 +172,7 @@ class GenericRiemannFixedTimeStepSize( FV ):
     
     """
     d[ "TIME_STEP_SIZE" ]               = self._time_step_size
-    d[ "TIME_STAMP" ]                   = d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
+    d[ "TIME_STAMP" ]                   = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
 
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation

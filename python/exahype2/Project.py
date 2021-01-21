@@ -158,13 +158,13 @@ class Project(object):
       templatefile_prefix + "SolverRepository.template.h",
       templatefile_prefix + "SolverRepository.template.cpp",
       "SolverRepository", 
-      self._project.namespace + ["observers"],
-      "observers", 
+      self._project.namespace + ["repositories"],
+      "repositories", 
       solverRepositoryDictionary,
       True)
 
     self._project.output.add( generated_solver_files )
-    self._project.output.makefile.add_cpp_file( "observers/SolverRepository.cpp" )
+    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
     
     
   def generate_Peano4_project(self):
