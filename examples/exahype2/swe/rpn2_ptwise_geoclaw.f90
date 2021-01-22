@@ -76,7 +76,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     !inform of a bad riemann problem from the start
     if (qr(1) < 0.d0 .or. ql(1) < 0.d0) then
         print *, "Negative input: hl, hr = ", qr(1), ql(1)
-        !stop 
+        stop 
     end if
 
     amdq(:) = 0.d0
@@ -84,6 +84,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     s(:) = 0.d0
     fwave(:, :) = 0d0
  
+    ! Set normal direction 
     if (ixy == 1) then
         mu = 2
         nv = 3
@@ -91,15 +92,8 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
         mu = 3
         nv = 2
     end if
-    
-    ! note that notation for u and v reflects assumption that the
-    ! Riemann problems are in the x-direction with u in the normal
-    ! direciton and v in the orthogonal direcion, but with the above
-    ! definitions of mu and mv the routine also works with ixy=2
-    ! in which case waves come from the
-    ! Riemann problems u_t + g(u)_y = 0 in the y-direction.
-    
 
+    !zero (small) negative values if they exist
     if (qr(1) < 0.d0) then
         qr(:) = 0.d0
     end if
@@ -159,6 +153,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
         call riemanntype(hL,hL,uL,-uL,hstar,s1m,s2m,rare1,rare2,1,drytol,g)
         hstartest=max(hL,hstar)
         if (hstartest+bL < bR) then !right state should become ghost values that mirror left for wall problem
+            !bR=hstartest+bL
             wall(2) = 0.d0
             wall(3) = 0.d0
             hR=hL
@@ -174,6 +169,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
         call riemanntype(hR,hR,-uR,uR,hstar,s1m,s2m,rare1,rare2,1,drytol,g)
         hstartest=max(hR,hstar)
         if (hstartest+bR < bL) then   !left state should become ghost values that mirror right
+            !bL=hstartest+bR
             wall(1)=0.d0
             wall(2)=0.d0
             hL=hR
