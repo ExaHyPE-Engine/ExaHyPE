@@ -45,6 +45,21 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
 {% endif %}
 
 
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
+  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__ S // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+) {
+  logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+  // @todo implement
+  logTraceOutWith( "sourceTerm(...)" );
+}
+{% endif %}
+
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(

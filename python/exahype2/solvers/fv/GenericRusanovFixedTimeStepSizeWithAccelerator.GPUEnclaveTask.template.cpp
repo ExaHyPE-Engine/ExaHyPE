@@ -49,7 +49,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
         {% if NCP_IMPLEMENTATION!="<none>" %}
         [] (
           const double* __restrict__                   Q,
-          const double * __restrict__                  dQdn,
+          const double * __restrict__                  deltaQ,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -57,7 +57,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
           int                                          normal,
           double                                       BgradQ[]
         ) -> void {
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
         },
         {% endif %}
         [] (
@@ -75,6 +75,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         FL,FR
       );
+    },
+    [] (
+      const double* __restrict__                   Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double* __restrict__                         S
+    ) -> void {
+      repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, volumeCentre, volumeH, t, dt, S);
     },
     marker.x(),
     marker.h(),

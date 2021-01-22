@@ -147,7 +147,7 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
 
 void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
   const double * __restrict__                  Q, // Q[64+0],
-  const double * __restrict__                  dQdn, // [64+0]
+  const double * __restrict__                  deltaQ, // [64+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -165,7 +165,7 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
     gradQSerialised[i+1*64] = 0.0;
     gradQSerialised[i+2*64] = 0.0;
 
-    gradQSerialised[i+normal*64] = dQdn[i];
+    gradQSerialised[i+normal*64] = deltaQ[i];
   }
   pdencp_(BgradQ, Q, gradQSerialised);
 

@@ -58,7 +58,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
             const double * __restrict__                  Q,
-            const double * __restrict__                  dQdn,
+            const double * __restrict__                  deltaQ,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -66,7 +66,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
+            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
@@ -83,6 +83,20 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           {{NUMBER_OF_UNKNOWNS}},
           {{NUMBER_OF_AUXILIARY_VARIABLES}},
           FL,FR
+        );
+      },
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__                        S
+      ) -> void {
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(
+          Q,
+          x, dx, t, dt, 
+          S
         );
       },
       marker.x(),
@@ -154,6 +168,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+    self._source_term_implementation          = PDETerms.Empty_Implementation
 
     self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
     self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
@@ -168,7 +183,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
 
 
   def set_implementation(self,
-    flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
+    flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term_implementation=None,
     memory_location         = None,
     use_split_loop          = False
   ):
@@ -196,6 +211,8 @@ class GenericRusanovFixedTimeStepSize( FV ):
       self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions!=None: 
       self._initial_conditions_implementation         = initial_conditions
+    if source_term_implementation!=None:
+      self._source_term_implementation                = source_term_implementation
 
     if memory_location!=None:
       self._reconstructed_array_memory_location = memory_location
@@ -233,4 +250,5 @@ class GenericRusanovFixedTimeStepSize( FV ):
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+    d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
 

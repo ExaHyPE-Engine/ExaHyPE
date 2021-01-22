@@ -67,6 +67,20 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           FL[i] = -FL[i];
         }
       },
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__                        S
+      ) -> void {
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(
+          Q,
+          x, dx, t, dt, 
+          S
+        );
+      },
       marker.x(),
       marker.h(),
       {{TIME_STAMP}},
@@ -174,6 +188,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+    self._source_term_implementation          = PDETerms.Empty_Implementation
 
     self.clawpack_Riemann_solver             = clawpack_Riemann_solver 
     self.Riemann_solver_implementation_files = Riemann_solver_implementation_files
@@ -193,7 +208,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
 
 
   def set_implementation(self,
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term_implementation=None,
     memory_location         = None,
     use_split_loop          = False
   ):
@@ -208,6 +223,8 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
       self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions!=None: 
       self._initial_conditions_implementation         = initial_conditions
+    if source_term_implementation!=None:
+      self._source_term_implementation                = source_term_implementation
 
     if memory_location!=None:
       self._reconstructed_array_memory_location = memory_location
@@ -238,6 +255,7 @@ class PointWiseClawPackFixedTimeStepSize(  FV ):
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+    d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
     d[ "DISCRIMINATE_NORMAL"] = self._discriminate_normal
 
   
