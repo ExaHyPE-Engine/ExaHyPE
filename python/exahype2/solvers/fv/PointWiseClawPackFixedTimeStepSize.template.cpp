@@ -2,9 +2,7 @@
 #include "exahype2/RefinementControl.h"
 
 
-
-tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
-
+tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}::_log( "{% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLASSNAME}}" );
 
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}

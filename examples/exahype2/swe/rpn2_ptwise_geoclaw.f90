@@ -1,23 +1,30 @@
-c======================================================================
+!======================================================================
 subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
-c======================================================================
-c Solves normal Riemann problems for the 2D SHALLOW WATER equations
-c     with topography:
-c     #        h_t + (hu)_x + (hv)_y = 0                           #
-c     #        (hu)_t + (hu^2 + 0.5gh^2)_x + (huv)_y = -ghb_x      #
-c     #        (hv)_t + (huv)_x + (hv^2 + 0.5gh^2)_y = -ghb_y      #
+!======================================================================
+! Solves normal Riemann problems for the 2D SHALLOW WATER equations
+!     with topography:
+!     #        h_t + (hu)_x + (hv)_y = 0                           #
+!     #        (hu)_t + (hu^2 + 0.5gh^2)_x + (huv)_y = -ghb_x      #
+!     #        (hv)_t + (huv)_x + (hv^2 + 0.5gh^2)_y = -ghb_y      #
 
-c On input, ql contains the state vector at the left edge of each cell
-c           qr contains the state vector at the right edge of each cell
-c
-c This data is along a slice in the x-direction if ixy=1
-c                            or the y-direction if ixy=2.
+! On input, ql contains the state vector at the left edge of each cell
+!           qr contains the state vector at the right edge of each cell
 
-c  Note that the i'th Riemann problem has left state qr(i-1,:)
-c                                     and right state ql(i,:)
-c  From the basic clawpack routines, this routine is called with
-c     ql = qr
-c======================================================================
+! This data is along a slice in the x-direction if ixy=1
+!                            or the y-direction if ixy=2.
+
+!  Note that the i'th Riemann problem has left state qr(i-1)
+!                                     and right state ql(i)
+!  From the basic clawpack routines, this routine is called with
+!     ql = qr
+ 
+! ql and qr are depth, longitudinal momentum and latitudinal momentum
+! auxl and auxr are were bathymetry is stored
+! On output, wave contains the waves,
+!            s the speeds,
+!            amdq the  left-going flux difference  A^- \Delta q
+!            apdq the right-going flux difference  A^+ \Delta q
+!======================================================================
 
     use geoclaw_module, only: deg2rad
     use amr_module, only: mcapa
@@ -48,8 +55,11 @@ c======================================================================
 
     logical :: rare1,rare2
        
-!    logical :: pressure_forcing = .false.
-!    integer :: pressure_index = 4
+    logical :: pressure_forcing
+    integer :: pressure_index
+    
+    pressure_forcing = .false.
+    pressure_index = 4
 
     ! from clawpack/apps/notebooks/geoclaw/chile2010a/geoclaw.data
     g = 9.81
@@ -61,16 +71,20 @@ c======================================================================
     pL = 0.d0
     pR = 0.d0
     
+    ixy = ixy+1
+    
     !inform of a bad riemann problem from the start
     if (qr(1) < 0.d0 .or. ql(1) < 0.d0) then
         print *, "Negative input: hl, hr = ", qr(1), ql(1)
+        stop 
     end if
 
-    amdq = 0.d0
-    apdq = 0.d0
-    s = 0.d0
-    fwave = 0d0
-
+    amdq(:) = 0.d0
+    apdq(:) = 0.d0
+    s(:) = 0.d0
+    fwave(:, :) = 0d0
+ 
+    ! Set normal direction 
     if (ixy == 1) then
         mu = 2
         nv = 3
@@ -79,6 +93,7 @@ c======================================================================
         nv = 2
     end if
 
+    !zero (small) negative values if they exist
     if (qr(1) < 0.d0) then
         qr(:) = 0.d0
     end if
@@ -98,15 +113,15 @@ c======================================================================
     huR = ql(mu) 
     bL = auxr(1)
     bR = auxl(1)
-!    if (pressure_forcing) then
-!        pL = auxr(pressure_index)
-!        pR = auxl(pressure_index)
-!    end if
+    if (pressure_forcing) then
+        pL = auxr(pressure_index)
+        pR = auxl(pressure_index)
+    end if
     hvL = qr(nv)
     hvR = ql(nv)
 
 
-    if (hR < drytol) then
+    if (hR > drytol) then
         uR=huR/hR
         vR=hvR/hR
         phiR = 0.5d0*g*hR**2 + huR**2/hR
@@ -137,7 +152,8 @@ c======================================================================
     if (hR <= drytol) then
         call riemanntype(hL,hL,uL,-uL,hstar,s1m,s2m,rare1,rare2,1,drytol,g)
         hstartest=max(hL,hstar)
-        if (hstartest+bL.lt.bR) then !right state should become ghost values that mirror left for wall problem
+        if (hstartest+bL < bR) then !right state should become ghost values that mirror left for wall problem
+            !bR=hstartest+bL
             wall(2) = 0.d0
             wall(3) = 0.d0
             hR=hL
@@ -149,10 +165,11 @@ c======================================================================
         else if (hL+bL < bR) then
             bR=hL+bL
         endif
-    elseif (hL.le.drytol) then
+    elseif (hL <= drytol) then
         call riemanntype(hR,hR,-uR,uR,hstar,s1m,s2m,rare1,rare2,1,drytol,g)
         hstartest=max(hR,hstar)
-        if (hstartest+bR.lt.bL) then   !left state should become ghost values that mirror right
+        if (hstartest+bR < bL) then   !left state should become ghost values that mirror right
+            !bL=hstartest+bR
             wall(1)=0.d0
             wall(2)=0.d0
             hL=hR
@@ -161,7 +178,7 @@ c======================================================================
             phiL=phiR
             uL=-uR
             vL=vR
-        elseif (hR+bR.lt.bL) then
+        elseif (hR+bR < bL) then
             bL=hR+bR
         endif
     endif
@@ -188,7 +205,6 @@ c======================================================================
     !eliminate ghost fluxes for wall
     do mw=1,3
         sw(mw)=sw(mw)*wall(mw)
-
         fw(1,mw)=fw(1,mw)*wall(mw) 
         fw(2,mw)=fw(2,mw)*wall(mw)
         fw(3,mw)=fw(3,mw)*wall(mw)
