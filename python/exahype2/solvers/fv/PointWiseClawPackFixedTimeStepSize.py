@@ -64,7 +64,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         );
 
         for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
-          FR[i] = -FR[i];
+          FL[i] = -FL[i];
         }
       },
       marker.x(),
