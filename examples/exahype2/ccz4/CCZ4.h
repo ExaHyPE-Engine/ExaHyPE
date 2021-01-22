@@ -71,13 +71,21 @@ class examples::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     
 
 
+    void sourceTerm(
+      const double * __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double * __restrict__ S
+    ) override;
     
 
 
     
     void nonconservativeProduct(
       const double * __restrict__ Q, // Q[64+0],
-      const double * __restrict__             dQdn, // [64+0]
+      const double * __restrict__             deltaQ, // [64+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,

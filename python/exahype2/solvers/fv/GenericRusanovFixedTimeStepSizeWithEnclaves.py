@@ -112,7 +112,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
             const double* __restrict__                   Q,
-            const double * __restrict__                  dQdn,
+            const double * __restrict__                  deltaQ,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -120,7 +120,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
+            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
@@ -137,6 +137,20 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
           {{NUMBER_OF_UNKNOWNS}},
           {{NUMBER_OF_AUXILIARY_VARIABLES}},
           FL,FR
+        );
+      },
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__                        S
+      ) -> void {
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(
+          Q,
+          x, dx, t, dt, 
+          S
         );
       },
       marker.x(),
@@ -206,7 +220,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
             const double* __restrict__                   Q,
-            const double * __restrict__                  dQdn,
+            const double * __restrict__                  deltaQ,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -214,7 +228,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
+            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
@@ -233,6 +247,20 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
           FL,FR
         );
         },
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       dx,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__                        S
+      ) -> void {
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(
+          Q,
+          x, dx, t, dt, 
+          S
+        );
+      },
         marker.x(),
         marker.h(),
         {{TIME_STAMP}},
@@ -350,6 +378,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+    self._source_term_implementation          = PDETerms.Empty_Implementation
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
@@ -453,7 +482,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
 
 
   def set_implementation(self,
-    flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
+    flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
     use_split_loop          = False
   ):
@@ -479,6 +508,8 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
       self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions!=None: 
       self._initial_conditions_implementation         = initial_conditions
+    if source_term!=None:
+      self._source_term_implementation                = source_term
 
     if memory_location!=None:
       self._reconstructed_array_memory_location = memory_location
@@ -519,6 +550,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+    d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
 
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])

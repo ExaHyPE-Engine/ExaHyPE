@@ -16,8 +16,6 @@
 
 namespace exahype2 {
   namespace fv {
-
-
     //*
      //The routine has exactly the same semantics as applySplit1DRiemannToPatch_Overlap1AoS2d()
      //but runs through the faces slightly differently.
@@ -426,9 +424,6 @@ namespace exahype2 {
     /**
      * 1d Riemann accepting a flux and eigenvalue function.
      */
-#if defined(GPUOffloading)
-#pragma omp declare target
-#endif
     void splitRusanov1d(
       std::function< void(
         const double * __restrict__ Q,
@@ -459,14 +454,8 @@ namespace exahype2 {
       double * __restrict__ FL,
       double * __restrict__ FR
     );
-#if defined(GPUOffloading)
-#pragma omp end declare target
-#endif
 
 
-    #if defined(GPUOffloading)
-    #pragma omp declare target
-    #endif
     /**
      * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
      */
@@ -482,7 +471,7 @@ namespace exahype2 {
       ) >   flux,
       std::function< void(
         const double * __restrict__                  Q,
-        const double * __restrict__     dQdn,
+        const double * __restrict__     deltaQ,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
         const tarch::la::Vector<Dimensions,double>&  volumeH,
         double                                       t,
@@ -510,9 +499,6 @@ namespace exahype2 {
       double * __restrict__ FL,
       double * __restrict__ FR
     );
-    #if defined(GPUOffloading)
-    #pragma omp end declare target
-    #endif
   }
 }
 

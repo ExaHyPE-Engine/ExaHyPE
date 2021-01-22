@@ -91,9 +91,6 @@ namespace exahype2 {
      * right adjacent volume in the preimage (Qin) which feeds into the Riemann 
      * solve, but the image hosts only the left or right volume.
      */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
     void applySplit1DRiemannToPatch_Overlap1AoS2d(
       std::function< void(
         const double * __restrict__ QL,
@@ -106,6 +103,14 @@ namespace exahype2 {
         double * __restrict__ FL,
         double * __restrict__ FR
       ) >   splitRiemannSolve1d,
+      std::function< void(
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  volueCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__ S
+      ) >   sourceTerm,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
       double                                       t,
@@ -116,9 +121,6 @@ namespace exahype2 {
       const double * __restrict__                  Qin,
       double * __restrict__                        Qout
     );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
 
 
     void applySplit1DRiemannToPatch_Overlap1AoS3d(
@@ -133,6 +135,14 @@ namespace exahype2 {
         double * __restrict__ FL,
         double * __restrict__ FR
       ) >   splitRiemannSolve1d,
+      std::function< void(
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  volueCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__ S
+      ) >   sourceTerm,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
       double                                       t,
@@ -163,9 +173,6 @@ namespace exahype2 {
      * conditions can arise. That is: Though we now run through the data structure
      * twice, we can process the for loops embarassingly parallel.
      */
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
     void applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
       std::function< void(
         const double * __restrict__ QL,
@@ -178,6 +185,14 @@ namespace exahype2 {
         double * __restrict__ FL,
         double * __restrict__ FR
       ) >   splitRiemannSolve1d,
+      std::function< void(
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  volueCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__ S
+      ) >   sourceTerm,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
       double                                       t,
@@ -188,9 +203,6 @@ namespace exahype2 {
       const double * __restrict__                  Qin,
       double * __restrict__                        Qout
     );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
 
 
     void applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
@@ -205,6 +217,14 @@ namespace exahype2 {
         double * __restrict__ FL,
         double * __restrict__ FR
       ) >   splitRiemannSolve1d,
+      std::function< void(
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  volueCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__ S
+      ) >   sourceTerm,
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchSize,
       double                                       t,

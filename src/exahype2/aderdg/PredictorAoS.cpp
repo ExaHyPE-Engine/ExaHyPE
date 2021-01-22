@@ -149,7 +149,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addSource
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
   std::function< void(
     const double * __restrict__                 Q,
-    double * __restrict__                       dQ_or_dQdn,
+    double * __restrict__                       dQ_or_deltaQ,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal,
@@ -395,7 +395,7 @@ __global__ void exahype2::aderdg::spaceTimePredictor_PicardLoop_assembleRhs_krnl
   ) >   algebraicSource,
   std::function< void(
     const double * __restrict__                 Q,
-    double * __restrict__                       dQ_or_dQdn,
+    double * __restrict__                       dQ_or_deltaQ,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal,
@@ -592,7 +592,7 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
   ) >   algebraicSource,
   std::function< void(
     const double * __restrict__                 Q,
-    const double * __restrict__                 dQ_or_dQdn,
+    const double * __restrict__                 dQ_or_deltaQ,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal,

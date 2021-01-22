@@ -87,7 +87,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
 
 
   def set_implementation(self,
-    flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
+    flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
     use_split_loop          = True
   ):
@@ -95,7 +95,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
      Call implementation configuration of master class, but exchange the actual compute kernel
     """
     GenericRusanovFixedTimeStepSizeWithEnclaves.set_implementation(self,
-      flux, ncp, eigenvalues, boundary_conditions, refinement_criterion, initial_conditions,
+      flux, ncp, eigenvalues, boundary_conditions, refinement_criterion, initial_conditions,source_term,
       memory_location, use_split_loop)
 
     self._action_set_update_cell = UpdateCellWithEnclavesOnAccelerator(self, use_split_loop=True)

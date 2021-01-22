@@ -69,6 +69,27 @@ examples::exahype2::ccz4::CCZ4::CCZ4() {
 }
 
 
+
+void examples::exahype2::ccz4::CCZ4::sourceTerm(
+  const double * __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__ S
+) {
+  for(int i=0; i<64; i++){
+    assertion4( std::isfinite(Q[i]), i, volumeCentre, volumeH, t );
+  }
+  memset(S, 0, 64*sizeof(double));
+  pdesource_(S,Q);    //  S(Q)
+  for(int i=0; i<64; i++){
+    nonCriticalAssertion4( std::isfinite(S[i]), i, volumeCentre, volumeH, t );
+  }
+  // enforceccz4constraints_(Q); // "cleans" Q, but knows nothing about S
+}
+
+
 void examples::exahype2::ccz4::CCZ4::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -87,19 +108,6 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
       double dt    = 0.0001;
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
     }
-  }
-  else{
-    for(int i=0; i<64; i++){
-      assertion4( std::isfinite(Q[i]), i, volumeX, volumeH, t );
-    }
-    double S[64];
-    memset(S, 0, 64*sizeof(double));
-    pdesource_(S,Q);    //  S(Q)
-    for(int i=0; i<64; i++){
-      nonCriticalAssertion4( std::isfinite(S[i]), i, volumeX, volumeH, t );
-      Q[i] += dt * S[i];
-    }
-    // enforceccz4constraints_(Q); // "cleans" Q, but knows nothing about S
   }
   logTraceOut( "adjustSolution(...)" );
 }
@@ -147,7 +155,7 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
 
 void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
   const double * __restrict__                  Q, // Q[64+0],
-  const double * __restrict__                  dQdn, // [64+0]
+  const double * __restrict__                  deltaQ, // [64+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -165,7 +173,7 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
     gradQSerialised[i+1*64] = 0.0;
     gradQSerialised[i+2*64] = 0.0;
 
-    gradQSerialised[i+normal*64] = dQdn[i];
+    gradQSerialised[i+normal*64] = deltaQ[i];
   }
   pdencp_(BgradQ, Q, gradQSerialised);
 
