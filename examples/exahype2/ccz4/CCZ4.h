@@ -71,6 +71,14 @@ class examples::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     
 
 
+    void sourceTerm(
+      const double * __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double * __restrict__ S
+    ) override;
     
 
 

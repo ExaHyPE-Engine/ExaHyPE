@@ -144,19 +144,20 @@ void exahype2::fv::copyPatch (
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
   std::function< void(
-    const double *__restrict__ QL,
-    const double *__restrict__ QR,
-         const tarch::la::Vector<Dimensions, double> &faceCentre,
-         double volumeH, double t, double dt, int normal,
-         double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
-         std::function< void(
-           const double * __restrict__ Q,
-           const tarch::la::Vector<Dimensions,double>&  volueCentre,
-           double                                       volumeH,
-           double                                       t,
-           double                                       dt,
-           double * __restrict__ S
-         ) >   sourceTerm,
+    const double *__restrict__                    QL,
+    const double *__restrict__                    QR,
+    const tarch::la::Vector<Dimensions, double>&  faceCentre,
+    double volumeH, double t, double dt, int normal,
+    double *__restrict__ FL, double *__restrict__ FR)
+  > splitRiemannSolve1d,
+  std::function< void(
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  volueCentre,
+    double                                       volumeH,
+    double                                       t,
+    double                                       dt,
+    double * __restrict__ S
+  ) >   sourceTerm,
   const tarch::la::Vector<Dimensions, double> &patchCentre,
   const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
   int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
@@ -171,6 +172,32 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
 
   double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
   double * numericalFluxR = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
+
+  #ifdef SharedOMP
+  #pragma omp parallel for collapse(2)
+  #endif
+  for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+  for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+    tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+        - 0.5 * patchSize;
+    volumeX (0) += (x + 0.5) * volumeH (0);
+    volumeX (1) += (y + 0.5) * volumeH (1);
+
+    const int voxelInPreImage  = x+1
+                               + (y+1) * (numberOfVolumesPerAxisInPatch+2);
+    const int voxelInImage     = x
+                               + y * numberOfVolumesPerAxisInPatch;
+
+    sourceTerm(
+      Qin + voxelInPreImage * (unknowns + auxiliaryVariables),
+      volumeX, volumeH(0), t, dt,
+      numericalFluxL
+    );
+
+    for (int unknown = 0; unknown < unknowns; unknown++) {
+      Qout[voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * numericalFluxL[unknown];
+    }
+  }
 
   for (int x = 0; x <= numberOfVolumesPerAxisInPatch; x++) {
     #ifdef SharedOMP
@@ -283,6 +310,36 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
 
   double numericalFluxL[unknowns]; // helper out variable
   double numericalFluxR[unknowns]; // helper out variable
+
+  #ifdef SharedOMP
+  #pragma omp parallel for collapse(2)
+  #endif
+  for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+  for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+  for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+    tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+        - 0.5 * patchSize;
+    volumeX (0) += (x + 0.5) * volumeH (0);
+    volumeX (1) += (y + 0.5) * volumeH (1);
+    volumeX (2) += (z + 0.5) * volumeH (2);
+
+    const int voxelInPreImage  = x+1
+                               + (y+1) * (numberOfVolumesPerAxisInPatch+2);
+                               + (z+1) * (numberOfVolumesPerAxisInPatch+2) * (numberOfVolumesPerAxisInPatch+2);
+    const int voxelInImage     = x
+                               + y * numberOfVolumesPerAxisInPatch
+                               + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+
+    sourceTerm(
+      Qin + voxelInPreImage * (unknowns + auxiliaryVariables),
+      volumeX, volumeH(0), t, dt,
+      numericalFluxL
+    );
+
+    for (int unknown = 0; unknown < unknowns; unknown++) {
+      Qout[voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * numericalFluxL[unknown];
+    }
+  }
 
   for (int x = 0; x <= numberOfVolumesPerAxisInPatch; x++) {
     #ifdef SharedOMP

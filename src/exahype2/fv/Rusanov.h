@@ -16,8 +16,6 @@
 
 namespace exahype2 {
   namespace fv {
-
-
     //*
      //The routine has exactly the same semantics as applySplit1DRiemannToPatch_Overlap1AoS2d()
      //but runs through the faces slightly differently.

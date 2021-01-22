@@ -138,7 +138,7 @@ class GenericRiemannFixedTimeStepSize( FV ):
 
 
   def set_implementation(self,
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term_implementation=None,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
     use_split_loop          = False
   ):
@@ -158,8 +158,8 @@ class GenericRiemannFixedTimeStepSize( FV ):
       self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions!=None: 
       self._initial_conditions_implementation         = initial_conditions
-    if source_term_implementation!=None:
-      self._source_term_implementation                = source_term_implementation
+    if source_term!=None:
+      self._source_term_implementation                = source_term
     
     if memory_location!=None:
       self._reconstructed_array_memory_location = memory_location
