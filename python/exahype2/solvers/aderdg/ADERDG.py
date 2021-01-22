@@ -17,7 +17,7 @@ from abc import abstractmethod
 
 from enum import IntEnum
 
-from exahype2.solvers.aderdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
+from exahype2.solvers.dg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
 
 class Polynomials(IntEnum):
@@ -63,7 +63,7 @@ class AMR(AbstractADERDGActionSet):
   if (not marker.isRefined()) { 
     ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
-    if (tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+    if (tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
       refinementCriterion = ::exahype2::RefinementCommand::Refine;
     } 
     else {
@@ -71,21 +71,21 @@ class AMR(AbstractADERDGActionSet):
       tarch::la::Vector<Dimensions,double> x;
       dfor( quadraturePoint, {{ORDER}}+1 ) {
         for (int d=0; d<Dimensions; d++) {
-          x(d) = {{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
+          x(d) = repositories::{{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
         }
-        refinementCriterion = refinementCriterion and {{SOLVER_INSTANCE}}.refinementCriterion(
+        refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
           x,
           marker.h(),
-          {{SOLVER_INSTANCE}}.getMinTimeStamp()
+          repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
         );
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
       }
      
-      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < {{SOLVER_INSTANCE}}.getMinMeshSize() ) {
+      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.getMinMeshSize() ) {
         refinementCriterion = ::exahype2::RefinementCommand::Keep;
       } 
-      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > {{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
         refinementCriterion = ::exahype2::RefinementCommand::Keep;
       } 
     }
@@ -138,12 +138,12 @@ class AdjustCell(AbstractADERDGActionSet):
     tarch::la::Vector<Dimensions,double> x;
     dfor( quadraturePoint, {{ORDER}}+1 ) {
       for (int d=0; d<Dimensions; d++) {
-        x(d) = {{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
+        x(d) = repositories::{{SOLVER_INSTANCE}}.QuadraturePoints[quadraturePoint(d)] * marker.h()(d) + marker.getOffset()(d);
       }
-      {{SOLVER_INSTANCE}}.adjustSolution(
+      repositories::{{SOLVER_INSTANCE}}.adjustSolution(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
         x,
-        {{SOLVER_INSTANCE}}.getMinTimeStamp()
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
@@ -158,50 +158,6 @@ class AdjustCell(AbstractADERDGActionSet):
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
-      result = jinja2.Template(self.TemplateAdjustCell).render(**d)
-      pass 
-    return result
-
-
-class HandleBoundary(AbstractADERDGActionSet):
-  TemplateHandleBoundary = """
-    logDebug( "touchFaceFirstTime(...)", "label=" << fineGridFaceLabel.toString() );
-    if (not {{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]) {
-/*      ::exahype2::fv::applyBoundaryConditions(
-        [&](
-          double                                       Qinside[],
-          double                                       Qoutside[],
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> void {
-          {{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
-        },  
-        marker.x(),
-        marker.h(),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        {{TIME_STEP_SIZE}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        marker.getSelectedFaceNumber(),
-        fineGridFace{{UNKNOWN_IDENTIFIER}}.value
-      ); */
-    }
-"""
-
-  
-  def __init__(self,solver):
-    AbstractADERDGActionSet.__init__(self, solver)
-
-  
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)      
@@ -268,11 +224,11 @@ class ADERDG(object):
     if order<=0:
       raise Exception( "Order has to be positive. Order 0 is a Finite Volume scheme. Use FV solver instead")
     
-    self._name                    = name
-    self._DG_polynomial           = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._DG_polynomial_new       = peano4.datamodel.Patch( (order,order,order),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
-    self._face_spacetime_solution = peano4.datamodel.Patch( (2*(order),order,order), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
-    self._Riemann_result          = peano4.datamodel.Patch( (2,order,order),         unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
+    self._name                             = name
+    self._DG_polynomial                    = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._DG_polynomial_new                = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
+    self._face_spacetime_solution          = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
+    self._Riemann_result                   = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
     
     #self._DG_polynomial_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
     #self._DG_polynomial_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
@@ -291,7 +247,6 @@ class ADERDG(object):
     self._guard_AMR                                = self._predicate_cell_carrying_data()
     self._guard_project_DG_polynomial_onto_faces   = self._predicate_cell_carrying_data()
     self._guard_update_cell                        = self._predicate_cell_carrying_data()
-    self._guard_handle_boundary                    = self._predicate_boundary_face_carrying_data()
 
     self._order                = order
     self._min_h                = min_h
@@ -305,13 +260,14 @@ class ADERDG(object):
       self._basis = GaussLegendreBasis(order+1)
     elif polynomials is Polynomials.Gauss_Lobatto:
       self._basis = GaussLobattoBasis(order+1)
+    else:
+      raise Exception( "No proper basis chosen" )
     
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
 
     self._action_set_adjust_cell     = AdjustCell(self)
     self._action_set_AMR             = AMR(self)
-    self._handle_boundary_action_set = AbstractADERDGActionSet(self)
     self._action_set_update_cell     = None
     self._action_set_update_face     = None
 
@@ -335,10 +291,6 @@ class ADERDG(object):
   
   def _predicate_face_carrying_data(self):
     return "not marker.isRefined()"
-
-
-  def _predicate_boundary_face_carrying_data(self):
-    return "not marker.isRefined() and fineGridFaceLabel.getBoundary()"
 
 
   def _predicate_cell_carrying_data(self):
@@ -392,7 +344,7 @@ class ADERDG(object):
 #include "SolverRepository.h"
 
 #include "exahype2/PatchUtils.h"
-#include "exahype2/aderdg/BoundaryConditions.h"
+#include "exahype2/aderdg/RusanovNonlinearAoS.h"
 """
 
 

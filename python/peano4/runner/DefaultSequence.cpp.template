@@ -9,8 +9,8 @@
 #include "peano4/grid/Spacetree.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
-#include "observers/DataRepository.h"
-#include "observers/StepRepository.h"
+#include "repositories/DataRepository.h"
+#include "repositories/StepRepository.h"
 
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
@@ -91,7 +91,7 @@ int main(int argc, char** argv) {{
 
   peano4::initParallelEnvironment(&argc,&argv);
   peano4::fillLookupTables();
-  {FULL_NAMESPACE}::observers::DataRepository::initDatatypes();
+  {FULL_NAMESPACE}::repositories::DataRepository::initDatatypes();
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
@@ -136,7 +136,7 @@ int main(int argc, char** argv) {{
   #endif
 
   peano4::shutdownSingletons();
-  {FULL_NAMESPACE}::observers::DataRepository::shutdownDatatypes();
+  {FULL_NAMESPACE}::repositories::DataRepository::shutdownDatatypes();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;

@@ -1057,7 +1057,7 @@ void peano4::grid::Spacetree::loadVertices(
     }
     logDebug(
       "loadVertices(...)",
-  	  "handled " << toString(type) << " vertex " << vertexIndex << " at " << vertexPositionWithinPatch << ": " <<
+      "handled " << toString(type) << " vertex " << vertexIndex << " at " << vertexPositionWithinPatch << ": " <<
       fineGridVertices[ peano4::utils::dLinearised(vertexIndex) ].toString()
     );
 
@@ -1557,16 +1557,20 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
           and
           p.getRefinementControl()==GridControlEvent::RefinementControl::Erase
           and
-   	      tarch::la::allSmaller( state.getH(), p.getH() )
-  	    ) {
+          tarch::la::allSmaller( state.getH(), p.getH() )
+        ) {
           erase  = true;
           refine = false;
         }
       }
     }
 
+    logDebug(
+      "evaluateGridControlEvents(...)",
+      _gridControlEvents.size() << " event(s) in state " << state.toString() << " trigger change=" << mayChangeGrid << ", refine=" << refine << ", erase=" << erase
+    );
+
     if (refine) {
-      // @todo Nur beim Debug rein
       bool haveTriggeredRefinementForAtLeastOneVertex = false;
       for (int i=0; i<TwoPowerD; i++) {
         if (
@@ -1580,7 +1584,6 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
       }
       if (not haveTriggeredRefinementForAtLeastOneVertex) {
         logDebug( "evaluate...", "wanted to refine cell " << state.toString() << " but no vertex is refinable" );
-        // @todo raus
         for (int i=0; i<TwoPowerD; i++) {
           logDebug( "evaluate...", "  - vertex " << fineGridVertices[i].toString() );
         }

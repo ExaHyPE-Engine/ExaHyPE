@@ -48,10 +48,16 @@ namespace exahype2 {
   #pragma omp end declare target
   #endif
 
+  #if defined(OpenMPGPUOffloading)
+  #pragma omp declare target
+  #endif
   tarch::la::Vector<Dimensions,double>  getVolumeSize(
     const tarch::la::Vector<Dimensions,double>&  h,
     int                                          numberOfVolumesPerAxisInPatch
   );
+  #if defined(OpenMPGPUOffloading)
+  #pragma omp end declare target
+  #endif
 }
 
 #endif

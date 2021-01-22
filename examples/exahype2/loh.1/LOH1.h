@@ -18,11 +18,8 @@
 namespace examples{
 namespace exahype2{
 namespace loh1{
-
   class LOH1;
-}
-}
-}
+}}}
 
 
 
@@ -47,14 +44,14 @@ class examples::exahype2::loh1::LOH1: public examples::exahype2::loh1::AbstractL
 
   public:
     virtual void adjustSolution(
-      double                                       Q[9+4],
+      double * __restrict__                        Q, // [9+4],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
     ) override;
 
     double maxEigenvalue(
-      double                                       Q[13],
+      const double * __restrict__                  Q, // [9+4],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -62,8 +59,8 @@ class examples::exahype2::loh1::LOH1: public examples::exahype2::loh1::AbstractL
     ) override;
 
     void boundaryConditions(
-      double                                       Qinside[13],
-      double                                       Qoutside[13],
+      const double* __restrict__                   Qinside, // [13]
+      double* __restrict__                         Qoutside, // [13]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
@@ -71,13 +68,13 @@ class examples::exahype2::loh1::LOH1: public examples::exahype2::loh1::AbstractL
     ) override;
 
     void nonconservativeProduct(
-      double                                       Q[13],
-      double                                       gradQ[13][Dimensions],
+      const double * __restrict__                  Q, // [9+4],
+      const double * __restrict__                  dQdn, // [9+4],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal,
-      double                                       BgradQ[13]
+      double * __restrict__ BgradQ // BgradQ[13]
      ) override;
 
 };

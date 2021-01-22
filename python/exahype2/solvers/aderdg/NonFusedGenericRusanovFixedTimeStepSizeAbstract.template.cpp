@@ -102,7 +102,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" %}
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
-  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal
@@ -115,7 +115,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
 {% if FLUX_IMPLEMENTATION!="<none>" %}
 {% if FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
- double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+ const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
  const tarch::la::Vector<Dimensions,double>&  x,
  double                                       t,
  int                                          normal,
@@ -126,18 +126,43 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 {% endif %}
 {% endif %}
 
+{% if FLUX_IMPLEMENTATION!="<none>" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryFlux(
+ const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+ const tarch::la::Vector<Dimensions,double>&  x,
+ double                                       t,
+ int                                          normal,
+ double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
+) {
+  flux(Q,x,t,normal,F);
+}
+{% endif %}
 
 {% if NCP_IMPLEMENTATION!="<none>" %}
 {% if NCP_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
-  double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  double                                       gradQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}][Dimensions],
+  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__             dQ_or_dQdn, // dQ_or_dQdn[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {{NCP_IMPLEMENTATION}}
+}
+{% endif %}
+{% endif %}
+
+
+{% if SOURCES_IMPLEMENTATION!="<none>" %}
+{% if SOURCES_IMPLEMENTATION!="<user-defined>" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::algebraicSources(
+    const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+    const tarch::la::Vector<Dimensions,double>&  x,
+    double                                       t,
+    double * __restrict__ S
+) {
+  {{SOURCES_IMPLEMENTATION}}
 }
 {% endif %}
 {% endif %}

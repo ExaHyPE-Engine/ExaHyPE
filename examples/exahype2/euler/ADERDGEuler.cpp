@@ -7,14 +7,15 @@ tarch::logging::Log   examples::exahype2::euler::ADERDGEuler::_log( "examples::e
 
 
 void examples::exahype2::euler::ADERDGEuler::adjustSolution(
-  double * __restrict__ Q, // Q[5+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t
+  double * __restrict__                       Q,  // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      t
 ) {
   logTraceInWith2Arguments( "adjustSolution(...)", x, t );
   if (tarch::la::equals(t,0.0) ) {
     logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );
 
+/*
     #if Dimensions==2
     tarch::la::Vector<Dimensions,double> circleCentre = {0.2,0.5};
     #else
@@ -30,7 +31,22 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
     Q[2] = 0;
     Q[3] = 0;
     Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
-  }
+*/
+    constexpr double gamma = 1.4;
+    constexpr double width = 0.25;
+    constexpr double x0[3] = { 0.5, 0.5, 0.5 };
+
+    Q[0] = 1.;
+    Q[1] = 0.;
+    Q[2] = 0.;
+    Q[3] = 0.;
+    #if Dimensions==2
+    const double norm2Squared = (x[0]-x0[0])*(x[0]-x0[0]) + (x[1]-x0[1])*(x[1]-x0[1]);
+    #else
+    const double norm2Squared = (x[0]-x0[0])*(x[0]-x0[0]) + (x[1]-x0[1])*(x[1]-x0[1]) + (x[2]-x0[2])*(x[2]-x0[2]);
+    #endif
+    Q[4] = 1. / (gamma - 1) + // pressure is set to one
+        exp(-std::sqrt(norm2Squared) / pow(width, Dimensions)) * 2;  }
   else {
     // other stuff
   }
@@ -41,10 +57,10 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
 
 
 double examples::exahype2::euler::ADERDGEuler::maxEigenvalue(
-  double * __restrict__ Q, // Q[5+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal
+  const double * __restrict__                 Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      t,
+  int                                         normal
 )  {
   logTraceInWith3Arguments( "maxEigenvalue(...)", x, t, normal );
 
@@ -77,23 +93,23 @@ double examples::exahype2::euler::ADERDGEuler::maxEigenvalue(
 
 
 void examples::exahype2::euler::ADERDGEuler::flux(
-  double * __restrict__ Q, // Q[5+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal,
-  double * __restrict__ F // F[5]
+  const double * __restrict__                 Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      t,
+  int                                         normal,
+  double * __restrict__                       F // F[5]
 )  {
   logTraceInWith3Arguments( "flux(...)", x, t, normal );
 
-  assertion4( normal>=0, faceCentre, volumeH, t, normal );
-  assertion4( normal<Dimensions, faceCentre, volumeH, t, normal);
-  nonCriticalAssertion9( Q[0]==Q[0], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[1]==Q[1], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[2]==Q[2], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[3]==Q[3], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  assertion3( normal>=0, x, t, normal );
+  assertion3( normal<Dimensions, x, t, normal);
+  nonCriticalAssertion8( Q[0]==Q[0], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
+  nonCriticalAssertion8( Q[1]==Q[1], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
+  nonCriticalAssertion8( Q[2]==Q[2], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
+  nonCriticalAssertion8( Q[3]==Q[3], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
+  nonCriticalAssertion8( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
 
-  nonCriticalAssertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion8( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
 
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -145,21 +161,21 @@ void examples::exahype2::euler::ADERDGEuler::flux(
 
 
 void examples::exahype2::euler::ADERDGEuler::boundaryConditions(
-  double * __restrict__ Qinside, // Qinside[5+0]
-  double * __restrict__ Qoutside, // Qoutside[5+0]
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t,
-  int                                          normal
+  const double * __restrict__                 Qinside, // Qinside[5+0]
+  double * __restrict__                       Qoutside, // Qoutside[5+0]
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      t,
+  int                                         normal
 ) {
   logTraceInWith3Arguments( "boundaryConditions(...)", x, t, normal );
 
-  nonCriticalAssertion4( Qinside[0]==Qinside[0], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion4( Qinside[1]==Qinside[1], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion4( Qinside[2]==Qinside[2], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion4( Qinside[3]==Qinside[3], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion3( Qinside[0]==Qinside[0], x, t, normal );
+  nonCriticalAssertion3( Qinside[1]==Qinside[1], x, t, normal );
+  nonCriticalAssertion3( Qinside[2]==Qinside[2], x, t, normal );
+  nonCriticalAssertion3( Qinside[3]==Qinside[3], x, t, normal );
+  nonCriticalAssertion3( Qinside[4]==Qinside[4], x, t, normal );
 
-  nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
+  nonCriticalAssertion3( Qinside[0]>1e-12, x, t, normal );
 
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];

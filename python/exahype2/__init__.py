@@ -7,11 +7,15 @@ try:
     import numpy
     havenumpy=True
 except ImportError:
+    print("Numpy is not available, not loading dg")
     print("Numpy is not available, not loading aderdg")
 
 if havenumpy:
     import exahype2.solvers.aderdg
+    import exahype2.solvers.dg
+    
 import exahype2.grid
+import exahype2.gpu
 
 
 from .ExaHyPEMain import ExaHyPEMain

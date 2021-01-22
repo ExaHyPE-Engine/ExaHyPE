@@ -19,7 +19,7 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
-  if ( marker.isEnclaveCell() and not marker.isRefined() and {{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
+  if ( marker.isEnclaveCell() and not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
 
     if ( taskNumber>=0 ) {
@@ -69,7 +69,6 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     ); // previous time step has to be valid
   
   if (marker.isSkeletonCell()) {
-   
     {% if USE_SPLIT_LOOP %}
     #if Dimensions==2
     ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
@@ -84,8 +83,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     #endif
     {% endif %}
       [&](
-        double                                       QL[],
-        double                                       QR[],
+        const double* __restrict__                   QL,
+        const double* __restrict__                   QR,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       dx,
         double                                       t,
@@ -96,7 +95,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       ) -> void {
         ::exahype2::fv::splitRusanov1d(
           [] (
-           double * __restrict__ Q,
+           const double * __restrict__ Q,
            const tarch::la::Vector<Dimensions,double>&  faceCentre,
            const tarch::la::Vector<Dimensions,double>&  volumeH,
            double                                       t,
@@ -107,13 +106,13 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             {% if FLUX_IMPLEMENTATION=="<none>" %}
             for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
             {% else %}
-            {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
-            double                                       Q[],
-            double                                       gradQ[][Dimensions],
+            const double* __restrict__                   Q,
+            const double * __restrict__                  dQdn,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -121,18 +120,18 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
-            double                                       Q[],
+            const double* __restrict__                   Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
             double                                       dt,
             int                                          normal
           ) -> double {
-            return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
           },
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
@@ -178,8 +177,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       #endif
       {% endif %}
         [&](
-          double                                       QL[],
-          double                                       QR[],
+          const double* __restrict__                   QL,
+          const double* __restrict__                   QR,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       dx,
           double                                       t,
@@ -190,7 +189,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
         ) -> void {
         ::exahype2::fv::splitRusanov1d(
           [] (
-           double * __restrict__ Q,
+           const double * __restrict__ Q,
            const tarch::la::Vector<Dimensions,double>&  faceCentre,
            const tarch::la::Vector<Dimensions,double>&  volumeH,
            double                                       t,
@@ -201,13 +200,13 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             {% if FLUX_IMPLEMENTATION=="<none>" %}
             for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
             {% else %}
-            {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
-            double                                       Q[],
-            double                                       gradQ[][Dimensions],
+            const double* __restrict__                   Q,
+            const double * __restrict__                  dQdn,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -215,18 +214,18 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
-            double                                       Q[],
+            const double* __restrict__                   Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
             double                                       dt,
             int                                          normal
           ) -> double {
-            return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
           },
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
@@ -279,8 +278,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       jinja2.Template( self.TemplateUpdateCell ).render(**d),
       solver._reconstructed_array_memory_location,
       "not marker.isRefined() and (" + \
-      "observers::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
-      "observers::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
+      "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
+      "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
     )
     self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
@@ -293,7 +292,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
-#include "SolverRepository.h"
+#include "repositories/SolverRepository.h"
 """
 
 
@@ -356,85 +355,95 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     self._use_split_loop                      = False
 
     initialisation_sweep_predicate = "(" + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
       
     first_iteration_after_initialisation_predicate = "(" + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
     ")"
 
     primary_sweep_predicate = "(" + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
     primary_sweep_or_plot_predicate = "(" + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
 
     primary_or_initialisation_sweep_predicate= "(" + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
     secondary_sweep_predicate = "(" + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
       ")"
 
     secondary_sweep_or_grid_construction_predicate = "(" + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
       ")"
 
     secondary_sweep_or_grid_initialisation_predicate = "(" + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
 
     secondary_sweep_or_grid_initialisation_or_plot_predicate = "(" + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
 
-    self._patch_overlap.generator.store_persistent_condition   = secondary_sweep_or_grid_initialisation_or_plot_predicate
-    self._patch_overlap.generator.load_persistent_condition    = primary_sweep_or_plot_predicate
+    ## @todo check
+    self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
+      secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
+    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
+      primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
+
+    
+    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + secondary_sweep_or_grid_initialisation_or_plot_predicate
+    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + primary_sweep_or_plot_predicate
 
     self._patch_overlap.generator.send_condition               = "not marker.isRefined() and " + initialisation_sweep_predicate
     self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " + first_iteration_after_initialisation_predicate
 
-    self._patch_overlap_new.generator.store_persistent_condition   = "not marker.isRefined() and " + primary_sweep_predicate
-    self._patch_overlap_new.generator.load_persistent_condition    = "not marker.isRefined() and " + secondary_sweep_predicate
+    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + primary_sweep_predicate
+    self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + secondary_sweep_predicate
 
     self._patch_overlap_new.generator.send_condition               = "true"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
     self._patch_overlap.generator.includes  += """
-#include "../observers/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """    
     self._patch_overlap_new.generator.includes  += """
-#include "../observers/SolverRepository.h"
+#include "../repositories/SolverRepository.h"
 """    
 
+    #
+    # AMR and adjust cell have to be there always, i.e. also throughout 
+    # the grid construction.
+    #
     self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined() and " + primary_or_initialisation_sweep_predicate)
     self._action_set_AMR                                 = AMROnPatch(self, "not marker.isRefined() and " + secondary_sweep_or_grid_construction_predicate)
-    # @todo Da ist einmal marker zu viel, weil steckt ja schon im Template drin
-    self._action_set_handle_boundary                     = HandleBoundary(self, "not marker.isRefined() and " + primary_or_initialisation_sweep_predicate)
+    self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() + " and " + primary_or_initialisation_sweep_predicate)
     self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, 
-      "not marker.isRefined() and (" + \
-         "(" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
-      "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
-      "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
-      "or (" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
+      self._store_cell_data_default_predicate() + " and (" + \
+         "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
+      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
+      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
+      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
       ")"
     )
-    self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, "not marker.isRefined() and " + secondary_sweep_or_grid_initialisation_predicate)
+    self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + secondary_sweep_or_grid_initialisation_predicate)
     self._action_set_update_cell              = None
    
     self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
@@ -502,7 +511,7 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     
     """
     d[ "TIME_STEP_SIZE" ] = self._time_step_size
-    d[ "TIME_STAMP" ]     = d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
+    d[ "TIME_STAMP" ]     = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
     
     d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
     d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
@@ -515,7 +524,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.EnclaveLabels.get_attribute_name(self._name)
-
 
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "FREE_SKELETON_MEMORY" ] = "delete[] reconstructedPatch;"

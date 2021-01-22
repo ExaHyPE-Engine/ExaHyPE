@@ -79,7 +79,7 @@ struct tarch::la::Vector {
   public:
     Vector();
 
-    Vector( Scalar* values );
+    Vector( const Scalar* values );
 
     Vector( std::initializer_list<Scalar> values );
     Vector( const std::bitset<Size>& values );

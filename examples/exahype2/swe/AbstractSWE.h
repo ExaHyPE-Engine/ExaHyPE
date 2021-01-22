@@ -66,7 +66,7 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
      * @param t Time
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      double * __restrict__ Q, // Q[3+1],
+      const double * __restrict__ Q, // Q[3+1],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
@@ -81,7 +81,8 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
      * in.
      */
     virtual void adjustSolution(
-      double * __restrict__ Q, // Q[3+1],
+  double * __restrict__ Q,
+      const double * __restrict__ Q, // Q[3+1],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
@@ -95,7 +96,7 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
      * to the Riemann solver, i.e. flux and eigenvalues.
      */
     virtual void boundaryConditions(
-      double * __restrict__ Qinside, // Qinside[3+1]
+      const double * __restrict__ Qinside, // Qinside[3+1]
       double * __restrict__ Qoutside, // Qoutside[3+1]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,

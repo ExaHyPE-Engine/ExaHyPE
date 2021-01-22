@@ -13,6 +13,9 @@ class ParticleAMR(ActionSet):
   """
   
     AMR criterion based upon the particle density
+    
+    Most codes use this criterion in combination with a classic mesh-based criterion
+    which ensures that the mesh is not coarser than a certain maximal mesh sizes.
         
   """
   def __init__(self,particle_set,particle_tree_analysis,min_particles_per_cell=1,max_particles_per_cell=65536):

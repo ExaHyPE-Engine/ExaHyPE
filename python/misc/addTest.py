@@ -43,12 +43,12 @@ public:
   /**
    * Constructor.
    */
-  CopyPatchTest();
+  {TESTNAME}Test();
 
   /**
    * Destructor, empty.
    */
-  virtual ~CopyPatchTest() {{}}
+  virtual ~{TESTNAME}Test() {{}}
 
   /**
    * This routine is triggered by the TestCaseCollection
@@ -124,3 +124,9 @@ if __name__ == "__main__":
 
         with open(fout_h,   "w") as f:
             f.write(instantiate(TEMPLATE_H,   testd))
+
+
+    targetfile = "src/{}/UnitTests.cpp".format(args[1].split("::")[0])
+    testinclude = "#include {}".format(fout_cpp)
+    print("Done. Register the test in {} by adding {}.".format(targetfile, testinclude))
+    print("And something like result->addTestCase( new {}::tests::{}Test() );".format(args[1], testd["TESTNAME"]))

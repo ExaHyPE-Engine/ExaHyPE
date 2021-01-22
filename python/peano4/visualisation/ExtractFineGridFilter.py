@@ -1,6 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.visualisation.Filter import Filter
+from twisted.trial._synctest import Todo
 
 
 class ExtractFineGridFilter( Filter ):
@@ -27,18 +28,37 @@ class ExtractFineGridFilter( Filter ):
   
   
   def __patches_overlap(self,a,b,dimensions):
+    """
+    
+     When we extract the fine grid patches, we rely on a 
+     patch overlap. With floating point precision which is 
+     often smaller then IEEE single (for a lot of vis tools
+     or formats, respectively), I try to be rather careful
+     with throwing away patches - otherwise, you quickly end
+     up with vis where small pieces are missing. 
+     
+     I therefore introduce a Tolerance of around 10 percent.
+     If in doubt, I keep stuff.
+    
+    """
+    result = False
+    
     if dimensions==3:
-      return a.offset[0] + a.size[0] >= b.offset[0] and \
-             a.offset[1] + a.size[1] >= b.offset[1] and \
-             a.offset[2] + a.size[2] >= b.offset[2] and \
-             a.offset[0] <= b.offset[0] + b.size[0] and \
-             a.offset[1] <= b.offset[1] + b.size[1] and \
-             a.offset[2] <= b.offset[2] + b.size[2]
+      Tolerance = 0.1 * max(a.size[0],b.size[0],a.size[1],b.size[1],a.size[2],b.size[2])
+      result = a.offset[0] + a.size[0] > b.offset[0] + Tolerance and \
+               a.offset[1] + a.size[1] > b.offset[1] + Tolerance  and \
+               a.offset[2] + a.size[2] > b.offset[2] + Tolerance  and \
+               a.offset[0] + Tolerance < b.offset[0] + b.size[0] and \
+               a.offset[1] + Tolerance < b.offset[1] + b.size[1] and \
+               a.offset[2] + Tolerance < b.offset[2] + b.size[2]
     else:
-      return a.offset[0] + a.size[0] >= b.offset[0] and \
-             a.offset[1] + a.size[1] >= b.offset[1] and \
-             a.offset[0] <= b.offset[0] + b.size[0] and \
-             a.offset[1] <= b.offset[1] + b.size[1] 
+      Tolerance = 0.1 * max(a.size[0],b.size[0],a.size[1],b.size[1])
+      result = a.offset[0] + a.size[0] > b.offset[0] + Tolerance and \
+               a.offset[1] + a.size[1] > b.offset[1] + Tolerance and \
+               a.offset[0] + Tolerance < b.offset[0] + b.size[0] and \
+               a.offset[1] + Tolerance < b.offset[1] + b.size[1]
+
+    return result
   
   
   def render(self,cell_data, dof, unknowns, dimensions):
@@ -68,7 +88,10 @@ class ExtractFineGridFilter( Filter ):
       
       j = i+1
       while j<len(cell_data) and insert:
-        insert = insert and (not self.__patches_overlap(cell_data[i],cell_data[j],dimensions) or cell_data[i].size[0] < cell_data[j].size[0])
+        is_not_blocked_by_element_to_the_right = not self.__patches_overlap(cell_data[i],cell_data[j],dimensions) or cell_data[i].size[0] < cell_data[j].size[0]
+        #if not is_not_blocked_by_element_to_the_right:
+        #  print( "patch " + str(cell_data[i]) + " does not enter result as there's also cell data " + str(cell_data[j]) )
+        insert = insert and is_not_blocked_by_element_to_the_right
         j = j+1
 
       if insert:        

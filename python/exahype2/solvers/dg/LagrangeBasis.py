@@ -20,15 +20,15 @@ class LagrangeBasis():
     # quadrature_points, quadrature_weights
     self.__quadrature_points, self.__quadrature_weights = self._compute_quadrature_points_and_weights(num_points)
     # operators
-    self.__mass_matrix                   = self.__compute_mass_matrix()
-    self.__stiffness_matrix              = self.__compute_stiffness_matrix()
-    self.__K1                            = self.__compute_K1()
-    self.__inv_K1                        = mp.inverse(self.__K1).tolist()
-    self.__basis_function_values_left,_  = self.__evaluate(mp.mpf(0.0))
-    self.__basis_function_values_right,_ = self.__evaluate(mp.mpf(1.0))
-    self.__dudx                          = self.__compute_discrete_derivative_operator()
-    self.__equidistant_grid_projector    = self.__compute_equidistant_grid_projector()
-    self.__fine_grid_projector           = [None]*3
+    self.__mass_matrix                     = self.__compute_mass_matrix()
+    self.__stiffness_operator                = self.__compute_stiffness_operator()
+    self.__K1                              = self.__compute_K1()
+    self.__inverted_predictor_lhs_operator = mp.inverse(self.__K1).tolist()
+    self.__basis_function_values_left,_    = self.__evaluate(mp.mpf(0.0))
+    self.__basis_function_values_right,_   = self.__evaluate(mp.mpf(1.0))
+    self.__derivative_operator    = self.__compute_derivative_operator()
+    self.__equidistant_grid_projector      = self.__compute_equidistant_grid_projector()
+    self.__fine_grid_projector             = [None]*3
     for j in range(0,3):
       self.__fine_grid_projector[j] = self.__compute_fine_grid_projector(j)
   def __str__(self):
@@ -108,7 +108,7 @@ class LagrangeBasis():
     #      MM[k][l] += self.__quadrature_weights[i]*phi[k]*phi[l]
     return MM
 
-  def __compute_stiffness_matrix(self):
+  def __compute_stiffness_operator(self):
     """
     Computes the (reference) element stiffness matrix for an approximation of order self.__max_poly_order.
     
@@ -146,7 +146,7 @@ class LagrangeBasis():
     :return: delta between the reference element mass operator at point xi=1.0 and the element stiffness matrix 
     """
     phi1, _ = self.__evaluate(1.0)
-    Kxi = self.__stiffness_matrix    
+    Kxi = self.__stiffness_operator    
 
     K1  = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
     #FRm = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
@@ -156,14 +156,14 @@ class LagrangeBasis():
         #FRm[k][l] = phi1[k]*phi1[l]
         K1[k][l]  = phi1[k]*phi1[l] - Kxi[k][l]
     
-    #K1_orig = np.subtract(FRm,self.__stiffness_matrix)
+    #K1_orig = np.subtract(FRm,self.__stiffness_operator)
     #for k in range(0, self.__num_points):
     #  for l in range(0, self.__num_points):
     #    print(K1[k][l] - K1_orig[k][l])
    
     return K1    
       
-  def __compute_discrete_derivative_operator(self):
+  def __compute_derivative_operator(self):
     """
     Computes basis function derivatives at each support point.
     Transposes the resulting operator.
@@ -203,7 +203,7 @@ class LagrangeBasis():
     """
     # matmul
     # @todo: get rid of this numpy dependency, as mass matrix is diagonal
-    #dudx_orig  = np.dot(mp.inverse(self.__mass_matrix).tolist(),np.transpose(self.__stiffness_matrix))
+    #dudx_orig  = np.dot(mp.inverse(self.__mass_matrix).tolist(),np.transpose(self.__stiffness_operator))
     dudx = [[mp.mpf(0) for _ in range(self.__num_points)] for _ in range(self.__num_points)]
     for i in range(0, self.__num_points):
       phi, phi_xi = self.__evaluate(self.__quadrature_points[i])
@@ -294,7 +294,7 @@ class LagrangeBasis():
     return result
   
   @classmethod
-  def __render_tensor_2(cls,tensor):
+  def __render_tensor_2(cls,tensor,multiDimArray=True):
     """
     Converts nested list or numpy matrix to nested list of strings.
     :param tensor: nested list or numpy matrix storing  mpmath numbers
@@ -304,11 +304,15 @@ class LagrangeBasis():
        resultRow = []
        for elem in row:
          resultRow.append(mp.nstr(elem,n=RENDER_DIGITS))
-       result.append(resultRow)
+       if multiDimArray:
+         result.append(resultRow)
+       else:
+         result += resultRow
+        
     return result
 
   @classmethod
-  def __render_tensor_3(cls,tensor):
+  def __render_tensor_3(cls,tensor,multiDimArray=True):
     """
     Converts nested list or numpy matrix to nested list of strings.
     :param tensor: nested list or numpy matrix storing  mpmath numbers
@@ -320,8 +324,12 @@ class LagrangeBasis():
           tmp2 = []
           for elem in r2:
             tmp2.append(mp.nstr(elem,n=RENDER_DIGITS))
-          tmp1.append(tmp2)
-       result.append(tmp1)
+          if multiDimArray:
+            tmp1.append(tmp2)
+          else:
+            result += tmp2
+       if multiDimArray:
+         result.append(tmp1)
     return result
 
   # protected 
@@ -356,13 +364,13 @@ class LagrangeBasis():
       sorted_transformed_quadrature_weights.append(ws)
     return sorted_transformed_quadrature_points, sorted_transformed_quadrature_weights
   
-  def _init_dictionary_with_default_parameters(self,d):
+  def _init_dictionary_with_default_parameters(self,d,multiDimArrays=False):
     def snake_to_camel(word):
       return ''.join(x.capitalize() or '_' for x in word.lower().split('_'))
 
     basisDeclarations = ""
     basisInitializers = ""
-    for var in ["quadrature_points","quadrature_weights","basis_function_values_left","basis_function_values_right","dudx","mass_matrix","stiffness_matrix","inv_K1","equidistant_grid_projector","fine_grid_projector"]:
+    for var in ["quadrature_points","quadrature_weights","basis_function_values_left","basis_function_values_right","derivative_operator","mass_matrix","stiffness_operator","inverted_predictor_lhs_operator","equidistant_grid_projector","fine_grid_projector"]:
       var_key  = "_LagrangeBasis__" + var # prefix for privat variables of class LagrangeBasis
       var_name = snake_to_camel(var) # C++ name
       if var in ["quadrature_points","quadrature_weights","basis_function_values_left","basis_function_values_right"]:
@@ -370,13 +378,21 @@ class LagrangeBasis():
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))
       elif var in ["fine_grid_projector"]:
-          basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          if multiDimArrays:
+            basisDeclarations += "const double {var_name}[3][{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          else:
+            basisDeclarations += "const double {var_name}[3][({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_3(getattr(self,var_key))))
+            initializer="{" + \
+              ",".join([LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(elem,multiDimArrays)) for elem in self.__fine_grid_projector]) +\
+             "}")
       else:
-          basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          if multiDimArrays:
+            basisDeclarations += "const double {var_name}[{order}+1][{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
+          else:
+            basisDeclarations += "const double {var_name}[({order}+1)*({order}+1)];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
-              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key))))
+              initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_2(getattr(self,var_key),multiDimArrays)))
     
     d["ORDER"]              = self.__max_poly_order
     d["BASIS_DECLARATIONS"] = basisDeclarations  

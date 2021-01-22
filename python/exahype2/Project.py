@@ -87,57 +87,6 @@ class Project(object):
     self._build_mode          = mode
 
 
-  def __get_library_postfix( self ):
-    """
-    
-    Libraries in ExaHyPE 2 always end with 2d_debug or 3d_trace. This 
-    operation gives you back the respective postfix. There are two 
-    variants of this routine. One accepts a dimension, the other one
-    does not, i.e. accepts None. This is important as some libraries are dimension-generic
-    while others are not. Therefore, some have the 2d/3d postfix and 
-    others lack it.
-
-    mode is from peano4.output.CompileMode
-    dimensions either None or something smaller zero (takes project's
-      dimension) or a particular dimension
-    
-    """
-    result = ""
-    result += str(self._dimensions) + "d"
-
-    if self._build_mode==peano4.output.CompileMode.Debug:
-        result += self.LibraryDebug
-    if self._build_mode==peano4.output.CompileMode.Trace:
-        result += self.LibraryTrace
-    if self._build_mode==peano4.output.CompileMode.Asserts:
-        result += self.LibraryAsserts
-    if self._build_mode==peano4.output.CompileMode.Release:
-        result += self.LibraryRelease
-    return result
-
-
-  def __get_ExaHyPE_library( self ):
-    """
-
-    Returns the core ExaHyPE library against which to link
-         
-    mode is from peano4.output.CompileMode
-    
-    """
-    return "ExaHyPE2Core" + self.__get_library_postfix()
-
-
-  def __get_load_balancing_library( self ):
-    """
-
-    Returns the core ExaHyPE library against which to link
-         
-    mode is from peano4.output.CompileMode
-    
-    """
-    return "ToolboxLoadBalancing" + self.__get_library_postfix()
-
-
   def add_solver(self,solver):
     self._solvers.append( solver )
 
@@ -167,7 +116,6 @@ class Project(object):
     
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
     
-
 
   def __configure_makefile(self):
     self._project.output.makefile.set_dimension(self._dimensions)
@@ -210,13 +158,13 @@ class Project(object):
       templatefile_prefix + "SolverRepository.template.h",
       templatefile_prefix + "SolverRepository.template.cpp",
       "SolverRepository", 
-      self._project.namespace + ["observers"],
-      "observers", 
+      self._project.namespace + ["repositories"],
+      "repositories", 
       solverRepositoryDictionary,
       True)
 
     self._project.output.add( generated_solver_files )
-    self._project.output.makefile.add_cpp_file( "observers/SolverRepository.cpp" )
+    self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
     
     
   def generate_Peano4_project(self):
@@ -244,6 +192,8 @@ class Project(object):
      the opportunity to insert a few "empty"ish traversals in-between.
      
     """
+    self._project.cleanup()
+
     self.__export_constants()
     self.__configure_makefile()
     
@@ -252,9 +202,7 @@ class Project(object):
     create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
     plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
     perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
-    
-    self._project.cleanup()
-    
+        
     self._project.solversteps.add_step(create_grid)
     self._project.solversteps.add_step(init_grid)
     self._project.solversteps.add_step(create_grid_but_postpone_refinement)
@@ -299,8 +247,8 @@ class Project(object):
 
     # maybe use ..
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
-    self._project.output.makefile.add_library( self.__get_ExaHyPE_library(),        self._Peano_src_directory + "/src/exahype2" )
-    self._project.output.makefile.add_library( self.__get_load_balancing_library(), self._Peano_src_directory + "/src/toolbox/loadbalancing" )
+    self._project.output.makefile.add_library( "ExaHyPE2Core$(DIMENSIONS)d$(LIBRARY_POSTFIX)",          self._Peano_src_directory + "/src/exahype2" )
+    self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
     self._project.output.makefile.set_mode(self._build_mode)
 
     return self._project

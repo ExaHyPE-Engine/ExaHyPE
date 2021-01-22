@@ -64,7 +64,7 @@ class ModelToDataRepository(object):
       self.__build_up_dictionary_for_one_data_set(i)
 
   def __get_full_namespace(self):
-    return self.model.namespace + [ "observers" ]
+    return self.model.namespace + [ "repositories" ]
       
   def __get_class_name(self):
     return "DataRepository"

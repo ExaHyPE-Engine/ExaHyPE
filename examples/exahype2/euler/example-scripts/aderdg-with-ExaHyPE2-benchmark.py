@@ -53,7 +53,7 @@ if args.mode not in ["release", "trace", "assert"]:
     sys.exit(1)
 
 if args.out is not None and os.path.exists(args.out) and not args.force:
-    print("No overwriting existing output file name {}. Use -f to force it.".format(args.out))
+    print("Not overwriting existing output file name {}. Use --f to force it.".format(args.out))
     sys.exit(1)
 
 print("\nConfiguring {}D Euler problem with h={} and {} timesteps. Buildmode is {}, nbuilds={}.\n".format(args.dim, args.h, args.timesteps, args.mode, args.j))
@@ -137,3 +137,4 @@ peano4_project = project.generate_Peano4_project()
 peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 print("Done. Executable is: {}".format(args.out))
+print( "Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-ADERDGEuler.peano-patch-file")

@@ -72,6 +72,7 @@ bool {FULL_QUALIFIED_CLASSNAME}::solveCellProblemAndFinishTimeStepOnCell() const
 
 
 void {FULL_QUALIFIED_CLASSNAME}::adjustSolution(
+  double * __restrict__ Q,
   double* Q,
   const tarch::la::Vector<Dimensions,double>&  cellCentre,
   const tarch::la::Vector<Dimensions,double>&  cellH,

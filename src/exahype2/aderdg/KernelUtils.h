@@ -1,3 +1,6 @@
+#ifndef _EXAHYPE2_ADERDG_KERNEL_UTILS_H_
+#define _EXAHYPE2_ADERDG_KERNEL_UTILS_H_
+
 #include "tarch/la/Vector.h"
 
 namespace exahype2 {
@@ -7,11 +10,17 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     GPUCallableMethod int getNodesPerCell(int nodesPerAxis);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
   
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
     GPUCallableMethod int getSpaceTimeNodesPerCell(int nodesPerAxis);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
   
     /**
      * If the stride is used for a space-time quantity, then this function generates:
@@ -22,8 +31,8 @@ namespace exahype2 {
      *
      * (0,1,nodesPerAxis,nodesPerAxis^2) for strides (t,x,y,z).
      *   
-     * @param strides4SpaceTimeQuantity generate strides for space-time quantity (default=true).
-     * @param nodesPerAxis              nodes per coordinate axis
+     * @param[in] strides4SpaceTimeQuantity generate strides for space-time quantity (default=true).
+     * @param[in] nodesPerAxis              nodes per coordinate axis nodes/Lagrange basis functions per coordinate axis (order+1)
      * @return Strides per direction (t,x,y,z), where t-direction stride has index 0.
      */
      #if defined(OpenMPGPUOffloading)
@@ -32,10 +41,13 @@ namespace exahype2 {
      GPUCallableMethod tarch::la::Vector<Dimensions+1,int> getStrides(
         int nodesPerAxis,
         bool strides4SpaceTimeQuantity = true);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
-      * @param linearises the index with the given strides.
-      * @param strides strides per direction (t,x,y,z).
+      * @param[in] linearises the index with the given strides.
+      * @param[in] strides strides per direction (t,x,y,z). time stamp
       * @note if stride[0] = 0 this implies that we have no time-index 
       */
      #if defined(OpenMPGPUOffloading)
@@ -44,10 +56,13 @@ namespace exahype2 {
      GPUCallableMethod int lineariseIndex(
         const tarch::la::Vector<Dimensions+1,int>& index,
         const tarch::la::Vector<Dimensions+1,int>& strides);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
        
      /**
-      * @param scalarIndex index that we want to delinearise 
-      * @param strides strides per direction (t,x,y,z).
+      * @param[in] scalarIndex index that we want to delinearise 
+      * @param[in] strides strides per direction (t,x,y,z). time stamp
       *
       * @return index that is descalar account to the strides
       *
@@ -60,11 +75,14 @@ namespace exahype2 {
      GPUCallableMethod tarch::la::Vector<Dimensions+1,int> delineariseIndex(
        int scalarIndex,
        const tarch::la::Vector<Dimensions+1,int>& strides);       
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
       * @return a tuple (t,x,y,z) where the t-component has index 0.
-      * @param index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index
+      * @param[in] index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index time stamp
       * @note coords[0] = t if if t-direction component of index is negative.
       */
      #if defined(OpenMPGPUOffloading)
@@ -77,12 +95,15 @@ namespace exahype2 {
        const double                                t, 
        const double                                dt, 
        const double* __restrict__                  nodes);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
       * @brief Compute coordinates from cell geometry and quadrature index
       * @return a tuple (t,x,y,z) where the t-component has index 0.
-      * @param index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index
-      * @param direction encodes direction of face normal (x: 0, y: 1, z: 2)
+      * @param[in] index t-,x-,y-, and z-direction (reference coordinates) components of descalar scalar index time stamp
+      * @param[in] direction encodes direction of face normal (x: 0, y: 1, z: 2)
       * @note coords[0] = t if if t-direction component of index is negative.
       */
      #if defined(OpenMPGPUOffloading)
@@ -96,10 +117,13 @@ namespace exahype2 {
        const double                                t, 
        const double                                dt, 
        const double* __restrict__                  nodes);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
-      * @param direction   coordinate direction of the (reference) element face normal (0: 
-      * @param orientation orientation of the (reference) element face normal (0: negative, 1: positive).
+      * @param[in] direction   coordinate direction of the (reference) element face normal (0: 
+      * @param[in] orientation orientation of the (reference) element face normal (0: negative, 1: positive).
       * @note Result must be scaled additionally by nodesPerAxis if it used to access space-time quantities.
       */
      #if defined(OpenMPGPUOffloading)
@@ -110,10 +134,13 @@ namespace exahype2 {
        const int                                 direction,
        const int                                 orientation,
        const int                                 nodesPerAxis);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /**
-      * @param direction   coordinate direction of the (reference) element face normal (0: 
-      * @param orientation orientation of the (reference) element face normal (0: negative, 1: positive).
+      * @param[in] direction   coordinate direction of the (reference) element face normal (0: 
+      * @param[in] orientation orientation of the (reference) element face normal (0: negative, 1: positive).
       * @return scalar cell index 
       */
      #if defined(OpenMPGPUOffloading)
@@ -124,6 +151,9 @@ namespace exahype2 {
        const int                                 direction,
        const int                                 id,
        const int                                 nodesPerAxis);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     /**
      * @brief Computes the gradient at a given (space-time) quadrature point.
@@ -154,10 +184,10 @@ namespace exahype2 {
      * @note This function assumes that the gradient zeroed out
      *
      * @param[in] QIn
-     * @param[in] dudx
+     * @param[in] dudx derivative operator; size: (order+1)*(order+1)
      * @param[in] invDx
-     * @param[in] nodesPerAxis
-     * @param[in] unknowns
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] unknowns the number of PDE unknowns that we evolve
      * @param[in] strideQ
      * @param[in] strideGradQ
      * @param[in] scalarIndex
@@ -174,6 +204,9 @@ namespace exahype2 {
       const int                  strideQ,
       const int                  scalarIndex,
       double* __restrict__       gradQAux);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      /** alignment in bytes
      */
@@ -181,11 +214,17 @@ namespace exahype2 {
      #pragma omp declare target
      #endif
      GPUCallableMethod size_t alignment();
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
      
      #if defined(OpenMPGPUOffloading)
      #pragma omp declare target
      #endif
      GPUCallableMethod size_t paddedSize(size_t numElements, size_t sizeofType=sizeof(double));
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
  
      double* allocateBuffer_cpu(size_t unpaddedSizeMultiplier, size_t paddedSizeMultiplier);  
      
@@ -193,3 +232,5 @@ namespace exahype2 {
     
   } // aderdg
 } // exahype2
+
+#endif

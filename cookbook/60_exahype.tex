@@ -19,6 +19,26 @@
 % \end{figure}
 
 
+\ExaHyPE\ is both a set of C/C++ and Fortran core routines complementing the
+\Peano\ core and a high-level augmentation of \Peano's Python API.
+\ExaHyPE's Python API can be read as builder mechanism:
+You configure your particular \ExaHyPE\ application, i.e.~you tell the \ExaHyPE\
+engine which application you want to run (which PDE terms, which solver
+variants, which hardware properties).
+The Python API then yields both a \Peano\ Python project which you can run plus
+a set of template classes which you implement with your particular application.
+
+
+The present document discusses how to create an \ExaHyPE\ application from
+scratch.
+Most application experts might not want to do this and instead use a read-to-use
+\ExaHyPE\ application.
+The most prominent (and maybe powerful) code using the ExaHyPE engine is maybe
+ExaSeis; used to simulate seismic waves.
+The details of these domain-specific codes are not covered by the present
+document.
+
+
 \begin{framed}
 \paragraph*{First \ExaHyPE\ run}
 \begin{itemize}
@@ -42,8 +62,7 @@ jupyter-notebook Euler.ipynb
   or---if you don't like Jupyter notebooks---type in
   \begin{code}
 export PYTHONPATH=../../../python/
-python3 example-scripts/finitevolumes-with-ExaHyPE2-CI.py
-make
+python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --h 0.1
 ./peano4
   \end{code}
 \end{itemize}
@@ -60,32 +79,6 @@ seen substantial rewrites of core routines.
 However, many paradigms and even code blocks remain the same.
 Migrating from the original ExaHyPE to \ExaHyPE\ thus should be straightforward.
 
-
-\ExaHyPE\ is both a set of C/C++ and Fortran core routines complementing the
-\Peano\ core and a high-level augmentation of \Peano's Python API.
-Compare to the architecture sketch from Chapter \ref{chapter:architecture}.
-\ExaHyPE's Python API can be read as builder mechanism:
-You configure your particular \ExaHyPE\ application, i.e.~you tell the \ExaHyPE\
-engine which application you want to run (which PDE terms, which solver
-variants, which hardware properties).
-The Python API then yields both a \Peano\ Python project which you can run plus
-a set of template classes which you implement with your particular application.
-
-
-The present document discusses how to create an \ExaHyPE\ application from
-scratch.
-Most application experts might not want to do this and instead use a read-to-use
-\ExaHyPE\ application.
-The most prominent (and maybe powerful) code using the ExaHyPE engine is maybe
-ExaSeis; used to simulate seismic waves.
-The details of these domain-specific codes are not covered by the present
-document.
-
-
-
-
-
-\section{Difference of \ExaHyPE\ vs.~ExaHyPE (first generation)}
 
 The original ExaHyPE had been built on top of Peano (third generation) and tried
 to hide as much of Peano away as possible.
@@ -107,6 +100,17 @@ then assembles the application.
 \section{Minimalist Finite Volumes for the Euler equations}
 \label{section:exahype:fv}
 
+
+\begin{remark}
+ In the \texttt{examples/exahype2} directory, there are multiple \ExaHyPE\
+ experiments. An \ExaHyPE\ project is mainly a Python script supplemented by
+ some C++ user code. I offer most of these scripts as Jupyter notebook, but some
+ also are available as plain Python scripts. If you prefer to run the Jupyter
+ notebooks without the GUI, use \texttt{ipython3}.
+\end{remark}
+
+
+\noindent
 A minimalist \ExaHyPE\ solver resembles:
 \begin{code}
 project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", "myexecname" )
@@ -131,23 +135,63 @@ peano4_project = project.generate_Peano4_project()
 peano4_project.generate()
 \end{code}
 
+\begin{enumerate}
+  \item We first create a new project. This is an \ExaHyPE\ project which is,
+  for the time being, completely independent of a \Peano\ project.
+  \item We next create a solver. 
+  There's a number of solvers currently available within \ExaHyPE.
+  Once created, we add it to the \ExaHyPE\ project before 
+  \item we set the global simulation parameters.
+  \item As \Peano\ has already been installed on the system, the developer did
+  set all pathes, all compilers, all libraries, \ldots It would be inconvenient
+  to ask a user to provide this information all over again. Therefore, we parse
+  the outcome of \texttt{configure} and copy the relevant information over.
+  \item Finally, we ask the \ExaHyPE\ project to generate a new \Peano\ project. 
+\end{enumerate}
+
+
 \noindent
-We first create a new project.
-There's a number of solvers currently available within \ExaHyPE.
-We add at least of them to \ExaHyPE\ before we set the global simulation
-parameters.
-The two final steps are that we make the \ExaHyPE\ API generate a \Peano\
-project, and this \Peano\ project then can generate the actual C++ code.
+Once we have a \Peano\ project, we can add further features to this one.
+Eventually, we make the \Peano\ project generate the actual C++ code.
 
 
+\paragraph{Created code.}
 The above snippet does set up a complete \ExaHyPE\ simulation.
 The solver will consist of two classes: \texttt{AbstractEuler} and a subclass
 \texttt{Euler}.
-The texttt{Euler} is an empty stub when you call the script the first time.
+The \texttt{Euler} is an empty stub when you call the script the first time.
 You will have to befill it with the actual Physics---flux functions for example.
+See the files in the directory \texttt{examples/exahype2/euler} which hosts such
+example code. 
+If you want to avoid to write C++ code at all, you can also use some symbolic
+Python interface. 
+An example for this one is provided via the Jupyter notebook.
 
 
-Details are discussed in the Euler Jupyter notebook.
+\paragraph{Changing simulation properties.}
+\ExaHyPE's Python API is written as end-to-end interface:
+Whenever you change something, you have to run the whole script or Jupyter
+notebook all over again.
+In practice, this might be too much. 
+Often, it is simply sufficient to repeat the following steps:
+
+\begin{itemize}
+  \item Change something within your \ExaHyPE\ project (such as the simulation
+  runtime, or mesh size, or \ldots).
+  \item Regenerate the resulting \Peano\ project: 
+  \begin{code}
+peano4_project = project.generate_Peano4_project()
+  \end{code}
+  \item Re-add all the stuff you had added to the \Peano\ project before,
+  i.e.~additional libraries, additional compile flags, additional
+  Fortran modules, \ldots Also set all the constants within the \Peano\ project
+  that have to be exported into C++ code.
+  \item Regenerate the C++ code:
+  \begin{code}
+peano4_project.generate( throw_away_data_after_generation=False )  
+  \end{code}
+\end{itemize}
+
 
 
 \section{IO, logging and initialisation}

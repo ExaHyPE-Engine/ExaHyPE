@@ -29,8 +29,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     #endif
     {% endif %}
       [&](
-        double                                       QL[],
-        double                                       QR[],
+        const double * __restrict__                  QL,
+        const double * __restrict__                  QR,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       dx,
         double                                       t,
@@ -41,7 +41,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ) -> void {
         ::exahype2::fv::splitRusanov1d(
           [] (
-            double                                       Q[],
+            const double * __restrict__                  Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -52,13 +52,13 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             {% if FLUX_IMPLEMENTATION=="<none>" %}
             for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
             {% else %}
-            {{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
           {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
-            double                                       Q[],
-            double                                       gradQ[][Dimensions],
+            const double * __restrict__                  Q,
+            const double * __restrict__                  dQdn,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
@@ -66,18 +66,18 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
-            {{SOLVER_INSTANCE}}.nonconservativeProduct( Q, gradQ, faceCentre, volumeH, t, normal, BgradQ );
+            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
           },
           {% endif %}
           [] (
-            double                                       Q[],
+            const double * __restrict__                  Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
             double                                       t,
             double                                       dt,
             int                                          normal
           ) -> double {
-            return {{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
           },
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
@@ -155,20 +155,11 @@ class GenericRusanovFixedTimeStepSize( FV ):
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
 
-    self._patch_overlap.generator.store_persistent_condition   = "not marker.isRefined() and " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
-    self._patch_overlap.generator.load_persistent_condition  = "not marker.isRefined() and " \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
-      "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
+    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
+      
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
-    #self._patch_overlap.generator.send_condition               = "not marker.isRefined() and " + \
-    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
-    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::CreateGridButPostponeRefinement"
-    #self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " \
-    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction and " + \
-    #   "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::CreateGridButPostponeRefinement and " + \
-    #  "observers::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
@@ -234,7 +225,7 @@ class GenericRusanovFixedTimeStepSize( FV ):
     
     """
     d[ "TIME_STEP_SIZE" ]               = self._time_step_size
-    d[ "TIME_STAMP" ]                   = d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
+    d[ "TIME_STAMP" ]                   = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
     
     d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
     d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation

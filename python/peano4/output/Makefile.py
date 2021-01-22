@@ -33,6 +33,7 @@ class Makefile(object):
     self.d["DIM"]              = "2"
     self.d["CONFIGUREPATH"]    = "."
     self.d["EXECUTABLENAME"]   = "peano4"
+    self.d["LIBRARY_POSTFIX"]  = ""
     self.d["FORTRAN_MODULES"]  = []
     self.set_mode( CompileMode.Debug )
     self.clear_files()
@@ -74,7 +75,7 @@ class Makefile(object):
     self.d["FCFLAGS"]  += " -I" + path
 
 
-  def add_gpu_object(self, object_path=""):
+  def add_gpu_object(self, object_path):
     """
     This is a temporary fix for GPU offloading with OpenMP and LLVM and will
     be required ntil linking to static libraries is supported. We need to
@@ -83,6 +84,7 @@ class Makefile(object):
     objects must be left of the static libs later.
     """
     self.d["GPUOBJS"] += " {}".format(object_path)
+
 
   def add_library(self, library_name, library_path="" ):
     """
@@ -134,8 +136,11 @@ class Makefile(object):
     self.d["CXXFLAGS"]      = value
 
 
-  def add_CXX_flag(self,value):
-    self.d["CXXFLAGS"]     += " " + value
+  def add_CXX_flag(self,value,force=False):
+    if value in self.d["CXXFLAGS"] and not force:
+      print( "CXXFLAG " + value + " is already in list of flags. Ignored as force attribute is not set" )
+    else:
+      self.d["CXXFLAGS"]     += " " + value
 
 
   def set_Fortran_compiler(self,value):
@@ -146,8 +151,11 @@ class Makefile(object):
     self.d["FCFLAGS"]       = value
 
 
-  def add_Fortran_flag(self,value):
-    self.d["FCFLAGS"]      += " " + value
+  def add_Fortran_flag(self,value,force=False):
+    if value in self.d["FCFLAGS"] and not force:
+      print( "FCFLAGS " + value + " is already in list of flags. Ignored as force attribute is not set" )
+    else:
+      self.d["FCFLAGS"]      += " " + value
 
 
   def add_linker_flag(self,value):
@@ -182,18 +190,18 @@ class Makefile(object):
           self.d["FC"] = compiler
         if re.search( "CXXFLAGS *=", line) and line.startswith( "CXXFLAGS" ):
           flags = line.split("=",1)[1].strip()
-          self.d["CXXFLAGS"] += flags
-          self.d["CXXFLAGS"] += " "
+          for i in flags.split( " " ):
+            self.add_CXX_flag(i)
         if re.search( "FCFLAGS *=", line) and line.startswith( "FCFLAGS" ):
           flags = line.split("=",1)[1].strip()
-          self.d["FCFLAGS"] += flags
-          self.d["FCFLAGS"] += " "
+          for i in flags.split( " " ):
+            self.add_Fortran_flag(i)
         if re.search( "LDFLAGS *=", line) and line.startswith( "LDFLAGS" ):
           flags = line.split("=",1)[1].strip()
-          self.d["LDFLAGS"] += flags
-          self.d["LDFLAGS"] += " "
+          for i in flags.split( " " ):
+            self.add_linker_flag(i)
         if re.search( "LIBS *=", line) and line.startswith( "LIBS" ):
-          flags = line.split("=",1)[1].strip()
+          self.d["LIBS"] += " "
           self.d["LIBS"] += flags
           self.d["LIBS"] += " "
       self.d["CONFIGUREPATH"] = directory
@@ -266,7 +274,7 @@ did search for a file """ + input_file )
       self.add_Fortran_file(i)
 
 
-  def add_Fortran_module(self,module_file):
+  def add_Fortran_module(self,module_file,force=False):
     """
 
      Add a Fortran module
@@ -274,12 +282,27 @@ did search for a file """ + input_file )
      module_file: String
        Filename of a Fortran source code file which hosts a module. It should
        have the extension .f90 or similar.
+       
+     force: Boolean
+       Enforce that Fortran module is added even though it might already be in
+       the list.
 
     """
     if not module_file.endswith( ".f90" ):
       print( "Warning: Fortran module file does not have extension .f90 (" + module_file + ") and translation thus might fail" )
-    self.d["FORTRAN_MODULES"].append( module_file )
-    #self.fortranfiles.append( module_file )
+    if module_file in self.d["FORTRAN_MODULES"] and not force:
+      print( """Fortran module file 
+""" + module_file + """
+is already in module file list. Did not add it once more. You can overwrite 
+this default behaviour via the force attribute in add_Fortran_module(). If 
+you create multiple Peano 4 makefiles in a row (as you change parameters, e.g.)
+then this message can typically be ignored.
+""" )
+    elif module_file in self.d["FORTRAN_MODULES"] and force:
+      print( "Fortran module file " + module_file + " is already in module file list but force flag is set. Add it" )
+      self.d["FORTRAN_MODULES"].append( module_file )
+    else:
+      self.d["FORTRAN_MODULES"].append( module_file )
 
 
   def add_Fortran_modules(self,module_files):

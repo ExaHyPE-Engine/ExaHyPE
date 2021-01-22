@@ -280,8 +280,11 @@ pip install jinja2 sympy
 \paragraph{Build with the GNU compilers}
 
 
+We do most of our work on Bede with LLVM, but you might want to try out GCC
+nevertheless.
+To build \Peano, run through the following steps:
 
-To build \Peano:
+
 \begin{code}
 module purge
 module load gcc
@@ -293,59 +296,78 @@ module load cuda
 \end{code}
 
 
--foffload=-lm-fno-fast-math -fno-associative-math
+% -foffload=-lm-fno-fast-math -fno-associative-math
 
-% To build \Peano:
-% \begin{code}
-% . /opt/software/spack/share/spack/setup-env.sh
-% module purge
-% module load spack
-% spack load gcc@10.2.0
-% spack load cuda
-% export CXXFLAGS="-fopenmp"
-% export LDFLAGS="-lgomp"
-% ./configure --with-multithreading=omp \
-%    --with-toolchain=nvidia \
-%    CXXFLAGS="-fopenmp -foffload=nvptx-none -lm -fno-fast-math -fno-associative-math" \
-%    LDFLAGS="-lnvToolsExt -fopenmp"
-% make clean
-% make -j 64
-% \end{code}
+
+\paragraph{Build with LLVM}
+
+LLVM is the recommended compiler for \Peano\ on Bede:
+
+\begin{code}
+module purge
+module load llvm openmpi cuda
+
+./configure --enable-gpu=nvidia --with-multithreading=omp --enable-exahype \  
+  --enable-loadbalancing-toolbox CXX=clang++ CXXFLAGS="-std=c++14 -fopenmp \
+  -fopenmp-targets=nvptx64-nvidia-cuda -fno-exceptions \
+  -DnoMPISupportsSingleSidedCommunication"  \
+  LDFLAGS="-L/opt/software/builder/developers/compilers/cuda/10.1.243/1/default/lib64 \ 
+  -lnvToolsExt"
+\end{code}
+
 
 \noindent
 Don't forget to add \texttt{--enable-exahype --enable-loadbalancing-toolbox} if
 you work with \ExaHyPE.
+If you don't need \ExaHyPE, you can likely just omit them.
 
-To run an example, create a SLURM script (e.g - slurm.sh) with something like the following:
+
+\paragraph{Build with MPI support}
+
+We have so far only used OpenMPI on Bede:
 \begin{code}
-#!/bin/bash
-#SBATCH --account=bddur01
-#SBATCH --time=1:0:0
-#SBATCH --export=ALL
-#SBATCH --partition=gpu
-#SBATCH --nodes=1
-#SBATCH --exclusive
-#SBATCH --gres=gpu:1  # 1/4 node cpu & mem allocated per gpu
-#SBATCH --gpu-bind=closest
-
- module purge
- module load cuda/10.2.89
- module load gcc/10.2.0
-
- export CXXFLAGS="-fopenmp"
- export LDFLAGS="-lgomp"
-
- pushd Peano/examples/exahype2/euler
- export PYTHONPATH=../../../python
- python3 example-scripts/finitevolumes-bede.py
- ./peano4
+module load openmpi
 \end{code}
 
-and to run it:
+\noindent
+There seem to be some issues with single-sided communication on Bede, so it is
+ipmortant that you add
+
 \begin{code}
-  module load slurm
-  sbatch slurm.sh
+CXXFLAGS=-DnoMPISupportsSingleSidedCommunication
 \end{code}
+
+\noindent
+to your configure call. Further to that, you need the flag 
+\begin{code}
+--with-mpi=mpiCC
+\end{code}
+
+
+\paragraph{Run code}
+
+To run an example, create a SLURM script and submit it via \texttt{sbatch}.
+There is extensive documentation on the SLURM syntax for Bede on Bede's docu
+page (link shared via command line after login).
+There are few things that stand out and differ compared to other machines:
+
+\begin{itemize}
+  \item It makes sense to add a \texttt{nvidia-smi} to the script right at the
+  start to get some kind of overview over the system.
+  \item The OpenMP environment has to be tailored to PowerPC (with its 1:4 SMT).
+  I usually use something like
+  \begin{code}
+export OMP_NUM_THREADS=32  
+  \end{code}
+  \item Use Bede's \texttt{bede-mpirun} instead of a sole \texttt{mpirun}.
+  \item Use Bede's partitioning arguments to get the pinnning of ranks/threads
+  to the cores right. I typically use \texttt{bede-mpirun --bede-par 1ppn:1tpc}.
+  \item It seems as if \Peano/OpenMP still sees all the cores or only 8 of them
+  when we start. So I usually set the thread count manually by passing a
+  \texttt{--threads 32} to \Peano.
+\end{itemize}
+
+
 
 \section{Local workstations}
 

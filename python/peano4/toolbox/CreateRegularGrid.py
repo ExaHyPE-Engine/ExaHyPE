@@ -25,7 +25,7 @@ class CreateRegularGrid(ActionSet):
   std::vector< peano4::grid::GridControlEvent > result;
   peano4::grid::GridControlEvent newEntry;
   newEntry.setRefinementControl( peano4::grid::GridControlEvent::RefinementControl::Refine );
-  newEntry.setOffset(tarch::la::Vector<Dimensions,double>( -std::numeric_limits<double>::max()/2.0 ));
+  newEntry.setOffset(tarch::la::Vector<Dimensions,double>( -std::numeric_limits<double>::max()/2.0/3.0 ));
   newEntry.setWidth(tarch::la::Vector<Dimensions,double>(  std::numeric_limits<double>::max()/2.0 ));
   newEntry.setH(tarch::la::Vector<Dimensions,double>( {H_MAX} ));
   result.push_back(newEntry);
