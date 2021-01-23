@@ -141,7 +141,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_A
 GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
     std::function< void(
       const double * __restrict__                 Q,
-      double * __restrict__                       dQ_or_dQdn,
+      double * __restrict__                       dQ_or_deltaQ,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       int                                         normal,
@@ -241,7 +241,7 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
   ) >   algebraicSource,
   std::function< void(
     const double * __restrict__                 Q,
-    double * __restrict__                       dQ_or_dQdn,
+    double * __restrict__                       dQ_or_deltaQ,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal,

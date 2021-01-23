@@ -79,7 +79,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
 {% endif %}
 
 
-
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   const double * __restrict__                  Qinside,   // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]

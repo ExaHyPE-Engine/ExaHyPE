@@ -21,7 +21,6 @@
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 
-
     /**
      * Feel free to change the solution in the particular finite volume.
      * You can for example change the initial conditions by overwriting

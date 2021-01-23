@@ -171,7 +171,7 @@ namespace exahype2 {
      GPUCallableMethod void corrector_addNcpContributions_body_AoS(
        std::function< void(
          const double * __restrict__                 Q,
-         double * __restrict__                       dQ_or_dQdn,
+         double * __restrict__                       dQ_or_deltaQ,
          const tarch::la::Vector<Dimensions,double>& x,
          double                                      t,
          int                                         normal,
@@ -270,7 +270,7 @@ namespace exahype2 {
       ) >   algebraicSource,
       std::function< void(
         const double * __restrict__                 Q,
-        double * __restrict__                       dQ_or_dQdn,
+        double * __restrict__                       dQ_or_deltaQ,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         int                                         normal,

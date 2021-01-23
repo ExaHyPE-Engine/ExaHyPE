@@ -107,7 +107,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 {% if NCP_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__             dQdn, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
@@ -117,4 +117,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   {{NCP_IMPLEMENTATION}}
 }
 {% endif %}
+{% endif %}
+
+
+
+
+{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
+  const double * __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__ S
+) {
+  {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
+  if (tarch::la::equals(t,0.0) ) {
+    {{SOURCE_TERM_IMPLEMENTATION}}
+  }
+  {% endif %}
+}
 {% endif %}

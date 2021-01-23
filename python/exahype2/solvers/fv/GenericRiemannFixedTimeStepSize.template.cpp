@@ -46,6 +46,22 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
 {% endif %}
 
 
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
+  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__ S // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+) {
+  logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+  // @todo implement
+  logTraceOutWith( "sourceTerm(...)" );
+}
+{% endif %}
+
+
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
@@ -96,7 +112,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__                  dQdn, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,

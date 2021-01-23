@@ -52,6 +52,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     {% endif %}
 
 
+    {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+    void sourceTerm(
+      const double * __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double * __restrict__ S
+    ) override;
+    {% endif %}
+
+    
     {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
     virtual void boundaryConditions(
       const double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]

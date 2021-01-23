@@ -152,7 +152,7 @@ GPUCallableMethod void exahype2::dg::rusanovNonlinear_riemannFlux_body_AoS(
 GPUCallableMethod void exahype2::dg::rusanovNonlinear_addNcpContributionsToRiemannFlux_body_AoS(
     std::function< void(
       double * __restrict__                       Q,
-      double * __restrict__                       dQ_or_dQdn,
+      double * __restrict__                       dQ_or_deltaQ,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       int                                         normal,
@@ -320,7 +320,7 @@ void exahype2::dg::rusanovNonlinear_loop_AoS(
   ) >                                         boundaryFlux,
   std::function< void(
     double * __restrict__                       Q,
-    double * __restrict__                       dQ_or_dQdn,
+    double * __restrict__                       dQ_or_deltaQ,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal,

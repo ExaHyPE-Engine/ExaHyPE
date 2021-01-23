@@ -49,7 +49,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
         {% if NCP_IMPLEMENTATION!="<none>" %}
         [] (
           const double* __restrict__                   Q,
-          const double * __restrict__                  dQdn,
+          const double * __restrict__                  deltaQ,
           const tarch::la::Vector<Dimensions,double>&  faceCentre,
           const tarch::la::Vector<Dimensions,double>&  volumeH,
           double                                       t,
@@ -57,7 +57,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
           int                                          normal,
           double                                       BgradQ[]
         ) -> void {
-          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, dQdn, faceCentre, volumeH, t, normal, BgradQ );
+          repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
         },
         {% endif %}
         [] (
@@ -75,6 +75,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         FL,FR
       );
+    },
+    [] (
+      const double* __restrict__                   Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double* __restrict__                         S
+    ) -> void {
+      repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, volumeCentre, volumeH, t, dt, S);
     },
     marker.x(),
     marker.h(),
@@ -142,7 +152,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 #ifdef UseNVIDIA
   nvtxRangePushA("Rusanov");
 #endif
+  #if Dimensions==2
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
+  #elif Dimensions==3
+  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
+  #endif
     _marker.x(),
     _marker.h(),
     timeStamp,
@@ -155,6 +169,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   nvtxRangePop();
 #endif
 
+  // Ab hier ist run , ^^^ alles in ctor
 #pragma omp target exit data map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(delete:reconstructedPatch[0:sourcePatchSize])
 
 
