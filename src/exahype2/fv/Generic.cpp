@@ -312,7 +312,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
   double numericalFluxR[unknowns]; // helper out variable
 
   #ifdef SharedOMP
-  #pragma omp parallel for collapse(2)
+  #pragma omp parallel for collapse(3)
   #endif
   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
