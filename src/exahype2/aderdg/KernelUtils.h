@@ -120,8 +120,28 @@ namespace exahype2 {
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
+
+
+     /**
+      * Map cell index to an index for a single face.
+      *
+      * @param[in] direction   coordinate direction of the (reference) element face normal (0: 
+      * @note Result must be scaled additionally by nodesPerAxis if it used to access space-time quantities.
+      */
+     #if defined(OpenMPGPUOffloading)
+     #pragma omp declare target
+     #endif
+     GPUCallableMethod int mapCellIndexToScalarFaceIndex(
+        const tarch::la::Vector<Dimensions+1,int>& indexCell,
+        const int                                  direction,
+        const int                                  nodesPerAxis);
+     #if defined(OpenMPGPUOffloading)
+     #pragma omp end declare target
+     #endif
      
      /**
+      * Map cell index to an index for the whole hull, i.e. all 2*Dimensios faces.
+      *
       * @param[in] direction   coordinate direction of the (reference) element face normal (0: 
       * @param[in] orientation orientation of the (reference) element face normal (0: negative, 1: positive).
       * @note Result must be scaled additionally by nodesPerAxis if it used to access space-time quantities.
@@ -131,9 +151,9 @@ namespace exahype2 {
      #endif
      GPUCallableMethod int mapCellIndexToScalarHullIndex(
        const tarch::la::Vector<Dimensions+1,int>& indexCell,
-       const int                                 direction,
-       const int                                 orientation,
-       const int                                 nodesPerAxis);
+       const int                                  direction,
+       const int                                  orientation,
+       const int                                  nodesPerAxis);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif

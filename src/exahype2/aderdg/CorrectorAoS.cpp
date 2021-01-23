@@ -282,7 +282,7 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
   double* SAux     = new double[nodesPerCell*strideS]{0.0};
   double* gradQAux = new double[nodesPerCell*strideGradQ]{0.0};
   
-  for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
+  for ( int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
     if ( callFlux ) { 
       corrector_addFluxContributions_body_AoS(
         flux,
@@ -376,7 +376,7 @@ void exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
   
   const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
-  for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
+  for ( int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
     corrector_addRiemannContributions_body_AoS(
       UOut,
       riemannResultIn,
