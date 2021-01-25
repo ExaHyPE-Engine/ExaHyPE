@@ -109,15 +109,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
 
-  #if Dimensions==2
-  const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-  const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-  #elif Dimensions==3
-  const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-  const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-  #endif
   
-  double destinationPatchOnGPU[destinationPatchSize]; // This works now since we know the array size at compile time (maybe later this needs to be on Heap)
+  double destinationPatchOnGPU[_destinationPatchSize]; // This works now since we know the array size at compile time (maybe later this needs to be on Heap)
   double * reconstructedPatch = _reconstructedPatch; // Fixes omp restrictions
 
   const double timeStamp = observers::{{SOLVER_INSTANCE}}.getMinTimeStamp();
@@ -128,7 +121,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 #endif
 
 // the first one should be alloc: not to:
-#pragma omp target enter data map(alloc:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
+#pragma omp target enter data map(alloc:destinationPatchOnGPU[0:_destinationPatchSize]) map(to:reconstructedPatch[0:_sourcePatchSize])
 
   ::exahype2::fv::copyPatch(
     reconstructedPatch,
@@ -160,17 +153,17 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 #endif
 
   // Ab hier ist run , ^^^ alles in ctor
-#pragma omp target exit data map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(delete:reconstructedPatch[0:sourcePatchSize])
+#pragma omp target exit data map(from:destinationPatchOnGPU[0:_destinationPatchSize]) map(delete:reconstructedPatch[0:_sourcePatchSize])
 
 
   // get stuff explicitly back from GPU, as it will be stored
   // locally for a while
-  double* destinationPatchOnCPU = ::tarch::allocateMemory(destinationPatchSize, ::tarch::MemoryLocation::Heap);
-  std::copy_n(destinationPatchOnGPU,destinationPatchSize,destinationPatchOnCPU);
+  double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
+  std::copy_n(destinationPatchOnGPU,_destinationPatchSize,destinationPatchOnCPU);
 
   {{FREE_SKELETON_MEMORY}}
 
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),destinationPatchSize,destinationPatchOnCPU);
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,destinationPatchOnCPU);
   logTraceOut( "run()" );
   return false;
 }
