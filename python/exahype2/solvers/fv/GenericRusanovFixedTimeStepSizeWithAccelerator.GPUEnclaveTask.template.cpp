@@ -110,7 +110,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
 
   
-  double destinationPatchOnGPU[_destinationPatchSize]; // This works now since we know the array size at compile time (maybe later this needs to be on Heap)
   double * reconstructedPatch = _reconstructedPatch; // Fixes omp restrictions
 
   const double timeStamp = observers::{{SOLVER_INSTANCE}}.getMinTimeStamp();
@@ -121,18 +120,18 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 #endif
 
 // the first one should be alloc: not to:
-#pragma omp target enter data map(alloc:destinationPatchOnGPU[0:_destinationPatchSize]) map(to:reconstructedPatch[0:_sourcePatchSize])
+#pragma omp target enter data map(alloc:_destinationPatch[0:_destinationPatchSize]) map(to:reconstructedPatch[0:_sourcePatchSize])
 
   ::exahype2::fv::copyPatch(
     reconstructedPatch,
-    destinationPatchOnGPU,
+    _destinationPatch,
     {{NUMBER_OF_UNKNOWNS}},
     {{NUMBER_OF_AUXILIARY_VARIABLES}},
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
     1 // halo size
   );
-
 #ifdef UseNVIDIA
+  nvtxRangePop();
   nvtxRangePushA("Rusanov");
 #endif
   #if Dimensions==2
@@ -145,7 +144,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
     timeStamp,
     {{TIME_STEP_SIZE}},
     reconstructedPatch,
-    destinationPatchOnGPU
+    _destinationPatch
     );
 
 #ifdef UseNVIDIA
@@ -153,13 +152,13 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 #endif
 
   // Ab hier ist run , ^^^ alles in ctor
-#pragma omp target exit data map(from:destinationPatchOnGPU[0:_destinationPatchSize]) map(delete:reconstructedPatch[0:_sourcePatchSize])
+#pragma omp target exit data map(from:_destinationPatch[0:_destinationPatchSize]) map(delete:reconstructedPatch[0:_sourcePatchSize])
 
 
   // get stuff explicitly back from GPU, as it will be stored
   // locally for a while
   double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-  std::copy_n(destinationPatchOnGPU,_destinationPatchSize,destinationPatchOnCPU);
+  std::copy_n(_destinationPatch,_destinationPatchSize,destinationPatchOnCPU);
 
   {{FREE_SKELETON_MEMORY}}
 
