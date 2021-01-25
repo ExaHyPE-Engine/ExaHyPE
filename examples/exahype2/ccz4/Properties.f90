@@ -35,7 +35,7 @@ RECURSIVE SUBROUTINE InitParameters(STRLEN,PARSETUP)
 			!
 			EQN%CCZ4itau  = 1.0 
 			
-			EQN%CCZ4k1  = 0.1  
+			EQN%CCZ4k1  = 0.1  !modified according to the version in ExaHyPE 1
 			EQN%CCZ4k2  = 0.0 
 			EQN%CCZ4k3  = 0.5 
 			EQN%CCZ4eta = 0.0 
