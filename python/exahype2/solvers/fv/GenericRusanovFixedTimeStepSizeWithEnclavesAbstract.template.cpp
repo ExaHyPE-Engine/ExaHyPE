@@ -155,17 +155,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
-  const double * __restrict__ Q,
+  const double * __restrict__                  Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   double                                       dt,
-  double * __restrict__ S
+  double * __restrict__                        S
 ) {
-  {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
-  if (tarch::la::equals(t,0.0) ) {
-    {{SOURCE_TERM_IMPLEMENTATION}}
-  }
+  {% if SOURCE_TERM_IMPLEMENTATION=="<empty>" %}
+  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
+  {% else %}
+  {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
 }
 {% endif %}
