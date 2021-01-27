@@ -45,7 +45,7 @@ void exahype2::fv::validatePatch (
   int numberOfVolumesPerAxisInPatch, int haloSize,
   const std::string &location
 ) {
-#if PeanoDebug>0
+  #if PeanoDebug>1
   const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
   dfor (k,PatchSize) {
     int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
@@ -56,11 +56,12 @@ void exahype2::fv::validatePatch (
     int isDiagonal = tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1);
 
     for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-      nonCriticalAssertion7(
+      nonCriticalAssertion9(
         (haloSize>0 and isDiagonal>1) or
         std::isfinite(Q[index+i]),
         unknowns,
         auxiliaryVariables,
+        isDiagonal, haloSize,
         numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
     }
   }
@@ -146,20 +147,21 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
   std::function< void(
     const double *__restrict__                    QL,
     const double *__restrict__                    QR,
-    const tarch::la::Vector<Dimensions, double>&  faceCentre,
+    const tarch::la::Vector<2, double>&           faceCentre,
     double volumeH, double t, double dt, int normal,
     double *__restrict__ FL, double *__restrict__ FR)
   > splitRiemannSolve1d,
   std::function< void(
     const double * __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  volueCentre,
+    const tarch::la::Vector<2,double>&           volueCentre,
     double                                       volumeH,
     double                                       t,
     double                                       dt,
     double * __restrict__ S
   ) >   sourceTerm,
-  const tarch::la::Vector<Dimensions, double> &patchCentre,
-  const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
+  const tarch::la::Vector<2, double>&  patchCentre,
+  const tarch::la::Vector<2, double>&  patchSize,
+  double t, double dt,
   int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
   const double *__restrict__ Qin, double *__restrict__ Qout
 ) {
@@ -167,7 +169,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
   assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
 
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
@@ -178,7 +180,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
   #endif
   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
-    tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+    tarch::la::Vector<2, double> volumeX = patchCentre
         - 0.5 * patchSize;
     volumeX (0) += (x + 0.5) * volumeH (0);
     volumeX (1) += (y + 0.5) * volumeH (1);
@@ -212,7 +214,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
       const int leftVoxelInImage = x - 1 + y * numberOfVolumesPerAxisInPatch;
       const int rightVoxelInImage = x + y * numberOfVolumesPerAxisInPatch;
 
-      tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+      tarch::la::Vector<2, double> volumeX = patchCentre
           - 0.5 * patchSize;
       volumeX (0) += x * volumeH (0);
       volumeX (1) += (y + 0.5) * volumeH (1);
@@ -249,7 +251,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
       const int lowerVoxelInImage = x + (y - 1) * numberOfVolumesPerAxisInPatch;
       const int upperVoxelInImage = x + y * numberOfVolumesPerAxisInPatch;
 
-      tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+      tarch::la::Vector<2, double> volumeX = patchCentre
           - 0.5 * patchSize;
       volumeX (0) += (x + 0.5) * volumeH (0);
       volumeX (1) += y * volumeH (1);
@@ -283,19 +285,20 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
   std::function<void(
     const double *__restrict__ QL,
     const double *__restrict__ QR,
-         const tarch::la::Vector<Dimensions, double> &faceCentre,
+         const tarch::la::Vector<3, double> &faceCentre,
          double volumeH, double t, double dt, int normal,
   double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
   std::function< void(
     const double * __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  volueCentre,
+    const tarch::la::Vector<3,double>&  volueCentre,
     double                                       volumeH,
     double                                       t,
     double                                       dt,
     double * __restrict__ S
   ) >   sourceTerm,
-  const tarch::la::Vector<Dimensions, double> &patchCentre,
-  const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
+  const tarch::la::Vector<3, double>&   patchCentre,
+  const tarch::la::Vector<3, double>&   patchSize,
+  double t, double dt,
   int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
   const double *__restrict__ Qin,
   double *__restrict__       Qout
@@ -305,7 +308,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
 
   assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
 
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<3, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double numericalFluxL[unknowns]; // helper out variable
@@ -317,14 +320,14 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
   for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
-    tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+    tarch::la::Vector<3, double> volumeX = patchCentre
         - 0.5 * patchSize;
     volumeX (0) += (x + 0.5) * volumeH (0);
     volumeX (1) += (y + 0.5) * volumeH (1);
     volumeX (2) += (z + 0.5) * volumeH (2);
 
     const int voxelInPreImage  = x+1
-                               + (y+1) * (numberOfVolumesPerAxisInPatch+2);
+                               + (y+1) * (numberOfVolumesPerAxisInPatch+2)
                                + (z+1) * (numberOfVolumesPerAxisInPatch+2) * (numberOfVolumesPerAxisInPatch+2);
     const int voxelInImage     = x
                                + y * numberOfVolumesPerAxisInPatch
@@ -361,7 +364,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
       const int rightVoxelInImage = x + y * numberOfVolumesPerAxisInPatch
             + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
 
-      tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+      tarch::la::Vector<3, double> volumeX = patchCentre
             - 0.5 * patchSize;
         volumeX (0) += x * volumeH (0);
         volumeX (1) += (y + 0.5) * volumeH (1);
@@ -407,7 +410,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
         const int upperVoxelInImage = x + y * numberOfVolumesPerAxisInPatch
             + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
 
-        tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+        tarch::la::Vector<3, double> volumeX = patchCentre
             - 0.5 * patchSize;
         volumeX (0) += (x + 0.5) * volumeH (0);
         volumeX (1) += y * volumeH (1);
@@ -453,7 +456,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
         const int upperVoxelInImage = x + y * numberOfVolumesPerAxisInPatch
             + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
 
-        tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+        tarch::la::Vector<3, double> volumeX = patchCentre
             - 0.5 * patchSize;
         volumeX (0) += (x + 0.5) * volumeH (0);
         volumeX (1) += (y + 0.5) * volumeH (1);
@@ -486,19 +489,20 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
   std::function< void(
     const double *__restrict__ QL,
     const double *__restrict__ QR,
-         const tarch::la::Vector<Dimensions, double> &faceCentre,
+         const tarch::la::Vector<2, double> &faceCentre,
          double volumeH, double t, double dt, int normal,
   double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
   std::function< void(
     const double * __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  volueCentre,
+    const tarch::la::Vector<2,double>&  volueCentre,
     double                                       volumeH,
     double                                       t,
     double                                       dt,
     double * __restrict__ S
   ) >   sourceTerm,
-  const tarch::la::Vector<Dimensions, double> &patchCentre,
-  const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
+  const tarch::la::Vector<2, double>&   patchCentre,
+  const tarch::la::Vector<2, double>&   patchSize,
+  double t, double dt,
   int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
   const double *__restrict__  Qin,
   double *__restrict__        Qout
@@ -508,7 +512,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
 
   assertionMsg( false, "ich glaube diese Variante ist buggy. Muessen wir erst testen. Kann auch an den OpenMP-Pragmas liegen. Mit LLVM gehts aber eh net, insofern kann man es auch gleich ordentlich umschreiben" ); assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
 
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
@@ -528,7 +532,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
         const int leftVoxelInImage = x - 1 + y * numberOfVolumesPerAxisInPatch;
         const int rightVoxelInImage = x + y * numberOfVolumesPerAxisInPatch;
 
-        tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+        tarch::la::Vector<2, double> volumeX = patchCentre
             - 0.5 * patchSize;
         volumeX (0) += x * volumeH (0);
         volumeX (1) += (y + 0.5) * volumeH (1);
@@ -567,7 +571,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
             + (y - 1) * numberOfVolumesPerAxisInPatch;
         const int upperVoxelInImage = x + y * numberOfVolumesPerAxisInPatch;
 
-        tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+        tarch::la::Vector<2, double> volumeX = patchCentre
             - 0.5 * patchSize;
         volumeX (0) += (x + 0.5) * volumeH (0);
         volumeX (1) += y * volumeH (1);
@@ -601,19 +605,20 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
     std::function<void(
       const double *__restrict__ QL,
       const double *__restrict__ QR,
-      const tarch::la::Vector<Dimensions, double> &faceCentre,
+      const tarch::la::Vector<3, double> &faceCentre,
       double volumeH, double t, double dt, int normal,
       double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
       std::function< void(
         const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  volueCentre,
+        const tarch::la::Vector<3,double>&           volueCentre,
         double                                       volumeH,
         double                                       t,
         double                                       dt,
         double * __restrict__ S
       ) >   sourceTerm,
-    const tarch::la::Vector<Dimensions, double> &patchCentre,
-    const tarch::la::Vector<Dimensions, double> &patchSize, double t, double dt,
+    const tarch::la::Vector<3, double>&   patchCentre,
+    const tarch::la::Vector<3, double>&   patchSize,
+    double t, double dt,
     int numberOfVolumesPerAxisInPatch, int unknowns, int auxiliaryVariables,
     const double *__restrict__   Qin,
     double *__restrict__         Qout
@@ -621,9 +626,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
-  assertionMsg( false, "ich glaube diese Variante ist buggy. Muessen wir erst testen. Kann auch an den OpenMP-Pragmas liegen. Mit LLVM gehts aber eh net, insofern kann man es auch gleich ordentlich umschreiben" ); assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
-
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<3, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double numericalFluxL[unknowns]; // helper out variable
@@ -652,7 +655,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
               + z * numberOfVolumesPerAxisInPatch
                   * numberOfVolumesPerAxisInPatch;
 
-          tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+          tarch::la::Vector<3, double> volumeX = patchCentre
               - 0.5 * patchSize;
           volumeX (0) += x * volumeH (0);
           volumeX (1) += (y + 0.5) * volumeH (1);
@@ -701,7 +704,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
               + z * numberOfVolumesPerAxisInPatch
                   * numberOfVolumesPerAxisInPatch;
 
-          tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+          tarch::la::Vector<3, double> volumeX = patchCentre
               - 0.5 * patchSize;
           volumeX (0) += (x + 0.5) * volumeH (0);
           volumeX (1) += y * volumeH (1);
@@ -749,7 +752,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
               + z * numberOfVolumesPerAxisInPatch
                   * numberOfVolumesPerAxisInPatch;
 
-          tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+          tarch::la::Vector<3, double> volumeX = patchCentre
               - 0.5 * patchSize;
           volumeX (0) += (x + 0.5) * volumeH (0);
           volumeX (1) += (y + 0.5) * volumeH (1);
