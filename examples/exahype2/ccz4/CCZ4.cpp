@@ -28,14 +28,15 @@ void gaugeWave(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double t
 ) {
-  constexpr int nVars = 64;
+  constexpr int nVars = 59;
   constexpr double pi = M_PI;
+  constexpr double peak_number = 2.0;
   constexpr double ICA = 0.1; ///< Amplitude of the wave
-  double HH     = 1.0 - ICA*sin( 2.0*pi*( volumeX[0] - t));
-  double dxH    = -2.0*pi*ICA*cos( 2.0 * pi*(volumeX[0] - t));
+  double HH     = 1.0 - ICA*sin( peak_number*pi*( volumeX[0] - t));
+  double dxH    = -peak_number*pi*ICA*cos( peak_number * pi*(volumeX[0] - t));
   double dxphi  = - pow(HH,(-7.0/6.0))*dxH/6.0;
   double phi    = pow(( 1.0 / HH),(1.0/6.0));
-  double Kxx    = - pi*ICA*cos( 2.0 * pi*(volumeX[0] - t))/sqrt( 1.0 - ICA*sin( 2.0*pi*( volumeX[0] - t))  );
+  double Kxx    = - 0.5*peak_number*pi*ICA*cos( peak_number * pi*(volumeX[0] - t))/sqrt( 1.0 - ICA*sin( peak_number*pi*( volumeX[0] - t))  );
   double traceK = Kxx/HH;
   memset(Q, .0, nVars*sizeof(double));
   Q[0]  = phi*phi*HH ;
@@ -53,7 +54,6 @@ void gaugeWave(
   Q[53] = traceK;
   Q[54] = log(phi);
   Q[55] = dxphi/phi;
-  Q[59] = 1.0;
 }
 
 
@@ -78,12 +78,13 @@ void examples::exahype2::ccz4::CCZ4::sourceTerm(
   double                                       dt,
   double * __restrict__ S
 ) {
-  for(int i=0; i<64; i++){
+  constexpr int nVars = 59;
+  for(int i=0; i<nVars; i++){
     assertion4( std::isfinite(Q[i]), i, volumeCentre, volumeH, t );
   }
-  memset(S, 0, 64*sizeof(double));
+  memset(S, 0, nVars*sizeof(double));
   pdesource_(S,Q);    //  S(Q)
-  for(int i=0; i<64; i++){
+  for(int i=0; i<nVars; i++){
     nonCriticalAssertion4( std::isfinite(S[i]), i, volumeCentre, volumeH, t );
   }
   // enforceccz4constraints_(Q); // "cleans" Q, but knows nothing about S
@@ -109,6 +110,7 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
     }
   }
+  else {enforceccz4constraints_(Q);}
   logTraceOut( "adjustSolution(...)" );
 }
 
@@ -124,7 +126,7 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
 ) {
   logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
   // helper data structure
-  constexpr int Unknowns = 64;
+  constexpr int Unknowns = 59;
   double lambda[Unknowns];
   for (int i=0; i<Unknowns; i++) {
     nonCriticalAssertion5( std::isfinite(Q[i]), i, faceCentre, volumeH, t, normal );
@@ -166,18 +168,18 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 
   assertion( normal>=0 );
   assertion( normal<Dimensions );
+  constexpr int nVars = 59;
+  double gradQSerialised[nVars*3];
+  for (int i=0; i<nVars; i++) {
+    gradQSerialised[i+0*nVars] = 0.0;
+    gradQSerialised[i+1*nVars] = 0.0;
+    gradQSerialised[i+2*nVars] = 0.0;
 
-  double gradQSerialised[64*3];
-  for (int i=0; i<64; i++) {
-    gradQSerialised[i+0*64] = 0.0;
-    gradQSerialised[i+1*64] = 0.0;
-    gradQSerialised[i+2*64] = 0.0;
-
-    gradQSerialised[i+normal*64] = deltaQ[i];
+    gradQSerialised[i+normal*nVars] = deltaQ[i];
   }
   pdencp_(BgradQ, Q, gradQSerialised);
 
-  for (int i=0; i<64; i++) {
+  for (int i=0; i<nVars; i++) {
     nonCriticalAssertion5( std::isfinite(BgradQ[i]), i, faceCentre, volumeH, t, normal );
   }
 
@@ -195,7 +197,7 @@ void examples::exahype2::ccz4::CCZ4::boundaryConditions(
   int                                          normal
 ) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
-  for(int i=0; i<64; i++)
+  for(int i=0; i<59; i++)
       Qoutside[i]=Qinside[i];
   assertion(false);
   logTraceOut( "boundaryConditions(...)" );
