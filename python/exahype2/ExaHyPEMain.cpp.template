@@ -313,7 +313,9 @@ int main(int argc, char** argv) {{
   
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
+  exahype2::initSmartMPIForEnclaveTasks();
   peano4::fillLookupTables();
+ 
   
   peano4::initSingletons(
     DomainOffset,
@@ -349,6 +351,8 @@ int main(int argc, char** argv) {{
   }}
   delete peanoTarchTests;
   #endif
+
+  repositories::startSimulation();
 
   tarch::logging::Statistics::getInstance().clear();
 

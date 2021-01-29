@@ -5,8 +5,14 @@
 #define _SMART_MPI_H_
 
 
+#include <functional>
+#include <string>
 #include <mpi.h>
 
+
+#ifndef SmartMPIPrefix
+#define SmartMPIPrefix "SmartMPI:\t"
+#endif
 
 namespace smartmpi {
   /**
@@ -15,24 +21,31 @@ namespace smartmpi {
    * Smart MPI Tasks are tasks that can be migrated onto another
    * node. For this, it is important that each task type is a unique
    * task number.
+   *
+   * Tasks in SmartMPI are always pointers to  objects. If 
    */
   class SmartMPITask {
     public:
       const int TypeNumber;
-      SmartMPITask( int typeNumber ):
-        TypeNumber(typeNumber) {}
-  };
-
-  class Scheduler {
-    void scheduleLocally( SmartMPITask* task );
-  };
-
-  class Receiver {
-      SmartMPITask* receive( int typeNumber );
+      SmartMPITask( int typeNumber );
+      virtual ~SmartMPITask() = default;
+      
+      virtual std::string toString() const;
+      
+      /**
+       * Execute the task locally. Tasks in SmartMPI are always pointers to 
+       * objects. Therefore, you have to tell the SmartMPI runtime whether 
+       * it shall delete these objects or whether someone else does it. You
+       * might for example forward the 
+       * 
+       *
+       * @return SmartMPI should delete task object eventually
+       */
+      virtual void runLocally() = 0;
   };
 
   void spawn(SmartMPITask* task);
-  void registerSchedulerAndReceiver( Scheduler* scheduler, Receiver* receiver );
+  void registerReceiver( std::function<void(int typeNumber)> );
   
   /**
    * Init SmartMPI

@@ -12,6 +12,7 @@ ExaHyPE2Sources = \
   EnclaveTask.cpp \
   NonCriticalAssertions.cpp \
   PatchUtils.cpp \
+  PlotFilter.cpp \
   RefinementControl.cpp \
   UserInterface.cpp \
   UnitTests.cpp \

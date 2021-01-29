@@ -472,15 +472,33 @@ class FV(object):
     self.plot_description = description
     
   
-  def add_actions_to_plot_solution(self, step):
+  def add_actions_to_plot_solution(self, step, output_path):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     
-    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( filename="solution-" + self._name, patch=self._patch, dataset_name=self._unknown_identifier(), description=self.plot_description ) )
+    step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
+      filename=output_path + "solution-" + self._name, 
+      patch=self._patch, 
+      dataset_name=self._unknown_identifier(), 
+      description=self.plot_description,
+      guard_predicate="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_predicate(),
+      additional_includes="""
+#include "exahype2/PlotFilter.h"
+#include "../repositories/SolverRepository.h"
+"""
+    ))
 
     if self._plot_grid_properties:    
-        step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid-" + self._name,None ))
+      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
+        filename = output_path + "grid-" + self._name,
+        cell_unknown=None,
+        guard_predicate="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_predicate(),
+        additional_includes="""
+#include "exahype2/PlotFilter.h"
+#include "../repositories/SolverRepository.h"
+"""
+      ))
 
     pass
    

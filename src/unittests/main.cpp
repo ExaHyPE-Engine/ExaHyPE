@@ -50,9 +50,6 @@ void runTests() {
 
 
 int main(int argc, char** argv) {
-  const int ExitCodeSuccess         = 0;
-  const int ExitCodeUnitTestsFailed = 1;
-
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetDebug, tarch::logging::LogFilter::FilterListEntry::AnyRank, "peano4", tarch::logging::LogFilter::FilterListEntry::BlackListEntry
   ));

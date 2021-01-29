@@ -282,14 +282,19 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
       #endif
       perCellFunctor
+      #ifdef UseSmartMPI
+      , 0 // should be solver number 
+      #endif
     );
       
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-    peano4::parallel::Tasks spawn( 
-      newEnclaveTask,
-      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
-      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
-    );      
+
+    newEnclaveTask->setPriority( peano4::parallel::Tasks::getPriority(peano4::parallel::Tasks::TaskType::LowPriorityLIFO) );
+    #ifdef UseSmartMPI
+    smartmpi::spawn( newEnclaveTask );
+    #else
+    tarch::multicore::spawnTask( newEnclaveTask );
+    #endif
   }
   """      
   

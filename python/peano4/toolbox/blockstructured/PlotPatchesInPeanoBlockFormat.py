@@ -20,7 +20,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   
   
-  def __init__(self,filename,patch,dataset_name, description, plot_cell_data=True, metadata = "", mapping = []):
+  def __init__(self,filename,patch,dataset_name, description, plot_cell_data=True, metadata = "", mapping = [], guard_predicate="true", additional_includes=""):
     """
     
       plot_cell_data: Boolean
@@ -38,6 +38,9 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     
     self.d = {}
     self.d[ "FILENAME" ]           = filename
+    self.d[ "GUARD_PREDICATE" ]    = guard_predicate
+    
+    self.additional_includes       = additional_includes
 
     dofs_per_axis = 0    
     #if plot_cell_data:
@@ -132,6 +135,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   __Template_TouchCellFirstTime_CellPlot = """ 
+  if ( {GUARD_PREDICATE} ) {{
   int vertexIndices[TwoPowerD];
   
   const double PatchScaling = 0.95;
@@ -152,6 +156,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
     _dataWriter->plotCell( cellIndex, data );
     cellIndex++;
     currentDoF += {UNKNOWNS};
+  }}
   }}
 """
 
@@ -277,4 +282,4 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 #include "tarch/mpi/Lock.h"
 #include "peano4/utils/Loop.h"
 #include "peano4/parallel/SpacetreeSet.h"
-"""
+""" + self.additional_includes

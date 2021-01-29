@@ -43,7 +43,9 @@ class Project(object):
     self._Peano_src_directory = "."
     self._build_mode          = peano4.output.CompileMode.Asserts
     self._executable_name = executable
-    self._periodic_BC = [False, False, False]
+    self._periodic_BC   = [False, False, False]
+    self._plot_filters  = []
+    self._output_path   = "./"
     
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
@@ -89,6 +91,38 @@ class Project(object):
 
   def add_solver(self,solver):
     self._solvers.append( solver )
+
+
+  def add_plot_filter(self,offset,size,frequency=1):
+    """
+    
+    Add a new filter to Peano/ExaHyPE
+    
+    offset: (float,float,float)
+    
+    size: (float,float,float)
+    
+    frequency: int
+      A positive value. Peano makes snapshots every dt simulation
+      units. This is something you specify once per simulation. But
+      you might decide only to splot every k of these snapshots.
+    
+    """  
+    new_entry = "{{"
+    new_entry += str(offset[0])
+    for i in offset[1:]:
+      new_entry += ","
+      new_entry += str(i)
+    new_entry += "},{"
+    new_entry += str(size[0])
+    for i in size[1:]:
+      new_entry += ","
+      new_entry += str(i)
+    new_entry += "},"
+    new_entry += str(frequency)
+    new_entry += "}"
+    
+    self._plot_filters.append( new_entry )
 
   
   def remove_all_solvers(self):
@@ -142,11 +176,18 @@ class Project(object):
       self._periodic_BC.append( periodic_BC[d] )
     
     
+  def  set_output_path(self,path):
+    self._output_path = path
+    if not self._output_path.endswith( "/" ):
+      self._output_path += "/"
+    
+    
   def __generate_solver_repository(self):
     solverRepositoryDictionary = {
       "SOLVERS" : [],
       "LOAD_BALANCER" : self._load_balancer_name,
-      "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments
+      "LOAD_BALANCER_ARGUMENTS" : self._load_balancer_arguments,
+      "PLOT_FILTER": self._plot_filters
     }
 
     for solver in self._solvers:
@@ -221,7 +262,7 @@ class Project(object):
       solver.add_actions_to_create_grid( create_grid,                         evaluate_refinement_criterion=True  )
       solver.add_actions_to_init_grid( init_grid )
       solver.add_actions_to_create_grid( create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
-      solver.add_actions_to_plot_solution( plot_solution )
+      solver.add_actions_to_plot_solution( plot_solution, self._output_path )
       solver.add_actions_to_perform_time_step( perform_time_step )
       
       solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
