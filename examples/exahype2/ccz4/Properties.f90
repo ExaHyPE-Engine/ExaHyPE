@@ -33,18 +33,18 @@ RECURSIVE SUBROUTINE InitParameters(STRLEN,PARSETUP)
 			EQN%CCZ4GLMepsP = 1.0   ! 5.  
 			EQN%CCZ4GLMepsD = 1.0   ! 0.1 
 			!
-			EQN%CCZ4itau  = 0.0 
+			EQN%CCZ4itau  = 1.0 
 			
-			EQN%CCZ4k1  = 0.0  
+			EQN%CCZ4k1  = 0.1  !modified according to the version in ExaHyPE 1
 			EQN%CCZ4k2  = 0.0 
-			EQN%CCZ4k3  = 0.0 
+			EQN%CCZ4k3  = 0.5 
 			EQN%CCZ4eta = 0.0 
 			EQN%CCZ4f   = 0.0 
 			EQN%CCZ4g   = 0.0 
 			EQN%CCZ4xi  = 0.0 
-			EQN%CCZ4e   = 2.0 
-			EQN%CCZ4c   = 0.0 
-			EQN%CCZ4mu  = 0.0 
+			EQN%CCZ4e   = 1.0 
+			EQN%CCZ4c   = 1.0 
+			EQN%CCZ4mu  = 0.2 
 			EQN%CCZ4ds  = 1.0 
 			EQN%CCZ4sk  = 0.0
 			EQN%CCZ4bs   = 0.0      ! set bs=1 if you want to activate the shift convection for beta, b and B (standard CCZ4 formulation). set it to bs=0 to switch off shift convection for those quantities 
