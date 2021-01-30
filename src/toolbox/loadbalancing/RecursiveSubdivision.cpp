@@ -28,10 +28,10 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double target
   _localNumberOfSplits(0),
   _numberOfStateUpdatesWithoutAnySplit( std::numeric_limits<int>::max()/2 ),
   _state( StrategyState::Standard ),
+  _enabled(true),
   _roundRobinToken(0),
   _maxTreeWeightAtLastSplit( std::numeric_limits<int>::max() ),
   _blacklistWeight(MinBlacklistWeight),
-  _enabled(true),
   _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff(0),
   _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff(0) {
   #ifdef Parallel

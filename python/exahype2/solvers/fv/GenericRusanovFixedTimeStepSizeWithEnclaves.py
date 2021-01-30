@@ -273,6 +273,19 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       );
     };
 
+    #if defined(UseSmartMPI)
+    ::exahype2::SmartEnclaveTask* newEnclaveTask = new ::exahype2::SmartEnclaveTask(
+      marker,
+      reconstructedPatch,
+      #if Dimensions==2
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
+      #else
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
+      #endif
+      perCellFunctor,
+      {{SOLVER_NUMBER}}
+    );    
+    #else
     ::exahype2::EnclaveTask* newEnclaveTask = new ::exahype2::EnclaveTask(
       marker,
       reconstructedPatch,
@@ -282,19 +295,21 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
       #endif
       perCellFunctor
-      #ifdef UseSmartMPI
-      , 0 // should be solver number 
-      #endif
-    );
-      
+    );    
+    #endif
+          
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
 
-    newEnclaveTask->setPriority( peano4::parallel::Tasks::getPriority(peano4::parallel::Tasks::TaskType::LowPriorityLIFO) );
-    #ifdef UseSmartMPI
+
+    #if defined(UseSmartMPI)
     smartmpi::spawn( newEnclaveTask );
     #else
-    tarch::multicore::spawnTask( newEnclaveTask );
-    #endif
+    peano4::parallel::Tasks spawn( 
+      newEnclaveTask,
+      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
+      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
+    );   
+    #endif   
   }
   """      
   
@@ -324,6 +339,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
+#include "exahype2/SmartEnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
 """

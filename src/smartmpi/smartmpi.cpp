@@ -22,6 +22,7 @@ void smartmpi::spawn(SmartMPITask* task) {
   std::cout << SmartMPIPrefix << "spawn task " << task->toString() << " locally" << std::endl;
   #endif
   task->runLocally();
+  delete task;
 }
 
 
@@ -34,3 +35,7 @@ void smartmpi::init(MPI_Comm communicator) {
 
 }
 
+
+void smartmpi::reportMPIWaitTime(double time) {
+
+}

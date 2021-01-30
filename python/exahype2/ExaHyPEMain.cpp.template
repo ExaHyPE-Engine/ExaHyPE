@@ -28,6 +28,7 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
+#include "exahype2/SmartEnclaveTask.h"
 
 
 

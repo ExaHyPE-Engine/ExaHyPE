@@ -30,6 +30,7 @@ class Makefile(object):
     self.d["LDFLAGS"]          = ""
     self.d["GPUOBJS"]          = ""
     self.d["LIBS"]             = ""
+    self.d["SYSTEM_LIBS"]      = ""
     self.d["DIM"]              = "2"
     self.d["CONFIGUREPATH"]    = "."
     self.d["EXECUTABLENAME"]   = "peano4"
@@ -70,6 +71,10 @@ class Makefile(object):
     """
      Add the header search path to both the C++ and the Fortran
      call command.
+
+     See parse_configure_script_outcome() for a explanation how LIBS
+     and SYSTEM_LIBS differ.
+    
     """
     self.d["CXXFLAGS"] += " -I" + path
     self.d["FCFLAGS"]  += " -I" + path
@@ -98,6 +103,9 @@ class Makefile(object):
 
     project.output.makefile.add_library( "ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements" )
 
+    See parse_configure_script_outcome() for a explanation how LIBS
+    and SYSTEM_LIBS differ.
+    
     """
     if library_path!="":
       self.d["LIBS"] = "-L" + library_path + " " + self.d["LIBS"]
@@ -174,6 +182,11 @@ class Makefile(object):
     This script does not accept relative paths. I then search for the subdirector
     src and parse the Makefile there.
 
+    I store configure's libraries in SYSTEM_LIBS, as I use LIBS for user-defined
+    libraries. My assumption is that the system's libraries will not depend on 
+    any library of Peano. So we are safe by appending these as the last libs, 
+    while the user will want LIBS to reflect the order they are handed in.
+    
     """
     input_file = directory + "/src/Makefile"
     try:
@@ -201,9 +214,9 @@ class Makefile(object):
           for i in flags.split( " " ):
             self.add_linker_flag(i)
         if re.search( "LIBS *=", line) and line.startswith( "LIBS" ):
-          self.d["LIBS"] += " "
-          self.d["LIBS"] += flags
-          self.d["LIBS"] += " "
+          self.d["SYSTEM_LIBS"] += " "
+          self.d["SYSTEM_LIBS"] += flags
+          self.d["SYSTEM_LIBS"] += " "
       self.d["CONFIGUREPATH"] = directory
 
       # A posteriori fix for openmp flag propagation

@@ -578,6 +578,7 @@ class FV(object):
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
+    d["SOLVER_NUMBER"]                  = 22
         
     if self._patch_overlap.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
