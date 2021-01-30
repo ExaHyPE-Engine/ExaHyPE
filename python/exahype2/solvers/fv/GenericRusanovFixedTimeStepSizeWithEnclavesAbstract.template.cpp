@@ -162,10 +162,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   double                                       dt,
   double * __restrict__                        S
 ) {
-  {% if SOURCE_TERM_IMPLEMENTATION=="<empty>" %}
-  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
-  {% else %}
+  {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
   {{SOURCE_TERM_IMPLEMENTATION}}
+  {% else %}
+  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
   {% endif %}
 }
 {% endif %}

@@ -11,6 +11,11 @@
 #include <functional>
 
 
+#ifdef UseSmartMPI
+#include "smartmpi/smartmpi.h"
+#endif
+
+
 namespace peano4 {
   namespace parallel {
     class Tasks;
@@ -80,6 +85,7 @@ class peano4::parallel::Tasks {
      */
     bool taskForLocationShouldBeIssuedAsTask( int location, int taskCount ) const;
 
+  public:
     /**
      * Map the task type onto a priority
      *
@@ -105,7 +111,7 @@ class peano4::parallel::Tasks {
      * accommodate a relatively high number of persistent tasks.
      */
     static int getPriority( TaskType type );
-  public:
+
     /**
      * Codes create an identifier (int) per parallel region through this
      * operation. This identifier then can be used internally for autotuning.
@@ -130,7 +136,14 @@ class peano4::parallel::Tasks {
 
     /**
      * Alternative to other Tasks constructor. Ownership goes to Tasks
-     * class, i.e. you don't have to delete it.
+     * class, i.e. you don't have to delete it. Instead of using this 
+     * operation, you can also type in 
+     * <pre>
+    
+task->setPriority( getPriority( .... ) );
+tarch::multicore::spawnTask( task );
+    
+     </pre>
      */
     Tasks(
       tarch::multicore::Task*  task,

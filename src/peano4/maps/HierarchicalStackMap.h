@@ -154,7 +154,7 @@ template <typename T>
 bool peano4::maps::HierarchicalStackMap<T>::holdsStack(const StackKey& key) const {
   const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(key.first);
   assertion3(localTreeId>=0,localTreeId,key.first,key.second);
-  assertion4(localTreeId<_data.size(),localTreeId,_data.size(),key.first,key.second);
+  assertion4(localTreeId<static_cast<int>(_data.size()),localTreeId,_data.size(),key.first,key.second);
   return _data[localTreeId]._stackNumberToData.count(key.second)==1;
 }
 
@@ -163,7 +163,7 @@ template <typename T>
 T* peano4::maps::HierarchicalStackMap<T>::getForPush(const StackKey& key) {
   const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(key.first);
   assertion3(localTreeId>=0,localTreeId,key.first,key.second);
-  assertion4(localTreeId<_data.size(),localTreeId,_data.size(),key.first,key.second);
+  assertion4(localTreeId<static_cast<int>(_data.size()),localTreeId,_data.size(),key.first,key.second);
   createStack(localTreeId,key.second);
   assertion4( _data[localTreeId]._stackNumberToData[key.second] != nullptr, localTreeId, key.first, key.second, tarch::mpi::Rank::getInstance().getRank() );
   return _data[localTreeId]._stackNumberToData[key.second];
@@ -262,7 +262,7 @@ void peano4::maps::HierarchicalStackMap<T>::clear() {
 template <typename T>
 void peano4::maps::HierarchicalStackMap<T>::clear(int spacetree) {
   const int localTreeId = peano4::parallel::Node::getInstance().getLocalTreeId(spacetree);
-  if (_data.size()>localTreeId) {
+  if (static_cast<int>(_data.size())>localTreeId) {
     for (auto& p: _data[localTreeId]._stackNumberToData) {
       delete p.second;
       p.second = new T();

@@ -1,7 +1,7 @@
 #include "EnclaveTask.h"
 #include "EnclaveBookkeeping.h"
-#include "tarch/multicore/Core.h"
 
+#include "tarch/multicore/Core.h"
 
 #include "exahype2/fv/Generic.h"
 
@@ -43,5 +43,4 @@ void exahype2::EnclaveTask::prefetch() {
   logTraceIn( "prefetch()" );
   logTraceOut( "prefetch()" );
 }
-
 

@@ -9,8 +9,4 @@
   #define SharedMemoryParallelisation
 #endif
 
-#if defined(TBBInvade) && !defined(SharedTBB)
-#error TBBInvade used without SharedTBB
-#endif
-
 #endif

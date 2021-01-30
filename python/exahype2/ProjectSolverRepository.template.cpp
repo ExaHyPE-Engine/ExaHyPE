@@ -16,9 +16,7 @@ int statisticsExchangeTag = tarch::mpi::Rank::reserveFreeTag("SolverRepository -
 tarch::logging::Log _log( "SolverRepository" );
 
 ::exahype2::RefinementControl  refinementControl;
-
-
-
+::exahype2::PlotFilter         plotFilter;
 peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
 
@@ -191,6 +189,17 @@ void finishPlottingStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishPlottingStep();
   {%- endfor %}
+
+  plotFilter.finishPlottingStep();
+}
+
+
+void startSimulation() {
+  {% for item in PLOT_FILTER -%}
+  plotFilter.addFilter(
+    {{item}}
+  );
+  {% endfor %}
 }
 
 

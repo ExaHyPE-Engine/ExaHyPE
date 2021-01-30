@@ -87,10 +87,11 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::create
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPatchFileWriter(
   int dimension, const std::string&  fileName, const std::string&  indexFileName, IndexFileMode appendToIndexFile
 ):
-  _writtenToFile(false),
-  _dimensions(dimension),
   _fileName(fileName),
-  _indexFile(indexFileName) {
+  _indexFile(indexFileName),
+  _writtenToFile(false),
+  _dimensions(dimension) {
+
   assertion( dimension>=2 );
   assertion( dimension<=3 );
 
