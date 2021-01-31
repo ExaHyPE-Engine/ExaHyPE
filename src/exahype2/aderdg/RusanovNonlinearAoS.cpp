@@ -7,7 +7,7 @@
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_riemannFlux_body_AoS(
+GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
     std::function< void(
       const double * __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
@@ -41,10 +41,10 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_riemannFlux_body_AoS(
     const double                                smax,
     const double * __restrict__                 nodes, 
     const double * __restrict__                 weights, 
-    const double                                t,
-    const double                                dt,
     const tarch::la::Vector<Dimensions,double>& faceCentre,
     const double                                dx,
+    const double                                t,
+    const double                                dt,
     const int                                   nodesPerAxis,
     const int                                   unknowns,
     const int                                   strideQ,
@@ -147,16 +147,14 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
   const double                               maxEigenvaluePerFace[Dimensions*2],
   const double * __restrict__                nodes, 
   const double * __restrict__                weights, 
-  const double                               t,
-  const double                               dt,
   const tarch::la::Vector<Dimensions,double> faceCentres[Dimensions*2],
   const double                               dx,
+  const double                               t,
+  const double                               dt,
   const int                                  order,
   const int                                  unknowns,
   const int                                  auxiliaryVariables,
-  const int                                  direction,
-  const bool                                 leftCellIsOutside,
-  const bool                                 rightCellIsOutside,
+  const bool                                 atBoundary[Dimensions*2],
   const bool                                 callFlux,
   const bool                                 callNonconservativeProduct) {
   const int nodesPerAxis = order + 1;
@@ -188,9 +186,13 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
   for ( int scalarIndexHull = 0; scalarIndexHull < nodesOnHull; scalarIndexHull++ ) {
     const int face              = scalarIndexHull / nodesOnFace;
     const int orientationToCell = face/Dimensions;
+    const int direction         = face-Dimensions*orientationToCell;
     const int scalarIndexFace   = scalarIndexHull - face*nodesOnFace;
       
-    rusanovNonlinear_riemannFlux_body_AoS(
+    const bool leftCellIsOutside  = atBoundary[ face ] && orientationToCell == 0; 
+    const bool rightCellIsOutside = atBoundary[ face ] && orientationToCell == 1;
+      
+    rusanovNonlinear_body_AoS(
       ( leftCellIsOutside )  ? boundaryFlux : flux,
       ( rightCellIsOutside ) ? boundaryFlux : flux,
       ( leftCellIsOutside || rightCellIsOutside ) ? boundaryNonconservativeProduct : nonconservativeProduct,
@@ -205,10 +207,10 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
       maxEigenvaluePerFace[ face ],
       nodes, 
       weights, 
-      t,
-      dt,
       faceCentres[ face ],
       dx,
+      t,
+      dt,
       nodesPerAxis,
       unknowns,
       strideQ,

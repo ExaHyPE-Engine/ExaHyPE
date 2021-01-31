@@ -15,38 +15,7 @@ import jinja2
 class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
   TemplateRiemannSolve = jinja2.Template( """
     if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
-      // @todo Have to think about this one
-
-
-      //not marker.isRefined() and fineGridFaceLabel.getBoundary()
-// fehlt noch
-/*
-      ::exahype2::aderdg::solveSpaceTimeRiemannProblem_GaussLegendre_AoS2d(
-        [&](
-          double * __restrict__                        QL,
-          double * __restrict__                        QR,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double * __restrict__ FL,
-          double * __restrict__ FR
-        )->void {
-        },
-        marker.x(),
-        marker.h(),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-        {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
-        repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-        marker.getSelectedFaceNumber() % Dimensions,
-        fineGridFace{{SOLVER_NAME}}QSolutionExtrapolation.value,
-        fineGridFace{{SOLVER_NAME}}QFluxExtrapolation.value,
-        fineGridFace{{SOLVER_NAME}}QRiemannSolveResult.value
-      );
-*/      
-      
+      // do nothing 
     }   
   """)
 
@@ -81,15 +50,6 @@ class UpdateCell(AbstractADERDGActionSet):
           #else
           double spaceTimeQ[ ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})  ];
           #endif
-
-
-//PredictorAoS.h:    void spaceTimePredictor_PicardLoop_loop_AoS(
-//PredictorAoS.h:    void spaceTimePredictor_extrapolate_loop_AoS(         // Funktioniert fuer Legendre und Lobatto
-//PredictorAoS.h:    void spaceTimePredictor_extrapolate_Lobatto_loop_AoS( // Optimierung fuer LobattoCorrectorAoS.h:    void corrector_addCellContributions_loop_AoS(
-//CorrectorAoS.h:    void corrector_addRiemannContributions_loop_AoS(RusanovNonlinearAoS.h:     void rusanovNonlinear_setBoundaryState_loop_AoS(
-//RusanovNonlinearAoS.h:     double rusanovNonlinear_maxAbsoluteEigenvalue_loop_AoS(
-//RusanovNonlinearAoS.h:    void rusanovNonlinear_loop_AoS(
-
           ::exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
             [&](
               const double * __restrict__                 Q,
@@ -145,13 +105,6 @@ class UpdateCell(AbstractADERDGActionSet):
             {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}
           );
 
-/*          
-          #if Dimensions==2
-          ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS2d(
-          #else
-          ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS3d(
-          #endif
-*/
 /*         
           ::exahype2::aderdg::corrector_addCellContributions_loop_AoS(
             [&](
@@ -221,13 +174,15 @@ class UpdateCell(AbstractADERDGActionSet):
             {{NUMBER_OF_AUXILIARY_VARIABLES}}
           );
 
-          #if Dimensions == 2
-          double* QHullOut[Dimensions*2] = {{ '{' }}{%- for i in range(0,4) -%}fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation({{i}}).value{{ "," if not loop.last }}{%- endfor -%}{{ '}' }};
-          #else
-          double* QHullOut[Dimensions*2] = {{ '{' }}{%- for i in range(0,6) -%}fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation({{i}}).value{{ "," if not loop.last }}{%- endfor -%}{{ '}' }};
-          #endif 
+          // collect information from the adjacent faces
+          double* __restrict__ QHull[Dimensions*2];
+          for (int face = 0; face < Dimensions*2; face++) {
+             QHull[ face ] = fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
+          }
+          
+          // hull extrapolation
           ::exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
-            QHullOut,
+            QHull,
             spaceTimeQ,                           // QIn
             repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
             repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
@@ -241,40 +196,132 @@ class UpdateCell(AbstractADERDGActionSet):
         break;
       case {{SOLVER_NAME}}::SolverState::Correction:
         {
-/*        
-          #if Dimensions==2
-          ::exahype2::aderdg::addSpaceTimeRiemannSolutionToPrediction_GaussLegendre_AoS2d(
-          #else
-          ::exahype2::aderdg::addSpaceTimeRiemannSolutionToPrediction_GaussLegendre_AoS3d(
-          #endif
-            marker.x(),
-            marker.h(),
+          // collect information from the adjacent faces
+          const double* __restrict__           QHull[Dimensions*2];
+          bool                                 atBoundary[Dimensions*2];
+          tarch::la::Vector<Dimensions,double> faceCentres[Dimensions*2];
+          for (int face = 0; face < Dimensions*2; face++) {
+             QHull      [ face ] = fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
+             atBoundary [ face ] = false; // TODO assume periodic BC
+             faceCentres[ face ] = marker.x();
+          }
+          const double dx = marker.h()(0); // we assume cubic/square cells
+          for (int orientation=0; orientation < 2; orientation++) {
+            for (int direction = 0; direction < Dimensions; direction++) {
+              const int face = Dimensions*orientation + direction; 
+              faceCentres[ face ][ direction ] += (-1+2*orientation)*0.5*dx;    
+            }
+          }
+
+          // set boundary conditions
+          // TODO assume periodic BC
+ 
+          // compute max eigenvalue per face 
+          double maxEigenvaluePerFace[Dimensions*2];
+          ::exahype2::aderdg::riemann_maxAbsoluteEigenvalue_loop_AoS(
+            [&](
+              const double * __restrict__                 Q,
+              const tarch::la::Vector<Dimensions,double>& x,
+              double                                      t,
+              const int                                   direction
+            )-> double { 
+              return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q,x,t,direction);
+            },
+            maxEigenvaluePerFace,
+            QHull,
+            repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+            faceCentres,
+            dx,
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(), 
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-            repositories::{{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            {{ORDER}}, 
+            {{NUMBER_OF_UNKNOWNS}}, 
+            {{NUMBER_OF_AUXILIARY_VARIABLES}}
+          );
+   
+          // call Rusanov
+          #if Dimensions==2
+          double riemannResult[ Dimensions*2*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}) ];
+          #else
+          double riemannResult[ Dimensions*2*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}) ];
+          #endif
+          ::exahype2::aderdg::rusanovNonlinear_loop_AoS(
+            [&](
+              const double * __restrict__                 Q,
+              const tarch::la::Vector<Dimensions,double>& x,
+              double                                      t,
+              int                                         normal,
+              double * __restrict__                       F
+            )->void {
+              {% if FLUX_IMPLEMENTATION!="<none>" %}
+              repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+              {% endif %}
+            },
+            [&](
+              const double * __restrict__                 Q,
+              const tarch::la::Vector<Dimensions,double>& x,
+              double                                      t,
+              int                                         normal,
+              double * __restrict__                       F
+            )->void {
+              {% if FLUX_IMPLEMENTATION!="<none>" %}
+              repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+              {% endif %}
+            },
+            [&](
+              const double * __restrict__                 Q,
+              const double * __restrict__                 dQ_or_dQdn,
+              const tarch::la::Vector<Dimensions,double>& x,
+              double                                      t,
+              int                                         normal,
+              double * __restrict__                       BgradQ
+            )->void {
+              {% if NCP_IMPLEMENTATION!="<none>" %}
+              repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
+              {% endif %}
+            },
+            [&](
+              const double * __restrict__                 Q,
+              const double * __restrict__                 dQ_or_dQdn,
+              const tarch::la::Vector<Dimensions,double>& x,
+              double                                      t,
+              int                                         normal,
+              double * __restrict__                       BgradQ
+            )->void {
+              {% if NCP_IMPLEMENTATION!="<none>" %}
+              repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
+              {% endif %}
+            },
+            riemannResult,
+            QHull, 
+            maxEigenvaluePerFace,
             repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
             repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(0).value,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(1).value,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(2).value,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(3).value,
-            #if Dimensions==3
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(4).value,
-            fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(5).value,
-            #endif
-            fineGridCell{{SOLVER_NAME}}QNew.value
+            faceCentres,
+            dx,
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+            {{ORDER}}, 
+            {{NUMBER_OF_UNKNOWNS}}, 
+            {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            atBoundary,
+            {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},   //  callFlux,
+            {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}     //  callNonconservativeProduct
           );
 
-          std::copy_n(
-            fineGridCell{{SOLVER_NAME}}QNew.value,
-            #if Dimensions==2
-            ({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
-            #else
-            ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}),
-            #endif
-            fineGridCell{{SOLVER_NAME}}Q.value
+          // add result to solution
+          ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
+            fineGridCell{{SOLVER_NAME}}Q.value,                         //  UOut,
+            riemannResult,
+            repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,  // FLCoeff,
+            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight, // FLCoeff,
+            dx,
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+            {{ORDER}}, 
+            {{NUMBER_OF_UNKNOWNS}}, 
+            {{NUMBER_OF_AUXILIARY_VARIABLES}}
           );
-        */
         }
         break;
       case {{SOLVER_NAME}}::SolverState::Plotting:

@@ -11,7 +11,7 @@ namespace exahype2 {
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    GPUCallableMethod void rusanovNonlinear_riemannFlux_body_AoS(
+    GPUCallableMethod void rusanovNonlinear_body_AoS(
         std::function< void(
           const double * __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
@@ -45,10 +45,10 @@ namespace exahype2 {
         const double                                smax,
         const double * __restrict__                 nodes, 
         const double * __restrict__                 weights, 
-        const double                                t,
-        const double                                dt,
         const tarch::la::Vector<Dimensions,double>& faceCentre,
         const double                                dx,
+        const double                                t,
+        const double                                dt,
         const int                                   nodesPerAxis,
         const int                                   unknowns,
         const int                                   strideQ,
@@ -82,8 +82,6 @@ namespace exahype2 {
      * @param[in]    unknowns the number of PDE unknowns that we evolve
      * @param[in]    auxiliaryVariables other quantities such as material parameters that we do not evolve
      * @param[in]    direction
-     * @param[in]    leftCellIsOutside
-     * @param[in]    rightCellIsOutside
      * @param[in]    callFlux
      * @param[in]    callNonconservativeProduct
      */
@@ -123,16 +121,14 @@ namespace exahype2 {
       const double                                maxEigenvaluePerFace[Dimensions*2],
       const double * __restrict__                 nodes, 
       const double * __restrict__                 weights, 
-      const double                                t,
-      const double                                dt,
       const tarch::la::Vector<Dimensions,double>  faceCentres[Dimensions*2],
       const double                                dx,
+      const double                                t,
+      const double                                dt,
       const int                                   order,
       const int                                   unknowns,
       const int                                   auxiliaryVariables,
-      const int                                   direction,
-      const bool                                  leftCellIsOutside,
-      const bool                                  rightCellIsOutside,
+      const bool                                  atBoundary[Dimensions*2],
       const bool                                  callFlux,
       const bool                                  callNonconservativeProduct);
 
