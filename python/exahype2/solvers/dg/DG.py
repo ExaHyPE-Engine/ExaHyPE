@@ -113,14 +113,14 @@ class AMR(AbstractDGActionSet):
 """
     if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = """
-  refinementControl.merge( _localRefinementControl );
+  repositories::refinementControl.merge( _localRefinementControl );
 """
     return result
 
 
   def get_body_of_getGridControlEvents(self):
     return """
-  return refinementControl.getGridControlEvents();
+  return repositories::refinementControl.getGridControlEvents();
 """ 
 
   
@@ -235,11 +235,11 @@ class DG(object):
     
     self._face_spacetime_solution.generator.includes     += """
 #include "peano4/utils/Loop.h"
-#include "observers/SolverRepository.h" 
+#include "repositories/SolverRepository.h" 
 """
     self._Riemann_result.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "observers/SolverRepository.h" 
+#include "repositories/SolverRepository.h" 
 """
    
     self._guard_copy_new_face_data_into_face_data  = self._predicate_face_carrying_data()
@@ -341,7 +341,7 @@ class DG(object):
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
 
-#include "SolverRepository.h"
+#include "repositories/SolverRepository.h"
 
 #include "exahype2/PatchUtils.h"
 #include "exahype2/aderdg/RusanovNonlinearAoS.h"
