@@ -47,7 +47,13 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
   }
 
   // Outputs:
-  double QOut[strideQ*nodesPerAxis3];
+  double QOut[nodesPerAxis3*strideQ];
+  double UOut[nodesPerAxis2*strideQ];
+  double _QHullOut[Dimensions*2][2*nodesPerAxis2*strideQ];
+  double* __restrict__ QHullOut[Dimensions*2];
+  for (int face = 0; face < Dimensions*2; face++) {
+    QHullOut[face] = &_QHullOut[face][0];
+  }
 
   ::exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
       [&](
@@ -136,6 +142,48 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
           eps, i);
     }
   }
+
+  ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_loop_AoS(
+    UOut,
+    QOut,
+    BasisFunctionValuesRight,           // FLCoeff,
+    order,
+    unknowns,
+    auxiliaryVariables);
+  
+  // print result
+  std::cout << "\nresult (UOut):\n\n";
+  for (int i = 0; i < nodesPerAxis2; i++) {
+    for (int m=0; m < unknowns; m++) {
+      const int i_UOut = i*unknowns  + m;
+      std::cout << std::setprecision(3) << UOut[i_UOut] << " ";
+    }
+    std::cout << "\n";
+  }
+  std::cout << std::flush;
+    
+  ::exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
+    QHullOut,
+    QOut,
+    BasisFunctionValuesRight,           // FLCoeff,
+    BasisFunctionValuesRight,           // FRCoeff,
+    order,
+    unknowns,
+    auxiliaryVariables);
+  
+  // print result
+  std::cout << "\nresult (QHullOut):\n\n";
+  for (int face = 0; face < 2*Dimensions; face++) {
+    for (int i = 0; i < 2*nodesPerAxis2; i++) {
+      for (int m=0; m < unknowns; m++) {
+        const int i_QHullOut = i*unknowns  + m;
+        std::cout << std::setprecision(3) << QHullOut[face][i_QHullOut] << " ";
+      }
+      std::cout << "\n";
+    }
+    std::cout << "\n";
+  }
+  std::cout << std::flush;
 }
 
 exahype2::aderdg::tests::ADERDGTest::ADERDGTest():

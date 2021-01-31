@@ -282,12 +282,18 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS
   //const int lr = faceIndex - 2*d;
   const int scalarIndexFace = scalarIndexHull - faceIndex*strideQLR;
 
+  // zero out
+  const int writeIndex = (strideQLR*(1-lr) + scalarIndexFace)*strideQ; 
+  for (int var=0; var < strideQ; var++) {
+    QHullOut[ faceIndex ][ writeIndex + var ] = 0.0;
+  }
+  // compute
   for (int id=0; id<nodesPerAxis; id++) {
     const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
     const double coeff = FLRCoeff[lr][id];
     for (int var=0; var < strideQ; var++) {
-      QHullOut[ faceIndex ][ strideQLR*(1-lr) + scalarIndexFace*strideQ + var ] += coeff * QIn[ scalarIndexCell*strideQ + var ]; 
+      QHullOut[ faceIndex ][ writeIndex + var ] += coeff * QIn[ scalarIndexCell*strideQ + var ]; 
     }
   }
 }
@@ -313,7 +319,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
   const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
   for (int var=0; var < strideQ; var++) {
-    QHullOut[ faceIndex ][ strideQLR*(1-lr) + scalarIndexFace*strideQ + var ] = QIn[ scalarIndexCell*strideQ + var ]; 
+    QHullOut[ faceIndex ][ (strideQLR*(1-lr) + scalarIndexFace)*strideQ + var ] = QIn[ scalarIndexCell*strideQ + var ]; 
   }
 }
 #if defined(OpenMPGPUOffloading)
