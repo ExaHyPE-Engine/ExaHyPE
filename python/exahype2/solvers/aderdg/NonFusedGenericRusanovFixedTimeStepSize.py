@@ -14,7 +14,7 @@ import jinja2
 
 class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
   TemplateRiemannSolve = jinja2.Template( """
-    if ({{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
+    if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
       // @todo Have to think about this one
 
 
@@ -35,11 +35,11 @@ class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
         },
         marker.x(),
         marker.h(),
-        {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-        {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
         {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{SOLVER_INSTANCE}}.QuadraturePoints,
-        {{SOLVER_INSTANCE}}.QuadratureWeights,
+        repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+        repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
         marker.getSelectedFaceNumber() % Dimensions,
         fineGridFace{{SOLVER_NAME}}QSolutionExtrapolation.value,
         fineGridFace{{SOLVER_NAME}}QFluxExtrapolation.value,
@@ -67,7 +67,7 @@ class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
 
 class UpdateCell(AbstractADERDGActionSet):
   TemplateUpdateCell = jinja2.Template( """
-    switch ({{SOLVER_INSTANCE}}.getSolverState() ) {
+    switch (repositories::{{SOLVER_INSTANCE}}.getSolverState() ) {
       case {{SOLVER_NAME}}::SolverState::GridConstruction:
         assertionMsg( false, "should not be entered" );
         break;
@@ -99,7 +99,7 @@ class UpdateCell(AbstractADERDGActionSet):
               double * __restrict__                       F
             )->void {
               {% if FLUX_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+              repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
               {% endif %}
             },
             [&](
@@ -109,7 +109,7 @@ class UpdateCell(AbstractADERDGActionSet):
               double * __restrict__                       S
             )->void {
               {% if SOURCES_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.algebraicSource(Q,x,t,S);
+              repositories::{{SOLVER_INSTANCE}}.algebraicSource(Q,x,t,S);
               {% endif %}
             },
             [&](
@@ -121,21 +121,21 @@ class UpdateCell(AbstractADERDGActionSet):
               double * __restrict__                       BgradQ
             )->void {
               {% if NCP_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_deltaQ,x,t,normal,BgradQ);
+              repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_deltaQ,x,t,normal,BgradQ);
               {% endif %}
             },
             spaceTimeQ,                           // QOut
             fineGridCell{{SOLVER_NAME}}Q.value,   // QIn
-            {{SOLVER_INSTANCE}}.QuadraturePoints,
-            {{SOLVER_INSTANCE}}.QuadratureWeights,
-            {{SOLVER_INSTANCE}}.StiffnessOperator,             // Kxi,
-            {{SOLVER_INSTANCE}}.InvertedPredictorLhsOperator, // iK1,
-            {{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,      // FLCoeff,
-            {{SOLVER_INSTANCE}}.DerivativeOperator,   // dudx, 
+            repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+            repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+            repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,             // Kxi,
+            repositories::{{SOLVER_INSTANCE}}.InvertedPredictorLhsOperator, // iK1,
+            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,      // FLCoeff,
+            repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,   // dudx, 
             marker.x(),
             marker.h()(0), // we assume cubic/square cells
-            {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-            {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
             {{ORDER}}, 
             {{NUMBER_OF_UNKNOWNS}}, 
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -162,7 +162,7 @@ class UpdateCell(AbstractADERDGActionSet):
               double * __restrict__                       F
             )->void {
               {% if FLUX_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+              repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
               {% endif %}
             },
             [&](
@@ -172,7 +172,7 @@ class UpdateCell(AbstractADERDGActionSet):
               double * __restrict__                       S
             )->void {
               {% if SOURCES_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.algebraicSource(Q,x,t,S);
+              repositories::{{SOLVER_INSTANCE}}.algebraicSource(Q,x,t,S);
               {% endif %}
             },
             [&](
@@ -184,7 +184,7 @@ class UpdateCell(AbstractADERDGActionSet):
               double * __restrict__                       BgradQ
             )->void {
               {% if NCP_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
+              repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
               {% endif %}
             },
             [&](
@@ -192,18 +192,18 @@ class UpdateCell(AbstractADERDGActionSet):
               const tarch::la::Vector<Dimensions,double>& x,
               double                                      t
             )->void {
-              //{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
+              //repositories::{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
             },
             fineGridCell{{SOLVER_NAME}}Q.value,                           //  UOut,
             spaceTimeQ,                                                   //  QIn,
-            {{SOLVER_INSTANCE}}.QuadraturePoints,                         //  nodes,
-            {{SOLVER_INSTANCE}}.QuadratureWeights,                        //  weights,
-            {{SOLVER_INSTANCE}}.StiffnessOperator,                        //  Kxi,
-            {{SOLVER_INSTANCE}}.DerivativeOperator,                       //  dudx,
+            repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,                         //  nodes,
+            repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,                        //  weights,
+            repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,                        //  Kxi,
+            repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,                       //  dudx,
             marker.x(),                                                   //  cellCentre,
             marker.h()(0),                                                //  dx,
-            {{SOLVER_INSTANCE}}.getMinTimeStamp(),                        //  t,
-            {{SOLVER_INSTANCE}}.getMinTimeStepSize(),                     //  dt,
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),                        //  t,
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),                     //  dt,
             {{ORDER}},                                                    //  order,
             {{NUMBER_OF_UNKNOWNS}},                                       //  unknowns,
             {{NUMBER_OF_AUXILIARY_VARIABLES}},                            //  auxiliaryVariables,
@@ -215,7 +215,7 @@ class UpdateCell(AbstractADERDGActionSet):
           ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
             fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
             spaceTimeQ,                           // QIn
-            {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
             {{ORDER}}, 
             {{NUMBER_OF_UNKNOWNS}}, 
             {{NUMBER_OF_AUXILIARY_VARIABLES}}
@@ -229,8 +229,8 @@ class UpdateCell(AbstractADERDGActionSet):
           ::exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
             QHullOut,
             spaceTimeQ,                           // QIn
-            {{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-            {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
             {{ORDER}}, 
             {{NUMBER_OF_UNKNOWNS}}, 
             {{NUMBER_OF_AUXILIARY_VARIABLES}}
@@ -249,11 +249,11 @@ class UpdateCell(AbstractADERDGActionSet):
           #endif
             marker.x(),
             marker.h(),
-            {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
-            {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            {{SOLVER_INSTANCE}}.QuadraturePoints,
-            {{SOLVER_INSTANCE}}.QuadratureWeights,
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+            repositories::{{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+            repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
             fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(0).value,
             fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(1).value,
             fineGridFaces{{SOLVER_NAME}}QRiemannSolveResult(2).value,

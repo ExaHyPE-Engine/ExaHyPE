@@ -433,6 +433,7 @@ AC_ARG_ENABLE(loadbalancing-toolbox,
   [ AC_MSG_CHECKING(for loadbalancing-toolbox); AC_MSG_RESULT(no); loadbalancing_toolbox=false ])
 AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$loadbalancing-toolbox" = xtrue])
 
+
 #
 # ExaHyPE2
 #
@@ -453,6 +454,28 @@ if test "$exahype" != false; then
 fi
 
 
+#
+# SmartMPI
+#
+AC_ARG_WITH(smartmpi,
+  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=false]]),
+  [ AC_MSG_CHECKING(for smartmpi)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    smartmpi=false ;;
+      *)     AC_MSG_RESULT(yes - please ensure that CXXFLAGS and LDFLAGS are properly set);   smartmpi=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
+AM_CONDITIONAL([UseSmartMPI],[test "x$smartmpi" = xtrue])
+if test "$smartmpi" != false; then
+  AC_DEFINE([UseSmartMPI], [1], [UseSmartMPI])
+  if test "$mpi" == false; then
+    AC_MSG_ERROR([SmartMPI requires an MPI build of Peano])
+  fi
+fi
+
+
+
+
 
 #
 # Delta
@@ -462,7 +485,7 @@ AC_ARG_WITH(delta,
   [ AC_MSG_CHECKING(for delta)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);                                 delta=false ;;
-      *)     AC_MSG_RESULT(build against Delta installation - please ensure that CXXFLAGS and LDFLAGS are properly set);  delta=${withval}  ;;
+      *)     AC_MSG_RESULT(yes - please ensure that CXXFLAGS and LDFLAGS are properly set);  delta=${withval}  ;;
     esac ],
   [ AC_MSG_CHECKING(for delta); AC_MSG_RESULT(no); delta=false ])
 # This whole autotools thing is not very nice: If I wanna use an if ... endif (
@@ -489,5 +512,6 @@ AC_OUTPUT(
   src/convert/Makefile
   src/exahype2/Makefile
   src/unittests/Makefile 
+  src/smartmpi/Makefile
 )
 

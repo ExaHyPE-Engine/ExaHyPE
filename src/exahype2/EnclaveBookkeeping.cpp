@@ -81,7 +81,7 @@ void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResu
 
   tarch::multicore::Lock lockFinishedTasks( _finishedTasksSemaphore );
   assertionEquals( _finishedTasks.count(taskNumber),0 );
-  int oldBucketCount = _finishedTasks.bucket_count();
+  auto oldBucketCount = _finishedTasks.bucket_count();
   std::pair<int,double*> newEntry(numberOfResultValues,data);
   _finishedTasks.insert( std::pair<int, std::pair<int,double*> >(taskNumber,newEntry) );
   if (_finishedTasks.bucket_count()>oldBucketCount) {

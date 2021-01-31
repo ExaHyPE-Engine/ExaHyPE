@@ -1091,11 +1091,11 @@ void peano4::grid::Spacetree::storeVertices(
     const std::bitset<Dimensions>           vertexIndex( coordinates ^ std::bitset<Dimensions>(i) );
     const tarch::la::Vector<Dimensions,int> vertexPositionWithinPatch = cellPositionWithin3x3Patch + convertToIntegerVector(vertexIndex);
 
-    const tarch::la::Vector<Dimensions,double> x = fineGridStatesState.getX()
-      + tarch::la::multiplyComponents(
-          tarch::la::convertScalar<double>( convertToIntegerVector(vertexIndex) ),
-          fineGridStatesState.getH()
-        );
+    //const tarch::la::Vector<Dimensions,double> x = fineGridStatesState.getX()
+    //  + tarch::la::multiplyComponents(
+    //      tarch::la::convertScalar<double>( convertToIntegerVector(vertexIndex) ),
+    //      fineGridStatesState.getH()
+    //    );
 
     const int   stackNumber = PeanoCurve::getVertexWriteStackNumber(fineGridStatesState,vertexIndex);
     VertexType  type        = getVertexType(coarseGridVertices,vertexPositionWithinPatch);
@@ -1121,7 +1121,7 @@ void peano4::grid::Spacetree::storeVertices(
           ) {
             updateVertexBeforeStore(
               fineGridVertices[ peano4::utils::dLinearised(vertexIndex) ],
-		          coarseGridVertices,
+              coarseGridVertices,
               vertexPositionWithinPatch
             );
           }
@@ -1337,7 +1337,7 @@ void peano4::grid::Spacetree::mergeGridVertexRefinementStateAtHorizontalDomainBo
     (
       tarch::la::contains(vertex.getAdjacentRanks(),RankOfPeriodicBoundaryCondition)
       and
-      (_periodicBC.count()>1 or tarch::la::countEqualEntries(vertex.getX(), inVertex.getX())==Dimensions-_periodicBC.count())
+      (_periodicBC.count()>1 or tarch::la::countEqualEntries(vertex.getX(), inVertex.getX())==Dimensions-static_cast<int>(_periodicBC.count()))
     ),
     inVertex.toString(), vertex.toString(), _id, neighbour,
     tarch::la::countEqualEntries(vertex.getX(), inVertex.getX()), _periodicBC
@@ -2063,7 +2063,6 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
     state.toString(), leaveCellTraversalEvent.toString(), _id
   );
 
-  int outCallStackCounter;
   int totalOutStackWrites;
 
   totalOutStackWrites = 0;
@@ -2089,7 +2088,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           logDebug(
             "sendUserData(...)",
             "send local vertex data of " << fineGridVertices[outVertexPositionWithinCell].toString() << " from stack " << outVertexStack << " on tree " <<
-            _id << " (relative position=" << outCallStackCounter << ") to neighbour " << p << ". Position within cell=" << outVertexPositionWithinCell  <<
+            _id << " to neighbour " << p << ". Position within cell=" << outVertexPositionWithinCell  <<
             ", total vertices on output stack=" << totalOutStackWrites
           );
           const int toStack   = peano4::parallel::Node::getOutputStackNumberForHorizontalDataExchange( p );
@@ -2130,7 +2129,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           logDebug(
             "sendUserData(...)",
             "stream local vertex data of " << fineGridVertices[outVertexPositionWithinCell].toString() << " from stack " << outVertexStack << " on tree " <<
-            _id << " (relative position=" << outCallStackCounter << ") to upcoming worker " << p << ". Position within cell=" << outVertexPositionWithinCell  <<
+            _id << " to upcoming worker " << p << ". Position within cell=" << outVertexPositionWithinCell  <<
             ", total vertices on output stack=" << totalOutStackWrites
           );
           const int toStack   = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange( p );
@@ -2232,14 +2231,11 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
 
   int outCellStack              = leaveCellTraversalEvent.getCellData();
   for (auto p: _splitting) {
-    const int outStack = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange(p);
-
     if ( getTreeOwningSpacetreeNode(fineGridVertices)==p ) {
       logDebug(
         "sendUserData(...)",
         "stream local cell of tree " << _id <<
-        " to new worker " << p << " through output stack=" << outStack <<
-        ". Left bottom vertex=" << fineGridVertices[0].toString()
+        " to new worker " << p << ". Left bottom vertex=" << fineGridVertices[0].toString()
       );
 
       const int toStack   = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange( p );

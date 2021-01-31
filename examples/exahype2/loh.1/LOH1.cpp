@@ -44,7 +44,7 @@ void examples::exahype2::loh1::LOH1::prescribeGaussianWave(
   Q[s.alpha] = 1.0;
 
   double radius = 3.0 ;
-  double height = 3.0;
+  //double height = 3.0;
   
   Q[ s.v + 0 ] = std::exp(-((x[0]-center_curve[0])*(x[0]-center_curve[0])+
                             (x[1]-center_curve[1])*(x[1]-center_curve[1])+

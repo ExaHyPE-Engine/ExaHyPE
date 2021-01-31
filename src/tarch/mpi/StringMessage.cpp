@@ -123,7 +123,6 @@ void tarch::mpi::StringMessage::send(const tarch::mpi::StringMessage& buffer, in
 
 void tarch::mpi::StringMessage::receive(tarch::mpi::StringMessage& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
   MPI_Status  status;
-  MPI_Request receiveRequestHandle; 
   int         flag = 0; 
   MPI_Iprobe( source, tag, communicator, &flag, &status );
   while (!flag) { 

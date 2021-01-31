@@ -113,14 +113,14 @@ class AMR(AbstractADERDGActionSet):
 """
     if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = """
-  refinementControl.merge( _localRefinementControl );
+  repositories::refinementControl.merge( _localRefinementControl );
 """
     return result
 
 
   def get_body_of_getGridControlEvents(self):
     return """
-  return refinementControl.getGridControlEvents();
+  return repositories::refinementControl.getGridControlEvents();
 """ 
 
   
@@ -235,11 +235,11 @@ class ADERDG(object):
     
     self._face_spacetime_solution.generator.includes     += """
 #include "peano4/utils/Loop.h"
-#include "observers/SolverRepository.h" 
+#include "repositories/SolverRepository.h" 
 """
     self._Riemann_result.generator.includes += """
 #include "peano4/utils/Loop.h"
-#include "observers/SolverRepository.h" 
+#include "repositories/SolverRepository.h" 
 """
    
     self._guard_copy_new_face_data_into_face_data  = self._predicate_face_carrying_data()
@@ -341,7 +341,7 @@ class ADERDG(object):
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
 
-#include "SolverRepository.h"
+#include "repositories/SolverRepository.h"
 
 #include "exahype2/PatchUtils.h"
 #include "exahype2/aderdg/RusanovNonlinearAoS.h"
@@ -392,7 +392,7 @@ class ADERDG(object):
     self.plot_metadata    = meta_data
     
   
-  def add_actions_to_plot_solution(self, step):
+  def add_actions_to_plot_solution(self, step, output_path):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
@@ -404,7 +404,7 @@ class ADERDG(object):
           mapping.append( (x,y,z) )
     
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
-      filename="solution-" + self._name,         
+      filename=output_path + "solution-" + self._name, 
       patch=self._DG_polynomial,     
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
@@ -414,7 +414,7 @@ class ADERDG(object):
     ))
 
     if self._plot_grid_properties:    
-      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( "grid-" + self._name,None ))
+      step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( output_path + "grid-" + self._name,None ))
 
     pass
    

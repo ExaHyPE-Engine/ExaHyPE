@@ -17,13 +17,6 @@ int peano4::parallel::Tasks::getLocationIdentifier(const std::string&  trace) {
 }
 
 
-#if defined(TBBInvade)
-#include "tarch/multicore/Core.h"
-
-
-shminvade::SHMInvade*  peano4::parallel::Tasks::_backgroundTaskInvade = nullptr;
-#endif
-
 
 bool peano4::parallel::Tasks::taskForLocationShouldBeIssuedAsTask( int location, int taskCount ) const {
   return true;
@@ -84,8 +77,12 @@ peano4::parallel::Tasks::Tasks(
     tarch::multicore::spawnTask( task );
   }
   else {
+    #if PeanoDebug>1
     bool reschedule = task->run();
-    assertionMsg( not reschedule, "wenn ein einziger Task rescheduled, dann muss er immer in den Hintergrund gehen, oder das ganze Ding geht net (Deadlock)")
+    assertionMsg( not reschedule, "if a single task reschedules, it should go to background, i.e. not return true, as we otherwise deadlock" )
+    #else
+    task->run();
+    #endif
     delete task;
   }
 }
@@ -111,8 +108,12 @@ peano4::parallel::Tasks::Tasks(
   }
   else {
     for (auto& p: tasks) {
+      #if PeanoDebug>1
       bool reschedule = p->run();
-      assertionMsg( not reschedule, "wenn ein einziger Task rescheduled, dann muss er immer in den Hintergrund gehen, oder das ganze Set an Tasks geht den Bach runter. Es muss permutieren! (Deadlock)")
+      assertionMsg( not reschedule, "if a single task reschedules, it should go to background, i.e. not return true, as we otherwise deadlock" )
+      #else
+      p->run();
+      #endif
       delete p;
     }
   }

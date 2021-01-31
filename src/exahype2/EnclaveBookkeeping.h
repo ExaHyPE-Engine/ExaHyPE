@@ -20,6 +20,12 @@ namespace exahype2 {
 
 
 /**
+ * Enclave bookkeeping
+ *
+ * The enclave bookkeeping is basically a big map which stores results of 
+ * enclave tasks.
+ * 
+ *
 @todo Das Ergebnis muss lokal gepuffert werden im bookkeeping.
       Ich brauche zwei Adapter: einen fuer primaer, einen fuer sekundaer. Sonst rekonstruier ich dei Loesung jedes Mal (ist teuer)
       Die Adapter muessen alle das gleiche Bookkeeping verwenden -> singleton

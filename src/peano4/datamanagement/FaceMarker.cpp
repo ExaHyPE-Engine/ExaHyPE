@@ -13,8 +13,8 @@ peano4::datamanagement::FaceMarker::FaceMarker(
 ):
   _cellCentre(event.getX()),
   _h(event.getH()),
-  _select(select),
-  _cellIsLocal(event.getIsCellLocal()) {
+  _cellIsLocal(event.getIsCellLocal()),
+  _select(select) {
 
   for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {
     _isRefined[faceNumber] = false;

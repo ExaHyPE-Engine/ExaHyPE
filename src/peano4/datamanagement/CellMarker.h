@@ -44,7 +44,11 @@ struct peano4::datamanagement::CellMarker {
      */
     tarch::la::Vector<Dimensions,double>  x() const;
 
+    /**
+     * Check whether the point x is contained within the marker.
+     */
     bool isContained( const tarch::la::Vector<Dimensions,double>& x ) const;
+    bool overlaps( const tarch::la::Vector<Dimensions,double>& offset, const tarch::la::Vector<Dimensions,double>& size ) const;
 
     /**
      * @return Size of cell

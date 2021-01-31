@@ -214,6 +214,37 @@ Therefore, one of the first postprocessing steps usually is to remove all data
 from the output data set besides the fine grid level.
 
 
+\begin{remark}
+ In principle, \Peano\ follows the philosophy that postprocessing should be done
+ by postprocessing tools. It therefore just dumps the data (though efficiently
+ in a bespoke format). For many applications, each dump of the whole
+ simulation data is already too heavy. Therefore, you can add filters.
+\end{remark}
+
+\noindent
+Filters can be added to your setup via
+\begin{code}
+probe_point = [0,0.693,0]
+project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
+project.add_plot_filter( offset,size,10 )
+\end{code}
+
+\noindent
+The example above sets a probe, i.e.~every plot step only the patch data around
+the probe is dumped. Every 10 snapshot steps however, the whole domain is
+written.
+I assume that \texttt{offset} and \texttt{size} are configured accordingly.
+
+
+The command
+\begin{code}
+project.set_output_path( "/scratch/myfolder" )
+\end{code}
+\noindent
+configures \Peano\ with a proper output path. Without this command, all output
+data is written to the working path.
+
+
 \paragraph{Logging output}
 
 \ExaHyPE\ searches for a text file \texttt{exahype.log-filter} in the working
