@@ -206,7 +206,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
       dQAux   + scalarIndexHull*strideDQ,
       SAux    + scalarIndexHull*strideS,
       QHullIn[ face ], 
-      QHullIn[ face ] + strideQLR, 
+      QHullIn[ face ] + strideQLR*strideQ, 
       maxEigenvaluePerFace[ face ],
       nodes, 
       weights, 
