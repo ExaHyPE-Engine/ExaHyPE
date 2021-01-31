@@ -113,7 +113,7 @@ void exahype2::aderdg::riemann_setBoundaryState_loop_AoS(
       // set Dirichlet boundary conditions
       if ( atBoundary[ face ] ) {
         double* QL  = QHullOut[ face ];
-        double* QR  = QHullOut[ face ] + strideQLR;
+        double* QR  = QHullOut[ face ] + strideQLR*strideQ;
         double* QOut = ( orientation == 0 ) ? QL : QR;
         double* QIn  = ( orientation == 0 ) ? QR : QL;
         for ( int scalarIndexFace = 0; scalarIndexFace < spaceTimeNodesOnFace; scalarIndexFace++ ) {
@@ -163,11 +163,10 @@ void exahype2::aderdg::riemann_maxAbsoluteEigenvalue_loop_AoS(
 
   // 6144 work items for order 7 in 3D 
   const int collocatedSpaceTimeNodesOnCellHull = Dimensions*2 * 2 * strideQLR; // #faces * 2 * nodesPerAxis^d,
-                                                                               //  '2' because QL & QR are stored in same array
  
   // init output 
   for (int face=0; face<2*Dimensions; face++) {
-    maxEigenvaluePerFaceOut[ face ]=0.0;
+    maxEigenvaluePerFaceOut[ face ] = 0.0;
   }
   // compute
   // scalarIndexHull = face*2*scalarIndexFace
