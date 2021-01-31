@@ -21,6 +21,7 @@ ExaHyPE2Sources = \
   aderdg/Generic.cpp \
   aderdg/KernelUtils.cpp \
   aderdg/PredictorAoS.cpp \
+  aderdg/RiemannAoS.cpp \
   aderdg/RusanovNonlinearAoS.cpp \
   aderdg/tests/ADERDGTest.cpp \
   fv/BoundaryConditions.cpp \
