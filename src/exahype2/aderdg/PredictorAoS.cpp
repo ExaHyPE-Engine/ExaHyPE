@@ -777,9 +777,6 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
   
   const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * Dimensions*2;
  
-  std::cout << "strideQLR=" << strideQLR << std::endl;
-  std::cout << "spaceTimeNodesOnCellHull=" << spaceTimeNodesOnCellHull << std::endl;
- 
   const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
   for ( int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
