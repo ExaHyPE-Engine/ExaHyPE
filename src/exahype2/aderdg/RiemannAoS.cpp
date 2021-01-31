@@ -143,11 +143,11 @@ void exahype2::aderdg::riemann_maxAbsoluteEigenvalue_loop_AoS(
   const int strideQ = unknowns+auxiliaryVariables;
   
   // Each face stores first: the degrees of freedom of QL ("left") and then of QR ("right")
-  const int strideBlock = getNodesPerCell(nodesPerAxis); 
+  const int strideQLR = getNodesPerCell(nodesPerAxis); 
 
   // 6144 work items for order 7 in 3D 
-  const int collocatedSpaceTimeNodesOnCellHull = Dimensions*2 * 2 * strideBlock; // #faces * 2 * nodesPerAxis^d,
-                                                                                 //  '2' because QL & QR are stored in same array
+  const int collocatedSpaceTimeNodesOnCellHull = Dimensions*2 * 2 * strideQLR; // #faces * 2 * nodesPerAxis^d,
+                                                                               //  '2' because QL & QR are stored in same array
  
   // init output 
   for (int face=0; face<2*Dimensions; face++) {
@@ -156,12 +156,12 @@ void exahype2::aderdg::riemann_maxAbsoluteEigenvalue_loop_AoS(
   // compute
   // scalarIndexHull = face*2*scalarIndexFace
   for ( int scalarIndexHull = 0; scalarIndexHull < collocatedSpaceTimeNodesOnCellHull; scalarIndexHull++ ) {
-    const int face        = scalarIndexHull / (2*strideBlock);
+    const int face        = scalarIndexHull / (2*strideQLR);
     // face = Dimensions*orientation + direction, direction < Dimensions
     const int orientation = face/Dimensions;
     const int direction   = face-Dimensions*orientation; 
     // strip off face index info to get  DoF index on face
-    const int scalarIndexFace = scalarIndexHull - face*2*strideBlock;
+    const int scalarIndexFace = scalarIndexHull - face*2*strideQLR;
     const double smax = riemann_maxAbsoluteEigenvalue_body_AoS(
       maxAbsoluteEigenvalue,
       QHullIn[ face ],

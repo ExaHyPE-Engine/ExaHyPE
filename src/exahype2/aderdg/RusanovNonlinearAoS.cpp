@@ -168,7 +168,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
   const int nodesOnFace = getNodesPerCell(nodesPerAxis)/nodesPerAxis; 
   const int nodesOnHull = Dimensions*2 * nodesOnFace; // 2*d*nodesPerAxis^(d-1)
   
-  const int strideBlock = nodesOnFace*nodesPerAxis; 
+  const int strideQLR = nodesOnFace*nodesPerAxis; 
  
   double * FAux     = nullptr;
   double * QAvgAux  = nullptr;
@@ -203,7 +203,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
       dQAux   + scalarIndexHull*strideDQ,
       SAux    + scalarIndexHull*strideS,
       QHullIn[ face ], 
-      QHullIn[ face ] + strideBlock, 
+      QHullIn[ face ] + strideQLR, 
       maxEigenvaluePerFace[ face ],
       nodes, 
       weights, 

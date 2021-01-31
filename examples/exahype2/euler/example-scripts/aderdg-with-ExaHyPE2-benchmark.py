@@ -26,13 +26,19 @@ sources. Typically, I invoke the script via
 python3 example-scripts/aderdg-with-ExaHyPE2-benchmark.py arguments
 """)
 
+modes = { 
+  "release": peano4.output.CompileMode.Release,
+  "trace":   peano4.output.CompileMode.Trace,
+  "assert":  peano4.output.CompileMode.Asserts,
+  "debug":   peano4.output.CompileMode.Debug,
+}
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Euler benchmarking script')
 parser.add_argument("--load-balancing-quality", dest="load_balancing_quality", type=float, default=0.9, help="Load balancing quality (something between 0 and 1; 1 is optimal)" )
 parser.add_argument("--h",               dest="h",              type=float, required=True, help="Mesh size" )
 parser.add_argument("--j",               dest="j",              type=int, default=4, help="Parallel builds" )
 parser.add_argument("--d",               dest="dim",            type=int, default=2, help="Dimensions" )
-parser.add_argument("--m",               dest="mode",                     default="release", help="release|trace|assert" )
+parser.add_argument("--m",               dest="mode",                     default="release", help="|".join(modes.keys()) )
 parser.add_argument("--t",               dest="timesteps",      type=int, default=10, help="Number of timesteps" )
 parser.add_argument("--p",               dest="peanodir",                 default="../../../", help="Peano4 directory" )
 parser.add_argument("--c",               dest="configuredir",             default="../../../", help="Location of configure" )
@@ -47,8 +53,8 @@ if args.dim not in [2,3]:
     import sys
     sys.exit(1)
 
-if args.mode not in ["release", "trace", "assert"]:
-    print("Error, mode must be release, trace or assert, you supplied {}".format(args.mode))
+if args.mode not in modes: 
+    print("Error, mode must be {} or {}, you supplied {}".format(", ",join(modes.keys()[:-1]),modes.keys()[-1],args.mode))
     import sys
     sys.exit(1)
 
@@ -69,7 +75,7 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "aderdg", ".", ex
 #
 # Add the Finite Volumes solver
 #
-order          = 7
+order          = 1
 unknowns       = 5
 time_step_size = 0.000001
 min_h          = args.h
@@ -80,7 +86,6 @@ max_h          = args.h
 # you can add further PDE terms btw.
 #
 #
-
 
 thesolver = None
 if args.GPU:
@@ -106,16 +111,8 @@ else:
 
 project.add_solver( thesolver )
 
-
 dimensions = args.dim
-if (args.mode=="release"):
-    build_mode = peano4.output.CompileMode.Release
-elif (args.mode=="trace"):
-    build_mode = peano4.output.CompileMode.Trace
-else:
-    build_mode = peano4.output.CompileMode.Asserts
-
-
+build_mode = modes[args.mode]
 
 #
 # Lets configure some global parameters

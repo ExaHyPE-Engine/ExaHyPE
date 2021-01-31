@@ -269,7 +269,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS
     const double * __restrict__ QIn,
     const double * __restrict__ FLRCoeff[2],
     const int                   nodesPerAxis,
-    const int                   offsetQR,
+    const int                   strideQLR,
     const int                   strideQ,
     const int                   scalarIndexHull) {
   const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
@@ -280,13 +280,14 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS
   const int d   = faceIndex - Dimensions*lr;
   //const int d  = faceIndex / 2;
   //const int lr = faceIndex - 2*d;
+  const int scalarIndexFace = scalarIndexHull - faceIndex*strideQLR;
 
   for (int id=0; id<nodesPerAxis; id++) {
     const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
     const double coeff = FLRCoeff[lr][id];
     for (int var=0; var < strideQ; var++) {
-      QHullOut[ faceIndex ][ offsetQR*(1-lr) + scalarIndexHull*strideQ + var ] += coeff * QIn[ scalarIndexCell*strideQ + var ]; 
+      QHullOut[ faceIndex ][ strideQLR*(1-lr) + scalarIndexFace*strideQ + var ] += coeff * QIn[ scalarIndexCell*strideQ + var ]; 
     }
   }
 }
@@ -295,7 +296,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
     double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const int                   nodesPerAxis,
-    const int                   offsetQR,
+    const int                   strideQLR,
     const int                   strideQ,
     const int                   scalarIndexHull) {
   const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
@@ -306,12 +307,13 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
   const int d   = faceIndex - Dimensions*lr;
   //const int d  = faceIndex / 2;
   //const int lr = faceIndex - 2*d;
+  const int scalarIndexFace = scalarIndexHull - faceIndex*strideQLR;
 
   const int id = ( lr == 0 ) ? 0 : (nodesPerAxis-1);
   const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
   for (int var=0; var < strideQ; var++) {
-    QHullOut[ faceIndex ][ offsetQR*(1-lr) + scalarIndexHull*strideQ + var ] = QIn[ scalarIndexCell*strideQ + var ]; 
+    QHullOut[ faceIndex ][ strideQLR*(1-lr) + scalarIndexFace*strideQ + var ] = QIn[ scalarIndexCell*strideQ + var ]; 
   }
 }
 #if defined(OpenMPGPUOffloading)
@@ -768,13 +770,16 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
   
   const int strideQ = unknowns+auxiliaryVariables;
   
-  const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * Dimensions*2;
-  
   // Each face stores first: the degrees of freedom of QL ("left") and then of QR ("right")
   // The cell is always positioned "right" to a face with lr=0 and
   // "left" to a face with lr=1.
-  const int offsetQR = getNodesPerCell(nodesPerAxis); 
+  const int strideQLR = getNodesPerCell(nodesPerAxis); 
   
+  const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * Dimensions*2;
+ 
+  std::cout << "strideQLR=" << strideQLR << std::endl;
+  std::cout << "spaceTimeNodesOnCellHull=" << spaceTimeNodesOnCellHull << std::endl;
+ 
   const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
   for ( int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
@@ -783,7 +788,7 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
       QIn,
       FLRCoeff,
       nodesPerAxis,
-      offsetQR,
+      strideQLR,
       strideQ,
       scalarIndexHull);
   }
@@ -806,14 +811,14 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
   // Each face stores first: the degrees of freedom of QL ("left") and then of QR ("right")
   // The cell is always positioned "right" to a face with lr=0 and
   // "left" to a face with lr=1.
-  const int offsetQR = getNodesPerCell(nodesPerAxis); 
+  const int strideQLR = getNodesPerCell(nodesPerAxis); 
  
   for ( int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
     spaceTimePredictor_extrapolate_Lobatto_body_AoS(
       QHullOut,
       QIn,
       nodesPerAxis,
-      offsetQR,
+      strideQLR,
       strideQ,
       scalarIndexHull);
   }

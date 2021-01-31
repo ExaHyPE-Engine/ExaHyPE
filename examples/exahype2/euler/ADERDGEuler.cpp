@@ -13,7 +13,7 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
 ) {
   logTraceInWith2Arguments( "adjustSolution(...)", x, t );
   if (tarch::la::equals(t,0.0) ) {
-    logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );
+    logDebug( "adjustSolution(...)", "init volume at " << x << "x" << t );
 
 /*
     #if Dimensions==2
