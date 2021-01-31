@@ -80,44 +80,60 @@ GPUCallableMethod double exahype2::aderdg::riemann_maxAbsoluteEigenvalue_body_Ao
 
 void exahype2::aderdg::riemann_setBoundaryState_loop_AoS(
   std::function< void(
-    double * __restrict__                       QInside,
+    const double * __restrict__                 QInside,
     double * __restrict__                       OOutside,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal
   ) >                                         boundaryState,
-  double * __restrict__                       QOut,
-  double * __restrict__                       QIn,
+  double * __restrict__                       QHullOut[Dimensions*2],
   const double * __restrict__                 nodes,
-  const tarch::la::Vector<Dimensions,double>& faceCentre,
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
   const double                                dx,
   const double                                t,
   const double                                dt,
   const int                                   order,
   const int                                   unknowns,
   const int                                   auxiliaryVariables,
-  const int                                   direction) {
+  const bool                                  atBoundary[Dimensions*2]) {
   const int nodesPerAxis = order + 1;
 
   const int strideQ = unknowns + auxiliaryVariables; 
-
+  
   const int spaceTimeNodesOnFace = getNodesPerCell(nodesPerAxis); // nodesPerAxis^d
+  
+  const int strideQLR = spaceTimeNodesOnFace;
 
-  for ( int scalarIndexFace = 0; scalarIndexFace < spaceTimeNodesOnFace; scalarIndexFace++ ) {
-    riemann_setBoundaryState_body_AoS(
-      boundaryState,
-      QOut,
-      QIn,
-      nodes,
-      faceCentre,
-      dx,
-      t,
-      dt,
-      nodesPerAxis,
-      unknowns,
-      strideQ,
-      direction,
-      scalarIndexFace);
+  for (int orientation=0; orientation < 2; orientation++) {
+    for (int direction = 0; direction < Dimensions; direction++) {
+      const int face = Dimensions*orientation + direction; 
+      tarch::la::Vector<Dimensions,double> faceCentre = cellCentre;
+      faceCentre[ direction ] += (-1+2*orientation)*0.5*dx;    
+      
+      // set Dirichlet boundary conditions
+      if ( atBoundary[ face ] ) {
+        double* QL  = QHullOut[ face ];
+        double* QR  = QHullOut[ face ] + strideQLR;
+        double* QOut = ( orientation == 0 ) ? QL : QR;
+        double* QIn  = ( orientation == 0 ) ? QR : QL;
+        for ( int scalarIndexFace = 0; scalarIndexFace < spaceTimeNodesOnFace; scalarIndexFace++ ) {
+          riemann_setBoundaryState_body_AoS(
+            boundaryState,
+            QOut,
+            QIn,
+            nodes,
+            faceCentre,
+            dx,
+            t,
+            dt,
+            nodesPerAxis,
+            unknowns,
+            strideQ,
+            direction,
+            scalarIndexFace);
+        }
+      }
+    }
   } 
 }
     
@@ -127,17 +143,17 @@ void exahype2::aderdg::riemann_maxAbsoluteEigenvalue_loop_AoS(
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     const int                                   direction
-  ) >                                        maxAbsoluteEigenvalue,
-  double                                     maxEigenvaluePerFaceOut[Dimensions*2],
-  const double * __restrict__                QHullIn[Dimensions*2],
-  const double * __restrict__                nodes,
-  const tarch::la::Vector<Dimensions,double> faceCentres[Dimensions*2],
-  const double                               dx,
-  const double                               t,
-  const double                               dt,
-  const int                                  order,
-  const int                                  unknowns,
-  const int                                  auxiliaryVariables) {
+  ) >                                         maxAbsoluteEigenvalue,
+  double                                      maxEigenvaluePerFaceOut[Dimensions*2],
+  const double * __restrict__                 QHullIn[Dimensions*2],
+  const double * __restrict__                 nodes,
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const double                                dx,
+  const double                                t,
+  const double                                dt,
+  const int                                   order,
+  const int                                   unknowns,
+  const int                                   auxiliaryVariables) {
   const int nodesPerAxis = order+1;
 
   const int strideQ = unknowns+auxiliaryVariables;
@@ -162,11 +178,14 @@ void exahype2::aderdg::riemann_maxAbsoluteEigenvalue_loop_AoS(
     const int direction   = face-Dimensions*orientation; 
     // strip off face index info to get  DoF index on face
     const int scalarIndexFace = scalarIndexHull - face*2*strideQLR;
+    
+    tarch::la::Vector<Dimensions,double> faceCentre = cellCentre;
+    faceCentre[ direction ] += (-1+2*orientation)*0.5*dx;    
     const double smax = riemann_maxAbsoluteEigenvalue_body_AoS(
       maxAbsoluteEigenvalue,
       QHullIn[ face ],
       nodes,
-      faceCentres[ face ],
+      faceCentre,
       dx,
       t,
       dt,

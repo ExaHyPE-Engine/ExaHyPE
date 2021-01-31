@@ -141,22 +141,22 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
     double                                      t,
     int                                         normal,
     double * __restrict__                       BgradQ
-  ) >                                        boundaryNonconservativeProduct,
-  double * __restrict__                      riemannResultOut,
-  const double * __restrict__                QHullIn[Dimensions*2], 
-  const double                               maxEigenvaluePerFace[Dimensions*2],
-  const double * __restrict__                nodes, 
-  const double * __restrict__                weights, 
-  const tarch::la::Vector<Dimensions,double> faceCentres[Dimensions*2],
-  const double                               dx,
-  const double                               t,
-  const double                               dt,
-  const int                                  order,
-  const int                                  unknowns,
-  const int                                  auxiliaryVariables,
-  const bool                                 atBoundary[Dimensions*2],
-  const bool                                 callFlux,
-  const bool                                 callNonconservativeProduct) {
+  ) >                                         boundaryNonconservativeProduct,
+  double * __restrict__                       riemannResultOut,
+  const double * __restrict__                 QHullIn[Dimensions*2], 
+  const double                                maxEigenvaluePerFace[Dimensions*2],
+  const double * __restrict__                 nodes, 
+  const double * __restrict__                 weights, 
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const double                                dx,
+  const double                                t,
+  const double                                dt,
+  const int                                   order,
+  const int                                   unknowns,
+  const int                                   auxiliaryVariables,
+  const bool                                  atBoundary[Dimensions*2],
+  const bool                                  callFlux,
+  const bool                                  callNonconservativeProduct) {
   const int nodesPerAxis = order + 1;
 
   const int strideQ  = unknowns+auxiliaryVariables;
@@ -191,7 +191,10 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
       
     const bool leftCellIsOutside  = atBoundary[ face ] && orientationToCell == 0; 
     const bool rightCellIsOutside = atBoundary[ face ] && orientationToCell == 1;
-      
+     
+    tarch::la::Vector<Dimensions,double> faceCentre = cellCentre;
+    faceCentre[ direction ] += (-1+2*orientationToCell)*0.5*dx;    
+ 
     rusanovNonlinear_body_AoS(
       ( leftCellIsOutside )  ? boundaryFlux : flux,
       ( rightCellIsOutside ) ? boundaryFlux : flux,
@@ -207,7 +210,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
       maxEigenvaluePerFace[ face ],
       nodes, 
       weights, 
-      faceCentres[ face ],
+      faceCentre,
       dx,
       t,
       dt,

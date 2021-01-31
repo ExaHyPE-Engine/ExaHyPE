@@ -176,8 +176,13 @@ class UpdateCell(AbstractADERDGActionSet):
 
           // collect information from the adjacent faces
           double* __restrict__ QHull[Dimensions*2];
+          bool                 atBoundary[Dimensions*2];
+          bool                 adjacentToBoundary = false;
           for (int face = 0; face < Dimensions*2; face++) {
-             QHull[ face ] = fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
+             QHull[ face ]       = fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
+             atBoundary [ face ] = fineGridFacesLabel(face).getBoundary() and
+                                   not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face%Dimensions];
+             adjacentToBoundary |= atBoundary[ face ];
           }
           
           // hull extrapolation
@@ -190,6 +195,31 @@ class UpdateCell(AbstractADERDGActionSet):
             {{NUMBER_OF_UNKNOWNS}}, 
             {{NUMBER_OF_AUXILIARY_VARIABLES}}
           );
+          
+          // set Dirichlet boundary conditions
+          if ( adjacentToBoundary ) {
+            ::exahype2::aderdg::riemann_setBoundaryState_loop_AoS(
+              [&](
+                 const double * __restrict__                 QInside,
+                 double * __restrict__                       QOutside,
+                 const tarch::la::Vector<Dimensions,double>& x,
+                 double                                      t,
+                 int                                         normal
+               )-> void {
+                 repositories::{{SOLVER_INSTANCE}}.boundaryConditions(QInside,QOutside,x,t,normal);
+               },
+               QHull,
+               repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+               marker.x(),                                                   //  cellCentre,
+               marker.h()(0),                                                //  dx,
+               repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(), 
+               repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
+               {{ORDER}}, 
+               {{NUMBER_OF_UNKNOWNS}}, 
+               {{NUMBER_OF_AUXILIARY_VARIABLES}},
+               atBoundary
+            );
+          }
         }
         break;
       case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
@@ -197,25 +227,16 @@ class UpdateCell(AbstractADERDGActionSet):
       case {{SOLVER_NAME}}::SolverState::Correction:
         {
           // collect information from the adjacent faces
-          const double* __restrict__           QHull[Dimensions*2];
-          bool                                 atBoundary[Dimensions*2];
-          tarch::la::Vector<Dimensions,double> faceCentres[Dimensions*2];
+          const double* __restrict__ QHull[Dimensions*2];
+          bool                       atBoundary[Dimensions*2];
+          bool                       adjacentToBoundary = false;
           for (int face = 0; face < Dimensions*2; face++) {
              QHull      [ face ] = fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
-             atBoundary [ face ] = false; // TODO assume periodic BC
-             faceCentres[ face ] = marker.x();
+             atBoundary [ face ] = fineGridFacesLabel(face).getBoundary() and
+                                   not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face%Dimensions];
+             adjacentToBoundary |= atBoundary[ face ];
           }
-          const double dx = marker.h()(0); // we assume cubic/square cells
-          for (int orientation=0; orientation < 2; orientation++) {
-            for (int direction = 0; direction < Dimensions; direction++) {
-              const int face = Dimensions*orientation + direction; 
-              faceCentres[ face ][ direction ] += (-1+2*orientation)*0.5*dx;    
-            }
-          }
-
-          // set boundary conditions
-          // TODO assume periodic BC
- 
+          
           // compute max eigenvalue per face 
           double maxEigenvaluePerFace[Dimensions*2];
           ::exahype2::aderdg::riemann_maxAbsoluteEigenvalue_loop_AoS(
@@ -230,8 +251,8 @@ class UpdateCell(AbstractADERDGActionSet):
             maxEigenvaluePerFace,
             QHull,
             repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
-            faceCentres,
-            dx,
+            marker.x(),                                                   //  cellCentre,
+            marker.h()(0),                                                //  dx,
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(), 
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
             {{ORDER}}, 
@@ -297,8 +318,8 @@ class UpdateCell(AbstractADERDGActionSet):
             maxEigenvaluePerFace,
             repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
             repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-            faceCentres,
-            dx,
+            marker.x(),                                                   //  cellCentre,
+            marker.h()(0),                                                //  dx,
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(), 
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
             {{ORDER}}, 
@@ -316,7 +337,7 @@ class UpdateCell(AbstractADERDGActionSet):
             repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
             repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,  // FLCoeff,
             repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight, // FLCoeff,
-            dx,
+            marker.h()(0),                                              //  dx,
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
             {{ORDER}}, 
             {{NUMBER_OF_UNKNOWNS}}, 

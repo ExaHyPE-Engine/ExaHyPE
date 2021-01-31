@@ -121,7 +121,7 @@ namespace exahype2 {
       const double                                maxEigenvaluePerFace[Dimensions*2],
       const double * __restrict__                 nodes, 
       const double * __restrict__                 weights, 
-      const tarch::la::Vector<Dimensions,double>  faceCentres[Dimensions*2],
+      const tarch::la::Vector<Dimensions,double>& cellCentre,
       const double                                dx,
       const double                                t,
       const double                                dt,

@@ -108,8 +108,7 @@ namespace exahype2 {
       * Prescribe boundary values (QOut) and overwrite interior values (QInside). 
       *
       * @param[in] boundaryState
-      * @param[inout] QOutside
-      * @param[inout] QInside
+      * @param[inout] QHullOut
       * @param[in] nodes quadrature nodes; size: (order+1)
       * @param[in] t time stamp
       * @param[in] dt time step size
@@ -118,27 +117,26 @@ namespace exahype2 {
       * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
       * @param[in] unknowns the number of PDE unknowns that we evolve
       * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
-      * @param[in] direction
+      * @param[in] atBoundary
       */
      void riemann_setBoundaryState_loop_AoS(
        std::function< void(
-         double * __restrict__                       QInside,
+         const double * __restrict__                 QInside,
          double * __restrict__                       OOutside,
          const tarch::la::Vector<Dimensions,double>& x,
          double                                      t,
          int                                         normal
        ) >                                         boundaryState,
-       double * __restrict__                       QOutside,
-       double * __restrict__                       QInside,
+       double * __restrict__                       QHullOut[Dimensions*2],
        const double * __restrict__                 nodes,
-       const tarch::la::Vector<Dimensions,double>& faceCentre,
+       const tarch::la::Vector<Dimensions,double>& cellCentre,
        const double                                dx,
        const double                                t,
        const double                                dt,
        const int                                   order,
        const int                                   unknowns,
        const int                                   auxiliaryVariables,
-       const int                                   direction);
+       const bool                                  atBoundary[Dimensions*2]);
     
     /**
      * @brief Per face, determine the eigenvalue with the largest absolute value
@@ -168,7 +166,7 @@ namespace exahype2 {
       double                                      maxEigenvaluePerFaceOut[Dimensions*2],
       const double * __restrict__                 QHullIn[Dimensions*2],
       const double * __restrict__                 nodes,
-      const tarch::la::Vector<Dimensions,double>  faceCentres[Dimensions*2],
+      const tarch::la::Vector<Dimensions,double>& cellCentre,
       const double                                dx,
       const double                                t,
       const double                                dt,
