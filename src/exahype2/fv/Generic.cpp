@@ -143,6 +143,9 @@ void exahype2::fv::copyPatch (
   }
 #endif
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
