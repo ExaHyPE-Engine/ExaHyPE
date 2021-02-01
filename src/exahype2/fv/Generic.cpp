@@ -56,13 +56,15 @@ void exahype2::fv::validatePatch (
     int isDiagonal = tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1);
 
     for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-      nonCriticalAssertion9(
-        (haloSize>0 and isDiagonal>1) or
-        std::isfinite(Q[index+i]),
-        unknowns,
-        auxiliaryVariables,
-        isDiagonal, haloSize,
-        numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
+      if (haloSize==0 or isDiagonal==0) {
+        nonCriticalAssertion9(
+          std::isfinite(Q[index+i]),
+          unknowns,
+          auxiliaryVariables,
+          isDiagonal, haloSize,
+          numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
+
+      }
     }
   }
   #endif
@@ -141,6 +143,9 @@ void exahype2::fv::copyPatch (
   }
 #endif
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
@@ -509,8 +514,6 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
 ) {
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
-
-  assertionMsg( false, "ich glaube diese Variante ist buggy. Muessen wir erst testen. Kann auch an den OpenMP-Pragmas liegen. Mit LLVM gehts aber eh net, insofern kann man es auch gleich ordentlich umschreiben" ); assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
 
   tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);

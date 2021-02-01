@@ -18,6 +18,7 @@
 {% endif -%}
 
 #include "exahype2/RefinementControl.h"
+#include "exahype2/PlotFilter.h"
 #include "peano4/grid/GridStatistics.h"
 
 
@@ -36,6 +37,7 @@
 
 
   extern ::exahype2::RefinementControl  refinementControl;
+  extern ::exahype2::PlotFilter         plotFilter;
 
   {% if LOAD_BALANCER!="" -%}
   extern {{LOAD_BALANCER}}              loadBalancer;
@@ -75,6 +77,7 @@
   void finishTimeStep();
   void finishPlottingStep();
 
+  void startSimulation();
   void finishSimulation();
 
 {% for item in NAMESPACE -%}
