@@ -1,8 +1,8 @@
 // This file is part of the SmartMPI project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org. This file will
 // later go into a separate project.
-#ifndef _SMART_MPI_H_
-#define _SMART_MPI_H_
+#ifndef _SMARTMPI_H_
+#define _SMARTMPI_H_
 
 
 #include <functional>
@@ -74,8 +74,11 @@ namespace smartmpi {
    * Should be called early throughout the computation. In the ideal case,
    * it is called immediately after an MPI_Init. SmartMPI creates its own
    * subcommunicator. Therefore, it needs a communicator.
+   *
+   * @param createSubcommunicator Create a new subcommunicator for SmartMPI
    */
-  void init(MPI_Comm communicator);
+  void init(MPI_Comm communicator, bool createSubcommunicator=true);
+  void shutdown();
   
   /**
    * Report that some MPI time has been observed
@@ -85,6 +88,14 @@ namespace smartmpi {
    * place.
    */
   void reportMPIWaitTime(double time);
+  
+  /**
+   * Should be called in (quasi-regular) intervals; like a clock tick. It has to
+   * be called on all ranks at the same time. The invocation updates the task 
+   * distribution pattern.
+   * 
+   */
+  void tick();
 }
 
 

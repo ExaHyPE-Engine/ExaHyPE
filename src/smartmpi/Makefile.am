@@ -5,7 +5,8 @@ lib_LIBRARIES = libsmartmpi.a libsmartmpi_debug.a
 
 
 SmartMPI_SOURCES = \
-  smartmpi.cpp
+  smartmpi.cpp \
+  GlobalStatistics.cpp
   
 
 libsmartmpi_a_CXXFLAGS        = -DSmartMPIDebug=0 
