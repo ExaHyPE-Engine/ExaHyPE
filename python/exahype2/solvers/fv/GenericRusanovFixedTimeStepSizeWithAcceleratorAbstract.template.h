@@ -110,6 +110,25 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     #endif
     {% endif %}
 
+    
+    {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static void sourceTerm(
+      const double * __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double * __restrict__ S
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+
+   
 
     {% include "AbstractSolverFixedTimeStepSize.template.h" %}
 };

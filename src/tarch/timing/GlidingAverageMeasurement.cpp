@@ -87,8 +87,6 @@ void tarch::timing::GlidingAverageMeasurement::setValue(const double& value) {
     _values.push_back(value);
   }
   else {
-    const double oldAverage = getValue();
-
     for (int i=0; i<_maxEntries-1; i++) {
       _values[i] = _values[i+1];
     }

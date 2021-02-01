@@ -53,14 +53,20 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
 
 
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    void sourceTerm(
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       double * __restrict__ S
-    ) override;
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
     {% endif %}
 
 

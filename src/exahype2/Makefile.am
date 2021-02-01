@@ -20,6 +20,7 @@ ExaHyPE2Sources = \
   aderdg/KernelUtils.cpp \
   aderdg/PredictorAoS.cpp \
   aderdg/RusanovNonlinearAoS.cpp \
+  aderdg/tests/ADERDGTest.cpp \
   fv/BoundaryConditions.cpp \
   fv/Generic.cpp \
   fv/Rusanov.cpp \
