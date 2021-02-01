@@ -1,0 +1,91 @@
+#if !defined(OpenMPGPUOffloading)
+#include "tarch/Assertions.h"
+#endif
+
+
+template<int Size, typename Scalar>
+tarch::la::Vector<Size,Scalar>::Vector ():
+  _values() {
+}
+
+
+template<int Size, typename Scalar>
+tarch::la::Vector<Size,Scalar>::Vector(const Scalar* values) {
+  for (int i=0; i<Size; i++) {
+    _values[i] = *(values+i);
+  }
+}
+
+
+template<int Size, typename Scalar>
+tarch::la::Vector<Size,Scalar>::Vector(std::initializer_list<Scalar> values) {
+  int index = 0;
+  for (typename std::initializer_list<Scalar>::const_iterator p = values.begin(); p!=values.end(); p++) {
+    _values[index] = *p;
+    index++;
+  }
+}
+
+
+template<int Size, typename Scalar>
+tarch::la::Vector<Size,Scalar>::Vector( const std::bitset<Size>& value ) {
+  for (int i=0; i<Size; i++) {
+    _values[i] = value[i] ? 1 : 0;
+  }
+}
+
+
+template<int Size, typename Scalar>
+tarch::la::Vector<Size,Scalar>&  tarch::la::Vector<Size,Scalar>::operator= (
+  const Vector<Size,Scalar>&  toAssign
+) {
+  #if !defined(OpenMPGPUOffloading)
+  assertion(this != &toAssign);
+  #endif
+
+  #ifdef CompilerICC
+  #pragma ivdep
+  #endif
+  for (int i=0; i<Size; i++) {
+    _values[i] = toAssign._values[i];
+  }
+  return *this;
+}
+
+
+template<int Size, typename Scalar>
+tarch::la::Vector<Size,Scalar>::Vector (
+  const Vector<Size,Scalar>& toCopy
+):
+  _values() {
+  #if !defined(OpenMPGPUOffloading)
+  assertion(this != &toCopy);
+  #endif
+ 
+  #ifdef CompilerICC
+  #pragma ivdep
+  #endif
+  for (int i=0; i<Size; i++) {
+    _values[i] = toCopy._values[i];
+  }
+}
+
+
+
+template<int Size, typename Scalar>
+tarch::la::Vector<Size,Scalar>::Vector(
+  const Scalar& initialValue
+):
+  _values() {
+  for (int i=0; i < Size; i++) {
+    _values[i] = initialValue;
+  }
+}
+
+
+template<int Size, typename Scalar>
+int tarch::la::Vector<Size,Scalar>::size() const {
+  return Size;
+}
+
+

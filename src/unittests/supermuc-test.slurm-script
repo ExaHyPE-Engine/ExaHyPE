@@ -1,0 +1,26 @@
+#!/bin/bash
+#SBATCH -t 00:15:00
+#SBATCH --exclusive
+#SBATCH -p test
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=1
+#SBATCH --mail-user=tobias.weinzierl@durham.ac.uk
+#SBATCH --mail-type=ALL
+#SBATCH --account=pr48ma
+##SBATCH --ear=off
+source /etc/profile.d/modules.sh
+
+module load tbb
+
+
+Cores=12
+mpiexec ./UnitTests2d $Cores
+
+mpiexec ./UnitTests3d $Cores
+
+mpiexec -check_mpi ./UnitTests2d $Cores
+
+mpiexec -check_mpi ./UnitTests3d $Cores
+
+ 
+

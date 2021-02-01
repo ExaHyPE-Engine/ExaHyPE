@@ -1,0 +1,108 @@
+#include "tarch/Assertions.h"
+
+
+#include <iomanip>
+
+
+template<int Rows, int Cols, typename Scalar>
+tarch::la::Matrix<Rows,Cols,Scalar>::Matrix():
+  _values() {
+}
+
+
+template<int Rows, int Cols, typename Scalar>
+tarch::la::Matrix<Rows,Cols,Scalar>::Matrix( const Scalar& initialValue ) {
+  for (int i=0; i < Rows*Cols; i++) {
+    _values[i] = initialValue;
+  }
+}
+
+
+
+template<int Rows, int Cols, typename Scalar>
+tarch::la::Matrix<Rows,Cols,Scalar>::Matrix( std::initializer_list<Scalar> values ) {
+  int index = 0;
+  for (typename std::initializer_list<Scalar>::const_iterator p = values.begin(); p!=values.end(); p++) {
+    _values[index] = *p;
+    index++;
+  }
+}
+
+
+template<int Rows, int Cols, typename Scalar>
+int tarch::la::Matrix<Rows,Cols,Scalar>::rows() const {
+  return Rows;
+}
+
+
+template<int Rows, int Cols, typename Scalar>
+int tarch::la::Matrix<Rows,Cols,Scalar>::cols() const {
+  return Cols;
+}
+
+
+template<int Rows, int Cols, typename Scalar>
+int tarch::la::Matrix<Rows,Cols,Scalar>::size() const {
+  return Rows * Cols;
+}
+
+
+template<int Rows, int Cols, typename Scalar>
+std::string tarch::la::Matrix<Rows,Cols,Scalar>::toString() const {
+  std::ostringstream os;
+  os << "[";
+  for (int i=0; i < Rows; i++) {
+    os << "[";
+    for (int j=0; j < Cols; j++) {
+      os << _values[i * Cols + j];
+      if (j + 1 < Cols) {
+        os << ",";
+      }
+    }
+    os << "]";
+    if (i + 1 < Rows) {
+      os << ",";
+    }
+  }
+  os << "]";
+  return os.str();
+}
+
+
+template<int Rows, int Cols, typename Scalar>
+std::string tarch::la::Matrix<Rows,Cols,Scalar>::toPrettyString(int numberOfDigits) const {
+  std::ostringstream os;
+  os << "[";
+  os << std::setiosflags(std::ios::fixed) << std::setprecision(numberOfDigits);
+  for (int i=0; i < Rows; i++) {
+    os << std::endl;
+    for (int j=0; j < Cols; j++) {
+      if ( tarch::la::abs( _values[i * Cols + j] )>=0.0) {
+        os << " ";
+      }
+      os << _values[i * Cols + j];
+      if (j + 1 < Cols) {
+        os << ", ";
+      }
+    }
+    if (i + 1 < Rows) {
+      os << ",";
+    }
+  }
+  os << std::endl;
+  os << "]";
+  return os.str();
+}
+
+
+template<int Rows, int Cols, typename Scalar>
+template <typename NewScalarType>
+tarch::la::Matrix<Rows,Cols,NewScalarType> tarch::la::Matrix<Rows,Cols,Scalar>::convertScalar() const {
+  tarch::la::Matrix<Rows,Cols,NewScalarType> result;
+  for (int i=0; i < Rows; i++) {
+    for (int j=0; j < Cols; j++) {
+      result(j,i) = operator()(j,i);
+    }
+  }
+  return result;
+}

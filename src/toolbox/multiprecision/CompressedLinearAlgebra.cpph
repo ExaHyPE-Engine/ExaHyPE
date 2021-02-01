@@ -1,0 +1,116 @@
+#include "toolbox/multiprecision/CompressedFloatingPointNumbers.h"
+
+
+template<int Size>
+std::vector<unsigned char> toolbox::multiprecision::compress(const tarch::la::Vector<Size,double>& vector, double maxAbsoluteError) {
+  std::vector<unsigned char> result;
+  unsigned char bytesForMantissa = findMostAgressiveCompression( vector.data(), Size, maxAbsoluteError );
+  result.push_back(bytesForMantissa);
+
+  if (bytesForMantissa>0) {
+    for (int i=0; i<Size; i++) {
+	  char     exponent;
+      long int mantissa;
+ 	  double   error;
+      char*    pMantissa = reinterpret_cast<char*>( &(mantissa) );
+
+      decompose( vector(i), exponent, mantissa, bytesForMantissa );
+
+      result.push_back(exponent);
+      for (int j=0; j<bytesForMantissa; j++) {
+        result.push_back(pMantissa[j]);
+      }
+    }
+  }
+  return result;
+}
+
+
+template<int Rows, int Cols>
+std::vector<unsigned char> toolbox::multiprecision::compress(const tarch::la::Matrix<Rows,Cols,double>& matrix, double maxAbsoluteError) {
+  std::vector<unsigned char> result;
+  unsigned char bytesForMantissa = findMostAgressiveCompression( matrix.data(), Rows*Cols, maxAbsoluteError );
+  result.push_back(bytesForMantissa);
+  if (bytesForMantissa>0) {
+    for (int row=0; row<Rows; row++)
+    for (int col=0; col<Cols; col++) {
+      char     exponent;
+      long int mantissa;
+	  double   error;
+      char*    pMantissa = reinterpret_cast<char*>( &(mantissa) );
+
+      decompose( matrix(row,col), exponent, mantissa, bytesForMantissa );
+
+      result.push_back(exponent);
+      for (int j=0; j<bytesForMantissa; j++) {
+        result.push_back(pMantissa[j]);
+      }
+    }
+  }
+  return result;
+}
+
+
+
+template<int Size>
+tarch::la::Vector<Size,double> toolbox::multiprecision::uncompressVector( const std::vector<unsigned char>& stream ) {
+  tarch::la::Vector<Size,double> result;
+
+  int index = 0;
+  unsigned char bytesForMantissa = stream[index]; index++;
+
+  for (int i=0; i<Size; i++) {
+    if (bytesForMantissa>0) {
+      char     exponent;
+      long int mantissa;
+      char*    pMantissa = reinterpret_cast<char*>( &(mantissa) );
+
+      exponent = stream[index]; index++;
+      for (int j=0; j<bytesForMantissa; j++) {
+        pMantissa[j] = stream[index]; index++;
+      }
+
+      result(i) = compose( exponent, mantissa, bytesForMantissa );
+    }
+    else {
+      result(i) = 0;
+    }
+  }
+
+  assertionEquals(index,stream.size());
+
+  return result;
+}
+
+
+template<int Rows, int Cols>
+tarch::la::Matrix<Rows,Cols,double> toolbox::multiprecision::uncompressMatrix( const std::vector<unsigned char>& stream ) {
+  tarch::la::Matrix<Rows,Cols,double> result;
+
+  int index = 0;
+  unsigned char bytesForMantissa = stream[index]; index++;
+
+  for (int row=0; row<Rows; row++)
+  for (int col=0; col<Cols; col++) {
+    if (bytesForMantissa>0) {
+      char     exponent;
+      long int mantissa = 0;
+      char*    pMantissa = reinterpret_cast<char*>( &(mantissa) );
+
+      exponent = stream[index]; index++;
+      for (int j=0; j<bytesForMantissa; j++) {
+        pMantissa[j] = stream[index]; index++;
+      }
+
+      result(row,col) = compose( exponent, mantissa, bytesForMantissa );
+    }
+    else {
+      result(row,col) = 0;
+    }
+  }
+
+  assertionEquals(index,stream.size());
+
+  return result;
+}
+
