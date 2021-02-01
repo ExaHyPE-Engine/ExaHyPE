@@ -7,7 +7,7 @@
 #pragma omp declare target
 #endif
 double* tarch::allocateMemory(int size, MemoryLocation location) {
-  double* result = nullptr;
+  double* result;
   switch (location) {
     case MemoryLocation::Heap:
       //#pragma omp allocate(result) allocator(allocator) memspace(memspace) memtraits(optimized=latency)

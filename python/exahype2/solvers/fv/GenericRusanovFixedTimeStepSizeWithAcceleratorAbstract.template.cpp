@@ -1,5 +1,5 @@
 {% include "AbstractSolverFixedTimeStepSize.template.cpp" %}
-#include <algorithm>
+
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
@@ -103,24 +103,6 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
   }
   return "<undef>";
 }
-
-
-{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
-  const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  double * __restrict__                        S // S[{{NUMBER_OF_UNKNOWNS}}]
-) {
-  {% if SOURCE_TERM_IMPLEMENTATION=="<empty>" %}
-  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
-  {% else %}
-  {{SOURCE_TERM_IMPLEMENTATION}}
-  {% endif %}
-}
-{% endif %}
 
 
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}

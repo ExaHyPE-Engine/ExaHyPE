@@ -106,7 +106,7 @@ void tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet( const std::string& s
   auto file = parseFile( filename );
 
   int                        snapshotCounter = std::get<0>(file);
-  //int                      part            = std::get<1>(file);
+  int                        part            = std::get<1>(file);
   std::vector< std::string > lines           = std::get<2>(file);
 
   removeFileTail(lines);

@@ -23,18 +23,11 @@ namespace exahype2 {
    * @param h      Size of the cell
    * @param index  Index of Finite Volume (in lexicographic ordering)
    */
-  tarch::la::Vector<2,double>  getVolumeCentre(
-    const tarch::la::Vector<2,double>&  x,
-    const tarch::la::Vector<2,double>&  h,
-    int                                 numberOfVolumesPerAxisInPatch,
-    const tarch::la::Vector<2,int>&     index
-  );
-
-  tarch::la::Vector<3,double>  getVolumeCentre(
-    const tarch::la::Vector<3,double>&  x,
-    const tarch::la::Vector<3,double>&  h,
-    int                                 numberOfVolumesPerAxisInPatch,
-    const tarch::la::Vector<3,int>&     index
+  tarch::la::Vector<Dimensions,double>  getVolumeCentre(
+    const tarch::la::Vector<Dimensions,double>&  x,
+    const tarch::la::Vector<Dimensions,double>&  h,
+    int                                          numberOfVolumesPerAxisInPatch,
+    const tarch::la::Vector<Dimensions,int>&     index
   );
 
   /**
@@ -44,25 +37,27 @@ namespace exahype2 {
    *
    * @see getVolumeSize()
    */
+  #if defined(OpenMPGPUOffloading)
+  #pragma omp declare target
+  #endif
   double  getVolumeLength(
-    const tarch::la::Vector<2,double>&  h,
-    int                                 numberOfVolumesPerAxisInPatch
+    const tarch::la::Vector<Dimensions,double>&  h,
+    int                                          numberOfVolumesPerAxisInPatch
   );
+  #if defined(OpenMPGPUOffloading)
+  #pragma omp end declare target
+  #endif
 
-  double  getVolumeLength(
-    const tarch::la::Vector<3,double>&  h,
-    int                                 numberOfVolumesPerAxisInPatch
+  #if defined(OpenMPGPUOffloading)
+  #pragma omp declare target
+  #endif
+  tarch::la::Vector<Dimensions,double>  getVolumeSize(
+    const tarch::la::Vector<Dimensions,double>&  h,
+    int                                          numberOfVolumesPerAxisInPatch
   );
-
-  tarch::la::Vector<2,double>  getVolumeSize(
-    const tarch::la::Vector<2,double>&  h,
-    int                                 numberOfVolumesPerAxisInPatch
-  );
-
-  tarch::la::Vector<3,double>  getVolumeSize(
-    const tarch::la::Vector<3,double>&  h,
-    int                                 numberOfVolumesPerAxisInPatch
-  );
+  #if defined(OpenMPGPUOffloading)
+  #pragma omp end declare target
+  #endif
 }
 
 #endif

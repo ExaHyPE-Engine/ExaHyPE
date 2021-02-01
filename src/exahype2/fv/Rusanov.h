@@ -63,44 +63,6 @@ namespace exahype2 {
       double h0 = thepatchSize[0];
       double h1 = thepatchSize[1];
 
-      #ifdef SharedOMP
-        #if defined(OpenMPGPUOffloading)
-        #pragma omp target
-        #endif
-      #pragma omp parallel for collapse(2)
-      #endif
-      for (int x = 0; x < numVPAIP; x++)
-      for (int y = 0; y < numVPAIP; y++) {
-        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1};
-        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1};
-
-        // getVolumeSize
-        tarch::la::Vector<2,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP};
-        // Assignment vectorA = vectorB - 0.5*vectorC
-        tarch::la::Vector<Dimensions, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1)};
-
-        volumeX (0) += (x + 0.5) * volumeH (0);
-        volumeX (1) += (y + 0.5) * volumeH (1);
-
-        const int voxelInPreImage  = x+1
-                                   + (y+1) * (numVPAIP+2);
-        const int voxelInImage     = x
-                                   + y * numVPAIP;
-
-        double sourceTermContributions[unknowns];
-        
-        SOLVER::sourceTerm(
-          Qin + voxelInPreImage * (unknowns + auxiliaryVariables),
-          volumeX, volumeH(0), t, dt,
-          sourceTermContributions
-        );
-
-        for (int unknown = 0; unknown < unknowns; unknown++) {
-          Qout[voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * sourceTermContributions[unknown];
-        }
-      }
-      
-      
       for (int shift = 0; shift < 2; shift++)
       {
         #ifdef SharedOMP
@@ -257,48 +219,6 @@ namespace exahype2 {
       double h0 = thepatchSize[0];
       double h1 = thepatchSize[1];
       double h2 = thepatchSize[2];
-
-      #ifdef SharedOMP
-        #if defined(OpenMPGPUOffloading)
-        #pragma omp target
-        #endif
-      #pragma omp parallel for collapse(3)
-      #endif
-      for (int x = 0; x < numVPAIP; x++)
-      for (int y = 0; y < numVPAIP; y++)
-      for (int z = 0; z < numVPAIP; z++) {
-        tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
-        tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
-
-        // getVolumeSize
-        tarch::la::Vector<2,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP,patchSize(2)/numVPAIP};
-        // Assignment vectorA = vectorB - 0.5*vectorC
-        tarch::la::Vector<Dimensions, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1), patchCentre(2)-0.5*patchSize(2)};
-
-        volumeX (0) += (x + 0.5) * volumeH (0);
-        volumeX (1) += (y + 0.5) * volumeH (1);
-        volumeX (2) += (z + 0.5) * volumeH (2);
-
-        const int voxelInPreImage  = x+1
-                                   + (y+1) * (numVPAIP+2)
-                                   + (z+1) * (numVPAIP+2) * (numVPAIP+2);
-        const int voxelInImage     = x
-                                   + y * numVPAIP
-                                   + z * numVPAIP * numVPAIP;
-
-        double sourceTermContributions[unknowns];
-  
-        SOLVER::sourceTerm(
-          Qin + voxelInPreImage * (unknowns + auxiliaryVariables),
-          volumeX, volumeH(0), t, dt,
-          sourceTermContributions
-        );
-
-        for (int unknown = 0; unknown < unknowns; unknown++) {
-          Qout[voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * sourceTermContributions[unknown];
-        }
-      }
-
 
       for (int shift = 0; shift < 2; shift++)
       {

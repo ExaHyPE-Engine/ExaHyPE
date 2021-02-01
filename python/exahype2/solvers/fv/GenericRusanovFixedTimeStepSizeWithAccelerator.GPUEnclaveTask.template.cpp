@@ -113,61 +113,74 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
   _reconstructedPatch(reconstructedPatch) {
   logTraceIn( "EnclaveTask(...)" );
   logTraceOut( "EnclaveTask(...)" );
-
-  const double timeStamp = repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp();
-
-#ifdef UseNVIDIA
-  nvtxRangePushA("copyPatch");
-#endif
-
-// Note that copyPatch and the Rusanov function do have their own omp target region
-#pragma omp target enter data map(alloc:_destinationPatch[0:_destinationPatchSize]) map(to:reconstructedPatch[0:_sourcePatchSize])
-  ::exahype2::fv::copyPatch(
-    reconstructedPatch,
-    _destinationPatch,
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    1 // halo size
-  );
-#ifdef UseNVIDIA
-  nvtxRangePop();
-  nvtxRangePushA("Rusanov");
-#endif
-#if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
-#elif Dimensions==3
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
-#endif
-    _marker.x(),
-    _marker.h(),
-    timeStamp,
-    {{TIME_STEP_SIZE}},
-    reconstructedPatch,
-    _destinationPatch
-    );
-
-#ifdef UseNVIDIA
-  nvtxRangePop();
-#endif
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
 
+  #if Dimensions==2
+  const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+  const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+  #elif Dimensions==3
+  const int destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+  const int sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+  #endif
+  
+  double destinationPatchOnGPU[destinationPatchSize]; // This works now since we know the array size at compile time (maybe later this needs to be on Heap)
   double * reconstructedPatch = _reconstructedPatch; // Fixes omp restrictions
 
-#pragma omp target exit data map(from:_destinationPatch[0:_destinationPatchSize]) map(delete:reconstructedPatch[0:_sourcePatchSize])
+  const double timeStamp = repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp();
+
+
+#ifdef UseNVIDIA
+  nvtxRangePushA("copyPatch");
+#endif
+
+// the first one should be alloc: not to:
+#pragma omp target enter data map(alloc:destinationPatchOnGPU[0:destinationPatchSize]) map(to:reconstructedPatch[0:sourcePatchSize])
+
+  ::exahype2::fv::copyPatch(
+    reconstructedPatch,
+    destinationPatchOnGPU,
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    1 // halo size
+  );
+
+#ifdef UseNVIDIA
+  nvtxRangePushA("Rusanov");
+#endif
+  #if Dimensions==2
+  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
+  #elif Dimensions==3
+  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
+  #endif
+    _marker.x(),
+    _marker.h(),
+    timeStamp,
+    {{TIME_STEP_SIZE}},
+    reconstructedPatch,
+    destinationPatchOnGPU
+    );
+
+#ifdef UseNVIDIA
+  nvtxRangePop();
+#endif
+
+  // Ab hier ist run , ^^^ alles in ctor
+#pragma omp target exit data map(from:destinationPatchOnGPU[0:destinationPatchSize]) map(delete:reconstructedPatch[0:sourcePatchSize])
+
 
   // get stuff explicitly back from GPU, as it will be stored
   // locally for a while
-  double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-  std::copy_n(_destinationPatch,_destinationPatchSize,destinationPatchOnCPU);
+  double* destinationPatchOnCPU = ::tarch::allocateMemory(destinationPatchSize, ::tarch::MemoryLocation::Heap);
+  std::copy_n(destinationPatchOnGPU,destinationPatchSize,destinationPatchOnCPU);
 
   {{FREE_SKELETON_MEMORY}}
 
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,destinationPatchOnCPU);
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),destinationPatchSize,destinationPatchOnCPU);
   logTraceOut( "run()" );
   return false;
 }

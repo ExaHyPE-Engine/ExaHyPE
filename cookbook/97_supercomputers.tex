@@ -277,20 +277,6 @@ pip install jinja2 sympy
 \end{code}
 
 
-
-\paragraph{Build with LLVM}
-
-
-\begin{code}
-module load nsight-systems/2020.3.1 cuda/10.1.243 llvm/11.0.0
-./configure --enable-gpu=nvidia --with-multithreading=omp --enable-exahype --enable-loadbalancing-toolbox CXX=clang++ CXXFLAGS="-std=c++14 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -fno-exceptions -DnoMPISupportsSingleSidedCommunication" --with-toolchain=nvidia LDFLAGS="-L/opt/software/builder/developers/compilers/cuda/10.1.243/1/default/lib64 -lnvToolsExt"
-
-
-module load openmpi
-./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing-toolbox --with-mpi=mpicxx CXXFLAGS="-DnoMPISupportsSingleSidedCommunication"
-\end{code}
-
-
 \paragraph{Build with the GNU compilers}
 
 

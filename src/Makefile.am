@@ -20,10 +20,6 @@ if UseExaHyPE
 SUBDIRS += toolbox/loadbalancing exahype2
 endif
 
-if UseSmartMPI
-SUBDIRS += smartmpi
-endif
-
 SUBDIRS += unittests convert
 
 #

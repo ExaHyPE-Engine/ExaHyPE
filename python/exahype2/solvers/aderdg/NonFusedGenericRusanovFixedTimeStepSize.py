@@ -126,23 +126,33 @@ class UpdateCell(AbstractADERDGActionSet):
             },
             spaceTimeQ,                           // QOut
             fineGridCell{{SOLVER_NAME}}Q.value,   // QIn
-            {{SOLVER_INSTANCE}}.QuadraturePoints,
             {{SOLVER_INSTANCE}}.QuadratureWeights,
+            {{SOLVER_INSTANCE}}.QuadraturePoints,
             {{SOLVER_INSTANCE}}.StiffnessOperator,             // Kxi,
             {{SOLVER_INSTANCE}}.InvertedPredictorLhsOperator, // iK1,
             {{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,      // FLCoeff,
             {{SOLVER_INSTANCE}}.DerivativeOperator,   // dudx, 
-            marker.x(),
             marker.h()(0), // we assume cubic/square cells
+            marker.x(),
             {{SOLVER_INSTANCE}}.getMinTimeStamp(), 
             {{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-            {{ORDER}}, 
-            {{NUMBER_OF_UNKNOWNS}}, 
-            {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}},
             1e-8,  // atol,
-            {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},
-            {{ "true" if SOURCES_IMPLEMENTATION!="<none>" else "false" }},
-            {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}
+            {% if FLUX_IMPLEMENTATION!="<none>" %}
+            true,
+            {% else %}
+            false,
+            {% endif %}
+            {% if SOURCES_IMPLEMENTATION!="<none>" %}
+            true,
+            {% else %}
+            false,
+            {% endif %}
+            {% if NCP_IMPLEMENTATION!="<none>" %}
+            true
+            {% else %}
+            false
+            {% endif %}
           );
 
 /*          
@@ -151,89 +161,13 @@ class UpdateCell(AbstractADERDGActionSet):
           #else
           ::exahype2::aderdg::projectSpaceTimeSolutionOntoFace_GaussLegendre_AoS3d(
           #endif
-*/
-/*         
-          ::exahype2::aderdg::corrector_addCellContributions_loop_AoS(
-            [&](
-              const double * __restrict__                 Q,
-              const tarch::la::Vector<Dimensions,double>& x,
-              double                                      t,
-              int                                         normal,
-              double * __restrict__                       F
-            )->void {
-              {% if FLUX_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
-              {% endif %}
-            },
-            [&](
-              const double * __restrict__                 Q,
-              const tarch::la::Vector<Dimensions,double>& x,
-              double                                      t,
-              double * __restrict__                       S
-            )->void {
-              {% if SOURCES_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.algebraicSource(Q,x,t,S);
-              {% endif %}
-            },
-            [&](
-              const double * __restrict__                 Q,
-              const double * __restrict__                 dQ_or_dQdn,
-              const tarch::la::Vector<Dimensions,double>& x,
-              double                                      t,
-              int                                         normal,
-              double * __restrict__                       BgradQ
-            )->void {
-              {% if NCP_IMPLEMENTATION!="<none>" %}
-              {{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
-              {% endif %}
-            },
-            [&](
-              double * __restrict__                       Q,
-              const tarch::la::Vector<Dimensions,double>& x,
-              double                                      t
-            )->void {
-              //{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
-            },
-            fineGridCell{{SOLVER_NAME}}Q.value,                           //  UOut,
-            spaceTimeQ,                                                   //  QIn,
-            {{SOLVER_INSTANCE}}.QuadraturePoints,                         //  nodes,
-            {{SOLVER_INSTANCE}}.QuadratureWeights,                        //  weights,
-            {{SOLVER_INSTANCE}}.StiffnessOperator,                        //  Kxi,
-            {{SOLVER_INSTANCE}}.DerivativeOperator,                       //  dudx,
-            marker.x(),                                                   //  cellCentre,
-            marker.h()(0),                                                //  dx,
-            {{SOLVER_INSTANCE}}.getMinTimeStamp(),                        //  t,
-            {{SOLVER_INSTANCE}}.getMinTimeStepSize(),                     //  dt,
-            {{ORDER}},                                                    //  order,
-            {{NUMBER_OF_UNKNOWNS}},                                       //  unknowns,
-            {{NUMBER_OF_AUXILIARY_VARIABLES}},                            //  auxiliaryVariables,
-            {{ "true" if FLUX_IMPLEMENTATION!="<none>" else "false" }},   //  callFlux,
-            {{ "true" if SOURCES_IMPLEMENTATION!="<none>" else "false" }},//  callSource,
-            {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}     //  callNonconservativeProduct
-          );
-*/ 
-          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
+          */
+          
+          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
             fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
             spaceTimeQ,                           // QIn
             {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-            {{ORDER}}, 
-            {{NUMBER_OF_UNKNOWNS}}, 
-            {{NUMBER_OF_AUXILIARY_VARIABLES}}
-          );
-
-          #if Dimensions == 2
-          double* QHullOut[Dimensions*2] = {{ '{' }}{%- for i in range(0,4) -%}fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation({{i}}).value{{ "," if not loop.last }}{%- endfor -%}{{ '}' }};
-          #else
-          double* QHullOut[Dimensions*2] = {{ '{' }}{%- for i in range(0,6) -%}fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation({{i}}).value{{ "," if not loop.last }}{%- endfor -%}{{ '}' }};
-          #endif 
-          ::exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
-            QHullOut,
-            spaceTimeQ,                           // QIn
-            {{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
-            {{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-            {{ORDER}}, 
-            {{NUMBER_OF_UNKNOWNS}}, 
-            {{NUMBER_OF_AUXILIARY_VARIABLES}}
+            {{ORDER}}, {{NUMBER_OF_UNKNOWNS}}, {{NUMBER_OF_AUXILIARY_VARIABLES}}
           );
         }
         break;

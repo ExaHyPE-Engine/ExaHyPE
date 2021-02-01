@@ -90,15 +90,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      {% endif %}
 
 
-     virtual void sourceTerm(
-       const double * __restrict__ Q,
-       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-       const tarch::la::Vector<Dimensions,double>&  volumeH,
-       double                                       t,
-       double                                       dt,
-       double * __restrict__ S
-     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
-
     {% include "AbstractSolverFixedTimeStepSize.template.h" %}
 };
 

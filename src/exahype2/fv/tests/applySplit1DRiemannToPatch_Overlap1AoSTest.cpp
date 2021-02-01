@@ -34,10 +34,8 @@ void exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::testMe() {
 
   int numberOfVolumesPerAxisInPatch = 10;
   
-  // These two values are not used in this test. So I comment them
-  // out to eliminate compiler warnings.
-  //tarch::la::Vector<Dimensions,double> patchCentre = {0.018519,0.018519};
-  //tarch::la::Vector<Dimensions,double> patchSize   = {0.037037,0.037037};
+  tarch::la::Vector<Dimensions,double> patchCentre = {0.018519,0.018519};
+  tarch::la::Vector<Dimensions,double> patchSize   = {0.037037,0.037037};
   tarch::la::Vector<Dimensions,double> volumeH     = {0.01,0.01};
 
 

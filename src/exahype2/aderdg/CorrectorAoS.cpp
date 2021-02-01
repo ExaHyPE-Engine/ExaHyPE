@@ -21,12 +21,13 @@ GPUCallableMethod void exahype2::aderdg::corrector_adjustSolution_body_AoS(
     const tarch::la::Vector<Dimensions,double>& cellCentre,
     const double                                dx,
     const double                                t,
+    const double                                dt,
     const int                                   nodesPerAxis,
     const int                                   unknowns,
     const int                                   strideQ,
     const int                                   scalarIndex) {
   const tarch::la::Vector<Dimensions+1,int>     index  = delineariseIndex(scalarIndex,getStrides(nodesPerAxis,false));
-  const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,0,nodes);
+  const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
   const tarch::la::Vector<Dimensions, double>   x( ( coords.data() + 1 ) );
  
   adjustSolution(&UOut[ scalarIndex * strideQ ], x, t);
@@ -127,7 +128,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addSourceContributions_body_A
     
     const double coeff = dt * weights[it];
     for (int var = 0; var < unknowns; var++) {
-      UOut[ scalarIndex*strideQ + var ] += coeff * SAux[var];
+      UOut[ scalarIndex*strideQ ] += coeff * SAux[var];
     }
   }
 }
@@ -254,8 +255,8 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
   ) >                                         adjustSolution,
   double * __restrict__                       UOut, 
   const double * __restrict__                 QIn, 
-  const double * __restrict__                 nodes,
   const double * __restrict__                 weights,
+  const double * __restrict__                 nodes,
   const double * __restrict__                 Kxi,
   const double * __restrict__                 dudx, 
   const tarch::la::Vector<Dimensions,double>& cellCentre,
@@ -344,7 +345,8 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
       nodes,
       cellCentre,
       dx,
-      t+dt,
+      t,
+      dt,
       nodesPerAxis,
       unknowns,
       strideQ,

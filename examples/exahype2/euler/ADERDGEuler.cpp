@@ -110,8 +110,6 @@ void examples::exahype2::euler::ADERDGEuler::flux(
   nonCriticalAssertion8( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
 
   nonCriticalAssertion8( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
-  // @todo Has to be removed once we are sure that the ADER-DG kernels do work
-  assertion8( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
 
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -121,13 +119,35 @@ void examples::exahype2::euler::ADERDGEuler::flux(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  const double velocity = irho*Q[normal+1];
-  F[0] = velocity*Q[0];
-  F[1] = velocity*Q[1];
-  F[2] = velocity*Q[2];
-  F[3] = velocity*Q[3];
-  F[normal+1] += p;
-  F[4] = velocity*(Q[4]+p);  
+  switch (normal) {
+    case 0:
+        {
+          F[0] = Q[1];
+          F[1] = irho*Q[1]*Q[1] + p;
+          F[2] = irho*Q[2]*Q[1];
+          F[3] = irho*Q[3]*Q[1];
+          F[4] = irho*(Q[4]+p)*Q[1];
+        }
+        break;
+    case 1:
+        {
+          F[0] = Q[2];
+          F[1] = irho*Q[1]*Q[2];
+          F[2] = irho*Q[2]*Q[2] + p;
+          F[3] = irho*Q[3]*Q[2];
+          F[4] = irho*(Q[4]+p)*Q[2];
+        }
+        break;
+    case 2:
+        {
+          F[0] = Q[3];
+          F[1] = irho*Q[1]*Q[3];
+          F[2] = irho*Q[2]*Q[3];
+          F[3] = irho*Q[3]*Q[3] + p;
+          F[4] = irho*(Q[4]+p)*Q[3];
+        }
+        break;
+  }
 
   nonCriticalAssertion( F[0]==F[0] );
   nonCriticalAssertion( F[1]==F[1] );
