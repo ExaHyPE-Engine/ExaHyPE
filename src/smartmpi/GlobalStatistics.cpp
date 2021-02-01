@@ -37,6 +37,8 @@ void smartmpi::GlobalStatistics::reportMPIWaitTime(double time) {
 void smartmpi::GlobalStatistics::setCommunicator( MPI_Comm communicator ) {
   MPI_Comm_size(communicator, &_numberOfRanks);
   _waitTimesPerNanoSecond = new double[_numberOfRanks];
+  std::fill_n( _waitTimesPerNanoSecond, _numberOfRanks, 0.0 );
+  _communicator = communicator;
 }
 
 
@@ -61,13 +63,14 @@ void smartmpi::GlobalStatistics::gatherWaitTimes() {
     _request
   );
 
-  // #if SmartMPIDebug>=4
+  #if SmartMPIDebug>=2
   int rank;
   MPI_Comm_rank(_communicator, &rank);
 
-  std::cout << SmartMPIPrefix << "rank " << rank << ":";
-  for (int i=0; i<_numberOfRanks; i++)
-    std::cout << " " << _waitTimesPerNanoSecond[i];
+  std::cout << SmartMPIPrefix << "rank " << rank << ": ";
+  std::cout << _waitTimesPerNanoSecond[0];
+  for (int i=1; i<_numberOfRanks; i++)
+    std::cout << ", " << _waitTimesPerNanoSecond[i];
   std::cout << std::endl;
-  // #endif
+  #endif
 }
