@@ -36,10 +36,10 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_initialis
   const int                   nodesPerAxis,
   const int                   strideQ,
   const int                   strideRhs,
-  const int                   scalarIndex) {
+  const int                   scalarIndex) {  
   const int it = delineariseIndex(scalarIndex,getStrides(nodesPerAxis))[0];
-  const double coeff = FLCoeff[ it ];
   
+  const double coeff = FLCoeff[ it ];
   for (int var = 0; var < strideQ; var++) {
     rhsOut[ scalarIndex*strideRhs + var ] = coeff * UIn[ ( scalarIndex / nodesPerAxis ) * strideQ + var ];
   }
@@ -87,7 +87,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addFluxCo
     const double coeff0 = dt * invDx/*[d-1]*/ * weights[index[0]] / weights[index[d]];
       
     for ( int a = 0; a < nodesPerAxis; a++ ) { // further collapsing causes data races, synchronization or GPU shared mem usage required
-      const double coeff = coeff0 * Kxi[ a*nodesPerAxis + index[d] ];
+      const double coeff = coeff0 * Kxi[ a*nodesPerAxis + index[d] ]; // @todo: provide transposed variant
       const double * Q = &QIn[ ( scalarIndex + (a - index[d])*strides[d] )*strideQ ];
       flux(Q, x, time, d-1, FAux);
       for (int var=0; var < unknowns; var++) {
@@ -136,7 +136,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addSource
 
   algebraicSource(Q, x, time, SAux);
   for (int var = 0; var < unknowns; var++) {
-    rhsOut[ scalarIndex*strideRhs ] += coeff * SAux[var];
+    rhsOut[ scalarIndex*strideRhs + var ] += coeff * SAux[var];
   }
 }
 #if defined(OpenMPGPUOffloading)
@@ -209,20 +209,19 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_bo
   const int                   strideRhs,
   const int                   scalarIndex) {
   const int it = delineariseIndex(scalarIndex,getStrides(nodesPerAxis))[0];
-   
+    
   squaredResiduumOut = 0.0; 
   for (int var = 0; var < unknowns; var++) {
     double Q_new = 0;
-    //const double coeff = iweight * rhsIn[ scalarIndex*strideRhs + var ]; 
-    const double coeff = rhsIn[ scalarIndex*strideRhs + var ]; 
-    // @todo: check if operator is correct
     for (int a = 0; a < nodesPerAxis; a++) { // matmul time
-      Q_new += coeff * iK1[ it*nodesPerAxis + a ]; // note: iK1 is already the transposed inverse of K1
+      const double rhsVal = rhsIn[ (scalarIndex + (a-it)*1) * strideRhs + var ]; 
+      Q_new += rhsVal * iK1[ it*nodesPerAxis + a ]; // note: iK1 is already the transposed inverse of K1
     }
-    
-    const double difference = Q_new - QOut[ scalarIndex*strideQ + var ]; 
+   
+    const int indexQ = scalarIndex*strideQ + var; 
+    const double difference = Q_new - QOut[ indexQ ]; 
     squaredResiduumOut += difference * difference;
-    QOut[ scalarIndex*strideQ + var ] = Q_new;
+    QOut[ indexQ ] = Q_new;
     
     //@todo: enable in CPU version
     //assertion3( !std::isnan( Q[ scalarIndex ] ), scalarIndex, dt, invDx );
@@ -266,45 +265,53 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_bo
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS(
-    double * __restrict__       QHullOut,
+    double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const double * __restrict__ FLRCoeff[2],
     const int                   nodesPerAxis,
+    const int                   offsetQR,
     const int                   strideQ,
     const int                   scalarIndexHull) {
   const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
   const tarch::la::Vector<Dimensions+1,int> indexQHull = delineariseIndex(scalarIndexHull,strides); // (t,y,z,face) , (t,x,z,face), (t,x,y,face)
- 
-  const int d  = indexQHull[Dimensions] / 2;
-  const int lr = indexQHull[Dimensions] - 2*d;
+
+  const int faceIndex = indexQHull[Dimensions]; 
+  const int lr  = faceIndex / Dimensions;
+  const int d   = faceIndex - Dimensions*lr;
+  //const int d  = faceIndex / 2;
+  //const int lr = faceIndex - 2*d;
 
   for (int id=0; id<nodesPerAxis; id++) {
-    const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr,id);
+    const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
     const double coeff = FLRCoeff[lr][id];
     for (int var=0; var < strideQ; var++) {
-      QHullOut[ scalarIndexHull * strideQ + var ] += coeff * QIn[ scalarIndexQ*strideQ + var ]; 
+      QHullOut[ faceIndex ][ offsetQR*(1-lr) + scalarIndexHull*strideQ + var ] += coeff * QIn[ scalarIndexCell*strideQ + var ]; 
     }
   }
 }
 
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_body_AoS(
-    double * __restrict__       QHullOut,
+    double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const int                   nodesPerAxis,
+    const int                   offsetQR,
     const int                   strideQ,
     const int                   scalarIndexHull) {
   const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
   const tarch::la::Vector<Dimensions+1,int> indexQHull = delineariseIndex(scalarIndexHull,strides); // (t,y,z,face) , (t,x,z,face), (t,x,y,face)
  
-  const int d  = indexQHull[Dimensions] / 2;
-  const int lr = indexQHull[Dimensions] - 2*d;
+  const int faceIndex = indexQHull[Dimensions]; 
+  const int lr  = faceIndex / Dimensions;
+  const int d   = faceIndex - Dimensions*lr;
+  //const int d  = faceIndex / 2;
+  //const int lr = faceIndex - 2*d;
 
   const int id = ( lr == 0 ) ? 0 : (nodesPerAxis-1);
-  const int scalarIndexQ = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
+  const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
   for (int var=0; var < strideQ; var++) {
-    QHullOut[ scalarIndexHull * strideQ + var ] = QIn[ scalarIndexQ*strideQ + var ]; 
+    QHullOut[ faceIndex ][ offsetQR*(1-lr) + scalarIndexHull*strideQ + var ] = QIn[ scalarIndexCell*strideQ + var ]; 
   }
 }
 #if defined(OpenMPGPUOffloading)
@@ -323,14 +330,14 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_bo
   const int                   scalarIndexCell) {
   // clear
   for (int var = 0; var < strideQ; var++ ) {
-    UOut[ scalarIndexCell ] = 0;
+    UOut[ scalarIndexCell*strideQ + var ] = 0;
   }
   // compute
   for (int it = 0; it < nodesPerAxis; it++ ) {
     const int indexQ = (scalarIndexCell*nodesPerAxis + it)*strideQ;
     const double coeff = FRCoeff[it];
     for (int var = 0; var < strideQ; var++ ) {
-      UOut[ scalarIndexCell + var ] += coeff * QIn[ indexQ + var ];
+      UOut[ scalarIndexCell*strideQ + var ] += coeff * QIn[ indexQ + var ];
     }
   }
 }
@@ -351,7 +358,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lo
  const int it = nodesPerAxis-1;
  const int indexQ = (scalarIndexCell*nodesPerAxis + it)*strideQ;
  for (int var = 0; var < strideQ; var++ ) {
-   UOut[ scalarIndexCell + var ] = QIn[ indexQ + var ];
+   UOut[ scalarIndexCell*strideQ + var ] = QIn[ indexQ + var ];
  }
 }
 #if defined(OpenMPGPUOffloading)
@@ -411,8 +418,8 @@ __global__ void exahype2::aderdg::spaceTimePredictor_PicardLoop_assembleRhs_krnl
   const double * __restrict__                 Kxi,
   const double * __restrict__                 FLCoeff,
   const double * __restrict__                 dudx, 
-  const double                                dx,
   const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const double                                dx,
   const double                                t,
   const double                                dt,
   const int                                   nodesPerAxis,
@@ -531,7 +538,7 @@ __global__ void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_krnl_AoS(
    }
   
    // below: (unoptimised) block-wide reduction; final result computed on host (as result is needed on host side)
-   sdata[ scalarIndexCell ] = squaredResiduumOut;
+   sdata[ threadIdxInBlock ] = squaredResiduumOut;
    __syncthreads();
 
    for (unsigned int s = 1; s < blockDim.x; s *= 2) {
@@ -600,14 +607,14 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
   ) >                                         nonconservativeProduct,
   double * __restrict__                       QOut, 
   const double * __restrict__                 UIn, 
-  const double * __restrict__                 weights,
   const double * __restrict__                 nodes,
+  const double * __restrict__                 weights,
   const double * __restrict__                 Kxi,
   const double * __restrict__                 iK1,
   const double * __restrict__                 FLCoeff,
   const double * __restrict__                 dudx, 
-  const double                                dx,
   const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const double                                dx,
   const double                                t,
   const double                                dt,
   const int                                   order,
@@ -750,7 +757,7 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
 }
 
 void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
-    double * __restrict__       QHullOut,
+    double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const double * __restrict__ FLCoeff,
     const double * __restrict__ FRCoeff,
@@ -763,6 +770,11 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
   
   const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * 2 * Dimensions;
   
+  // Each face stores first: the degrees of freedom of QL ("left") and then of QR ("right")
+  // The cell is always positioned "right" to a face with lr=0 and
+  // "left" to a face with lr=1.
+  const int offsetQR = getNodesPerCell(nodesPerAxis); 
+  
   const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
   for ( unsigned int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
@@ -771,13 +783,14 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
       QIn,
       FLRCoeff,
       nodesPerAxis,
+      offsetQR,
       strideQ,
       scalarIndexHull);
   }
 }
 
 void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
-    double * __restrict__       QHullOut,
+    double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const double * __restrict__ FLCoeff, // just to have same signature as other routine
     const double * __restrict__ FRCoeff, // just to have same signature as other routine
@@ -789,12 +802,18 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
   const int strideQ = unknowns+auxiliaryVariables;
   
   const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * 2 * Dimensions;
+  
+  // Each face stores first: the degrees of freedom of QL ("left") and then of QR ("right")
+  // The cell is always positioned "right" to a face with lr=0 and
+  // "left" to a face with lr=1.
+  const int offsetQR = getNodesPerCell(nodesPerAxis); 
  
   for ( unsigned int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
     spaceTimePredictor_extrapolate_Lobatto_body_AoS(
       QHullOut,
       QIn,
       nodesPerAxis,
+      offsetQR,
       strideQ,
       scalarIndexHull);
   }

@@ -73,3 +73,20 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
   return "<undef>";
 }
 
+
+{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
+  const double * __restrict__                  Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__                        S
+) {
+  {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
+  {{SOURCE_TERM_IMPLEMENTATION}}
+  {% else %}
+  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
+  {% endif %}
+}
+{% endif %}
