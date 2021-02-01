@@ -513,7 +513,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
-  assertionMsg( false, "ich glaube diese Variante ist buggy. Muessen wir erst testen. Kann auch an den OpenMP-Pragmas liegen. Mit LLVM gehts aber eh net, insofern kann man es auch gleich ordentlich umschreiben" ); assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
+  //assertionMsg( false, "ich glaube diese Variante ist buggy. Muessen wir erst testen. Kann auch an den OpenMP-Pragmas liegen. Mit LLVM gehts aber eh net, insofern kann man es auch gleich ordentlich umschreiben" ); assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
 
   tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
