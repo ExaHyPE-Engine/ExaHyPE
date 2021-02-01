@@ -226,18 +226,24 @@ class ADERDG(object):
     
     self._name                             = name
     self._DG_polynomial                    = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._DG_polynomial_new                = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
-    self._face_spacetime_solution          = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" ) # replicated
-    self._Riemann_result                   = peano4.datamodel.Patch( (1*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
     
+    #> note(dominic):
+    #> a second snapshot vector is only needed in case we need to perform a rollback to a previous solution state (fused adaptive time stepping).
+    #self._DG_polynomial_new                = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
+    self._face_spacetime_solution          = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" ) # replicated
+    # > note(dominic): 
+    # > Riemann solve is performed on cell now. Hence, Riemann_result is not needed on the face anymore.
+    #self._Riemann_result                   = peano4.datamodel.Patch( (1*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
+    # > note(dominic): Fused scheme would need to use some sort of double buffering to prevent data races
+    # > One could thus have two buffers on the face that are swapped / copied every iteration.
+    # > Alternatively, one could (i) reintroduce the Riemann result and store a ready flag, (ii) or store the space-time predictor/hull-extrapolated predictor on the cell patch
+    # > and map it to the face when the neighbour merge is performed.
+    # > note(dominic): Enclave tasking needs to store the results on the Cell patch
+    #self._face_spacetime_solution_new      = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolationNew" ) # replicated 
     #self._DG_polynomial_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
     #self._DG_polynomial_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
     
     self._face_spacetime_solution.generator.includes     += """
-#include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
-"""
-    self._Riemann_result.generator.includes += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
@@ -276,9 +282,6 @@ class ADERDG(object):
     self._face_spacetime_solution.generator.send_condition               = "false"
     self._face_spacetime_solution.generator.receive_and_merge_condition  = "false"
 
-    self._Riemann_result.generator.send_condition               = "false"
-    self._Riemann_result.generator.receive_and_merge_condition  = "false"
-
     self.plot_description = ""
     self.plot_metadata    = ""
     pass
@@ -314,9 +317,8 @@ class ADERDG(object):
       
     """
     datamodel.add_cell(self._DG_polynomial)
-    datamodel.add_cell(self._DG_polynomial_new)
+#    datamodel.add_cell(self._DG_polynomial_new)
     datamodel.add_face(self._face_spacetime_solution)
-    datamodel.add_face(self._Riemann_result)
  
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
@@ -329,9 +331,8 @@ class ADERDG(object):
     
     """
     step.use_cell(self._DG_polynomial)
-    step.use_cell(self._DG_polynomial_new)
+#    step.use_cell(self._DG_polynomial_new)
     step.use_face(self._face_spacetime_solution)
-    step.use_face(self._Riemann_result)
 
   
   def _get_default_includes(self):
@@ -344,6 +345,7 @@ class ADERDG(object):
 #include "repositories/SolverRepository.h"
 
 #include "exahype2/PatchUtils.h"
+#include "exahype2/aderdg/RiemannAoS.h"
 #include "exahype2/aderdg/RusanovNonlinearAoS.h"
 """
 

@@ -269,7 +269,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS
     const double * __restrict__ QIn,
     const double * __restrict__ FLRCoeff[2],
     const int                   nodesPerAxis,
-    const int                   offsetQR,
+    const int                   strideQLR,
     const int                   strideQ,
     const int                   scalarIndexHull) {
   const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
@@ -280,13 +280,20 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS
   const int d   = faceIndex - Dimensions*lr;
   //const int d  = faceIndex / 2;
   //const int lr = faceIndex - 2*d;
+  const int scalarIndexFace = scalarIndexHull - faceIndex*strideQLR;
 
+  // zero out
+  const int writeIndex = (strideQLR*(1-lr) + scalarIndexFace)*strideQ; 
+  for (int var=0; var < strideQ; var++) {
+    QHullOut[ faceIndex ][ writeIndex + var ] = 0.0;
+  }
+  // compute
   for (int id=0; id<nodesPerAxis; id++) {
     const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
     const double coeff = FLRCoeff[lr][id];
     for (int var=0; var < strideQ; var++) {
-      QHullOut[ faceIndex ][ offsetQR*(1-lr) + scalarIndexHull*strideQ + var ] += coeff * QIn[ scalarIndexCell*strideQ + var ]; 
+      QHullOut[ faceIndex ][ writeIndex + var ] += coeff * QIn[ scalarIndexCell*strideQ + var ]; 
     }
   }
 }
@@ -295,7 +302,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
     double * __restrict__       QHullOut[Dimensions*2],
     const double * __restrict__ QIn,
     const int                   nodesPerAxis,
-    const int                   offsetQR,
+    const int                   strideQLR,
     const int                   strideQ,
     const int                   scalarIndexHull) {
   const tarch::la::Vector<Dimensions+1,int> strides    = getStrides(nodesPerAxis);
@@ -306,12 +313,13 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_
   const int d   = faceIndex - Dimensions*lr;
   //const int d  = faceIndex / 2;
   //const int lr = faceIndex - 2*d;
+  const int scalarIndexFace = scalarIndexHull - faceIndex*strideQLR;
 
   const int id = ( lr == 0 ) ? 0 : (nodesPerAxis-1);
   const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
 
   for (int var=0; var < strideQ; var++) {
-    QHullOut[ faceIndex ][ offsetQR*(1-lr) + scalarIndexHull*strideQ + var ] = QIn[ scalarIndexCell*strideQ + var ]; 
+    QHullOut[ faceIndex ][ (strideQLR*(1-lr) + scalarIndexFace)*strideQ + var ] = QIn[ scalarIndexCell*strideQ + var ]; 
   }
 }
 #if defined(OpenMPGPUOffloading)
@@ -541,7 +549,7 @@ __global__ void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_krnl_AoS(
    sdata[ threadIdxInBlock ] = squaredResiduumOut;
    __syncthreads();
 
-   for (unsigned int s = 1; s < blockDim.x; s *= 2) {
+   for (int s = 1; s < blockDim.x; s *= 2) {
      int index = 2 * s * threadIdxInBlock;
      if (index < blockDim.x) {
        sdata[index] += sdata[index + s];
@@ -562,7 +570,7 @@ __global__ void exahype2::aderdg::spaceTimePredictor_PicardLoop_invert_krnl_AoS(
     const int                   nodesPerAxis,
     const int                   unknowns,
     const int                   strideQ) {
-   const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * 2 * Dimensions;
+   const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * Dimensions*2;
    
   const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
@@ -641,7 +649,7 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
   double* FAux     = new double[spaceTimeNodesPerCell*strideF]{0.0}; 
   
   // initial guess  
-  for ( unsigned int scalarIndexCell = 0; scalarIndexCell < spaceTimeNodesPerCell; scalarIndexCell++ ) {
+  for ( int scalarIndexCell = 0; scalarIndexCell < spaceTimeNodesPerCell; scalarIndexCell++ ) {
     spaceTimePredictor_initialGuess_body_AoS(
       QOut,
       UIn,
@@ -652,7 +660,7 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
 
   int iter = 0;
   for ( ;iter < nodesPerAxis; iter++ ) {
-    for ( unsigned int scalarIndexCell = 0; scalarIndexCell < spaceTimeNodesPerCell; scalarIndexCell++ ) {
+    for ( int scalarIndexCell = 0; scalarIndexCell < spaceTimeNodesPerCell; scalarIndexCell++ ) {
       spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
         rhs,
         UIn,
@@ -723,7 +731,7 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
 
     // 3. Multiply with (K1)^(-1) to get the discrete time integral of the discrete Picard iteration
     double sq_res = 0.0;
-    for ( unsigned int scalarIndexCell = 0; scalarIndexCell < spaceTimeNodesPerCell; scalarIndexCell++ ) {
+    for ( int scalarIndexCell = 0; scalarIndexCell < spaceTimeNodesPerCell; scalarIndexCell++ ) {
       double squaredResiduum = 0.0;
       spaceTimePredictor_PicardLoop_invert_body_AoS(
         QOut,
@@ -768,22 +776,22 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(
   
   const int strideQ = unknowns+auxiliaryVariables;
   
-  const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * 2 * Dimensions;
-  
   // Each face stores first: the degrees of freedom of QL ("left") and then of QR ("right")
   // The cell is always positioned "right" to a face with lr=0 and
   // "left" to a face with lr=1.
-  const int offsetQR = getNodesPerCell(nodesPerAxis); 
+  const int strideQLR = getNodesPerCell(nodesPerAxis); 
   
+  const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * Dimensions*2;
+ 
   const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
-  for ( unsigned int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
+  for ( int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
     spaceTimePredictor_extrapolate_body_AoS(
       QHullOut,
       QIn,
       FLRCoeff,
       nodesPerAxis,
-      offsetQR,
+      strideQLR,
       strideQ,
       scalarIndexHull);
   }
@@ -801,19 +809,19 @@ void exahype2::aderdg::spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
   
   const int strideQ = unknowns+auxiliaryVariables;
   
-  const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * 2 * Dimensions;
+  const int spaceTimeNodesOnCellHull = getNodesPerCell(nodesPerAxis)/* nodesPerAxis^d */ * Dimensions*2;
   
   // Each face stores first: the degrees of freedom of QL ("left") and then of QR ("right")
   // The cell is always positioned "right" to a face with lr=0 and
   // "left" to a face with lr=1.
-  const int offsetQR = getNodesPerCell(nodesPerAxis); 
+  const int strideQLR = getNodesPerCell(nodesPerAxis); 
  
-  for ( unsigned int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
+  for ( int scalarIndexHull = 0; scalarIndexHull < spaceTimeNodesOnCellHull; scalarIndexHull++ ) {
     spaceTimePredictor_extrapolate_Lobatto_body_AoS(
       QHullOut,
       QIn,
       nodesPerAxis,
-      offsetQR,
+      strideQLR,
       strideQ,
       scalarIndexHull);
   }
@@ -832,7 +840,7 @@ void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
   
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
  
-  for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
+  for ( int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
     exahype2::aderdg::spaceTimePredictor_extrapolateInTime_body_AoS(
       UOut,
       QIn,
@@ -856,7 +864,7 @@ void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_loop_AoS(
   
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
  
-  for ( unsigned int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
+  for ( int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
     exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_body_AoS(
       UOut,
       QIn,

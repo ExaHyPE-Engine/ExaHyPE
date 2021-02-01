@@ -147,6 +147,29 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCo
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
+GPUCallableMethod int exahype2::aderdg::mapCellIndexToScalarFaceIndex(
+  const tarch::la::Vector<Dimensions+1,int>& indexCell,
+  const int                                 direction,
+  const int                                 nodesPerAxis
+) {
+  // freeze spatial dimension direction (indexCell[direction+1])
+  int scalarIndexFace = 0;
+  int stride = 1;
+  for ( int e=0; e < Dimensions; e++ ) { // ordering (fastest running left): (y,z), (x,z), (x,y)
+    if ( e != direction ) {
+      scalarIndexFace += stride*indexCell[e+1];
+      stride *= nodesPerAxis;
+    }
+  }
+  return scalarIndexFace;
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
+
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 GPUCallableMethod int exahype2::aderdg::mapCellIndexToScalarHullIndex(
   const tarch::la::Vector<Dimensions+1,int>& indexCell,
   const int                                 direction,

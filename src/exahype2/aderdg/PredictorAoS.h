@@ -242,7 +242,7 @@ namespace exahype2 {
      * @param[in] QIn
      * @param[in] FLRCoeff Basis functions evaluated at reference coordinates 0.0 (L,component 0) and 1.0 (R, component 1).
      * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
-     * @param[in] offsetQR
+     * @param[in] strideQLR
      * @param[in] strideQ
      * @param[in] scalarIndexHull
      */
@@ -254,7 +254,7 @@ namespace exahype2 {
       const double * __restrict__ QIn,
       const double * __restrict__ FLRCoeff[2],
       const int                   nodesPerAxis,
-      const int                   offsetQR,
+      const int                   strideQLR,
       const int                   strideQ,
       const int                   scalarIndexHull);
     #if defined(OpenMPGPUOffloading)
@@ -271,7 +271,7 @@ namespace exahype2 {
      * @param[inout] QHullOut
      * @param[in] QIn
      * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
-     * @param[in] offsetQR
+     * @param[in] strideQLR
      * @param[in] strideQ
      * @param[in] scalarIndexHull
      */
@@ -282,7 +282,7 @@ namespace exahype2 {
       double * __restrict__       QHullOut[Dimensions*2],
       const double * __restrict__ QIn,
       const int                   nodesPerAxis,
-      const int                   offsetQR,
+      const int                   strideQLR,
       const int                   strideQ,
       const int                   scalarIndexHull);
     #if defined(OpenMPGPUOffloading)
