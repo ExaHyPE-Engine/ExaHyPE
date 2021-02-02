@@ -34,10 +34,16 @@ void smartmpi::GlobalStatistics::reportMPIWaitTime(double time, int rank) {
 
 void smartmpi::GlobalStatistics::setCommunicator( MPI_Comm communicator ) {
   MPI_Comm_size(communicator, &_numberOfRanks);
+<<<<<<< HEAD
   MPI_Comm_rank(_communicator, &_rank);
 
   _localWaitTimes = new double[_numberOfRanks];
   _waitTimes      = new double[_numberOfRanks*_numberOfRanks];
+=======
+  _waitTimesPerNanoSecond = new double[_numberOfRanks];
+  std::fill_n( _waitTimesPerNanoSecond, _numberOfRanks, 0.0 );
+  _communicator = communicator;
+>>>>>>> branch 'ader-dg' of https://gitlab.lrz.de/hpcsoftware/Peano.git
 }
 
 

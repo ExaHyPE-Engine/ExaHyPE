@@ -511,7 +511,7 @@ AC_OUTPUT(
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile
-  src/unittests/Makefile 
   src/smartmpi/Makefile
+  src/unittests/Makefile
 )
 

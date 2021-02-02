@@ -48,7 +48,6 @@ void smartmpi::init(MPI_Comm communicator, bool createSubcommunicator) {
     smartMPICommunicator = communicator;
   }
 
-
   globalStatistics.setCommunicator( smartMPICommunicator );
 }
 
