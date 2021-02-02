@@ -153,6 +153,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
         ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, outpatch);
         ::tarch::freeMemory(std::get<0>(localwork[i]), ::tarch::MemoryLocation::Heap);
      }
+     ::tarch::freeMemory(destinationPatchOnCPU, ::tarch::MemoryLocation::Heap);
   }
 
   logTraceOut( "run()" );
