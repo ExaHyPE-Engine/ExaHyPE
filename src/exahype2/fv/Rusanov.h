@@ -34,10 +34,10 @@ namespace exahype2 {
       const size_t NPT  = patchVec.size();
       const size_t LTOT = NPT*destPatchSize;
       const size_t LR   = NPT*sourcePatchSize;
-      double destinationPatch[LTOT];
+      double * destinationPatch = Qout;
       //double * reconstructedPatch;//[sourcePatchSize];
 
-      double* RP = ::tarch::allocateMemory(sourcePatchSize*NPT, ::tarch::MemoryLocation::Heap);
+      double* RP = ::tarch::allocateMemory(LR, ::tarch::MemoryLocation::Heap);
 
       // Move all data to the device, prepare arrays first
       double T[NPT], X0[NPT], X1[NPT], H0[NPT], H1[NPT];
@@ -54,6 +54,7 @@ namespace exahype2 {
         std::copy(std::get<0>(patch), std::get<0>(patch)+sourcePatchSize, RP + i*sourcePatchSize);
       }
 
+
  //map(alloc:destinationPatch[0:LTOT]) 
 #pragma omp target map(to:T[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT]) map(to:RP[0:LR]) map(tofrom:destinationPatch[0:LTOT])//map(alloc:reconstructedPatch[0:sourcePatchSize])
 #pragma omp teams
@@ -68,17 +69,13 @@ namespace exahype2 {
         double                   h0 =  H0[pidx];
         double                   x1 =  X1[pidx];
         double                   h1 =  H1[pidx];
-        double *reconstructedPatch = RP + LR*pidx;
-        //printf("x1*: %f\n", x1);
+        double *reconstructedPatch = RP + sourcePatchSize*pidx;
+        //printf("x1*: %f %lu/%lu\n", x1, pidx, NPT);
         //printf("there %lu\n",patchVec.size());
 
-        //#pragma omp target update to( reconstructedPatch[0:sourcePatchSize])
 
 
       #ifdef SharedOMP
-        #if defined(OpenMPGPUOffloading)
-        //#pragma omp target map(to:reconstructedPatch[0:sourcePatchSize])
-        #endif
       #pragma omp parallel for collapse(2)
       #endif
         for (int x = 0; x < numVPAIP; x++)
@@ -91,7 +88,10 @@ namespace exahype2 {
             {
               int sourceIndex      = (y+1)*(numVPAIP+ 3*haloSize) + x - y;
               int destinationIndex = y*numVPAIP + x;
-              destinationPatch[pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i] = reconstructedPatch[sourceIndex*(unknowns+auxiliaryVariables)+i];
+              //if (pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i >= LTOT)
+                //printf("%lu of %lu\n",pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i, LTOT); 
+              //printf("%lu of %lu\n",sourceIndex*(unknowns+auxiliaryVariables)+i, ); 
+              destinationPatch[pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i] =  reconstructedPatch[sourceIndex*(unknowns+auxiliaryVariables)+i];
             }
             
             tarch::la::Vector<2,double> patchCentre = {x0,x1};
@@ -180,7 +180,7 @@ namespace exahype2 {
           }
         }
 
-         //Iterate over other normal
+         ////Iterate over other normal
         for (int shift = 0; shift < 2; shift++)
         {
           #ifdef SharedOMP
