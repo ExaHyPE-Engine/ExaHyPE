@@ -14,6 +14,7 @@
 #define SmartMPIPrefix "SmartMPI:\t"
 #endif
 
+
 namespace smartmpi {
   /**
    * Smart MPI Task
@@ -87,7 +88,7 @@ namespace smartmpi {
    * That is: if you use seconds at one point, don't use milliseconds in another
    * place.
    */
-  void reportMPIWaitTime(double time);
+  void reportMPIWaitTime(double time, int rank);
   
   /**
    * Should be called in (quasi-regular) intervals; like a clock tick. It has to

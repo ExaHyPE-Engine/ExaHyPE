@@ -58,8 +58,8 @@ void smartmpi::shutdown() {
 }
 
 
-void smartmpi::reportMPIWaitTime(double time) {
-  globalStatistics.reportMPIWaitTime(time);
+void smartmpi::reportMPIWaitTime(double time, int rank) {
+  globalStatistics.reportMPIWaitTime(time,rank);
 }
 
 

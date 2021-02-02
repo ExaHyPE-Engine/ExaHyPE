@@ -9,7 +9,7 @@ SmartMPI_SOURCES = \
   GlobalStatistics.cpp
   
 
-libsmartmpi_a_CXXFLAGS        = -DSmartMPIDebug=0 
+libsmartmpi_a_CXXFLAGS        = -DSmartMPIDebug=1
 libsmartmpi_debug_a_CXXFLAGS  = -DSmartMPIDebug=4
 
 libsmartmpi_a_SOURCES          = $(SmartMPI_SOURCES)

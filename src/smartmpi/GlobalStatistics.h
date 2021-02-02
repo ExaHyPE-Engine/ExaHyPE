@@ -17,17 +17,14 @@ namespace smartmpi {
 
 class smartmpi::GlobalStatistics {
   private:
-    double _accumulatedWaitTimePerNanoSecond;
-    int    _numberOfMeasurementsContributingTowardsAccumulation;
-    double _waitTimePerNanoSecond;
-    
-    std::chrono::high_resolution_clock::time_point   _startTime;
-    
     MPI_Comm                                         _communicator;
-    double*                                          _waitTimesPerNanoSecond;
+    
+    double*                                          _localWaitTimes;
+    double*                                          _waitTimes;
     MPI_Request*                                     _request;
     
     int                                              _numberOfRanks;
+    int                                              _rank;
   public:  
     GlobalStatistics();
     ~GlobalStatistics();
@@ -35,7 +32,7 @@ class smartmpi::GlobalStatistics {
     /**
      * This is a delegate from the global signature. See smartmpi.h.
      */
-    void reportMPIWaitTime(double time);
+    void reportMPIWaitTime(double time, int rank);
     
     void setCommunicator( MPI_Comm communicator );
     

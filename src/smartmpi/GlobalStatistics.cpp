@@ -6,42 +6,44 @@
 
 
 smartmpi::GlobalStatistics::GlobalStatistics():
-  _accumulatedWaitTimePerNanoSecond(0.0),
-  _numberOfMeasurementsContributingTowardsAccumulation(0),
-  _startTime( std::chrono::high_resolution_clock::now() ),
-  _waitTimesPerNanoSecond(nullptr),
-  _request(nullptr) {
+  _communicator( MPI_COMM_WORLD ),
+  _localWaitTimes( nullptr ),
+  _waitTimes( nullptr ),
+  _request(nullptr),
+  _numberOfRanks(-1),
+  _rank(-1) {
 }
 
 
 smartmpi::GlobalStatistics::~GlobalStatistics() {
-  if (_waitTimesPerNanoSecond!=nullptr) {
-    delete[] _waitTimesPerNanoSecond;
-    _waitTimesPerNanoSecond = nullptr;
+  if (_localWaitTimes!=nullptr) {
+    delete[] _localWaitTimes;
+    delete[] _waitTimes;
+    _localWaitTimes = nullptr;
+    _waitTimes      = nullptr;
   }
 }
 
 
-void smartmpi::GlobalStatistics::reportMPIWaitTime(double time) {
-  std::chrono::high_resolution_clock::time_point timeStamp = std::chrono::high_resolution_clock::now();
-  double elapsedTime = std::chrono::duration_cast<std::chrono::nanoseconds>(timeStamp - _startTime).count();
-  _startTime = timeStamp;
-
-  _numberOfMeasurementsContributingTowardsAccumulation++;
-  _accumulatedWaitTimePerNanoSecond += time / elapsedTime;
-
-  _waitTimePerNanoSecond = _accumulatedWaitTimePerNanoSecond / static_cast<double>(_numberOfMeasurementsContributingTowardsAccumulation);
+void smartmpi::GlobalStatistics::reportMPIWaitTime(double time, int rank) {
+  assert( _localWaitTimes != nullptr );
+  _localWaitTimes[ _rank ] += time;
+  _localWaitTimes[ _rank ] /= 2.0;
 }
 
 
 void smartmpi::GlobalStatistics::setCommunicator( MPI_Comm communicator ) {
   MPI_Comm_size(communicator, &_numberOfRanks);
-  _waitTimesPerNanoSecond = new double[_numberOfRanks];
+  MPI_Comm_rank(_communicator, &_rank);
+
+  _localWaitTimes = new double[_numberOfRanks];
+  _waitTimes      = new double[_numberOfRanks*_numberOfRanks];
 }
 
 
 void smartmpi::GlobalStatistics::gatherWaitTimes() {
-  assert( _waitTimesPerNanoSecond!=nullptr );
+  assert( _waitTimes!=nullptr );
+  assert( _localWaitTimes!=nullptr );
 
   if (_request!=nullptr) {
     MPI_Wait( _request, MPI_STATUS_IGNORE );
@@ -51,23 +53,23 @@ void smartmpi::GlobalStatistics::gatherWaitTimes() {
   _request = new MPI_Request();
 
   MPI_Iallgather(
-    &_waitTimePerNanoSecond,
-    1,
+    &_localWaitTimes,
+    _numberOfRanks,
     MPI_DOUBLE,
-    _waitTimesPerNanoSecond,
-    1,
+    _waitTimes,
+    _numberOfRanks,
     MPI_DOUBLE,
     _communicator,
     _request
   );
 
-  // #if SmartMPIDebug>=4
-  int rank;
-  MPI_Comm_rank(_communicator, &rank);
-
-  std::cout << SmartMPIPrefix << "rank " << rank << ":";
-  for (int i=0; i<_numberOfRanks; i++)
-    std::cout << " " << _waitTimesPerNanoSecond[i];
-  std::cout << std::endl;
-  // #endif
+  #if SmartMPIDebug>=1
+  for (int row=0; row<_numberOfRanks; row++) {
+    std::cout << SmartMPIPrefix << "rank " << _rank << ":";
+    for (int col=0; col<_numberOfRanks; col++) {
+      std::cout << " " << _waitTimes[row*_numberOfRanks + col];
+    }
+    std::cout << std::endl;
+  }
+  #endif
 }
