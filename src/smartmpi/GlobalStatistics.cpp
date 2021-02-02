@@ -27,23 +27,21 @@ smartmpi::GlobalStatistics::~GlobalStatistics() {
 
 void smartmpi::GlobalStatistics::reportMPIWaitTime(double time, int rank) {
   assert( _localWaitTimes != nullptr );
-  _localWaitTimes[ _rank ] += time;
-  _localWaitTimes[ _rank ] /= 2.0;
+  assert( rank!=_rank );
+  _localWaitTimes[ rank ] += time;
+  _localWaitTimes[ rank ] /= 2.0;
 }
 
 
 void smartmpi::GlobalStatistics::setCommunicator( MPI_Comm communicator ) {
   MPI_Comm_size(communicator, &_numberOfRanks);
-<<<<<<< HEAD
   MPI_Comm_rank(_communicator, &_rank);
 
   _localWaitTimes = new double[_numberOfRanks];
   _waitTimes      = new double[_numberOfRanks*_numberOfRanks];
-=======
-  _waitTimesPerNanoSecond = new double[_numberOfRanks];
-  std::fill_n( _waitTimesPerNanoSecond, _numberOfRanks, 0.0 );
-  _communicator = communicator;
->>>>>>> branch 'ader-dg' of https://gitlab.lrz.de/hpcsoftware/Peano.git
+
+  std::fill_n( _localWaitTimes, _numberOfRanks, 0.0 );
+  std::fill_n( _waitTimes,      _numberOfRanks*_numberOfRanks, 0.0 );
 }
 
 
@@ -59,7 +57,7 @@ void smartmpi::GlobalStatistics::gatherWaitTimes() {
   _request = new MPI_Request();
 
   MPI_Iallgather(
-    &_localWaitTimes,
+    _localWaitTimes,
     _numberOfRanks,
     MPI_DOUBLE,
     _waitTimes,
@@ -70,8 +68,13 @@ void smartmpi::GlobalStatistics::gatherWaitTimes() {
   );
 
   #if SmartMPIDebug>=1
+  std::cout << SmartMPIPrefix << "rank " << _rank << " (local view):";
+  for (int i=0; i<_numberOfRanks; i++) {
+    std::cout << " " << _localWaitTimes[i];
+  } 
+  std::cout << std::endl;
   for (int row=0; row<_numberOfRanks; row++) {
-    std::cout << SmartMPIPrefix << "rank " << _rank << ":";
+    std::cout << SmartMPIPrefix << "rank " << _rank << "x" << row << ":";
     for (int col=0; col<_numberOfRanks; col++) {
       std::cout << " " << _waitTimes[row*_numberOfRanks + col];
     }
