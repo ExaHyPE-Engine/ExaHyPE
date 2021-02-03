@@ -58,6 +58,27 @@ namespace exahype2 {
     #pragma omp end declare target
     #endif
 
+    
+    double maxEigenvalue_AoS(
+      std::function< double(
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) >   eigenvalues,
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
+      double                                       dt,
+      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      const double * __restrict__                  Q
+    );
+    
+
     /**
      * Is a face loop-based implementation of a split 1d Riemann.
      *
@@ -122,7 +143,7 @@ namespace exahype2 {
       double * __restrict__                        Qout
     );
 
-
+    
     void applySplit1DRiemannToPatch_Overlap1AoS3d(
       std::function< void(
         const double * __restrict__ QL,
@@ -154,7 +175,7 @@ namespace exahype2 {
       double * __restrict__                        Qout
     );
 
-
+    
     /**
      * The routine has exactly the same semantics as applySplit1DRiemannToPatch_Overlap1AoS2d()
      * but runs through the faces slightly differently. 

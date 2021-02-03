@@ -38,7 +38,7 @@ parser.add_argument("--p",               dest="peanodir",                 defaul
 parser.add_argument("--c",               dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("--o",               dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("--f",               dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
-parser.add_argument("--type",            dest="type",                     choices=["default", "enclave", "gpu"], default="default", help="Pick implementation variant" )
+parser.add_argument("--type",            dest="type",                     choices=["default", "default-ats", "enclave", "gpu"], default="default", help="Pick implementation variant" )
 parser.add_argument("--dt",              dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 args = parser.parse_args()
 
@@ -109,6 +109,14 @@ elif args.type=="default":
     unknowns, 0,
     min_h, max_h,
     time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
+elif args.type=="default-ats":
+  thesolver = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize(
+    "Euler",
+    patch_size,
+    unknowns, 0,
+    min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 

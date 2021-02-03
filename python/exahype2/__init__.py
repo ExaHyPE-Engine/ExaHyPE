@@ -5,10 +5,11 @@ import exahype2.solvers.fv
 havenumpy=False
 try:
     import numpy
+    import mpmath
     havenumpy=True
 except ImportError:
-    print("Numpy is not available, not loading dg")
-    print("Numpy is not available, not loading aderdg")
+    print("Numpy/mpmath is not available, not loading dg")
+    print("Numpy/mpmath is not available, not loading aderdg")
 
 if havenumpy:
     import exahype2.solvers.aderdg

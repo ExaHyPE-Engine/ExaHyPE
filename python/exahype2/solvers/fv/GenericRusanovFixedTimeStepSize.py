@@ -55,7 +55,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
-          {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
             const double * __restrict__                  Q,
             const double * __restrict__                  deltaQ,
@@ -66,9 +65,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
+            {% if NCP_IMPLEMENTATION!="<none>" %}
             repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
+            {% endif %}
           },
-          {% endif %}
           [] (
             const double * __restrict__                  Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -82,7 +82,17 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
           {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR
+          FL,FR,
+          {% if FLUX_IMPLEMENTATION=="<none>" %}
+          true,
+          {% else %}
+          false,
+          {% endif %}
+          {% if NCP_IMPLEMENTATION=="<none>" %}
+          true
+          {% else %}
+          false
+          {% endif %}
         );
       },
       [&](
