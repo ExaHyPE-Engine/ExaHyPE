@@ -52,7 +52,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
   double newTimeStepSize = {{TIME_STEP_RELAXATION}} * _admissibleTimeStepSize;
   #ifdef Parallel
-  #include <mpi.h>
   MPI_Allreduce(&newTimeStepSize, &_timeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
   #else
   _timeStepSize = newTimeStepSize;
