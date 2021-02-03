@@ -109,7 +109,7 @@ void examples::exahype2::euler::ADERDGEuler::flux(
   nonCriticalAssertion8( Q[3]==Q[3], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
   nonCriticalAssertion8( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
 
-  nonCriticalAssertion8( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
+  //nonCriticalAssertion8( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
   // @todo Has to be removed once we are sure that the ADER-DG kernels do work
   assertion8( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
 

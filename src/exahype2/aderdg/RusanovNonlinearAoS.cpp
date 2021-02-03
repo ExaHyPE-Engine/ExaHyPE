@@ -65,10 +65,10 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
 
   // zero result vector
   for (int var = 0; var < unknowns; var++) {
-    riemannResultOut[ scalarIndexHull*strideF + var ] = 0;
+    riemannResultOut[ scalarIndexHull*strideF + var ] = 0.0;
   }
   for (int it = 0; it < nodesPerAxis; it++) { // time integration 
-    const int offsetQ   = (scalarIndexFace*nodesPerAxis + it)*strideQ;
+    const int offsetQ = (scalarIndexFace*nodesPerAxis + it)*strideQ;
     const double time = t + nodes[it] * dt;
     
     // time averaged flux contributions
@@ -143,10 +143,10 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
     double * __restrict__                       BgradQ
   ) >                                         boundaryNonconservativeProduct,
   double * __restrict__                       riemannResultOut,
-  const double * const __restrict__                 QHullIn[Dimensions*2], 
+  const double * const __restrict__           QHullIn[Dimensions*2], 
   const double                                maxEigenvaluePerFace[Dimensions*2],
-  const double * const __restrict__                 nodes, 
-  const double * const __restrict__                 weights, 
+  const double * const __restrict__           nodes, 
+  const double * const __restrict__           weights, 
   const tarch::la::Vector<Dimensions,double>& cellCentre,
   const double                                dx,
   const double                                t,

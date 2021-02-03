@@ -1,11 +1,12 @@
 #include "CorrectorAoS.h"
-//#include <functional>
 
 #include "KernelUtils.h"
 
 #include "Generic.h"
 
 #include "tarch/la/Vector.h"
+
+#include <iostream>
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -17,7 +18,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_adjustSolution_body_AoS(
       double                                      t
     ) >                                         adjustSolution,
     double * __restrict__                       UOut,
-    const double * const __restrict__                 nodes,
+    const double * const __restrict__           nodes,
     const tarch::la::Vector<Dimensions,double>& cellCentre,
     const double                                dx,
     const double                                t,
@@ -192,30 +193,32 @@ GPUCallableMethod void exahype2::aderdg::corrector_addNcpContributions_body_AoS(
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_AoS(
-  double * __restrict__       UOut,
+  double * __restrict__             UOut,
   const double * const __restrict__ riemannResultIn,
   const double * const __restrict__ weights,
   const double * const __restrict__ FLRCoeff[2],
-  const double                dx,
-  const double                dt,
-  const int                   nodesPerAxis,
-  const int                   unknowns,
-  const int                   strideQ,
-  const int                   strideRiemannResult,
-  const int                   scalarIndexCell) {
-  const tarch::la::Vector<Dimensions+1,int> index = delineariseIndex(scalarIndexCell,getStrides(nodesPerAxis,false));
+  const double                      dx,
+  const double                      dt,
+  const int                         nodesPerAxis,
+  const int                         unknowns,
+  const int                         strideQ,
+  const int                         strideF,
+  const int                         scalarIndexCell) {
+  const tarch::la::Vector<Dimensions+1,int> index = 
+    delineariseIndex(scalarIndexCell,getStrides(nodesPerAxis,false));
   
   const double invDx = 1.0/dx;
-  
-  for (int d=0; d < Dimensions; d++) {
-    for (int lr=0; lr<2; lr++) {
-      const int scalarIndexCellFace = mapCellIndexToScalarHullIndex(index,d,lr,nodesPerAxis);
-
-      for (int id=0; id < nodesPerAxis; id++) { 
-        const double coeff = dt * FLRCoeff[lr][index[d+1]] * invDx/*[d]*/;
-        for (int var=0; var < unknowns; var++) {
-          UOut[ scalarIndexCell*strideQ + var ] += coeff * riemannResultIn[ (scalarIndexCellFace*nodesPerAxis + id)*strideRiemannResult + var ]; 
-        }
+ 
+  //std::cout << "scalarIndexCell=" << scalarIndexCell << std::endl;
+ 
+  for (int lr=0; lr<2; lr++) {
+    for (int d=0; d < Dimensions; d++) {
+      const int scalarIndexHull = mapCellIndexToScalarHullIndex(index,d,lr,nodesPerAxis);
+      //std::cout << "  scalarIndexHull[ " << d << "," << lr << " ]=" << scalarIndexHull << std::endl;
+      const double iWd = 1.0/weights[index[d+1]];
+      const double coeff = dt * FLRCoeff[lr][index[d+1]] * invDx/*[d]*/ * iWd;
+      for (int var=0; var < unknowns; var++) {
+        UOut[ scalarIndexCell*strideQ + var ] -= coeff * riemannResultIn[ scalarIndexHull*strideF + var ]; 
       }
     }
   }
@@ -371,8 +374,8 @@ void exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
 
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
   
-  const int strideQ             = unknowns+auxiliaryVariables;
-  const int strideRiemannResult = unknowns;
+  const int strideQ = unknowns+auxiliaryVariables;
+  const int strideF = unknowns;
   
   const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
@@ -387,7 +390,7 @@ void exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
       nodesPerAxis,
       unknowns,
       strideQ,
-      strideRiemannResult,
+      strideF,
       scalarIndexCell);
   }
 }

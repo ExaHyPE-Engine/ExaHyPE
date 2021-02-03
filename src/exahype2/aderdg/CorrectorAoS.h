@@ -224,7 +224,7 @@ namespace exahype2 {
        const int                   nodesPerAxis,
        const int                   unknowns,
        const int                   strideQ,
-       const int                   strideRiemannResult,
+       const int                   strideF,
        const int                   scalarIndexCell);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target

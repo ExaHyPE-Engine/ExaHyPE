@@ -177,17 +177,18 @@ GPUCallableMethod int exahype2::aderdg::mapCellIndexToScalarHullIndex(
   const int                                 nodesPerAxis
 ) {
   // freeze spatial dimension direction (indexCell[direction+1])
-  int scalarIndexFace = 0;
+  int scalarIndexHull = 0;
   int stride = 1;
   for ( int e=0; e < Dimensions; e++ ) { // ordering (fastest running left): (y,z), (x,z), (x,y)
     if ( e != direction ) {
-      scalarIndexFace += stride*indexCell[e+1];
+      scalarIndexHull += stride*indexCell[e+1];
       stride *= nodesPerAxis;
     }
   }
-  const int faceOffset = ( direction*2 + orientation ) * stride; // stride = nodesPerAxis^{direction-1}
-  scalarIndexFace += faceOffset;
-  return scalarIndexFace;
+  //const int faceOffset = ( direction*2 + orientation ) * stride; // stride = nodesPerAxis^{d-1}
+  const int faceOffset = ( direction + Dimensions*orientation ) * stride; // stride = nodesPerAxis^{d-1}
+  scalarIndexHull += faceOffset;
+  return scalarIndexHull;
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
