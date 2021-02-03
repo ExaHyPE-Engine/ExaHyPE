@@ -230,16 +230,103 @@ namespace exahype2 {
       ::tarch::freeMemory(RP, tarch::MemoryLocation::Heap);
     };
 
+//
+//   3D fused copyPatch and Rusanov1D
+//
+//
+
+    template<
+      int                                          numVPAIP, // numberofVolumesPerAxisInPatch
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      typename SOLVER>
+    void Fusanov_3D(
+      int                                          haloSize,
+      double                                       dt,
+      std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > patchVec,
+      double * __restrict__                        Qout,
+      int                                          sourcePatchSize,
+      int                                          destPatchSize
+    )
+    {
+      const size_t NPT  = patchVec.size();
+      const size_t LTOT = NPT*destPatchSize;
+      const size_t LR   = NPT*sourcePatchSize;
+      double * destinationPatch = Qout;
+
+      double* RP = ::tarch::allocateMemory(LR, ::tarch::MemoryLocation::Heap);
+
+      // Move all data to the device, prepare arrays first
+      double T[NPT], X0[NPT], X1[NPT], X2[NPT], H0[NPT], H1[NPT], H2[NPT];
+      int TID[NPT];
+      for (size_t i=0; i<patchVec.size(); i++)
+      {
+        auto patch = patchVec[i];
+        T[i]    = std::get<1>(patch);
+        TID[i]  = std::get<2>(patch);
+        X0[i]   = std::get<3>(patch);
+        H0[i]   = std::get<4>(patch);
+        X1[i]   = std::get<5>(patch);
+        H1[i]   = std::get<6>(patch);
+        X2[i]   = std::get<7>(patch);
+        H2[i]   = std::get<8>(patch);
+        std::copy(std::get<0>(patch), std::get<0>(patch)+sourcePatchSize, RP + i*sourcePatchSize);
+      }
+
+
+#pragma omp target map(to:T[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:X2[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT])  map(to:H2[0:NPT]) map(to:RP[0:LR]) map(tofrom:destinationPatch[0:LTOT])
+#pragma omp teams
+#pragma omp distribute 
+      for (size_t pidx=0;pidx<NPT;pidx++)
+      {
+        double                    t =   T[pidx];
+        int                  taskId = TID[pidx];
+        double                   x0 =  X0[pidx];
+        double                   h0 =  H0[pidx];
+        double                   x1 =  X1[pidx];
+        double                   h1 =  H1[pidx];
+        double                   x2 =  X2[pidx];
+        double                   h2 =  H2[pidx];
+        double *reconstructedPatch = RP + sourcePatchSize*pidx;
+
+        int sourceSerialised = (numVPAIP + haloSize * 2)
+            * (numVPAIP + haloSize * 2)
+            + numVPAIP + haloSize * 2 + haloSize;
+
+
+
+        int helper = numVPAIP+haloSize*2;
+        #ifdef SharedOMP
+        #pragma omp parallel for collapse(4)
+        #endif
+        for (int z = 0; z < numVPAIP; z++)
+        {
+          for (int y = 0; y < numVPAIP; y++)
+          {
+            for (int x = 0; x < numVPAIP; x++)
+            {
+              for (int i = 0; i < unknowns + auxiliaryVariables; i++)
+              {
+                 int mydest = z*numVPAIP*numVPAIP + y*numVPAIP + x;
+                 int mysrc  = z*helper*helper + y*helper + x + sourceSerialised;
+
+                 destinationPatch[pidx*destPatchSize + mydest * (unknowns + auxiliaryVariables) + i] = reconstructedPatch[mysrc * (unknowns + auxiliaryVariables) + i];
+              }
+            }
+          }
+        }
+
+
+      }
+
+      ::tarch::freeMemory(RP, tarch::MemoryLocation::Heap);
+    };
 
 
 
 
 
-
-
-    //#if defined(OpenMPGPUOffloading)
-    //#pragma omp declare target
-    //#endif
+// NOTE: this is the gpu-inefficient version --- marked for deletion
     template<
       int                                          numVPAIP, // numberofVolumesPerAxisInPatch
       int                                          unknowns,

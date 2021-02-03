@@ -12,7 +12,6 @@
 
 
 tarch::multicore::BooleanSemaphore {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchsema;
-//std::vector<std::tuple<const ::peano4::datamanagement::CellMarker&, double*, const double, int> > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchkeeper;
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
 #if Dimensions==2
