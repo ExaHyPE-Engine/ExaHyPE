@@ -9,14 +9,14 @@
 #endif
 GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
     std::function< void(
-      const double * __restrict__                 Q,
+      const double * const __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       int                                         normal,
       double * __restrict__                       F
     ) >                                         fluxL,
     std::function< void(
-      const double * __restrict__                 Q,
+      const double * const __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       int                                         normal,
@@ -36,11 +36,11 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
     double * __restrict__                       QAvgAux,
     double * __restrict__                       dQAux,
     double * __restrict__                       SAux,
-    const double * __restrict__                 QLIn, 
-    const double * __restrict__                 QRIn, 
+    const double * const __restrict__           QLIn, 
+    const double * const __restrict__           QRIn, 
     const double                                smax,
-    const double * __restrict__                 nodes, 
-    const double * __restrict__                 weights, 
+    const double * const __restrict__           nodes, 
+    const double * const __restrict__           weights, 
     const tarch::la::Vector<Dimensions,double>& faceCentre,
     const double                                dx,
     const double                                t,
@@ -113,14 +113,14 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
 // launchers
 void exahype2::aderdg::rusanovNonlinear_loop_AoS(
   std::function< void(
-    const double * __restrict__                 Q,
+    const double * const __restrict__                 Q,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal,
     double * __restrict__                       F
   ) >                                         flux,
   std::function< void(
-    const double * __restrict__                 Q,
+    const double * const __restrict__                 Q,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     int                                         normal,
@@ -143,10 +143,10 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
     double * __restrict__                       BgradQ
   ) >                                         boundaryNonconservativeProduct,
   double * __restrict__                       riemannResultOut,
-  const double * __restrict__                 QHullIn[Dimensions*2], 
+  const double * const __restrict__                 QHullIn[Dimensions*2], 
   const double                                maxEigenvaluePerFace[Dimensions*2],
-  const double * __restrict__                 nodes, 
-  const double * __restrict__                 weights, 
+  const double * const __restrict__                 nodes, 
+  const double * const __restrict__                 weights, 
   const tarch::la::Vector<Dimensions,double>& cellCentre,
   const double                                dx,
   const double                                t,
@@ -199,7 +199,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
       ( leftCellIsOutside )  ? boundaryFlux : flux,
       ( rightCellIsOutside ) ? boundaryFlux : flux,
       ( leftCellIsOutside || rightCellIsOutside ) ? boundaryNonconservativeProduct : nonconservativeProduct,
-      riemannResultOut + face*nodesOnFace,
+      riemannResultOut + face*nodesOnFace*strideF,
       FAux + scalarIndexHull*2*strideF,
       FAux + scalarIndexHull*2*strideF + strideF,
       QAvgAux + scalarIndexHull*strideQ,

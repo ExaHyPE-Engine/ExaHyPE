@@ -43,7 +43,7 @@ namespace exahype2 {
       ) >                                         boundaryState,
       double * __restrict__                       QOut,
       double * __restrict__                       QIn,
-      const double * __restrict__                 nodes,
+      const double * const __restrict__                 nodes,
       const tarch::la::Vector<Dimensions,double>& faceCentre,
       const double                                dx,
       const double                                t,
@@ -84,13 +84,13 @@ namespace exahype2 {
     #endif
     GPUCallableMethod double riemann_maxAbsoluteEigenvalue_body_AoS(
     std::function< double(
-      const double * __restrict__                 Q,
+      const double * const __restrict__                 Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       const int                                   normal
     ) >                                         maxAbsoluteEigenvalue,
-    const double * __restrict__                 QLR,
-    const double * __restrict__                 nodes,
+    const double * const __restrict__                 QLR,
+    const double * const __restrict__                 nodes,
     const tarch::la::Vector<Dimensions,double>& faceCentre,
     const double                                dx,
     const double                                t,
@@ -121,14 +121,14 @@ namespace exahype2 {
       */
      void riemann_setBoundaryState_loop_AoS(
        std::function< void(
-         const double * __restrict__                 QInside,
+         const double * const __restrict__                 QInside,
          double * __restrict__                       OOutside,
          const tarch::la::Vector<Dimensions,double>& x,
          double                                      t,
          int                                         normal
        ) >                                         boundaryState,
-       double * __restrict__                       QHullOut[Dimensions*2],
-       const double * __restrict__                 nodes,
+       double *                                    QHullOut[Dimensions*2],
+       const double * const __restrict__                 nodes,
        const tarch::la::Vector<Dimensions,double>& cellCentre,
        const double                                dx,
        const double                                t,
@@ -158,14 +158,14 @@ namespace exahype2 {
      */
     void riemann_maxAbsoluteEigenvalue_loop_AoS(
       std::function< double(
-        const double * __restrict__                 Q,
+        const double * const __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         const int                                   direction
       ) >                                         maxAbsoluteEigenvalue,
       double                                      maxEigenvaluePerFaceOut[Dimensions*2],
-      const double * __restrict__                 QHullIn[Dimensions*2],
-      const double * __restrict__                 nodes,
+      double * const                              QHullIn[Dimensions*2],
+      const double * const __restrict__                 nodes,
       const tarch::la::Vector<Dimensions,double>& cellCentre,
       const double                                dx,
       const double                                t,
