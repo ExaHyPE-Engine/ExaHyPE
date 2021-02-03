@@ -136,13 +136,39 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
 
   logTraceIn( "run()" );
   tarch::multicore::Lock myLock( _patchsema );
-  auto localwork = std::move(_patchkeeper);
+  const int Nremain = _patchkeeper.size();
+  const int Nmax = {{NGRABMAX}}; // This needs to be a template argument --- this (among other things) depends on the patchsize and the machine so GPU memory needs to be taken into account
+
+#if Dimensions==2
+   std::vector<std::tuple<double*, const double, int, double, double, double, double> > localwork;
+#elif Dimensions==3
+   std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > localwork;
+#endif
+
+
+  if (Nmax==0)  localwork = std::move(_patchkeeper);
+  else
+  {
+     if (_patchkeeper.size()>0)
+     {
+        const int maxwork = std::min(Nremain, Nmax); // Don't request more work than there is
+        for (int i=1;i<maxwork+1;i++)
+        {
+           localwork.push_back(_patchkeeper[Nremain-i]);
+        }
+        _patchkeeper.resize(Nremain-maxwork);
+     }
+  }
   myLock.free();
 
   if (localwork.size() >0)
   {
      double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize*localwork.size(), ::tarch::MemoryLocation::Heap);
+#if Dimensions==2
         ::exahype2::fv::Fusanov_2D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>
+#elif Dimensions==3
+        ::exahype2::fv::Fusanov_3D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>
+#endif
            (1,{{TIME_STEP_SIZE}},  localwork, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize);
 
      for (int i=0;i<localwork.size();i++)

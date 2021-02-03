@@ -28,7 +28,8 @@ parser.add_argument("--s",              dest="patchsize",      type=int,   help=
 parser.add_argument("--p",              dest="plot",     type=float,  help="Plot interval", default=None )
 parser.add_argument("--n",              dest="number_of_time_steps",  type=int,  help="Number of timesteps", default=10 )
 parser.add_argument("--gpu",            dest="gpu",    action="store_true",      help="Use GPU", default=False )
-parser.add_argument("--m",               dest="mode",                     default="release", help="release|trace|asserts" )
+parser.add_argument("--m",              dest="mode",                     default="release", help="release|trace|asserts" )
+parser.add_argument("--nmax",           dest="nmax",           type=int,          default=0, help="Number of maximum tasks to grab" )
 args = parser.parse_args()
 
 if args.mode not in ["release", "trace", "asserts"]:
@@ -66,7 +67,8 @@ if args.gpu:
     unknowns, 0,
     min_h, max_h,
     time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    ngrabmax=args.nmax
   )
   solver._use_split_loop=True
 else:
