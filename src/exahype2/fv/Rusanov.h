@@ -35,7 +35,6 @@ namespace exahype2 {
       const size_t LTOT = NPT*destPatchSize;
       const size_t LR   = NPT*sourcePatchSize;
       double * destinationPatch = Qout;
-      //double * reconstructedPatch;//[sourcePatchSize];
 
       double* RP = ::tarch::allocateMemory(LR, ::tarch::MemoryLocation::Heap);
 
@@ -55,14 +54,11 @@ namespace exahype2 {
       }
 
 
- //map(alloc:destinationPatch[0:LTOT]) 
-#pragma omp target map(to:T[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT]) map(to:RP[0:LR]) map(tofrom:destinationPatch[0:LTOT])//map(alloc:reconstructedPatch[0:sourcePatchSize])
+#pragma omp target map(to:T[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT]) map(to:RP[0:LR]) map(tofrom:destinationPatch[0:LTOT])
 #pragma omp teams
 #pragma omp distribute 
       for (size_t pidx=0;pidx<NPT;pidx++)
       {
-        //auto patch = patchVec[pidx];
-        //double *reconstructedPatch = std::get<0>(patch);
         double                    t =   T[pidx];
         int                  taskId = TID[pidx];
         double                   x0 =  X0[pidx];
@@ -70,8 +66,6 @@ namespace exahype2 {
         double                   x1 =  X1[pidx];
         double                   h1 =  H1[pidx];
         double *reconstructedPatch = RP + sourcePatchSize*pidx;
-        //printf("x1*: %f %lu/%lu\n", x1, pidx, NPT);
-        //printf("there %lu\n",patchVec.size());
 
 
 
@@ -88,9 +82,6 @@ namespace exahype2 {
             {
               int sourceIndex      = (y+1)*(numVPAIP+ 3*haloSize) + x - y;
               int destinationIndex = y*numVPAIP + x;
-              //if (pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i >= LTOT)
-                //printf("%lu of %lu\n",pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i, LTOT); 
-              //printf("%lu of %lu\n",sourceIndex*(unknowns+auxiliaryVariables)+i, ); 
               destinationPatch[pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i] =  reconstructedPatch[sourceIndex*(unknowns+auxiliaryVariables)+i];
             }
             
@@ -117,9 +108,6 @@ namespace exahype2 {
         for (int shift = 0; shift < 2; shift++)
         {
           #ifdef SharedOMP
-             //#if defined(OpenMPGPUOffloading)
-             //#pragma omp target
-             //#endif
           #pragma omp parallel for collapse(2)
           #endif
 
@@ -184,9 +172,6 @@ namespace exahype2 {
         for (int shift = 0; shift < 2; shift++)
         {
           #ifdef SharedOMP
-             //#if defined(OpenMPGPUOffloading)
-             //#pragma omp target
-             //#endif
           #pragma omp parallel for collapse(2)
           #endif
           for (int y = shift; y <= numVPAIP; y += 2)
