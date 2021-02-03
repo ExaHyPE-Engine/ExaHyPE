@@ -1,5 +1,7 @@
 #include "RusanovNonlinearAoS.h"
 
+#include <iostream>
+
 #include "Generic.h"
 
 #include "KernelUtils.h"
@@ -14,14 +16,7 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
       double                                      t,
       int                                         normal,
       double * __restrict__                       F
-    ) >                                         fluxL,
-    std::function< void(
-      const double * const __restrict__                 Q,
-      const tarch::la::Vector<Dimensions,double>& x,
-      double                                      t,
-      int                                         normal,
-      double * __restrict__                       F
-    ) >                                         fluxR,
+    ) >                                         flux,
     std::function< void(
       double * __restrict__                       Q,
       double * __restrict__                       dQ_or_deltaQ,
@@ -76,8 +71,8 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
       const double coeff1 = weights[it] * 0.5;
       const double coeff2 = coeff1 * smax;
   
-      fluxL( QLIn + offsetQ, x, time, direction, FLAux ); 
-      fluxR( QRIn + offsetQ, x, time, direction, FRAux );
+      flux( QLIn + offsetQ, x, time, direction, FLAux ); 
+      flux( QRIn + offsetQ, x, time, direction, FRAux );
       for (int var = 0; var < unknowns; var++) {
         riemannResultOut[ scalarIndexHull*strideF + var ] += coeff1 * (FRAux[ var ] + FLAux[ var ]);
       }
@@ -187,6 +182,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
     const int face              = scalarIndexHull / nodesOnFace;
     const int orientationToCell = face/Dimensions;
     const int direction         = face-Dimensions*orientationToCell;
+    std::cout << "face=" << face  << std::endl;
     const int scalarIndexFace   = scalarIndexHull - face*nodesOnFace;
       
     const bool leftCellIsOutside  = atBoundary[ face ] && orientationToCell == 0; 
@@ -196,8 +192,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
     faceCentre[ direction ] += (-1+2*orientationToCell)*0.5*dx;    
  
     rusanovNonlinear_body_AoS(
-      ( leftCellIsOutside )  ? boundaryFlux : flux,
-      ( rightCellIsOutside ) ? boundaryFlux : flux,
+      ( leftCellIsOutside || rightCellIsOutside ) ? boundaryFlux : flux,
       ( leftCellIsOutside || rightCellIsOutside ) ? boundaryNonconservativeProduct : nonconservativeProduct,
       riemannResultOut + face*nodesOnFace*strideF,
       FAux + scalarIndexHull*2*strideF,
@@ -206,7 +201,7 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
       dQAux   + scalarIndexHull*strideDQ,
       SAux    + scalarIndexHull*strideS,
       QHullIn[ face ], 
-      QHullIn[ face ] + strideQLR*strideQ, 
+      &QHullIn[ face ][0] + strideQLR*strideQ, 
       maxEigenvaluePerFace[ face ],
       nodes, 
       weights, 

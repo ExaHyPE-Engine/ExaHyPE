@@ -18,14 +18,7 @@ namespace exahype2 {
           double                                      t,
           int                                         normal,
           double * __restrict__                       F
-        ) >                                         fluxL,
-        std::function< void(
-          const double * const __restrict__                 Q,
-          const tarch::la::Vector<Dimensions,double>& x,
-          double                                      t,
-          int                                         normal,
-          double * __restrict__                       F
-        ) >                                         fluxR,
+        ) >                                         flux,
         std::function< void(
           double * __restrict__                       Q,
           double * __restrict__                       dQ_or_deltaQ,
@@ -117,10 +110,10 @@ namespace exahype2 {
         double * __restrict__                       BgradQ
       ) >                                         boundaryNonconservativeProduct,
       double * __restrict__                       riemannResultOut,
-      const double * const __restrict__                 QHullIn[Dimensions*2], 
+      const double * const __restrict__           QHullIn[Dimensions*2], 
       const double                                maxEigenvaluePerFace[Dimensions*2],
-      const double * const __restrict__                 nodes, 
-      const double * const __restrict__                 weights, 
+      const double * const __restrict__           nodes, 
+      const double * const __restrict__           weights, 
       const tarch::la::Vector<Dimensions,double>& cellCentre,
       const double                                dx,
       const double                                t,
