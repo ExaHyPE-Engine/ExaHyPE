@@ -16,9 +16,6 @@ UnitTests2d_LDADD     += $(top_builddir)/src/exahype2/libExaHyPE2Core2d_a-PatchU
 endif
 endif
 UnitTests2d_LDADD     += -lPeano4Core2d_debug -lTarch_debug
-#if UseSmartMPI
-UnitTests2d_LDADD     += -lsmartmpi_debug
-#endif
 UnitTests2d_SOURCES   = $(UnitTestsSources)
 
 UnitTests3d_CXXFLAGS  = -I$(top_builddir)/src  -DPeanoDebug=4 -DDimensions=3 -g3 -O0
@@ -35,8 +32,5 @@ UnitTests3d_LDADD     += $(top_builddir)/src/exahype2/libExaHyPE2Core3d_a-PatchU
 endif
 endif
 UnitTests3d_LDADD     += -lPeano4Core3d_debug -lTarch_debug
-#if UseSmartMPI
-UnitTests3d_LDADD     += -lsmartmpi_debug
-#endif
 UnitTests3d_SOURCES   = $(UnitTestsSources)
 
