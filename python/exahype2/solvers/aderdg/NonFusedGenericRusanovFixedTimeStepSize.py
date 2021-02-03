@@ -105,7 +105,6 @@ class UpdateCell(AbstractADERDGActionSet):
             {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}
           );
 
-/*         
           ::exahype2::aderdg::corrector_addCellContributions_loop_AoS(
             [&](
               const double * __restrict__                 Q,
@@ -149,14 +148,14 @@ class UpdateCell(AbstractADERDGActionSet):
             },
             fineGridCell{{SOLVER_NAME}}Q.value,                           //  UOut,
             spaceTimeQ,                                                   //  QIn,
-            repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,                         //  nodes,
-            repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,                        //  weights,
-            repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,                        //  Kxi,
-            repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,                       //  dudx,
+            repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,           //  nodes,
+            repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,          //  weights,
+            repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,          //  Kxi,
+            repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,         //  dudx,
             marker.x(),                                                   //  cellCentre,
             marker.h()(0),                                                //  dx,
-            repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),                        //  t,
-            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),                     //  dt,
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),          //  t,
+            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),       //  dt,
             {{ORDER}},                                                    //  order,
             {{NUMBER_OF_UNKNOWNS}},                                       //  unknowns,
             {{NUMBER_OF_AUXILIARY_VARIABLES}},                            //  auxiliaryVariables,
@@ -164,7 +163,7 @@ class UpdateCell(AbstractADERDGActionSet):
             {{ "true" if SOURCES_IMPLEMENTATION!="<none>" else "false" }},//  callSource,
             {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}     //  callNonconservativeProduct
           );
-*/ 
+/*         
           ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
             fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
             spaceTimeQ,                           // QIn
@@ -173,11 +172,12 @@ class UpdateCell(AbstractADERDGActionSet):
             {{NUMBER_OF_UNKNOWNS}}, 
             {{NUMBER_OF_AUXILIARY_VARIABLES}}
           );
+*/ 
 
           // collect information from the adjacent faces
-          double* __restrict__ QHull[Dimensions*2];
-          bool                 atBoundary[Dimensions*2];
-          bool                 adjacentToBoundary = false;
+          double* QHull[Dimensions*2];
+          bool    atBoundary[Dimensions*2];
+          bool    adjacentToBoundary = false;
           for (int face = 0; face < Dimensions*2; face++) {
              QHull[ face ]       = fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
              atBoundary [ face ] = fineGridFacesLabel(face).getBoundary() and
@@ -227,14 +227,13 @@ class UpdateCell(AbstractADERDGActionSet):
       case {{SOLVER_NAME}}::SolverState::Correction:
         {
           // collect information from the adjacent faces
-          const double* __restrict__ QHull[Dimensions*2];
-          bool                       atBoundary[Dimensions*2];
-          bool                       adjacentToBoundary = false;
+          double* QHull[Dimensions*2];
+          bool    atBoundary[Dimensions*2];
+          bool    adjacentToBoundary = false;
           for (int face = 0; face < Dimensions*2; face++) {
              QHull      [ face ] = fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
              atBoundary [ face ] = fineGridFacesLabel(face).getBoundary() and
                                    not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[face%Dimensions];
-             adjacentToBoundary |= atBoundary[ face ];
           }
           
           // compute max eigenvalue per face 

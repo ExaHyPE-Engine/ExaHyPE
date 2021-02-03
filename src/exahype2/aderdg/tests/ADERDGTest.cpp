@@ -57,24 +57,23 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
   const int nodesPerAxis2      = nodesPerAxis *nodesPerAxis;
   const int nodesPerAxis3      = nodesPerAxis2*nodesPerAxis;
 
-  // Inputs:
-  double UIn[strideQ*nodesPerAxis2];
+  // In-/Outputs:
+  double U[nodesPerAxis2*strideQ];
   for (int i = 0; i < nodesPerAxis2; i++) {
     for (int m=0; m < unknowns; m++) {
-      const int i_UIn          = i*strideQ + m;
+      const int i_U            = i*strideQ + m;
       const int i_UIn_testdata = i*unknowns  + m;
 
-      UIn[i_UIn] = spaceTimePredictor_PicardLoop_UIn[i_UIn_testdata];
+      U[i_U] = spaceTimePredictor_PicardLoop_UIn[i_UIn_testdata];
     }
     for (int m=unknowns; m < strideQ; m++) {
-      const int i_UIn = i*strideQ + m;
-      UIn[i_UIn] = 0.0;
+      const int i_U = i*strideQ + m;
+      U[i_U] = 0.0;
     }
   }
 
   // Outputs:
   double Q[nodesPerAxis3*strideQ];
-  double U[nodesPerAxis2*strideQ];
   double _QHull[Dimensions*2][2*nodesPerAxis2*strideQ];
   double* QHull[Dimensions*2];
   double* QHull_faceSwap[Dimensions*2]; // left becomes right
@@ -114,7 +113,7 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
         double * __restrict__                       BgradQ
       )->void {},
       Q,                                 // Q
-      UIn,                               // UIn
+      U,                                 // U
       QuadraturePoints,
       QuadratureWeights,
       StiffnessOperator,                 // Kxi,
@@ -145,16 +144,16 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
   //}
   //std::cout << std::flush;
   //
-  //// print result
-  //std::cout << "\nresult (Q):\n\n";
-  //for (int i = 0; i < nodesPerAxis3; i++) {
-  //  for (int m=0; m < unknowns; m++) {
-  //    const int i_Q = i*unknowns  + m;
-  //    std::cout << std::setprecision(3) << Q[i_Q] << " ";
-  //  }
-  //  std::cout << "\n";
-  //}
-  //std::cout << std::flush;
+  // print result
+  std::cout << "\nresult (Q):\n\n";
+  for (int i = 0; i < nodesPerAxis3; i++) {
+    for (int m=0; m < unknowns; m++) {
+      const int i_Q = i*unknowns  + m;
+      std::cout << std::setprecision(3) << Q[i_Q] << " ";
+    }
+    std::cout << "\n";
+  }
+  std::cout << std::flush;
   
   for (int i = 0; i < nodesPerAxis3; i++) {
     for (int m=0; m < unknowns; m++) {
@@ -166,7 +165,57 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
           eps, i);
     }
   }
+  
+  ::exahype2::aderdg::corrector_addCellContributions_loop_AoS(
+    [&] (
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                         direction,
+      double * __restrict__                       F
+    ) -> void {
+      flux(Q,x,t,direction,F);
+    },
+    [&] (
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      double * __restrict__                       S
+    ) -> void {
+    },
+    [&] (
+      const double * const __restrict__           Q,
+      double * __restrict__                       dQ_or_deltaQ,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                         direction,
+      double * __restrict__                       BgradQ
+    ) -> void {
+    },
+    [&] (
+      double * __restrict__                       Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t
+    ) -> void {
+    },
+    U,                                      // UOut,                               
+    Q,                                      // QIn, 
+    QuadraturePoints,                       // nodes,
+    QuadratureWeights,                      // weights,
+    StiffnessOperator,                      // Kxi,
+    DerivativeOperator,                     // dudx, 
+    x,                                      // cellCentre,
+    dx,                                     // dx,
+    t,                                      // t,
+    dt,                                     // dt,
+    order,                                  // order,
+    unknowns,                               // unknowns,
+    auxiliaryVariables,                     // auxiliaryVariables,
+    true /*callFlux*/,                      // callFlux,
+    false /*callSource*/,                   // callSource,
+    false /*callNonconservativeProduct*/);  // callNonconservativeProduct) {
 
+/*
   ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_loop_AoS(
     U,
     Q,
@@ -174,7 +223,8 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
     order,
     unknowns,
     auxiliaryVariables);
-  
+*/  
+
   // print result
   std::cout << "\nresult (U, post time extrapolation):\n\n";
   for (int i = 0; i < nodesPerAxis2; i++) {
@@ -185,7 +235,7 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
     std::cout << "\n";
   }
   std::cout << std::flush;
-  
+ 
   // prepare QHull
   for (int face = 0; face < 2*Dimensions; face++) {
     for (int i = 0; i < 2*nodesPerAxis2; i++) {
@@ -248,7 +298,7 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
   // max eigenvalue
   ::exahype2::aderdg::riemann_maxAbsoluteEigenvalue_loop_AoS(
     [&] (
-      const double * const __restrict__                 Q,
+      const double * const __restrict__           Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       const int                                   direction
@@ -295,7 +345,7 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
       flux(Q,x,t,direction,F); 
     },
     [&](
-      const double * const __restrict__                 Q,
+      const double * const __restrict__           Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       int                                         direction,
@@ -335,10 +385,10 @@ void exahype2::aderdg::tests::ADERDGTest::test_spaceTimePredictor_PicardLoop_loo
 
     // print result
     std::cout << "\nresult (riemannResult):\n\n";
-    for (int face = 0; face < 2*Dimensions; face++) {
+    for (int face = 0; face < Dimensions*2; face++) {
       for (int i = 0; i < nodesPerAxis; i++) {
         for (int m=0; m < unknowns; m++) {
-          const int i_QFace = (face*nodesPerAxis+i)*unknowns  + m;
+          const int i_QFace = (face*nodesPerAxis+i)*unknowns + m;
           std::cout << std::setprecision(3) << riemannResult[i_QFace] << " ";
         }
         std::cout << "\n";

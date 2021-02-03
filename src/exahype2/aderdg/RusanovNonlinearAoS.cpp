@@ -58,26 +58,34 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
 
   const int scalarIndexFace = scalarIndexHull - indexUHull[Dimensions]*strides[Dimensions];
 
+  //std::cout << "    scalarIndexHull=" << scalarIndexHull << std::endl;
+  //std::cout << "    scalarIndexFace=" << scalarIndexFace << std::endl;
+
   // zero result vector
   for (int var = 0; var < unknowns; var++) {
     riemannResultOut[ scalarIndexHull*strideF + var ] = 0.0;
   }
   for (int it = 0; it < nodesPerAxis; it++) { // time integration 
-    const int offsetQ = (scalarIndexFace*nodesPerAxis + it)*strideQ;
     const double time = t + nodes[it] * dt;
+    const double* qL = &QLIn[ (scalarIndexFace*nodesPerAxis + it)*strideQ ];
+    const double* qR = &QRIn[ (scalarIndexFace*nodesPerAxis + it)*strideQ ];
+  
+    //std::cout << "      qL[0]=" << qL[0] << std::endl;
+    //std::cout << "      qR[0]=" << qR[0] << std::endl;
+    //std::cout << "      direction=" << direction << std::endl;
     
     // time averaged flux contributions
     if ( callFlux ) {
       const double coeff1 = weights[it] * 0.5;
       const double coeff2 = coeff1 * smax;
   
-      flux( QLIn + offsetQ, x, time, direction, FLAux ); 
-      flux( QRIn + offsetQ, x, time, direction, FRAux );
+      flux( qL, x, time, direction, FLAux ); 
+      flux( qR, x, time, direction, FRAux );
       for (int var = 0; var < unknowns; var++) {
         riemannResultOut[ scalarIndexHull*strideF + var ] += coeff1 * (FRAux[ var ] + FLAux[ var ]);
       }
       for (int var = 0; var < unknowns; var++) {
-        riemannResultOut[ scalarIndexHull*strideF + var ] -= coeff2 * (QRIn[ offsetQ + var ] - QLIn[ offsetQ + var ]);
+        riemannResultOut[ scalarIndexHull*strideF + var ] -= coeff2 * (qR[ var ] - qL[ var ]);
       }
     }
     // nonconservative product contirbutions
@@ -86,10 +94,10 @@ GPUCallableMethod void exahype2::aderdg::rusanovNonlinear_body_AoS(
       // orientationToCell = 1 => face is right to cell => cell is left to face  => cell gets FL => sign is positive
       const double coeff0 = (-1.0 + 2.0*orientationToCell) * 0.5;
       for (int var=0; var < strideQ; var++) {
-        dQAux[ var ] = QRIn[ offsetQ + var ] - QLIn[ offsetQ + var ];
+        dQAux[ var ] = qR[ var ] - qL[ var ];
       }
       for (int var=0; var < strideQ; var++) {
-        QAvgAux[var] = 0.5 * (QRIn[ offsetQ + var ] + QLIn[ offsetQ + var ]);
+        QAvgAux[var] = 0.5 * (qR[ var ] + qL[ var ]);
       }
       
       nonconservativeProduct(QAvgAux,  dQAux, x, time, direction, SAux);
@@ -182,7 +190,10 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
     const int face              = scalarIndexHull / nodesOnFace;
     const int orientationToCell = face/Dimensions;
     const int direction         = face-Dimensions*orientationToCell;
-    std::cout << "face=" << face  << std::endl;
+    //std::cout << "face=" << face  << std::endl;
+    //std::cout << "  orientationToCell=" << orientationToCell  << std::endl;
+    //std::cout << "  direction=" << direction  << std::endl;
+    //std::cout << "  strideQLR=" << strideQLR  << std::endl;
     const int scalarIndexFace   = scalarIndexHull - face*nodesOnFace;
       
     const bool leftCellIsOutside  = atBoundary[ face ] && orientationToCell == 0; 
@@ -194,14 +205,14 @@ void exahype2::aderdg::rusanovNonlinear_loop_AoS(
     rusanovNonlinear_body_AoS(
       ( leftCellIsOutside || rightCellIsOutside ) ? boundaryFlux : flux,
       ( leftCellIsOutside || rightCellIsOutside ) ? boundaryNonconservativeProduct : nonconservativeProduct,
-      riemannResultOut + face*nodesOnFace*strideF,
+      riemannResultOut, // we index the whole hull
       FAux + scalarIndexHull*2*strideF,
       FAux + scalarIndexHull*2*strideF + strideF,
       QAvgAux + scalarIndexHull*strideQ,
       dQAux   + scalarIndexHull*strideDQ,
       SAux    + scalarIndexHull*strideS,
       QHullIn[ face ], 
-      &QHullIn[ face ][0] + strideQLR*strideQ, 
+      QHullIn[ face ] + strideQLR*strideQ, 
       maxEigenvaluePerFace[ face ],
       nodes, 
       weights, 
