@@ -23,6 +23,9 @@ namespace tarch {
 
 
 /**
+ * Global statistics interface
+ *
+ * This interface only logs data if you have translated with -DTrackStatistics.
  *
  * To get the stats right, you might want to invoke the clear() operation 
  * explicitly when you start up your code. This way, you ensure that the 
@@ -38,6 +41,8 @@ class tarch::logging::Statistics {
 
     /**
      * Log one particular value
+     *
+     * @param identifier Unique name (string) for this event
      */
     #ifdef TrackStatistics
     void log( const std::string& identifier, double value, bool disableSampling = false );

@@ -12,13 +12,16 @@ ExaHyPE2Sources = \
   EnclaveTask.cpp \
   NonCriticalAssertions.cpp \
   PatchUtils.cpp \
+  PlotFilter.cpp \
   RefinementControl.cpp \
+  SmartEnclaveTask.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
   aderdg/CorrectorAoS.cpp \
   aderdg/Generic.cpp \
   aderdg/KernelUtils.cpp \
   aderdg/PredictorAoS.cpp \
+  aderdg/RiemannAoS.cpp \
   aderdg/RusanovNonlinearAoS.cpp \
   aderdg/tests/ADERDGTest.cpp \
   fv/BoundaryConditions.cpp \

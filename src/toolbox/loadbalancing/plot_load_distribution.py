@@ -35,14 +35,21 @@ def parse_file( filename, rank, verbose ):
   """
     Returns tuple of (x_data,y_data_local,y_data_remote)
     
-    x_data is a series of time stamps
-    y_data is a series of corresponding entries. Each entry is an array again as there might be many trees
-
-
-    filename File to parse (what a surprise)
+    filename: String
+      File to parse (what a surprise)
+      
     rank: int
       Rank number of extract data for (can be -1 if you run serially)
     
+    x_data: [Float] 
+      A series of time stamps
+      
+    y_data_local: [[Float]] 
+      A set of  series of corresponding cell count entries. Each entry 
+      within the list is an array again as there might be many trees 
+      per rank.
+
+
   """
   file = open( filename, "r" )
   x_data        = []
@@ -53,21 +60,33 @@ def parse_file( filename, rank, verbose ):
     if rank>1:
       is_in_line = is_in_line and "rank:" + str(rank ) in line
       
-    if is_in_line:
-      x_data.append( float( line.strip().split(" ")[0] ) )
-      y_data_local.append( [] )
-      y_data_remote.append( [] )
-      for entry in line.split( "(#")[1:]:
-        local_data  = entry.split(":")[1].split("/")[0]
-        remote_data = entry.split("/")[1].split(")")[0]
-        y_data_local[-1].append( float(local_data) )
-        y_data_remote[-1].append( float(remote_data) )
+    try:
+      if is_in_line:
+        x_data.append( float( line.strip().split(" ")[0] ) )
+        y_data_local.append( [] )
+        y_data_remote.append( [] )
+        for entry in line.split( "(#")[1:]:
+          local_data  = entry.split(":")[1].split("/")[0]
+          remote_data = entry.split("/")[1].split(")")[0]
+          y_data_local[-1].append( float(local_data) )
+          y_data_remote[-1].append( float(remote_data) )
+    except Exception as e:
+      print( "parser error " + str(e) )
+      print( "faulty line: " + line )
+      print( "assume this is due to a race condition to write to the terminal; continue to parse ..." )
+        
   return ( x_data, y_data_local, y_data_remote )
 
 
 def local_optimal_average( x_data, y_data_local, cores ):
   """
    
+    x_data: [Float]
+      Series of time stamps.
+      
+    y_data_local: [[FLOAT]]
+      Per tree, it holds a series of cell counts.
+     
     When I split partitions, I typically get (temporary) subtrees with weight
     0. I have to be aware that the average thus can fall below 1.
     
@@ -86,7 +105,7 @@ def local_optimal_average( x_data, y_data_local, cores ):
   return (pruned_x_data,y_data)
    
    
-def plot( filename, verbose, plot_remote_cells, sum_per_rank ):
+def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank ):
   (ranks,threads) = get_ranks_and_threads( filename )
   #
   # Should be one colour per rank
@@ -114,14 +133,14 @@ def plot( filename, verbose, plot_remote_cells, sum_per_rank ):
       if len(y_data_local[i])>0:
         my_alpha       = 0.1+(1.0-0.1)/len(y_data_local[i])
       for j in y_data_local[i]:
-        y_data_sum[-1] += j/len(x_data)
+        y_data_sum[-1] += j
         
       if verbose:
         print( "plot " + str(one_snapshot_x_data) + " x " + str(y_data_local[i]) + " with symbol/colour/alpha " + str(symbol_counter) + "/" + str(colour_counter) + "/" + str(my_alpha) )
         
-      if i==0 and rank>=0:
+      if i==0 and rank>=0 and not sum_per_rank:
         plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha, label="Rank " + str(rank) )  
-      elif i==0:
+      elif i==0 and not sum_per_rank:
         plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha, label="Load per tree" )  
       else:
         plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha)
@@ -136,8 +155,10 @@ def plot( filename, verbose, plot_remote_cells, sum_per_rank ):
       sum_symbol = "--"
     if rank<len(Colours):
       sum_symbol = ":"
+    sum_symbol += Symbols[symbol_counter]
+    
     if sum_per_rank: 
-      plt.plot(x_data_sum, y_data_sum, sum_symbol, color=Colours[colour_counter] )
+      plt.plot(x_data_sum, y_data_sum, sum_symbol, color=Colours[colour_counter], markevery=symbol_counter*3+2, label="Rank " + str(rank) )
       
     symbol_counter += 1
     colour_counter += 1
@@ -182,7 +203,7 @@ def plot_trees_per_rank( filename, verbose ):
     y_data = []
     for snapshot in y_data_local:
       y_data.append( len(snapshot) )
-    plt.plot(x_data, y_data, marker=Symbols[symbol_counter], color=Colours[colour_counter] )     
+    plt.plot(x_data, y_data, marker=Symbols[symbol_counter], color=Colours[colour_counter], label="rank " + str(rank) )     
     
 
     symbol_counter += 1
@@ -196,20 +217,23 @@ def plot_trees_per_rank( filename, verbose ):
 
   plt.xlabel( "time" )
   plt.ylabel( "trees per rank" )
+  plt.legend()
 
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Peano 4 load balancing plotter')
   parser.add_argument("file",   help="filename of the file to parse (should be a text file)")
-  parser.add_argument("-v", "--verbose", help="increase output verbosity", default=False)
-  parser.add_argument("-rc", "--remote-cells", dest="plot_remote_cells", help="plot remote cells, too", default=False)
-  parser.add_argument("-sum", "--sum-per-rank", dest="sum_per_rank", help="sum up cells per rank", default=False)
+  parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity", default=False)
+  parser.add_argument("-rc", "--remote-cells",  dest="plot_remote_cells", action="store_true", default=False, help="plot remote cells, too")
+  parser.add_argument("-sum", "--sum-per-rank", dest="sum_per_rank",      action="store_true", default=False, help="sum up cells per rank")
   args = parser.parse_args()
 
   plt.clf()
+  plot_trees_per_rank(args.file, args.verbose )
+  plt.savefig( args.file + "-trees-per-rank.pdf" )
+  plt.savefig( args.file + "-trees-per-rank.png" )
   
-  plot(args.file, args.verbose, args.plot_remote_cells, args.sum_per_rank )
-
-  plt.savefig( args.file + ".pdf" )
-  plt.savefig( args.file + ".png" )
-  
+  plt.clf()
+  plot_cells_per_rank(args.file, args.verbose, args.plot_remote_cells, args.sum_per_rank )
+  plt.savefig( args.file + "-cells-per-rank.pdf" )
+  plt.savefig( args.file + "-cells-per-rank.png" )

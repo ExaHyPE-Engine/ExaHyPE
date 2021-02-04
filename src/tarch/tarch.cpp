@@ -16,19 +16,19 @@
 namespace {
   int convertMemorySize(long value, tarch::MemoryUsageFormat format) {
     static tarch::logging::Log _log( "tarch" );
-	int result;
+    int result = 0;
     switch (format) {
       case tarch::MemoryUsageFormat::MByte:
         {
-	      long megaByte = 1024 * 1024;
-	      long usageMB ((value + (megaByte/2)) / megaByte );
-	      const long maxInteger = std::numeric_limits<int>::max();
-	      if (usageMB>maxInteger) {
-	        logError( "convertMemorySize()", "cannot cast result to return value: " << usageMB );
-	      }
-	      result = static_cast<int>(usageMB);
-	      }
-	  }
+          long megaByte = 1024 * 1024;
+          long usageMB ((value + (megaByte/2)) / megaByte );
+          const long maxInteger = std::numeric_limits<int>::max();
+          if (usageMB>maxInteger) {
+            logError( "convertMemorySize()", "cannot cast result to return value: " << usageMB );
+          }
+          result = static_cast<int>(usageMB);
+        }
+    }
     return result;
   }
 }

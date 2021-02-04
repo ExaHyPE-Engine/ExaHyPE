@@ -1,7 +1,16 @@
 #include "Node.h"
+
 #include "tarch/mpi/IntegerMessage.h"
+#include "tarch/timing/Watch.h"
+
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/Spacetree.h"
+
+
+
+#ifdef UseSmartMPI
+#include "smartmpi/smartmpi.h"
+#endif
 
 
 
@@ -229,14 +238,27 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
   bool triggeredTimeoutWarning = false;
   bool allSendReceivesFinished = false;
 
+  #ifdef UseSmartMPI
+  tarch::timing::Watch dataExchangeTime("peano4::parallel::SpacetreeSet", "traverse", false );
+  #endif
+
   while (not allSendReceivesFinished) {
     allSendReceivesFinished = true;
     for (auto& sourceStackKey: keys) {
       if ( sourceStackKey.first==spacetreeId ) {
         logDebug( "finishAllOutstandingSendsAndReceives(...)", "check stack no " << sourceStackKey.first << " x " << sourceStackKey.second );
         allSendReceivesFinished &= stackContainer.getForPush(sourceStackKey)->tryToFinishSendOrReceive();
+
+        #ifdef UseSmartMPI
+        const int rank = stackContainer.getForPush(sourceStackKey)->sendingOrReceiving();
+        if ( rank>=0 ) {
+          dataExchangeTime.stop();
+          smartmpi::reportMPIWaitTime(dataExchangeTime.getCPUTime(),rank);
+        }
+        #endif
       }
     }
+
 
     if (
       tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&

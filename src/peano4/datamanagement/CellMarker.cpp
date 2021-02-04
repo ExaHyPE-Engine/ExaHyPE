@@ -41,6 +41,18 @@ bool peano4::datamanagement::CellMarker::isContained( const tarch::la::Vector<Di
 }
 
 
+bool peano4::datamanagement::CellMarker::overlaps( const tarch::la::Vector<Dimensions,double>& offset, const tarch::la::Vector<Dimensions,double>& size ) const {
+  bool overlaps = true;
+
+  for (int d=0; d<Dimensions; d++) {
+    overlaps &= tarch::la::smallerEquals( _centre(d)-_h(d)/2.0, offset(d)+size(d) );
+    overlaps &= tarch::la::greaterEquals( _centre(d)+_h(d)/2.0, offset(d) );
+  }
+
+  return overlaps;
+}
+
+
 bool peano4::datamanagement::CellMarker::isRefined() const {
   return _isRefined;
 }

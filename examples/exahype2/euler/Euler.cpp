@@ -51,6 +51,8 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   assertion(normal>=0);
   assertion(normal<Dimensions);
 
+  assertion( Q[0]>0.0 );
+
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -62,7 +64,9 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   const double u_n = Q[normal + 1] * irho;
   const double c   = std::sqrt(gamma * p * irho);
 
-  return std::max( std::abs(u_n - c), std::abs(u_n + c) );
+  double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
+  assertion5( result>=0.0, result, p, u_n, irho, c );
+  return result;
 }
 
 

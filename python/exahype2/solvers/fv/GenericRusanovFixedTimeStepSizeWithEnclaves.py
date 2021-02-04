@@ -109,7 +109,6 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
-          {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
             const double* __restrict__                   Q,
             const double * __restrict__                  deltaQ,
@@ -120,9 +119,10 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
+            {% if NCP_IMPLEMENTATION!="<none>" %}
             repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
+            {% endif %}
           },
-          {% endif %}
           [] (
             const double* __restrict__                   Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -136,7 +136,17 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
           {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR
+          FL,FR,
+          {% if FLUX_IMPLEMENTATION=="<none>" %}
+          true,
+          {% else %}
+          false,
+          {% endif %}
+          {% if NCP_IMPLEMENTATION=="<none>" %}
+          true
+          {% else %}
+          false
+          {% endif %}
         );
       },
       [&](
@@ -217,7 +227,6 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
-          {% if NCP_IMPLEMENTATION!="<none>" %}
           [] (
             const double* __restrict__                   Q,
             const double * __restrict__                  deltaQ,
@@ -228,9 +237,10 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             int                                          normal,
             double                                       BgradQ[]
           ) -> void {
+            {% if NCP_IMPLEMENTATION!="<none>" %}
             repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
+            {% endif %}
           },
-          {% endif %}
           [] (
             const double* __restrict__                   Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -244,7 +254,17 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
           {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR
+          FL,FR,
+          {% if FLUX_IMPLEMENTATION=="<none>" %}
+          true,
+          {% else %}
+          false,
+          {% endif %}
+          {% if NCP_IMPLEMENTATION=="<none>" %}
+          true
+          {% else %}
+          false
+          {% endif %}
         );
         },
       [&](
@@ -273,6 +293,19 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       );
     };
 
+    #if defined(UseSmartMPI)
+    ::exahype2::SmartEnclaveTask* newEnclaveTask = new ::exahype2::SmartEnclaveTask(
+      marker,
+      reconstructedPatch,
+      #if Dimensions==2
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
+      #else
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
+      #endif
+      perCellFunctor,
+      {{SOLVER_NUMBER}}
+    );    
+    #else
     ::exahype2::EnclaveTask* newEnclaveTask = new ::exahype2::EnclaveTask(
       marker,
       reconstructedPatch,
@@ -282,14 +315,21 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
       #endif
       perCellFunctor
-    );
-      
+    );    
+    #endif
+          
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+
+
+    #if defined(UseSmartMPI)
+    smartmpi::spawn( newEnclaveTask );
+    #else
     peano4::parallel::Tasks spawn( 
       newEnclaveTask,
       peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
       peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
-    );      
+    );   
+    #endif   
   }
   """      
   
@@ -319,6 +359,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
+#include "exahype2/SmartEnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
 """

@@ -4,11 +4,20 @@
 #define _EXAHYPE2_ENCLAVE_TASK_H_
 
 
+#include "../config.h"
+
 #include "peano4/datamanagement/CellMarker.h"
 #include "tarch/multicore/Tasks.h"
 
 
 #include <functional>
+
+
+
+#ifdef UseSmartMPI
+#include "smartmpi/smartmpi.h"
+#endif
+
 
 
 namespace exahype2 {
@@ -36,6 +45,11 @@ namespace exahype2 {
  * When they have computed their stuff, they have to hand over this heap (and the
  * responsibility to destroy it) to the bookkeeping and then can be deleted
  * themselves.
+ *
+ * <h2> SmartMPI </h2>
+ * 
+ * If you enable SmartMPI, then all enclave tasks are SmartMPI tasks, too. I 
+ * realise this through multiple inheritance. Peano's task interface automatically
  */
 class exahype2::EnclaveTask: public tarch::multicore::Task {
   private:
@@ -64,6 +78,8 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
 
     EnclaveTask(const EnclaveTask& other) = delete;
     EnclaveTask(const EnclaveTask&& other) = delete;
+
+    virtual ~EnclaveTask() = default;
 
     bool run() override;
 

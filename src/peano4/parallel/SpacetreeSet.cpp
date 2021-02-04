@@ -19,6 +19,8 @@
 
 #include "tarch/timing/Watch.h"
 
+#include "tarch/logging/Statistics.h"
+
 
 tarch::logging::Log peano4::parallel::SpacetreeSet::_log( "peano4::parallel::SpacetreeSet" );
 
@@ -573,8 +575,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   exchangeHorizontalDataBetweenTrees(observer);
 
   dataExchangeTime.stop();
-
-  logInfo( "traverse(TraversalObserver&)", "wait for MPI messages for " << dataExchangeTime.getCPUTime() << "s" );
+  tarch::logging::Statistics::getInstance().log( "mpi wait times", dataExchangeTime.getCPUTime() );
 
   _state = SpacetreeSetState::Waiting;
 

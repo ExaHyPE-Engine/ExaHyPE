@@ -28,6 +28,7 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
+#include "exahype2/SmartEnclaveTask.h"
 
 
 
@@ -148,7 +149,7 @@ bool selectNextAlgorithmicStep() {{
       addGridSweepWithoutGridRefinementNext           = true;
     }}
     else {{
-      if (repositories::loadBalancer.hasSplitRecently() and peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>=maxNumberOfLocalSpacetrees) {{
+      if (repositories::loadBalancer.hasSplitRecently() and static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size())>=maxNumberOfLocalSpacetrees) {{
         logInfo( "selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement (former max tree count " << maxNumberOfLocalSpacetrees << ", current count " << peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() << ")" );
         addGridSweepWithoutGridRefinementNext = true;
       }} 
@@ -313,7 +314,9 @@ int main(int argc, char** argv) {{
   
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
+  exahype2::initSmartMPI();
   peano4::fillLookupTables();
+ 
   
   peano4::initSingletons(
     DomainOffset,
@@ -350,6 +353,8 @@ int main(int argc, char** argv) {{
   delete peanoTarchTests;
   #endif
 
+  repositories::startSimulation();
+
   tarch::logging::Statistics::getInstance().clear();
 
   #if defined(SharedOMP)
@@ -384,6 +389,7 @@ int main(int argc, char** argv) {{
 
   peano4::shutdownSingletons();
   {FULL_NAMESPACE}::repositories::DataRepository::shutdownDatatypes();
+  exahype2::shutdownSmartMPI();
   exahype2::shutdownNonCritialAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 

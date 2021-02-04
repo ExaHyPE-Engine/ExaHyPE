@@ -1209,45 +1209,6 @@ namespace exahype2 {
     #pragma omp end declare target
     #endif
 
-
-
-
-
-    /**
-     * 1d Riemann accepting a flux and eigenvalue function.
-     */
-    void splitRusanov1d(
-      std::function< void(
-        const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double * __restrict__ F
-      ) >   flux,
-      std::function< double(
-        const double * __restrict__ Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) >   eigenvalues,
-      const double * __restrict__ QL,
-      const double * __restrict__ QR,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       dx,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      int                                          unknowns,
-      int                                          auxiliaryVariables,
-      double * __restrict__ FL,
-      double * __restrict__ FR
-    );
-
-
     /**
      * Extension of standard Rusanov1d. This one also supports non-conservative fluxes.
      */
@@ -1288,8 +1249,10 @@ namespace exahype2 {
       int                                          normal,
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      double * __restrict__ FL,
-      double * __restrict__ FR
+      double * __restrict__     FL,
+      double * __restrict__     FR,
+      bool skipFluxEvaluation   = false,
+      bool skipNCPEvaluation    = false
     );
   }
 }

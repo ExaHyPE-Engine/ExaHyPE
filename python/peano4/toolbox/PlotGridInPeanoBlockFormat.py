@@ -5,7 +5,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 class PlotGridInPeanoBlockFormat(ActionSet):
-  def __init__(self,filename,cell_unknown):
+  def __init__(self, filename, cell_unknown, guard_predicate="true", additional_includes=""):
     """
       Plot only the grid structure
       
@@ -26,6 +26,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     self.d[ "CELL_WRAPPER" ] = "Cell"
     if cell_unknown!=None:
       self.d[ "CELL_WRAPPER" ] += cell_unknown.name
+    self.d[ "GUARD_PREDICATE" ]    = guard_predicate
+    self.additional_includes       = additional_includes
     
 
   __Template_Constructor = """
@@ -74,6 +76,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
 
   __Template_TouchCellFirstTime = """ 
+  if ( {GUARD_PREDICATE} ) {{
   int vertexIndices[TwoPowerD];
 
   int indices = _writer->plotPatch(
@@ -89,6 +92,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     marker.isEnclaveCell() ? 1.0 : 0.0
   }};
  _dataWriter->plotCell(indices,markerData);
+ }}
 """
 
 
@@ -160,4 +164,5 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/mpi/Lock.h"
 #include "peano4/parallel/SpacetreeSet.h"
-"""
+""" + self.additional_includes
+

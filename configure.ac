@@ -463,7 +463,7 @@ AC_ARG_WITH(smartmpi,
   [ AC_MSG_CHECKING(for smartmpi)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    smartmpi=false ;;
-      *)     AC_MSG_RESULT(yes);   smartmpi=true  ;;
+      *)     AC_MSG_RESULT(yes - please ensure that CXXFLAGS and LDFLAGS are properly set);   smartmpi=true  ;;
     esac ],
   [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
 AM_CONDITIONAL([UseSmartMPI],[test "x$smartmpi" = xtrue])
@@ -486,7 +486,7 @@ AC_ARG_WITH(delta,
   [ AC_MSG_CHECKING(for delta)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);                                 delta=false ;;
-      *)     AC_MSG_RESULT(build against Delta installation - please ensure that CXXFLAGS and LDFLAGS are properly set);  delta=${withval}  ;;
+      *)     AC_MSG_RESULT(yes - please ensure that CXXFLAGS and LDFLAGS are properly set);  delta=${withval}  ;;
     esac ],
   [ AC_MSG_CHECKING(for delta); AC_MSG_RESULT(no); delta=false ])
 # This whole autotools thing is not very nice: If I wanna use an if ... endif (
@@ -512,7 +512,7 @@ AC_OUTPUT(
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile
-  src/unittests/Makefile 
   src/smartmpi/Makefile
+  src/unittests/Makefile
 )
 
