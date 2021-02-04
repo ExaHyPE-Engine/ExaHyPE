@@ -6,6 +6,7 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/Tasks.h"
+#include "tarch/multicore/BooleanSemaphore.h"
 
 
 #include <functional>
@@ -77,6 +78,8 @@ class peano4::parallel::Tasks {
     };
   private:
     static tarch::logging::Log  _log;
+    static tarch::multicore::BooleanSemaphore _tasksema;
+      
 
     static int                  _locationCounter;
 

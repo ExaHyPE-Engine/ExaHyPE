@@ -3,15 +3,23 @@
 
 #include "tarch/Assertions.h"
 #include "tarch/multicore/Tasks.h"
+#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/BooleanSemaphore.h"
 
 
 tarch::logging::Log  peano4::parallel::Tasks::_log( "peano4::parallel::Tasks" );
 int                  peano4::parallel::Tasks::_locationCounter(0);
 
+tarch::multicore::BooleanSemaphore peano4::parallel::Tasks::_tasksema;
+
 
 int peano4::parallel::Tasks::getLocationIdentifier(const std::string&  trace) {
   logTraceInWith1Argument( "getLocationIdentifier(trace)", trace );
+
+  tarch::multicore::Lock myLock( _tasksema );
   _locationCounter++;
+  myLock.free();
+
   logTraceOutWith1Argument( "getLocationIdentifier(trace)", (_locationCounter-1) );
   return _locationCounter-1;
 }

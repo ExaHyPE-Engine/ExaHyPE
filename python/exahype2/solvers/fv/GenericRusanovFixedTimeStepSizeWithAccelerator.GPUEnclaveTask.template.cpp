@@ -1,4 +1,5 @@
 #include "{{CLASSNAME}}.h"
+#include "tarch/multicore/Lock.h"
 #include "tarch/multicore/Core.h"
 
 #include <algorithm>
@@ -10,8 +11,14 @@
 #endif
 
 
+tarch::multicore::BooleanSemaphore {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchsema;
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 
+#if Dimensions==2
+std::vector<std::tuple<double*, const double, int, double, double, double, double> > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchkeeper;
+#elif Dimensions==3
+std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchkeeper;
+#endif
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(double* __restrict__  reconstructedPatch, const ::peano4::datamanagement::CellMarker& marker, double* __restrict__  targetPatch) {
   #if Dimensions==2
@@ -108,66 +115,72 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
   const ::peano4::datamanagement::CellMarker&    marker,
   double* __restrict__                           reconstructedPatch
 ):
-  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority),
-  _marker(marker),
-  _reconstructedPatch(reconstructedPatch) {
+  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority)
+{
   logTraceIn( "EnclaveTask(...)" );
   logTraceOut( "EnclaveTask(...)" );
 
   const double timeStamp = repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp();
-
-#ifdef UseNVIDIA
-  nvtxRangePushA("copyPatch");
-#endif
-
-// Note that copyPatch and the Rusanov function do have their own omp target region
-#pragma omp target enter data map(alloc:_destinationPatch[0:_destinationPatchSize]) map(to:reconstructedPatch[0:_sourcePatchSize])
-  ::exahype2::fv::copyPatch(
-    reconstructedPatch,
-    _destinationPatch,
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    1 // halo size
-  );
-#ifdef UseNVIDIA
-  nvtxRangePop();
-  nvtxRangePushA("Rusanov");
-#endif
+  tarch::multicore::Lock myLock( _patchsema );
 #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
+  _patchkeeper.push_back({reconstructedPatch, timeStamp, getTaskId(), marker.x()[0], marker.h()[0], marker.x()[1], marker.h()[1]});
 #elif Dimensions==3
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>(
+  _patchkeeper.push_back({reconstructedPatch, timeStamp, getTaskId(), marker.x()[0], marker.h()[0], marker.x()[1], marker.h()[1], marker.x()[2] , marker.h()[2]});
 #endif
-    _marker.x(),
-    _marker.h(),
-    timeStamp,
-    {{TIME_STEP_SIZE}},
-    reconstructedPatch,
-    _destinationPatch
-    );
-
-#ifdef UseNVIDIA
-  nvtxRangePop();
-#endif
+  myLock.free();
 }
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
+{
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
+  tarch::multicore::Lock myLock( _patchsema );
+  const int Nremain = _patchkeeper.size();
+  const int Nmax = {{NGRABMAX}}; // This needs to be a template argument --- this (among other things) depends on the patchsize and the machine so GPU memory needs to be taken into account
 
-  double * reconstructedPatch = _reconstructedPatch; // Fixes omp restrictions
+#if Dimensions==2
+   std::vector<std::tuple<double*, const double, int, double, double, double, double> > localwork;
+#elif Dimensions==3
+   std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > localwork;
+#endif
 
-#pragma omp target exit data map(from:_destinationPatch[0:_destinationPatchSize]) map(delete:reconstructedPatch[0:_sourcePatchSize])
 
-  // get stuff explicitly back from GPU, as it will be stored
-  // locally for a while
-  double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-  std::copy_n(_destinationPatch,_destinationPatchSize,destinationPatchOnCPU);
+  if (Nmax==0)  localwork = std::move(_patchkeeper);
+  else
+  {
+     if (_patchkeeper.size()>0)
+     {
+        const int maxwork = std::min(Nremain, Nmax); // Don't request more work than there is
+        for (int i=1;i<maxwork+1;i++)
+        {
+           localwork.push_back(_patchkeeper[Nremain-i]);
+        }
+        _patchkeeper.resize(Nremain-maxwork);
+     }
+  }
+  myLock.free();
 
-  {{FREE_SKELETON_MEMORY}}
+  if (localwork.size() >0)
+  {
+     double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize*localwork.size(), ::tarch::MemoryLocation::Heap);
+#if Dimensions==2
+        ::exahype2::fv::Fusanov_2D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
+#elif Dimensions==3
+        ::exahype2::fv::Fusanov_3D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
+#endif
+           (1,{{TIME_STEP_SIZE}},  localwork, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize);
 
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,destinationPatchOnCPU);
+     for (int i=0;i<localwork.size();i++)
+     {
+        const int taskid = std::get<2>(localwork[i]);
+        double* outpatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
+        std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, outpatch);
+        ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, outpatch);
+        ::tarch::freeMemory(std::get<0>(localwork[i]), ::tarch::MemoryLocation::Heap);
+     }
+     ::tarch::freeMemory(destinationPatchOnCPU, ::tarch::MemoryLocation::Heap);
+  }
+
   logTraceOut( "run()" );
   return false;
 }
