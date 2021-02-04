@@ -164,9 +164,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
   {
      double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize*localwork.size(), ::tarch::MemoryLocation::Heap);
 #if Dimensions==2
-        ::exahype2::fv::Fusanov_2D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>
+        ::exahype2::fv::Fusanov_2D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
 #elif Dimensions==3
-        ::exahype2::fv::Fusanov_3D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>
+        ::exahype2::fv::Fusanov_3D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
 #endif
            (1,{{TIME_STEP_SIZE}},  localwork, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize);
 
@@ -184,70 +184,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
   logTraceOut( "run()" );
   return false;
 }
-
-//bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
-//{
-  //logTraceIn( "run()" );
-  //tarch::multicore::Lock myLock( _patchsema );
-  //auto localwork = std::move(_patchkeeper);
-  ////myLock.free();
-  //if (localwork.size()==0) abort();
- 
-  //for (auto lw : localwork)
-  //{
-     //double * reconstructedPatch = std::get<0>(lw);
-     //double            timeStamp = std::get<1>(lw);
-     //int                  taskId = std::get<2>(lw);
-     //double x0 = std::get<3>(lw);
-     //double h0 = std::get<4>(lw);
-     //double x1 = std::get<5>(lw);
-     //double h1 = std::get<6>(lw);
-//#if Dimensions==3
-     //double x2 = std::get<7>(lw);
-     //double h2 = std::get<8>(lw);
-//# endif
-
-
-     //double destinationPatch[_destinationPatchSize];
-
-//#pragma omp target enter data map(alloc:destinationPatch[0:_destinationPatchSize]) map(to:reconstructedPatch[0:_sourcePatchSize])
-  
-//#ifdef UseNVIDIA
-     //nvtxRangePop();
-     //nvtxRangePushA("Rusanov");
-//#endif
-
-//#if Dimensions==2
-     ////::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>
-     //::exahype2::fv::Fusanov_2D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>
-        //({x0,x1}, {h0,h1}, 1,
-//#elif Dimensions==3
-     //::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop_Rusanov<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},EulerOnGPU>
-        //({x0,x1,x2}, {h0,h1,h2},
-//#endif
-        //timeStamp,
-       //{{TIME_STEP_SIZE}},
-        //reconstructedPatch,
-        //destinationPatch
-        //);
-//#ifdef UseNVIDIA
-        //nvtxRangePop();
-//#endif
-//#pragma omp target exit data map(from:destinationPatch[0:_destinationPatchSize]) map(delete:reconstructedPatch[0:_sourcePatchSize])
-        //::tarch::freeMemory(reconstructedPatch, ::tarch::MemoryLocation::Heap);
-
-        //// get stuff explicitly back from GPU, as it will be stored
-        //// locally for a while
-        //double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-        //std::copy_n(destinationPatch,_destinationPatchSize,destinationPatchOnCPU);
-
-        //::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,destinationPatchOnCPU);
-  //}
-
-
-  //logTraceOut( "run()" );
-  //return false;
-//}
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::prefetch() {
