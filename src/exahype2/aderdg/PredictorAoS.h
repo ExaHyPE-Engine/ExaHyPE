@@ -279,12 +279,12 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
-      double * __restrict__       QHullOut[Dimensions*2],
+      double * __restrict__             QHullOut[Dimensions*2],
       const double * const __restrict__ QIn,
-      const int                   nodesPerAxis,
-      const int                   strideQLR,
-      const int                   strideQ,
-      const int                   scalarIndexHull);
+      const int                         nodesPerAxis,
+      const int                         strideQLR,
+      const int                         strideQ,
+      const int                         scalarIndexHull);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -304,12 +304,12 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     void spaceTimePredictor_extrapolateInTime_body_AoS(
-      double * __restrict__       UOut,
+      double * __restrict__             UOut,
       const double * const __restrict__ QIn,
       const double * const __restrict__ FRCoeff,
-      const double                nodesPerAxis,
-      const int                   strideQ,
-      const int                   scalarIndexCell);
+      const double                      nodesPerAxis,
+      const int                         strideQ,
+      const int                         scalarIndexCell);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -331,12 +331,12 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     void spaceTimePredictor_extrapolateInTime_Lobatto_body_AoS(
-      double * __restrict__       UOut,
+      double * __restrict__             UOut,
       const double * const __restrict__ QIn,
       const double * const __restrict__ FRCoeff,
-      const double                nodesPerAxis,
-      const int                   strideQ,
-      const int                   scalarIndexCell);
+      const double                      nodesPerAxis,
+      const int                         strideQ,
+      const int                         scalarIndexCell);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -473,12 +473,12 @@ namespace exahype2 {
      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */
     void spaceTimePredictor_extrapolateInTime_loop_AoS(
-      double * __restrict__       UOut,
+      double * __restrict__             UOut,
       const double * const __restrict__ QIn,
       const double * const __restrict__ FRCoeff,
-      const int                   order,
-      const int                   unknowns,
-      const int                   auxiliaryVariables);
+      const int                         order,
+      const int                         unknowns,
+      const int                         auxiliaryVariables);
     
     /** 
      * @brief Extrapolates the predictor to t+dt. 
@@ -497,12 +497,12 @@ namespace exahype2 {
      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */
     void spaceTimePredictor_extrapolateInTime_Lobatto_loop_AoS(
-      double * __restrict__       UOut,
+      double * __restrict__             UOut,
       const double * const __restrict__ QIn,
       const double * const __restrict__ FRCoeff,
-      const int                   order,
-      const int                   unknowns,
-      const int                   auxiliaryVariables);
+      const int                         order,
+      const int                         unknowns,
+      const int                         auxiliaryVariables);
 
   } // aderdg
 } // exahype2

@@ -45,13 +45,13 @@ GPUCallableMethod void exahype2::aderdg::riemann_setBoundaryState_body_AoS(
 #endif
 GPUCallableMethod double exahype2::aderdg::riemann_maxAbsoluteEigenvalue_body_AoS(
   std::function< double(
-    const double * const __restrict__                 Q,
+    const double * const __restrict__           Q,
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     const int                                   normal
   ) >                                         maxAbsoluteEigenvalue,
-  const double * const __restrict__                 QLR,
-  const double * const __restrict__                 nodes,
+  const double * const __restrict__           QLR,
+  const double * const __restrict__           nodes,
   const tarch::la::Vector<Dimensions,double>& faceCentre,
   const double                                dx,
   const double                                t,
@@ -146,7 +146,7 @@ void exahype2::aderdg::riemann_maxAbsoluteEigenvalue_loop_AoS(
   ) >                                         maxAbsoluteEigenvalue,
   double                                      maxEigenvaluePerFaceOut[Dimensions*2],
   double * const                              QHullIn[Dimensions*2],
-  const double * const __restrict__                 nodes,
+  const double * const __restrict__           nodes,
   const tarch::la::Vector<Dimensions,double>& cellCentre,
   const double                                dx,
   const double                                t,
