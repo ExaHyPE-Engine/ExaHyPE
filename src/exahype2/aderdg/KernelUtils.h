@@ -3,6 +3,9 @@
 
 #include "tarch/la/Vector.h"
 
+#define FLCoeff(i) FLCoeff[i]
+#define FRCoeff(i) FLCoeff[nodesPerAxis-1-i]
+
 namespace exahype2 {
   namespace aderdg {
 

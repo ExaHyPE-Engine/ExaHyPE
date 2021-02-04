@@ -335,7 +335,6 @@ class UpdateCell(AbstractADERDGActionSet):
             riemannResult,
             repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
             repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,  // FLCoeff,
-            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight, // FLCoeff,
             marker.h()(0),                                              //  dx,
             repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
             {{ORDER}}, 

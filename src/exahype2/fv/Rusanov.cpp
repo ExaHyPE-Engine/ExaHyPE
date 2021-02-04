@@ -99,9 +99,8 @@ void exahype2::fv::splitRusanov1d(
     if (not skipNCPEvaluation) {
       FL[unknown] += + 0.5 * fluxNCP[unknown];
       FR[unknown] += - 0.5 * fluxNCP[unknown];
+      nonCriticalAssertion7( fluxNCP[unknown]==fluxNCP[unknown], x, dx, t, dt, normal, lambdaMaxL, lambdaMaxR );
     }
-
-    nonCriticalAssertion7( fluxNCP[unknown]==fluxNCP[unknown], x, dx, t, dt, normal, lambdaMaxL, lambdaMaxR );
   }
 
   if (not skipFluxEvaluation) {
