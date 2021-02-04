@@ -197,7 +197,7 @@ GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_
   double * __restrict__             UOut,
   const double * const __restrict__ riemannResultIn,
   const double * const __restrict__ weights,
-  const double * const __restrict__ FLRCoeff[2],
+  const double * const __restrict__ FLCoeff,
   const double                      dx,
   const double                      dt,
   const int                         nodesPerAxis,
@@ -208,17 +208,20 @@ GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_
   const tarch::la::Vector<Dimensions+1,int> index = 
     delineariseIndex(scalarIndexCell,getStrides(nodesPerAxis,false));
   
-  const double invDx = 1.0/dx;
-  const double coeff0 = dt * invDx/*[d]*/;
+  const double coeff0 = dt / dx/*[d]*/;
   for (int d=0; d < Dimensions; d++) { // direction
     const double coeff1  = coeff0 / weights[index[d+1]];
     
-    const double coeff_L = coeff1 * FLRCoeff[0][index[d+1]];
-    const double coeff_R = coeff1 * FLRCoeff[1][index[d+1]];
+    const double coeff_L = coeff1 * FLCoeff[index[d+1]];
+    const double coeff_R = coeff1 * FLCoeff[nodesPerAxis-1 - index[d+1]]; // FR is mirrored FL thanks to symmetric distrib. of nodes in [0,1]
+    //const double coeff_R = coeff1 * FRCoeff[index[d+1]];
     
     const int scalarIndexHull_L = mapCellIndexToScalarHullIndex(index,d,0,nodesPerAxis);
-    const int scalarIndexHull_R = mapCellIndexToScalarHullIndex(index,d,1,nodesPerAxis);
+    const int scalarIndexHull_R = mapCellIndexToScalarHullIndex(index,d,1,nodesPerAxis); 
+    // if the boundary data is symmetric, the contributions should cancel
     // "left" minus "right" flux
+    std::cout << "scalarIndexHull_L=" << scalarIndexHull_L << std::endl;
+    std::cout << "scalarIndexHull_R=" << scalarIndexHull_R << std::endl;
     for (int var=0; var < unknowns; var++) {
       UOut[ scalarIndexCell*strideQ + var ] += coeff_L * riemannResultIn[ scalarIndexHull_L*strideF + var ]; 
     }
@@ -364,31 +367,28 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
 }
 
 void exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
-  double * __restrict__       UOut,
+  double * __restrict__             UOut,
   const double * const __restrict__ riemannResultIn,
   const double * const __restrict__ weights,
   const double * const __restrict__ FLCoeff,
-  const double * const __restrict__ FRCoeff,
-  const double                dx,
-  const double                dt,
-  const int                   order,
-  const int                   unknowns,
-  const int                   auxiliaryVariables) {
+  const double                      dx,
+  const double                      dt,
+  const int                         order,
+  const int                         unknowns,
+  const int                         auxiliaryVariables) {
   const int nodesPerAxis = order+1;
 
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
   
   const int strideQ = unknowns+auxiliaryVariables;
   const int strideF = unknowns;
-  
-  const double* FLRCoeff[2] = {FLCoeff, FRCoeff};
  
   for ( int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
     corrector_addRiemannContributions_body_AoS(
       UOut,
       riemannResultIn,
       weights,
-      FLRCoeff,
+      FLCoeff,
       dx,
       dt,
       nodesPerAxis,
