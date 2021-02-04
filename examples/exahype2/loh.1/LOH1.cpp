@@ -30,20 +30,25 @@ void examples::exahype2::loh1::LOH1::prescribeGaussianWave(
 ) {
   double center_curve[3];
 
-  center_curve[0] = 15.0;
-  center_curve[1] = 15.0;
-  center_curve[2] = 15.0;    
+  center_curve[0] = 0.0;
+  center_curve[1] = 0.0;
+  center_curve[2] = 2.0;
 
-  double rho = 2.67;
-  double cp  = 6.0;
-  double cs  = 3.343;
+  bool upperLayer = x(2) < 1.0;
   
+  //double rho = upperLayer ? 2.67   : 2.6;
+  //double cp  = upperLayer ? 6.0    : 4.0;
+  //double cs  = upperLayer ? 3.343  : 2.0;
+  double rho = upperLayer ? 4.0 : 6.0;
+  double cp  = upperLayer ? 2.0 : 3.464;
+  double cs  = upperLayer ? 2.6 : 2.7;
+
   Q[s.rho  ] = rho;
   Q[s.cp   ] = cp;
   Q[s.cs   ] = cs;
   Q[s.alpha] = 1.0;
 
-  double radius = 3.0 ;
+  double radius = 0.1 ;
   //double height = 3.0;
   
   Q[ s.v + 0 ] = std::exp(-((x[0]-center_curve[0])*(x[0]-center_curve[0])+
