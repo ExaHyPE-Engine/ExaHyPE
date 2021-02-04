@@ -51,6 +51,9 @@ namespace exahype2 {
         const bool                                  callFlux,
         const bool                                  callNonconservativeProduct,
         const int                                   scalarIndexFace);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
    
     // launchers
     /**
