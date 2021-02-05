@@ -123,6 +123,11 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     implementationDictionary["NGRABMAX"] = self.ngrabmax_
 
     task_name = self._GPU_enclave_task_name()
+
+    # Bit of a hack so we can easily instantiate templates
+    implementationDictionary["SKIP_NCP"]  = "true" if implementationDictionary["NCP_IMPLEMENTATION"]  == "<none>" else "false"
+    implementationDictionary["SKIP_FLUX"] = "true" if implementationDictionary["FLUX_IMPLEMENTATION"] == "<none>" else "false"
+
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".GPUEnclaveTask.template.h",
       templatefile_prefix + ".GPUEnclaveTask.template.cpp",
