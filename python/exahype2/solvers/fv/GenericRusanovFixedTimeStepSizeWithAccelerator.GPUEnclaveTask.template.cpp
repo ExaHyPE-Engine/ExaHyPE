@@ -80,7 +80,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
         QL, QR, x, dx, t, dt, normal,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        FL,FR
+        FL,FR,
+       {{SKIP_FLUX}},
+       {{SKIP_NCP}}
       );
     },
     [] (
@@ -168,7 +170,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
 #elif Dimensions==3
         ::exahype2::fv::Fusanov_3D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
 #endif
-           (1,{{TIME_STEP_SIZE}},  localwork, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize);
+           (1,{{TIME_STEP_SIZE}},  localwork, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize, {{SKIP_FLUX}}, {{SKIP_NCP}});
 
      for (int i=0;i<localwork.size();i++)
      {
