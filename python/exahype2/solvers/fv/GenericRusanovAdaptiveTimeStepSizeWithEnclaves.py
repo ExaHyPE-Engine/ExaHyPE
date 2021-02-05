@@ -59,14 +59,16 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = """
-    ::exahype2::fv::validatePatch(
+  ::exahype2::fv::validatePatch(
       reconstructedPatch,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       1, // halo
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // previous time step has to be valid
+  ); // previous time step has to be valid
+  
+  {{PREPROCESS_RECONSTRUCTED_PATCH}}
   
   if (marker.isSkeletonCell()) {
     {% if USE_SPLIT_LOOP %}
@@ -469,6 +471,7 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     self._use_split_loop                      = False
 
     self._time_step_relaxation                = time_step_relaxation
+    self._preprocess_reconstructed_patch      = ""
 
     initialisation_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
@@ -644,6 +647,8 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.EnclaveLabels.get_attribute_name(self._name)
+
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]      = self._preprocess_reconstructed_patch
 
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "FREE_SKELETON_MEMORY" ] = "delete[] reconstructedPatch;"

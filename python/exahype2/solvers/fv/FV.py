@@ -269,6 +269,18 @@ class FV(object):
     are unset by default. If you need some data exchange, you have to activate
     them manually.
     
+    
+    Attributes:
+    
+    _solver_template_file_class_name: String or None
+      Set it to None to make the solver search for a template with the name of the
+      solver. Set it to a string to use a particular template. That is, if you 
+      create your own, user-defined solver, you will have to alter this thing 
+      manually. Most users add something like:
+      
+        self._solver_template_file_class_name = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves.__name__
+
+    
   """
   
       
@@ -356,6 +368,8 @@ class FV(object):
 
     self._patch_overlap_new.generator.store_persistent_condition   = "false"
     self._patch_overlap_new.generator.load_persistent_condition    = "false"
+
+    self._solver_template_file_class_name = None
 
     self._patch.generator.includes  += """
 #include "../repositories/SolverRepository.h"
@@ -532,7 +546,12 @@ class FV(object):
      output: peano4.output.Output
       
     """
-    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
+    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" 
+
+    if self._solver_template_file_class_name == None:
+      templatefile_prefix += self.__class__.__name__
+    else:
+      templatefile_prefix += self._solver_template_file_class_name
     
     abstractHeaderDictionary = {}
     implementationDictionary = {}
