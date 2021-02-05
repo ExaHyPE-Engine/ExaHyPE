@@ -33,7 +33,8 @@ class PerformanceData(object):
     self.total_plotting_steps      = 0
 
     self._start_time_step_time_stamp = []
-    self.plotting_time_stamp  = []
+    self.plotting_time_stamp         = []
+    self.time_step_size              = []
 
     self._number_of_time_steps = 0
     
@@ -150,6 +151,9 @@ class PerformanceData(object):
         
         if "run" in line and "TimeStep" in line and "rank:0" in line:
           self._number_of_time_steps += 1
+
+        if "dt_{min}" in line:
+          self.time_step_size.append( float( line.split("=")[-1]) )
 
 
         if "finest mesh resolution of" in line:
