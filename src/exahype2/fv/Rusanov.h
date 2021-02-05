@@ -30,7 +30,7 @@ namespace exahype2 {
       int                                          sourcePatchSize,
       int                                          destPatchSize,
       bool                                         skipFluxEvaluation=false,
-      bool                                         skipNCPEvaluation=true
+      bool                                         skipNCPEvaluation=false
     )
     {
       const size_t NPT  = patchVec.size();
