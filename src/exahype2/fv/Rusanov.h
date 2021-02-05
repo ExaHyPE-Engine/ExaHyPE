@@ -28,7 +28,9 @@ namespace exahype2 {
       std::vector<std::tuple<double*, const double, int, double, double, double, double> > patchVec,
       double * __restrict__                        Qout,
       int                                          sourcePatchSize,
-      int                                          destPatchSize
+      int                                          destPatchSize,
+      bool                                         skipFluxEvaluation=false,
+      bool                                         skipNCPEvaluation=true
     )
     {
       const size_t NPT  = patchVec.size();
@@ -139,28 +141,46 @@ namespace exahype2 {
               auto dx = volumeH(0);
               int normal = 0;
 
-              double fluxFL[unknowns];
-              double fluxFR[unknowns];
+              double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
+              
+              if (not skipFluxEvaluation)
+              {
+                SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+                SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+              }
 
-              // The arguments don't make any sense
-              SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
-              SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+              if (not skipNCPEvaluation)
+              {
+                double Qaverage[unknowns+auxiliaryVariables];
+                double deltaQ[unknowns+auxiliaryVariables];
+
+                for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++)
+                {
+                  Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
+                  deltaQ[unknown]   = QR[unknown] - QL[unknown];
+                }
+                SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP);
+              }
 
               double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
               double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
-
               double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+
 
               for (int unknown = 0; unknown < unknowns; unknown++)
               {
                 if (x > 0)
                 {
-                  double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+                  if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
                   destinationPatch[pidx*destPatchSize + leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown]  -= dt / volumeH (0) * fl;
                 }
                 if (x < numVPAIP)
                 {
-                  double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown]; 
+                  if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
                   destinationPatch[pidx*destPatchSize + rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
                 }
               }
@@ -168,7 +188,7 @@ namespace exahype2 {
           }
         }
 
-         ////Iterate over other normal
+         //////Iterate over other normal
         for (int shift = 0; shift < 2; shift++)
         {
           #ifdef SharedOMP
@@ -199,11 +219,26 @@ namespace exahype2 {
               auto dx = volumeH(0);
               int normal = 1;
 
-              double fluxFL[unknowns];
-              double fluxFR[unknowns];
+              double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
-              SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
-              SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+              if (not skipFluxEvaluation)
+              {
+                SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+                SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+              }
+              
+              if (not skipNCPEvaluation)
+              {
+                double Qaverage[unknowns+auxiliaryVariables];
+                double deltaQ[unknowns+auxiliaryVariables];
+
+                for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++)
+                {
+                  Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
+                  deltaQ[unknown]   = QR[unknown] - QL[unknown];
+                }
+                SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP);
+              }
 
               double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
               double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
@@ -213,12 +248,16 @@ namespace exahype2 {
               {
                 if (y > 0)
                 {
-                  double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+                  if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
                   destinationPatch[pidx*destPatchSize + lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
                 }
                 if (y < numVPAIP)
                 {
-                  double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                  if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown]; 
+                  if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
                   destinationPatch[pidx*destPatchSize + upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
                 }
               }
@@ -246,7 +285,9 @@ namespace exahype2 {
       std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > patchVec,
       double * __restrict__                        Qout,
       int                                          sourcePatchSize,
-      int                                          destPatchSize
+      int                                          destPatchSize,
+      bool                                         skipFluxEvaluation=false,
+      bool                                         skipNCPEvaluation=true
     )
     {
       const size_t NPT  = patchVec.size();
@@ -375,11 +416,26 @@ namespace exahype2 {
                 auto dx = volumeH(0);
                 int normal = 0;
 
-                double fluxFL[unknowns];
-                double fluxFR[unknowns];
+                double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
-                SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
-                SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+                if (not skipFluxEvaluation)
+                {
+                  SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+                  SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+                }
+              
+                if (not skipNCPEvaluation)
+                {
+                  double Qaverage[unknowns+auxiliaryVariables];
+                  double deltaQ[unknowns+auxiliaryVariables];
+
+                  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++)
+                  {
+                    Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
+                    deltaQ[unknown]   = QR[unknown] - QL[unknown];
+                  }
+                  SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP);
+                }
 
                 double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
                 double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
@@ -389,12 +445,16 @@ namespace exahype2 {
                 {
                   if (x > 0)
                   {
-                    double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+                    if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
                     destinationPatch[pidx*destPatchSize + leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown]  -= dt / volumeH (0) * fl;
                   }
                   if (x < numVPAIP)
                   {
-                    double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown]; 
+                    if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
                     destinationPatch[pidx*destPatchSize + rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
                   }
                 }
@@ -435,11 +495,26 @@ namespace exahype2 {
                 auto dx = volumeH(0);
                 int normal = 1;
 
-                double fluxFL[unknowns];
-                double fluxFR[unknowns];
+                double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
-                SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
-                SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+                if (not skipFluxEvaluation)
+                {
+                  SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+                  SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+                }
+              
+                if (not skipNCPEvaluation)
+                {
+                  double Qaverage[unknowns+auxiliaryVariables];
+                  double deltaQ[unknowns+auxiliaryVariables];
+
+                  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++)
+                  {
+                    Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
+                    deltaQ[unknown]   = QR[unknown] - QL[unknown];
+                  }
+                  SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP);
+                }
 
                 double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
                 double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
@@ -450,12 +525,16 @@ namespace exahype2 {
                 {
                   if (y > 0)
                   {
-                    double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+                    if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
                     destinationPatch[pidx*destPatchSize + lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
                   }
                   if (y < numVPAIP)
                   {
-                    double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown]; 
+                    if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
                     destinationPatch[pidx*destPatchSize + upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
                   }
                 }
@@ -496,11 +575,26 @@ namespace exahype2 {
                 auto dx = volumeH(0);
                 int normal = 2;
 
-                double fluxFL[unknowns];
-                double fluxFR[unknowns];
+                double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
-                SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
-                SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+                if (not skipFluxEvaluation)
+                {
+                  SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
+                  SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+                }
+              
+                if (not skipNCPEvaluation)
+                {
+                  double Qaverage[unknowns+auxiliaryVariables];
+                  double deltaQ[unknowns+auxiliaryVariables];
+
+                  for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++)
+                  {
+                    Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
+                    deltaQ[unknown]   = QR[unknown] - QL[unknown];
+                  }
+                  SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP);
+                }
 
                 double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
                 double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
@@ -511,12 +605,16 @@ namespace exahype2 {
                 {
                   if (z > 0)
                   {
-                    double fl = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+                    if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
                     destinationPatch[pidx*destPatchSize + lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
                   }
                   if (z < numVPAIP)
                   {
-                    double fr = 0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown] - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+                    if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown]; 
+                    if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
                     destinationPatch[pidx*destPatchSize + upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
                   }
                 }
