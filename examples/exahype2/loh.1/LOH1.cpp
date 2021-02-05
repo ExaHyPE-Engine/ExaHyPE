@@ -34,7 +34,10 @@ void examples::exahype2::loh1::LOH1::prescribeGaussianWave(
   center_curve[1] = 0.0;
   center_curve[2] = 2.0;
 
-  bool upperLayer = x(2) < 1.0;
+  // 1.0 is the parameter from the setup, but we need at least one voxel
+  bool layerWidth = std::max( getMinMeshSize() / _NumberOfFiniteVolumesPerAxisPerPatch, 1.0 );
+
+  bool upperLayer = x(2) <= layerWidth;
   
   //double rho = upperLayer ? 2.67   : 2.6;
   //double cp  = upperLayer ? 6.0    : 4.0;
@@ -48,7 +51,7 @@ void examples::exahype2::loh1::LOH1::prescribeGaussianWave(
   Q[s.cs   ] = cs;
   Q[s.alpha] = 1.0;
 
-  double radius = 0.1 ;
+  double radius = 2.0*layerWidth;
   //double height = 3.0;
   
   Q[ s.v + 0 ] = std::exp(-((x[0]-center_curve[0])*(x[0]-center_curve[0])+
