@@ -108,8 +108,8 @@ end_time = time_step_size * args.number_of_time_steps
 
 project.set_global_simulation_parameters(
   dimensions            = args.dim,
-  offset                = [0.0]*args.dim,
-  size                  = [30.0]*args.dim,
+  offset                = [-26,-26,0],
+  size                  = [ 58, 58, 58],
   end_time              = end_time,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = plot_interval
