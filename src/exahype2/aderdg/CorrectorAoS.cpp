@@ -66,8 +66,6 @@ GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS
   const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
   const tarch::la::Vector<Dimensions, double>   x( ( coords.data() + 1 ) );
 
-  std::cout << "scalarIndex=" << scalarIndex << std::endl;
-  std::cout << std::endl;
   const double invDx = 1.0/dx;
   for ( int d = 0; d < Dimensions; d++) { // direction
     const double coeff0 = dt * invDx/*[d]*/ / weights[index[d+1]];
@@ -80,11 +78,8 @@ GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS
         const double coeff = coeff1 * weights[it];
         
         const double* Q = &QIn[ (scalarIndexNeighbour*nodesPerAxis + it)*strideQ ];
-        //std::cout << "  scalarIndexNeighbour=" << scalarIndexNeighbour << std::endl;
-        //std::cout << "  Q[0]=" << Q[0] << std::endl;
         const double time = t + nodes[it] * dt; 
         flux( Q, x, time, d, FAux ); 
-        //std::cout << "  F[0]=" << FAux[0] << std::endl;
         for (int var=0; var < unknowns; var++) {
           UOut[ scalarIndex*strideQ + var ] += coeff * FAux[ var ];
         }
@@ -220,8 +215,6 @@ GPUCallableMethod void exahype2::aderdg::corrector_addRiemannContributions_body_
     const int scalarIndexHull_R = mapCellIndexToScalarHullIndex(index,d,1,nodesPerAxis); 
     // if the boundary data is symmetric, the contributions should cancel
     // "left" minus "right" flux
-    std::cout << "scalarIndexHull_L=" << scalarIndexHull_L << std::endl;
-    std::cout << "scalarIndexHull_R=" << scalarIndexHull_R << std::endl;
     for (int var=0; var < unknowns; var++) {
       UOut[ scalarIndexCell*strideQ + var ] += coeff_L * riemannResultIn[ scalarIndexHull_L*strideF + var ]; 
     }

@@ -32,7 +32,7 @@ exahype2::aderdg::tests::ADERDGTest::ADERDGTest():
   testEuler_QOut{
     1.00000000000000,  0.100000000000000, 0.200000000000000, 0.300000000000000, 2.57000000000000},
   testAdvection_UIn{
-    1.00000000000000,  1.000000000000000, 0.000000000000000, 0.000000000000000}
+    1.00000000000000,  1.000000000000000, 1.123456789000000, 0.987654321000000}
 {
 }
 
@@ -182,64 +182,65 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
     }
   }
   
-//  ::exahype2::aderdg::corrector_addCellContributions_loop_AoS(
-//    [&] (
-//      const double * const __restrict__           Q,
-//      const tarch::la::Vector<Dimensions,double>& x,
-//      double                                      t,
-//      int                                         direction,
-//      double * __restrict__                       F
-//    ) -> void {
-//      flux(Q,x,t,direction,F);
-//    },
-//    [&] (
-//      const double * const __restrict__           Q,
-//      const tarch::la::Vector<Dimensions,double>& x,
-//      double                                      t,
-//      double * __restrict__                       S
-//    ) -> void {
-//    },
-//    [&] (
-//      const double * const __restrict__           Q,
-//      double * __restrict__                       dQ_or_deltaQ,
-//      const tarch::la::Vector<Dimensions,double>& x,
-//      double                                      t,
-//      int                                         direction,
-//      double * __restrict__                       BgradQ
-//    ) -> void {
-//    },
-//    [&] (
-//      double * __restrict__                       Q,
-//      const tarch::la::Vector<Dimensions,double>& x,
-//      double                                      t
-//    ) -> void {
-//    },
-//    U,                                      // UOut,                               
-//    Q,                                      // QIn, 
-//    QuadraturePoints,                       // nodes,
-//    QuadratureWeights,                      // weights,
-//    StiffnessOperator,                      // Kxi,
-//    DerivativeOperator,                     // dudx, 
-//    x,                                      // cellCentre,
-//    dx,                                     // dx,
-//    t,                                      // t,
-//    dt,                                     // dt,
-//    order,                                  // order,
-//    unknowns,                               // unknowns,
-//    auxiliaryVariables,                     // auxiliaryVariables,
-//    true /*callFlux*/,                      // callFlux,
-//    false /*callSource*/,                   // callSource,
-//    false /*callNonconservativeProduct*/);  // callNonconservativeProduct) 
+  ::exahype2::aderdg::corrector_addCellContributions_loop_AoS(
+    [&] (
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                         direction,
+      double * __restrict__                       F
+    ) -> void {
+      flux(Q,x,t,direction,F);
+    },
+    [&] (
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      double * __restrict__                       S
+    ) -> void {
+    },
+    [&] (
+      const double * const __restrict__           Q,
+      double * __restrict__                       dQ_or_deltaQ,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                         direction,
+      double * __restrict__                       BgradQ
+    ) -> void {
+    },
+    [&] (
+      double * __restrict__                       Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t
+    ) -> void {
+    },
+    U,                                      // UOut,                               
+    Q,                                      // QIn, 
+    QuadraturePoints,                       // nodes,
+    QuadratureWeights,                      // weights,
+    StiffnessOperator,                      // Kxi,
+    DerivativeOperator,                     // dudx, 
+    x,                                      // cellCentre,
+    dx,                                     // dx,
+    t,                                      // t,
+    dt,                                     // dt,
+    order,                                  // order,
+    unknowns,                               // unknowns,
+    auxiliaryVariables,                     // auxiliaryVariables,
+    true /*callFlux*/,                      // callFlux,
+    false /*callSource*/,                   // callSource,
+    false /*callNonconservativeProduct*/);  // callNonconservativeProduct) 
 
-/*
-  ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lobatto_loop_AoS(
-    U,
-    Q,
-    BasisFunctionValuesRight,           // FRCoeff,
-    order,
-    unknowns,
-    auxiliaryVariables);
-*/  
+
+  // TODO Using simple extrpolation leads to wrong result
+  //::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
+  //  U,
+  //  Q,
+  //  BasisFunctionValuesRight,           // FRCoeff,
+  //  order,
+  //  unknowns,
+  //  auxiliaryVariables);
+  
 
   // print result
   if ( verbose ) {
@@ -407,7 +408,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
     for (int i = 0; i < nodesPerAxis2; i++) {
       for (int m=0; m < unknowns; m++) {
         const int i_U = i*unknowns  + m;
-        std::cout << std::setprecision(3) << U[i_U] << " ";
+        std::cout << std::setprecision(6) << U[i_U] << " ";
       }
       std::cout << "\n";
     }
@@ -416,8 +417,8 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
 }
 
 void exahype2::aderdg::tests::ADERDGTest::run() {
-  testMethod (testAdvection)
-  //testMethod (testEuler)
+  //testMethod (testAdvection)
+  testMethod (testEuler)
 }
 
 void exahype2::aderdg::tests::ADERDGTest::testAdvection() {
@@ -425,7 +426,7 @@ void exahype2::aderdg::tests::ADERDGTest::testAdvection() {
   const tarch::la::Vector<Dimensions, double> x({0.0, 0.0});
   const double dx = 1;
   const double t  = 0.0;
-  const double dt = 1;
+  const double dt = 0.001;
 
   const int unknowns           = 4;
   const int auxiliaryVariables = 0;
@@ -444,6 +445,9 @@ void exahype2::aderdg::tests::ADERDGTest::testAdvection() {
       const double irho = 1./Q[0];
       const double velocity = irho*Q[direction+1];
       F[0] = velocity*Q[0];
+      F[1] = 0.0;
+      F[2] = 0.0;
+      F[3] = 0.0;
     },
     [&] (
       const double * const __restrict__           Q,
