@@ -5,6 +5,9 @@
 
 #include "tarch/tests/TestCase.h"
 
+#include <functional>
+#include "tarch/la/Vector.h"
+
 namespace exahype2 {
   namespace aderdg {
     namespace tests {
@@ -36,13 +39,54 @@ private:
   /**
    * Test input/output data from ExaHyPE1.
    */
-  const double spaceTimePredictor_PicardLoop_UIn[80];
-  const double spaceTimePredictor_PicardLoop_QOut[320];
+  const double testEuler_UIn[5];
+  const double testEuler_QOut[5];
+  
+  const double testAdvection_UIn[4];
+
+  void runADERDGStep2d(
+    std::function< void(
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                         normal,
+      double * __restrict__                       F
+    ) >                                          flux,
+    std::function< double(
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                         normal
+    ) >                                          maxEigenvalue,
+    std::function< void(
+      const double* Q,
+      const int     i_Q,
+      const int     unknown
+    )>                                           validatePicardLoopResult,
+    const tarch::la::Vector<Dimensions, double>& x,
+    const double                                 dx,
+    const double                                 t,
+    const double                                 dt,
+    const int                                    unknowns,
+    const int                                    auxiliaryVariables,
+    const int                                    order,
+    const double*                                test_UIn,
+    const bool                                   verbose); 
 
   /**
-   * Tests ADER-DG Picard loop.
+   * Tests ADER-DG with linear advection flux and eigenvalues.
+   * We consider a simple PDE with a single variable, mass. 
+   * Advection is driven by a constant velocity field.
+   * The maximum eigenvalue equals the absolute value of
+   * the velocity.
+   * This is the most simple system with non-trivial flux.
    */
-  void test_spaceTimePredictor_PicardLoop_loop();
+  void testAdvection();
+  
+  /**
+   * Tests ADER-DG with Euler fluxes and eigenvalues.
+   */
+  void testEuler();
 
 public:
 
