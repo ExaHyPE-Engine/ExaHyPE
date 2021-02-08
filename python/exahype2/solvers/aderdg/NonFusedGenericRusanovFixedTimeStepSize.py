@@ -36,6 +36,8 @@ class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
 
 class UpdateCell(AbstractADERDGActionSet):
   TemplateUpdateCell = jinja2.Template( """
+    if ( marker.isRefined() ) return; // TODO(dominic): (probably) only applicable for unigrid simulations
+
     switch (repositories::{{SOLVER_INSTANCE}}.getSolverState() ) {
       case {{SOLVER_NAME}}::SolverState::GridConstruction:
         assertionMsg( false, "should not be entered" );
@@ -88,7 +90,7 @@ class UpdateCell(AbstractADERDGActionSet):
             fineGridCell{{SOLVER_NAME}}Q.value,   // QIn
             repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
             repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-            repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,             // Kxi,
+            repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,            // Kxi,
             repositories::{{SOLVER_INSTANCE}}.InvertedPredictorLhsOperator, // iK1,
             repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,      // FLCoeff,
             repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,   // dudx, 
@@ -163,16 +165,6 @@ class UpdateCell(AbstractADERDGActionSet):
             {{ "true" if SOURCES_IMPLEMENTATION!="<none>" else "false" }},//  callSource,
             {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}     //  callNonconservativeProduct
           );
-/*         
-          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
-            fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
-            spaceTimeQ,                           // QIn
-            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-            {{ORDER}}, 
-            {{NUMBER_OF_UNKNOWNS}}, 
-            {{NUMBER_OF_AUXILIARY_VARIABLES}}
-          );
-*/ 
 
           // collect information from the adjacent faces
           double* QHull[Dimensions*2];
@@ -229,7 +221,6 @@ class UpdateCell(AbstractADERDGActionSet):
           // collect information from the adjacent faces
           double* QHull[Dimensions*2];
           bool    atBoundary[Dimensions*2];
-          bool    adjacentToBoundary = false;
           for (int face = 0; face < Dimensions*2; face++) {
              QHull      [ face ] = fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
              atBoundary [ face ] = fineGridFacesLabel(face).getBoundary() and
