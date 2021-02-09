@@ -20,7 +20,7 @@ void pdeeigenvalues_(double* lambda, const double* const Q, double* nv);
 void hllemfluxfv_(double* lambda, double* FL, double* FR, const double* const  QL, const double* const  QR, const int* normalNonZeroIndex);
 void hllemriemannsolver_(const int* basisSize, const int* normalNonZeroIndex, double* FL, double* FR, const double* const  QL, const double* const  QR, const double* const  QavL, const double* const  QavR);
 
-void admconstraints_(double* constraints, double* Q, double* gradQ);
+void admconstraints_(double* constraints, const double* const Q, const double* const gradQ);
 
 void pdecons2prim_(double* V,const double* Q);
 void enforceccz4constraints_(const double* const Q); 

@@ -1,7 +1,7 @@
 import os
 import peano4
 import exahype2
-
+import admc
 
 class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves ):
   def __init__(self, name, patch_size, min_h, max_h ):
@@ -32,7 +32,7 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
     print( "number of unknowns=", number_of_unknowns )
     
     #number_of_auxiliary_variables = 0
-    number_of_auxiliary_variables  = 1
+    number_of_auxiliary_variables  = 6
 
     exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves.__init__( 
       self,
@@ -40,7 +40,7 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
       unknowns=number_of_unknowns, 
       auxiliary_variables=number_of_auxiliary_variables, 
       min_h=min_h, max_h=max_h, 
-      time_step_relaxation=0.1
+      time_step_relaxation=0.3
     )
     
     self._solver_template_file_class_name = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves.__name__
@@ -58,8 +58,8 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
      the solution.
      
     """
-    if self._auxiliary_variables != 1:
-      raise Exception( "We need one additional (material) auxiliary variable" )
+    if self._auxiliary_variables != 6:
+      raise Exception( "number of constraints does not match." )
     self._preprocess_reconstructed_patch  = """
     const int patchSize = """ + str(self._patch.dim[0]) + """;
     dfor(sourceCell,patchSize) {
@@ -67,22 +67,56 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
       
       tarch::la::Vector<Dimensions,int> cell;
       int cellSerialised;
-      
-      // Read value no 7 from left neighbour
-      cell            = destinationCell;
-      cell(0) = cell(0)-1;
-      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
-      double leftValue = reconstructedPatch[cellSerialised*(59+1)+6]; 
+      /*double* Q_deri;
+      double* Q_putin;
+      double* constraints;
+      memset(Q_putin, 0.1, 59*sizeof(double));
+      memset(Q_deri, 0.1, 3*59*sizeof(double));
+      memset(constraints, .0, 6*sizeof(double));*/
+      double Q_deri[59*3]; double Q_putin[59]; double constraints[6]={ 0 };
+      for(int i=0; i<59; i++){
+      	  cell = destinationCell;
+	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
+	      double centralValue = reconstructedPatch[cellSerialised*(59+6)+i];
+	      Q_putin[i]=centralValue;
 
-      // Read value from current voxel
-      cell            = destinationCell;
-      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
-      double centralValue = reconstructedPatch[cellSerialised*(59+1)+6]; 
-      
-      // write into material parameter of current voxel. That's the unknown
-      // 60 which will be ignored by the actual PDE
-      reconstructedPatch[cellSerialised*(59+1)+59] = centralValue - leftValue; 
-      
+	      cell            = destinationCell;
+	      cell(0) = cell(0)-1;
+	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
+	      double leftValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
+	      cell            = destinationCell;
+	      cell(0) = cell(0)+1;
+	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
+	      double rightValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
+	      Q_deri[i+59*0]=(rightValue-leftValue)/(2*marker.h()(0));
+
+	      cell            = destinationCell;
+	      cell(0) = cell(0)-1*(patchSize+2);
+	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
+	      leftValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
+	      cell            = destinationCell;
+	      cell(0) = cell(0)+1*(patchSize+2);
+	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
+	      rightValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
+	      Q_deri[i+59*1]=(rightValue-leftValue)/(2*marker.h()(1));
+	      
+	      cell            = destinationCell;
+	      cell(0) = cell(0)-1*(patchSize+2)*(patchSize+2);
+	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
+	      leftValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
+	      cell            = destinationCell;
+	      cell(0) = cell(0)+1*(patchSize+2)*(patchSize+2);
+	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
+	      rightValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
+	      Q_deri[i+59*2]=(rightValue-leftValue)/(2*marker.h()(2));
+	  }
+	  
+	  admconstraints_(constraints,Q_putin,Q_deri);
+	  
+	  for(int i=0;i<6,i++;){
+	      reconstructedPatch[cellSerialised*(59+6)+59+i] = constraints[i]+3;
+	  }
+      //free(Q_putin); free(Q_deri); free(constraints);
     }
 """
     
@@ -135,7 +169,9 @@ if __name__ == "__main__":
     
     # This is for GNU
     peano4_project.output.makefile.add_Fortran_flag( "-lstdc++ -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy -ffree-line-length-512 -fPIC" )
-    peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -lgfortran" )
+#add routie to find the gfortran
+#need to create a link first:sudo ln -s /usr/lib/x86_64-linux-gnu/libgfortran.so.4 /usr/lib/x86_64-linux-gnu/libgfortran.so
+    peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -L/usr/lib/x86_64-linux-gnu -lgfortran" )
     
     # This might work for Intel (not tested)
     #peano4_project.output.makefile.add_Fortran_flag( "-r8 -cpp -auto -qopenmp-simd -O2" )
@@ -146,14 +182,14 @@ if __name__ == "__main__":
     
     peano4_project.output.makefile.add_Fortran_files( 
       ["PDE.f90 ", "EinsteinConstraints.f90 ", "Properties.f90",
-        "Metric.f90 ", "C2P-FOCCZ4.f90 "] 
+        "Metric.f90 ", "C2P-FOCCZ4.f90 ","ADMConstraints.f90"] 
     )
     
     peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
     
     peano4_project.generate( throw_away_data_after_generation=False )
     
-    parallel_builds = 16   # I don't use a massively parallel build here as my laptop otherwise becomes too hot.
+    parallel_builds = 4   # I don't use a massively parallel build here as my laptop otherwise becomes too hot.
                           # Without any arguments, the build process will grab all of your cores.
     peano4_project.build( make_clean_first = False, number_of_parallel_builds = parallel_builds )
     #!make -j4
