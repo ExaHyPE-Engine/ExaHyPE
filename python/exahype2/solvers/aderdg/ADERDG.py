@@ -421,11 +421,16 @@ class ADERDG(object):
    
  
   def add_actions_to_perform_time_step(self, step):
+    """
+    :note: ADER-DG does different things in different iterations. Therefore,
+           adjust solution operationns must be handled by _action_set_update_cell.
+    """
+
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
-    step.add_action_set( self._action_set_adjust_cell )
     step.add_action_set( self._action_set_update_cell )
+    #step.add_action_set( self._action_set_adjust_cell ) # ADER-DG does different things in different iterations. Integrate directly in update cell instead.
     step.add_action_set( self._action_set_AMR )
     pass
 

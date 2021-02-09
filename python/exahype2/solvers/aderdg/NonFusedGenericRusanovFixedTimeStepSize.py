@@ -124,7 +124,7 @@ class UpdateCell(AbstractADERDGActionSet):
               const tarch::la::Vector<Dimensions,double>& x,
               double                                      t
             )->void {
-              //repositories::{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
+              repositories::{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
             },
             fineGridCell{{SOLVER_NAME}}Q.value,                           //  UOut,
             spaceTimeQ,                                                   //  QIn,
