@@ -1,7 +1,6 @@
 import os
 import peano4
 import exahype2
-import admc
 
 class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves ):
   def __init__(self, name, patch_size, min_h, max_h ):
@@ -171,8 +170,9 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_Fortran_flag( "-lstdc++ -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy -ffree-line-length-512 -fPIC" )
 #add routie to find the gfortran
 #need to create a link first:sudo ln -s /usr/lib/x86_64-linux-gnu/libgfortran.so.4 /usr/lib/x86_64-linux-gnu/libgfortran.so
-    peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -L/usr/lib/x86_64-linux-gnu -lgfortran" )
-    
+    #peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -L/usr/lib/x86_64-linux-gnu -lgfortran" )
+    peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -lgfortran" )
+
     # This might work for Intel (not tested)
     #peano4_project.output.makefile.add_Fortran_flag( "-r8 -cpp -auto -qopenmp-simd -O2" )
     #peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC" )
