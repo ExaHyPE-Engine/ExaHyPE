@@ -16,16 +16,26 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = """
-    ::exahype2::fv::validatePatch(
+  {{PREPROCESS_RECONSTRUCTED_PATCH}}
+    
+  ::exahype2::fv::validatePatch(
+    reconstructedPatch,
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    1, // halo
+    std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+  ); // previous time step has to be valid
+  
+  if (marker.isSkeletonCell()) {
+    ::exahype2::fv::copyPatch(
       reconstructedPatch,
+      originalPatch,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1, // halo
-      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // previous time step has to be valid
-  
-  if (marker.isSkeletonCell()) {
+      1 // halo size
+    );
     tasks::{{GPU_ENCLAVE_TASK_NAME}}::runComputeKernelsOnSkeletonCell( reconstructedPatch, marker, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
   }
   else { // is an enclave cell
@@ -68,7 +78,7 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
   def get_includes(self):
     return ReconstructPatchAndApplyFunctor.get_includes(self) + """
 #include "tasks/""" + self._solver._GPU_enclave_task_name() + """.h"    
-"""
+"""  + self._solver._get_default_includes() + self._solver.get_user_includes() 
 
 
 class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeStepSizeWithEnclaves ):

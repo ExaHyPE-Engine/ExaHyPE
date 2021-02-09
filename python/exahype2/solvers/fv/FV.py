@@ -338,6 +338,8 @@ class FV(object):
     self._min_h                = min_h
     self._max_h                = max_h 
     self._plot_grid_properties = plot_grid_properties
+
+    self._preprocess_reconstructed_patch      = ""
     
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
@@ -599,6 +601,8 @@ class FV(object):
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     d["SOLVER_NUMBER"]                  = 22
         
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]      = self._preprocess_reconstructed_patch
+    
     if self._patch_overlap.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
       

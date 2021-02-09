@@ -71,6 +71,15 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
   
   if (marker.isSkeletonCell()) {
+    ::exahype2::fv::copyPatch(
+      reconstructedPatch,
+      originalPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      1 // halo size
+    );
+
     {% if USE_SPLIT_LOOP %}
     #if Dimensions==2
     ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
@@ -400,6 +409,9 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     )
     self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
 
+    self._solver    = solver
+
+
 
   def get_includes(self):
     return ReconstructPatchAndApplyFunctor.get_includes(self) + """
@@ -410,7 +422,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 #include "exahype2/SmartEnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
-"""
+""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
 
 
 class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
@@ -471,7 +483,6 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     self._use_split_loop                      = False
 
     self._time_step_relaxation                = time_step_relaxation
-    self._preprocess_reconstructed_patch      = ""
 
     initialisation_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
@@ -647,8 +658,6 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.EnclaveLabels.get_attribute_name(self._name)
-
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]      = self._preprocess_reconstructed_patch
 
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "FREE_SKELETON_MEMORY" ] = "delete[] reconstructedPatch;"

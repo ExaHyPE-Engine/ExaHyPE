@@ -46,6 +46,18 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
     self.add_constraint_verification()
 
 
+  def get_user_includes(self):
+    """
+    
+     We take this routine to add a few additional include statements.
+     
+    """
+    return exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves.get_user_includes(self) + """
+#include "../PDE.h"
+#include "exahype2/PatchUtils.h"    
+"""
+
+
   def add_constraint_verification(self):
     """
      
@@ -59,63 +71,49 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
     """
     if self._auxiliary_variables != 6:
       raise Exception( "number of constraints does not match." )
+  
     self._preprocess_reconstructed_patch  = """
     const int patchSize = """ + str(self._patch.dim[0]) + """;
-    dfor(sourceCell,patchSize) {
-      tarch::la::Vector<Dimensions,int> destinationCell = sourceCell + tarch::la::Vector<Dimensions,int>(1);
+    double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+    dfor(cell,patchSize) {
+      tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
       
-      tarch::la::Vector<Dimensions,int> cell;
-      int cellSerialised;
-      /*double* Q_deri;
-      double* Q_putin;
-      double* constraints;
-      memset(Q_putin, 0.1, 59*sizeof(double));
-      memset(Q_deri, 0.1, 3*59*sizeof(double));
-      memset(constraints, .0, 6*sizeof(double));*/
-      double Q_deri[59*3]; double Q_putin[59]; double constraints[6]={ 0 };
-      for(int i=0; i<59; i++){
-      	  cell = destinationCell;
-	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
-	      double centralValue = reconstructedPatch[cellSerialised*(59+6)+i];
-	      Q_putin[i]=centralValue;
+      // This constraint routine will evaluate both the solution per voxel
+      // plus the derivative. The latter is something that we don't have, i.e.
+      // we have to reconstruct it manually.
 
-	      cell            = destinationCell;
-	      cell(0) = cell(0)-1;
-	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
-	      double leftValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
-	      cell            = destinationCell;
-	      cell(0) = cell(0)+1;
-	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
-	      double rightValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
-	      Q_deri[i+59*0]=(rightValue-leftValue)/(2*marker.h()(0));
+      // See the docu in PDE.h      
+      double gradQ[3*59]={ 0 };
+      
+      // Lets look left vs right and compute the gradient. Then, lets
+      // loop up and down. So we look three times for the respective
+      // directional gradients
+      for (int d=0; d<3; d++) {
+        tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+        tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+        leftCell(d)  -= 1;
+        rightCell(d) += 1;
+        const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+        const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+        for(int i=0; i<59; i++) {
+          gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+6)+i] - reconstructedPatch[leftCellSerialised*(59+6)+i] ) / 2.0 / volumeH;
+        }
+      }
 
-	      cell            = destinationCell;
-	      cell(0) = cell(0)-1*(patchSize+2);
-	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
-	      leftValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
-	      cell            = destinationCell;
-	      cell(0) = cell(0)+1*(patchSize+2);
-	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
-	      rightValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
-	      Q_deri[i+59*1]=(rightValue-leftValue)/(2*marker.h()(1));
-	      
-	      cell            = destinationCell;
-	      cell(0) = cell(0)-1*(patchSize+2)*(patchSize+2);
-	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
-	      leftValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
-	      cell            = destinationCell;
-	      cell(0) = cell(0)+1*(patchSize+2)*(patchSize+2);
-	      cellSerialised  = peano4::utils::dLinearised(destinationCell,patchSize + 2*1);
-	      rightValue = reconstructedPatch[cellSerialised*(59+6)+i]; 
-	      Q_deri[i+59*2]=(rightValue-leftValue)/(2*marker.h()(2));
-	  }
+      // We will use a Fortran routine to compute the six constraints per 
+      // Finite Volume
+      double constraints[6]={ 0 };
+
+      // Central cell
+      const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+     
+      admconstraints_(constraints,reconstructedPatch+cellSerialised*(59+6),gradQ);
 	  
-	  admconstraints_(constraints,Q_putin,Q_deri);
-	  
-	  for(int i=0;i<6,i++;){
-	      reconstructedPatch[cellSerialised*(59+6)+59+i] = constraints[i]+3;
-	  }
-      //free(Q_putin); free(Q_deri); free(constraints);
+      for(int i=0;i<6;i++){
+        reconstructedPatch[cellSerialised*(59+6)+59+i] = constraints[i];
+        // @todo Han: Please remove this line. I just have it in here for testing
+        reconstructedPatch[cellSerialised*(59+6)+59+i] = i+3.0;
+      }
     }
 """
     

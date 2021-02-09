@@ -26,7 +26,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
       ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
     }
     fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-      
+
     ::exahype2::fv::validatePatch(
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
       {{NUMBER_OF_UNKNOWNS}},
@@ -71,6 +71,15 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
   if (marker.isSkeletonCell()) {
+    ::exahype2::fv::copyPatch(
+      reconstructedPatch,
+      originalPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      1 // halo size
+    );
+  
     {% if USE_SPLIT_LOOP %}
     #if Dimensions==2
     ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
@@ -426,8 +435,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
 
-    self._preprocess_reconstructed_patch      = ""
-
     initialisation_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
@@ -602,8 +609,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.EnclaveLabels.get_attribute_name(self._name)
     
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]      = self._preprocess_reconstructed_patch
-
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       d[ "FREE_SKELETON_MEMORY" ] = "delete[] reconstructedPatch;"
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:

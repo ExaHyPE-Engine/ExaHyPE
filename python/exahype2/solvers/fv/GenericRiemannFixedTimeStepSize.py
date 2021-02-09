@@ -15,6 +15,17 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   RiemannCallOverPatch = """
+    {{PREPROCESS_RECONSTRUCTED_PATCH}}
+    
+    ::exahype2::fv::copyPatch(
+      reconstructedPatch,
+      originalPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      1 // halo size
+    );
+
     {% if USE_SPLIT_LOOP %}
     #if Dimensions==2
     ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
