@@ -31,7 +31,7 @@ namespace exahype2 {
           double                                      t
         ) >                                         adjustSolution,
         double * __restrict__                       UOut,
-        const double * __restrict__                 nodes,
+        const double * const __restrict__           nodes,
         const tarch::la::Vector<Dimensions,double>& cellCentre,
         const double                                dx,
         const double                                t,
@@ -68,7 +68,7 @@ namespace exahype2 {
     #endif
     GPUCallableMethod void corrector_addFluxContributions_body_AoS(
         std::function< void(
-          const double * __restrict__                 Q,
+          const double * const __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
           int                                         normal,
@@ -119,7 +119,7 @@ namespace exahype2 {
     #endif
     GPUCallableMethod void corrector_addSourceContributions_body_AoS(
         std::function< void(
-          const double * __restrict__                 Q,
+          const double * const __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
           double * __restrict__                       S
@@ -170,7 +170,7 @@ namespace exahype2 {
      #endif
      GPUCallableMethod void corrector_addNcpContributions_body_AoS(
        std::function< void(
-         const double * __restrict__                 Q,
+         const double * const __restrict__                 Q,
          double * __restrict__                       dQ_or_deltaQ,
          const tarch::la::Vector<Dimensions,double>& x,
          double                                      t,
@@ -215,17 +215,17 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     GPUCallableMethod void corrector_addRiemannContributions_body_AoS(
-       double * __restrict__       UOut,
-       const double * __restrict__ riemannResultIn,
-       const double * __restrict__ weights,
-       const double * __restrict__ FCoeff[2],
-       const double                dx,
-       const double                dt,
-       const int                   nodesPerAxis,
-       const int                   unknowns,
-       const int                   strideQ,
-       const int                   strideRiemannResult,
-       const int                   scalarIndexCell);
+       double * __restrict__             UOut,
+       const double * const __restrict__ riemannResultIn,
+       const double * const __restrict__ weights,
+       const double * const __restrict__ FLCoeff,
+       const double                      dx,
+       const double                      dt,
+       const int                         nodesPerAxis,
+       const int                         unknowns,
+       const int                         strideQ,
+       const int                         strideF,
+       const int                         scalarIndexCell);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -256,20 +256,20 @@ namespace exahype2 {
       */
     void corrector_addCellContributions_loop_AoS(
       std::function< void(
-        const double * __restrict__                 Q,
+        const double * const __restrict__           Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         int                                         normal,
         double * __restrict__                       F
       ) >   flux,
       std::function< void(
-        const double * __restrict__                 Q,
+        const double * const __restrict__           Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         double * __restrict__                       S
       ) >   algebraicSource,
       std::function< void(
-        const double * __restrict__                 Q,
+        const double * const __restrict__           Q,
         double * __restrict__                       dQ_or_deltaQ,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
@@ -282,11 +282,11 @@ namespace exahype2 {
         double                                      t
       ) >                                         adjustSolution,
       double * __restrict__                       UOut, 
-      const double * __restrict__                 QIn, 
-      const double * __restrict__                 nodes,
-      const double * __restrict__                 weights,
-      const double * __restrict__                 Kxi,
-      const double * __restrict__                 dudx, 
+      const double * const __restrict__           QIn, 
+      const double * const __restrict__           nodes,
+      const double * const __restrict__           weights,
+      const double * const __restrict__           Kxi,
+      const double * const __restrict__           dudx, 
       const tarch::la::Vector<Dimensions,double>& cellCentre,
       const double                                dx,
       const double                                t,
@@ -305,7 +305,6 @@ namespace exahype2 {
      * @param[in] riemannResultIn
      * @param[in] weights quadrature weights; size: (order+1)
      * @param[in] FLCoeff values of basis functions evaluated at x=0.0 (left); size: order+1
-     * @param[in] FRCoeff values of basis functions evaluated at x=1.0 (right); size: order+1
      * @param[in] dx cell spacing (we assume the same spacing in all coordinate directions)
      * @param[in] dt time step size
      * @param[in] order the DG approximation order, which corresponds to order+1 DG nodes/Lagrange basis functions per coordinate axis
@@ -313,16 +312,15 @@ namespace exahype2 {
      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */
     void corrector_addRiemannContributions_loop_AoS(
-      double * __restrict__       UOut,
-      const double * __restrict__ riemannResultIn,
-      const double * __restrict__ weights,
-      const double * __restrict__ FLCoeff,
-      const double * __restrict__ FRCoeff,
-      const double                dx,
-      const double                dt,
-      const int                   order,
-      const int                   unknowns,
-      const int                   auxiliaryVariables);
+      double * __restrict__             UOut,
+      const double * const __restrict__ riemannResultIn,
+      const double * const __restrict__ weights,
+      const double * const __restrict__ FLCoeff,
+      const double                      dx,
+      const double                      dt,
+      const int                         order,
+      const int                         unknowns,
+      const int                         auxiliaryVariables);
   
   }
 }

@@ -17,3 +17,12 @@ def plot_time_per_time_step(performance_data):
   plt.xlabel( "Simulation time [t]=s" )
   plt.ylabel( "Time per step [t]=s" )
   plt.legend()
+
+
+
+def plot_time_step_size_per_time_step(performance_data):
+  plt.plot( range(0,len(performance_data.time_step_size)), performance_data.time_step_size, label="time step size"  )
+  
+  plt.xlabel( "Time step" )
+  plt.ylabel( "Time step size" )
+  plt.legend()

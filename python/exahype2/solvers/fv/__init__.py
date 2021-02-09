@@ -10,5 +10,9 @@ from .GenericRusanovFixedTimeStepSize                import GenericRusanovFixedT
 from .GenericRusanovFixedTimeStepSizeWithEnclaves    import GenericRusanovFixedTimeStepSizeWithEnclaves
 from .GenericRusanovFixedTimeStepSizeWithAccelerator import GenericRusanovFixedTimeStepSizeWithAccelerator
 
+from .GenericRusanovAdaptiveTimeStepSize             import GenericRusanovAdaptiveTimeStepSize
+from .GenericRusanovAdaptiveTimeStepSizeWithEnclaves import GenericRusanovAdaptiveTimeStepSizeWithEnclaves
+#from .GenericRusanovFixedTimeStepSizeWithAccelerator import GenericRusanovFixedTimeStepSizeWithAccelerator
+
 from .PointWiseClawPackFixedTimeStepSize             import PointWiseClawPackFixedTimeStepSize
 

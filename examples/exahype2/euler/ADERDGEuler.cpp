@@ -13,7 +13,7 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
 ) {
   logTraceInWith2Arguments( "adjustSolution(...)", x, t );
   if (tarch::la::equals(t,0.0) ) {
-    logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );
+    logDebug( "adjustSolution(...)", "init volume at " << x << "x" << t );
 
 /*
     #if Dimensions==2
@@ -75,15 +75,7 @@ double examples::exahype2::euler::ADERDGEuler::maxEigenvalue(
   const double u_n = Q[normal + 1] * irho;
   const double c   = std::sqrt(gamma * p * irho);
 
-  double lambda[5];
-
-  lambda[0]  = u_n - c;
-  lambda[1]  = u_n;
-  lambda[2]  = u_n;
-  lambda[3]  = u_n;
-  lambda[4]  = u_n + c;
-
-  double result = std::max( std::abs(lambda[0]), std::abs(lambda[4]) );
+  double result = std::max( std::abs(u_n - c), std::abs(u_n + c ));
 
   logTraceOutWith1Argument( "maxEigenvalue(...)", result );
   return result;
@@ -109,7 +101,7 @@ void examples::exahype2::euler::ADERDGEuler::flux(
   nonCriticalAssertion8( Q[3]==Q[3], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
   nonCriticalAssertion8( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
 
-  nonCriticalAssertion8( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
+  //nonCriticalAssertion8( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
   // @todo Has to be removed once we are sure that the ADER-DG kernels do work
   assertion8( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], x, t, normal );
 
@@ -121,13 +113,13 @@ void examples::exahype2::euler::ADERDGEuler::flux(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  const double velocity = irho*Q[normal+1];
-  F[0] = velocity*Q[0];
-  F[1] = velocity*Q[1];
-  F[2] = velocity*Q[2];
-  F[3] = velocity*Q[3];
+  const double u_n = irho*Q[normal+1];
+  F[0] = u_n*Q[0];
+  F[1] = u_n*Q[1];
+  F[2] = u_n*Q[2];
+  F[3] = u_n*Q[3];
   F[normal+1] += p;
-  F[4] = velocity*(Q[4]+p);  
+  F[4] = u_n*(Q[4]+p);  
 
   nonCriticalAssertion( F[0]==F[0] );
   nonCriticalAssertion( F[1]==F[1] );

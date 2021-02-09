@@ -53,8 +53,8 @@ namespace exahype2 {
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_initialiseRhs_AoS(
       double * __restrict__       rhsOut,
-      const double * __restrict__ UIn,
-      const double * __restrict__ FLCoeff,
+      const double * const __restrict__ UIn,
+      const double * const __restrict__ FLCoeff,
       const int                  nodesPerAxis,
       const int                  strideQ,
       const int                  strideRhs,
@@ -90,7 +90,7 @@ namespace exahype2 {
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
         std::function< void(
-          const double * __restrict__                 Q,
+          const double * const __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
           int                                         normal,
@@ -141,7 +141,7 @@ namespace exahype2 {
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
         std::function< void(
-          const double * __restrict__                 Q,
+          const double * const __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
           double * __restrict__                       S
@@ -172,7 +172,7 @@ namespace exahype2 {
     #endif
     GPUCallableMethod void spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
       std::function< void(
-        const double * __restrict__                 Q,
+        const double * const __restrict__                 Q,
         double * __restrict__                       dQ_or_deltaQ,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
@@ -182,10 +182,10 @@ namespace exahype2 {
       double * __restrict__                       rhsOut,
       double * __restrict__                       gradQAux,
       double * __restrict__                       SAux,
-      const double * __restrict__                 QIn,
-      const double * __restrict__                 nodes,
-      const double * __restrict__                 weights,
-      const double * __restrict__                 dudx, 
+      const double * const __restrict__                 QIn,
+      const double * const __restrict__                 nodes,
+      const double * const __restrict__                 weights,
+      const double * const __restrict__                 dudx, 
       const tarch::la::Vector<Dimensions,double>& cellCentre,
       const double                                dx,
       const double                                t,
@@ -220,8 +220,8 @@ namespace exahype2 {
     GPUCallableMethod void spaceTimePredictor_PicardLoop_invert_body_AoS(
       double * __restrict__       QOut,
       double&                     squaredResiduumOut,
-      const double * __restrict__ rhsIn,
-      const double * __restrict__ iK1,
+      const double * const __restrict__ rhsIn,
+      const double * const __restrict__ iK1,
       const int                   nodesPerAxis,
       const int                   unknowns,
       const int                   strideQ,
@@ -242,7 +242,7 @@ namespace exahype2 {
      * @param[in] QIn
      * @param[in] FLRCoeff Basis functions evaluated at reference coordinates 0.0 (L,component 0) and 1.0 (R, component 1).
      * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
-     * @param[in] offsetQR
+     * @param[in] strideQLR
      * @param[in] strideQ
      * @param[in] scalarIndexHull
      */
@@ -251,10 +251,10 @@ namespace exahype2 {
     #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_body_AoS(
       double * __restrict__       QHullOut[Dimensions*2],
-      const double * __restrict__ QIn,
-      const double * __restrict__ FLRCoeff[2],
+      const double * const __restrict__ QIn,
+      const double * const __restrict__ FLRCoeff[2],
       const int                   nodesPerAxis,
-      const int                   offsetQR,
+      const int                   strideQLR,
       const int                   strideQ,
       const int                   scalarIndexHull);
     #if defined(OpenMPGPUOffloading)
@@ -271,7 +271,7 @@ namespace exahype2 {
      * @param[inout] QHullOut
      * @param[in] QIn
      * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
-     * @param[in] offsetQR
+     * @param[in] strideQLR
      * @param[in] strideQ
      * @param[in] scalarIndexHull
      */
@@ -279,12 +279,12 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     GPUCallableMethod void spaceTimePredictor_extrapolate_Lobatto_body_AoS(
-      double * __restrict__       QHullOut[Dimensions*2],
-      const double * __restrict__ QIn,
-      const int                   nodesPerAxis,
-      const int                   offsetQR,
-      const int                   strideQ,
-      const int                   scalarIndexHull);
+      double * __restrict__             QHullOut[Dimensions*2],
+      const double * const __restrict__ QIn,
+      const int                         nodesPerAxis,
+      const int                         strideQLR,
+      const int                         strideQ,
+      const int                         scalarIndexHull);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -304,12 +304,12 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     void spaceTimePredictor_extrapolateInTime_body_AoS(
-      double * __restrict__       UOut,
-      const double * __restrict__ QIn,
-      const double * __restrict__ FRCoeff,
-      const double                nodesPerAxis,
-      const int                   strideQ,
-      const int                   scalarIndexCell);
+      double * __restrict__             UOut,
+      const double * const __restrict__ QIn,
+      const double * const __restrict__ FRCoeff,
+      const double                      nodesPerAxis,
+      const int                         strideQ,
+      const int                         scalarIndexCell);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -331,12 +331,12 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     void spaceTimePredictor_extrapolateInTime_Lobatto_body_AoS(
-      double * __restrict__       UOut,
-      const double * __restrict__ QIn,
-      const double * __restrict__ FRCoeff,
-      const double                nodesPerAxis,
-      const int                   strideQ,
-      const int                   scalarIndexCell);
+      double * __restrict__             UOut,
+      const double * const __restrict__ QIn,
+      const double * const __restrict__ FRCoeff,
+      const double                      nodesPerAxis,
+      const int                         strideQ,
+      const int                         scalarIndexCell);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -369,34 +369,34 @@ namespace exahype2 {
      */ 
     void spaceTimePredictor_PicardLoop_loop_AoS(
       std::function< void(
-        const double * __restrict__                 Q,
+        const double * const __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         int                                         normal,
         double * __restrict__                       F
       ) >   flux,
       std::function< void(
-        const double * __restrict__                 Q,
+        const double * const __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         double * __restrict__                       S
       ) >   algebraicSource,
       std::function< void(
-        const double * __restrict__                 Q,
-        const double * __restrict__                 dQ_or_deltaQ,
+        const double * const __restrict__                 Q,
+        const double * const __restrict__                 dQ_or_deltaQ,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
         int                                         normal,
         double * __restrict__                       BgradQ
       ) >                                         nonconservativeProduct,
       double * __restrict__                       QOut, 
-      const double * __restrict__                 UIn, 
-      const double * __restrict__                 nodes,
-      const double * __restrict__                 weights,
-      const double * __restrict__                 Kxi,
-      const double * __restrict__                 iK1,
-      const double * __restrict__                 FLCoeff,
-      const double * __restrict__                 dudx, 
+      const double * const __restrict__                 UIn, 
+      const double * const __restrict__                 nodes,
+      const double * const __restrict__                 weights,
+      const double * const __restrict__                 Kxi,
+      const double * const __restrict__                 iK1,
+      const double * const __restrict__                 FLCoeff,
+      const double * const __restrict__                 dudx, 
       const tarch::la::Vector<Dimensions,double>& cellCentre,
       const double                                dx,
       const double                                t,
@@ -424,9 +424,9 @@ namespace exahype2 {
      */ 
     void spaceTimePredictor_extrapolate_loop_AoS(
         double * __restrict__       QHullOut[Dimensions*2],
-        const double * __restrict__ QIn,
-        const double * __restrict__ FLCoeff,
-        const double * __restrict__ FRCoeff,
+        const double * const __restrict__ QIn,
+        const double * const __restrict__ FLCoeff,
+        const double * const __restrict__ FRCoeff,
         const int                   order,
         const int                   unknowns,
         const int                   auxiliaryVariables);
@@ -451,9 +451,9 @@ namespace exahype2 {
      */ 
     void spaceTimePredictor_extrapolate_Lobatto_loop_AoS(
         double * __restrict__       QHullOut[Dimensions*2],
-        const double * __restrict__ QIn,
-        const double * __restrict__ FLCoeff,
-        const double * __restrict__ FRCoeff,
+        const double * const __restrict__ QIn,
+        const double * const __restrict__ FLCoeff,
+        const double * const __restrict__ FRCoeff,
         const int                   order,
         const int                   unknowns,
         const int                   auxiliaryVariables);
@@ -473,12 +473,12 @@ namespace exahype2 {
      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */
     void spaceTimePredictor_extrapolateInTime_loop_AoS(
-      double * __restrict__       UOut,
-      const double * __restrict__ QIn,
-      const double * __restrict__ FRCoeff,
-      const int                   order,
-      const int                   unknowns,
-      const int                   auxiliaryVariables);
+      double * __restrict__             UOut,
+      const double * const __restrict__ QIn,
+      const double * const __restrict__ FRCoeff,
+      const int                         order,
+      const int                         unknowns,
+      const int                         auxiliaryVariables);
     
     /** 
      * @brief Extrapolates the predictor to t+dt. 
@@ -497,12 +497,12 @@ namespace exahype2 {
      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */
     void spaceTimePredictor_extrapolateInTime_Lobatto_loop_AoS(
-      double * __restrict__       UOut,
-      const double * __restrict__ QIn,
-      const double * __restrict__ FRCoeff,
-      const int                   order,
-      const int                   unknowns,
-      const int                   auxiliaryVariables);
+      double * __restrict__             UOut,
+      const double * const __restrict__ QIn,
+      const double * const __restrict__ FRCoeff,
+      const int                         order,
+      const int                         unknowns,
+      const int                         auxiliaryVariables);
 
   } // aderdg
 } // exahype2

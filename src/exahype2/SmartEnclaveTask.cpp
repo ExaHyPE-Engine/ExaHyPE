@@ -2,9 +2,16 @@
 #include "EnclaveTask.h"
 
 
-void exahype2::initSmartMPIForEnclaveTasks() {
+void exahype2::initSmartMPI() {
   #ifdef UseSmartMPI
   smartmpi::init( tarch::mpi::Rank::getInstance().getCommunicator() );
+  #endif
+}
+
+
+void exahype2::shutdownSmartMPI() {
+  #ifdef UseSmartMPI
+  smartmpi::shutdown();
   #endif
 }
 

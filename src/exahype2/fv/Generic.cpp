@@ -71,6 +71,87 @@ void exahype2::fv::validatePatch (
 }
 
 
+double exahype2::fv::maxEigenvalue_AoS(
+  std::function< double(
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  ) >   eigenvalues,
+  const tarch::la::Vector<Dimensions,double>&           patchCentre,
+  const tarch::la::Vector<Dimensions,double>&           patchSize,
+  double                                       t,
+  double                                       dt,
+  int                                          numberOfVolumesPerAxisInPatch,
+  int                                          unknowns,
+  int                                          auxiliaryVariables,
+  const double * __restrict__                  Q
+) {
+  double result = std::numeric_limits<double>::max();
+
+  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+      patchSize, numberOfVolumesPerAxisInPatch);
+
+  #if Dimensions==2
+  #ifdef SharedOMP
+  #pragma omp parallel for collapse(2) reduction(min:result)
+  #endif
+  for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+  for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+    tarch::la::Vector<2, double> volumeX = patchCentre
+        - 0.5 * patchSize;
+    volumeX (0) += (x + 0.5) * volumeH (0);
+    volumeX (1) += (y + 0.5) * volumeH (1);
+
+    const int voxelInImage  = x
+                            + y * numberOfVolumesPerAxisInPatch;
+
+    for (int d=0; d<Dimensions; d++) {
+      result = std::min(
+        result,
+        eigenvalues(
+          Q + voxelInImage * (unknowns + auxiliaryVariables),
+          volumeX, volumeH, t, dt, d
+        )
+      );
+    }
+  }
+  #else
+  #ifdef SharedOMP
+  #pragma omp parallel for collapse(3) reduction(min:result)
+  #endif
+  for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+  for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+  for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+    tarch::la::Vector<3, double> volumeX = patchCentre
+        - 0.5 * patchSize;
+    volumeX (0) += (x + 0.5) * volumeH (0);
+    volumeX (1) += (y + 0.5) * volumeH (1);
+    volumeX (2) += (z + 0.5) * volumeH (2);
+
+    const int voxelInImage  = x
+                            + y * numberOfVolumesPerAxisInPatch
+                            + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+
+    for (int d=0; d<Dimensions; d++) {
+      result = std::min(
+        result,
+        eigenvalues(
+          Q + voxelInImage * (unknowns + auxiliaryVariables),
+          volumeX, volumeH, t, dt, d
+        )
+      );
+    }
+  }
+  #endif
+
+  return result;
+}
+
+
+
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -172,7 +253,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
 ) {
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
-  assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
+  assertion4( dt>=0.0, patchCentre, patchSize, t, dt  );
 
   tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
@@ -311,7 +392,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
-  assertion( dt>=tarch::la::NUMERICAL_ZERO_DIFFERENCE );
+  assertion( dt>=0.0 );
 
   tarch::la::Vector<3, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);

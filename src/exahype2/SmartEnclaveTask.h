@@ -11,7 +11,8 @@ namespace exahype2 {
    * If you don't use SmartMPI, this operation becomes nop, i.e. you can always 
    * call it and configure will decide whether it does something useful.
    */
-  void initSmartMPIForEnclaveTasks();
+  void initSmartMPI();
+  void shutdownSmartMPI();
 }
 
 

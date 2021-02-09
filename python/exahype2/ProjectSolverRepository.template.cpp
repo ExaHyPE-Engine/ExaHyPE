@@ -6,7 +6,6 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 
-
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 {%- endfor %}
@@ -137,6 +136,10 @@ void finishTimeStep() {
 
   refinementControl.finishStep();
   loadBalancer.finishStep();
+
+  #ifdef UseSmartMPI
+  smartmpi::tick();
+  #endif
 }
 
 

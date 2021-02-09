@@ -432,6 +432,16 @@ class peano4::stacks::STDVectorStack {
     }
 
     /**
+     * I need this one to find out whether I'm waiting for data.
+     *
+     * @return A negative value if we don't send or receive anymore. Otherwise,
+     *         we return the rank of the communication partner.
+     */
+    int sendingOrReceiving() const {
+      return _ioMode==IOMode::None ? -1 : _ioRank;
+    }
+
+    /**
      * Reversing a stream is something I need extremely rarely. The biggest application
      * is the realisation of joins through peano4::parallel::SpacetreeSet::streamLocalVertexInformationToMasterThroughVerticalStacks().
      * Here, I need a streamed version of the tree to get the up-to-date data of the mesh

@@ -39,18 +39,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
     friend class EnclaveBookkeeping;
 
     static tarch::logging::Log                   _log;
-
-    const ::peano4::datamanagement::CellMarker   _marker;
-    double* __restrict__                         _reconstructedPatch;
+    static tarch::multicore::BooleanSemaphore _patchsema;
 
     #if Dimensions==2
     const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     const int _sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    double _destinationPatch[{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
+    static std::vector<std::tuple<double*, const double, int, double, double, double, double> > _patchkeeper;
     #elif Dimensions==3
     const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     const int _sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    double _destinationPatch[{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})];
+    static std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > _patchkeeper;
     #endif
 
 

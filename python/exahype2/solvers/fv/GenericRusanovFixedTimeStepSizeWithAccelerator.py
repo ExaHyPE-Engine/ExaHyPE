@@ -73,15 +73,16 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
 
 class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeStepSizeWithEnclaves ):
   """
-  
+
    This is a specialisation of the enclave tasking that works with accelerators
-   (GPUs). 
-  
+   (GPUs).
+
   """
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False):
-    GenericRusanovFixedTimeStepSizeWithEnclaves.__init__(self, 
-      name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, 
-      flux, ncp, 
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, ngrabmax=0):
+    self.ngrabmax_ = ngrabmax
+    GenericRusanovFixedTimeStepSizeWithEnclaves.__init__(self,
+      name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size,
+      flux, ncp,
       plot_grid_properties
     )
 
@@ -99,17 +100,17 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
       memory_location, use_split_loop)
 
     self._action_set_update_cell = UpdateCellWithEnclavesOnAccelerator(self, use_split_loop=True)
-    
-    
+
+
   def _GPU_enclave_task_name(self):
     return self._name + "GPUEnclaveTask"
 
 
   def add_implementation_files_to_project(self,namespace,output):
     """
-    
-      Add the enclave task for the GPU  
-      
+
+      Add the enclave task for the GPU
+
     """
     GenericRusanovFixedTimeStepSizeWithEnclaves.add_implementation_files_to_project(self,namespace,output)
 
@@ -119,13 +120,20 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     self._init_dictionary_with_default_parameters(implementationDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
+    implementationDictionary["NGRABMAX"] = self.ngrabmax_
+
     task_name = self._GPU_enclave_task_name()
+
+    # Bit of a hack so we can easily instantiate templates
+    implementationDictionary["SKIP_NCP"]  = "true" if implementationDictionary["NCP_IMPLEMENTATION"]  == "<none>" else "false"
+    implementationDictionary["SKIP_FLUX"] = "true" if implementationDictionary["FLUX_IMPLEMENTATION"] == "<none>" else "false"
+
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".GPUEnclaveTask.template.h",
       templatefile_prefix + ".GPUEnclaveTask.template.cpp",
-      task_name, 
+      task_name,
       namespace + [ "tasks" ],
-      "tasks", 
+      "tasks",
       implementationDictionary,
       True)
 

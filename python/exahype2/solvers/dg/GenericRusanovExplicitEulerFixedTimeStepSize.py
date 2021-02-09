@@ -15,7 +15,7 @@ import jinja2
 class ApplyRiemannSolveToFaces(AbstractDGActionSet):
   TemplateRiemannSolve = jinja2.Template( """
 /*
-    if ({{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
+    if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
       // @todo Have to think about this one
 
 
@@ -40,7 +40,7 @@ class ApplyRiemannSolveToFaces(AbstractDGActionSet):
 
 class UpdateCell(AbstractDGActionSet):
   TemplateUpdateCell = jinja2.Template( """
-    switch ({{SOLVER_INSTANCE}}.getSolverState() ) {
+    switch (repositories::{{SOLVER_INSTANCE}}.getSolverState() ) {
       case {{SOLVER_NAME}}::SolverState::GridConstruction:
         assertionMsg( false, "should not be entered" );
         break;

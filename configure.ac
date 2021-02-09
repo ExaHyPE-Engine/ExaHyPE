@@ -330,7 +330,8 @@ if test "$gpu" == amd; then
 fi
 
 if test "$gpu" == nvidia; then
-  if test "$multithreading" == omp; then
+  #if test "$multithreading" == omp; then
+  if test "$multithreading" == omp-layered; then
     AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
   else
     AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
@@ -511,7 +512,7 @@ AC_OUTPUT(
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile
-  src/unittests/Makefile 
   src/smartmpi/Makefile
+  src/unittests/Makefile
 )
 

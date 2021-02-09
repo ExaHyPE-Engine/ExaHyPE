@@ -15,16 +15,16 @@ double* tarch::allocateMemory(int size, MemoryLocation location) {
       result = new double[size];
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
-      #if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
-      cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
-      #elif defined(OpenMPGPUOffloading) and defined(UseAMD)
+      //#if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
+      //cudaMallocManaged((void**)&result, size*sizeof(double), cudaMemAttachGlobal);
+      //#elif defined(OpenMPGPUOffloading) and defined(UseAMD)
+      //result = new double[size];
+      //// AMD does not (yet) support managed memory
+      //// hipMallocManaged(&result, size*sizeof(double));
+      //#else
+      //// #pragma omp allocate ()
       result = new double[size];
-      // AMD does not (yet) support managed memory
-      // hipMallocManaged(&result, size*sizeof(double));
-      #else
-      // #pragma omp allocate ()
-      result = new double[size];
-      #endif
+      //#endif
       break;
   }
   return result;
@@ -43,16 +43,16 @@ void tarch::freeMemory(double* data, MemoryLocation location) {
       delete[] data;
       break;
     case MemoryLocation::ManagedAcceleratorMemory:
-      #if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
-      cudaFree(data);
-      #elif defined(OpenMPGPUOffloading) and defined(UseAMD)
-      // See remark on managed memory above
-      // hipFree(data);
+      //#if defined(OpenMPGPUOffloading) and defined(UseNVIDIA)
+      //cudaFree(data);
+      //#elif defined(OpenMPGPUOffloading) and defined(UseAMD)
+      //// See remark on managed memory above
+      //// hipFree(data);
+      //delete[] data;
+      //#else
       delete[] data;
-      #else
-      delete[] data;
-      #endif
-      break;
+      //#endif
+      //break;
   }
 }
 #if defined(OpenMPGPUOffloading)
