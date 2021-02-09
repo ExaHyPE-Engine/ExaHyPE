@@ -12,28 +12,6 @@ import exahype2
 import jinja2
 
 
-class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
-  TemplateRiemannSolve = jinja2.Template( """
-    if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
-      // do nothing 
-    }   
-  """)
-
-  def __init__(self,solver):
-    AbstractADERDGActionSet.__init__(self,solver)
-  
-  
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
-      result = self.TemplateRiemannSolve.render(**d)
-      pass 
-    return result
-
-
 class UpdateCell(AbstractADERDGActionSet):
   TemplateUpdateCell = jinja2.Template( """
     if ( marker.isRefined() ) return; // TODO(dominic): (probably) only applicable for unigrid simulations
@@ -396,14 +374,11 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     self._sources_implementation              = PDETerms.None_Implementation
 
     self._action_set_update_cell = UpdateCell(self)
-    self._action_set_update_face = ApplyRiemannSolveToFaces(self)
 
     # braucht kein Mensch
-    self._rusanov_call = ""
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
 
     self.set_implementation(flux=flux,ncp=ncp,sources=sources)
-    
     
     #self._face_spacetime_solution.generator.send_condition               = "false"
     #self._face_spacetime_solution.generator.receive_and_merge_condition  = "false"
@@ -490,4 +465,3 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
 
   def add_actions_to_perform_time_step(self, step):
     ADERDG.add_actions_to_perform_time_step( self, step )
-    step.add_action_set( ApplyRiemannSolveToFaces(self) )

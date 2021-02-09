@@ -50,9 +50,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       _solverState = SolverState::Prediction;
       break;
     case SolverState::Prediction:
-      _solverState = SolverState::RiemannProblemSolve;
-      break;
-    case SolverState::RiemannProblemSolve:
       _solverState = SolverState::Correction;
       break;
     case SolverState::Correction:
@@ -89,8 +86,6 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Prediction:
       return "prediction";
-    case SolverState::RiemannProblemSolve:
-      return "Riemann-problem-solve";
     case SolverState::Correction:
       return "correction";
     case SolverState::Plotting:

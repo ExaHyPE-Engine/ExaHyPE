@@ -275,7 +275,6 @@ class ADERDG(object):
     self._action_set_adjust_cell     = AdjustCell(self)
     self._action_set_AMR             = AMR(self)
     self._action_set_update_cell     = None
-    self._action_set_update_face     = None
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     
@@ -427,7 +426,6 @@ class ADERDG(object):
     self.add_entries_to_text_replacement_dictionary(d)
     step.add_action_set( self._action_set_adjust_cell )
     step.add_action_set( self._action_set_update_cell )
-    step.add_action_set( self._action_set_update_face )
     step.add_action_set( self._action_set_AMR )
     pass
 
