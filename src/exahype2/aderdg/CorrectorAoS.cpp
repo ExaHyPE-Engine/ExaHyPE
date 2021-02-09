@@ -66,16 +66,16 @@ GPUCallableMethod void exahype2::aderdg::corrector_addFluxContributions_body_AoS
   const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
   const tarch::la::Vector<Dimensions, double>   x( ( coords.data() + 1 ) );
 
-  const double invDx = 1.0/dx;
+  const double coeff0 = dt/dx/*[d]*/;
   for ( int d = 0; d < Dimensions; d++) { // direction
-    const double coeff0 = dt * invDx/*[d]*/ / weights[index[d+1]];
+    const double coeff1 = coeff0 / weights[index[d+1]];
       
     for ( int id = 0; id < nodesPerAxis; id++ ) { // loop over spatial neighbours
-      const double coeff1 = coeff0 * Kxi[ index[d+1]*nodesPerAxis + id ]; // note: transposed vs. predictor flux computation
+      const double coeff2 = coeff1 * Kxi[ index[d+1]*nodesPerAxis + id ]; // note: transposed vs. predictor flux computation
 
       const int scalarIndexNeighbour = scalarIndex + (id - index[d+1])*strides[d+1];
       for ( int it = 0; it < nodesPerAxis; it++ ) { // time loop
-        const double coeff = coeff1 * weights[it];
+        const double coeff = coeff2 * weights[it];
         
         const double* Q = &QIn[ (scalarIndexNeighbour*nodesPerAxis + it)*strideQ ];
         const double time = t + nodes[it] * dt; 

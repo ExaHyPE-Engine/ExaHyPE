@@ -289,7 +289,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolate_body_AoS
   }
   // compute
   for (int id=0; id<nodesPerAxis; id++) {
-    const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,lr, id );
+    const int scalarIndexCell = mapSpaceTimeFaceIndexToScalarCellIndex(indexQHull,d,id,nodesPerAxis);
 
     const double coeff = FLRCoeff[lr][id];
     for (int var=0; var < strideQ; var++) {

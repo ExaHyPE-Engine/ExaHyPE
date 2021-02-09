@@ -65,10 +65,10 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
   const double*                                test_UIn,
   const bool                                   verbose
 ) {
-  const int strideQ            = unknowns+auxiliaryVariables;
-  const int nodesPerAxis       = (order+1);
-  const int nodesPerAxis2      = nodesPerAxis *nodesPerAxis;
-  const int nodesPerAxis3      = nodesPerAxis2*nodesPerAxis;
+  const int strideQ       = unknowns+auxiliaryVariables;
+  const int nodesPerAxis  = (order+1);
+  const int nodesPerAxis2 = nodesPerAxis *nodesPerAxis;
+  const int nodesPerAxis3 = nodesPerAxis2*nodesPerAxis;
 
   // In-/Outputs:
   double U[nodesPerAxis2*strideQ];
@@ -417,7 +417,9 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
 }
 
 void exahype2::aderdg::tests::ADERDGTest::run() {
-  //testMethod (testAdvection)
+  std::cout << "# LINEAR ADVECTION:\n" << std::endl;
+  testMethod (testAdvection)
+  std::cout << "\n# COMPRESSIBLE EULER:\n" << std::endl;
   testMethod (testEuler)
 }
 
@@ -430,7 +432,7 @@ void exahype2::aderdg::tests::ADERDGTest::testAdvection() {
 
   const int unknowns           = 4;
   const int auxiliaryVariables = 0;
-  const int order              = 3;
+  const int order              = 3; // order must match nodes, weights etc.
 
   const bool verbose = true;
 
@@ -464,9 +466,9 @@ void exahype2::aderdg::tests::ADERDGTest::testAdvection() {
       const int     i_Q,
       const int     m 
     ) -> void { 
-      //const double eps = 1.0e-5;
-      //validateNumericalEqualsWithEpsWithParams2(
-      //  Q[i_Q], testEuler_QOut[m], eps, i_Q, m);
+      const double eps = 1.0e-6;
+      validateNumericalEqualsWithEpsWithParams1(
+        Q[i_Q], testAdvection_UIn[m], eps, i_Q); // constant solution
     },
     x,dx,t,dt,unknowns,auxiliaryVariables,order,
     testAdvection_UIn, 
@@ -483,7 +485,7 @@ void exahype2::aderdg::tests::ADERDGTest::testEuler() {
 
   const int unknowns           = 5;
   const int auxiliaryVariables = 0;
-  const int order              = 3;
+  const int order              = 3; // order must match nodes, weights etc.
 
   const bool verbose = true;
 
