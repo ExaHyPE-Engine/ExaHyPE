@@ -440,7 +440,7 @@ void exahype2::aderdg::tests::ADERDGTest::testAdvection() {
 
   const bool verbose = true;
 
-  runADERDGStep2d(
+  runADERDGStep(
     [&] (      
       const double * const __restrict__           Q,
       const tarch::la::Vector<Dimensions,double>& x,
@@ -493,7 +493,7 @@ void exahype2::aderdg::tests::ADERDGTest::testEuler() {
 
   const bool verbose = true;
 
-  runADERDGStep2d(
+  runADERDGStep(
     [&] (      
       const double * const __restrict__           Q,
       const tarch::la::Vector<Dimensions,double>& x,
