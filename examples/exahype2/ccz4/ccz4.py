@@ -96,7 +96,7 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
         const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
         const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
         for(int i=0; i<59; i++) {
-          gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+6)+i] - reconstructedPatch[leftCellSerialised*(59+6)+i] ) / 1.0 / volumeH;
+          gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+6)+i] - reconstructedPatch[leftCellSerialised*(59+6)+i] ) / 2.0 / volumeH;
         }
       }
 
