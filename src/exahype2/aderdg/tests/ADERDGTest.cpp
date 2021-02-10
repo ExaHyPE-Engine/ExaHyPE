@@ -55,7 +55,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
     const double* Q,
     const int     i_Q,
     const int     unknown
-  )>                                           validatePicardLoopResult,
+  )>                                           validatePicardLoopHullAndCorrectorResult,
   const tarch::la::Vector<Dimensions, double>& x,
   const double                                 dx,
   const double                                 t,
@@ -155,7 +155,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
   for (int i = 0; i < spaceTimeNodesPerCell; i++) {
     for (int m=0; m < unknowns; m++) {
       const int i_Q = i*unknowns  + m;
-      validatePicardLoopResult(Q,i_Q,m);
+      validatePicardLoopHullAndCorrectorResult(Q,i_Q,m);
       buffer << std::fixed << std::showpoint << std::setprecision(6) << Q[i_Q] << " ";
     }
     buffer << "\n";
@@ -290,6 +290,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
       for (int m=0; m < unknowns; m++) {
         const int i_QHull = i*unknowns  + m;
         const double value = QHull[face][i_QHull];
+        validatePicardLoopHullAndCorrectorResult(QHull[face],i_QHull,m);
         buffer << std::fixed << std::showpoint << std::setprecision(6) << value << " ";
       }
       buffer << "\n";
@@ -388,6 +389,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
   for (int i = 0; i < nodesPerCell; i++) {
     for (int m=0; m < unknowns; m++) {
       const int i_U = i*unknowns  + m;
+      validatePicardLoopHullAndCorrectorResult(U,i_U,m);
       buffer << std::fixed << std::showpoint << std::setprecision(6) << U[i_U] << " ";
     }
     buffer << "\n";

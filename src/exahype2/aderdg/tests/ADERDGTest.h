@@ -62,7 +62,7 @@ private:
       const double* Q,
       const int     i_Q,
       const int     unknown
-    )>                                           validatePicardLoopResult,
+    )>                                           validatePicardLoopHullAndCorrectorResult,
     const tarch::la::Vector<Dimensions, double>& x,
     const double                                 dx,
     const double                                 t,
