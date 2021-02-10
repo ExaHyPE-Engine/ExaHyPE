@@ -54,14 +54,14 @@ class UpdateCell(AbstractADERDGActionSet):
             },
             [&](
               const double * __restrict__                 Q,
-              const double * __restrict__                 dQ_or_deltaQ,
+              const double * __restrict__                 deltaQ,
               const tarch::la::Vector<Dimensions,double>& x,
               double                                      t,
               int                                         normal,
               double * __restrict__                       BgradQ
             )->void {
               {% if NCP_IMPLEMENTATION!="<none>" %}
-              repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_deltaQ,x,t,normal,BgradQ);
+              repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,deltaQ,x,t,normal,BgradQ);
               {% endif %}
             },
             spaceTimeQ,                           // QOut
@@ -440,7 +440,7 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
-
+    
     pass
 
 
@@ -454,14 +454,9 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
 
   def add_to_Peano4_datamodel( self, datamodel ):
     ADERDG.add_to_Peano4_datamodel( self, datamodel )
-    #datamodel.add_face(self._face_flux_along_normal)
-
-
 
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     ADERDG.add_use_data_statements_to_Peano4_solver_step( self, step )
-    #step.use_face(self._face_flux_along_normal)
-
 
   def add_actions_to_perform_time_step(self, step):
     ADERDG.add_actions_to_perform_time_step( self, step )
