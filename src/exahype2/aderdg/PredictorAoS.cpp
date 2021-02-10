@@ -44,7 +44,102 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_initialis
     rhsOut[ scalarIndex*strideRhs + var ] = coeff * UIn[ ( scalarIndex / nodesPerAxis ) * strideQ + var ];
   }
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addContributions_body_AoS (
+    std::function< void(
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                         normal,
+      double * __restrict__                       F
+    ) >   flux,
+    std::function< void(
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      double * __restrict__                       S
+    ) >   algebraicSource,
+    std::function< void(
+      const double * const __restrict__           Q,
+      double * __restrict__                       dQ_or_deltaQ,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                         normal,
+      double * __restrict__                       BgradQ
+    ) >                                           nonconservativeProduct,
+    double * __restrict__                         rhsOut, 
+    double * __restrict__                         FAux, 
+    double * __restrict__                         gradQAux,
+    double * __restrict__                         SAux,
+    const double* __restrict__                    QIn, 
+    const double* __restrict__                    nodes,
+    const double* __restrict__                    weights,
+    const double* __restrict__                    Kxi,
+    const double* __restrict__                    dudx,
+    const tarch::la::Vector<Dimensions,double>&   cellCentre,
+    const double                                  dx,
+    const double                                  t,
+    const double                                  dt,
+    const int                                     nodesPerAxis,
+    const int                                     unknowns,
+    const int                                     strideQ,
+    const int                                     strideRhs,
+    const bool                                    callFlux,
+    const bool                                    callSource,
+    const bool                                    callNonconservativeProduct,
+    const int                                     scalarIndex) {
+  const tarch::la::Vector<Dimensions+1,int> strides   = getStrides(nodesPerAxis);
+  const tarch::la::Vector<Dimensions+1,int> index     = delineariseIndex(scalarIndex,strides);
+  const tarch::la::Vector<Dimensions+1,double> coords = getCoordinates(index,cellCentre,dx,t,dt,nodes);
+  const tarch::la::Vector<Dimensions,double> x(&coords[1]);
+  const double time = coords[0];
+  
+  const double invDx   = 1.0/dx;
+  const double coeff0 = dt * weights[index[0]];
+
+  // flux contributions
+  if ( callFlux ) {
+    for ( int d = 1; d < Dimensions+1; d++) {
+      const double coeff1 = coeff0 * invDx/*[d-1]*/ / weights[index[d]];
+      
+      for ( int a = 0; a < nodesPerAxis; a++ ) { // further collapsing causes data races, synchronization or GPU shared mem usage required
+        const double coeff = coeff1 * Kxi[ a*nodesPerAxis + index[d] ]; // @todo: provide transposed variant
+        const double * const Q = &QIn[ ( scalarIndex + (a - index[d])*strides[d] )*strideQ ];
+        flux(Q, x, time, d-1, FAux);
+        for (int var=0; var < unknowns; var++) {
+          rhsOut[ scalarIndex*strideRhs+var ] -= coeff * FAux[ var ];
+        }
+      }
+    }
+  }
+  // NCP contributions ; NOTE: gradient has same Q access pattern as flux
+  if ( callNonconservativeProduct ) {
+    gradient_AoS(QIn,dudx,invDx,nodesPerAxis,strideQ,scalarIndex,gradQAux);           
+    
+    const double* Q = &QIn [ scalarIndex*strideQ ];
+    for ( int direction = 0; direction < Dimensions; direction++ ) {
+      nonconservativeProduct(Q, &gradQAux[ direction*strideQ ], x, time, direction, SAux );
+      for(int var=0; var < unknowns; var++) {
+        rhsOut[ scalarIndex*strideRhs + var ] += coeff0 * SAux[var];
+      }
+    }
+  }
+  // source contributions
+  if ( callSource ) {
+    const double* Q = &QIn[ scalarIndex*strideQ ];
+
+    algebraicSource(Q, x, time, SAux);
+    for (int var = 0; var < unknowns; var++) {
+      rhsOut[ scalarIndex*strideRhs + var ] += coeff0 * SAux[var];
+    }
+  }
+}
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
@@ -54,7 +149,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_initialis
 #endif
 GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS (
     std::function< void(
-      const double * const __restrict__                 Q,
+      const double * const __restrict__           Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t,
       int                                         normal,
@@ -96,7 +191,6 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addFluxCo
     }
   }
 }
-
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
@@ -670,63 +764,31 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
         strideRhs,
         scalarIndexCell);
 
-      if ( callFlux ) { 
-        spaceTimePredictor_PicardLoop_addFluxContributionsToRhs_body_AoS(
-          flux,
-          rhs, 
-          &FAux[ scalarIndexCell*strideF ], 
-          QOut, 
-          nodes,
-          weights,
-          Kxi,
-          cellCentre,
-          dx,
-          t,
-          dt,
-          nodesPerAxis,
-          unknowns,
-          strideQ,
-          strideRhs,
-          scalarIndexCell);
-      }
-      if ( callSource ) { 
-        spaceTimePredictor_PicardLoop_addSourceContributionToRhs_body_AoS(
-          algebraicSource,
-          rhs,
-          &SAux[ scalarIndexCell*strideS ],
-          QOut,
-          nodes,
-          weights,
-          cellCentre,
-          dx,
-          t,
-          dt,
-          nodesPerAxis,
-          unknowns,
-          strideQ,
-          strideRhs,
-          scalarIndexCell);
-      }
-      if ( callNonconservativeProduct ) { 
-        spaceTimePredictor_PicardLoop_addNcpContributionToRhs_body_AoS(
-          nonconservativeProduct,
-          rhs,
-          &gradQAux[ scalarIndexCell*strideGradQ ],
-          &SAux[ scalarIndexCell*strideS ],
-          QOut,
-          nodes,
-          weights,
-          dudx, 
-          cellCentre,
-          dx,
-          t,
-          dt,
-          nodesPerAxis,
-          unknowns,
-          strideQ,
-          strideRhs,
-          scalarIndexCell);
-      }
+      spaceTimePredictor_PicardLoop_addContributions_body_AoS(
+        flux,
+        algebraicSource,
+        nonconservativeProduct,
+        rhs, 
+        FAux, 
+        gradQAux,
+        SAux,
+        QOut, 
+        nodes,
+        weights,
+        Kxi,
+        dudx,
+        cellCentre,
+        dx,
+        t,
+        dt,
+        nodesPerAxis,
+        unknowns,
+        strideQ,
+        strideRhs,
+        callFlux,
+        callSource,
+        callNonconservativeProduct,
+        scalarIndexCell);
     } // scalarIndexCell
 
     // 3. Multiply with (K1)^(-1) to get the discrete time integral of the discrete Picard iteration

@@ -62,6 +62,84 @@ namespace exahype2 {
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
+
+    /**
+     * @brief Add flux, NCP, and source contributions to RHS during STP Picard loop.
+     * 
+     * This body writes to a single space-time volume coefficient.  
+     *
+     * @param[in] flux
+     * @param[in] algebraicSource
+     * @param[in] nonconservativeProduct
+     * @param[in] flux
+     * @param[in] rhsOut
+     * @param[in] FAux
+     * @param[in] QIn
+     * @param[in] nodes quadrature nodes; size: (order+1)
+     * @param[in] weights quadrature weights; size: (order+1)
+     * @param[in] Kxi stiffness matrix; size: (order+1)*(order+1)
+     * @param[in] t time stamp
+     * @param[in] dt time step size
+     * @param[in] centre
+     * @param[in] dx
+     * @param[in] unknowns the number of PDE unknowns that we evolve
+     * @param[in] nodesPerAxis nodes/Lagrange basis functions per coordinate axis (order+1)
+     * @param[in] strideQ
+     * @param[in] strideRhs
+     * @param[in] callFlux
+     * @param[in] callAlgebraicSource
+     * @param[in] callNonconservativeProduct
+     * @param[in] scalarIndex
+    */
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    GPUCallableMethod void spaceTimePredictor_PicardLoop_addContributions_body_AoS (
+      std::function< void(
+        const double * const __restrict__           Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        int                                         normal,
+        double * __restrict__                       F
+      ) >   flux,
+      std::function< void(
+        const double * const __restrict__           Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        double * __restrict__                       S
+      ) >   algebraicSource,
+      std::function< void(
+        const double * const __restrict__           Q,
+        double * __restrict__                       dQ_or_deltaQ,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        int                                         normal,
+        double * __restrict__                       BgradQ
+      ) >                                           nonconservativeProduct,
+      double * __restrict__                         rhsOut, 
+      double * __restrict__                         FAux, 
+      double * __restrict__                         gradQAux,
+      double * __restrict__                         SAux,
+      const double* __restrict__                    QIn, 
+      const double* __restrict__                    nodes,
+      const double* __restrict__                    weights,
+      const double* __restrict__                    Kxi,
+      const double* __restrict__                    dudx,
+      const tarch::la::Vector<Dimensions,double>&   cellCentre,
+      const double                                  dx,
+      const double                                  t,
+      const double                                  dt,
+      const int                                     nodesPerAxis,
+      const int                                     unknowns,
+      const int                                     strideQ,
+      const int                                     strideRhs,
+      const bool                                    callFlux,
+      const bool                                    callSource,
+      const bool                                    callNonconservativeProduct,
+      const int                                     scalarIndex);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
     
     /**
      * @brief Add flux contributions to RHS during STP Picard loop.
