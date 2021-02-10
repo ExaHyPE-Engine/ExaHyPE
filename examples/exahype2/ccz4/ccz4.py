@@ -39,7 +39,7 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
       unknowns=number_of_unknowns, 
       auxiliary_variables=number_of_auxiliary_variables, 
       min_h=min_h, max_h=max_h, 
-      time_step_relaxation=0.3
+      time_step_relaxation=0.2
     )
     
     self._solver_template_file_class_name = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves.__name__
@@ -96,7 +96,7 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
         const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
         const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
         for(int i=0; i<59; i++) {
-          gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+6)+i] - reconstructedPatch[leftCellSerialised*(59+6)+i] ) / 2.0 / volumeH;
+          gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+6)+i] - reconstructedPatch[leftCellSerialised*(59+6)+i] ) / 1.0 / volumeH;
         }
       }
 
@@ -111,8 +111,6 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
 	  
       for(int i=0;i<6;i++){
         reconstructedPatch[cellSerialised*(59+6)+59+i] = constraints[i];
-        // @todo Han: Please remove this line. I just have it in here for testing
-        reconstructedPatch[cellSerialised*(59+6)+59+i] = i+3.0;
       }
     }
 """
