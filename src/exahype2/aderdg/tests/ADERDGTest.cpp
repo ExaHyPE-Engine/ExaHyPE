@@ -36,7 +36,7 @@ exahype2::aderdg::tests::ADERDGTest::ADERDGTest():
 {
 }
 
-void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
+void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
   std::function< void(
     const double * const __restrict__           Q,
     const tarch::la::Vector<Dimensions,double>& x,
@@ -67,12 +67,16 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
 ) {
   const int strideQ       = unknowns+auxiliaryVariables;
   const int nodesPerAxis  = (order+1);
-  const int nodesPerAxis2 = nodesPerAxis *nodesPerAxis;
-  const int nodesPerAxis3 = nodesPerAxis2*nodesPerAxis;
+  int nodesPerFace  = nodesPerAxis; 
+  if ( Dimensions == 3 ) {
+    nodesPerFace *= nodesPerAxis;
+  }
+  const int nodesPerCell          = nodesPerFace*nodesPerAxis;
+  const int spaceTimeNodesPerCell = nodesPerCell*nodesPerAxis;
 
   // In-/Outputs:
-  double U[nodesPerAxis2*strideQ];
-  for (int i = 0; i < nodesPerAxis2; i++) {
+  double U[nodesPerCell*strideQ];
+  for (int i = 0; i < nodesPerCell; i++) {
     for (int m=0; m < unknowns; m++) {
       const int i_U = i*strideQ + m;
 
@@ -87,7 +91,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
   if ( verbose ) { 
     // print input
     std::cout << "\ninput (U):\n\n";
-    for (int i = 0; i < nodesPerAxis2; i++) {
+    for (int i = 0; i < nodesPerCell; i++) {
       for (int m=0; m < unknowns; m++) {
         const int i_U = i*unknowns  + m;
         std::cout << std::setprecision(3) << U[i_U] << " ";
@@ -98,8 +102,8 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
   }
 
   // Outputs:
-  double Q[nodesPerAxis3*strideQ];
-  double _QHull[Dimensions*2][2*nodesPerAxis2*strideQ];
+  double Q[spaceTimeNodesPerCell*strideQ];
+  double _QHull[Dimensions*2][2*nodesPerCell*strideQ];
   double* QHull[Dimensions*2];
   double* QHull_faceSwap[Dimensions*2]; // left becomes right
   double riemannResult[Dimensions*2*nodesPerAxis];
@@ -152,7 +156,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
   
   //// print test data 
   //std::cout << "\ntest data (Q):\n\n";
-  //for (int i = 0; i < nodesPerAxis3; i++) {
+  //for (int i = 0; i < spaceTimeNodesPerCell; i++) {
   //  for (int m=0; m < unknowns; m++) {
   //    const int i_QOut_testdata = i*unknowns  + m;
   //    std::cout << std::setprecision(3) << testEuler_QOut[i_QOut_testdata] << " ";
@@ -165,7 +169,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
   if ( verbose ) {
     // print result
     std::cout << "\nresult (Q):\n\n";
-    for (int i = 0; i < nodesPerAxis3; i++) {
+    for (int i = 0; i < spaceTimeNodesPerCell; i++) {
       for (int m=0; m < unknowns; m++) {
         const int i_Q = i*unknowns  + m;
         std::cout << std::setprecision(3) << Q[i_Q] << " ";
@@ -175,7 +179,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
     std::cout << std::flush;
   }
   
-  for (int i = 0; i < nodesPerAxis3; i++) {
+  for (int i = 0; i < spaceTimeNodesPerCell; i++) {
     for (int m=0; m < unknowns; m++) {
       const int i_Q = i*strideQ + m;
       validatePicardLoopResult(Q,i_Q,m);
@@ -245,7 +249,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
   // print result
   if ( verbose ) {
     std::cout << "\nresult (U, post time extrapolation):\n\n";
-    for (int i = 0; i < nodesPerAxis2; i++) {
+    for (int i = 0; i < nodesPerCell; i++) {
       for (int m=0; m < unknowns; m++) {
         const int i_U = i*unknowns  + m;
         std::cout << std::setprecision(3) << U[i_U] << " ";
@@ -257,7 +261,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
  
   // prepare QHull
   for (int face = 0; face < 2*Dimensions; face++) {
-    for (int i = 0; i < 2*nodesPerAxis2; i++) {
+    for (int i = 0; i < 2*nodesPerCell; i++) {
       for (int m=0; m < unknowns; m++) {
         const int i_QHull = i*unknowns  + m;
         QHull[face][i_QHull] = std::numeric_limits<double>::quiet_NaN();
@@ -278,7 +282,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
     // print result
     std::cout << "\nresult (QHull):\n\n";
     for (int face = 0; face < 2*Dimensions; face++) {
-      for (int i = 0; i < 2*nodesPerAxis2; i++) {
+      for (int i = 0; i < 2*nodesPerCell; i++) {
         for (int m=0; m < unknowns; m++) {
           const int i_QHull = i*unknowns  + m;
           const double value = QHull[face][i_QHull];
@@ -305,7 +309,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
     // print result 
     std::cout << "\nresult (QHull, post filling neighbour arrays):\n\n";
     for (int face = 0; face < 2*Dimensions; face++) {
-      for (int i = 0; i < 2*nodesPerAxis2; i++) {
+      for (int i = 0; i < 2*nodesPerCell; i++) {
         for (int m=0; m < unknowns; m++) {
           const int i_QHull = i*unknowns  + m;
           const double value = QHull[face][i_QHull];
@@ -380,9 +384,9 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
     // print result
     std::cout << "\nresult (riemannResult):\n\n";
     for (int face = 0; face < Dimensions*2; face++) {
-      for (int i = 0; i < nodesPerAxis; i++) {
+      for (int i = 0; i < nodesPerFace; i++) {
         for (int m=0; m < unknowns; m++) {
-          const int i_QFace = (face*nodesPerAxis+i)*unknowns + m;
+          const int i_QFace = (face*nodesPerFace+i)*unknowns + m;
           std::cout << std::setprecision(3) << riemannResult[i_QFace] << " ";
         }
         std::cout << "\n";
@@ -405,7 +409,7 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep2d(
  
   if ( verbose ) { 
     std::cout << "\nresult (U, post Riemann):\n\n";
-    for (int i = 0; i < nodesPerAxis2; i++) {
+    for (int i = 0; i < nodesPerCell; i++) {
       for (int m=0; m < unknowns; m++) {
         const int i_U = i*unknowns  + m;
         std::cout << std::setprecision(6) << U[i_U] << " ";

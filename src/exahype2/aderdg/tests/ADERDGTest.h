@@ -44,7 +44,7 @@ private:
   
   const double testAdvection_UIn[4];
 
-  void runADERDGStep2d(
+  void runADERDGStep(
     std::function< void(
       const double * const __restrict__           Q,
       const tarch::la::Vector<Dimensions,double>& x,
