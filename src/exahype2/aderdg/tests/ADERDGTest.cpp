@@ -2,6 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #include "ADERDGTest.h"
 
+#include <sstream>
 #include <iostream>
 #include <iomanip>
 
@@ -65,6 +66,8 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
   const double*                                test_UIn,
   const bool                                   verbose
 ) {
+  std::ostringstream buffer;
+
   const int strideQ       = unknowns+auxiliaryVariables;
   const int nodesPerAxis  = (order+1);
   int nodesPerFace  = nodesPerAxis; 
@@ -75,30 +78,23 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
   const int spaceTimeNodesPerCell = nodesPerCell*nodesPerAxis;
 
   // In-/Outputs:
+  buffer << "\ninput (U):\n\n";
   double U[nodesPerCell*strideQ];
   for (int i = 0; i < nodesPerCell; i++) {
     for (int m=0; m < unknowns; m++) {
       const int i_U = i*strideQ + m;
-
       U[i_U] = test_UIn[m];
+      buffer << std::fixed << std::showpoint << std::setprecision(6) << U[i_U] << " ";
     }
     for (int m=unknowns; m < strideQ; m++) {
       const int i_U = i*strideQ + m;
       U[i_U] = 0.0;
+      buffer << std::fixed << std::showpoint << std::setprecision(6) << U[i_U] << " ";
     }
+    buffer << "\n";
   }
-  
-  if ( verbose ) { 
-    // print input
-    std::cout << "\ninput (U):\n\n";
-    for (int i = 0; i < nodesPerCell; i++) {
-      for (int m=0; m < unknowns; m++) {
-        const int i_U = i*unknowns  + m;
-        std::cout << std::setprecision(3) << U[i_U] << " ";
-      }
-      std::cout << "\n";
-    }
-    std::cout << std::flush;
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
   }
 
   // Outputs:
@@ -118,72 +114,54 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
   double maxEigenvaluePerFace[Dimensions*2];
 
   ::exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
-      flux,
-      [&](
-        const double * const __restrict__           Q,
-        const tarch::la::Vector<Dimensions,double>& x,
-        double                                      t,
-        double * __restrict__                       S
-      )->void {},
-      [&](
-        const double * const __restrict__           Q,
-        const double * const __restrict__           dQ_or_dQdn,
-        const tarch::la::Vector<Dimensions,double>& x,
-        double                                      t,
-        int                                         direction,
-        double * __restrict__                       BgradQ
-      )->void {},
-      Q,                                 // Q
-      U,                                 // U
-      QuadraturePoints,
-      QuadratureWeights,
-      StiffnessOperator,                 // Kxi,
-      InvertedPredictorLhsOperator,      // iK1,
-      BasisFunctionValuesLeft,           // FLCoeff,
-      DerivativeOperator,                // dudx, 
-      x,
-      dx,                                // we assume cubic/square cells
-      t,
-      dt,
-      order, 
-      unknowns,
-      auxiliaryVariables,
-      1e-8,  // atol,
-      true, 
-      false,
-      false
-    );
+    flux,
+    [&](
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      double * __restrict__                       S
+    )->void {},
+    [&](
+      const double * const __restrict__           Q,
+      const double * const __restrict__           dQ_or_dQdn,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                         direction,
+      double * __restrict__                       BgradQ
+    )->void {},
+    Q,                                 // Q
+    U,                                 // U
+    QuadraturePoints,
+    QuadratureWeights,
+    StiffnessOperator,                 // Kxi,
+    InvertedPredictorLhsOperator,      // iK1,
+    BasisFunctionValuesLeft,           // FLCoeff,
+    DerivativeOperator,                // dudx, 
+    x,
+    dx,                                // we assume cubic/square cells
+    t,
+    dt,
+    order, 
+    unknowns,
+    auxiliaryVariables,
+    1e-8,  // atol,
+    true, 
+    false,
+    false
+  );
   
-  //// print test data 
-  //std::cout << "\ntest data (Q):\n\n";
-  //for (int i = 0; i < spaceTimeNodesPerCell; i++) {
-  //  for (int m=0; m < unknowns; m++) {
-  //    const int i_QOut_testdata = i*unknowns  + m;
-  //    std::cout << std::setprecision(3) << testEuler_QOut[i_QOut_testdata] << " ";
-  //  }
-  //  std::cout << "\n";
-  //}
-  //std::cout << std::flush;
-  //
-  
-  if ( verbose ) {
-    // print result
-    std::cout << "\nresult (Q):\n\n";
-    for (int i = 0; i < spaceTimeNodesPerCell; i++) {
-      for (int m=0; m < unknowns; m++) {
-        const int i_Q = i*unknowns  + m;
-        std::cout << std::setprecision(3) << Q[i_Q] << " ";
-      }
-      std::cout << "\n";
-    }
-    std::cout << std::flush;
-  }
-  
+  // print result
+  buffer << "\nresult (Q):\n\n";
   for (int i = 0; i < spaceTimeNodesPerCell; i++) {
     for (int m=0; m < unknowns; m++) {
-      const int i_Q = i*strideQ + m;
+      const int i_Q = i*unknowns  + m;
       validatePicardLoopResult(Q,i_Q,m);
+      buffer << std::fixed << std::showpoint << std::setprecision(6) << Q[i_Q] << " ";
     }
+    buffer << "\n";
+  }
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
   }
   
   ::exahype2::aderdg::corrector_addCellContributions_loop_AoS(
@@ -233,10 +211,11 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
     auxiliaryVariables,                     // auxiliaryVariables,
     true /*callFlux*/,                      // callFlux,
     false /*callSource*/,                   // callSource,
-    false /*callNonconservativeProduct*/);  // callNonconservativeProduct) 
+    false /*callNonconservativeProduct*/
+  );  // callNonconservativeProduct) 
 
 
-  // TODO Using simple extrpolation leads to wrong result
+  // TODO Using simple extrapolation leads to wrong result
   //::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
   //  U,
   //  Q,
@@ -244,19 +223,18 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
   //  order,
   //  unknowns,
   //  auxiliaryVariables);
-  
 
   // print result
-  if ( verbose ) {
-    std::cout << "\nresult (U, post time extrapolation):\n\n";
-    for (int i = 0; i < nodesPerCell; i++) {
-      for (int m=0; m < unknowns; m++) {
-        const int i_U = i*unknowns  + m;
-        std::cout << std::setprecision(3) << U[i_U] << " ";
-      }
-      std::cout << "\n";
+  buffer << "\nresult (U, post volume integral):\n\n";
+  for (int i = 0; i < nodesPerCell; i++) {
+    for (int m=0; m < unknowns; m++) {
+      const int i_U = i*unknowns  + m;
+      buffer << std::fixed << std::showpoint << std::setprecision(6) << U[i_U] << " ";
     }
-    std::cout << std::flush;
+    buffer << "\n";
+  }
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
   }
  
   // prepare QHull
@@ -278,21 +256,21 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
     unknowns,
     auxiliaryVariables);
   
-  if ( verbose ) { 
-    // print result
-    std::cout << "\nresult (QHull):\n\n";
-    for (int face = 0; face < 2*Dimensions; face++) {
-      for (int i = 0; i < 2*nodesPerCell; i++) {
-        for (int m=0; m < unknowns; m++) {
-          const int i_QHull = i*unknowns  + m;
-          const double value = QHull[face][i_QHull];
-          std::cout << std::setprecision(3) << value << " ";
-        }
-        std::cout << "\n";
+  // print result
+  buffer << "\nresult (QHull):\n\n";
+  for (int face = 0; face < 2*Dimensions; face++) {
+    for (int i = 0; i < 2*nodesPerCell; i++) {
+      for (int m=0; m < unknowns; m++) {
+        const int i_QHull = i*unknowns  + m;
+        const double value = QHull[face][i_QHull];
+        buffer << std::fixed << std::showpoint << std::setprecision(6) << value << " ";
       }
-      std::cout << "\n";
+      buffer << "\n";
     }
-    std::cout << std::flush;
+    buffer << "\n";
+  }
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
   }
   
   // extrapolate again with swapped face pointers (left<->right) to fill the neigbour blocks
@@ -305,21 +283,21 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
     unknowns,
     auxiliaryVariables);
   
-  if ( verbose ) { 
-    // print result 
-    std::cout << "\nresult (QHull, post filling neighbour arrays):\n\n";
-    for (int face = 0; face < 2*Dimensions; face++) {
-      for (int i = 0; i < 2*nodesPerCell; i++) {
-        for (int m=0; m < unknowns; m++) {
-          const int i_QHull = i*unknowns  + m;
-          const double value = QHull[face][i_QHull];
-          std::cout << std::setprecision(3) << value << " ";
-        }
-        std::cout << "\n";
+  // print result 
+  buffer << "\nresult (QHull, post filling neighbour arrays):\n\n";
+  for (int face = 0; face < 2*Dimensions; face++) {
+    for (int i = 0; i < 2*nodesPerCell; i++) {
+      for (int m=0; m < unknowns; m++) {
+        const int i_QHull = i*unknowns  + m;
+        const double value = QHull[face][i_QHull];
+        buffer << std::fixed << std::showpoint << std::setprecision(6) << value << " ";
       }
-      std::cout << "\n";
+      buffer << "\n";
     }
-    std::cout << std::flush;
+    buffer << "\n";
+  }
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
   }
 
   // max eigenvalue
@@ -336,14 +314,13 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
     unknowns,
     auxiliaryVariables);
   
-  if ( verbose ) { 
-    std::cout << "\nresult (maxEigenvaluePerFace):\n\n";
-    for (int face = 0; face < 2*Dimensions; face++) {
-      std::cout << std::setprecision(3) << maxEigenvaluePerFace[face] << " ";
-    }
-    std::cout << std::endl;
+  buffer << "\nresult (maxEigenvaluePerFace):\n\n";
+  for (int face = 0; face < 2*Dimensions; face++) {
+    buffer << std::fixed << std::showpoint << std::setprecision(6) << maxEigenvaluePerFace[face] << " ";
   }
-
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
+  }
   // Rusanov test
   ::exahype2::aderdg::rusanovNonlinear_loop_AoS(
     flux,
@@ -380,20 +357,20 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
     true /*callFlux*/,
     false/*callNonconservativeProduct*/);
 
-  if ( verbose ) { 
-    // print result
-    std::cout << "\nresult (riemannResult):\n\n";
-    for (int face = 0; face < Dimensions*2; face++) {
-      for (int i = 0; i < nodesPerFace; i++) {
-        for (int m=0; m < unknowns; m++) {
-          const int i_QFace = (face*nodesPerFace+i)*unknowns + m;
-          std::cout << std::setprecision(3) << riemannResult[i_QFace] << " ";
-        }
-        std::cout << "\n";
+  // print result
+  buffer << "\nresult (riemannResult):\n\n";
+  for (int face = 0; face < Dimensions*2; face++) {
+    for (int i = 0; i < nodesPerFace; i++) {
+      for (int m=0; m < unknowns; m++) {
+        const int i_QFace = (face*nodesPerFace+i)*unknowns + m;
+        buffer << std::fixed << std::showpoint << std::setprecision(6) << riemannResult[i_QFace] << " ";
       }
-      std::cout << "\n";
+      buffer << "\n";
     }
-    std::cout << std::flush;
+    buffer << "\n";
+  }
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
   }
 
   ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
@@ -406,24 +383,22 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
     order,
     unknowns,
     auxiliaryVariables);
- 
-  if ( verbose ) { 
-    std::cout << "\nresult (U, post Riemann):\n\n";
-    for (int i = 0; i < nodesPerCell; i++) {
-      for (int m=0; m < unknowns; m++) {
-        const int i_U = i*unknowns  + m;
-        std::cout << std::setprecision(6) << U[i_U] << " ";
-      }
-      std::cout << "\n";
+  
+  buffer << "\nresult (U, post Riemann):\n\n";
+  for (int i = 0; i < nodesPerCell; i++) {
+    for (int m=0; m < unknowns; m++) {
+      const int i_U = i*unknowns  + m;
+      buffer << std::fixed << std::showpoint << std::setprecision(6) << U[i_U] << " ";
     }
-    std::cout << std::flush;
+    buffer << "\n";
+  }
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
   }
 }
 
 void exahype2::aderdg::tests::ADERDGTest::run() {
-  std::cout << "# LINEAR ADVECTION:\n" << std::endl;
   testMethod (testAdvection)
-  std::cout << "\n# COMPRESSIBLE EULER:\n" << std::endl;
   testMethod (testEuler)
 }
 
@@ -438,8 +413,11 @@ void exahype2::aderdg::tests::ADERDGTest::testAdvection() {
   const int auxiliaryVariables = 0;
   const int order              = 3; // order must match nodes, weights etc.
 
-  const bool verbose = true;
+  const bool verbose = false;
 
+  if ( verbose ) {
+    std::cout << "# LINEAR ADVECTION:\n" << std::endl;
+  }
   runADERDGStep(
     [&] (      
       const double * const __restrict__           Q,
@@ -491,8 +469,11 @@ void exahype2::aderdg::tests::ADERDGTest::testEuler() {
   const int auxiliaryVariables = 0;
   const int order              = 3; // order must match nodes, weights etc.
 
-  const bool verbose = true;
+  const bool verbose = false;
 
+  if ( verbose ) { 
+    std::cout << "\n# COMPRESSIBLE EULER:\n" << std::endl;
+  }
   runADERDGStep(
     [&] (      
       const double * const __restrict__           Q,
