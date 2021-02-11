@@ -66,8 +66,7 @@ class examples::exahype2::loh1::ADERDGLOH1: public AbstractADERDGLOH1 {
     void nonconservativeProduct(
       const double * __restrict__                  Q, // [9+4],
       const double * __restrict__                  deltaQ, // [9+4],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[13]

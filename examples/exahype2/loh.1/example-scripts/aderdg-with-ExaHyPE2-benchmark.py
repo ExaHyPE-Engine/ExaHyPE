@@ -37,7 +37,6 @@ parser = argparse.ArgumentParser(description='ExaHyPE 2 - LOH1 benchmarking scri
 parser.add_argument("--load-balancing-quality", dest="load_balancing_quality", type=float, default=0.9, help="Load balancing quality (something between 0 and 1; 1 is optimal)" )
 parser.add_argument("--h",               dest="h",              type=float, required=True, help="Mesh size" )
 parser.add_argument("--j",               dest="j",              type=int, default=4, help="Parallel builds" )
-parser.add_argument("--d",               dest="dim",            type=int, default=2, help="Dimensions" )
 parser.add_argument("--m",               dest="mode",                     default="release", help="|".join(modes.keys()) )
 parser.add_argument("--t",               dest="timesteps",      type=int, default=10, help="Number of timesteps" )
 parser.add_argument("--p",               dest="peanodir",                 default="../../../", help="Peano4 directory" )
@@ -48,11 +47,6 @@ parser.add_argument("--gpu",             dest="GPU",             default=False, 
 parser.add_argument("--dt",              dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 args = parser.parse_args()
 
-if args.dim not in [2,3]:
-    print("Error, dimension must be 2 or 3, you supplied {}".format(args.dim))
-    import sys
-    sys.exit(1)
-
 if args.mode not in modes: 
     print("Error, mode must be {} or {}, you supplied {}".format(", ",join(modes.keys()[:-1]),modes.keys()[-1],args.mode))
     import sys
@@ -62,7 +56,7 @@ if args.out is not None and os.path.exists(args.out) and not args.force:
     print("Not overwriting existing output file name {}. Use --f to force it.".format(args.out))
     sys.exit(1)
 
-print("\nConfiguring {}D LOH.1 problem with h={} and {} timesteps. Buildmode is {}, nbuilds={}.\n".format(args.dim, args.h, args.timesteps, args.mode, args.j))
+print("\nConfiguring {}D LOH.1 problem with h={} and {} timesteps. Buildmode is {}, nbuilds={}.\n".format(3, args.h, args.timesteps, args.mode, args.j))
 print("Executable: {}".format(args.out))
 
 #
@@ -115,7 +109,7 @@ else:
 
 project.add_solver( thesolver )
 
-dimensions = args.dim
+dimensions = 3
 build_mode = modes[args.mode]
 
 #

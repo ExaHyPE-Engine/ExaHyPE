@@ -40,7 +40,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_initialis
   const int it = delineariseIndex(scalarIndex,getStrides(nodesPerAxis))[0];
   
   const double coeff = FLCoeff[ it ];
-  for (int var = 0; var < strideQ; var++) {
+  for (int var = 0; var < strideRhs; var++) {
     rhsOut[ scalarIndex*strideRhs + var ] = coeff * UIn[ ( scalarIndex / nodesPerAxis ) * strideQ + var ];
   }
 }
@@ -119,7 +119,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_PicardLoop_addContri
     }
   }
   // NCP contributions ; NOTE: gradient has same Q access pattern as flux
-  if ( callNonconservativeProduct ) {
+  if ( callNonconservativeProduct ) { 
     gradient_AoS(QIn,dudx,invDx,nodesPerAxis,strideQ,scalarIndex,gradQAux);           
     
     const double* Q = &QIn [ scalarIndex*strideQ ];
@@ -737,10 +737,19 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
   const int strideGradQ  = strideQ*Dimensions; // gradient of auxiliary variables needed for some apps
   
   double* rhs      = new double[spaceTimeNodesPerCell*strideRhs]{0.0}; 
-  
-  double* SAux     = new double[spaceTimeNodesPerCell*strideS]{0.0};
-  double* gradQAux = new double[spaceTimeNodesPerCell*strideGradQ]{0.0};
-  double* FAux     = new double[spaceTimeNodesPerCell*strideF]{0.0}; 
+ 
+  double* FAux     = nullptr; 
+  double* SAux     = nullptr; 
+  double* gradQAux = nullptr; 
+  if ( callFlux ) {
+    FAux     = new double[spaceTimeNodesPerCell*strideF]{0.0}; 
+  } 
+  if ( callSource || callNonconservativeProduct ) {   
+    SAux     = new double[spaceTimeNodesPerCell*strideS]{0.0};
+  }  
+  if ( callNonconservativeProduct ) {   
+    gradQAux = new double[spaceTimeNodesPerCell*strideGradQ]{0.0};
+  }
   
   // initial guess  
   for ( int scalarIndexCell = 0; scalarIndexCell < spaceTimeNodesPerCell; scalarIndexCell++ ) {
@@ -769,9 +778,9 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
         algebraicSource,
         nonconservativeProduct,
         rhs, 
-        FAux, 
-        gradQAux,
-        SAux,
+        FAux     + scalarIndexCell*strideF, 
+        gradQAux + scalarIndexCell*strideGradQ,
+        SAux     + scalarIndexCell*strideS,
         QOut, 
         nodes,
         weights,
@@ -820,10 +829,16 @@ void exahype2::aderdg::spaceTimePredictor_PicardLoop_loop_AoS(
   } // iter
   
   delete [] rhs;
-   
-  delete [] FAux;
-  delete [] SAux;
-  delete [] gradQAux;
+
+  if ( callFlux ) {   
+    delete [] FAux;
+  }
+  if ( callSource || callNonconservativeProduct ) {   
+    delete [] SAux;
+  }
+  if ( callNonconservativeProduct ) {   
+    delete [] gradQAux;
+  }
 }
 
 void exahype2::aderdg::spaceTimePredictor_extrapolate_loop_AoS(

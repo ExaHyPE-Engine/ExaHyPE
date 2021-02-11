@@ -114,15 +114,16 @@ double examples::exahype2::loh1::ADERDGLOH1::maxEigenvalue(
 }
 
 
-void examples::exahype2::loh1::nonconservativeProduct(
+void examples::exahype2::loh1::ADERDGLOH1::nonconservativeProduct(
   const double * __restrict__                  Q, // [9+4],
   const double * __restrict__                  deltaQ, // [9+4],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[13]
+  double * __restrict__                        BgradQ // BgradQ[13]
  ) {
+  logTraceIn( "nonconservativeProduct(...)" );
+
   double rho    = Q[s.rho];  
   double cp     = Q[s.cp];
   double cs     = Q[s.cs];

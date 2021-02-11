@@ -281,10 +281,18 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
   const int strideF      = unknowns;
   const int strideGradQ  = strideQ*Dimensions; // gradient of auxiliary variables needed for some apps
   
-  double* FAux     = new double[nodesPerCell*strideF]{0.0}; 
-  double* SAux     = new double[nodesPerCell*strideS]{0.0};
-  double* gradQAux = new double[nodesPerCell*strideGradQ]{0.0};
-  
+  double* FAux     = nullptr; 
+  double* SAux     = nullptr; 
+  double* gradQAux = nullptr; 
+  if ( callFlux ) {
+    FAux     = new double[nodesPerCell*strideF]{0.0}; 
+  } 
+  if ( callSource || callNonconservativeProduct ) {   
+    SAux     = new double[nodesPerCell*strideS]{0.0};
+  }  
+  if ( callNonconservativeProduct ) {   
+    gradQAux = new double[nodesPerCell*strideGradQ]{0.0};
+  }
   for ( int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
     if ( callFlux ) { 
       corrector_addFluxContributions_body_AoS(                   
@@ -354,9 +362,15 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
       scalarIndexCell);
   } // scalarIndexCell
   
-  delete [] FAux;
-  delete [] SAux;
-  delete [] gradQAux;
+  if ( callFlux ) {   
+    delete [] FAux;
+  }
+  if ( callSource || callNonconservativeProduct ) {   
+    delete [] SAux;
+  }
+  if ( callNonconservativeProduct ) {   
+    delete [] gradQAux;
+  }
 }
 
 void exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(

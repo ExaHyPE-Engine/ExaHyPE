@@ -235,7 +235,8 @@ GPUCallableMethod void exahype2::aderdg::gradient_AoS(
   for ( int d = 0; d < Dimensions; d++ ) { // x -> y -> z
     // zero
     for (int var=0; var < strideQ; var++) {
-      gradQ[ d + var*Dimensions ] = 0.0;
+      gradQ[ d*strideQ + var ] = 0.0;
+      //gradQ[ d + var*Dimensions ] = 0.0;
     }
     // sum up
     for (int a=0; a < nodesPerAxis; a++) { 
