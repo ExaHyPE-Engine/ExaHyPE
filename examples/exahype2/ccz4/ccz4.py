@@ -39,7 +39,7 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
       unknowns=number_of_unknowns, 
       auxiliary_variables=number_of_auxiliary_variables, 
       min_h=min_h, max_h=max_h, 
-      time_step_relaxation=0.3
+      time_step_relaxation=0.2
     )
     
     self._solver_template_file_class_name = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves.__name__

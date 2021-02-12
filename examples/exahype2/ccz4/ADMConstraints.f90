@@ -282,10 +282,10 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
     DO ii = 1, 3
         DO jj = 1, 3
             DO ll = 1, 3
-                Mom(ii) = Mom(ii) + g_contr(jj,ll)*(dKex(ll,ii,jj) - dKex(ii,jj,ll))
+                Mom(ii) = Mom(ii) + phi**2*g_contr(jj,ll)*(dKex(ll,ii,jj) - dKex(ii,jj,ll))
                 DO mm = 1, 3
                 !Mom(ii) = Mom(ii) + g_contr(jj,ll)*( - ChristoffelNC(jj,ll,mm)*K(mm,ii) + ChristoffelNC(jj,ii,mm)*K(mm,ll)) 
-                Mom(ii) = Mom(ii) + g_contr(jj,ll)*( - Christoffel(jj,ll,mm)*Kex(mm,ii) + Christoffel(jj,ii,mm)*Kex(mm,ll)) 
+                Mom(ii) = Mom(ii) + phi**2*g_contr(jj,ll)*( - Christoffel(jj,ll,mm)*Kex(mm,ii) + Christoffel(jj,ii,mm)*Kex(mm,ll)) 
                 ENDDO
             ENDDO     
         ENDDO
