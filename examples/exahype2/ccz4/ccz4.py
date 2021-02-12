@@ -111,8 +111,6 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
 	  
       for(int i=0;i<6;i++){
         reconstructedPatch[cellSerialised*(59+6)+59+i] = constraints[i];
-        // @todo Han: Please remove this line. I just have it in here for testing
-        reconstructedPatch[cellSerialised*(59+6)+59+i] = i+3.0;
       }
     }
 """
