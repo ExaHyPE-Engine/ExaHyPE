@@ -264,7 +264,7 @@ def render_single_file(filename, identifier, display_as_tree = True, filter=None
   return grid
 
 
-def render_dataset(filename, identifier, dataset_number=0, display_as_tree = True, filter=None):
+def render_dataset(filename, identifier, dataset_number=0, display_as_tree = True, filter=None, apply_filter_to_individual_snapshots_first=True ):
   """
   
     Peano patch files can either hold data (see render_single_file)
@@ -374,18 +374,19 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
       print("Unknowns not compatible with unknowns from previous files in the snapshot")
       return
     unknowns=snapshot_unknowns
-       
-  print( "Apply filter to individual snapshots" )
+    
+  if apply_filter_to_individual_snapshots_first:
+    print( "Apply filter to individual snapshots" )
 
-  #
-  # Parallel
-  #
-  pool = multiprocessing.Pool( len(parsers) ) 
-  for parser in parsers:
-    pool.apply_async( __apply_filter( parser, unknowns, dimensions) )
-    #__apply_filter( parser, unknowns, dimensions)
-  pool.close()
-  pool.join()
+    #
+    # Parallel
+    #
+    pool = multiprocessing.Pool( len(parsers) ) 
+    for parser in parsers:
+      pool.apply_async( __apply_filter( parser, unknowns, dimensions) )
+      #__apply_filter( parser, unknowns, dimensions)
+    pool.close()
+    pool.join()
 
   print( "Concatenate snapshots" )
 
@@ -435,6 +436,7 @@ class Visualiser(object):
     self.filter         = []
     self.identifier     = ""
     self.data           = None
+    self.apply_filter_to_individual_snapshots_first = True
     
     
   def display(self, invoked_on_command_line = False):
@@ -456,12 +458,13 @@ class Visualiser(object):
     self.reload()
   
   
-  def append_filter(self, filter):
+  def append_filter(self, filter, reload=True):
     """
      
     """
     self.filter.append(filter)
-    self.reload()
+    if reload:
+      self.reload()
     
     
   def remove_filters(self):
@@ -480,14 +483,15 @@ class Visualiser(object):
      not work if self._tp is set to None
     
     """
+    self._data = render_dataset( 
+      self.file_name,
+      self.identifier,
+      self.dataset_number,
+      False, # display_as_tree
+      self.filter,
+      self.apply_filter_to_individual_snapshots_first
+    )
     if self._tp != None:
-      self._data = render_dataset( 
-        self.file_name,
-        self.identifier,
-        self.dataset_number,
-        False, # display_as_tree
-        self.filter
-      )
       self._tp.GetClientSideObject().SetOutput(self._data)
       Show(self._tp)
       print( "Please press the play button to update your pipeline" )
@@ -503,6 +507,11 @@ class Visualiser(object):
     writer.SetFileName( file_name )
     writer.SetInputData( self._data )
     writer.Write()
+    #
+    # explicitly destroy object to speed up things
+    #
+    print( "Wrote file " + file_name )
+    del writer
 
 
   def write_vtu_time_series(self):
@@ -516,6 +525,9 @@ class Visualiser(object):
     i = 0;
     try:
       while True:
+        print( "==================================")
+        print( "Process snapshot " + str(i) )
+        print( "==================================")
         self.select_dataset(i)
         snapshot_file_name = file_name + "-" + str(i) + ".vtu"
         self.write_vtu( snapshot_file_name )

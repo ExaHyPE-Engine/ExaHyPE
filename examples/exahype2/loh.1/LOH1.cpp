@@ -34,7 +34,10 @@ void examples::exahype2::loh1::LOH1::prescribeGaussianWave(
   center_curve[1] = 0.0;
   center_curve[2] = 2.0;
 
-  bool upperLayer = x(2) < 1.0;
+  // 1.0 is the parameter from the setup, but we need at least one voxel
+  bool layerWidth = std::max( getMinMeshSize() / _NumberOfFiniteVolumesPerAxisPerPatch, 1.0 );
+
+  bool upperLayer = x(2) <= layerWidth;
   
   //double rho = upperLayer ? 2.67   : 2.6;
   //double cp  = upperLayer ? 6.0    : 4.0;
@@ -48,7 +51,7 @@ void examples::exahype2::loh1::LOH1::prescribeGaussianWave(
   Q[s.cs   ] = cs;
   Q[s.alpha] = 1.0;
 
-  double radius = 0.1 ;
+  double radius = 2.0*layerWidth;
   //double height = 3.0;
   
   Q[ s.v + 0 ] = std::exp(-((x[0]-center_curve[0])*(x[0]-center_curve[0])+
@@ -160,15 +163,6 @@ void examples::exahype2::loh1::LOH1::nonconservativeProduct(
 ) {
   logTraceIn( "nonconservativeProduct(...)" );
  
-  // modificatons to ExaSeis original
- 
-  //BgradQ[s.rho]= 0.0;
-  //BgradQ[s.cp]= 0.0;
-  //BgradQ[s.cs]= 0.0;
-  //BgradQ[s.alpha]= 0.0;
-
-  // below as in original code
-
   double rho    = Q[s.rho];  
   double cp     = Q[s.cp];
   double cs     = Q[s.cs];
@@ -186,28 +180,21 @@ void examples::exahype2::loh1::LOH1::nonconservativeProduct(
   double v= Q[s.v + 1] * alpha_i;
   double w= Q[s.v + 2] * alpha_i;
 
-  //  BgradQ[s.alpha] = 0;
-  //  std::cout << rho_i << std::endl; 
-
-  // INDEXING
-  // previous: define idx(dim,var) (var)][(dim)
-  #define idx(dim,var) (var)
-
   assertion(normal>=0);
   assertion(normal<3);
   switch ( normal ) { 
     //dx
     case 0:
       {
-      double alpha_x  = deltaQ[idx(0,s.alpha)];
-      BgradQ[s.v + 0] = -rho_i*(deltaQ[idx(0,s.sigma + 0)] + 2*Q[s.sigma + 0]*alpha_x);   //   AQx(7) = - irho * Qx(1) - 2*Q(1)*irho*Qx(13)        
-      BgradQ[s.v + 1] = -rho_i*(deltaQ[idx(0,s.sigma + 3)] + 2*Q[s.sigma + 3]*alpha_x);   //   AQx(8) = - irho * Qx(4) - 2*Q(4)*irho*Qx(13)        
-      BgradQ[s.v + 2] = -rho_i*(deltaQ[idx(0,s.sigma + 4)] + 2*Q[s.sigma + 4]*alpha_x);   //   AQx(9) = - irho * Qx(6) - 2*Q(6)*irho*Qx(13)        
-      BgradQ[s.sigma + 0] =-(lambda+2*mu) * ( deltaQ[idx(0,s.v + 0)]  - u * alpha_x);   //   AQx(1) = - (lam+2*mu)*Qx(7) + (lam+2*mu)*u(1)*Qx(13) 
-      BgradQ[s.sigma + 1] =       -lambda * ( deltaQ[idx(0,s.v + 0)]  - u * alpha_x);   //   AQx(2) = - lam*Qx(7)        + lam*u(1)*Qx(13)               
-      BgradQ[s.sigma + 2] =       -lambda * ( deltaQ[idx(0,s.v + 0)]  - u * alpha_x);   //   AQx(3) = - lam*Qx(7)        + lam*u(1)*Qx(13)               
-      BgradQ[s.sigma + 3] =           -mu * ( deltaQ[idx(0,s.v + 1)]  - v * alpha_x);   //   AQx(4) = - mu *Qx(8)        + mu *u(2)*Qx(13)               
-      BgradQ[s.sigma + 4] =           -mu * ( deltaQ[idx(0,s.v + 2)]  - w * alpha_x);   //   AQx(6) = - mu *Qx(9)        + mu *u(3)*Qx(13)               
+      double alpha_x  = deltaQ[s.alpha];
+      BgradQ[s.v + 0] = -rho_i*(deltaQ[s.sigma + 0] + 2*Q[s.sigma + 0]*alpha_x);   //   AQx(7) = - irho * Qx(1) - 2*Q(1)*irho*Qx(13)        
+      BgradQ[s.v + 1] = -rho_i*(deltaQ[s.sigma + 3] + 2*Q[s.sigma + 3]*alpha_x);   //   AQx(8) = - irho * Qx(4) - 2*Q(4)*irho*Qx(13)        
+      BgradQ[s.v + 2] = -rho_i*(deltaQ[s.sigma + 4] + 2*Q[s.sigma + 4]*alpha_x);   //   AQx(9) = - irho * Qx(6) - 2*Q(6)*irho*Qx(13)        
+      BgradQ[s.sigma + 0] =-(lambda+2*mu) * ( deltaQ[s.v + 0]  - u * alpha_x);   //   AQx(1) = - (lam+2*mu)*Qx(7) + (lam+2*mu)*u(1)*Qx(13) 
+      BgradQ[s.sigma + 1] =       -lambda * ( deltaQ[s.v + 0]  - u * alpha_x);   //   AQx(2) = - lam*Qx(7)        + lam*u(1)*Qx(13)               
+      BgradQ[s.sigma + 2] =       -lambda * ( deltaQ[s.v + 0]  - u * alpha_x);   //   AQx(3) = - lam*Qx(7)        + lam*u(1)*Qx(13)               
+      BgradQ[s.sigma + 3] =           -mu * ( deltaQ[s.v + 1]  - v * alpha_x);   //   AQx(4) = - mu *Qx(8)        + mu *u(2)*Qx(13)               
+      BgradQ[s.sigma + 4] =           -mu * ( deltaQ[s.v + 2]  - w * alpha_x);   //   AQx(6) = - mu *Qx(9)        + mu *u(3)*Qx(13)               
       BgradQ[s.sigma + 5] =                                                     0.0;   //   AQx(5) =   0.0
       }
       break; 
@@ -215,32 +202,32 @@ void examples::exahype2::loh1::LOH1::nonconservativeProduct(
     //dy                                                                                                                                              
     case 1:
       {
-      double alpha_y  = deltaQ[idx(1,s.alpha)];
-      BgradQ[s.v + 0] = -rho_i*(deltaQ[idx(1,s.sigma + 3)] + 2*Q[s.sigma + 3]*alpha_y);   //   BQy(7) = - irho * Qy(4) - 2*Q(4)*irho*Qy(13)        
-      BgradQ[s.v + 1] = -rho_i*(deltaQ[idx(1,s.sigma + 1)] + 2*Q[s.sigma + 1]*alpha_y);   //   BQy(8) = - irho * Qy(2) - 2*Q(2)*irho*Qy(13)        
-      BgradQ[s.v + 2] = -rho_i*(deltaQ[idx(1,s.sigma + 5)] + 2*Q[s.sigma + 5]*alpha_y);   //   BQy(9) = - irho * Qy(5) - 2*Q(5)*irho*Qy(13)        
-      BgradQ[s.sigma + 0] =        -lambda * ( deltaQ[idx(1,s.v + 1)] - v * alpha_y);   //   BQy(1) = - lam*Qy(8)        + lam*u(2)*Qy(13)           
-      BgradQ[s.sigma + 1] = -(lambda+2*mu) * ( deltaQ[idx(1,s.v + 1)] - v * alpha_y);   //   BQy(2) = - (lam+2*mu)*Qy(8) + (lam+2*mu)*u(2)*Qy(13) 
-      BgradQ[s.sigma + 2] =        -lambda * ( deltaQ[idx(1,s.v + 1)] - v * alpha_y);   //   BQy(3) = - lam*Qy(8)        + lam*u(2)*Qy(13)           
-      BgradQ[s.sigma + 3] =            -mu * ( deltaQ[idx(1,s.v + 0)] - u * alpha_y);   //   BQy(4) = - mu *Qy(7)        + mu *u(1)*Qy(13)           
+      double alpha_y  = deltaQ[s.alpha];
+      BgradQ[s.v + 0] = -rho_i*(deltaQ[s.sigma + 3] + 2*Q[s.sigma + 3]*alpha_y);   //   BQy(7) = - irho * Qy(4) - 2*Q(4)*irho*Qy(13)        
+      BgradQ[s.v + 1] = -rho_i*(deltaQ[s.sigma + 1] + 2*Q[s.sigma + 1]*alpha_y);   //   BQy(8) = - irho * Qy(2) - 2*Q(2)*irho*Qy(13)        
+      BgradQ[s.v + 2] = -rho_i*(deltaQ[s.sigma + 5] + 2*Q[s.sigma + 5]*alpha_y);   //   BQy(9) = - irho * Qy(5) - 2*Q(5)*irho*Qy(13)        
+      BgradQ[s.sigma + 0] =        -lambda * ( deltaQ[s.v + 1] - v * alpha_y);   //   BQy(1) = - lam*Qy(8)        + lam*u(2)*Qy(13)           
+      BgradQ[s.sigma + 1] = -(lambda+2*mu) * ( deltaQ[s.v + 1] - v * alpha_y);   //   BQy(2) = - (lam+2*mu)*Qy(8) + (lam+2*mu)*u(2)*Qy(13) 
+      BgradQ[s.sigma + 2] =        -lambda * ( deltaQ[s.v + 1] - v * alpha_y);   //   BQy(3) = - lam*Qy(8)        + lam*u(2)*Qy(13)           
+      BgradQ[s.sigma + 3] =            -mu * ( deltaQ[s.v + 0] - u * alpha_y);   //   BQy(4) = - mu *Qy(7)        + mu *u(1)*Qy(13)           
       BgradQ[s.sigma + 4] =                                                     0.0;   //   BQy(6) =   0.0                                      
-      BgradQ[s.sigma + 5] =            -mu * ( deltaQ[idx(1,s.v + 2)] - w * alpha_y);   //   BQy(5) = - mu *Qy(9)        + mu *u(3)*Qy(13)
+      BgradQ[s.sigma + 5] =            -mu * ( deltaQ[s.v + 2] - w * alpha_y);   //   BQy(5) = - mu *Qy(9)        + mu *u(3)*Qy(13)
       }
       break; 
                                                                                            //       !                                               
     //dz                                                                                                                                              
     case 2:
       {
-      double alpha_z  = deltaQ[idx(2,s.alpha)];
-      BgradQ[s.v + 0] = -rho_i*(deltaQ[idx(2,s.sigma + 4)] + 2*Q[s.sigma + 4]*alpha_z);   //   CQz(7) = - irho * Qz(6) - 2*Q(6)*irho*Qz(13)        
-      BgradQ[s.v + 1] = -rho_i*(deltaQ[idx(2,s.sigma + 5)] + 2*Q[s.sigma + 5]*alpha_z);   //   CQz(8) = - irho * Qz(5) - 2*Q(5)*irho*Qz(13)        
-      BgradQ[s.v + 2] = -rho_i*(deltaQ[idx(2,s.sigma + 2)] + 2*Q[s.sigma + 2]*alpha_z);   //   CQz(9) = - irho * Qz(3) - 2*Q(3)*irho*Qz(13)        
-      BgradQ[s.sigma + 0] =        -lambda * ( deltaQ[idx(2,s.v + 2)] - w * alpha_z);   //   CQz(1) = - lam*Qz(9)        + lam*u(3)*Qz(13)           
-      BgradQ[s.sigma + 1] =        -lambda * ( deltaQ[idx(2,s.v + 2)] - w * alpha_z);   //   CQz(2) = - lam*Qz(9)        + lam*u(3)*Qz(13)           
-      BgradQ[s.sigma + 2] = -(lambda+2*mu) * ( deltaQ[idx(2,s.v + 2)] - w * alpha_z);   //   CQz(3) = - (lam+2*mu)*Qz(9) + (lam+2*mu)*u(3)*Qz(13) 
+      double alpha_z  = deltaQ[s.alpha];
+      BgradQ[s.v + 0] = -rho_i*(deltaQ[s.sigma + 4] + 2*Q[s.sigma + 4]*alpha_z);   //   CQz(7) = - irho * Qz(6) - 2*Q(6)*irho*Qz(13)        
+      BgradQ[s.v + 1] = -rho_i*(deltaQ[s.sigma + 5] + 2*Q[s.sigma + 5]*alpha_z);   //   CQz(8) = - irho * Qz(5) - 2*Q(5)*irho*Qz(13)        
+      BgradQ[s.v + 2] = -rho_i*(deltaQ[s.sigma + 2] + 2*Q[s.sigma + 2]*alpha_z);   //   CQz(9) = - irho * Qz(3) - 2*Q(3)*irho*Qz(13)        
+      BgradQ[s.sigma + 0] =        -lambda * ( deltaQ[s.v + 2] - w * alpha_z);   //   CQz(1) = - lam*Qz(9)        + lam*u(3)*Qz(13)           
+      BgradQ[s.sigma + 1] =        -lambda * ( deltaQ[s.v + 2] - w * alpha_z);   //   CQz(2) = - lam*Qz(9)        + lam*u(3)*Qz(13)           
+      BgradQ[s.sigma + 2] = -(lambda+2*mu) * ( deltaQ[s.v + 2] - w * alpha_z);   //   CQz(3) = - (lam+2*mu)*Qz(9) + (lam+2*mu)*u(3)*Qz(13) 
       BgradQ[s.sigma + 3] =                                                     0.0;   //   CQz(4) =  0.0                                       
-      BgradQ[s.sigma + 4] =            -mu * ( deltaQ[idx(2,s.v + 0)] - u * alpha_z);   //   CQz(6) = - mu *Qz(7)        + mu *u(1)*Qz(13)           
-      BgradQ[s.sigma + 5] =            -mu * ( deltaQ[idx(2,s.v + 1)] - v * alpha_z);   //   CQz(5) = - mu *Qz(8)        + mu *u(2)*Qz(13)
+      BgradQ[s.sigma + 4] =            -mu * ( deltaQ[s.v + 0] - u * alpha_z);   //   CQz(6) = - mu *Qz(7)        + mu *u(1)*Qz(13)           
+      BgradQ[s.sigma + 5] =            -mu * ( deltaQ[s.v + 1] - v * alpha_z);   //   CQz(5) = - mu *Qz(8)        + mu *u(2)*Qz(13)
       }
       break;
 

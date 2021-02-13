@@ -13,10 +13,10 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
   const tarch::la::Vector<Dimensions,double>& cellH,
   double                                      t
 ) {
-  logTraceInWith3Arguments( "refinementCriterion(...)", x, volumeH, t );
+  logTraceInWith3Arguments( "refinementCriterion(...)", x, cellH, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
+  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(cellH)) ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
 
@@ -91,7 +91,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 {% if NCP_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__                 dQ_or_deltaQ // dQ_or_deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__                 deltaQ // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>& x,
   double                                      t,
   int                                         normal

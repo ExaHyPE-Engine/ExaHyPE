@@ -204,14 +204,14 @@ GPUCallableMethod int exahype2::aderdg::mapSpaceTimeFaceIndexToScalarCellIndex(
   const int                                 nodesPerAxis
 ) {
   tarch::la::Vector<Dimensions+1,int> indexCell(-1);
-  indexCell[0] = indexFace[0];
+  indexCell[0]           = indexFace[0]; // time
+  indexCell[direction+1] = id;           // node in interior 
   int i = 1;
-  for ( int e = 0; e < Dimensions; e++) {
+  for ( int e = 0; e < Dimensions; e++) { // take from face
     if ( e != direction ) {
       indexCell[e+1] = indexFace[i++];
     }
   }
-  indexCell[direction+1] = id;
   return lineariseIndex(indexCell,getStrides(nodesPerAxis));
 }
 #if defined(OpenMPGPUOffloading)
@@ -235,7 +235,8 @@ GPUCallableMethod void exahype2::aderdg::gradient_AoS(
   for ( int d = 0; d < Dimensions; d++ ) { // x -> y -> z
     // zero
     for (int var=0; var < strideQ; var++) {
-      gradQ[ d + var*Dimensions ] = 0.0;
+      gradQ[ d*strideQ + var ] = 0.0;
+      //gradQ[ d + var*Dimensions ] = 0.0;
     }
     // sum up
     for (int a=0; a < nodesPerAxis; a++) { 

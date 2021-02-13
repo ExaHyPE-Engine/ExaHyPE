@@ -46,7 +46,33 @@ void examples::exahype2::euler::ADERDGEuler::adjustSolution(
     const double norm2Squared = (x[0]-x0[0])*(x[0]-x0[0]) + (x[1]-x0[1])*(x[1]-x0[1]) + (x[2]-x0[2])*(x[2]-x0[2]);
     #endif
     Q[4] = 1. / (gamma - 1) + // pressure is set to one
-        exp(-std::sqrt(norm2Squared) / pow(width, Dimensions)) * 2;  }
+        exp(-std::sqrt(norm2Squared) / pow(width, Dimensions)) * 2;
+    
+/*
+    const double gamma         = 1.4;
+    constexpr double width     = 0.3;
+    constexpr double amplitude = 0.3;
+
+    #if Dimensions==2
+    tarch::la::Vector<Dimensions,double> xVec({x[0],x[1]});
+    tarch::la::Vector<Dimensions,double> v0({0.5,0.0});
+    tarch::la::Vector<Dimensions,double> x0({0.5,0.5});
+    #else
+    tarch::la::Vector<Dimensions,double> xVec(x[0],x[1],x[2]);
+    tarch::la::Vector<Dimensions,double> v0(0.5,0.0,0.0);
+    tarch::la::Vector<Dimensions,double> x0(0.5,0.5,0.5);
+    #endif
+    const double distance  = tarch::la::norm2( xVec - x0 - v0 * t );
+
+    Q[0] = 0.5 + amplitude * std::exp(-distance / std::pow(width, Dimensions));
+    Q[1] = Q[0] * v0[0];
+    Q[2] = Q[0] * v0[1];
+    Q[3] = 0.0;
+    // total energy = internal energy + kinetic energy
+    const double p = 1.;
+    Q[4] = p / (gamma-1)  +  0.5*Q[0] * (v0[0]*v0[0]+v0[1]*v0[1]); // v*v; assumes: v0[2]=0
+*/
+  }
   else {
     // other stuff
   }

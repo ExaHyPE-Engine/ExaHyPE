@@ -12,30 +12,10 @@ import exahype2
 import jinja2
 
 
-class ApplyRiemannSolveToFaces(AbstractADERDGActionSet):
-  TemplateRiemannSolve = jinja2.Template( """
-    if (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::RiemannProblemSolve) {
-      // do nothing 
-    }   
-  """)
-
-  def __init__(self,solver):
-    AbstractADERDGActionSet.__init__(self,solver)
-  
-  
-  def get_body_of_operation(self,operation_name):
-    result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
-      result = self.TemplateRiemannSolve.render(**d)
-      pass 
-    return result
-
-
 class UpdateCell(AbstractADERDGActionSet):
   TemplateUpdateCell = jinja2.Template( """
+    if ( marker.isRefined() ) return; // TODO(dominic): (probably) only applicable for unigrid simulations
+
     switch (repositories::{{SOLVER_INSTANCE}}.getSolverState() ) {
       case {{SOLVER_NAME}}::SolverState::GridConstruction:
         assertionMsg( false, "should not be entered" );
@@ -74,21 +54,21 @@ class UpdateCell(AbstractADERDGActionSet):
             },
             [&](
               const double * __restrict__                 Q,
-              const double * __restrict__                 dQ_or_deltaQ,
+              const double * __restrict__                 deltaQ,
               const tarch::la::Vector<Dimensions,double>& x,
               double                                      t,
               int                                         normal,
               double * __restrict__                       BgradQ
             )->void {
               {% if NCP_IMPLEMENTATION!="<none>" %}
-              repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_deltaQ,x,t,normal,BgradQ);
+              repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,deltaQ,x,t,normal,BgradQ);
               {% endif %}
             },
             spaceTimeQ,                           // QOut
             fineGridCell{{SOLVER_NAME}}Q.value,   // QIn
             repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
             repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-            repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,             // Kxi,
+            repositories::{{SOLVER_INSTANCE}}.StiffnessOperator,            // Kxi,
             repositories::{{SOLVER_INSTANCE}}.InvertedPredictorLhsOperator, // iK1,
             repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,      // FLCoeff,
             repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,   // dudx, 
@@ -144,7 +124,7 @@ class UpdateCell(AbstractADERDGActionSet):
               const tarch::la::Vector<Dimensions,double>& x,
               double                                      t
             )->void {
-              //repositories::{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
+              repositories::{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
             },
             fineGridCell{{SOLVER_NAME}}Q.value,                           //  UOut,
             spaceTimeQ,                                                   //  QIn,
@@ -163,16 +143,6 @@ class UpdateCell(AbstractADERDGActionSet):
             {{ "true" if SOURCES_IMPLEMENTATION!="<none>" else "false" }},//  callSource,
             {{ "true" if NCP_IMPLEMENTATION!="<none>" else "false" }}     //  callNonconservativeProduct
           );
-/*         
-          ::exahype2::aderdg::spaceTimePredictor_extrapolateInTime_loop_AoS(
-            fineGridCell{{SOLVER_NAME}}Q.value,   // UOut,
-            spaceTimeQ,                           // QIn
-            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
-            {{ORDER}}, 
-            {{NUMBER_OF_UNKNOWNS}}, 
-            {{NUMBER_OF_AUXILIARY_VARIABLES}}
-          );
-*/ 
 
           // collect information from the adjacent faces
           double* QHull[Dimensions*2];
@@ -229,7 +199,6 @@ class UpdateCell(AbstractADERDGActionSet):
           // collect information from the adjacent faces
           double* QHull[Dimensions*2];
           bool    atBoundary[Dimensions*2];
-          bool    adjacentToBoundary = false;
           for (int face = 0; face < Dimensions*2; face++) {
              QHull      [ face ] = fineGridFaces{{SOLVER_NAME}}QSolutionExtrapolation(face).value;
              atBoundary [ face ] = fineGridFacesLabel(face).getBoundary() and
@@ -405,14 +374,11 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     self._sources_implementation              = PDETerms.None_Implementation
 
     self._action_set_update_cell = UpdateCell(self)
-    self._action_set_update_face = ApplyRiemannSolveToFaces(self)
 
     # braucht kein Mensch
-    self._rusanov_call = ""
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
 
     self.set_implementation(flux=flux,ncp=ncp,sources=sources)
-    
     
     #self._face_spacetime_solution.generator.send_condition               = "false"
     #self._face_spacetime_solution.generator.receive_and_merge_condition  = "false"
@@ -474,7 +440,7 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
-
+    
     pass
 
 
@@ -488,15 +454,9 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
 
   def add_to_Peano4_datamodel( self, datamodel ):
     ADERDG.add_to_Peano4_datamodel( self, datamodel )
-    #datamodel.add_face(self._face_flux_along_normal)
-
-
 
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     ADERDG.add_use_data_statements_to_Peano4_solver_step( self, step )
-    #step.use_face(self._face_flux_along_normal)
-
 
   def add_actions_to_perform_time_step(self, step):
     ADERDG.add_actions_to_perform_time_step( self, step )
-    step.add_action_set( ApplyRiemannSolveToFaces(self) )
