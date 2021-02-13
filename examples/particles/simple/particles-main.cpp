@@ -13,8 +13,8 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 
-#include "observers/DataRepository.h"
-#include "observers/StepRepository.h"
+#include "repositories/DataRepository.h"
+#include "repositories/StepRepository.h"
 
 
 //
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
 
   peano4::initParallelEnvironment(&argc,&argv);
   peano4::fillLookupTables();
-  examples::particles::observers::DataRepository::initDatatypes();
+  examples::particles::repositories::DataRepository::initDatatypes();
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
@@ -78,13 +78,13 @@ int main(int argc, char** argv) {
     exit(ExitCodeUnitTestsFailed);
   }
   delete peanoTarchTests;
- 
+
   #endif
 
   #if defined(SharedOMP)
   #pragma omp parallel
   {
-  #pragma omp master 
+  #pragma omp master
   {
   #endif
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
   #endif
 
   peano4::shutdownSingletons();
-  examples::particles::observers::DataRepository::shutdownDatatypes();
+  examples::particles::repositories::DataRepository::shutdownDatatypes();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;
