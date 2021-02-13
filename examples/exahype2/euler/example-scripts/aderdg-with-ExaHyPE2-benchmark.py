@@ -75,9 +75,9 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "aderdg", ".", ex
 #
 # Add the Finite Volumes solver
 #
-order          = 5
+order          = 3
 unknowns       = 5
-time_step_size = 0.000001
+time_step_size = 0.0001
 min_h          = args.h
 max_h          = args.h
 

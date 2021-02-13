@@ -50,9 +50,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       _solverState = SolverState::Prediction;
       break;
     case SolverState::Prediction:
-      _solverState = SolverState::RiemannProblemSolve;
-      break;
-    case SolverState::RiemannProblemSolve:
       _solverState = SolverState::Correction;
       break;
     case SolverState::Correction:
@@ -89,8 +86,6 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Prediction:
       return "prediction";
-    case SolverState::RiemannProblemSolve:
-      return "Riemann-problem-solve";
     case SolverState::Correction:
       return "correction";
     case SolverState::Plotting:
@@ -124,11 +119,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
 }
 {% endif %}
-{% endif %}
-
-{% if FLUX_IMPLEMENTATION!="<none>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryFlux(
- const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+ const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
  const tarch::la::Vector<Dimensions,double>&  x,
  double                                       t,
  int                                          normal,
@@ -141,8 +133,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryFlux(
 {% if NCP_IMPLEMENTATION!="<none>" %}
 {% if NCP_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__             dQ_or_deltaQ, // dQ_or_deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  Q,      // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal,
@@ -151,6 +143,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   {{NCP_IMPLEMENTATION}}
 }
 {% endif %}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryNonconservativeProduct(
+  const double * __restrict__                  Q,      // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__                  deltaQ, // deltaQ[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const tarch::la::Vector<Dimensions,double>&  x,
+  double                                       t,
+  int                                          normal,
+  double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+) {
+  nonconservativeProduct(Q,deltaQ,x,t,normal,BgradQ);
+}
 {% endif %}
 
 
