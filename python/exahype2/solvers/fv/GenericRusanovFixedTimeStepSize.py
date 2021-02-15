@@ -130,6 +130,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       reconstructedPatch,
       originalPatch
     );
+    
+    {{POSTPROCESS_UPDATED_PATCH}}
   """ 
 
 
@@ -179,8 +181,6 @@ class GenericRusanovFixedTimeStepSize( FV ):
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-
     self._time_step_size = time_step_size
 
     self._flux_implementation                 = PDETerms.None_Implementation
@@ -191,16 +191,26 @@ class GenericRusanovFixedTimeStepSize( FV ):
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
     self._source_term_implementation          = PDETerms.Empty_Implementation
 
+    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+    self._use_split_loop                      = False
+
+    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+    self.set_implementation(flux=flux,ncp=ncp)
+
+
+  def create_data_structures(self):
+    FV.create_data_structures(self)
+    
     self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
     self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
       
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
+    
 
-    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-    self._use_split_loop                      = False
-
-    self.set_implementation(flux=flux,ncp=ncp)
+  def create_action_sets(self):
+    FV.create_action_sets(self)
+    self._action_set_update_cell = UpdateCell(self)
 
 
   def set_implementation(self,
@@ -245,6 +255,16 @@ class GenericRusanovFixedTimeStepSize( FV ):
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
+    self.create_action_sets()
+
+
+  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+    self._preprocess_reconstructed_patch = kernel
+    self._action_set_update_cell = UpdateCell(self)
+
+
+  def set_postprocess_updated_patch_kernel(self,kernel):
+    self._postprocess_updated_patch = kernel
     self._action_set_update_cell = UpdateCell(self)
      
       

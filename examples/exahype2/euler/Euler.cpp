@@ -19,9 +19,9 @@ void examples::exahype2::euler::Euler::adjustSolution(
     // Manual offset to make the wave originate slightly to the left of the center --- helps
     // to detect if wave is moving to the left or right
     #if Dimensions==2
-    tarch::la::Vector<Dimensions,double> circleCentre = {0.2,0.5};
+    tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3};
     #else
-    tarch::la::Vector<Dimensions,double> circleCentre = {0.2,0.5,0.5};
+    tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
     #endif
 
     // initial conditions

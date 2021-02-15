@@ -319,9 +319,44 @@ class FV(object):
  
     """
     self._name              = name
-    self._patch             = peano4.datamodel.Patch( (patch_size,patch_size,patch_size),    unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap     = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap_new = peano4.datamodel.Patch( (2,patch_size,patch_size), unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
+    
+    self._min_h                = min_h
+    self._max_h                = max_h 
+    self._plot_grid_properties = plot_grid_properties
+
+    self._preprocess_reconstructed_patch      = ""
+    self._postprocess_updated_patch           = ""
+    
+    self.additional_includes   = ""
+ 
+    self._patch_size           = patch_size  
+    self._unknowns             = unknowns
+    self._auxiliary_variables  = auxiliary_variables
+    
+    if min_h>max_h:
+       print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
+
+    self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+
+    self._solver_template_file_class_name = None
+
+    self.plot_description = ""
+    
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @abstractmethod
+  def create_data_structures(self):
+    """
+    
+     Recall in subclasses if you wanna change the number of unknowns
+     or auxiliary variables
+     
+    """
+    self._patch             = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._patch_overlap     = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._patch_overlap_new = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     
     self._patch_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
@@ -335,27 +370,6 @@ class FV(object):
 #include "repositories/SolverRepository.h" 
 """
    
-    self._min_h                = min_h
-    self._max_h                = max_h 
-    self._plot_grid_properties = plot_grid_properties
-
-    self._preprocess_reconstructed_patch      = ""
-    
-    self._unknowns             = unknowns
-    self._auxiliary_variables  = auxiliary_variables
-    
-    if min_h>max_h:
-       print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
-
-    self._action_set_adjust_cell              = AdjustPatch(self, "not marker.isRefined()")
-    self._action_set_AMR                      = AMROnPatch(self, "not marker.isRefined()")
-    self._action_set_handle_boundary          = HandleBoundary(self, self._store_face_data_default_predicate() )
-    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
-    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
-    self._action_set_update_cell              = None
-
-    self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate()
     
@@ -371,8 +385,6 @@ class FV(object):
     self._patch_overlap_new.generator.store_persistent_condition   = "false"
     self._patch_overlap_new.generator.load_persistent_condition    = "false"
 
-    self._solver_template_file_class_name = None
-
     self._patch.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
@@ -383,8 +395,21 @@ class FV(object):
 #include "../repositories/SolverRepository.h"
 """    
 
-    self.plot_description = ""
-    pass
+
+  @abstractmethod
+  def create_action_sets(self):
+    """
+    
+     Overwrite in subclasses if you wanna create different
+     action sets.
+     
+    """
+    self._action_set_adjust_cell              = AdjustPatch(self, "not marker.isRefined()")
+    self._action_set_AMR                      = AMROnPatch(self, "not marker.isRefined()")
+    self._action_set_handle_boundary          = HandleBoundary(self, self._store_face_data_default_predicate() )
+    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
+    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
+    self._action_set_update_cell              = None
 
 
   def _store_cell_data_default_predicate(self):
@@ -464,6 +489,28 @@ class FV(object):
     """
     return ""
   
+  
+  @abstractmethod
+  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+    """
+  
+    Most subclasses will redefine/overwrite this operation as they have
+    to incorporate the kernel into their generated stuff
+  
+    """
+    self._preprocess_reconstructed_patch = kernel
+
+
+  @abstractmethod
+  def set_postprocess_updated_patch_kernel(self,kernel):
+    """
+  
+    Most subclasses will redefine/overwrite this operation as they have
+    to incorporate the kernel into their generated stuff
+  
+    """
+    self._postprocess_updated_patch = kernel
+
   
   def add_actions_to_init_grid(self, step):
     step.add_action_set( self._action_set_adjust_cell ) 
@@ -601,7 +648,8 @@ class FV(object):
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     d["SOLVER_NUMBER"]                  = 22
         
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]      = self._preprocess_reconstructed_patch
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]  = self._preprocess_reconstructed_patch
+    d[ "POSTPROCESS_UPDATED_PATCH" ]       = self._postprocess_updated_patch  
     
     if self._patch_overlap.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
@@ -615,4 +663,6 @@ class FV(object):
 
     d[ "MAX_H"] = self._min_h
     d[ "MIN_H"] = self._max_h
+
+    d[ "INCLUDES"] = self.additional_includes
    

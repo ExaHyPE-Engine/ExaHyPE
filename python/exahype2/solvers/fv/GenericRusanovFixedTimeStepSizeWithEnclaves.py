@@ -186,6 +186,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     );
     
     {{FREE_SKELETON_MEMORY}}
+    {{POSTPROCESS_UPDATED_PATCH}}
   }
   else { // is an enclave cell
     auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
@@ -302,6 +303,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
         reconstructedPatch,
         originalPatch
       );
+      {{POSTPROCESS_UPDATED_PATCH}}
     };
 
     #if defined(UseSmartMPI)
@@ -584,6 +586,16 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 """    
+    
+
+  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+    self._preprocess_reconstructed_patch = kernel
+    self._action_set_update_cell = UpdateCellWithEnclaves(self)
+
+
+  def set_postprocess_updated_patch_kernel(self,kernel):
+    self._postprocess_updated_patch = kernel
+    self._action_set_update_cell = UpdateCellWithEnclaves(self)
 
   
   def add_entries_to_text_replacement_dictionary(self,d):

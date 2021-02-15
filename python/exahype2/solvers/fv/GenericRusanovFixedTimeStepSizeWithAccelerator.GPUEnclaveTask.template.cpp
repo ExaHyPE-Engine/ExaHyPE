@@ -10,6 +10,8 @@
 #include <nvToolsExt.h>
 #endif
 
+{{INCLUDES}}
+
 
 tarch::multicore::BooleanSemaphore {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchsema;
 tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
@@ -21,6 +23,7 @@ std::vector<std::tuple<double*, const double, int, double, double, double, doubl
 #endif
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(double* __restrict__  reconstructedPatch, const ::peano4::datamanagement::CellMarker& marker, double* __restrict__  targetPatch) {
+  {{PREPROCESS_RECONSTRUCTED_PATCH}}
   #if Dimensions==2
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
   #else
@@ -63,9 +66,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
           int                                          normal,
           double                                       BgradQ[]
         ) -> void {
-           {% if NCP_IMPLEMENTATION!="<none>" %}
+          {% if NCP_IMPLEMENTATION!="<none>" %}
           repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
-           {% endif %}
+          {% endif %}
         },
         [] (
           const double* __restrict__                   Q,
@@ -107,6 +110,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
   );
 
   {{FREE_SKELETON_MEMORY}}
+  {{POSTPROCESS_UPDATED_PATCH}}
 }
 
 
@@ -132,9 +136,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
   myLock.free();
 }
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
-{
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
   tarch::multicore::Lock myLock( _patchsema );
   const int Nremain = _patchkeeper.size();
@@ -162,6 +165,16 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
   }
   myLock.free();
 
+  //
+  // If the user specifies some pre-processing, it is inserted here. If
+  // the preprocessing is empty, this loop should be removed by the
+  // compiler.
+  //
+  for (int i=0;i<static_cast<int>(localwork.size());i++) {
+    // const auto& marker =
+    // PREPROCESS_RECONSTRUCTED_PATCH has to go in here, but the marker can't be copied yet
+  }
+
   if (localwork.size() >0)
   {
      double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize*localwork.size(), ::tarch::MemoryLocation::Heap);
@@ -172,11 +185,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run()
 #endif
            (1,{{TIME_STEP_SIZE}},  localwork, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize, {{SKIP_FLUX}}, {{SKIP_NCP}});
 
-     for (int i=0;i<localwork.size();i++)
+     for (int i=0;i<static_cast<int>(localwork.size());i++)
      {
         const int taskid = std::get<2>(localwork[i]);
         double* outpatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
         std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, outpatch);
+        {{POSTPROCESS_UPDATED_PATCH}}
         ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, outpatch);
         ::tarch::freeMemory(std::get<0>(localwork[i]), ::tarch::MemoryLocation::Heap);
      }
