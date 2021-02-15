@@ -38,7 +38,7 @@ parser.add_argument("--p",               dest="peanodir",                 defaul
 parser.add_argument("--c",               dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("--o",               dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("--f",               dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
-parser.add_argument("--type",            dest="type",                     choices=["default", "default-ats", "enclave", "enclave-ats", "gpu"], default="default", help="Pick implementation variant" )
+parser.add_argument("--type",            dest="type",                     choices=["default", "default-ats", "enclave", "enclave-ats" ], default="default", help="Pick implementation variant" )
 parser.add_argument("--dt",              dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 args = parser.parse_args()
 
@@ -87,17 +87,7 @@ admissible_time_step_size = min_h/patch_size*0.01
 auxiliary_variables = 3
 
 thesolver = None
-if args.type=="gpu":
-  print("Turning on OpenMP for GPUs")
-  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator(
-    "EulerOnGPU",
-    patch_size,
-    unknowns, auxiliary_variables,
-    min_h, max_h,
-    admissible_time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
-  )
-elif args.type=="enclave":
+if args.type=="enclave":
   thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
     "Euler",
     patch_size,

@@ -481,77 +481,79 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
     self._source_term_implementation          = PDETerms.Empty_Implementation
+    
+    self._name = name
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
 
     self._time_step_relaxation                = time_step_relaxation
 
-    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-
-    initialisation_sweep_predicate = "(" + \
+    self._initialisation_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
       
-    first_iteration_after_initialisation_predicate = "(" + \
+    self._first_iteration_after_initialisation_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
     ")"
 
-    primary_sweep_predicate = "(" + \
+    self._primary_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
-    primary_sweep_or_plot_predicate = "(" + \
+    self._primary_sweep_or_plot_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
 
-    primary_or_initialisation_sweep_predicate= "(" + \
+    self._primary_or_initialisation_sweep_predicate= "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
-    secondary_sweep_predicate = "(" + \
+    self._secondary_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
       ")"
 
-    secondary_sweep_or_grid_construction_predicate = "(" + \
+    self._secondary_sweep_or_grid_construction_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
       ")"
 
-    secondary_sweep_or_grid_initialisation_predicate = "(" + \
+    self._secondary_sweep_or_grid_initialisation_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
 
-    secondary_sweep_or_grid_initialisation_or_plot_predicate = "(" + \
+    self._secondary_sweep_or_grid_initialisation_or_plot_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
 
+    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+
     ## @todo check
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
-      secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
+      self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
-      primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
+      self._primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
 
     
-    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + secondary_sweep_or_grid_initialisation_or_plot_predicate
-    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + primary_sweep_or_plot_predicate
+    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate
+    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._primary_sweep_or_plot_predicate
 
-    self._patch_overlap.generator.send_condition               = "not marker.isRefined() and " + initialisation_sweep_predicate
-    self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " + first_iteration_after_initialisation_predicate
+    self._patch_overlap.generator.send_condition               = "not marker.isRefined() and " + self._initialisation_sweep_predicate
+    self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " + self._first_iteration_after_initialisation_predicate
 
-    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + primary_sweep_predicate
-    self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + secondary_sweep_predicate
+    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._primary_sweep_predicate
+    self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._secondary_sweep_predicate
 
     self._patch_overlap_new.generator.send_condition               = "true"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
@@ -575,9 +577,9 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     # AMR and adjust cell have to be there always, i.e. also throughout 
     # the grid construction.
     #
-    self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined() and " + primary_or_initialisation_sweep_predicate)
-    self._action_set_AMR                                 = AMROnPatch(self, "not marker.isRefined() and " + secondary_sweep_or_grid_construction_predicate)
-    self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() + " and " + primary_or_initialisation_sweep_predicate)
+    self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate)
+    self._action_set_AMR                                 = AMROnPatch(self, "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate)
+    self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate)
     self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, 
       self._store_cell_data_default_predicate() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
@@ -586,7 +588,7 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
       ")"
     )
-    self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + secondary_sweep_or_grid_initialisation_predicate)
+    self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate)
     self._action_set_update_cell = UpdateCellWithEnclaves(self)
 
 
