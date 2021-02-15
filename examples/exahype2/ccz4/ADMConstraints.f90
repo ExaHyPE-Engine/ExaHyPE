@@ -5,7 +5,7 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
    IMPLICIT NONE
    INTENT(IN)  :: Q, gradQ 
    INTENT(OUT) :: Constraints
-   INTEGER, PARAMETER :: nConstraints = 6 
+   INTEGER, PARAMETER :: nConstraints = 6!6+4+5+5+18+1 !6 
    INTEGER :: i, ip, j, k, l, m, n, iErr, qq, ii, jj, kk, ll, mm, nn  
    REAL :: xGP(d), Constraints(nConstraints), Q(nVar), gradQ(nVar,nDim)!, gradQT(d,Nvar)  
    REAL :: traceK, R, phi, KK2
@@ -18,6 +18,7 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
    REAL :: alpha, Aex(3,3), Kex(3,3), traceA, k0, dAex(3,3,3), dKex(3,3,3), Amix(3,3), Aup(3,3), Kmix(3,3), Kup(3,3)
    REAL :: ghat(3), theta, dtheta(3), dghat(3,3), AA(3), dAA(3,3), BB(3,3), dBB(3,3,3), dphi(3), dPP(3,3), beta(3) 
    REAL :: Christoffel_tilde(3,3,3), Gtilde(3), Christoffel_kind1(3,3,3), Z(3), Zup(3), Kupdown 
+   !REAL :: M2_sepa(4), gamma_dKex_sepa1(5), gamma_dKex_sepa2(5)
 
    Constraints(:) = 0.0
 
@@ -79,7 +80,7 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
     dAex(:,3,3) = gradQ(12,:) 
     !
     Amix = MATMUL(g_contr, Aex)
-    Aup  = MATMUL(g_contr, Amix) 
+    Aup  = MATMUL(g_contr, TRANSPOSE(Amix)) 
     !
     Theta = Q(13)
     dTheta = gradQ(13,:) 
@@ -204,7 +205,7 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
     !
     Kex  = Aex/phi**2 + 1./3.*traceK*g_cov/phi**2 
     Kmix = MATMUL( phi**2*g_contr, Kex  ) 
-    Kup  = MATMUL( phi**2*g_contr, Kmix ) 
+    Kup  = MATMUL( phi**2*g_contr, TRANSPOSE(Kmix)) 
     !
     Christoffel_tilde = 0.0  
     Christoffel       = 0.0 
@@ -289,8 +290,7 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
                 ENDDO
             ENDDO     
         ENDDO
-    ENDDO   
-   
+    ENDDO    
     Constraints(1)   = Ham 
     Constraints(2:4) = Mom(1:3)
     Constraints(5)   = det - 1.0 
