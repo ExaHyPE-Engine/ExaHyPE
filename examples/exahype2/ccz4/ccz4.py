@@ -2,7 +2,15 @@ import os
 import peano4
 import exahype2
 
-class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves ):
+
+import exahype2.sympy
+
+
+#SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
+SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
+
+
+class CCZ4Solver( SuperClass ):
   def __init__(self, name, patch_size, min_h, max_h ):
     unknowns = {
       "G":6,
@@ -30,21 +38,25 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
       number_of_unknowns += unknowns[i]
     print( "number of unknowns=", number_of_unknowns )
     
-    #number_of_auxiliary_variables = 0
-    number_of_auxiliary_variables  = 6
-
-    exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves.__init__( 
+    SuperClass.__init__( 
       self,
       name=name, patch_size=patch_size, 
       unknowns=number_of_unknowns, 
-      auxiliary_variables=number_of_auxiliary_variables, 
+      auxiliary_variables=0, 
       min_h=min_h, max_h=max_h, 
       time_step_relaxation=0.2
     )
-    
-    self._solver_template_file_class_name = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves.__name__
-    self.add_constraint_verification()
+    self._solver_template_file_class_name = SuperClass.__name__
 
+    pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
+    
+    self.set_implementation(
+      boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+      flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+      ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+      source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    )   
+    
 
   def get_user_includes(self):
     """
@@ -52,7 +64,7 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
      We take this routine to add a few additional include statements.
      
     """
-    return exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves.get_user_includes(self) + """
+    return SuperClass.get_user_includes(self) + """
 #include "../PDE.h"
 #include "exahype2/PatchUtils.h"    
 """
@@ -68,12 +80,15 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
      is kind of a material parameter F(Q) which does not feed back into
      the solution.
      
+     Changing the number of unknowns a posteriori is a delicate update
+     to the solver, so we invoke the constructor again to be on the safe
+     side.
+     
     """
-    if self._auxiliary_variables != 6:
-      raise Exception( "number of constraints does not match." )
+    self._auxiliary_variables = 6
   
-    self._preprocess_reconstructed_patch  = """
-    const int patchSize = """ + str(self._patch.dim[0]) + """;
+    self.set_preprocess_reconstructed_patch_kernel( """
+    const int patchSize = """ + str( self._patch.dim[0] ) + """; 
     double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
     dfor(cell,patchSize) {
       tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
@@ -113,7 +128,57 @@ class CCZ4Solver( exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEncl
         reconstructedPatch[cellSerialised*(59+6)+59+i] = constraints[i];
       }
     }
-"""
+""")
+
+    self.create_data_structures()
+    self.create_action_sets()
+
+  
+  def add_derivative_calculation(self):
+    """
+     
+     Add the constraint verification code
+     
+     We introduce new auxiliary variables. Prior to each time step, I 
+     compute the Laplacian and store it in the auxiliary variable. This
+     is kind of a material parameter F(Q) which does not feed back into
+     the solution.
+     
+     Changing the number of unknowns a posteriori is a delicate update
+     to the solver, so we invoke the constructor again to be on the safe
+     side.
+     
+    """
+    self._auxiliary_variables = 59*3
+      
+    self.set_preprocess_reconstructed_patch_kernel( """
+    const int patchSize = """ + str( self._patch.dim[0] ) + """; 
+    double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+    dfor(cell,patchSize) {
+      tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+      const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+            
+      // Lets look left vs right and compute the gradient. Then, lets
+      // loop up and down. So we look three times for the respective
+      // directional gradients
+      for (int d=0; d<3; d++) {
+        tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+        tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+        leftCell(d)  -= 1;
+        rightCell(d) += 1;
+        const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+        const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+        for (int i=0; i<59; i++) {
+          reconstructedPatch[cellSerialised*(59*4)+59+i*3+d] = 
+            ( reconstructedPatch[rightCellSerialised*(59*4)+i] - reconstructedPatch[leftCellSerialised*(59*4)+i] ) / 2.0 / volumeH;
+        }
+      }
+    }
+""")
+    
+    self.create_data_structures()
+    self.create_action_sets()
+
     
     
 if __name__ == "__main__":
@@ -127,19 +192,11 @@ if __name__ == "__main__":
     my_solver = CCZ4Solver(
       "CCZ4", patch_size, min_h, max_h
     )
+
+    #my_solver.add_constraint_verification()
+    my_solver.add_derivative_calculation()
     
-    project.add_solver(my_solver)
-    
-    import exahype2.sympy
-    
-    pde = exahype2.sympy.PDE(unknowns=my_solver._unknowns,auxiliary_variables=my_solver._auxiliary_variables,dimensions=3)
-    
-    my_solver.set_implementation(
-      boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-      flux=exahype2.solvers.fv.PDETerms.None_Implementation,
-      ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-      source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
-    )   
+    project.add_solver(my_solver)    
     
     build_mode = peano4.output.CompileMode.Asserts
     #build_mode = peano4.output.CompileMode.Release

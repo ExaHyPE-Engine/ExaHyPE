@@ -16,8 +16,6 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = """
-  {{PREPROCESS_RECONSTRUCTED_PATCH}}
-    
   ::exahype2::fv::validatePatch(
     reconstructedPatch,
     {{NUMBER_OF_UNKNOWNS}},
@@ -52,6 +50,8 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
   }
   """      
   
+
+    
   
   def __init__(self,solver,use_split_loop=False):
     d = {}
@@ -138,6 +138,9 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     implementationDictionary["SKIP_NCP"]  = "true" if implementationDictionary["NCP_IMPLEMENTATION"]  == "<none>" else "false"
     implementationDictionary["SKIP_FLUX"] = "true" if implementationDictionary["FLUX_IMPLEMENTATION"] == "<none>" else "false"
 
+    print( "@@@@@@@@@@@@@@: " + implementationDictionary["NCP_IMPLEMENTATION"] )
+    print( "||||||||||||||: " + implementationDictionary["FLUX_IMPLEMENTATION"] )
+    
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".GPUEnclaveTask.template.h",
       templatefile_prefix + ".GPUEnclaveTask.template.cpp",

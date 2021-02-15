@@ -67,10 +67,10 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       1, // halo
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
-  
-  {{PREPROCESS_RECONSTRUCTED_PATCH}}
-  
+    
   if (marker.isSkeletonCell()) {
+    {{PREPROCESS_RECONSTRUCTED_PATCH}}
+    
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
       originalPatch,
@@ -186,6 +186,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     );
     
     {{FREE_SKELETON_MEMORY}}
+    {{POSTPROCESS_UPDATED_PATCH}}
 
     double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
       [] (
@@ -212,6 +213,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   }
   else { // is an enclave cell
     auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
+      {{PREPROCESS_RECONSTRUCTED_PATCH}}
+      
       ::exahype2::fv::copyPatch(
         reconstructedPatch,
         originalPatch,
@@ -325,6 +328,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
         reconstructedPatch,
         originalPatch
       );
+      
+      {{POSTPROCESS_UPDATED_PATCH}}
     };
 
     double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
@@ -389,8 +394,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     #endif   
   }
   """      
-  
-  
+    
+    
   def __init__(self,solver,use_split_loop=False):
     d = {}
     solver._init_dictionary_with_default_parameters(d)
@@ -426,7 +431,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 
 
 class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, time_step_relaxation=0.9):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, time_step_relaxation=0.1):
     """
     
     A fixed time stepping scheme with enclave tasking
@@ -469,8 +474,6 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     add the marker to the cell which holds the semaphore/cell number.      
     
     """
-    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-
     self._flux_implementation                 = PDETerms.None_Implementation
     self._ncp_implementation                  = PDETerms.None_Implementation
     self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
@@ -483,6 +486,8 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     self._use_split_loop                      = False
 
     self._time_step_relaxation                = time_step_relaxation
+
+    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
 
     initialisation_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
@@ -557,6 +562,14 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     self._patch_overlap_new.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
+   
+    self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
+
+    self.set_implementation(flux=flux,ncp=ncp)
+
+
+  def create_action_sets(self):
+    FV.create_action_sets(self)
 
     #
     # AMR and adjust cell have to be there always, i.e. also throughout 
@@ -574,12 +587,7 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
       ")"
     )
     self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + secondary_sweep_or_grid_initialisation_predicate)
-    self._action_set_update_cell              = None
-   
-    self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
-
-    self.set_implementation(flux=flux,ncp=ncp)
-  
+    self._action_set_update_cell = UpdateCellWithEnclaves(self)
 
 
   def set_implementation(self,
@@ -622,7 +630,17 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
        self._reconstructed_array_memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without immedidate (call stack) free chosen. This will lead into a segmentation fault" )
 
-    self._action_set_update_cell = UpdateCellWithEnclaves(self)
+    self.create_action_sets()
+    
+
+  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+    self._preprocess_reconstructed_patch = kernel
+    self.create_action_sets()
+
+
+  def set_postprocess_updated_patch_kernel(self,kernel):
+    self._postprocess_updated_patch = kernel
+    self.create_action_sets()
 
   
   def get_user_includes(self):
