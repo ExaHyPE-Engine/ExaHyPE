@@ -44,7 +44,7 @@ class CCZ4Solver( SuperClass ):
       unknowns=number_of_unknowns, 
       auxiliary_variables=0, 
       min_h=min_h, max_h=max_h, 
-      time_step_relaxation=0.2
+      time_step_relaxation=0.1
     )
     self._solver_template_file_class_name = SuperClass.__name__
 
@@ -90,6 +90,7 @@ class CCZ4Solver( SuperClass ):
     self.set_preprocess_reconstructed_patch_kernel( """
     const int patchSize = """ + str( self._patch.dim[0] ) + """; 
     double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+    int n_a_v=6;
     dfor(cell,patchSize) {
       tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
       
@@ -111,21 +112,21 @@ class CCZ4Solver( SuperClass ):
         const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
         const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
         for(int i=0; i<59; i++) {
-          gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+6)+i] - reconstructedPatch[leftCellSerialised*(59+6)+i] ) / 2.0 / volumeH;
+          gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
         }
       }
 
-      // We will use a Fortran routine to compute the six constraints per 
+      // We will use a Fortran routine to compute the constraints per 
       // Finite Volume
-      double constraints[6]={ 0 };
+      double constraints[n_a_v]={ 0 };
 
       // Central cell
       const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
      
-      admconstraints_(constraints,reconstructedPatch+cellSerialised*(59+6),gradQ);
+      admconstraints_(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
 	  
-      for(int i=0;i<6;i++){
-        reconstructedPatch[cellSerialised*(59+6)+59+i] = constraints[i];
+      for(int i=0;i<n_a_v;i++){
+        reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
       }
     }
 """)
@@ -214,7 +215,9 @@ if __name__ == "__main__":
     )
     
     project.set_Peano4_installation("../../..", build_mode)
-    
+
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem3" )
+
     peano4_project = project.generate_Peano4_project()
     
     peano4_project.output.makefile.add_Fortran_flag( "-DCCZ4EINSTEIN -DDim3" )

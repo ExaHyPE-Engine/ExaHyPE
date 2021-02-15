@@ -281,7 +281,7 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
     !
     Kex  = Aex/phi**2 + 1./3.*traceK*g_cov/phi**2 
     Kmix = MATMUL( phi**2*g_contr, Kex  ) 
-    Kup  = MATMUL( phi**2*g_contr, Kmix ) 
+    Kup  = MATMUL( phi**2*g_contr, TRANSPOSE(Kmix)) 
     !
     Christoffel_tilde = 0.0  
     Christoffel       = 0.0 
