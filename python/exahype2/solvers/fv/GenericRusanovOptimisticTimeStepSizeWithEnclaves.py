@@ -59,6 +59,24 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = """
+  #if Dimensions==2
+  const int NumberOfBackedUpEntries = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*( {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}} );
+  #else
+  const int NumberOfBackedUpEntries = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*( {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}} );
+  #endif
+  
+  if ( repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::PrimaryWithRollback ) {
+    std::copy_n( 
+      fineGridCell{{UNKNOWN_IDENTIFIER}}ReconstructedBackup.value, NumberOfBackedUpEntries, fineGridCell{{UNKNOWN_IDENTIFIER}}.value
+    );
+  } 
+  else {
+    std::copy_n( 
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value, NumberOfBackedUpEntries, fineGridCell{{UNKNOWN_IDENTIFIER}}ReconstructedBackup.value
+    );
+  }
+  
+  
   ::exahype2::fv::validatePatch(
       reconstructedPatch,
       {{NUMBER_OF_UNKNOWNS}},
@@ -79,6 +97,9 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       1 // halo size
     );
+    
+    tarch::multicore::BooleanSemaphore maxEigenvalueSemaphore;
+    double maxPatchEigenvalue = 0.0;
 
     {% if USE_SPLIT_LOOP %}
     #if Dimensions==2
@@ -105,7 +126,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
         double                                       FR[]
       ) -> void {
         ::exahype2::fv::splitRusanov1d(
-          [] (
+          [&] (
            const double * __restrict__ Q,
            const tarch::la::Vector<Dimensions,double>&  faceCentre,
            const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -120,7 +141,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
-          [] (
+          [&] (
             const double* __restrict__                   Q,
             const double * __restrict__                  deltaQ,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -134,7 +155,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
             {% endif %}
           },
-          [] (
+          [&] (
             const double* __restrict__                   Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -142,7 +163,12 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             double                                       dt,
             int                                          normal
           ) -> double {
-            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            const double result = repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            
+            tarch::multicore::Lock lock(maxEigenvalueSemaphore);
+            maxPatchEigenvalue = std::max( maxPatchEigenvalue, result );
+           
+            return result;
           },
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
@@ -185,31 +211,9 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       originalPatch
     );
     
+    repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxPatchEigenvalue );
     {{FREE_SKELETON_MEMORY}}
     {{POSTPROCESS_UPDATED_PATCH}}
-
-    double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-      [] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-      },
-      marker.x(),
-      marker.h(),
-      {{TIME_STAMP}},
-      {{TIME_STEP_SIZE}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      originalPatch
-    );
-
-    repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
   }
   else { // is an enclave cell
     auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
@@ -223,6 +227,9 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         1 // halo size
       );
+
+      tarch::multicore::BooleanSemaphore maxEigenvalueSemaphore;
+      double maxPatchEigenvalue = 0.0;
 
       {% if USE_SPLIT_LOOP %}
       #if Dimensions==2
@@ -249,7 +256,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
           double                                       FR[]
         ) -> void {
         ::exahype2::fv::splitRusanov1d(
-          [] (
+          [&] (
            const double * __restrict__ Q,
            const tarch::la::Vector<Dimensions,double>&  faceCentre,
            const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -264,7 +271,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
             {% endif %}
           },
-          [] (
+          [&] (
             const double* __restrict__                   Q,
             const double * __restrict__                  deltaQ,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -278,7 +285,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
             {% endif %}
           },
-          [] (
+          [&] (
             const double* __restrict__                   Q,
             const tarch::la::Vector<Dimensions,double>&  faceCentre,
             const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -286,7 +293,10 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
             double                                       dt,
             int                                          normal
           ) -> double {
-            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            const double result = repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            tarch::multicore::Lock lock(maxEigenvalueSemaphore);
+            maxPatchEigenvalue = std::max( maxPatchEigenvalue, result );
+            return result;
           },
           QL, QR, x, dx, t, dt, normal,
           {{NUMBER_OF_UNKNOWNS}},
@@ -328,32 +338,11 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
         reconstructedPatch,
         originalPatch
       );
+
+      repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxPatchEigenvalue );
       
       {{POSTPROCESS_UPDATED_PATCH}}
     };
-
-    double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-      [] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-      },
-      marker.x(),
-      marker.h(),
-      {{TIME_STAMP}},
-      {{TIME_STEP_SIZE}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      originalPatch
-    );
-
-    repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
 
     #if defined(UseSmartMPI)
     ::exahype2::SmartEnclaveTask* newEnclaveTask = new ::exahype2::SmartEnclaveTask(
@@ -409,6 +398,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       solver._reconstructed_array_memory_location,
       "not marker.isRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
+      "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryWithRollback or " + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
     )
@@ -425,8 +415,15 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "exahype2/SmartEnclaveTask.h"
+
 #include "peano4/parallel/Tasks.h"
+
 #include "repositories/SolverRepository.h"
+
+#include <algorithm>
+
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Lock.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_includes() 
 
 
@@ -500,11 +497,13 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( FV ):
 
     self._primary_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
     self._primary_sweep_or_plot_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
@@ -513,6 +512,7 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( FV ):
     self._primary_or_initialisation_sweep_predicate= "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
@@ -570,6 +570,11 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( FV ):
     self.set_implementation(flux=flux,ncp=ncp)
 
 
+  def create_data_structures(self):
+    FV.create_data_structures(self)
+    self._reconstructed_patch_backup = peano4.datamodel.Patch( (self._patch_size+2,self._patch_size+2,self._patch_size+2), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "ReconstructedBackup" )
+    
+
   def create_action_sets(self):
     FV.create_action_sets(self)
 
@@ -583,6 +588,7 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( FV ):
     self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, 
       self._store_cell_data_default_predicate() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
+      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback             and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
@@ -590,6 +596,11 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( FV ):
     )
     self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate)
     self._action_set_update_cell = UpdateCellWithEnclaves(self)
+
+
+  def add_to_Peano4_datamodel( self, datamodel ):
+    FV.add_to_Peano4_datamodel( self, datamodel )
+    datamodel.add_cell(self._reconstructed_patch_backup)
 
 
   def set_implementation(self,
@@ -724,8 +735,10 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( FV ):
   def add_to_Peano4_datamodel( self, datamodel ):
     FV.add_to_Peano4_datamodel(self,datamodel)
     datamodel.add_cell(self._cell_sempahore_label)
+    datamodel.add_cell(self._reconstructed_patch_backup)
  
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     FV.add_use_data_statements_to_Peano4_solver_step(self,step)
     step.use_cell(self._cell_sempahore_label)
+    step.use_cell(self._reconstructed_patch_backup)
