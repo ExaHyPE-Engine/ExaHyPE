@@ -253,11 +253,19 @@ class ADERDG(object):
     self._guard_AMR                                = self._predicate_cell_carrying_data()
     self._guard_project_DG_polynomial_onto_faces   = self._predicate_cell_carrying_data()
     self._guard_update_cell                        = self._predicate_cell_carrying_data()
-
+    
     self._order                = order
     self._min_h                = min_h
     self._max_h                = max_h 
     self._plot_grid_properties = plot_grid_properties
+    
+    self._adaptive_time_stepping = False 
+    # ADER-DG CFL factors        
+    # Up to order 4, computed via von Neumann analysis [1]; above, determined empirically by M. Dumbser)
+    # [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz, 
+    # ‘A unified framework for the construction of one-step finite volume and discontinuous Galerkin schemes on unstructured meshes’, 
+    # Journal of Computational Physics, vol. 227, no. 18, pp. 8209–8253, Sep. 2008.
+    self._ader_pnpm_stability_factor = [1.0,   0.33,  0.17, 0.1,  0.069, 0.045, 0.038, 0.03, 0.02, 0.015][order]
     
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
@@ -278,8 +286,8 @@ class ADERDG(object):
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     
-    self._face_spacetime_solution.generator.send_condition               = "false"
-    self._face_spacetime_solution.generator.receive_and_merge_condition  = "false"
+    self._face_spacetime_solution.generator.send_condition               = "true"
+    self._face_spacetime_solution.generator.receive_and_merge_condition  = "true"
 
     self.plot_description = ""
     self.plot_metadata    = ""
@@ -490,11 +498,13 @@ class ADERDG(object):
     """
     #d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._DG_polynomial.dim[0]
     #d["HALO_SIZE"]                      = int(self._DG_polynomial_overlap.dim[0]/2)
-    d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
-    d["SOLVER_NAME"]                    = self._name
-    d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
-    d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
-    d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
+    d["SOLVER_INSTANCE"]               = self.get_name_of_global_instance()
+    d["SOLVER_NAME"]                   = self._name
+    d["UNKNOWN_IDENTIFIER"]            = self._unknown_identifier()
+    d["NUMBER_OF_UNKNOWNS"]            = self._unknowns
+    d["NUMBER_OF_AUXILIARY_VARIABLES"] = self._auxiliary_variables
+    d["ADAPTIVE_TIME_STEPPING"]        = self._adaptive_time_stepping
+    d["ADER_PNPM_STABILITY_FACTOR"]    = self._ader_pnpm_stability_factor
 
     self._basis._init_dictionary_with_default_parameters(d)        
         

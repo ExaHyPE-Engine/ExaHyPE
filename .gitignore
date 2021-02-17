@@ -3,3 +3,11 @@ __pycache__
 *.o
 *.a
 /cookbook/
+*.deps
+*.dirstamp
+
+*.peano-patch-file
+*.vtu
+
+src/unittests/UnitTests2d
+src/unittests/UnitTests3d
