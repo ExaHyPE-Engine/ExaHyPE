@@ -190,12 +190,6 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
       double * __restrict__                       BgradQ
     ) -> void {
     },
-    [&] (
-      double * __restrict__                       Q,
-      const tarch::la::Vector<Dimensions,double>& x,
-      double                                      t
-    ) -> void {
-    },
     U,                                      // UOut,                               
     Q,                                      // QIn, 
     QuadraturePoints,                       // nodes,
@@ -374,16 +368,27 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
     std::cout << buffer.str() << std::flush; 
   }
 
-  ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
+  double maxEigenvalueInCell = ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
+    [&] (
+      double * __restrict__                       Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t
+    ) -> void {
+    },
+    maxEigenvalue,
     U,
     riemannResult,
+    QuadraturePoints,
     QuadratureWeights,
     BasisFunctionValuesLeft, // only left
+    x,
     dx,
+    t,
     dt,
     order,
     unknowns,
-    auxiliaryVariables);
+    auxiliaryVariables,
+    false); // callMaxEigenvalue
   
   buffer << "\nresult (U, post Riemann):\n\n";
   for (int i = 0; i < nodesPerCell; i++) {
