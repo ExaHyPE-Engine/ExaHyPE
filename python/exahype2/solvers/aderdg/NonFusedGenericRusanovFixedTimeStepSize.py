@@ -119,13 +119,6 @@ class UpdateCell(AbstractADERDGActionSet):
               repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
               {% endif %}
             },
-            [&](
-              double * __restrict__                       Q,
-              const tarch::la::Vector<Dimensions,double>& x,
-              double                                      t
-            )->void {
-              repositories::{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
-            },
             fineGridCell{{SOLVER_NAME}}Q.value,                           //  UOut,
             spaceTimeQ,                                                   //  QIn,
             repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,           //  nodes,
@@ -299,17 +292,43 @@ class UpdateCell(AbstractADERDGActionSet):
           );
 
           // add result to solution
-          ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
-            fineGridCell{{SOLVER_NAME}}Q.value,                         //  UOut,
-            riemannResult,
-            repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,  // FLCoeff,
-            marker.h()(0),                                              //  dx,
-            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-            {{ORDER}}, 
-            {{NUMBER_OF_UNKNOWNS}}, 
-            {{NUMBER_OF_AUXILIARY_VARIABLES}}
-          );
+          const double maxEigenvalueInCellVolume = 
+            ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
+              [&](
+                double * __restrict__                       Q,
+                const tarch::la::Vector<Dimensions,double>& x,
+                double                                      t
+              )->void {
+                repositories::{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
+              },
+              [&](
+                const double * __restrict__                 Q,
+                const tarch::la::Vector<Dimensions,double>& x,
+                double                                      t,
+                const int                                   direction
+              )-> double { 
+                return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q,x,t,direction);
+              },
+              fineGridCell{{SOLVER_NAME}}Q.value,                         //  UOut,
+              riemannResult,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+              repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+              repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,  // FLCoeff,
+              marker.x(),                                                 // cellCentre
+              marker.h()(0),                                              // dx,
+              repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),        // x
+              repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),     // dt 
+              {{ORDER}}, 
+              {{NUMBER_OF_UNKNOWNS}}, 
+              {{NUMBER_OF_AUXILIARY_VARIABLES}},
+              {{ "true" if ADAPTIVE_TIME_STEPPING else "false" }}         //  callMaxEigenvalue
+            );
+{% if ADAPTIVE_TIME_STEPPING %}
+            // compute time step size from 'maxEigenvalueInCellVolume' and/or 'maxEigenvaluePerFace[]'
+            const double safetyFactor        = 0.9;
+            const double stabilityFactorADER = safetyFactor * {{ADER_PNPM_STABILITY_FACTOR}};
+            const double dtNew = safetyFactor * stabilityFactorADER * marker.h()(0) / maxEigenvalueInCellVolume; 
+{% endif %}
         }
         break;
       case {{SOLVER_NAME}}::SolverState::Plotting:
