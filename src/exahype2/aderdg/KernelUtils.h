@@ -266,7 +266,6 @@ namespace exahype2 {
       const double* __restrict__ const            barycentricWeights,
       const tarch::la::Vector<Dimensions,double>& referenceCoodinates,
       const int                                   nodesPerAxis,
-      const int                                   unknowns,
       const int                                   strideQ,
       double* __restrict__                        pointwiseQOut);
     #if defined(OpenMPGPUOffloading)

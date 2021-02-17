@@ -281,12 +281,11 @@ GPUCallableMethod void exahype2::aderdg::interpolate_AoS(
   const double* __restrict__ const            barycentricWeights,
   const tarch::la::Vector<Dimensions,double>& referenceCoodinates,
   const int                                   nodesPerAxis,
-  const int                                   unknowns,
   const int                                   strideQ,
   double* __restrict__                        pointwiseQOut) {
   double l = 1.0;
   // clear
-  for ( int var = 0; var < unknowns; var++ ) {
+  for ( int var = 0; var < strideQ; var++ ) {
     pointwiseQOut[ var ] = 0.0;
   } 
   // compute
@@ -304,7 +303,7 @@ GPUCallableMethod void exahype2::aderdg::interpolate_AoS(
     for ( int d = 0; d < Dimensions; d++ ){
       coeff *= barycentricWeights[index[1+d]] / (referenceCoodinates[d] - nodes[index[1+d]] );
     } 
-    for ( int var = 0; var < unknowns; var++ ) {
+    for ( int var = 0; var < strideQ; var++ ) {
       pointwiseQOut[ var ] += coeff * UIn[ scalarIndex*strideQ + var ];
     }
   }
