@@ -72,17 +72,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if ( _solverState == SolverState::Secondary ) {
-    const double chosenTimeStepSize = _timeStepSize;
+    assertion( _admissibleTimeStepSize < std::numeric_limits<double>::max() );
 
     #ifdef Parallel
-    double admissibleTimeStepSize      = {{TIME_STEP_RELAXATION}} * _admissibleTimeStepSize;
-    double localAdmissibleTimeStepSize = {{TIME_STEP_RELAXATION}} * _admissibleTimeStepSize;
-    MPI_Allreduce(&localAdmissibleTimeStepSize, &admissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
-    #else
-    double admissibleTimeStepSize = {{TIME_STEP_RELAXATION}} * _admissibleTimeStepSize;
+    double localAdmissibleTimeStepSize = _admissibleTimeStepSize;
+    MPI_Allreduce(&localAdmissibleTimeStepSize, &_admissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
     #endif
 
-    if ( chosenTimeStepSize<=admissibleTimeStepSize and _previousAdmissibleTimeStepSize>_admissibleTimeStepSize) {
+    const double TimeStapSizeDamping = 0.9;
+
+    if ( tarch::la::equals(_timeStepSize,0.0) ) {
+      _timeStepSize  = TimeStapSizeDamping * _admissibleTimeStepSize;
+    }
+    else if ( _timeStepSize<=_admissibleTimeStepSize and _previousAdmissibleTimeStepSize>_admissibleTimeStepSize) {
       _timeStamp    += _timeStepSize;
 
       assertion(_previousAdmissibleTimeStepSize>0.0);
@@ -91,25 +93,28 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         "finishTimeStep()",
         "admissible time step size seems to shrink by " << shrinkFactor << ". Shrink chosen time step size, too"
       );
-      _timeStepSize  = shrinkFactor * chosenTimeStepSize;
+      _timeStepSize  = shrinkFactor * _timeStepSize;
     }
-    else if ( chosenTimeStepSize<=admissibleTimeStepSize) {
+    else if ( _timeStepSize<=_admissibleTimeStepSize) {
       _timeStamp    += _timeStepSize;
-      _timeStepSize  = 0.5 * (chosenTimeStepSize + admissibleTimeStepSize);
+      _timeStepSize  = 0.5 * (_timeStepSize + _admissibleTimeStepSize);
     }
     else {
       logWarning(
         "finishTimeStep()",
-        "time step size of " << chosenTimeStepSize << " has been too optimistic as max admissible " <<
-        "step size is " << admissibleTimeStepSize << ". Rollback and recompute time step"
+        "time step size of " << _timeStepSize << " has been too optimistic as max admissible " <<
+        "step size is " << _admissibleTimeStepSize << ". Rollback and recompute time step"
       );
       _solverState = SolverState::SecondaryWithInvalidRollback;
-      _timeStepSize  = {{TIME_STEP_RELAXATION}} * admissibleTimeStepSize;
+      _timeStepSize  = TimeStapSizeDamping * _admissibleTimeStepSize;
     }
 
     _previousAdmissibleTimeStepSize = _admissibleTimeStepSize;
     _admissibleTimeStepSize         = std::numeric_limits<double>::max();
   }
+
+  assertion( _timeStepSize < std::numeric_limits<double>::max() );
+  assertion( _timeStepSize >=0.0 );
 }
 
 
@@ -144,6 +149,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "primary-with-rollback";
     case SolverState::Secondary:
       return "secondary";
+    case SolverState::SecondaryWithInvalidRollback:
+      return "secondary-but-invalid";
     case SolverState::PlottingInitialCondition:
       return "plotting-initial-condition";
     case SolverState::PrimaryAfterGridInitialisation:

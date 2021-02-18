@@ -514,6 +514,7 @@ class FV(object):
   
   def add_actions_to_init_grid(self, step):
     step.add_action_set( self._action_set_adjust_cell ) 
+    step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
 

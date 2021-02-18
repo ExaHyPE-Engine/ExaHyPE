@@ -70,6 +70,7 @@ class BackupPatchOverlap(ActionSet):
       dfore(k,{DOFS_PER_AXIS},0,0) {{
         for (int i=0; i<{OVERLAP}*2; i++) {{
           for (int j=0; j<{UNKNOWNS}; j++) {{
+            // assertion4( {FACES_ACCESSOR_IN}.value[counter]=={FACES_ACCESSOR_IN}.value[counter], k,i,j, marker.toString() );
             {FACES_ACCESSOR_OUT}.value[counter] = {FACES_ACCESSOR_IN}.value[counter];
             counter++;
           }}

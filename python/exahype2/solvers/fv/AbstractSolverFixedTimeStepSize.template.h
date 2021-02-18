@@ -123,6 +123,9 @@
     double getMinMeshSize() const override;
 
     SolverState  getSolverState() const;
+
+    static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
   protected:
     static tarch::logging::Log  _log;
 

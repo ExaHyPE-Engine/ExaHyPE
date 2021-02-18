@@ -290,6 +290,8 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      */
     std::map< int, peano4::grid::TraversalObserver* >    _clonedObserver;
 
+    std::bitset<Dimensions>&                             _periodicBC;
+
     peano4::grid::Spacetree& getSpacetree(int id);
 
     const peano4::grid::Spacetree& getSpacetree(int id) const;
@@ -739,6 +741,8 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * The barrier map is cleared once per iteration.
      */
     void orderedBarrier( const std::string& identifier );
+    
+    bool hasPeriodicBoundaryConditions() const;
 };
 
 

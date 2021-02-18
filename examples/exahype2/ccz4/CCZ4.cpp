@@ -104,13 +104,16 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
       gaugeWave(Q, volumeX, volumeH, t);
     }
     else {
-      double width = volumeH(0);
-      double t     = 0.0;
-      double dt    = 0.0001;
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
     }
+
+    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+      Q[i] = 0.0;
+    }
   }
-  else {enforceccz4constraints_(Q);}
+  else {
+    enforceccz4constraints_(Q);
+  }
   logTraceOut( "adjustSolution(...)" );
 }
 
@@ -189,17 +192,17 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 
 
 void examples::exahype2::ccz4::CCZ4::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[64+0]
-  double * __restrict__                        Qoutside, // Qoutside[64+0]
+  const double * __restrict__                  Qinside,
+  double * __restrict__                        Qoutside,
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
 ) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
-  for(int i=0; i<59; i++)
-      Qoutside[i]=Qinside[i];
-  assertion(false);
+  for(int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Qoutside[i]=Qinside[i];
+  }
   logTraceOut( "boundaryConditions(...)" );
 }
 

@@ -31,7 +31,8 @@ tarch::multicore::BooleanSemaphore  peano4::parallel::SpacetreeSet::_semaphore;
 
 
 peano4::parallel::SpacetreeSet::SpacetreeSet():
-  _state( SpacetreeSetState::Waiting) {
+  _state( SpacetreeSetState::Waiting),
+  _periodicBC(0) {
 }
 
 
@@ -40,11 +41,18 @@ peano4::parallel::SpacetreeSet&  peano4::parallel::SpacetreeSet::getInstance() {
 }
 
 
+bool peano4::parallel::SpacetreeSet::hasPeriodicBoundaryConditions() const {
+  return _periodicBC.count()>0;
+}
+
+
 void peano4::parallel::SpacetreeSet::init(
   const tarch::la::Vector<Dimensions,double>&  offset,
   const tarch::la::Vector<Dimensions,double>&  width,
   const std::bitset<Dimensions>&               periodicBC
 ) {
+  _periodicBC = periodicBC;
+
   _requestMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - request message");
   _answerMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - answer message", Node::MaxSpacetreesPerRank);
   tarch::services::ServiceRepository::getInstance().addService( this, "peano4::parallel::SpacetreeSet" );
@@ -222,10 +230,8 @@ void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId )
     TreeManagementMessage::receive( message,  targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator() );
     assertion1(message.getAction()==TreeManagementMessage::Action::Acknowledgement, message.toString());
 
-    const int tag = peano4::parallel::Node::getInstance().getGridDataExchangeTag(masterId,newTreeId,peano4::parallel::Node::ExchangeMode::VerticalData);
     peano4::grid::AutomatonState state = _spacetrees.begin()->_root;
-
-    logDebug( "addSpacetree(int,int)", "send state " << state.toString() << " to rank " << targetRank << " via tag " << tag );
+    logDebug( "addSpacetree(int,int)", "send state " << state.toString() << " to rank " << targetRank );
     peano4::grid::AutomatonState::send( state, targetRank, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator() );
 
     TreeManagementMessage::receive( message,  targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator() );

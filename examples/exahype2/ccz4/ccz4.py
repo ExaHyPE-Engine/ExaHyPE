@@ -7,7 +7,8 @@ import exahype2.sympy
 
 
 #SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
-SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
+#SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
+SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
 
 
 class CCZ4Solver( SuperClass ):
@@ -187,7 +188,8 @@ if __name__ == "__main__":
 
     time_step_size      = 0.001
     max_h               = 0.4
-    min_h               = 0.4
+    #max_h               = 0.2
+    min_h               = max_h
     patch_size          = 6
     
     my_solver = CCZ4Solver(
@@ -204,14 +206,18 @@ if __name__ == "__main__":
     
     dimensions = 3
     end_time = 1.0
-    snapshots = time_step_size*40
+    #snapshots = time_step_size*40
+    snapshots = 0
+
+    periodic_boundary_conditions = [True,True,True]          # Periodic BC
+    periodic_boundary_conditions = [False,False,False]          # Periodic BC
         
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
       [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       end_time,                 # end time
       0.0, snapshots,   # snapshots
-      [True,True,True]          # Periodic BC
+      periodic_boundary_conditions
     )
     
     project.set_Peano4_installation("../../..", build_mode)

@@ -568,8 +568,13 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
 
     self.set_implementation(flux=flux,ncp=ncp)
+  
 
+  def add_to_Peano4_datamodel( self, datamodel ):
+    FV.add_to_Peano4_datamodel(self,datamodel)
+    datamodel.add_cell(self._cell_sempahore_label)
 
+  
   def create_action_sets(self):
     FV.create_action_sets(self)
 
@@ -719,11 +724,6 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     FV.add_actions_to_perform_time_step(self,step)
     step.add_action_set( exahype2.grid.EnclaveLabels(self._name) ) 
     step.add_action_set( MergeEnclaveTaskOutcome(self) )
-    
-
-  def add_to_Peano4_datamodel( self, datamodel ):
-    FV.add_to_Peano4_datamodel(self,datamodel)
-    datamodel.add_cell(self._cell_sempahore_label)
  
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):

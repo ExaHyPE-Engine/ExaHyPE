@@ -67,12 +67,12 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   
   if ( repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::PrimaryWithRollback ) {
     std::copy_n( 
-      fineGridCell{{UNKNOWN_IDENTIFIER}}ReconstructedBackup.value, NumberOfBackedUpEntries, fineGridCell{{UNKNOWN_IDENTIFIER}}.value
+      fineGridCell{{UNKNOWN_IDENTIFIER}}ReconstructedBackup.value, NumberOfBackedUpEntries, reconstructedPatch
     );
   } 
   else {
     std::copy_n( 
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value, NumberOfBackedUpEntries, fineGridCell{{UNKNOWN_IDENTIFIER}}ReconstructedBackup.value
+      reconstructedPatch, NumberOfBackedUpEntries, fineGridCell{{UNKNOWN_IDENTIFIER}}ReconstructedBackup.value
     );
   }
   
