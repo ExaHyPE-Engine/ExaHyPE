@@ -100,11 +100,21 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
 ) {
   logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
+    // @todo docu
+    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+      Q[i] = 0.0;
+    }
+
+
     if ( Scenario=="gaugewave-c++" ) {
       gaugeWave(Q, volumeX, volumeH, t);
     }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
+    }
+
+    for (int i=0; i<NumberOfUnknowns; i++) {
+      assertion5( std::isfinite(Q[i]), volumeX, volumeH, t, dt, i );
     }
 
     for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
@@ -151,6 +161,8 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
     result = std::max(result,std::abs(lambda[i]));
   }
 
+  // @todo Raus
+  assertion4( std::isfinite(result), faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( std::isfinite(result), faceCentre, volumeH, t, normal );
 
   logTraceOut( "eigenvalues(...)" );

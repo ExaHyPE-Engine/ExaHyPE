@@ -6,8 +6,27 @@ import exahype2
 import exahype2.sympy
 
 
-#SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
+"""
+ Use this one if and only if you wanna debug
+"""
+#SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
+
+"""
+ This is my simplest version of an adaptive time stepping scheme. This one 
+ is extensively tested, i.e. use this one for experiments.
+"""
 SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
+
+
+"""
+ This is a more sophisticated version which should yield way better performance
+ on nodes with many cores.
+"""
+#SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
+
+
+
+
 
 
 class CCZ4Solver( SuperClass ):
@@ -36,16 +55,26 @@ class CCZ4Solver( SuperClass ):
     number_of_unknowns = 0
     for i in unknowns:
       number_of_unknowns += unknowns[i]
-    print( "number of unknowns=", number_of_unknowns )
     
-    SuperClass.__init__( 
-      self,
-      name=name, patch_size=patch_size, 
-      unknowns=number_of_unknowns, 
-      auxiliary_variables=0, 
-      min_h=min_h, max_h=max_h, 
-      time_step_relaxation=0.1
-    )
+    if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize:
+      SuperClass.__init__( 
+        self,
+        name=name, patch_size=patch_size, 
+        unknowns=number_of_unknowns, 
+        auxiliary_variables=0, 
+        min_h=min_h, max_h=max_h,
+        time_step_size=1e-6
+      )
+    else:
+      SuperClass.__init__( 
+        self,
+        name=name, patch_size=patch_size, 
+        unknowns=number_of_unknowns, 
+        auxiliary_variables=0, 
+        min_h=min_h, max_h=max_h, 
+        time_step_relaxation=0.1
+      )
+      
     self._solver_template_file_class_name = SuperClass.__name__
 
     pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
@@ -195,8 +224,8 @@ if __name__ == "__main__":
       "CCZ4", patch_size, min_h, max_h
     )
 
-    my_solver.add_constraint_verification()
-    #my_solver.add_derivative_calculation()
+    #my_solver.add_constraint_verification()
+    my_solver.add_derivative_calculation()
     
     project.add_solver(my_solver)    
     
@@ -209,7 +238,6 @@ if __name__ == "__main__":
     #snapshots = 0
 
     periodic_boundary_conditions = [True,True,True]          # Periodic BC
-    periodic_boundary_conditions = [False,False,False]          # Periodic BC
         
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
@@ -225,16 +253,21 @@ if __name__ == "__main__":
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
-    peano4_project = project.generate_Peano4_project()
+    peano4_project = project.generate_Peano4_project(verbose=True)
     
     peano4_project.output.makefile.add_Fortran_flag( "-DCCZ4EINSTEIN -DDim3" )
     
-    # This is for GNU
-    peano4_project.output.makefile.add_Fortran_flag( "-lstdc++ -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy -ffree-line-length-512 -fPIC" )
-#add routie to find the gfortran
-#need to create a link first:sudo ln -s /usr/lib/x86_64-linux-gnu/libgfortran.so.4 /usr/lib/x86_64-linux-gnu/libgfortran.so
+    use_intel = False
+    if use_intel:
+      pass
+    else:
+      peano4_project.output.makefile.add_Fortran_flag( "-lstdc++ -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy -ffree-line-length-512 -fPIC" )
+      peano4_project.output.makefile.add_CXX_flag( "-fPIE" )
+      peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -lgfortran" )
+    
+
+    
     #peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -L/usr/lib/x86_64-linux-gnu -lgfortran" )
-    peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -lgfortran" )
 
     # This might work for Intel (not tested)
     #peano4_project.output.makefile.add_Fortran_flag( "-r8 -cpp -auto -qopenmp-simd -O2" )
@@ -247,13 +280,11 @@ if __name__ == "__main__":
       ["PDE.f90 ", "EinsteinConstraints.f90 ", "Properties.f90",
         "Metric.f90 ", "C2P-FOCCZ4.f90 ","ADMConstraints.f90"] 
     )
-    
+      
     peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
     
     peano4_project.generate( throw_away_data_after_generation=False )
     
-    parallel_builds = 4   # I don't use a massively parallel build here as my laptop otherwise becomes too hot.
-                          # Without any arguments, the build process will grab all of your cores.
-    peano4_project.build( make_clean_first = False, number_of_parallel_builds = parallel_builds )
+    peano4_project.build( make_clean_first = False )
     #!make -j4
 

@@ -228,7 +228,7 @@ class HandleBoundary(AbstractFVActionSet):
 """ + AbstractFVActionSet.get_includes(self) 
 
 
-class ProjectPatchOntoFaces( ProjectPatchOntoFaces ):
+class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFaces ):
   def __init__(self,solver, predicate):
     peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
       self,
@@ -345,6 +345,32 @@ class FV(object):
     self.create_data_structures()
     self.create_action_sets()
 
+
+  def __str__(self):
+    result = """
+Name:                """ + self._name + """
+Type:                """ + self.__class__.__name__ + """
+Patch size:          """ + str( self._patch_size ) + """  
+Unknowns:            """ + str( self._unknowns ) + """
+Auxiliary variables: """ + str( self._auxiliary_variables ) + """
+h_min:               """ + str( self._min_h ) + """
+h_max:               """ + str( self._max_h ) + """
+Preprocess patch:    """ 
+    if self._preprocess_reconstructed_patch:
+      result += """yes
+"""
+    else:
+      result += """no
+"""
+    result += "Postprocess patch:   """ 
+    if self._postprocess_updated_patch:
+      result += """yes
+"""
+    else:
+      result += """no
+"""
+    return result
+  
 
   @abstractmethod
   def create_data_structures(self):

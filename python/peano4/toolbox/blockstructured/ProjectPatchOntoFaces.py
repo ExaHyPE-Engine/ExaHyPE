@@ -21,7 +21,7 @@ class ProjectPatchOntoFaces(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap,guard,additional_includes):
+  def __init__(self,patch,patch_overlap,guard,additional_includes, add_assertions = True):
     self.d = {}
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
@@ -39,6 +39,11 @@ class ProjectPatchOntoFaces(ActionSet):
     self.d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + patch_overlap.name
     self.d[ "CELL_ACCESSOR" ]      = "fineGridCell" + patch.name
     self.d[ "GUARD" ]                                        = guard
+    if add_assertions:
+      self.d[ "ASSERTION_PREFIX" ] = "false"
+    else:
+      self.d[ "ASSERTION_PREFIX" ] = "true"
+      
     
     self.additional_includes = additional_includes
 
@@ -98,7 +103,12 @@ class ProjectPatchOntoFaces(ActionSet):
           int patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
           int overlapCellSerialised = serialisePatchIndex(overlapCell,d);
           for (int j=0; j<{UNKNOWNS}; j++) {{
-            assertion6( {CELL_ACCESSOR}.value[patchCellSerialised*236+j]=={CELL_ACCESSOR}.value[patchCellSerialised*236+j], j,i,k,d, patchCell, overlapCell );
+            assertion7( 
+              {ASSERTION_PREFIX}
+              or
+              {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j]=={CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j], j,i,k,d, patchCell, overlapCell,
+              marker.toString() 
+            );
             {FACES_ACCESSOR}(d).value[overlapCellSerialised*{UNKNOWNS}+j] = 
               {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j];
           }}
@@ -109,7 +119,12 @@ class ProjectPatchOntoFaces(ActionSet):
           patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
           overlapCellSerialised = serialisePatchIndex(overlapCell,d);
           for (int j=0; j<{UNKNOWNS}; j++) {{
-            assertion6( {CELL_ACCESSOR}.value[patchCellSerialised*236+j]=={CELL_ACCESSOR}.value[patchCellSerialised*236+j], j,i,k,d, patchCell, overlapCell );
+            assertion7( 
+              {ASSERTION_PREFIX}
+              or
+              {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j]=={CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j], j,i,k,d, patchCell, overlapCell, 
+              marker.toString() 
+            );
             {FACES_ACCESSOR}(d+Dimensions).value[overlapCellSerialised*{UNKNOWNS}+j] = 
               {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j];
           }}

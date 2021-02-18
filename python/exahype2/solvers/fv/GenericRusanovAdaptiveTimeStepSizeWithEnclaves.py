@@ -13,8 +13,22 @@ from .GenericRusanovFixedTimeStepSize import GenericRusanovFixedTimeStepSize
 from .GenericRusanovFixedTimeStepSize import UpdateCell 
 
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+from peano4.toolbox.blockstructured.ProjectPatchOntoFaces import ProjectPatchOntoFaces
 
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
+
+
+class ProjectEnclavePatchOntoFaces( ProjectPatchOntoFaces ):
+  def __init__(self,solver, predicate):
+    peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
+      self,
+      solver._patch,
+      solver._patch_overlap_new,
+      predicate, 
+      solver._get_default_includes() + solver.get_user_includes(),
+      add_assertions = False
+    )
+  
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
@@ -410,7 +424,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       "not marker.isRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
-      ")"
+      ")", 
+      add_assertions_to_halo_exchange = True
     )
     self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
 
@@ -585,7 +600,7 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate)
     self._action_set_AMR                                 = AMROnPatch(self, "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate)
     self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate)
-    self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, 
+    self._action_set_project_patch_onto_faces            = ProjectEnclavePatchOntoFaces(self, 
       self._store_cell_data_default_predicate() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
