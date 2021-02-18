@@ -7,8 +7,7 @@ import exahype2.sympy
 
 
 #SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
-#SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
-SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
+SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
 
 
 class CCZ4Solver( SuperClass ):
@@ -196,8 +195,8 @@ if __name__ == "__main__":
       "CCZ4", patch_size, min_h, max_h
     )
 
-    #my_solver.add_constraint_verification()
-    my_solver.add_derivative_calculation()
+    my_solver.add_constraint_verification()
+    #my_solver.add_derivative_calculation()
     
     project.add_solver(my_solver)    
     
@@ -206,8 +205,8 @@ if __name__ == "__main__":
     
     dimensions = 3
     end_time = 1.0
-    #snapshots = time_step_size*40
-    snapshots = 0
+    snapshots = time_step_size*40
+    #snapshots = 0
 
     periodic_boundary_conditions = [True,True,True]          # Periodic BC
     periodic_boundary_conditions = [False,False,False]          # Periodic BC
