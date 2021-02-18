@@ -295,11 +295,18 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
        DO l = 1, 3
           Christoffel_tilde(i,j,k) = Christoffel_tilde(i,j,k) + g_contr(k,l)*( DD(i,j,l)+DD(j,i,l)-DD(l,i,j) ) 
           Christoffel(i,j,k)       = Christoffel(i,j,k)       + g_contr(k,l)*( DD(i,j,l)+DD(j,i,l)-DD(l,i,j) ) -g_contr(k,l)*( g_cov(j,l)*PP(i)+g_cov(i,l)*PP(j)-g_cov(i,j)*PP(l) ) 
-          Gtilde(i)                = Gtilde(i)+2*g_contr(i,j)*g_contr(k,l)*DD(l,j,k) 
+          !Gtilde(i)                = Gtilde(i)+2*g_contr(i,j)*g_contr(k,l)*DD(l,j,k) 
         ENDDO 
       ENDDO
      ENDDO
     ENDDO
+    DO l = 1, 3
+     DO j = 1, 3
+      DO i = 1, 3
+          Gtilde(i) = Gtilde(i) + g_contr(j,l)*Christoffel_tilde(j,l,i) 
+      ENDDO
+     ENDDO     
+    ENDDO   
     Z   = 0.5*MATMUL( g_cov, Ghat - Gtilde ) 
     Zup = MATMUL(phi**2*g_contr, Z) 
     !
