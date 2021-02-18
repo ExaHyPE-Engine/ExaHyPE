@@ -31,8 +31,7 @@ tarch::multicore::BooleanSemaphore  peano4::parallel::SpacetreeSet::_semaphore;
 
 
 peano4::parallel::SpacetreeSet::SpacetreeSet():
-  _state( SpacetreeSetState::Waiting),
-  _periodicBC(0) {
+  _state( SpacetreeSetState::Waiting) {
 }
 
 
@@ -41,18 +40,11 @@ peano4::parallel::SpacetreeSet&  peano4::parallel::SpacetreeSet::getInstance() {
 }
 
 
-bool peano4::parallel::SpacetreeSet::hasPeriodicBoundaryConditions() const {
-  return _periodicBC.count()>0;
-}
-
-
 void peano4::parallel::SpacetreeSet::init(
   const tarch::la::Vector<Dimensions,double>&  offset,
   const tarch::la::Vector<Dimensions,double>&  width,
   const std::bitset<Dimensions>&               periodicBC
 ) {
-  _periodicBC = periodicBC;
-
   _requestMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - request message");
   _answerMessageTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::SpacetreeSet - answer message", Node::MaxSpacetreesPerRank);
   tarch::services::ServiceRepository::getInstance().addService( this, "peano4::parallel::SpacetreeSet" );
