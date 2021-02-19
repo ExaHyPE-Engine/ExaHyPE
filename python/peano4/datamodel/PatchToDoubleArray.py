@@ -37,6 +37,23 @@ class PatchToDoubleArray():
     self.includes                    = ""
 
 
+  def __str__(self):
+    result =  """Map to double array
+  - send condition:          """ + self.send_condition + """
+  - receive/merge condition: """ + self.receive_and_merge_condition + """
+  - store condition:         """ + self.store_persistent_condition + """
+  - load condition:          """ + self.load_persistent_condition + """
+  - merge criterion:         """
+  
+    if self.merge_method_definition!="":
+      result += """user-defined
+"""
+    else:    
+      result += """nop
+"""
+    return result    
+
+
   def get_stack_container(self):
     return "peano4::stacks::STDVectorStack< " + self.data.get_full_qualified_type() + " >";
 

@@ -739,6 +739,7 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * The barrier map is cleared once per iteration.
      */
     void orderedBarrier( const std::string& identifier );
+    
 };
 
 

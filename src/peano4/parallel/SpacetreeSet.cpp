@@ -222,10 +222,8 @@ void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId )
     TreeManagementMessage::receive( message,  targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator() );
     assertion1(message.getAction()==TreeManagementMessage::Action::Acknowledgement, message.toString());
 
-    const int tag = peano4::parallel::Node::getInstance().getGridDataExchangeTag(masterId,newTreeId,peano4::parallel::Node::ExchangeMode::VerticalData);
     peano4::grid::AutomatonState state = _spacetrees.begin()->_root;
-
-    logDebug( "addSpacetree(int,int)", "send state " << state.toString() << " to rank " << targetRank << " via tag " << tag );
+    logDebug( "addSpacetree(int,int)", "send state " << state.toString() << " to rank " << targetRank );
     peano4::grid::AutomatonState::send( state, targetRank, _requestMessageTag, tarch::mpi::Rank::getInstance().getCommunicator() );
 
     TreeManagementMessage::receive( message,  targetRank, getAnswerTag(masterId), tarch::mpi::Rank::getInstance().getCommunicator() );

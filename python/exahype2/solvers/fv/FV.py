@@ -228,7 +228,7 @@ class HandleBoundary(AbstractFVActionSet):
 """ + AbstractFVActionSet.get_includes(self) 
 
 
-class ProjectPatchOntoFaces( ProjectPatchOntoFaces ):
+class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFaces ):
   def __init__(self,solver, predicate):
     peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
       self,
@@ -261,25 +261,29 @@ class FV(object):
     at the end of the iteration. This way, we ensure that the one from the previous
     iteration is not overwritten by some adjacent cell halfway through the 
     computation.
+
+    
+    Data flow:
+    
+    The class has a number of guards. They are boolean expression which control 
+    whether data is stored and communicated. If you want to redefine these guards,
+    you have to redefine create_data_structures() and reset the predicates after
+    you have called the superclass' operation. I recommend that you refrain from
+    defining completely new predicates. Use the predefined predicates instead and
+    refine them by adding more and and or clauses.
   
   
     Parallelisation:
     
     I do equip both Q and NewQ with proper merge routines. However, all merge guards
-    are unset by default. If you need some data exchange, you have to activate
+    set to "never" by default. If you need some data exchange, you have to activate
     them manually.
     
     
-    Attributes:
+    Add further data structures:
     
-    _solver_template_file_class_name: String or None
-      Set it to None to make the solver search for a template with the name of the
-      solver. Set it to a string to use a particular template. That is, if you 
-      create your own, user-defined solver, you will have to alter this thing 
-      manually. Most users add something like:
-      
-        self._solver_template_file_class_name = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves.__name__
-
+    To add more data structures, plug into create_data_structures() and 
+    create_action_sets().
     
   """
   
@@ -346,14 +350,43 @@ class FV(object):
     self.create_action_sets()
 
 
+  def __str__(self):
+    result = """
+Name:                   """ + self._name + """
+Type:                   """ + self.__class__.__name__ + """
+Patch size:             """ + str( self._patch_size ) + """  
+Unknowns:               """ + str( self._unknowns ) + """
+Auxiliary variables:    """ + str( self._auxiliary_variables ) + """
+h_min:                  """ + str( self._min_h ) + """
+h_max:                  """ + str( self._max_h ) + """
+In-situ preprocessing:  """ 
+    if self._preprocess_reconstructed_patch:
+      result += """yes
+"""
+    else:
+      result += """no
+"""
+    result += "In-situ postprocessing: """ 
+    if self._postprocess_updated_patch:
+      result += """yes
+"""
+    else:
+      result += """no
+"""
+    return result
+  
+
   @abstractmethod
   def create_data_structures(self):
     """
     
      Recall in subclasses if you wanna change the number of unknowns
-     or auxiliary variables
+     or auxiliary variables. See class description's subsection on 
+     data flow.
      
     """
+    print( "@@@@@@@@ create data structures ")
+
     self._patch             = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
     self._patch_overlap     = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
     self._patch_overlap_new = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
@@ -442,13 +475,23 @@ class FV(object):
     return "InstanceOf" + self._name
 
   
-  def add_to_Peano4_datamodel( self, datamodel ):
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
     """
     
       Add all required data to the Peano4 project's datamodel 
       so it is properly built up
       
     """
+    if verbose:
+      print( "Patch data" )
+      print( "----------" )
+      print( str(self._patch) )
+      print( "Patch overlap data" )
+      print( "----------" )
+      print( str(self._patch_overlap) )
+      print( "Patch overlap data" )
+      print( "----------" )
+      print( str(self._patch_overlap_new) )
     datamodel.add_cell(self._patch)
     datamodel.add_face(self._patch_overlap)
     datamodel.add_face(self._patch_overlap_new)
@@ -570,6 +613,8 @@ class FV(object):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
+
+    # @todo vertauschen
 
     step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_adjust_cell )
