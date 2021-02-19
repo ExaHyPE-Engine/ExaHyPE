@@ -30,6 +30,20 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     );
   }
 """
+  def __init__(self,solver):
+    AbstractFVActionSet.__init__(self,solver)
+    self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "LABEL_NAME" ] = self.label_name      
+      result = jinja2.Template(self.Template).render(**d)
+      pass 
+    return result
 
 
 class EnclaveTaskingFV( FV ):

@@ -26,7 +26,15 @@ from _ast import Or
  This is a more sophisticated version which should yield way better performance
  on nodes with many cores.
 """
-SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
+#SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
+
+
+"""
+ This is my most advanced solver. It should basically yield the same output as
+ GenericRusanovAdaptiveTimeStepSizeWithEnclaves for CCZ4 with the Gauge wave
+ however.
+"""
+SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
 
 
 
