@@ -12,7 +12,7 @@ from _ast import Or
  Use these if and only if you wanna debug
 """
 #SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
-SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
+#SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
 
 
 """
@@ -26,7 +26,7 @@ SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
  This is a more sophisticated version which should yield way better performance
  on nodes with many cores.
 """
-#SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
+SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
 
 
 
