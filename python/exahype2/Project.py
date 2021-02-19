@@ -251,7 +251,12 @@ class Project(object):
     self._project.solversteps.add_step(perform_time_step)
    
     for solver in self._solvers:
-      solver.add_to_Peano4_datamodel( self._project.datamodel )
+      print( "---------------------------------------")
+      print( "Create data for solver " +solver._name  )
+      print( "---------------------------------------")
+      print( str(solver) )
+      
+      solver.add_to_Peano4_datamodel( self._project.datamodel, verbose )
       
       solver.add_use_data_statements_to_Peano4_solver_step( create_grid )
       solver.add_use_data_statements_to_Peano4_solver_step( plot_solution )
@@ -267,11 +272,6 @@ class Project(object):
       
       solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
       
-      if verbose:
-        print( "---------------------------------------")
-        print( "Created data for solver " +solver._name )
-        print( "---------------------------------------")
-        print( str(solver) )
 
     self.__generate_solver_repository();
 
