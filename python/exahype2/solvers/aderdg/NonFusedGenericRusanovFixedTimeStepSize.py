@@ -452,8 +452,8 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
 """    
 
 
-  def add_to_Peano4_datamodel( self, datamodel ):
-    ADERDG.add_to_Peano4_datamodel( self, datamodel )
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
+    ADERDG.add_to_Peano4_datamodel( self, datamodel, verbose )
 
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     ADERDG.add_use_data_statements_to_Peano4_solver_step( self, step )

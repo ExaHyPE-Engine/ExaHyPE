@@ -100,12 +100,6 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
 ) {
   logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
-    // @todo docu
-    for (int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-      Q[i] = 0.0;
-    }
-
-
     if ( Scenario=="gaugewave-c++" ) {
       gaugeWave(Q, volumeX, volumeH, t);
     }
@@ -213,6 +207,7 @@ void examples::exahype2::ccz4::CCZ4::boundaryConditions(
 ) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
   for(int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    assertion5( Qinside[i]==Qinside[i], faceCentre, volumeH, t, normal, i );
     Qoutside[i]=Qinside[i];
   }
   logTraceOut( "boundaryConditions(...)" );

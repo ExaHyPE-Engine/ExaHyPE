@@ -598,11 +598,6 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( FV ):
     self._action_set_update_cell = UpdateCellWithEnclaves(self)
 
 
-  def add_to_Peano4_datamodel( self, datamodel ):
-    FV.add_to_Peano4_datamodel( self, datamodel )
-    datamodel.add_cell(self._reconstructed_patch_backup)
-
-
   def set_implementation(self,
     flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
@@ -732,11 +727,11 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( FV ):
     step.add_action_set( MergeEnclaveTaskOutcome(self) )
     
 
-  def add_to_Peano4_datamodel( self, datamodel ):
-    FV.add_to_Peano4_datamodel(self,datamodel)
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
+    FV.add_to_Peano4_datamodel(self,datamodel, verbose)
     datamodel.add_cell(self._cell_sempahore_label)
     datamodel.add_cell(self._reconstructed_patch_backup)
- 
+
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     FV.add_use_data_statements_to_Peano4_solver_step(self,step)

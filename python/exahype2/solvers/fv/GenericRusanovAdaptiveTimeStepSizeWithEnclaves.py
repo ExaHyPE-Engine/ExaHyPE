@@ -13,22 +13,9 @@ from .GenericRusanovFixedTimeStepSize import GenericRusanovFixedTimeStepSize
 from .GenericRusanovFixedTimeStepSize import UpdateCell 
 
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
-from peano4.toolbox.blockstructured.ProjectPatchOntoFaces import ProjectPatchOntoFaces
+
 
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
-
-
-class ProjectEnclavePatchOntoFaces( ProjectPatchOntoFaces ):
-  def __init__(self,solver, predicate):
-    peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
-      self,
-      solver._patch,
-      solver._patch_overlap_new,
-      predicate, 
-      solver._get_default_includes() + solver.get_user_includes(),
-      add_assertions = False
-    )
-  
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
@@ -489,6 +476,8 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     add the marker to the cell which holds the semaphore/cell number.      
     
     """
+    self._time_step_relaxation                = time_step_relaxation
+
     self._flux_implementation                 = PDETerms.None_Implementation
     self._ncp_implementation                  = PDETerms.None_Implementation
     self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
@@ -501,8 +490,6 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
-
-    self._time_step_relaxation                = time_step_relaxation
 
     self._initialisation_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
@@ -553,6 +540,13 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
       ")"
 
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+   
+    self.set_implementation(flux=flux,ncp=ncp)
+
+  
+  def create_data_structures(self):
+    FV.create_data_structures(self)
+    self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
 
     ## @todo check
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
@@ -579,14 +573,10 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     self._patch_overlap_new.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
-   
-    self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
 
-    self.set_implementation(flux=flux,ncp=ncp)
-  
 
-  def add_to_Peano4_datamodel( self, datamodel ):
-    FV.add_to_Peano4_datamodel(self,datamodel)
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
+    FV.add_to_Peano4_datamodel(self,datamodel, verbose)
     datamodel.add_cell(self._cell_sempahore_label)
 
   
@@ -600,7 +590,7 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( FV ):
     self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate)
     self._action_set_AMR                                 = AMROnPatch(self, "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate)
     self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate)
-    self._action_set_project_patch_onto_faces            = ProjectEnclavePatchOntoFaces(self, 
+    self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self,
       self._store_cell_data_default_predicate() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \

@@ -68,9 +68,9 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
   
-  {{PREPROCESS_RECONSTRUCTED_PATCH}}
-
   if (marker.isSkeletonCell()) {
+    {{PREPROCESS_RECONSTRUCTED_PATCH}}
+  
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
       originalPatch,
@@ -190,6 +190,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   }
   else { // is an enclave cell
     auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
+      {{PREPROCESS_RECONSTRUCTED_PATCH}}
+      
       ::exahype2::fv::copyPatch(
         reconstructedPatch,
         originalPatch,
@@ -361,9 +363,12 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       "not marker.isRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
-      ")"
+      ")", 
+      add_assertions_to_halo_exchange = True
     )
     self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
+
+    self._solver    = solver
 
 
   def get_includes(self):
@@ -375,7 +380,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 #include "exahype2/SmartEnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
-"""
+""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
 
 
 class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
@@ -422,8 +427,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     add the marker to the cell which holds the semaphore/cell number.      
     
     """
-    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-
     self._time_step_size = time_step_size
     
     self._flux_implementation                 = PDETerms.None_Implementation
@@ -434,72 +437,84 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
     self._source_term_implementation          = PDETerms.Empty_Implementation
 
+    self._name = name
+
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
 
-    initialisation_sweep_predicate = "(" + \
+
+    self._initialisation_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
       
-    first_iteration_after_initialisation_predicate = "(" + \
+    self._first_iteration_after_initialisation_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
     ")"
 
-    primary_sweep_predicate = "(" + \
+    self._primary_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
-    primary_sweep_or_plot_predicate = "(" + \
+    self._primary_sweep_or_plot_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
 
-    primary_or_initialisation_sweep_predicate= "(" + \
+    self._primary_or_initialisation_sweep_predicate= "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
-    secondary_sweep_predicate = "(" + \
+    self._secondary_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
       ")"
 
-    secondary_sweep_or_grid_construction_predicate = "(" + \
+    self._secondary_sweep_or_grid_construction_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
       ")"
 
-    secondary_sweep_or_grid_initialisation_predicate = "(" + \
+    self._secondary_sweep_or_grid_initialisation_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
 
-    secondary_sweep_or_grid_initialisation_or_plot_predicate = "(" + \
+    self._secondary_sweep_or_grid_initialisation_or_plot_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
 
+    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+
+    self.set_implementation(flux=flux,ncp=ncp)
+
+
+  def create_data_structures(self):
+    FV.create_data_structures(self)
+    self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
+    
     ## @todo check
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
-      secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
+      self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
-      primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
+      self._primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
 
     
-    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + secondary_sweep_or_grid_initialisation_or_plot_predicate
-    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + primary_sweep_or_plot_predicate
+    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate
+    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._primary_sweep_or_plot_predicate
 
-    self._patch_overlap.generator.send_condition               = "not marker.isRefined() and " + initialisation_sweep_predicate
-    self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " + first_iteration_after_initialisation_predicate
+    self._patch_overlap.generator.send_condition               = "not marker.isRefined() and " + self._initialisation_sweep_predicate
+    self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " + self._first_iteration_after_initialisation_predicate
 
-    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + primary_sweep_predicate
-    self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + secondary_sweep_predicate
+    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._primary_sweep_predicate
+    self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._secondary_sweep_predicate
 
     self._patch_overlap_new.generator.send_condition               = "true"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
@@ -511,13 +526,22 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
 #include "../repositories/SolverRepository.h"
 """    
 
+
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
+    FV.add_to_Peano4_datamodel(self,datamodel, verbose)
+    datamodel.add_cell(self._cell_sempahore_label)
+
+  
+  def create_action_sets(self):
+    FV.create_action_sets(self)
+    
     #
     # AMR and adjust cell have to be there always, i.e. also throughout 
     # the grid construction.
     #
-    self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined() and " + primary_or_initialisation_sweep_predicate)
-    self._action_set_AMR                                 = AMROnPatch(self, "not marker.isRefined() and " + secondary_sweep_or_grid_construction_predicate)
-    self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() + " and " + primary_or_initialisation_sweep_predicate)
+    self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate)
+    self._action_set_AMR                                 = AMROnPatch(self, "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate)
+    self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate)
     self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, 
       self._store_cell_data_default_predicate() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
@@ -526,13 +550,8 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
       ")"
     )
-    self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + secondary_sweep_or_grid_initialisation_predicate)
-    self._action_set_update_cell              = None
-   
-    self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
-
-    self.set_implementation(flux=flux,ncp=ncp)
-  
+    self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate)
+    self._action_set_update_cell = UpdateCellWithEnclaves(self)
 
 
   def set_implementation(self,
@@ -575,7 +594,17 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
        self._reconstructed_array_memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without immedidate (call stack) free chosen. This will lead into a segmentation fault" )
 
-    self._action_set_update_cell = UpdateCellWithEnclaves(self)
+    self.create_action_sets()
+    
+
+  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+    self._preprocess_reconstructed_patch = kernel
+    self.create_action_sets()
+
+
+  def set_postprocess_updated_patch_kernel(self,kernel):
+    self._postprocess_updated_patch = kernel
+    self.create_action_sets()
 
   
   def get_user_includes(self):
@@ -586,16 +615,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 """    
-    
-
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
-    self._preprocess_reconstructed_patch = kernel
-    self._action_set_update_cell = UpdateCellWithEnclaves(self)
-
-
-  def set_postprocess_updated_patch_kernel(self,kernel):
-    self._postprocess_updated_patch = kernel
-    self._action_set_update_cell = UpdateCellWithEnclaves(self)
 
   
   def add_entries_to_text_replacement_dictionary(self,d):
@@ -663,11 +682,6 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( FV ):
     step.add_action_set( MergeEnclaveTaskOutcome(self) )
     
 
-  def add_to_Peano4_datamodel( self, datamodel ):
-    FV.add_to_Peano4_datamodel(self,datamodel)
-    datamodel.add_cell(self._cell_sempahore_label)
- 
- 
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     FV.add_use_data_statements_to_Peano4_solver_step(self,step)
     step.use_cell(self._cell_sempahore_label)
