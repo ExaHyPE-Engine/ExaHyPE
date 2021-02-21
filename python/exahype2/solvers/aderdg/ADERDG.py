@@ -366,14 +366,14 @@ In-situ preprocessing:  """
   const bool isLeftLocal = marker.outerNormal()(faceNormal)>0;  
 
 #if Dimensions == 2
-  const int nodesOnFace = ({u}+{a})*({p}+1)*({p}+1);
+  const int doublesPerFace = ({u}+{a})*({p}+1)*({p}+1);
 #else
-  const int nodesOnFace = ({u}+{a})*({p}+1)*({p}+1)*({p}+1);
+  const int doublesPerFace = ({u}+{a})*({p}+1)*({p}+1)*({p}+1);
 #endif
   
   std::copy_n( 
-    neighbour.value + (isLeftLocal ? 0: nodesOnFace), nodesOnFace, 
-    value           + (isLeftLocal ? 0: nodesOnFace)
+    neighbour.value + (isLeftLocal ? 0: doublesPerFace), doublesPerFace, 
+    value           + (isLeftLocal ? 0: doublesPerFace)
   );
 """.strip() # note: python3 format string, no jinja template
     return template.format(\
