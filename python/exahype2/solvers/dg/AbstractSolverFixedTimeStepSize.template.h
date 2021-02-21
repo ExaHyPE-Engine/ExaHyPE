@@ -129,6 +129,8 @@
      */
 {{BASIS_DECLARATIONS | indent(4,True) }}
 
+    static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
+    static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
   protected:
     static tarch::logging::Log  _log;
     double     _timeStamp;
@@ -137,3 +139,4 @@
 
     const double     _maxH;
     const double     _minH;
+

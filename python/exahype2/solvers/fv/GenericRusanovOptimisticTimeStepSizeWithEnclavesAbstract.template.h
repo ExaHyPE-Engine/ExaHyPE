@@ -39,7 +39,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       GridConstruction,
       GridInitialisation,
       Primary,
+      PrimaryWithRollback,
       Secondary,
+      /**
+       * Only used temporarily to flag a posteriori if something has gone wrong
+       */
+      SecondaryWithInvalidRollback,
       PlottingInitialCondition,
       PrimaryAfterGridInitialisation,
       Plotting
@@ -101,6 +106,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
      
     {% include "AbstractSolverAdaptiveTimeStepSize.template.h" %}
+  private:
+    double _previousAdmissibleTimeStepSize;
 };
 
 

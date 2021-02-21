@@ -199,8 +199,8 @@ class GenericRusanovExplicitEulerFixedTimeStepSize( DG ):
 """    
 
 
-  def add_to_Peano4_datamodel( self, datamodel ):
-    DG.add_to_Peano4_datamodel( self, datamodel )
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
+    DG.add_to_Peano4_datamodel( self, datamodel, verbose )
     #datamodel.add_face(self._face_flux_along_normal)
 
 

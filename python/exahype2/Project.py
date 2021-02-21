@@ -208,7 +208,7 @@ class Project(object):
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
     
     
-  def generate_Peano4_project(self):
+  def generate_Peano4_project(self, verbose=False):
     """
     
      Build the Peano4 project, i.e. all the action sets et al that you require
@@ -251,7 +251,12 @@ class Project(object):
     self._project.solversteps.add_step(perform_time_step)
    
     for solver in self._solvers:
-      solver.add_to_Peano4_datamodel( self._project.datamodel )
+      print( "---------------------------------------")
+      print( "Create data for solver " +solver._name  )
+      print( "---------------------------------------")
+      print( str(solver) )
+      
+      solver.add_to_Peano4_datamodel( self._project.datamodel, verbose )
       
       solver.add_use_data_statements_to_Peano4_solver_step( create_grid )
       solver.add_use_data_statements_to_Peano4_solver_step( plot_solution )
@@ -266,6 +271,7 @@ class Project(object):
       solver.add_actions_to_perform_time_step( perform_time_step )
       
       solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
+      
 
     self.__generate_solver_repository();
 

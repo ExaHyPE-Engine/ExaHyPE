@@ -76,12 +76,11 @@ void examples::exahype2::loh1::LOH1::adjustSolution(
   double                                       dt
 ) {
   logTraceInWith3Arguments( "adjustSolution(...)", x, h, t );
+
   if (tarch::la::equals(t,0.0) ) {
     prescribeGaussianWave(x,Q);
   }
-  else {
-    // other stuff
-  }
+
   logTraceOut( "adjustSolution(...)" );
 }
 

@@ -316,7 +316,7 @@ class ADERDG(object):
     return "InstanceOf" + self._name
 
   
-  def add_to_Peano4_datamodel( self, datamodel ):
+  def add_to_Peano4_datamodel( self, datamodel, verbose ):
     """
     
       Add all required data to the Peano4 project's datamodel 

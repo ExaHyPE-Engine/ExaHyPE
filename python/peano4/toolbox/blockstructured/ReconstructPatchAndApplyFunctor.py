@@ -5,6 +5,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 from enum import Enum
 
+
 class ReconstructedArrayMemoryLocation(Enum):
   """
    All arrays are held on the call stack. Might not work with PGI compilers or 
@@ -46,7 +47,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   """
   
   
-  def __init__(self,patch,patch_overlap,functor_implementation,reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.Heap,guard="true"):
+  def __init__(self,patch,patch_overlap,functor_implementation,reconstructed_array_memory_location=ReconstructedArrayMemoryLocation.Heap,guard="true", add_assertions_to_halo_exchange = True):
     """
 
   patch: peano4.datamodel.Patch
@@ -109,6 +110,12 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     self.d[ "ASSERTION_WITH_7_ARGUMENTS" ] = "assertion7"
     
     self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = functor_implementation
+
+    if add_assertions_to_halo_exchange:
+      self.d[ "ASSERTION_PREFIX_FOR_HALO" ] = "false"
+    else:
+      self.d[ "ASSERTION_PREFIX_FOR_HALO" ] = "true"
+      
 
     if reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
       self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
@@ -234,6 +241,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
           for (int j=0; j<{UNKNOWNS}; j++) {{
             reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d).value[ sourceCellSerialised*{UNKNOWNS}+j ];
             {ASSERTION_WITH_7_ARGUMENTS}( 
+              {ASSERTION_PREFIX_FOR_HALO} or 
               reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
               sourceCell, destinationCell, j, d, marker.toString(), _treeNumber, marker.toString()
             );
@@ -247,6 +255,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
           for (int j=0; j<{UNKNOWNS}; j++) {{
             reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] = {FACES_ACCESSOR}(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ];
             {ASSERTION_WITH_7_ARGUMENTS}( 
+              {ASSERTION_PREFIX_FOR_HALO} or 
               reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
               sourceCell, destinationCell, j, d, marker.toString(), _treeNumber, marker.toString()
             );
