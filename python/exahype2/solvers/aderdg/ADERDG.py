@@ -372,8 +372,8 @@ In-situ preprocessing:  """
 #endif
   
   std::copy_n( 
-    neighbour.value + (isLeftLocal ? 0: doublesPerFace), doublesPerFace, 
-    value           + (isLeftLocal ? 0: doublesPerFace)
+    neighbour.value + (isLeftLocal ? doublesPerFace : 0), doublesPerFace, 
+    value           + (isLeftLocal ? doublesPerFace : 0)
   );
 """.strip() # note: python3 format string, no jinja template
     return template.format(\
