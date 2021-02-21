@@ -224,42 +224,18 @@ class ADERDG(object):
     if order<=0:
       raise Exception( "Order has to be positive. Order 0 is a Finite Volume scheme. Use FV solver instead")
     
-    self._name                             = name
-    self._DG_polynomial                    = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() )
+    self._name                   = name
+    self._order                  = order
+    self._min_h                  = min_h
+    self._max_h                  = max_h 
+    self._plot_grid_properties   = plot_grid_properties
     
-    #> note(dominic):
-    #> a second snapshot vector is only needed in case we need to perform a rollback to a previous solution state (fused adaptive time stepping).
-    #self._DG_polynomial_new                = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
-    self._face_spacetime_solution          = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" ) # replicated
-    # > note(dominic): 
-    # > Riemann solve is performed on cell now. Hence, Riemann_result is not needed on the face anymore.
-    #self._Riemann_result                   = peano4.datamodel.Patch( (1*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
-    # > note(dominic): Fused scheme would need to use some sort of double buffering to prevent data races
-    # > One could thus have two buffers on the face that are swapped / copied every iteration.
-    # > Alternatively, one could (i) reintroduce the Riemann result and store a ready flag, (ii) or store the space-time predictor/hull-extrapolated predictor on the cell patch
-    # > and map it to the face when the neighbour merge is performed.
-    # > note(dominic): Enclave tasking needs to store the results on the Cell patch
-    #self._face_spacetime_solution_new      = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolationNew" ) # replicated 
-    #self._DG_polynomial_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
-    #self._DG_polynomial_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
-    
-    self._face_spacetime_solution.generator.includes     += """
-#include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
-"""
-   
-    self._guard_copy_new_face_data_into_face_data  = self._predicate_face_carrying_data()
-    self._guard_adjust_cell                        = self._predicate_cell_carrying_data()
-    self._guard_AMR                                = self._predicate_cell_carrying_data()
-    self._guard_project_DG_polynomial_onto_faces   = self._predicate_cell_carrying_data()
-    self._guard_update_cell                        = self._predicate_cell_carrying_data()
-    
-    self._order                = order
-    self._min_h                = min_h
-    self._max_h                = max_h 
-    self._plot_grid_properties = plot_grid_properties
-    
+    self._preprocess_reconstructed_patch      = ""
+    self._postprocess_updated_patch           = ""
+
+    # @todo raus    
     self._adaptive_time_stepping = False 
+    
     # ADER-DG CFL factors        
     # Up to order 4, computed via von Neumann analysis [1]; above, determined empirically by M. Dumbser)
     # [1] M. Dumbser, D. S. Balsara, E. F. Toro, and C.-D. Munz, 
@@ -280,24 +256,80 @@ class ADERDG(object):
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
 
-    self._action_set_adjust_cell     = AdjustCell(self)
-    self._action_set_AMR             = AMR(self)
-    self._action_set_update_cell     = None
-
-    self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+    self.plot_description = ""
+    self.plot_metadata    = ""
     
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  def __str__(self):
+    result = """
+Name:                   """ + self._name + """
+Type:                   """ + self.__class__.__name__ + """
+Order:                  """ + str( self._order ) + """  
+Unknowns:               """ + str( self._unknowns ) + """
+Auxiliary variables:    """ + str( self._auxiliary_variables ) + """
+h_min:                  """ + str( self._min_h ) + """
+h_max:                  """ + str( self._max_h ) + """
+In-situ preprocessing:  """ 
+    if self._preprocess_reconstructed_patch:
+      result += """yes
+"""
+    else:
+      result += """no
+"""
+    result += "In-situ postprocessing: """ 
+    if self._postprocess_updated_patch:
+      result += """yes
+"""
+    else:
+      result += """no
+"""
+    return result
+
+
+  __repr__ = __str__
+
+
+  def create_data_structures(self):
+    self._DG_polynomial                    = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    
+    #> note(dominic):
+    #> a second snapshot vector is only needed in case we need to perform a rollback to a previous solution state (fused adaptive time stepping).
+    #self._DG_polynomial_new                = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
+    self._face_spacetime_solution          = peano4.datamodel.Patch( (2*(self._order+1),self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" ) # replicated
+    # > note(dominic): 
+    # > Riemann solve is performed on cell now. Hence, Riemann_result is not needed on the face anymore.
+    #self._Riemann_result                   = peano4.datamodel.Patch( (1*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
+    # > note(dominic): Fused scheme would need to use some sort of double buffering to prevent data races
+    # > One could thus have two buffers on the face that are swapped / copied every iteration.
+    # > Alternatively, one could (i) reintroduce the Riemann result and store a ready flag, (ii) or store the space-time predictor/hull-extrapolated predictor on the cell patch
+    # > and map it to the face when the neighbour merge is performed.
+    # > note(dominic): Enclave tasking needs to store the results on the Cell patch
+    #self._face_spacetime_solution_new      = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolationNew" ) # replicated 
+    #self._DG_polynomial_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
+    #self._DG_polynomial_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._DG_polynomial_overlap)
+    
+    self._face_spacetime_solution.generator.includes     += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
     self._face_spacetime_solution.generator.send_condition               = "true"
     self._face_spacetime_solution.generator.receive_and_merge_condition  = "true"
 
-    self.plot_description = ""
-    self.plot_metadata    = ""
-    pass
-  
-  
-  def __str__(self):
-    return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,self.__dict__)
-  __repr__ = __str__
-  
+      
+  def create_action_sets(self):
+    #self._guard_copy_new_face_data_into_face_data  = self._predicate_face_carrying_data()
+    #self._guard_adjust_cell                        = self._predicate_cell_carrying_data()
+    #self._guard_AMR                                = self._predicate_cell_carrying_data()
+    #self._guard_project_DG_polynomial_onto_faces   = self._predicate_cell_carrying_data()
+    #self._guard_update_cell                        = self._predicate_cell_carrying_data()
+
+    self._action_set_adjust_cell     = AdjustCell(self)
+    self._action_set_AMR             = AMR(self)
+    self._action_set_update_cell     = None
+        
   
   def _predicate_face_carrying_data(self):
     return "not marker.isRefined()"
@@ -323,8 +355,14 @@ class ADERDG(object):
       so it is properly built up
       
     """
+    if verbose:
+      print( "Cell data" )
+      print( "----------" )
+      print( str(self._DG_polynomial) )
+      print( "Face data" )
+      print( "----------" )
+      print( str(self._face_spacetime_solution) )
     datamodel.add_cell(self._DG_polynomial)
-#    datamodel.add_cell(self._DG_polynomial_new)
     datamodel.add_face(self._face_spacetime_solution)
  
  
@@ -495,9 +533,11 @@ class ADERDG(object):
   def _init_dictionary_with_default_parameters(self,d):
     """
     
+    I use my non-critical assertion in the numerical codes. That is, if these
+    assertions fail, they do not terminate immediately. Instead, they ask the 
+    code to dump the output and to terminate then.
+    
     """
-    #d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._DG_polynomial.dim[0]
-    #d["HALO_SIZE"]                      = int(self._DG_polynomial_overlap.dim[0]/2)
     d["SOLVER_INSTANCE"]               = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                   = self._name
     d["UNKNOWN_IDENTIFIER"]            = self._unknown_identifier()
@@ -508,14 +548,13 @@ class ADERDG(object):
 
     self._basis._init_dictionary_with_default_parameters(d)        
         
-    #if self._DG_polynomial_overlap.dim[0]/2!=1:
-    #  print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
-    #d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
-    #d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
-    #d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
-    #d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
-    #d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
-    #d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
+    d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
+    d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
+    d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
+    d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "nonCriticalAssertion4"
+    d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
+    d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
+    
     d[ "MAX_H"] = self._min_h
     d[ "MIN_H"] = self._max_h
  

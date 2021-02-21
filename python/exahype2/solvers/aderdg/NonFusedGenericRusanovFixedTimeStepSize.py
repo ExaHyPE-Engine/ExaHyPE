@@ -378,10 +378,6 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
       Instantiate ADER-DG in a non-fused variant
 
     """
-    ADERDG.__init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties)
-
-    #self._face_flux_along_normal = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "FluxExtrapolation" )
-
     self._time_step_size = time_step_size
 
     self._flux_implementation                 = PDETerms.None_Implementation
@@ -392,16 +388,18 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
     self._sources_implementation              = PDETerms.None_Implementation
 
-    self._action_set_update_cell = UpdateCell(self)
-
-    # braucht kein Mensch
-    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+    ADERDG.__init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties)
 
     self.set_implementation(flux=flux,ncp=ncp,sources=sources)
-    
-    #self._face_spacetime_solution.generator.send_condition               = "false"
-    #self._face_spacetime_solution.generator.receive_and_merge_condition  = "false"
-    pass
+
+
+  def create_data_structures(self):
+    ADERDG.create_data_structures(self)
+
+
+  def create_action_sets(self):
+    ADERDG.create_action_sets(self)
+    self._action_set_update_cell = UpdateCell(self)
 
   
   def set_implementation(self,flux=None,ncp=None,sources=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None):
@@ -430,19 +428,19 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     if initial_conditions!=None: 
       self._initial_conditions_implementation         = initial_conditions
     
-    #if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
-    #  self._rusanov_call = self.RusanovCallWithFlux
-    #elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-    #  self._rusanov_call = self.RusanovCallWithNCP
-    #elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-    #  self._rusanov_call = self.RusanovCallWithFluxAndNCP
-    #else:
-    #  raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
+    self.create_action_sets()
 
-    #self._construct_template_update_cell()
-    pass
-    
   
+  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+    self._preprocess_reconstructed_patch = kernel
+    self._action_set_update_cell = UpdateCell(self)
+
+
+  def set_postprocess_updated_patch_kernel(self,kernel):
+    self._postprocess_updated_patch = kernel
+    self._action_set_update_cell = UpdateCell(self)
+     
+      
   def add_entries_to_text_replacement_dictionary(self,d):
     """
      
