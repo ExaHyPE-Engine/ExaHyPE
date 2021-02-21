@@ -310,7 +310,7 @@ In-situ preprocessing:  """
     #> note(dominic):
     #> a second snapshot vector is only needed in case we need to perform a rollback to a previous solution state (fused adaptive time stepping).
     #self._DG_polynomial_new                = peano4.datamodel.Patch( (order+1,order+1,order+1),     unknowns+auxiliary_variables, self._unknown_identifier() + "New" )
-    self._face_spacetime_solution          = peano4.datamodel.Patch( (2*(self._order+1),self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" ) # replicated
+    self._face_spacetime_solution          = peano4.datamodel.Patch( (2*(self._order+1),self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "SolutionExtrapolation" )
     # > note(dominic): 
     # > Riemann solve is performed on cell now. Hence, Riemann_result is not needed on the face anymore.
     #self._Riemann_result                   = peano4.datamodel.Patch( (1*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "RiemannSolveResult" )
@@ -326,13 +326,16 @@ In-situ preprocessing:  """
     self._face_spacetime_solution.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
+
+#include <algorithm>
 """
+
+
+    # @todo Sollte false sein
     self._face_spacetime_solution.generator.send_condition               = "true"
     self._face_spacetime_solution.generator.receive_and_merge_condition  = "true"
 
-    self._face_spacetime_solution.generator.includes  += """
-#include "../repositories/SolverRepository.h"
-"""    
+    self._face_spacetime_solution.generator.merge_method_definition     = self._create_face_merge_code()
 
       
   def _store_cell_data_default_predicate(self):
@@ -357,6 +360,24 @@ In-situ preprocessing:  """
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
   
+  def _create_face_merge_code(self):
+    template = jinja2.Template( """
+  const int  faceNormal  = marker.getSelectedFaceNumber() % Dimensions;
+  const bool isLeftLocal = marker.outerNormal()(faceNormal)>0;  
+  
+  std::copy_n( 
+    neighbour.value + (isLeftLocal ? {{SIZE_OR_POLYNOMIAL}} : 0),
+    {{SIZE_OR_POLYNOMIAL}},
+    value + (isLeftLocal ? 0: {{SIZE_OR_POLYNOMIAL}})
+  );
+
+""")
+    d = {
+      "SIZE_OR_POLYNOMIAL": 20
+    }
+    return template.render( **d )
+      
+      
   def create_action_sets(self):
     self._action_set_adjust_cell     = AdjustCell(self)
     self._action_set_AMR             = AMR(self)
