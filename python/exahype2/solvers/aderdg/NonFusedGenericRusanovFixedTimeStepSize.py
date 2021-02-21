@@ -185,8 +185,6 @@ class UpdateCell(AbstractADERDGActionSet):
           }
         }
         break;
-      case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
-        break;
       case {{SOLVER_NAME}}::SolverState::Correction:
         {
           // collect information from the adjacent faces
@@ -391,6 +389,13 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     ADERDG.__init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties)
 
     self.set_implementation(flux=flux,ncp=ncp,sources=sources)
+    
+    # @todo Sollte false sein
+    condition="repositories::{SOLVER_INSTANCE}.getSolverState()=={SOLVER_NAME}::SolverState::{{STEP}}".format(
+      SOLVER_INSTANCE=self.get_name_of_global_instance(),
+      SOLVER_NAME=self._name)
+    self._face_spacetime_solution.generator.send_condition              = condition.format(STEP="Prediction")
+    self._face_spacetime_solution.generator.receive_and_merge_condition = condition.format(STEP="Correction")
 
 
   def create_data_structures(self):
