@@ -361,22 +361,23 @@ In-situ preprocessing:  """
 
   
   def _create_face_merge_code(self):
-    template = jinja2.Template( """
+    template = """
   const int  faceNormal  = marker.getSelectedFaceNumber() % Dimensions;
   const bool isLeftLocal = marker.outerNormal()(faceNormal)>0;  
+
+#if Dimensions == 2
+  const int nodesOnFace = ({u}+{a})*({p}+1)*({p}+1);
+#else
+  const int nodesOnFace = ({u}+{a})*({p}+1)*({p}+1)*({p}+1);
+#endif
   
   std::copy_n( 
-    neighbour.value + (isLeftLocal ? {{SIZE_OR_POLYNOMIAL}} : 0),
-    {{SIZE_OR_POLYNOMIAL}},
-    value + (isLeftLocal ? 0: {{SIZE_OR_POLYNOMIAL}})
+    neighbour.value + (isLeftLocal ? 0: nodesOnFace), nodesOnFace, 
+    value           + (isLeftLocal ? 0: nodesOnFace)
   );
-
-""")
-    d = {
-      "SIZE_OR_POLYNOMIAL": 20
-    }
-    return template.render( **d )
-      
+""".strip() # note: python3 format string, no jinja template
+    return template.format(\
+      u=self._unknowns,a=self._auxiliary_variables,p=self._order)
       
   def create_action_sets(self):
     self._action_set_adjust_cell     = AdjustCell(self)
