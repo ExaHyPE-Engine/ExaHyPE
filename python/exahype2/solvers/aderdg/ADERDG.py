@@ -293,7 +293,19 @@ In-situ preprocessing:  """
 
 
   def create_data_structures(self):
+    """
+    
+     By default, we hold all data persistent
+     
+    """
     self._DG_polynomial                    = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    
+    self._DG_polynomial.generator.store_persistent_condition = self._store_cell_data_default_predicate()
+    self._DG_polynomial.generator.load_persistent_condition  = self._load_cell_data_default_predicate()
+
+    self._DG_polynomial.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
     
     #> note(dominic):
     #> a second snapshot vector is only needed in case we need to perform a rollback to a previous solution state (fused adaptive time stepping).
@@ -318,26 +330,37 @@ In-situ preprocessing:  """
     self._face_spacetime_solution.generator.send_condition               = "true"
     self._face_spacetime_solution.generator.receive_and_merge_condition  = "true"
 
-      
-  def create_action_sets(self):
-    #self._guard_copy_new_face_data_into_face_data  = self._predicate_face_carrying_data()
-    #self._guard_adjust_cell                        = self._predicate_cell_carrying_data()
-    #self._guard_AMR                                = self._predicate_cell_carrying_data()
-    #self._guard_project_DG_polynomial_onto_faces   = self._predicate_cell_carrying_data()
-    #self._guard_update_cell                        = self._predicate_cell_carrying_data()
+    self._face_spacetime_solution.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
 
+      
+  def _store_cell_data_default_predicate(self):
+    return "not marker.isRefined() " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+  
+  
+  def _load_cell_data_default_predicate(self):
+    return "not marker.isRefined() " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+
+
+  def _store_face_data_default_predicate(self):
+    return "not marker.isRefined() " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
+  
+  
+  def _load_face_data_default_predicate(self):
+    return "not marker.isRefined() " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
+           "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
+
+  
+  def create_action_sets(self):
     self._action_set_adjust_cell     = AdjustCell(self)
     self._action_set_AMR             = AMR(self)
     self._action_set_update_cell     = None
-        
-  
-  def _predicate_face_carrying_data(self):
-    return "not marker.isRefined()"
-
-
-  def _predicate_cell_carrying_data(self):
-    # @todo(dominic): Depends on the cell type
-    return "not marker.isRefined()"
   
   
   def _unknown_identifier(self):
@@ -403,7 +426,9 @@ In-situ preprocessing:  """
     subclasses to hook in.
   
     """
-    return ""
+    return """
+#include "repositories/SolverRepository.h"
+"""
   
   
   def add_actions_to_init_grid(self, step):
