@@ -18,6 +18,12 @@ class Patch(DoF):
     self.no_of_unknowns = no_of_unknowns
     self.generator = PatchToDoubleArray(self)
 
+  def __str__(self):
+    return """
+Dim:       """ + str(self.dim) + """
+Unknowns:  """ + str(self.no_of_unknowns) + """
+Generator: """ + str(self.generator) + """
+"""    
 
 
 

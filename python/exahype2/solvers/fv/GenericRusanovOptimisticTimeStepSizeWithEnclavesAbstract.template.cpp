@@ -79,6 +79,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     MPI_Allreduce(&localAdmissibleTimeStepSize, &_admissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
     #endif
 
+    _admissibleTimeStepSize *= {{TIME_STEP_RELAXATION}};
+
     const double TimeStapSizeDamping = 0.9;
 
     if ( tarch::la::equals(_timeStepSize,0.0) ) {

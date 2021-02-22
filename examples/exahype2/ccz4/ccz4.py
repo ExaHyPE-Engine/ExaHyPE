@@ -4,18 +4,22 @@ import exahype2
 
 
 import exahype2.sympy
+from _ast import Or
+
 
 
 """
- Use this one if and only if you wanna debug
+ Use these if and only if you wanna debug
 """
 #SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
+#SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
+
 
 """
  This is my simplest version of an adaptive time stepping scheme. This one 
  is extensively tested, i.e. use this one for experiments.
 """
-SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
+#SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
 
 
 """
@@ -23,6 +27,14 @@ SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
  on nodes with many cores.
 """
 #SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
+
+
+"""
+ This is my most advanced solver. It should basically yield the same output as
+ GenericRusanovAdaptiveTimeStepSizeWithEnclaves for CCZ4 with the Gauge wave
+ however.
+"""
+SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
 
 
 
@@ -56,7 +68,8 @@ class CCZ4Solver( SuperClass ):
     for i in unknowns:
       number_of_unknowns += unknowns[i]
     
-    if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize:
+    if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
+       SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
       SuperClass.__init__( 
         self,
         name=name, patch_size=patch_size, 
@@ -159,7 +172,7 @@ class CCZ4Solver( SuperClass ):
       }
     }
 """)
-
+    
     self.create_data_structures()
     self.create_action_sets()
 
@@ -238,6 +251,7 @@ if __name__ == "__main__":
     #snapshots = 0
 
     periodic_boundary_conditions = [True,True,True]          # Periodic BC
+    periodic_boundary_conditions = [False,False,False]
         
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
