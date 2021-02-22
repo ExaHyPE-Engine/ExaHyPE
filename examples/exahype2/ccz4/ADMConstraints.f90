@@ -7,18 +7,18 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
    INTENT(OUT) :: Constraints
    INTEGER, PARAMETER :: nConstraints = 6!6+4+5+5+18+1 !6 
    INTEGER :: i, ip, j, k, l, m, n, iErr, qq, ii, jj, kk, ll, mm, nn  
-   REAL :: xGP(d), Constraints(nConstraints), Q(nVar), gradQ(nVar,nDim)!, gradQT(d,Nvar)  
-   REAL :: traceK, R, phi, KK2
-   REAL :: g_contr(3,3), g_cov(3,3), Ricci(3,3)
-   REAL :: DD(3,3,3), Atilde(3,3), PP(3), GG(3), dP(3,3)
-   REAL :: s1,s2,s3,s4,s5,s6,s7,s8,s9,s10
-   REAL :: dDD(3,3,3,3), Christoffel(3,3,3), ChristoffelNC(3,3,3), Id(3,3), dgup(3,3,3), Riemann(3,3,3,3), dChristoffel(3,3,3,3)
-   REAL :: Christoffel_diff(3,3,3,3), Ham, Mom(3), dK(3,3,3), dAtilde(3,3,3), dtraceK(3), Qx(nVar), Qy(nVar), Qz(nVar)
-   REAL :: dg_cov(3,3,3), g_covx(3,3), g_covy(3,3), g_covz(3,3), det
-   REAL :: alpha, Aex(3,3), Kex(3,3), traceA, k0, dAex(3,3,3), dKex(3,3,3), Amix(3,3), Aup(3,3), Kmix(3,3), Kup(3,3)
-   REAL :: ghat(3), theta, dtheta(3), dghat(3,3), AA(3), dAA(3,3), BB(3,3), dBB(3,3,3), dphi(3), dPP(3,3), beta(3) 
-   REAL :: Christoffel_tilde(3,3,3), Gtilde(3), Christoffel_kind1(3,3,3), Z(3), Zup(3), Kupdown 
-   !REAL :: M2_sepa(4), gamma_dKex_sepa1(5), gamma_dKex_sepa2(5)
+   REAL(8) :: xGP(d), Constraints(nConstraints), Q(nVar), gradQ(nVar,nDim)!, gradQT(d,Nvar)  
+   REAL(8) :: traceK, R, phi, KK2
+   REAL(8) :: g_contr(3,3), g_cov(3,3), Ricci(3,3)
+   REAL(8) :: DD(3,3,3), Atilde(3,3), PP(3), GG(3)!, dP(3,3)
+   REAL(8) :: s1,s2,s3,s4,s5,s6,s7,s8,s9,s10
+   REAL(8) :: dDD(3,3,3,3), Christoffel(3,3,3), ChristoffelNC(3,3,3), Id(3,3), dgup(3,3,3), Riemann(3,3,3,3), dChristoffel(3,3,3,3)
+   REAL(8) :: Christoffel_diff(3,3,3,3), Ham, Mom(3), dK(3,3,3), dAtilde(3,3,3), dtraceK(3), Qx(nVar), Qy(nVar), Qz(nVar)
+   REAL(8) :: dg_cov(3,3,3), g_covx(3,3), g_covy(3,3), g_covz(3,3), det
+   REAL(8) :: alpha, Aex(3,3), Kex(3,3), traceA, k0, dAex(3,3,3), dKex(3,3,3), Amix(3,3), Aup(3,3), Kmix(3,3), Kup(3,3)
+   REAL(8) :: ghat(3), theta, dtheta(3), dghat(3,3), AA(3), dAA(3,3), BB(3,3), dBB(3,3,3), dphi(3), dPP(3,3), beta(3) 
+   REAL(8) :: Christoffel_tilde(3,3,3), Gtilde(3), Christoffel_kind1(3,3,3), Z(3), Zup(3), Kupdown 
+   !REAL(8) :: M2_sepa(4), gamma_dKex_sepa1(5), gamma_dKex_sepa2(5)
 
    Constraints(:) = 0.0
 
@@ -67,7 +67,7 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
     Aex(3,3) = Q(12) 
     !
     traceA = SUM(g_contr*Aex) 
-    Aex = Aex - 1./3.*g_cov*traceA 
+    Aex = Aex - 1.0D0/3.0D0*g_cov*traceA 
     !
     dAex(:,1,1) = gradQ(7,:) 
     dAex(:,1,2) = gradQ(8,:) 
@@ -203,7 +203,7 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
      ENDDO 
     ENDDO         
     !
-    Kex  = Aex/phi**2 + 1./3.*traceK*g_cov/phi**2 
+    Kex  = Aex/phi**2 + 1.0D0/3.0D0*traceK*g_cov/phi**2 
     Kmix = MATMUL( phi**2*g_contr, Kex  ) 
     Kup  = MATMUL( phi**2*g_contr, TRANSPOSE(Kmix)) 
     !
@@ -219,30 +219,37 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
        DO l = 1, 3
           Christoffel_tilde(i,j,k) = Christoffel_tilde(i,j,k) + g_contr(k,l)*( DD(i,j,l)+DD(j,i,l)-DD(l,i,j) ) 
           Christoffel(i,j,k)       = Christoffel(i,j,k)       + g_contr(k,l)*( DD(i,j,l)+DD(j,i,l)-DD(l,i,j) ) -g_contr(k,l)*( g_cov(j,l)*PP(i)+g_cov(i,l)*PP(j)-g_cov(i,j)*PP(l) ) 
-          Gtilde(i)                = Gtilde(i)+2*g_contr(i,j)*g_contr(k,l)*DD(l,j,k) 
+          !Gtilde(i)                = Gtilde(i)+2*g_contr(i,j)*g_contr(k,l)*DD(l,j,k) 
         ENDDO 
       ENDDO
      ENDDO
     ENDDO
-    Z   = 0.5*MATMUL( g_cov, Ghat - Gtilde ) 
+    DO l=1,3
+      DO j=1,3
+        DO i=1,3
+          Gtilde(i) = Gtilde(i)+g_contr(j,l)*Christoffel_tilde(j,l,i) 
+        ENDDO
+      ENDDO     
+    ENDDO   
+    Z   = 0.5D0*MATMUL( g_cov, Ghat - Gtilde ) 
     Zup = MATMUL(phi**2*g_contr, Z) 
     !
     DO i = 1, 3 
      DO ip = 1, 3 
       DO m = 1, 3 
        DO k = 1, 3
-          dChristoffel(k,i,ip,m) = 0 
+          dChristoffel(k,i,ip,m) = 0.0D0 
           DO l = 1, 3 
-            dChristoffel(k,i,ip,m) = dChristoffel(k,i,ip,m) + g_contr(m,l)*(0.5*(dDD(k,i,ip,l)+dDD(i,k,ip,l))+0.5*(dDD(k,ip,i,l)+dDD(ip,k,i,l))-0.5*(dDD(k,l,i,ip)+dDD(l,k,i,ip)))         & 
-                                                            - g_contr(m,l)*(g_cov(ip,l)*0.5*(dPP(k,i)+dPP(i,k))+g_cov(i,l)*0.5*(dPP(k,ip)+dPP(ip,k))-g_cov(i,ip)*0.5*(dPP(k,l)+dPP(l,k)))  & 
-                                                             +dgup(k,m,l)*(DD(i,ip,l)+DD(ip,i,l)-DD(l,i,ip)) - dgup(k,m,l)*(g_cov(ip,l)*PP(i)+g_cov(i,l)*PP(ip)-g_cov(i,ip)*PP(l)) - g_contr(m,l)*( 2*DD(k,ip,l)*PP(i)+2*DD(k,i,l)*PP(ip)-2*DD(k,i,ip)*PP(l) ) 
+            dChristoffel(k,i,ip,m) = dChristoffel(k,i,ip,m) + g_contr(m,l)*(0.5D0*(dDD(k,i,ip,l)+dDD(i,k,ip,l))+0.5D0*(dDD(k,ip,i,l)+dDD(ip,k,i,l))-0.5D0*(dDD(k,l,i,ip)+dDD(l,k,i,ip)))         & 
+                                                            - g_contr(m,l)*(g_cov(ip,l)*0.5D0*(dPP(k,i)+dPP(i,k))+g_cov(i,l)*0.5D0*(dPP(k,ip)+dPP(ip,k))-g_cov(i,ip)*0.5D0*(dPP(k,l)+dPP(l,k)))  & 
+                                                             +dgup(k,m,l)*(DD(i,ip,l)+DD(ip,i,l)-DD(l,i,ip)) - dgup(k,m,l)*(g_cov(ip,l)*PP(i)+g_cov(i,l)*PP(ip)-g_cov(i,ip)*PP(l)) - g_contr(m,l)*( 2.0D0*DD(k,ip,l)*PP(i)+2.0D0*DD(k,i,l)*PP(ip)-2.0D0*DD(k,i,ip)*PP(l) ) 
           ENDDO 
        ENDDO
       ENDDO
      ENDDO
     ENDDO
     ! 
-    Riemann = 0.0 
+    Riemann = 0.0D0 
     DO i = 1, 3 
      DO ip = 1, 3 
       DO m = 1, 3 
@@ -256,7 +263,7 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
      ENDDO
     ENDDO    
     ! 
-    Ricci = 0.0 
+    Ricci = 0.0D0 
     DO m = 1, 3 
      DO n = 1, 3
       DO l = 1, 3    
@@ -270,16 +277,16 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
     Kupdown = SUM(Kex*Kup) 
     Ham = R - KupDown + traceK**2 
     !
-    dKex = 0.0
+    dKex = 0.0D0
     DO j = 1, 3
      DO i = 1, 3
       DO k = 1, 3
-          dKex(k,i,j) = 1.0/phi**2*( dAex(k,i,j) - 2.0*Aex(i,j)*PP(k) + 1./3.*dtraceK(k)*g_cov(i,j) + 2./3.*traceK*DD(k,i,j) - 2./3.*traceK*g_cov(i,j)*PP(k) ) 
+          dKex(k,i,j) = 1.0D0/phi**2*( dAex(k,i,j) - 2.0D0*Aex(i,j)*PP(k) + 1.0D0/3.0D0*dtraceK(k)*g_cov(i,j) + 2.0D0/3.0D0*traceK*DD(k,i,j) - 2.0D0/3.0D0*traceK*g_cov(i,j)*PP(k) ) 
       ENDDO
      ENDDO
     ENDDO 
     !
-    Mom(:) = 0.0
+    Mom(:) = 0.0D0
     DO ii = 1, 3
         DO jj = 1, 3
             DO ll = 1, 3
@@ -293,7 +300,7 @@ RECURSIVE SUBROUTINE ADMConstraints( Constraints, Q, gradQ )
     ENDDO    
     Constraints(1)   = Ham 
     Constraints(2:4) = Mom(1:3)
-    Constraints(5)   = det - 1.0 
+    Constraints(5)   = det - 1.0D0
     Constraints(6)   = traceA 
     !
     CONTINUE
