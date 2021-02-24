@@ -157,33 +157,6 @@ fi
 #
 
 AX_COMPILER_VENDOR
-AX_COMPILER_VERSION
-
-found_compiler_type=false
-AS_IF([test "x${ax_cv_cxx_compiler_vendor}" = xintel],
-[
-  AX_COMPARE_VERSION([${ax_cv_cxx_compiler_version}], [ge], [19], , [ AC_MSG_ERROR([Intel compiler version (${ax_cv_cxx_compiler_version}) too old. Use at least 19. Switch compiler through CXX flag.]) ])
-  found_compiler_type=true
-]
-)
-
-AS_IF([test "x${ax_cv_cxx_compiler_vendor}" = xgnu], 
-[
-  AX_COMPARE_VERSION( $ax_cv_cxx_compiler_version, [ge], [9.3.0], , [ AC_MSG_ERROR([GNU compiler version ($ax_cv_cxx_compiler_version) too old. Use at least 9.3.0. Switch compiler through CXX flag.]) ])
-  found_compiler_type=true
-]
-)
-
-AS_IF([test "x${ax_cv_cxx_compiler_vendor}" = xclang], 
-[
-  AX_COMPARE_VERSION( $ax_cv_cxx_compiler_version, [ge], [9.0.0], , [ AC_MSG_ERROR([LLVM compiler version ($ax_cv_cxx_compiler_version) too old. Use at least 9.0.0. Switch compiler through CXX flag.]) ])
-  found_compiler_type=true
-]
-)
-
-if test $found_compiler_type == false; then
-  AC_MSG_FAILURE( [Not able to determine compiler type. Set CXX flag to use clang, g++ or icpc.] )
-fi
 
 
 ##

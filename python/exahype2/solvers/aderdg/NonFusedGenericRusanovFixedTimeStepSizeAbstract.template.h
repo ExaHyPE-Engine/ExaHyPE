@@ -39,7 +39,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       GridConstruction,
       GridInitialisation,
       Prediction,
-      RiemannProblemSolve,
       Correction,
       Plotting
     };

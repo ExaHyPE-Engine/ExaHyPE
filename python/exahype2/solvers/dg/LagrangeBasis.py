@@ -19,9 +19,11 @@ class LagrangeBasis():
     self.__max_poly_order = num_points - 1
     # quadrature_points, quadrature_weights
     self.__quadrature_points, self.__quadrature_weights = self._compute_quadrature_points_and_weights(num_points)
+    # interpolation weights
+    self.__barycentric_weights             = self.__compute_barycentric_weights()
     # operators
     self.__mass_matrix                     = self.__compute_mass_matrix()
-    self.__stiffness_operator                = self.__compute_stiffness_operator()
+    self.__stiffness_operator              = self.__compute_stiffness_operator()
     self.__K1                              = self.__compute_K1()
     self.__inverted_predictor_lhs_operator = mp.inverse(self.__K1).tolist()
     self.__basis_function_values_left,_    = self.__evaluate(mp.mpf(0.0))
@@ -73,6 +75,20 @@ class LagrangeBasis():
         phi_xi[m] += tmp/(xin[m]-xin[i])
     return phi, phi_xi  
 
+  def __compute_barycentric_weights(self):
+    """
+    See Eq. 3.2 in
+    https://people.maths.ox.ac.uk/trefethen/barycentric.pdf
+    """
+    result = [0.0]*self.__num_points
+    for j,xj in enumerate(self.__quadrature_points):
+      divisor = 1.0
+      for k,xk in enumerate(self.__quadrature_points):
+        if j != k:
+          divisor *= (xj-xk)
+      result[j] = 1.0/divisor
+    return result
+     
   def __compute_mass_matrix(self):
     """
     Computes the (reference) element mass matrix for an approximation of
@@ -370,10 +386,10 @@ class LagrangeBasis():
 
     basisDeclarations = ""
     basisInitializers = ""
-    for var in ["quadrature_points","quadrature_weights","basis_function_values_left","basis_function_values_right","derivative_operator","mass_matrix","stiffness_operator","inverted_predictor_lhs_operator","equidistant_grid_projector","fine_grid_projector"]:
+    for var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right","derivative_operator","mass_matrix","stiffness_operator","inverted_predictor_lhs_operator","equidistant_grid_projector","fine_grid_projector"]:
       var_key  = "_LagrangeBasis__" + var # prefix for privat variables of class LagrangeBasis
       var_name = snake_to_camel(var) # C++ name
-      if var in ["quadrature_points","quadrature_weights","basis_function_values_left","basis_function_values_right"]:
+      if var in ["quadrature_points","quadrature_weights","barycentric_weights","basis_function_values_left","basis_function_values_right"]:
           basisDeclarations += "const double {var_name}[{order}+1];\n".format(indent="  "*2,var_name=var_name,order=self.__max_poly_order)
           basisInitializers += "{var_name}{initializer},\n".format(var_name=var_name,\
               initializer=LagrangeBasis.__make_initializer_list(LagrangeBasis.__render_tensor_1(getattr(self,var_key))))

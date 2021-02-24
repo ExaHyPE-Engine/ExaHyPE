@@ -11,6 +11,7 @@
 
 #include "tarch/la/Vector.h"
 
+#include "exahype2/aderdg/KernelUtils.h"
 #include "exahype2/aderdg/PredictorAoS.h"
 #include "exahype2/aderdg/RiemannAoS.h"
 #include "exahype2/aderdg/RusanovNonlinearAoS.h"
@@ -20,6 +21,7 @@ exahype2::aderdg::tests::ADERDGTest::ADERDGTest():
   TestCase ("exahype2::aderdg::ADERDGTest"),
   QuadraturePoints{0.069431844202973713731097404888714663684368133544921875,0.33000947820757187134432797392946667969226837158203125,0.66999052179242812865567202607053332030773162841796875,0.9305681557970262307577513638534583151340484619140625},
   QuadratureWeights{0.1739274225687269248563637802362791262567043304443359375,0.32607257743127304738806060413480736315250396728515625,0.32607257743127304738806060413480736315250396728515625,0.1739274225687269248563637802362791262567043304443359375},
+  BarycentricWeights{-7.4205400680389477230392003548331558704376220703125,18.79544940755506132745722425170242786407470703125,-18.79544940755506132745722425170242786407470703125,7.42054006803894861121762005495838820934295654296875},
   BasisFunctionValuesLeft{1.5267881254572663873858573424513451755046844482421875,-0.8136324494869271450880887641687877476215362548828125,0.40076152031165046540905905203544534742832183837890625,-0.11391719628198997138479597879268112592399120330810546875},
   BasisFunctionValuesRight{-0.113917196281990040773735017864964902400970458984375,0.400761520311650742964815208324580453336238861083984375,-0.813632449486927811221903539262712001800537109375,1.5267881254572674976088819676078855991363525390625},
   DerivativeOperator{-6.6640004727045631938153746887110173702239990234375,9.7203088313703940315235740854404866695404052734375,-4.21756469699035818621268845163285732269287109375,1.161256338324529568950538305216468870639801025390625,-1.5151152295984677831341969067580066621303558349609375,-0.7688287844464174458636307463166303932666778564453125,2.941340462561433444221847821609117090702056884765625,-0.6573964485165488813578349436284042894840240478515625,0.65739644851654832624632263105013407766819000244140625,-2.941340462561433444221847821609117090702056884765625,0.768828784446416335640606121160089969635009765625,1.515115229598468449268011681851930916309356689453125,-1.161256338324528680772118605091236531734466552734375,4.21756469699035729803426875150762498378753662109375,-9.720308831370392255166734685190021991729736328125,6.66400047270456497017221408896148204803466796875},
@@ -188,12 +190,6 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
       double                                      t,
       int                                         direction,
       double * __restrict__                       BgradQ
-    ) -> void {
-    },
-    [&] (
-      double * __restrict__                       Q,
-      const tarch::la::Vector<Dimensions,double>& x,
-      double                                      t
     ) -> void {
     },
     U,                                      // UOut,                               
@@ -374,16 +370,27 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
     std::cout << buffer.str() << std::flush; 
   }
 
-  ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
+  double maxEigenvalueInCell = ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
+    [&] (
+      double * __restrict__                       Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t
+    ) -> void {
+    },
+    maxEigenvalue,
     U,
     riemannResult,
+    QuadraturePoints,
     QuadratureWeights,
     BasisFunctionValuesLeft, // only left
+    x,
     dx,
+    t,
     dt,
     order,
     unknowns,
-    auxiliaryVariables);
+    auxiliaryVariables,
+    false); // callMaxEigenvalue
   
   buffer << "\nresult (U, post Riemann):\n\n";
   for (int i = 0; i < nodesPerCell; i++) {
@@ -402,6 +409,73 @@ void exahype2::aderdg::tests::ADERDGTest::runADERDGStep(
 void exahype2::aderdg::tests::ADERDGTest::run() {
   testMethod (testAdvection)
   testMethod (testEuler)
+  testMethod (testInterpolate)
+}
+
+void exahype2::aderdg::tests::ADERDGTest::testInterpolate() {
+  std::ostringstream buffer;
+  const bool verbose = false;
+  
+  constexpr int unknowns           = 5;
+  constexpr int auxiliaryVariables = 0;
+  constexpr int order              = 3; // order must match nodes, weights etc.
+
+  constexpr int strideQ       = unknowns+auxiliaryVariables;
+  constexpr int nodesPerAxis  = (order+1);
+  int nodesPerFace  = nodesPerAxis; 
+  if ( Dimensions == 3 ) {
+    nodesPerFace *= nodesPerAxis;
+  }
+  const int nodesPerCell = nodesPerFace*nodesPerAxis;
+
+  if ( verbose ) {
+    std::cout << "# INTERPOLATION:\n" << std::endl;
+  }
+  
+  // In-/Outputs:
+  buffer << "\ninput (U):\n\n";
+  double U[nodesPerCell*strideQ];
+  for (int i = 0; i < nodesPerCell; i++) {
+    for (int m=0; m < unknowns; m++) {
+      const int i_U = i*strideQ + m;
+      U[i_U] = testEuler_UIn[m];
+      buffer << std::fixed << std::showpoint << std::setprecision(6) << U[i_U] << " ";
+    }
+    for (int m=unknowns; m < strideQ; m++) {
+      const int i_U = i*strideQ + m;
+      U[i_U] = 0.0;
+      buffer << std::fixed << std::showpoint << std::setprecision(6) << U[i_U] << " ";
+    }
+    buffer << "\n";
+  }
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
+  }
+  
+  const tarch::la::Vector<Dimensions,double> refX(0.5); // must be in [0,1]^d
+
+  double pointwiseQOut[strideQ]; // unknowns + auxiliaryVariables
+  ::exahype2::aderdg::interpolate_AoS(
+    U,
+    QuadraturePoints,
+    BarycentricWeights,
+    refX,
+    nodesPerAxis,
+    strideQ,
+    pointwiseQOut);
+
+  buffer << "\noutput (pointwiseQOut):\n\n";
+  for (int m=0; m < unknowns; m++) {
+    const double value = pointwiseQOut[m];
+      const double eps = 1.0e-6;
+      validateNumericalEqualsWithEpsWithParams1(
+        value, testEuler_UIn[m], eps, m); // constant solution
+    buffer << std::fixed << std::showpoint << std::setprecision(6) << value << " ";
+  }
+  buffer << "\n";
+  if ( verbose ) {
+    std::cout << buffer.str() << std::flush; 
+  }
 }
 
 void exahype2::aderdg::tests::ADERDGTest::testAdvection() {

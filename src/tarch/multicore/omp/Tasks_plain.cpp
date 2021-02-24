@@ -36,7 +36,7 @@ void tarch::multicore::spawnTask(Task*  job) {
 
 
 /**
- * Use a taskloop and label is as nogroup, i.e. we only synchronise over the
+ * Use a taskloop and label it as nogroup, i.e. we only synchronise over the
  * siblings. If the loop bodies to yield further tasks, we do not wait for
  * these guys.
  *

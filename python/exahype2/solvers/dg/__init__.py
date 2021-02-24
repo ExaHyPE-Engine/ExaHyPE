@@ -3,5 +3,6 @@
 from .PDETerms                                       import PDETerms
 
 from .DG                                             import Polynomials
-
-from .GenericRusanovExplicitEulerFixedTimeStepSize   import GenericRusanovExplicitEulerFixedTimeStepSize
+from .LagrangeBasis                                  import LagrangeBasis
+from .LagrangeBasis                                  import GaussLegendreBasis
+from .LagrangeBasis                                  import GaussLobattoBasis

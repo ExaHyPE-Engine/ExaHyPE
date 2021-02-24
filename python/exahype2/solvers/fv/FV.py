@@ -374,6 +374,9 @@ In-situ preprocessing:  """
       result += """no
 """
     return result
+
+
+  __repr__ = __str__
   
 
   @abstractmethod
@@ -385,8 +388,6 @@ In-situ preprocessing:  """
      data flow.
      
     """
-    print( "@@@@@@@@ create data structures ")
-
     self._patch             = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
     self._patch_overlap     = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
     self._patch_overlap_new = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
