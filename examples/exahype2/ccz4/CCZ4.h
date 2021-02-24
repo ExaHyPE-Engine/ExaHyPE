@@ -16,6 +16,7 @@
 
 namespace examples {namespace exahype2 {namespace ccz4 {
   class CCZ4;
+
 }}}
 
 
@@ -25,35 +26,23 @@ class examples::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
     static tarch::logging::Log   _log;
 
   public:
-    /**
-     * I've introduced this one manually to initialise the FORTRAN 
-     * subroutines. You can never be sure when this routine is called,
-     * i.e. Peano4 might decide to call it very early prior to any
-     * proper initialisation of the logging et al. Therefore, I don't
-     * use any log statements here.
-     */
-    CCZ4(); 
+    CCZ4();
+
+
     
-    
-    /**
-     * I don't adjust the solution, but I adjust the solution in the very
-     * first time step, i.e. I impose initial conditions. For this, I forward
-     * the initialisation request to the Fortran routines.
-     */
     void adjustSolution(
       double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t
     )  override;
     
+
+
     
     virtual void boundaryConditions(
-      const double * __restrict__ Qinside, // Qinside[64+0]
-      double * __restrict__ Qoutside, // Qoutside[64+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const double * __restrict__                  Qinside, // Qinside[59+0]
+      double * __restrict__                        Qoutside, // Qoutside[59+0]
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal
     )  override;
@@ -62,36 +51,29 @@ class examples::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
 
     
     double maxEigenvalue(
-      const double * __restrict__ Q, // Q[64+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const double * __restrict__ Q, // Q[59+0],
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal
     ) override;
     
 
 
-    void sourceTerm(
-      const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      double * __restrict__ S
-    ) override;
     
 
 
     
     void nonconservativeProduct(
-      const double * __restrict__ Q, // Q[64+0],
-      const double * __restrict__             deltaQ, // [64+0]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const double * __restrict__                  Q, // Q[59+0],
+      const double * __restrict__                  deltaQ, // deltaQ[59+0]
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal,
-      double * __restrict__ BgradQ // BgradQ[64]
+      double * __restrict__                        BgradQ // BgradQ[59]
     ) override;
+    
+
+
     
 };
 

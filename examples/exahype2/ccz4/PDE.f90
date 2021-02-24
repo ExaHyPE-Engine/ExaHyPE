@@ -576,7 +576,8 @@ RECURSIVE SUBROUTINE PDEEigenvalues(Lambda,Q,nv)
   Lambda = 0.0D0
   Lambda(1) = -alpha*DMAX1(DSQRT(2.0D0),EQN%CCZ4e,EQN%CCZ4ds,EQN%CCZ4GLMc/alpha,EQN%CCZ4GLMd/alpha)-DOT_PRODUCT(Q(18:20),nv(:))   ! MAX( SQRT(2.0), EQN%CCZ4e, EQN%CCZ4ds ) + SQRT(SUM(Q(18:20)**2)) 
   Lambda(2) =  alpha*DMAX1(DSQRT(2.0D0),EQN%CCZ4e,EQN%CCZ4ds,EQN%CCZ4GLMc/alpha,EQN%CCZ4GLMd/alpha)-DOT_PRODUCT(Q(18:20),nv(:))   ! MAX( SQRT(2.0), EQN%CCZ4e, EQN%CCZ4ds ) + SQRT(SUM(Q(18:20)**2)) 
-   
+  Lambda(3) =  Q(1)
+  Lambda(4) =  Q(14)
 END SUBROUTINE PDEEigenvalues
 
 RECURSIVE SUBROUTINE PDESource(S,Q) 

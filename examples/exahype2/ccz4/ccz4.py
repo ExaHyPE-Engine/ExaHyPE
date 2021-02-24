@@ -34,15 +34,17 @@ from _ast import Or
  GenericRusanovAdaptiveTimeStepSizeWithEnclaves for CCZ4 with the Gauge wave
  however.
 """
-SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
+#SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
 
-
-
+"""
+Here is the aderdg test.
+"""
+SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
 
 
 
 class CCZ4Solver( SuperClass ):
-  def __init__(self, name, patch_size, min_h, max_h ):
+  def __init__(self, name, patch_size, min_h, max_h):
     unknowns = {
       "G":6,
       "K":6,
@@ -91,7 +93,7 @@ class CCZ4Solver( SuperClass ):
     self._solver_template_file_class_name = SuperClass.__name__
 
     pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
-    
+  
     self.set_implementation(
       boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
       flux=exahype2.solvers.fv.PDETerms.None_Implementation,
@@ -222,8 +224,6 @@ class CCZ4Solver( SuperClass ):
     self.create_data_structures()
     self.create_action_sets()
 
-    
-    
 if __name__ == "__main__":
     project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4" )
 
@@ -232,14 +232,35 @@ if __name__ == "__main__":
     #max_h               = 0.2
     min_h               = max_h
     patch_size          = 6
+    order               = 3
+    unknowns            = 59
     
-    my_solver = CCZ4Solver(
-      "CCZ4", patch_size, min_h, max_h
-    )
+    if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
+      my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
+        "CCZ4", order, unknowns, 0, #auxiliary_variables
+        exahype2.solvers.aderdg.Polynomials.Gauss_Legendre, 
+        min_h, max_h, time_step_size,
+	flux = None,
+	ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+      )
 
-    my_solver.add_constraint_verification()
-    #my_solver.add_derivative_calculation()
-    
+      #my_solver._solver_template_file_class_name = SuperClass.__name__
+
+      #pde = exahype2.sympy.PDE(unknowns=unknowns,auxiliary_variables=0,dimensions=3)
+
+      #my_solver.set_implementation(
+       # boundary_conditions=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+       # flux=exahype2.solvers.aderdg.PDETerms.None_Implementation,
+       # ncp=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+        #source_term=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+      #) 
+    else:
+      my_solver = CCZ4Solver("CCZ4", patch_size, min_h, max_h)
+
+      my_solver.add_constraint_verification()
+      #my_solver.add_derivative_calculation()
+
+   
     project.add_solver(my_solver)    
     
     build_mode = peano4.output.CompileMode.Asserts
@@ -251,7 +272,7 @@ if __name__ == "__main__":
     #snapshots = 0
 
     periodic_boundary_conditions = [True,True,True]          # Periodic BC
-    periodic_boundary_conditions = [False,False,False]
+    #periodic_boundary_conditions = [False,False,False]
         
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
@@ -263,11 +284,11 @@ if __name__ == "__main__":
     
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem4" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem3" )
 
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
-    peano4_project = project.generate_Peano4_project(verbose=True)
+    peano4_project = project.generate_Peano4_project()#verbose=True)
     
     peano4_project.output.makefile.add_Fortran_flag( "-DCCZ4EINSTEIN -DDim3" )
     
