@@ -10,7 +10,7 @@ class Filter(object):
     patches from the data that are not to be displayed.
     
   """
-  def __init__(self, run_on_individual_pieces_of_data, run_on_concatenated_data):
+  def __init__(self, run_on_individual_pieces_of_data, run_on_concatenated_data, verbose):
     """
     
     exploit_idempotent: boolean
@@ -21,14 +21,21 @@ class Filter(object):
     """
     self.run_on_individual_pieces_of_data = run_on_individual_pieces_of_data
     self.run_on_concatenated_data         = run_on_concatenated_data
+    self.verbose                          = verbose
     pass
+
+
+  def __str__(self):
+    return "Filter: " + self.__class__.__name__ + ", run on individual pieces of data=" + str(self.run_on_individual_pieces_of_data) + ", run on concatenated data=" + str(self.run_on_concatenated_data) + ", verbose=" + str(self.verbose)  
+
   
-  
-  def render(self, cell_data, dof, unknowns, dimensions):
+  def render(self, cell_data, dof, dimension, unknowns, description, mapping):
     """
     
       Overwrite this one for the particular filter. 
       
+      cell_data: [Patch]
+      
     """
-    return cell_data, dof, unknowns, dimensions
+    return cell_data, dof, dimension, unknowns, description, mapping
 

@@ -11,9 +11,12 @@ import argparse
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Peano 4 - pvserver render script')
-  parser.add_argument("--no-filter-fine-grid", dest="filter_fine_grid", action="store_false", help="Display only fine grid" )
-  parser.add_argument("--render",              dest="render",           action="store_true",  default = False, help="Skip interactive rendering" )
   parser.add_argument("--no-convert",          dest="convert",          action="store_false", default = True,  help="Convert into native vtk files" )
+  parser.add_argument("--render",              dest="render",           action="store_true",  default = False, help="Skip interactive rendering" )
+  parser.add_argument("--filter-fine-grid",    dest="filter_fine_grid", action="store_true",  default = False, help="Display only fine grid" )
+  parser.add_argument("--average",             dest="filter_average",   action="store_true",  default = False, help="Average over cell data (reduces resolution/memory)" )
+  parser.add_argument("-v", "--verbose",       dest="verbose",          action="store_true",  default = False, help="Run in a chatty mode" )
+    
   parser.add_argument(dest="filename", help="Input file name" )
   args = parser.parse_args()
 
@@ -21,12 +24,18 @@ if __name__ == "__main__":
     print("Error, specified input file '{}' does not exist, exiting...". format(args.filename))
     sys.exit(1)
 
-  visualiser = peano4.visualisation.Visualiser( args.filename )
+  visualiser = peano4.visualisation.Visualiser( args.filename, args.verbose )
 
   filter = []
+  #
+  # Ensure the filter order is cheap-to-expensive
+  #
+  if args.filter_average:
+    print( "add averaging filter" )
+    visualiser.append_filter( peano4.visualisation.AverageOverCellFilter(args.verbose), False )
   if args.filter_fine_grid:
     print( "add fine grid filter" )
-    visualiser.append_filter( peano4.visualisation.ExtractFineGridFilter(), False )
+    visualiser.append_filter( peano4.visualisation.ExtractFineGridFilter(False, args.verbose), False )
 
   if args.render:
     visualiser.display()
@@ -34,5 +43,4 @@ if __name__ == "__main__":
     Interact() #Needed if running from command line
     
   if args.convert:
-    visualiser.apply_filter_to_individual_snapshots_first = False    
     visualiser.write_vtu_time_series()

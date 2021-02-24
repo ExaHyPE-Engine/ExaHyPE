@@ -4,8 +4,8 @@ from peano4.visualisation.Filter import Filter
 
 
 class ExtractMeshResolutionFilter( Filter ):
-  def __init__(self, min_h, max_h, run_on_individual_pieces_of_data=True):
-    Filter.__init__(self, run_on_individual_pieces_of_data, not run_on_individual_pieces_of_data)
+  def __init__(self, min_h, max_h, run_on_individual_pieces_of_data=True, verbose=False):
+    Filter.__init__(self, run_on_individual_pieces_of_data, not run_on_individual_pieces_of_data, verbose)
     self.min_h = min_h
     self.max_h = max_h
     if min_h > max_h:
@@ -14,7 +14,7 @@ class ExtractMeshResolutionFilter( Filter ):
       self.max_h = min_h
     pass
     
-  def render(self,cell_data, dof, unknowns, dimensions):
+  def render(self, cell_data, dof, dimension, unknowns, description, mapping):
     """
     
       Overwrite this one for the particular filter. 
@@ -42,5 +42,5 @@ class ExtractMeshResolutionFilter( Filter ):
 
     print( "extracted " + str( len(new_cell_data) ) + " from the " + str( len(cell_data) ) + " patch(es)" )
 
-    return new_cell_data, dof, unknowns, dimensions
+    return new_cell_data, dof, dimension, unknowns, description, mapping
   

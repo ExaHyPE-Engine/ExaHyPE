@@ -8,4 +8,4 @@ from .Patch                  import Patch
 from .Visualiser             import Visualiser 
 from .Visualiser             import render_single_file 
 from .Visualiser             import render_dataset
-
+from .AverageOverCellFilter  import AverageOverCellFilter
