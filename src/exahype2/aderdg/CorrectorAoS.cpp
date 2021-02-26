@@ -11,12 +11,18 @@
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-GPUCallableMethod void exahype2::aderdg::corrector_adjustSolution_body_AoS(
+GPUCallableMethod double exahype2::aderdg::corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
     std::function< void(
       double * __restrict__                       Q,
       const tarch::la::Vector<Dimensions,double>& x,
       double                                      t
     ) >                                         adjustSolution,
+    std::function< double(
+      const double * const __restrict__           Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      const int                                   normal
+    ) >                                         maxAbsoluteEigenvalue,
     double * __restrict__                       UOut,
     const double * const __restrict__           nodes,
     const tarch::la::Vector<Dimensions,double>& cellCentre,
@@ -25,12 +31,24 @@ GPUCallableMethod void exahype2::aderdg::corrector_adjustSolution_body_AoS(
     const int                                   nodesPerAxis,
     const int                                   unknowns,
     const int                                   strideQ,
+    const int                                   callMaxEigenvalue,
     const int                                   scalarIndex) {
   const tarch::la::Vector<Dimensions+1,int>     index  = delineariseIndex(scalarIndex,getStrides(nodesPerAxis,false));
   const tarch::la::Vector<Dimensions+1, double> coords = getCoordinates(index,cellCentre,dx,t,0,nodes);
   const tarch::la::Vector<Dimensions, double>   x( ( coords.data() + 1 ) );
- 
-  adjustSolution(&UOut[ scalarIndex * strideQ ], x, t);
+
+  double * __restrict__ Q = &UOut[ scalarIndex * strideQ];
+  adjustSolution(Q, x, t);
+
+  if ( callMaxEigenvalue ) {
+    double lambdaMax = 0.0;
+    for ( int d; d < Dimensions; d++ ) {
+      lambdaMax = std::max( lambdaMax, maxAbsoluteEigenvalue(Q,x,t,d) );
+    }
+    return lambdaMax;
+  } else {
+    return 0.0;
+  }
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
@@ -250,11 +268,6 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
     int                                         normal,
     double * __restrict__                       BgradQ
   ) >                                         nonconservativeProduct,
-  std::function< void(
-    double * __restrict__                       Q,
-    const tarch::la::Vector<Dimensions,double>& x,
-    double                                      t
-  ) >                                         adjustSolution,
   double * __restrict__                       UOut, 
   const double * const __restrict__           QIn, 
   const double * const __restrict__           nodes,
@@ -348,18 +361,6 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
         strideQ,
         scalarIndexCell);
     }
-   
-    corrector_adjustSolution_body_AoS(
-      adjustSolution,
-      UOut,
-      nodes,
-      cellCentre,
-      dx,
-      t+dt,
-      nodesPerAxis,
-      unknowns,
-      strideQ,
-      scalarIndexCell);
   } // scalarIndexCell
   
   if ( callFlux ) {   
@@ -373,16 +374,31 @@ void exahype2::aderdg::corrector_addCellContributions_loop_AoS(
   }
 }
 
-void exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
-  double * __restrict__             UOut,
-  const double * const __restrict__ riemannResultIn,
-  const double * const __restrict__ weights,
-  const double * const __restrict__ FLCoeff,
-  const double                      dx,
-  const double                      dt,
-  const int                         order,
-  const int                         unknowns,
-  const int                         auxiliaryVariables) {
+double exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
+  std::function< void(
+    double * __restrict__                       Q,
+    const tarch::la::Vector<Dimensions,double>& x,
+    double                                      t
+  ) >                                         adjustSolution,
+  std::function< double(
+    const double * const __restrict__           Q,
+    const tarch::la::Vector<Dimensions,double>& x,
+    double                                      t,
+    const int                                   normal
+  ) >                                         maxAbsoluteEigenvalue,
+  double * __restrict__                       UOut,
+  const double * const __restrict__           riemannResultIn,
+  const double * const __restrict__           nodes,
+  const double * const __restrict__           weights,
+  const double * const __restrict__           FLCoeff,
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const double                                dx,
+  const double                                t,
+  const double                                dt,
+  const int                                   order,
+  const int                                   unknowns,
+  const int                                   auxiliaryVariables,
+  const bool                                  callMaxEigenvalue) {
   const int nodesPerAxis = order+1;
 
   const int nodesPerCell = getNodesPerCell(nodesPerAxis);
@@ -390,6 +406,7 @@ void exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
   const int strideQ = unknowns+auxiliaryVariables;
   const int strideF = unknowns;
  
+  double lambdaMax = 0.0;
   for ( int scalarIndexCell = 0; scalarIndexCell < nodesPerCell; scalarIndexCell++ ) {
     corrector_addRiemannContributions_body_AoS(
       UOut,
@@ -403,5 +420,22 @@ void exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
       strideQ,
       strideF,
       scalarIndexCell);
+
+    const double result = 
+      corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
+        adjustSolution,
+        maxAbsoluteEigenvalue,
+        UOut,
+        nodes,
+        cellCentre,
+        dx,
+        t+dt,
+        nodesPerAxis,
+        unknowns,
+        strideQ,
+        callMaxEigenvalue,
+        scalarIndexCell);
+    lambdaMax = std::max( lambdaMax, result );
   }
+  return lambdaMax;
 }

@@ -119,13 +119,6 @@ class UpdateCell(AbstractADERDGActionSet):
               repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQ_or_dQdn,x,t,normal,BgradQ);
               {% endif %}
             },
-            [&](
-              double * __restrict__                       Q,
-              const tarch::la::Vector<Dimensions,double>& x,
-              double                                      t
-            )->void {
-              repositories::{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
-            },
             fineGridCell{{SOLVER_NAME}}Q.value,                           //  UOut,
             spaceTimeQ,                                                   //  QIn,
             repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,           //  nodes,
@@ -191,8 +184,6 @@ class UpdateCell(AbstractADERDGActionSet):
             );
           }
         }
-        break;
-      case {{SOLVER_NAME}}::SolverState::RiemannProblemSolve:
         break;
       case {{SOLVER_NAME}}::SolverState::Correction:
         {
@@ -299,17 +290,43 @@ class UpdateCell(AbstractADERDGActionSet):
           );
 
           // add result to solution
-          ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
-            fineGridCell{{SOLVER_NAME}}Q.value,                         //  UOut,
-            riemannResult,
-            repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
-            repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,  // FLCoeff,
-            marker.h()(0),                                              //  dx,
-            repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(), 
-            {{ORDER}}, 
-            {{NUMBER_OF_UNKNOWNS}}, 
-            {{NUMBER_OF_AUXILIARY_VARIABLES}}
-          );
+          const double maxEigenvalueInCellVolume = 
+            ::exahype2::aderdg::corrector_addRiemannContributions_loop_AoS(
+              [&](
+                double * __restrict__                       Q,
+                const tarch::la::Vector<Dimensions,double>& x,
+                double                                      t
+              )->void {
+                repositories::{{SOLVER_INSTANCE}}.adjustSolution(Q,x,t);
+              },
+              [&](
+                const double * __restrict__                 Q,
+                const tarch::la::Vector<Dimensions,double>& x,
+                double                                      t,
+                const int                                   direction
+              )-> double { 
+                return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue(Q,x,t,direction);
+              },
+              fineGridCell{{SOLVER_NAME}}Q.value,                         //  UOut,
+              riemannResult,
+              repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+              repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
+              repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,  // FLCoeff,
+              marker.x(),                                                 // cellCentre
+              marker.h()(0),                                              // dx,
+              repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),        // x
+              repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),     // dt 
+              {{ORDER}}, 
+              {{NUMBER_OF_UNKNOWNS}}, 
+              {{NUMBER_OF_AUXILIARY_VARIABLES}},
+              {{ "true" if ADAPTIVE_TIME_STEPPING else "false" }}         //  callMaxEigenvalue
+            );
+{% if ADAPTIVE_TIME_STEPPING %}
+            // compute time step size from 'maxEigenvalueInCellVolume' and/or 'maxEigenvaluePerFace[]'
+            const double safetyFactor        = 0.9;
+            const double stabilityFactorADER = safetyFactor * {{ADER_PNPM_STABILITY_FACTOR}};
+            const double dtNew = safetyFactor * stabilityFactorADER * marker.h()(0) / maxEigenvalueInCellVolume; 
+{% endif %}
         }
         break;
       case {{SOLVER_NAME}}::SolverState::Plotting:
@@ -359,10 +376,6 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
       Instantiate ADER-DG in a non-fused variant
 
     """
-    ADERDG.__init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties)
-
-    #self._face_flux_along_normal = peano4.datamodel.Patch( (2*(order+1),order+1,order+1), unknowns+auxiliary_variables, self._unknown_identifier() + "FluxExtrapolation" )
-
     self._time_step_size = time_step_size
 
     self._flux_implementation                 = PDETerms.None_Implementation
@@ -373,16 +386,25 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
     self._sources_implementation              = PDETerms.None_Implementation
 
-    self._action_set_update_cell = UpdateCell(self)
-
-    # braucht kein Mensch
-    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
+    ADERDG.__init__(self, name, order, unknowns, auxiliary_variables, polynomials, min_h, max_h, plot_grid_properties)
 
     self.set_implementation(flux=flux,ncp=ncp,sources=sources)
     
-    #self._face_spacetime_solution.generator.send_condition               = "false"
-    #self._face_spacetime_solution.generator.receive_and_merge_condition  = "false"
-    pass
+    # @todo Sollte false sein
+    condition="repositories::{SOLVER_INSTANCE}.getSolverState()=={SOLVER_NAME}::SolverState::{{STEP}}".format(
+      SOLVER_INSTANCE=self.get_name_of_global_instance(),
+      SOLVER_NAME=self._name)
+    self._face_spacetime_solution.generator.send_condition              = condition.format(STEP="Prediction")
+    self._face_spacetime_solution.generator.receive_and_merge_condition = condition.format(STEP="Correction")
+
+
+  def create_data_structures(self):
+    ADERDG.create_data_structures(self)
+
+
+  def create_action_sets(self):
+    ADERDG.create_action_sets(self)
+    self._action_set_update_cell = UpdateCell(self)
 
   
   def set_implementation(self,flux=None,ncp=None,sources=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None):
@@ -411,19 +433,19 @@ class NonFusedGenericRusanovFixedTimeStepSize( ADERDG ):
     if initial_conditions!=None: 
       self._initial_conditions_implementation         = initial_conditions
     
-    #if self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation==PDETerms.None_Implementation:
-    #  self._rusanov_call = self.RusanovCallWithFlux
-    #elif self._flux_implementation==PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-    #  self._rusanov_call = self.RusanovCallWithNCP
-    #elif self._flux_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-    #  self._rusanov_call = self.RusanovCallWithFluxAndNCP
-    #else:
-    #  raise Exception("ERROR: Combination of fluxes/operators not supported. flux: {} ncp: {}".format(flux, ncp))
+    self.create_action_sets()
 
-    #self._construct_template_update_cell()
-    pass
-    
   
+  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+    self._preprocess_reconstructed_patch = kernel
+    self._action_set_update_cell = UpdateCell(self)
+
+
+  def set_postprocess_updated_patch_kernel(self,kernel):
+    self._postprocess_updated_patch = kernel
+    self._action_set_update_cell = UpdateCell(self)
+     
+      
   def add_entries_to_text_replacement_dictionary(self,d):
     """
      

@@ -222,13 +222,14 @@ GPUCallableMethod int exahype2::aderdg::mapSpaceTimeFaceIndexToScalarCellIndex(
 #pragma omp declare target
 #endif
 GPUCallableMethod void exahype2::aderdg::gradient_AoS(
-  const double* __restrict__ QIn,
-  const double* __restrict__ dudx,
-  const double               invDx,
-  const int                  nodesPerAxis,
-  const int                  strideQ,
-  const int                  scalarIndex,
-  double* __restrict__       gradQ) {
+  const double* __restrict__ const QIn,
+  const double* __restrict__ const dudx,
+  const double                     invDx,
+  const int                        nodesPerAxis,
+  const int                        strideQ,
+  const int                        scalarIndex,
+  double* __restrict__             gradQ) {
+  // Always works with space time input data
   const tarch::la::Vector<Dimensions+1,int> strides = getStrides(nodesPerAxis);
   const tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(scalarIndex, strides);
 
@@ -251,33 +252,59 @@ GPUCallableMethod void exahype2::aderdg::gradient_AoS(
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
-
+    
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-GPUCallableMethod size_t exahype2::aderdg::alignment() {
-  //return 64;
-  return -1;
+GPUCallableMethod tarch::la::Vector<Dimensions,double> exahype2::aderdg::mapToReferenceCoordinates(
+  const tarch::la::Vector<Dimensions,double>& x,
+  const tarch::la::Vector<Dimensions,double>& cellCentre,
+  const double                                dx) {
+  return (x - cellCentre + dx/2.0) / dx;
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 
+/**
+ * Evalutes DG polynomial at arbitrary reference space coordinate
+ * in reference domain [0,1]^d.
+ *
+ * @see: mapToReferenceCoordinates
+ */ 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-GPUCallableMethod size_t exahype2::aderdg::paddedSize(size_t numElements, size_t sizeofType) {
-  //int align = alignment() / sizeofType; // 8 elements per cache line for double 
-  //return ( ( numElements + align - 1 ) / align ) * align;  // @todo: padding
-  return numElements;
-}
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
-
-double* exahype2::aderdg::allocateBuffer_cpu(size_t unpaddedSizeMultiplier, size_t paddedSizeMultiplier) {
-  //double* ptr = nullptr;
-  //int ierr = posix_memalign( (void**) &ptr, alignment(), sizeof(double) * unpaddedSizeMultiplier * paddedSizeMultiplier );
-  //return ptr;
-  return new double[ unpaddedSizeMultiplier * paddedSizeMultiplier ]; 
+GPUCallableMethod void exahype2::aderdg::interpolate_AoS(
+  const double* __restrict__ const            UIn,
+  const double* __restrict__ const            nodes,
+  const double* __restrict__ const            barycentricWeights,
+  const tarch::la::Vector<Dimensions,double>& referenceCoodinates,
+  const int                                   nodesPerAxis,
+  const int                                   strideQ,
+  double* __restrict__                        pointwiseQOut) {
+  double l = 1.0;
+  // clear
+  for ( int var = 0; var < strideQ; var++ ) {
+    pointwiseQOut[ var ] = 0.0;
+  } 
+  // compute
+  for ( int d = 0; d < Dimensions; d++ ) {
+    for ( int i = 0; i < nodesPerAxis; i++ ) {
+      l *= (referenceCoodinates[d] - nodes[i]);
+    }
+  }
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);   
+  for ( int scalarIndex = 0; scalarIndex < nodesPerCell; scalarIndex++ ) {
+    const tarch::la::Vector<Dimensions+1,int> strides = getStrides(nodesPerAxis,false);
+    const tarch::la::Vector<Dimensions+1,int> index   = delineariseIndex(scalarIndex, strides);
+    
+    double coeff = l;
+    for ( int d = 0; d < Dimensions; d++ ){
+      coeff *= barycentricWeights[index[1+d]] / (referenceCoodinates[d] - nodes[index[1+d]] );
+    } 
+    for ( int var = 0; var < strideQ; var++ ) {
+      pointwiseQOut[ var ] += coeff * UIn[ scalarIndex*strideQ + var ];
+    }
+  }
 }

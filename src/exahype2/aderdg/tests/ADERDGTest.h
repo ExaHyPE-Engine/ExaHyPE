@@ -27,6 +27,7 @@ private:
    */
   const double QuadraturePoints[3+1];
   const double QuadratureWeights[3+1];
+  const double BarycentricWeights[3+1];
   const double BasisFunctionValuesLeft[3+1];
   const double BasisFunctionValuesRight[3+1];
   const double DerivativeOperator[(3+1)*(3+1)];
@@ -72,6 +73,12 @@ private:
     const int                                    order,
     const double*                                test_UIn,
     const bool                                   verbose); 
+
+  
+  /**
+   * Test interpolation operator.
+   */
+  void testInterpolate();
 
   /**
    * Tests ADER-DG with linear advection flux and eigenvalues.

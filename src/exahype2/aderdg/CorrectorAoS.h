@@ -9,7 +9,8 @@ namespace exahype2 {
   namespace aderdg {
     
     /**
-     * @brief Modify the solution at the given coordinates and time.
+     * @brief Allow user to modify solution at the given coordinates and time and
+     * compute the max eigenvalue afterwards.
      * 
      * Writes to a single spatial degree of freedom.
      *
@@ -24,12 +25,21 @@ namespace exahype2 {
      * @param[in] strideQ
      * @param[in] scalarIndex
      */ 
-     GPUCallableMethod void corrector_adjustSolution_body_AoS(
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    GPUCallableMethod double corrector_adjustSolution_computeMaxEigenvalue_body_AoS(
         std::function< void(
           double * __restrict__                       Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t
         ) >                                         adjustSolution,
+        std::function< double(
+          const double * const __restrict__           Q,
+          const tarch::la::Vector<Dimensions,double>& x,
+          double                                      t,
+          const int                                   normal
+        ) >                                         maxAbsoluteEigenvalue,
         double * __restrict__                       UOut,
         const double * const __restrict__           nodes,
         const tarch::la::Vector<Dimensions,double>& cellCentre,
@@ -38,7 +48,11 @@ namespace exahype2 {
         const int                                   nodesPerAxis,
         const int                                   unknowns,
         const int                                   strideQ,
+        const int                                   callMaxEigenvalue,
         const int                                   scalarIndex);
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
 
     /**
      * @brief Add space-time volume flux contributions to the solution.
@@ -276,11 +290,6 @@ namespace exahype2 {
         int                                         normal,
         double * __restrict__                       BgradQ
       ) >                                         nonconservativeProduct,
-      std::function< void(
-        double * __restrict__                       Q,
-        const tarch::la::Vector<Dimensions,double>& x,
-        double                                      t
-      ) >                                         adjustSolution,
       double * __restrict__                       UOut, 
       const double * const __restrict__           QIn, 
       const double * const __restrict__           nodes,
@@ -300,7 +309,13 @@ namespace exahype2 {
    
     /** 
      * @brief Add cell-local contributions to new solution or update vector.
+     *
+     * @note This routine must be called AFTER corrector_addCellContributions_loop_AoS !
+     *       Otherwise calling adjustSolution and maxAbsoluteEigenvalue will not have the intended effect.
      * 
+     * @return maximum eigenvalue (absolute value) computed at the quadrature nodes in the interior of the cell
+     *         after the full DG update and after all solution adjustments.
+     *
      * @param[inout] UOut
      * @param[in] riemannResultIn
      * @param[in] weights quadrature weights; size: (order+1)
@@ -311,16 +326,31 @@ namespace exahype2 {
      * @param[in] unknowns the number of PDE unknowns that we evolve
      * @param[in] auxiliaryVariables other quantities such as material parameters that we do not evolve
      */
-    void corrector_addRiemannContributions_loop_AoS(
-      double * __restrict__             UOut,
-      const double * const __restrict__ riemannResultIn,
-      const double * const __restrict__ weights,
-      const double * const __restrict__ FLCoeff,
-      const double                      dx,
-      const double                      dt,
-      const int                         order,
-      const int                         unknowns,
-      const int                         auxiliaryVariables);
+     double corrector_addRiemannContributions_loop_AoS(
+       std::function< void(
+         double * __restrict__                       Q,
+         const tarch::la::Vector<Dimensions,double>& x,
+         double                                      t
+       ) >                                         adjustSolution,
+       std::function< double(
+         const double * const __restrict__           Q,
+         const tarch::la::Vector<Dimensions,double>& x,
+         double                                      t,
+         const int                                   normal
+       ) >                                         maxAbsoluteEigenvalue,
+       double * __restrict__                       UOut,
+       const double * const __restrict__           riemannResultIn,
+       const double * const __restrict__           nodes,
+       const double * const __restrict__           weights,
+       const double * const __restrict__           FLCoeff,
+       const tarch::la::Vector<Dimensions,double>& cellCentre,
+       const double                                dx,
+       const double                                t,
+       const double                                dt,
+       const int                                   order,
+       const int                                   unknowns,
+       const int                                   auxiliaryVariables,
+       const bool                                  callMaxEigenvalue);
   
   }
 }

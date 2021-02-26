@@ -220,39 +220,57 @@ namespace exahype2 {
     #pragma omp declare target
     #endif
     GPUCallableMethod void gradient_AoS(
-      const double* __restrict__ QIn,
-      const double* __restrict__ dudx,
-      const double               invDx,
-      const int                  nodesPerAxis,
-      const int                  strideQ,
-      const int                  scalarIndex,
-      double* __restrict__       gradQAux);
+      const double* __restrict__ const QIn,
+      const double* __restrict__ const dudx,
+      const double                     invDx,
+      const int                        nodesPerAxis,
+      const int                        strideQ,
+      const int                        scalarIndex,
+      double* __restrict__             gradQAux);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
-     
-     /** alignment in bytes
-     */
-     #if defined(OpenMPGPUOffloading)
-     #pragma omp declare target
-     #endif
-     GPUCallableMethod size_t alignment();
+   
+
+    /**
+     * Map point in physical domain to corresponding coordinates in reference domain.
+     *
+     * @param[in] x          coordinate
+     * @param[in] cellCentre centre of the cell that contains x
+     * @param[in] dx         extent of the cell that contains x
+     * @return 
+     */ 
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    GPUCallableMethod tarch::la::Vector<Dimensions,double> mapToReferenceCoordinates(
+      const tarch::la::Vector<Dimensions,double>& x,
+      const tarch::la::Vector<Dimensions,double>& cellCentre,
+      const double                                dx);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
-     
-     #if defined(OpenMPGPUOffloading)
-     #pragma omp declare target
-     #endif
-     GPUCallableMethod size_t paddedSize(size_t numElements, size_t sizeofType=sizeof(double));
+   
+    /**
+     * Evalutes DG polynomial at arbitrary reference space coordinate
+     * in reference domain [0,1]^d.
+     *
+     * @see: mapToReferenceCoordinates
+     */ 
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    GPUCallableMethod void interpolate_AoS(
+      const double* __restrict__ const            UIn,
+      const double* __restrict__ const            nodes,
+      const double* __restrict__ const            barycentricWeights,
+      const tarch::la::Vector<Dimensions,double>& referenceCoodinates,
+      const int                                   nodesPerAxis,
+      const int                                   strideQ,
+      double* __restrict__                        pointwiseQOut);
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
- 
-     double* allocateBuffer_cpu(size_t unpaddedSizeMultiplier, size_t paddedSizeMultiplier);  
-     
-     double* allocateBuffer_HIP(size_t unpaddedSizeMultiplier, size_t paddedSizeMultiplier);  
-    
   } // aderdg
 } // exahype2
 

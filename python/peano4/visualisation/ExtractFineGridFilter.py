@@ -22,8 +22,8 @@ class ExtractFineGridFilter( Filter ):
     concatenate all data and then to apply the filter.
       
   """
-  def __init__(self, run_on_individual_pieces_of_data=True):
-    Filter.__init__(self, run_on_individual_pieces_of_data, True)
+  def __init__(self, run_on_individual_pieces_of_data=False, verbose=False):
+    Filter.__init__(self, run_on_individual_pieces_of_data, True, verbose)
     pass
   
   
@@ -61,7 +61,7 @@ class ExtractFineGridFilter( Filter ):
     return result
   
   
-  def render(self,cell_data, dof, unknowns, dimensions):
+  def render(self, cell_data, dof, dimension, unknowns, description, mapping):
     """
     
       Overwrite this one for the particular filter. 
@@ -73,16 +73,21 @@ class ExtractFineGridFilter( Filter ):
     def sort_key(patch):
       return patch.size[0]
   
-    print( "Sort input data to optimise algorithmic efficiency" )
+    if self.verbose:
+      print( "Sort input data to optimise algorithmic efficiency" )
     cell_data.sort(reverse=True, key=sort_key)
     
     new_num_patches = 0
     new_cell_data   = [None] * len(cell_data)
     
-    print( "Build up auxiliary data structures over " + str(len(cell_data)) + " entries" )
-    
-    ratio_for_print = 10
-    
+    if self.verbose:
+      print( "Build up auxiliary data structures over " + str(len(cell_data)) + " entries" )
+
+    delta_for_print = 10    
+    ratio_for_print = 0
+    if len(cell_data)>10000:
+      delta_for_print = 1
+
     for i in range(0, len(cell_data) ):
       insert = True
       
@@ -99,15 +104,18 @@ class ExtractFineGridFilter( Filter ):
         new_num_patches += 1
 
       if i>0.01*ratio_for_print*len(cell_data):
-        print( "... " + str(ratio_for_print) + "%" )
-        ratio_for_print += 10
+        if self.verbose:
+          print( "... " + str(ratio_for_print) + "%" )
+        ratio_for_print += delta_for_print
 
-    print( "Copy results into output (commit changes)" )
+    if self.verbose:
+      print( "Copy results into output (commit changes)" )
     result_cell_data = [None] * new_num_patches
     for i in range(0,new_num_patches):
       result_cell_data[i] = new_cell_data[i]
 
-    print( "extracted " + str( new_num_patches ) + " from the " + str( len(cell_data) ) + " patch(es)" )
+    if self.verbose:
+      print( "extracted " + str( new_num_patches ) + " from the " + str( len(cell_data) ) + " patch(es)" )
 
-    return result_cell_data, dof, unknowns, dimensions
+    return result_cell_data, dof, dimension, unknowns, description, mapping
   
