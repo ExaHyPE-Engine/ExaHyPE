@@ -288,7 +288,7 @@ if __name__ == "__main__":
 
     #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
-    peano4_project = project.generate_Peano4_project()#verbose=True)
+    peano4_project = project.generate_Peano4_project(verbose=True)
     
     peano4_project.output.makefile.add_Fortran_flag( "-DCCZ4EINSTEIN -DDim3" )
     

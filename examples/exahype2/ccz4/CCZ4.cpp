@@ -106,13 +106,11 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
 
     for (int i=0; i<NumberOfUnknowns; i++) {
       assertion3( std::isfinite(Q[i]), x, t, i );
-      if ( i==0 )
-        assertion3( Q[0]!=0, x, t, i );
     }
 
-    //for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-     // Q[i] = 0.0;
-    //}
+    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+      Q[i] = 0.0;
+    }
   }
   else {
     enforceccz4constraints_(Q);
@@ -135,8 +133,6 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
   double lambda[Unknowns];
   for (int i=0; i<Unknowns; i++) {
     nonCriticalAssertion4( std::isfinite(Q[i]), i, x, t, normal );
-    if ( i==0 )
-      assertion3( Q[0]!=0, x, t, i );
     lambda[i] = 1.0;
   }
 
@@ -153,11 +149,10 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
   double result = 0.0;
   for (int i=0; i<Unknowns; i++) {
     result = std::max(result,std::abs(lambda[i]));
-    //result = 5.0;
   }
 
   // @todo Raus
-  assertion5( std::isfinite(result), x, t, normal, lambda[2], lambda[3]);
+  assertion3( std::isfinite(result), x, t, normal );
   //nonCriticalAssertion3( std::isfinite(result), x, t, normal );
 
   logTraceOut( "eigenvalues(...)" );

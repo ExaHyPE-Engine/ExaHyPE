@@ -51,20 +51,20 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   REAL(8) :: QGRGPR(nVarGRGPR),gradQGRGPR(nVarGRGPR,d),BgradQGRGPR(nVarGRGPR)
   !
   ! Q and their gradients
-  REAL(8) :: g_cov(3,3),g_contr(3,3),det                                        ! Q(1-6)
-  REAL(8) :: Aex(3,3),dAex(3,3,3),Amix(3,3),Aup(3,3),traceA                     ! Q(7-12)
-  REAL(8) :: Theta,dTheta(3)                                                    ! Q(13)
-  REAL(8) :: Ghat(3),Gtilde(3),dGhat(3,3)                                       ! Q(14-16)
-  REAL(8) :: alpha                                                              ! Q(17)
-  REAL(8) :: beta(3)                                                            ! Q(18-20)
-  REAL(8) :: b(3)                                                               ! Q(21-23)
-  REAL(8) :: AA(3),dAA(3,3)                                                     ! Q(24-26)
-  REAL(8) :: BB(3,3),dBB(3,3,3),traceB                                          ! Q(27-35)
-  REAL(8) :: DD(3,3,3),dDD(3,3,3,3),dgup(3,3,3)                                 ! Q(36-53)
-  REAL(8) :: traceK,dtraceK(3)                                                  ! Q(54)
-  REAL(8) :: phi                                                                ! Q(55)
-  REAL(8) :: PP(3),dPP(3,3)                                                     ! Q(56-58)
-  REAL(8) :: K0,dK0(3)                                                          ! Q(59)
+  REAL(8) :: g_cov(3,3),g_contr(3,3),det                                        ! Q(1-6)    conformal metric
+  REAL(8) :: Aex(3,3),dAex(3,3,3),Amix(3,3),Aup(3,3),traceA                     ! Q(7-12)   conformal traceless extrinic curvature
+  REAL(8) :: Theta,dTheta(3)                                                    ! Q(13)     time component of Z
+  REAL(8) :: Ghat(3),Gtilde(3),dGhat(3,3)                                       ! Q(14-16)  Gamma hat
+  REAL(8) :: alpha                                                              ! Q(17)     lapse, exp(Q17)
+  REAL(8) :: beta(3)                                                            ! Q(18-20)  shift
+  REAL(8) :: b(3)                                                               ! Q(21-23)  gamma driver
+  REAL(8) :: AA(3),dAA(3,3)                                                     ! Q(24-26)  auxiliary variables for lapse
+  REAL(8) :: BB(3,3),dBB(3,3,3),traceB                                          ! Q(27-35)  auxiliary variables for beta
+  REAL(8) :: DD(3,3,3),dDD(3,3,3,3),dgup(3,3,3)                                 ! Q(36-53)  auxiliary variables for metric
+  REAL(8) :: traceK,dtraceK(3)                                                  ! Q(54)     trace of extrinic curvature
+  REAL(8) :: phi                                                                ! Q(55)     conformal factor, exp(Q55)
+  REAL(8) :: PP(3),dPP(3,3)                                                     ! Q(56-58)  auxiliary variables for phi
+  REAL(8) :: K0,dK0(3)                                                          ! Q(59)     initial trace of K
   !
   ! time derivatives of Q 
   REAL(8) :: dtgamma(3,3)                                                       ! Q(1-6)
@@ -1179,7 +1179,7 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
   DO j=1,3 
      DO i=1,3
         DO k=1,3 
-           dtD(k,i,j) = dtD(k,i,j)-alpha*AA(k)*Aex(i,j) 
+           dtD(k,i,j) = dtD(k,i,j)-alpha*AA(k)*Aex(i,j) !trace removing missing here
            DO l=1,3 
               dtD(k,i,j) = dtD(k,i,j)+BB(k,l)*DD(l,i,j)+DD(k,l,i)*BB(j,l)+DD(k,l,j)*BB(i,l)-2.0D0/3.0D0*DD(k,i,j)*BB(l,l) 
            ENDDO 

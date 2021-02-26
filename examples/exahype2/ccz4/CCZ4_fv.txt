@@ -69,7 +69,7 @@ examples::exahype2::ccz4::CCZ4::CCZ4() {
 }
 
 
-/*
+
 void examples::exahype2::ccz4::CCZ4::sourceTerm(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -89,7 +89,7 @@ void examples::exahype2::ccz4::CCZ4::sourceTerm(
   }
   // enforceccz4constraints_(Q); // "cleans" Q, but knows nothing about S
 }
-*/
+
 
 void examples::exahype2::ccz4::CCZ4::adjustSolution(
   double * __restrict__ Q,
