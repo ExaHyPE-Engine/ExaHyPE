@@ -121,9 +121,6 @@ bool selectNextAlgorithmicStep() {{
       logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << repositories::getMinMeshSize() << " reached with h_min=" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() );
       gridConstructed = true;
       addGridSweepWithoutGridRefinementNext = false;
-      
-      logInfo( "selectNextAlgorithmicStep()", "switch off load balancing manually (to be removed in later releases)" );
-      repositories::loadBalancer.enable(false);
     }}
     else {{
       logDebug( "selectNextAlgorithmicStep()", "finest mesh resolution of " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() << " does not yet meet mesh requirements of " << repositories::getMinMeshSize() );
@@ -233,6 +230,13 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::CreateGrid:
       {{
+        if (
+          tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinMeshSize()
+        ) {{
+          logInfo( "step()", "switch off load balancing manually as finest grid resolution met (to be removed in later releases)" );
+          repositories::loadBalancer.enable(false);
+        }}
+
         repositories::startGridConstructionStep();
         
         observers::CreateGrid  observer;
@@ -245,9 +249,12 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::InitGrid:
       {{
-        #ifdef Parallel
-        repositories::loadBalancer.enable(false);
-        #endif
+        if (
+          tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinMeshSize()
+        ) {{
+          logInfo( "step()", "disable load balancing throughout initialisation (to be removed in later releases)" );
+          repositories::loadBalancer.enable(false);
+        }}
     
         repositories::startGridInitialisationStep();
         
