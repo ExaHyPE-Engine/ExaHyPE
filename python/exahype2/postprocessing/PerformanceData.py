@@ -32,7 +32,7 @@ class PerformanceData(object):
     self.total_time_stepping_steps = 0
     self.total_plotting_steps      = 0
 
-    self._start_time_step_time_stamp = []
+    self._start_time_step_time_stamp  = []
     self.plotting_time_stamp         = []
     self.time_step_size              = []
 
@@ -174,9 +174,11 @@ class PerformanceData(object):
         
         if "time stepping:" in line and not "#measurements=0" in line:
           match = re.findall( search_pattern, line)
-          self.total_time_stepping_time  = float( match[0].split( "s" )[0] )
+          if match:
+            self.total_time_stepping_time  = float( match[0].split( "s" )[0] )
           match = re.findall( r"measurements=\d+", line)
-          self.total_time_stepping_steps  = int( match[0].split( "=" )[1] )
+          if match:
+            self.total_time_stepping_steps  = int( match[0].split( "=" )[1] )
           print( "time stepping lasts " + str(self.total_time_stepping_time) + " over " + str(self.total_time_stepping_steps) + " steps" )
         
         
