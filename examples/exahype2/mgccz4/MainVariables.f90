@@ -25,7 +25,7 @@
     INTEGER, PARAMETER             	:: nDim = 2                   ! The number of space dimensions
 #endif
 	INTEGER, PARAMETER             	:: nAux = 0
-    INTEGER, PARAMETER             	:: nVar = 59                           ! The number of variables of the PDE system 
+    INTEGER, PARAMETER             	:: nVar = 64                           ! The number of variables of the PDE system
     INTEGER, PARAMETER 				:: nLin = 0
 	INTEGER, PARAMETER				:: nParam=0
 	INTEGER, PARAMETER				:: d=3

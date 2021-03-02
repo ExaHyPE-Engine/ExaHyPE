@@ -63,8 +63,11 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   REAL(8) :: DD(3,3,3),dDD(3,3,3,3),dgup(3,3,3)                                 ! Q(36-53)  auxiliary variables for metric
   REAL(8) :: traceK,dtraceK(3)                                                  ! Q(54)     trace of extrinic curvature
   REAL(8) :: phi                                                                ! Q(55)     conformal factor, exp(Q55)
-  REAL(8) :: PP(3),dPP(3,3)                                                     ! Q(56-58)  auxiliary variables for phi
+  REAL(8) :: PP(3),dPP(3,3)                                                     ! Q(56-58)  auxiliary variables for conformal phi
   REAL(8) :: K0,dK0(3)                                                          ! Q(59)     initial trace of K
+  REAL(8) :: MGphi                                                              ! Q(60)     scalar field
+  REAL(8) :: Kphi,dKphi(3)                                                      ! Q(61)     "extrinic curvature" for scalar field
+  REAL(8) :: Pi(3),dPi(3,3)                                                     ! Q(62-64)  auxiliary variables for scalar field phi
   !
   ! time derivatives of Q 
   REAL(8) :: dtgamma(3,3)                                                       ! Q(1-6)
@@ -80,6 +83,9 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   REAL(8) :: dtTraceK                                                           ! Q(54)
   REAL(8) :: dtphi                                                              ! Q(55)
   REAL(8) :: dtP(3)                                                             ! Q(56-58)
+  REAL(8) :: dtMGphi                                                            ! Q(60)
+  REAL(8) :: dtKphi,dnKphi                                                      ! Q(61)
+  REAL(8) :: dtPi(3)                                                            ! Q(62-64)
   !
   ! intermediate quantities
   REAL(8) :: Kex(3,3),Kmix(3,3),Kup(3,3)
@@ -89,22 +95,20 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   REAL(8) :: RiemannNCP(3,3,3,3),RicciNCP(3,3),RNCP
   REAL(8) :: RicciPlusNablaZNCP(3,3),RPlusTwoNablaZNCP
   REAL(8) :: nablaijalphaNCP(3,3),nablanablaalpha,nablanablaalphaNCP
+  REAL(8) :: nablaijMGphiNCP(3,3),nablanablaMGphiNCP
   REAL(8) :: dGtildeNCP(3,3)
   REAL(8) :: SecondOrderTermsNCP(3,3),traceNCP
   REAL(8) :: ov(3)
+  REAL(8) :: Piup(3)
   !
-#ifdef GLMROT     
-  REAL(8) :: dpsiA(3,3),dpsiP(3,3),dpsiB(3,3,3),dpsiD(3,3,3,3),dphiA(3),dphiP(3),dphiB(3,3),dphiD(3,3,3)   
-  REAL(8) :: dtpsiA(3),dtpsiP(3),dtpsiB(3,3),dtpsiD(3,3,3),dtphiA,dtphiP,dtphiB(3),dtphiD(3,3)    
-#endif         
-  !
-  !
-  !
-  !
+  ! function for scalar field theory
+  REAL(8) :: F_phi,Z_phi,U_phi
+  REAL(8) :: dF_phi,dZ_phi,dU_phi     ! all derivatives here are corresponding to phi itself
+  REAL(8) :: ddF_phi
   !
   BgradQ = 0.0D0
   !
-#if defined(CCZ4EINSTEIN) || defined(CCZ4GRMHD) || defined(CCZ4GRHD) || defined(CCZ4GRGPR) 
+#if defined(CCZ4EINSTEIN) || defined(CCZ4GRMHD) || defined(CCZ4GRHD) || defined(CCZ4GRGPR)
   !
   Qx = gradQin(:,1) 
   Qy = gradQin(:,2)
@@ -165,7 +169,24 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
      CASE DEFAULT  ! 1 + log 
         fa  = 2.0D0/alpha
         faa = -2.0D0/alpha**2   
-  END SELECT 
+  END SELECT
+  !
+  MGphi = Q(60)
+  Kphi  = Q(61)
+  Pi    = (/Q(62),Q(63),Q(64)/)
+  !
+  dKphi(:) = gradQ(61,:)
+  dPi(:,1) = gradQ(62,:)
+  dPi(:,2) = gradQ(63,:)
+  dPi(:,3) = gradQ(64,:)
+  !
+  F_phi   = 1.0D0
+  dF_phi  = 0.0D0
+  ddF_phi = 0.0D0
+  Z_phi   = 1.0D0
+  dZ_phi  = 0.0D0
+  U_phi   = 0.0D0
+  dU_phi  = 0.0D0
   ! 
   K0  = Q(59)
   dK0 = 0.0D0 ! sk*gradQ(59,:) 
@@ -420,7 +441,7 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
      ENDDO
   ENDDO    
   !
-  RicciPlusNablaZNCP = RicciNCP+(nablaZNCP+TRANSPOSE(nablaZNCP)) 
+  RicciPlusNablaZNCP = RicciNCP+(nablaZNCP+TRANSPOSE(nablaZNCP))/F_phi    ! modified from standard GR
   !
   RPlusTwoNablaZNCP  = phi**2*SUM(g_contr*RicciPlusNablaZNCP) 
   !
@@ -430,34 +451,49 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
         nablaijalphaNCP(i,j) = 0.5D0*alpha*(dAA(i,j)+dAA(j,i)) 
      ENDDO
   ENDDO
-  ! 
-  nablanablaalphaNCP = phi**2*SUM(g_contr*nablaijalphaNCP) 
   !
-  SecondOrderTermsNCP = -nablaijalphaNCP+alpha*RicciPlusNablaZNCP 
+  nablaijMGphiNCP=0.0D0
+  DO j=1,3
+    DO i=1,3
+      nablaijMGphiNCP(i,j) = 0.5D0*(dPi(i,j)+dPi(j,i))
+    ENDDO
+  ENDDO
   !
-  traceNCP = SUM(g_contr*SecondOrderTermsNCP) 
+  nablanablaalphaNCP = phi**2*SUM(g_contr*nablaijalphaNCP)
+  nablanablaMGphiNCP = phi**2*SUM(g_contr*nablaijMGphiNCP)
   !
-  SecondOrderTermsNCP = SecondOrderTermsNCP-1.0D0/3.0D0*g_cov*traceNCP 
+  SecondOrderTermsNCP = -nablaijalphaNCP+alpha*RicciPlusNablaZNCP-alpha*(dF_phi/F_phi)*nablaijMGphiNCP
+  !
+  traceNCP = SUM(g_contr*SecondOrderTermsNCP)
+  !
+  SecondOrderTermsNCP = SecondOrderTermsNCP-1.0D0/3.0D0*g_cov*traceNCP !the phi**2 factor is canceled wit the one above
   !
   !
   !
   ! Now assemble all this terrible stuff... 
   !
-  dtgamma = 0.0D0 
+  dtgamma = 0.0D0
+  dtMGphi = 0.0D0
   !
   ! Main variables of the CCZ4 system 
   dtK = phi**2*SecondOrderTermsNCP+beta(1)*dAex(1,:,:)+beta(2)*dAex(2,:,:)+beta(3)*dAex(3,:,:)      ! extrinsic curvature
   !
-  dtTraceK = -nablanablaalphaNCP+alpha*RPlusTwoNablaZNCP+SUM(beta(:)*dtraceK(:)) 
+  dnKphi = (dF_phi*RNCP-(2.0D0*Z_phi+5.0D0*(dF_phi**2/F_phi))*nablanablaMGphiNCP+4.0D0*dF_phi*phi**2*SUM(g_contr*nablaZNCP)/F_phi) &
+         & /(2.0D0*Z_phi+3.0D0*(dF_phi**2/F_phi))
+  dtKphi = SUM(beta(:)*dKphi(:))+alpha*dnKphi
+  !
+  dtTraceK = -nablanablaalphaNCP+alpha*RPlusTwoNablaZNCP-alpha*(5.0D0*dF_phi/F_phi/2.0D0)*nablanablaMGphiNCP+SUM(beta(:)*dtraceK(:)) &
+           & -alpha*(3.0D0*dF_phi/2.0D0/F_phi)*dnKphi
   !
   traceB = BB(1,1)+BB(2,2)+BB(3,3) 
   dtphi   = 0.0D0 
   dtalpha = 0.0D0
   !
-  dtTheta = 0.5D0*alpha*e**2*RplusTwoNablaZNCP+beta(1)*dTheta(1)+beta(2)*dTheta(2)+beta(3)*dTheta(3)        ! *** original cleaning *** 
+  dtTheta = 0.5D0*alpha*e**2*F_phi*RplusTwoNablaZNCP-0.5D0*alpha*dF_phi*nablanablaMGphiNCP+beta(1)*dTheta(1)+beta(2)*dTheta(2)+beta(3)*dTheta(3)        ! *** original cleaning ***
   !
   DO i=1,3
-     dtGhat(i) = -4.0D0/3.0D0*alpha*SUM(g_contr(i,:)*dtraceK(:))+ &  
+     dtGhat(i) = -4.0D0/3.0D0*alpha*SUM(g_contr(i,:)*dtraceK(:))- &
+               &  2*alpha*dF_phi*SUM(g_contr(i,:)*dKphi(:))+ &
                &  2.0D0      *alpha*SUM(g_contr(:,i)*dTheta (:))+ &                    
                &  beta(1)*dGhat(1,i)+beta(2)*dGhat(2,i)+beta(3)*dGhat(3,i) 
      DO l=1,3
@@ -531,7 +567,9 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
      DO i=1,3 
         dtP(k) = dtP(k)-1.0D0/3.0D0*0.5D0*(dBB(k,i,i)+dBB(i,k,i))  
      ENDDO
-  ENDDO 
+  ENDDO
+  !
+  dtPi = beta(1)*dPi(1,:)+beta(2)*dPi(2,:)+beta(3)*dPi(3,:)-alpha*dKphi
   !
   BgradQ(1:6)   = (/dtgamma(1,1),dtgamma(1,2),dtgamma(1,3),dtgamma(2,2),dtgamma(2,3),dtgamma(3,3)/)       ! \tilde \gamma_ij 
   BgradQ(7:12)  = (/dtK(1,1),dtK(1,2),dtK(1,3),dtK(2,2),dtK(2,3),dtK(3,3)/)                               ! \tilde A_ij 
@@ -548,7 +586,10 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   BgradQ(54)    = dtTraceK                                                                                ! traceK 
   BgradQ(55)    = dtphi                                                                                   ! log phi 
   BgradQ(56:58) = dtP                                                                                     ! P_k 
-  BgradQ(59:nVar) = 0.0D0
+  BgradQ(59)    = 0.0D0
+  BgradQ(60)    = dtMGphi
+  BgradQ(61)    = dtKphi
+  BgradQ(62:64) = dtPi(1:3)
   !
   BgradQ = -BgradQ ! change sign, since we work on the left hand side in PDENCP 
   !
@@ -651,6 +692,10 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
   REAL(8) :: phi                                                        ! Q(55)
   REAL(8) :: PP(3),dPP(3,3)                                             ! Q(56-58)
   REAL(8) :: K0,dK0(3)                                                  ! Q(59)
+  REAL(8) :: MGphi                                                      ! Q(60)     scalar field
+  REAL(8) :: Kphi,dKphi(3)                                              ! Q(61)     "extrinic curvature" for scalar field
+  REAL(8) :: Pi(3),dPi(3,3)                                             ! Q(62-64)  auxiliary variables for scalar field phi
+  !
   ! time derivatives of Q
   REAL(8) :: dtgamma(3,3)                                               ! Q(1-7)
   REAL(8) :: dtK(3,3)                                                   ! Q(7-12)
@@ -665,6 +710,10 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
   REAL(8) :: dtTraceK                                                   ! Q(54)
   REAL(8) :: dtphi                                                      ! Q(55)
   REAL(8) :: dtP(3)                                                     ! Q(56-58)
+  REAL(8) :: dtMGphi                                                    ! Q(60)
+  REAL(8) :: dtKphi,dnKphi                                              ! Q(61)
+  REAL(8) :: dtPi(3)                                                    ! Q(62-64)
+  !
   ! intermediate quantities    
   REAL(8) :: Gtilde(3)
   REAL(8) :: Kex(3,3),Kmix(3,3),Kup(3,3)
@@ -680,21 +729,25 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
   REAL(8) :: RplusNablaZNCP,RplusNablaZSrc,RPlusTwoNablaZNCP,RPlusTwoNablaZSrc
   REAL(8) :: nablaijalphaNCP(3,3),nablaijalphaSrc(3,3) 
   REAL(8) :: nablanablaalpha,nablanablaalphaNCP,nablanablaalphaSrc
+  REAL(8) :: nablaijMGphiNCP(3,3),nablaijMGphiSrc(3,3)
+  REAL(8) :: nablanablaMGphi,nablanablaMGphiNCP,nablanablaMGphiSrc
   REAL(8) :: SecondOrderTermsNCP(3,3),SecondOrderTermsSrc(3,3),traceNCP,traceSrc
-  REAL(8) :: ov(3)
+  REAL(8) :: ov(3),AAPi
+  REAL(8) :: Piup(3),PiPi(3,3),tracePiPi
   !
   ! matter contributions
   REAL(8) :: sm(3),Sij(3,3),Sij_contr(3,3),sm_contr(3),S,tau,dens,bv_cov(3),sqrdet 
   REAL(8) :: srctraceK,srcTheta
   REAL(8) :: SrcK(3,3),SrcGhat(3),mytmp1(3,3,3,3),mytmp2(3,3,3,3) 
   !
-  !
-  !
-  !
+  ! function for scalar field theory
+  REAL(8) :: F_phi,Z_phi,U_phi
+  REAL(8) :: dF_phi,dZ_phi,dU_phi     ! all derivatives here are corresponding to phi itself
+  REAL(8) :: ddF_phi
   !
   BgradQ = 0.0D0 
   !
-#if defined(CCZ4EINSTEIN) || defined(CCZ4GRHD) || defined(CCZ4GRMHD) || defined(CCZ4GRGPR) 
+#if defined(CCZ4EINSTEIN) || defined(CCZ4GRHD) || defined(CCZ4GRMHD) || defined(CCZ4GRGPR)
   !
   Qx = gradQin(:,1) 
   Qy = gradQin(:,2)
@@ -753,7 +806,24 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
      CASE DEFAULT  ! 1 + log 
         fa  = 2.0D0/alpha
         faa = -2.0D0/alpha**2   
-  END SELECT 
+  END SELECT
+  !
+  MGphi = Q(60)
+  Kphi  = Q(61)
+  Pi    = (/Q(62),Q(63),Q(64)/)
+  !
+  dKphi(:) = gradQ(61,:)
+  dPi(:,1) = gradQ(62,:)
+  dPi(:,2) = gradQ(63,:)
+  dPi(:,3) = gradQ(64,:)
+  !
+  F_phi   = 1.0D0
+  dF_phi  = 0.0D0
+  ddF_phi = 0.0D0
+  Z_phi   = 1.0D0
+  dZ_phi  = 0.0D0
+  U_phi   = 0.0D0
+  dU_phi  = 0.0D0
   ! 
   K0  = Q(59)
   dK0 = sk*gradQ(59,:) 
@@ -1034,8 +1104,8 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
      ENDDO
   ENDDO    
   !
-  RicciPlusNablaZNCP = RicciNCP+(nablaZNCP+TRANSPOSE(nablaZNCP)) 
-  RicciPlusNablaZSrc = RicciSrc+(nablaZSrc+TRANSPOSE(nablaZSrc)) 
+  RicciPlusNablaZNCP = RicciNCP+(nablaZNCP+TRANSPOSE(nablaZNCP))/F_phi  ! modified from standard GR
+  RicciPlusNablaZSrc = RicciSrc+(nablaZSrc+TRANSPOSE(nablaZSrc))/F_phi
   !
   RPlusTwoNablaZNCP = phi**2*SUM(g_contr*RicciPlusNablaZNCP) 
   RPlusTwoNablaZSrc = phi**2*SUM(g_contr*RicciPlusNablaZSrc) 
@@ -1052,15 +1122,34 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
      ENDDO
   ENDDO 
   nablanablaalphaNCP = phi**2*SUM(g_contr*nablaijalphaNCP) 
-  nablanablaalphaSrc = phi**2*SUM(g_contr*nablaijalphaSrc) 
+  nablanablaalphaSrc = phi**2*SUM(g_contr*nablaijalphaSrc)
   !
-  SecondOrderTermsNCP = -nablaijalphaNCP+alpha*RicciPlusNablaZNCP 
-  SecondOrderTermsSrc = -nablaijalphaSrc+alpha*RicciPlusNablaZSrc 
+  nablaijMGphiNCP = 0.0D0
+  nablaijMGphiSrc = 0.0D0
+  DO j=1,3
+    DO i=1,3
+      nablaijMGphiNCP(i,j) = 0.5D0*(dPi(i,j)+dPi(j,i))
+      DO k=1,3
+        nablaijMGphiSrc(i,j) = nablaijMGphiSrc(i,j)-Christoffel(i,j,k)*Pi(k)
+      ENDDO
+    ENDDO
+  ENDDO
+  nablanablaMGphiNCP = phi**2*SUM(g_contr*nablaijMGphiNCP)
+  nablanablaMGphiSrc = phi**2*SUM(g_contr*nablaijMGphiSrc)
+  !
+  SecondOrderTermsNCP = -nablaijalphaNCP+alpha*RicciPlusNablaZNCP-alpha*(dF_phi/F_phi)*nablaijMGphiNCP
+  SecondOrderTermsSrc = -nablaijalphaSrc+alpha*RicciPlusNablaZSrc-alpha*(dF_phi/F_phi)*nablaijMGphiSrc
   traceNCP = SUM(g_contr*SecondOrderTermsNCP) 
   SecondOrderTermsNCP = SecondOrderTermsNCP-1.0D0/3.0D0*g_cov*traceNCP 
   traceSrc = SUM(g_contr*SecondOrderTermsSrc) 
   SecondOrderTermsSrc = SecondOrderTermsSrc-1.0D0/3.0D0*g_cov*traceSrc 
   !
+  DO j=1,3
+    DO i=1,3
+      PiPi(i,j)=Pi(i)*Pi(j)
+    END DO
+  END DO
+  tracePiPi=SUM(g_contr*PiPi) ! omit the phi**2 factor here, so we need omit another phi**2 factor when removing trace.
   !
   !
   ! now assemble all this terrible stuff... 
@@ -1076,40 +1165,74 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
   !
   ! Main variables of the CCZ4 system 
   dtK = phi**2*SecondOrderTermsNCP+beta(1)*dAex(1,:,:)+beta(2)*dAex(2,:,:)+beta(3)*dAex(3,:,:)      ! extrinsic curvature
-  dtK = dtK+phi**2*SecondOrderTermsSrc+alpha*Aex*(traceK-2.0D0*Theta)-2.0D0*alpha*MATMUL(Aex,Amix)-itau*g_cov*traceA 
+  dtK = dtK+phi**2*SecondOrderTermsSrc+alpha*Aex*(traceK-2.0D0*Theta/F_phi)-2.0D0*alpha*MATMUL(Aex,Amix)-itau*g_cov*traceA
   DO j=1,3 
      DO i=1,3 
         DO k=1,3 
            dtK(i,j) = dtK(i,j)+Aex(k,i)*BB(j,k)+Aex(k,j)*BB(i,k)-2.0D0/3.0D0*Aex(i,j)*BB(k,k) 
         ENDDO
      ENDDO
-  ENDDO 
+  ENDDO
+  dtK = dtK-phi**2*alpha*(ddF_phi+Z_phi)*(PiPi-1.0D0/3.0D0*g_cov*tracePiPi)/F_phi+(dF_phi/F_phi)*alpha*Kphi*Aex !omit another phi**2 factor here
+  !
+  Aupdown = SUM(Aex*Aup)
+  AAPi=0.0D0
+  DO j=1,3
+    DO i=1,3
+      AAPi = AAPi+phi**2*g_contr(i,j)*AA(i)*Pi(j)
+    END DO
+  END DO
+  !
+  dnKphi = (dF_phi*RNCP-(2.0D0*Z_phi+5.0D0*(dF_phi**2/F_phi))*nablanablaMGphiNCP+4.0D0*dF_phi*phi**2*SUM(g_contr*nablaZNCP)/F_phi)
+  dnKphi = dnKphi+(dF_phi*RSrc-(2.0D0*Z_phi+5.0D0*(dF_phi**2/F_phi))*nablanablaMGphiSrc+4.0D0*dF_phi*phi**2*SUM(g_contr*nablaZSrc)/F_phi)
+  dnKphi = dnKphi+dF_phi*(-Aupdown+2.0D0/3.0D0*traceK**2)+(dZ_phi+3.0D0*(dF_phi*ddF_phi/F_phi))*Kphi**2 &
+              &  -(dZ_phi+2.0D0*(dF_phi*dZ_phi/F_phi)+5.0D0*(dF_phi*ddF_phi/F_phi))*phi**2*tracePiPi    &
+              &  +(2.0D0*Z_phi+5.0D0*(dF_phi*dF_phi/F_phi))*traceK*Kphi-2*(dF_phi/F_phi)*(3*k1*(1+k2)*Theta+2*Theta*traceK)  &
+              &  +2.0D0*dU_phi-6.0D0*(dF_phi/F_phi)*U_phi &
+              &  -(2.0D0*Z_phi+3.0D0*(dF_phi*dF_phi/F_phi))*AAPi
+  dnKphi=dnKphi/(2.0D0*Z_phi+3.0D0*(dF_phi**2/F_phi))
+  dtKphi=SUM(beta(:)*dKphi(:))+alpha*dnKphi
   !
 ! dtTraceK = -nablanablaalphaNCP-nablanablaalphaSrc+alpha*(RPlusTwoNablaZNCP+RPlusTwoNablaZSrc+traceK**2-2.0D0*Theta*traceK)-3.0D0*alpha*k1*(1.0D0+k2)*Theta+SUM(beta(:)*dtraceK(:))   ! Baojiu 
-  dtTraceK = -nablanablaalphaNCP-nablanablaalphaSrc+alpha*(RPlusTwoNablaZNCP+RPlusTwoNablaZSrc+traceK**2-2.0D0*c*Theta*traceK)-3.0D0*alpha*k1*(1.0D0+k2)*Theta+SUM(beta(:)*dtraceK(:)) ! Baojiu 
+  dtTraceK = -nablanablaalphaNCP-nablanablaalphaSrc  &
+           &  +alpha*(RPlusTwoNablaZNCP+RPlusTwoNablaZSrc+traceK**2-2.0D0*c*Theta*traceK/F_phi) &
+           &  -alpha*(5.0D0*dF_phi/2.0D0/F_phi)*(nablanablaMGphiNCP+nablanablaMGphiSrc) &
+           &  -3.0D0*alpha*k1*(1.0D0+k2)*Theta/F_phi+SUM(beta(:)*dtraceK(:))  &
+           &  -3.0D0*alpha*U_phi/F_phi-(5.0D0*ddF_phi+2.0D0*Z_phi)*alpha*phi**2*tracePiPi/2.0D0/F_phi  &
+           &  +(5.0D0*dF_phi/2.0D0/F_phi)*alpha*traceK*Kphi+(3.0D0*ddF_phi/2.0D0/F_phi)*alpha*Kphi**2  &
+           &  -(3.0D0*dF_phi/2.0D0/F_phi)*alpha*AAPi  &
+           &  -(3.0D0*dF_phi/2.0D0/F_phi)*alpha*dnKphi
   !
   traceB  = BB(1,1)+BB(2,2)+BB(3,3) 
   dtphi   = beta(1)*PP(1)+beta(2)*PP(2)+beta(3)*PP(3)+1.0D0/3.0D0*alpha*traceK-1.0D0/3.0D0*traceB 
-  dtalpha = -alpha*fa*(traceK-K0-2.0D0*c*Theta)+beta(1)*AA(1)+beta(2)*AA(2)+beta(3)*AA(3) 
-  !
-  Aupdown = SUM(Aex*Aup) 
+  dtalpha = -alpha*fa*(traceK-K0-2.0D0*c*Theta)+beta(1)*AA(1)+beta(2)*AA(2)+beta(3)*AA(3)
+  dtMGphi = beta(1)*Pi(1)+beta(2)*Pi(2)+beta(3)*Pi(3)-alpha*Kphi
   ! *** original 
-  dtTheta = 0.5D0*alpha*e**2*(RplusTwoNablaZNCP+RplusTwoNablaZSrc)+beta(1)*dTheta(1)+beta(2)*dTheta(2)+beta(3)*dTheta(3) +    &            ! temporal Z 
+  dtTheta = 0.5D0*alpha*e**2*F_phi*(RplusTwoNablaZNCP+RplusTwoNablaZSrc)+beta(1)*dTheta(1)+beta(2)*dTheta(2)+beta(3)*dTheta(3) -    &
+          & 0.5D0*alpha*dF_phi*(nablanablaMGphiNCP+nablanablaMGphiSrc)+&
 !         & 0.5D0*alpha*e**2*(-Aupdown+2.0D0/3.0D0*traceK**2)-alpha*Theta*traceK-SUM(Zup*alpha*AA)-alpha*k1*(2.0D0+k2)*Theta    ! Baojiu  
-          & 0.5D0*alpha*e**2*(-Aupdown+2.0D0/3.0D0*traceK**2)-c*alpha*Theta*traceK-alpha*SUM(Zup*AA)-alpha*k1*(2.0D0+k2)*Theta  ! Baojiu 
+          & 0.5D0*alpha*F_phi*e**2*(-Aupdown+2.0D0/3.0D0*traceK**2)-c*alpha*Theta*traceK-alpha*SUM(Zup*AA)-alpha*k1*(2.0D0+k2)*Theta &
+          & -0.5D0*Z_phi*alpha*Kphi**2-(0.5D0*Z_phi+ddF_phi)*alpha*phi**2*tracePiPi  &
+          & +alpha*dF_phi*traceK*Kphi-alpha*U_phi
   ! 
   dtGhat = 0.0D0 
   DO i=1,3
-     dtGhat(i) = dtGhat(i)  & 
-               & +2.0D0*alpha*(SUM(Christoffel_tilde(:,:,i)*Aup(:,:))-3.0D0*SUM(Aup(i,:)*PP(:))-2.0D0/3.0D0*SUM(g_contr(i,:)*dtraceK(:)))    &
+     dtGhat(i) = dtGhat(i)  &
+               & -2*alpha*dF_phi*SUM(g_contr(i,:)*dKphi(:))  &
+               & +2.0D0*alpha*F_phi*(SUM(Christoffel_tilde(:,:,i)*Aup(:,:))-3.0D0*SUM(Aup(i,:)*PP(:)))-4.0D0/3.0D0*alpha*SUM(g_contr(i,:)*dtraceK(:))    &
                & +2.0D0*alpha*SUM(g_contr(:,i)*(dTheta(:)-Theta*AA(:)-2.0D0/3.0D0*traceK*Z(:)))  & 
                & -2.0D0*alpha*SUM(Aup(i,:)*AA(:))-2.0D0*alpha*k1*SUM(g_contr(i,:)*Z(:))-SUM(Gtilde(:)*BB(:,i))   &
                & +beta(1)*dGhat(1,i)+beta(2)*dGhat(2,i)+beta(3)*dGhat(3,i)+2.0D0/3.0D0*Gtilde(i)*traceB 
      DO l=1,3
         DO k=1,3
-           dtGhat(i) = dtGhat(i)+g_contr(k,l)*0.5D0*(dBB(k,l,i)+dBB(l,k,i))+1.0D0/3.0D0*g_contr(i,k)*0.5D0*(dBB(k,l,l)+dBB(l,k,l)) + & 
-                     &         2.0D0*k3*(2.0D0/3.0D0*g_contr(i,l)*Z(l)*BB(k,k)-g_contr(l,k)*Z(l)*BB(k,i)) 
+           dtGhat(i) = dtGhat(i)+g_contr(k,l)*0.5D0*(dBB(k,l,i)+dBB(l,k,i))+1.0D0/3.0D0*g_contr(i,k)*0.5D0*(dBB(k,l,l)+dBB(l,k,l))  &
+                     &     +2.0D0*k3*(2.0D0/3.0D0*g_contr(i,l)*Z(l)*BB(k,k)-g_contr(l,k)*Z(l)*BB(k,i))
+           DO j=1,3
+             dtGhat(i) =dtGhat(i)+2.0D0*g_contr(i,j)*alpha*dF_phi*g_contr(k,l)*Aex(j,l)*Pi(k)
+           END DO
         ENDDO
+        dtGhat(i) = dtGhat(i)  &
+                  &  +2*alpha*g_contr(i,l)*(-(Z_phi+ddF_phi)*Kphi*Pi(l)+1.0D0/3.0D0*dF_phi*traceK*Pi(l))
      ENDDO         
   ENDDO 
   !
@@ -1195,7 +1318,14 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
      DO i=1,3 
         dtP(k) = dtP(k)-1.0D0/3.0D0*0.5D0*(dBB(k,i,i)+dBB(i,k,i)) 
      ENDDO
-  ENDDO 
+  ENDDO
+  !
+  dtPi=-alpha*AA*Kphi-alpha*dKphi
+  DO i=1,3
+    DO k=1,3
+      dtPi(i)=dtPi(i)+BB(i,k)*Pi(k)+beta(k)*dPi(k,i)
+    END DO
+  END DO
   !
   BgradQ(1:6)   = (/dtgamma(1,1),dtgamma(1,2),dtgamma(1,3),dtgamma(2,2),dtgamma(2,3),dtgamma(3,3)/)       ! \tilde \gamma_ij 
   BgradQ(7:12)  = (/dtK(1,1),dtK(1,2),dtK(1,3),dtK(2,2),dtK(2,3),dtK(3,3)/)                               ! \tilde A_ij 
@@ -1213,6 +1343,9 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
   BgradQ(55)    = dtphi                                                                                   ! log phi 
   BgradQ(56:58) = dtP                                                                                     ! P_k 
   BgradQ(59)    = 0.0D0
+  BgradQ(60)    = dtMGphi
+  BgradQ(61)    = dtKphi
+  BgradQ(62:64) = dtPi(1:3)
   !
   Src_BgradQ = BgradQ    ! here, we do not have to change sign, since we work on the right hand side in the fused subroutine 
   !

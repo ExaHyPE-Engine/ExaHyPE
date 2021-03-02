@@ -258,7 +258,7 @@ if __name__ == "__main__":
     else:
       my_solver = CCZ4Solver("MGCCZ4", patch_size, min_h, max_h)
 
-      my_solver.add_constraint_verification()
+      #my_solver.add_constraint_verification()
       #my_solver.add_derivative_calculation()
 
    
