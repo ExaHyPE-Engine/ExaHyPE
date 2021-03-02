@@ -22,7 +22,7 @@ Default plotter for various standard ExaHyPE dumps.
    "time-step-size","time-step-size-rt",
    "runtime-rt", "runtime-rt-sum-2",
   ], required=True  )
-  parser.add_argument("-l",     "--label",   dest="label",   nargs="*", help="Label of dataset (optional) ",  default="output"  )
+  parser.add_argument("-l",     "--label",   dest="label",   nargs="*", help="Label of dataset (optional; if used, you have to add --label/-l after the actual files and you have to embed the labels into hyphens)",  default="output"  )
   parser.add_argument("-o",     "--output",  dest="output",  help="Name of output file",         default="output"  )
   args = parser.parse_args()
   

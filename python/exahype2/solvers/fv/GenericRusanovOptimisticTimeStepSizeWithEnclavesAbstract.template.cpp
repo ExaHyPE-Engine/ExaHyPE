@@ -14,8 +14,7 @@
   _admissibleTimeStepSize(std::numeric_limits<double>::max()),
   _solverState(SolverState::GridConstruction),
   _maxH({{MAX_H}}),
-  _minH({{MIN_H}}),
-  _previousAdmissibleTimeStepSize(0.0) {
+  _minH({{MIN_H}}) {
 }
 
 
@@ -86,17 +85,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     if ( tarch::la::equals(_timeStepSize,0.0) ) {
       _timeStepSize  = TimeStapSizeDamping * _admissibleTimeStepSize;
     }
-    else if ( _timeStepSize<=_admissibleTimeStepSize and _previousAdmissibleTimeStepSize>_admissibleTimeStepSize) {
-      _timeStamp    += _timeStepSize;
-
-      assertion(_previousAdmissibleTimeStepSize>0.0);
-      double shrinkFactor = _admissibleTimeStepSize / _previousAdmissibleTimeStepSize;
-      logInfo(
-        "finishTimeStep()",
-        "admissible time step size seems to shrink by " << shrinkFactor << ". Shrink chosen time step size, too"
-      );
-      _timeStepSize  = shrinkFactor * _timeStepSize;
-    }
     else if ( _timeStepSize<=_admissibleTimeStepSize) {
       _timeStamp    += _timeStepSize;
       _timeStepSize  = 0.5 * (_timeStepSize + _admissibleTimeStepSize);
@@ -111,7 +99,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       _timeStepSize  = TimeStapSizeDamping * _admissibleTimeStepSize;
     }
 
-    _previousAdmissibleTimeStepSize = _admissibleTimeStepSize;
     _admissibleTimeStepSize         = std::numeric_limits<double>::max();
   }
 
