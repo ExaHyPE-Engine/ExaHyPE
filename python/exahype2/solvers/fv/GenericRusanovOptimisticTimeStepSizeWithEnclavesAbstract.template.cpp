@@ -89,13 +89,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     else if ( _timeStepSize<=_admissibleTimeStepSize) {
       _timeStamp    += _timeStepSize;
 
-      double creepingAverageNewTimeStepSize = 0.5 * (_timeStepSize + _admissibleTimeStepSize);
       double growthOfAdmissibleTimeStepSize = _admissibleTimeStepSize / _previousAdmissibleTimeStepSize;
       if (growthOfAdmissibleTimeStepSize<1.0) {
-        logInfo( "finishTimeStepSize()", "pick biased new time step size " << _timeStepSize << " instead of creeping average of " << creepingAverageNewTimeStepSize )
-        _timeStepSize  = growthOfAdmissibleTimeStepSize * creepingAverageNewTimeStepSize;
+        double creepingAverageNewTimeStepSize = 0.5 * (_timeStepSize + _admissibleTimeStepSize);
+        double biasedAverageNewTimeStepSize   = 0.5 * (_timeStepSize + growthOfAdmissibleTimeStepSize * _admissibleTimeStepSize);
+        logInfo( "finishTimeStepSize()", "pick biased new time step size " << biasedAverageNewTimeStepSize << " instead of creeping average of " << creepingAverageNewTimeStepSize )
+        _timeStepSize  = biasedAverageNewTimeStepSize;
       }
       else {
+        double creepingAverageNewTimeStepSize = 0.5 * (_timeStepSize + _admissibleTimeStepSize);
         _timeStepSize  = creepingAverageNewTimeStepSize;
       }
     }
