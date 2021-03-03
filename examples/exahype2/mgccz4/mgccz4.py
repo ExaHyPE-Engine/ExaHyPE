@@ -64,6 +64,9 @@ class CCZ4Solver( SuperClass ):
       "phi":1,
       "P":3,
       "K0":1,
+      "MGphi":1,
+      "Kphi":1,
+      "Pi":3
     }
     
     number_of_unknowns = 0

@@ -34,12 +34,12 @@ from _ast import Or
  GenericRusanovAdaptiveTimeStepSizeWithEnclaves for CCZ4 with the Gauge wave
  however.
 """
-#SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
+SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
 
 """
 Here is the aderdg test.
 """
-SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
+#SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
 
 
 
@@ -241,7 +241,8 @@ if __name__ == "__main__":
         exahype2.solvers.aderdg.Polynomials.Gauss_Legendre, 
         min_h, max_h, time_step_size,
 	flux = None,
-	ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+	ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+	#source_term=exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
 
       #my_solver._solver_template_file_class_name = SuperClass.__name__
