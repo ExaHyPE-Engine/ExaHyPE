@@ -600,7 +600,7 @@ RECURSIVE SUBROUTINE PDESource(S,Q)
   REAL(8) :: RPlusTwoNablaZSrc
   REAL(8) :: nablaijalphaSrc(3,3)
   REAL(8) :: nablanablaalphaSrc
-  REAL(8) :: SecondOrderTermsSrc(3,3),traceNCP,traceSrc
+  REAL(8) :: SecondOrderTermsSrc(3,3),traceSrc
   REAL(8) :: ov(3)
 
 #if defined(CCZ4EINSTEIN) || defined(CCZ4GRHD) || defined(CCZ4GRMHD) || defined(CCZ4GRGPR)

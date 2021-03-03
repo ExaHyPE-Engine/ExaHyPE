@@ -28,7 +28,7 @@ void gaugeWave(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double t
 ) {
-  constexpr int nVars = 59;
+  constexpr int nVars = 64;
   constexpr double pi = M_PI;
   constexpr double peak_number = 2.0;
   constexpr double ICA = 0.1; ///< Amplitude of the wave
@@ -78,7 +78,7 @@ void examples::exahype2::mgccz4::MGCCZ4::sourceTerm(
   double                                       dt,
   double * __restrict__ S
 ) {
-  constexpr int nVars = 59;
+  constexpr int nVars = 64;
   for(int i=0; i<nVars; i++){
     assertion4( std::isfinite(Q[i]), i, volumeCentre, volumeH, t );
   }
@@ -133,7 +133,7 @@ double examples::exahype2::mgccz4::MGCCZ4::maxEigenvalue(
 ) {
   logTraceInWith4Arguments( "eigenvalues(...)", faceCentre, volumeH, t, normal );
   // helper data structure
-  constexpr int Unknowns = 59;
+  constexpr int Unknowns = 64;
   double lambda[Unknowns];
   for (int i=0; i<Unknowns; i++) {
     nonCriticalAssertion5( std::isfinite(Q[i]), i, faceCentre, volumeH, t, normal );
@@ -177,7 +177,7 @@ void examples::exahype2::mgccz4::MGCCZ4::nonconservativeProduct(
 
   assertion( normal>=0 );
   assertion( normal<Dimensions );
-  constexpr int nVars = 59;
+  constexpr int nVars = 64;
   double gradQSerialised[nVars*3];
   for (int i=0; i<nVars; i++) {
     gradQSerialised[i+0*nVars] = 0.0;
