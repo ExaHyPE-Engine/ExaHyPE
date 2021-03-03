@@ -106,6 +106,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
      
     {% include "AbstractSolverAdaptiveTimeStepSize.template.h" %}
+  private:
+    double _previousAdmissibleTimeStepSize;
 };
 
 

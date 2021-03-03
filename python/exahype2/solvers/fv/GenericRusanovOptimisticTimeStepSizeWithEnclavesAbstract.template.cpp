@@ -14,7 +14,8 @@
   _admissibleTimeStepSize(std::numeric_limits<double>::max()),
   _solverState(SolverState::GridConstruction),
   _maxH({{MAX_H}}),
-  _minH({{MIN_H}}) {
+  _minH({{MIN_H}}),
+  _previousAdmissibleTimeStepSize(0.0) {
 }
 
 
@@ -87,7 +88,16 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     }
     else if ( _timeStepSize<=_admissibleTimeStepSize) {
       _timeStamp    += _timeStepSize;
-      _timeStepSize  = 0.5 * (_timeStepSize + _admissibleTimeStepSize);
+
+      double creepingAverageNewTimeStepSize = 0.5 * (_timeStepSize + _admissibleTimeStepSize);
+      double growthOfAdmissibleTimeStepSize = _admissibleTimeStepSize / _previousAdmissibleTimeStepSize;
+      if (growthOfAdmissibleTimeStepSize<1.0) {
+        logInfo( "finishTimeStepSize()", "pick biased new time step size " << _timeStepSize << " instead of creeping average of " << creepingAverageNewTimeStepSize )
+        _timeStepSize  = growthOfAdmissibleTimeStepSize * creepingAverageNewTimeStepSize;
+      }
+      else {
+        _timeStepSize  = creepingAverageNewTimeStepSize;
+      }
     }
     else {
       logWarning(
@@ -95,10 +105,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         "time step size of " << _timeStepSize << " has been too optimistic as max admissible " <<
         "step size is " << _admissibleTimeStepSize << ". Rollback and recompute time step"
       );
-      _solverState = SolverState::SecondaryWithInvalidRollback;
-      _timeStepSize  = TimeStapSizeDamping * _admissibleTimeStepSize;
+      _solverState  = SolverState::SecondaryWithInvalidRollback;
+      _timeStepSize = TimeStapSizeDamping * _admissibleTimeStepSize;
     }
 
+    _previousAdmissibleTimeStepSize = _admissibleTimeStepSize;
     _admissibleTimeStepSize         = std::numeric_limits<double>::max();
   }
 
