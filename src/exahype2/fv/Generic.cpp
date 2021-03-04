@@ -96,7 +96,7 @@ double exahype2::fv::maxEigenvalue_AoS(
 
   #if Dimensions==2
   #ifdef SharedOMP
-  #pragma omp parallel for collapse(2) reduction(min:result)
+  #pragma omp parallel for collapse(2) reduction(max:result)
   #endif
   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
@@ -120,7 +120,7 @@ double exahype2::fv::maxEigenvalue_AoS(
   }
   #else
   #ifdef SharedOMP
-  #pragma omp parallel for collapse(3) reduction(min:result)
+  #pragma omp parallel for collapse(3) reduction(max:result)
   #endif
   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
