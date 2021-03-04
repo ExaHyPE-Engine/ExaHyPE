@@ -69,7 +69,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if ( _solverState == SolverState::Secondary ) {
     _timeStamp += getMaxTimeStepSize();
 
-    double newTimeStepSize = {{TIME_STEP_RELAXATION}} * _admissibleTimeStepSize;
+    double newTimeStepSize = _admissibleTimeStepSize;
     #ifdef Parallel
     MPI_Allreduce(&newTimeStepSize, &_timeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
     #else
