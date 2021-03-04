@@ -89,14 +89,14 @@ double exahype2::fv::maxEigenvalue_AoS(
   int                                          auxiliaryVariables,
   const double * __restrict__                  Q
 ) {
-  double result = std::numeric_limits<double>::max();
+  double result = 0.0;
 
   tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   #if Dimensions==2
   #ifdef SharedOMP
-  #pragma omp parallel for collapse(2) reduction(min:result)
+  #pragma omp parallel for collapse(2) reduction(max:result)
   #endif
   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
@@ -109,7 +109,7 @@ double exahype2::fv::maxEigenvalue_AoS(
                             + y * numberOfVolumesPerAxisInPatch;
 
     for (int d=0; d<Dimensions; d++) {
-      result = std::min(
+      result = std::max(
         result,
         eigenvalues(
           Q + voxelInImage * (unknowns + auxiliaryVariables),
@@ -120,7 +120,7 @@ double exahype2::fv::maxEigenvalue_AoS(
   }
   #else
   #ifdef SharedOMP
-  #pragma omp parallel for collapse(3) reduction(min:result)
+  #pragma omp parallel for collapse(3) reduction(max:result)
   #endif
   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
@@ -136,7 +136,7 @@ double exahype2::fv::maxEigenvalue_AoS(
                             + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
 
     for (int d=0; d<Dimensions; d++) {
-      result = std::min(
+      result = std::max(
         result,
         eigenvalues(
           Q + voxelInImage * (unknowns + auxiliaryVariables),
