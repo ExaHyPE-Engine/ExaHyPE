@@ -89,7 +89,7 @@ double exahype2::fv::maxEigenvalue_AoS(
   int                                          auxiliaryVariables,
   const double * __restrict__                  Q
 ) {
-  double result = std::numeric_limits<double>::max();
+  double result = 0.0;
 
   tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
@@ -109,7 +109,7 @@ double exahype2::fv::maxEigenvalue_AoS(
                             + y * numberOfVolumesPerAxisInPatch;
 
     for (int d=0; d<Dimensions; d++) {
-      result = std::min(
+      result = std::max(
         result,
         eigenvalues(
           Q + voxelInImage * (unknowns + auxiliaryVariables),
@@ -136,7 +136,7 @@ double exahype2::fv::maxEigenvalue_AoS(
                             + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
 
     for (int d=0; d<Dimensions; d++) {
-      result = std::min(
+      result = std::max(
         result,
         eigenvalues(
           Q + voxelInImage * (unknowns + auxiliaryVariables),
