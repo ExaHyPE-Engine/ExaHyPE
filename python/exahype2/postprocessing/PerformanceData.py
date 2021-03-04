@@ -32,9 +32,12 @@ class PerformanceData(object):
     self.total_time_stepping_steps = 0
     self.total_plotting_steps      = 0
 
+    self.plotting_time_stamp          = []
+    
     self._start_time_step_time_stamp  = []
-    self.plotting_time_stamp         = []
-    self.time_step_size              = []
+    self._simulated_time_stamp        = []
+    self._real_time_stamp             = []
+    self._time_step_size              = []
 
     self._number_of_time_steps = 0
     
@@ -151,10 +154,15 @@ class PerformanceData(object):
         
         if "run" in line and "TimeStep" in line and "rank:0" in line:
           self._number_of_time_steps += 1
+          self._real_time_stamp.append( self.__extract_time_stamp_from_run_call(line) )
 
+        #
+        # Be careful with the order: the first one is more specific
+        #
         if "dt_{min}" in line:
-          self.time_step_size.append( float( line.split("=")[-1]) )
-
+          self._time_step_size.append( float( line.split("=")[-1]) )
+        elif "t_{min}" in line:
+          self._simulated_time_stamp.append( float( line.split("=")[-1]) )
 
         if "finest mesh resolution of" in line:
           token = line.split( "h_min=[" )[1].split(",")[0]
@@ -207,15 +215,41 @@ class PerformanceData(object):
     return result
 
 
-  def get_time_step_time_stamps(self):
+  def get_time_step_real_time_stamps(self):
     """
+    
+     Returns a series of real time stamps (in seconds) snapshotted
+     per time step.
+     
+     
      This is not a mere copy, as the last entry in the local set is the end
      of the simulation
+     
     """
-    result = [x for x in self._start_time_step_time_stamp]
-    result = result[0:-1]
+    result = [x for x in self._real_time_stamp]
+    #result = result[0:-1]
     return result
 
+
+  def get_time_step_simulated_time_stamps(self):
+    """
+    
+     Returns a sequence of time stamps that are the simulated time
+     stamps (where has the simulation been at a certain point) per
+     step.
+     
+     This is not a mere copy, as the last entry in the local set is the end
+     of the simulation
+     
+    """
+    result = [x for x in self._simulated_time_stamp]
+    #result = result[0:-1]
+    return result
+
+
+  def get_time_step_time_step_size(self):
+    return [x for x in self._time_step_size]
+      
 
   def normalised_time_of_last_time_step(self):
     """
