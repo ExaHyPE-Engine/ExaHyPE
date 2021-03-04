@@ -13,8 +13,8 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 
-#include "observers/DataRepository.h"
-#include "observers/StepRepository.h"
+#include "repositories/DataRepository.h"
+#include "repositories/StepRepository.h"
 
 
 //
@@ -24,7 +24,8 @@
 //
 #include "observers/CreateGrid.h"
 #include "observers/Plot.h"
-#include "observers/MoveParticles.h"
+#include "observers/CalcDensities.h"
+#include "observers/CalcAccels.h"
 
 
 #include "peano4/UnitTests.h"
@@ -50,7 +51,7 @@ int main(int argc, char** argv) {
 
   peano4::initParallelEnvironment(&argc,&argv);
   peano4::fillLookupTables();
-  peanosph::observers::DataRepository::initDatatypes();
+  peanosph::repositories::DataRepository::initDatatypes();
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
@@ -106,10 +107,12 @@ int main(int argc, char** argv) {
     peanosph::observers::Plot observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     logInfo( "main()", "dumped initial condition" )
-    for (int i=0; i<1; i++) {
-      for (int j=0; j<10; j++) {
-        peanosph::observers::MoveParticles observer;
-        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+    for (int i=0; i<10; i++) {
+      for (int j=0; j<200; j++) {
+        peanosph::observers::CalcDensities densityObserver;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(densityObserver);
+        peanosph::observers::CalcAccels accelObservers;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(accelObservers);
       }
       logInfo( "main()", "plot" )
       peanosph::observers::Plot observer;
@@ -131,7 +134,7 @@ int main(int argc, char** argv) {
   #endif
 
   peano4::shutdownSingletons();
-  peanosph::observers::DataRepository::shutdownDatatypes();
+  peanosph::repositories::DataRepository::shutdownDatatypes();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;
