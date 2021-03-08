@@ -1,0 +1,21 @@
+# Level (info or debug)   Trace   Rank (-1 means all ranks)   Black or white list entry
+
+
+#
+# General debug settings
+#
+debug  tarch                               -1     black
+debug  peano4                              -1     black
+debug  peanosph                            -1     black
+
+info  tarch                                -1     white
+info  peano4                               -1     white
+info  peanosph                             -1     white
+info  toolbox                              -1     white
+
+trace  tarch                               -1     black
+trace  peano4                              -1     black
+trace  peanosph                            -1     black
+trace  toolbox                             -1     black
+
+info peano4::grid                          -1     white
