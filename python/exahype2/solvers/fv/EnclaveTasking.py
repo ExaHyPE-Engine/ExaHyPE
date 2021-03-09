@@ -113,6 +113,15 @@ class EnclaveTaskingFV( FV ):
 
 
   def create_data_structures(self):
+    """
+    
+    This routine does not really add new data, but it heavily tailors when data are
+    stored, exchanged, ... Each generator has some guard attributes, i.e. some predicates,
+    which control when data is stored, sent, received. The routine takes these guards
+    and rewires them to the local predicates of this object. If you alter these predicates
+    further, you have to alter them before you invoke this class' create_data_structures().
+    
+    """
     FV.create_data_structures(self)
     self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
 
