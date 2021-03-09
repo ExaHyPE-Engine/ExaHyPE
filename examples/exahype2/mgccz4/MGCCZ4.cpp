@@ -43,7 +43,7 @@ void gaugeWave(
   Q[3]  = phi*phi  ;
   Q[5]  = phi*phi                            ;
   Q[6]  = phi*phi*(Kxx - 1.0/3.0*traceK*HH ) ;
-  Q[9] =  phi*phi*(0.0 - 1.0/3.0*traceK*1.0) ;
+  Q[9]  = phi*phi*(0.0 - 1.0/3.0*traceK*1.0) ;
   Q[11] = phi*phi*(0.0 - 1.0/3.0*traceK*1.0)  ;
   Q[16] = log(sqrt(HH));
   Q[13] = 2.0/(3.0*pow(HH,(5.0/3.0)))*dxH        ;
@@ -54,6 +54,9 @@ void gaugeWave(
   Q[53] = traceK;
   Q[54] = log(phi);
   Q[55] = dxphi/phi;
+  Q[59] = HH;
+  Q[60] = 2.0*Kxx;
+  Q[61] = dxH;
 }
 
 

@@ -39,26 +39,52 @@ void gaugeWave(
   double Kxx    = - 0.5*peak_number*pi*ICA*cos( peak_number * pi*(volumeX[0] - t))/sqrt( 1.0 - ICA*sin( peak_number*pi*( volumeX[0] - t))  );
   double traceK = Kxx/HH;
   memset(Q, .0, nVars*sizeof(double));
-  Q[0]  = phi*phi*HH ;
-  Q[3]  = phi*phi  ;
-  Q[5]  = phi*phi                            ;
-  Q[6]  = phi*phi*(Kxx - 1.0/3.0*traceK*HH ) ;
-  Q[9] =  phi*phi*(0.0 - 1.0/3.0*traceK*1.0) ;
-  Q[11] = phi*phi*(0.0 - 1.0/3.0*traceK*1.0)  ;
-  Q[16] = log(sqrt(HH));
-  Q[13] = 2.0/(3.0*pow(HH,(5.0/3.0)))*dxH        ;
-  Q[23] = 1.0/(2.0*HH)*dxH               ;
-  Q[35] = pow(HH,(-1.0/3.0))*dxH/3.0         ;
-  Q[38] = phi*dxphi                     ;
-  Q[40] = phi*dxphi                    ;
-  Q[53] = traceK;
-  Q[54] = log(phi);
-  Q[55] = dxphi/phi;
+  Q[0]  = phi*phi*HH ;					//\tilde(\gamma)_xx
+  Q[3]  = phi*phi  ;					//\tilde(\gamma)_yy
+  Q[5]  = phi*phi                            ;		//\tilde(\gamma)_zz
+  Q[6]  = phi*phi*(Kxx - 1.0/3.0*traceK*HH ) ;		//\tilde(A)_xx
+  Q[9] =  phi*phi*(0.0 - 1.0/3.0*traceK*1.0) ;		//\tilde(A)_yy
+  Q[11] = phi*phi*(0.0 - 1.0/3.0*traceK*1.0) ;		//\tilde(A)_zz
+  Q[16] = log(sqrt(HH));				//ln(\alpha)
+  Q[13] = 2.0/(3.0*pow(HH,(5.0/3.0)))*dxH        ;	//\hat(\Gamma)^x
+  Q[23] = 1.0/(2.0*HH)*dxH               ;		//A_x
+  Q[35] = pow(HH,(-1.0/3.0))*dxH/3.0         ;		//D_xxx
+  Q[38] = phi*dxphi                     ;		//D_xyy
+  Q[40] = phi*dxphi                    ;		//D_xzz
+  Q[53] = traceK;					//K
+  Q[54] = log(phi);					//ln(\phi)
+  Q[55] = dxphi/phi;					//P_x
 }
 
+void LinearWave(
+  double * __restrict__ Q, // Q[64+0],
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double t
+) {
+  constexpr int nVars = 59;
+  constexpr double pi = M_PI;
+  constexpr double peak_number = 2.0;
+  constexpr double ICA = 1e-8; ///< Amplitude of the wave, should be very small to keep linearized.
+  double HH     =  ICA*sin( peak_number*pi*( volumeX[0] - t));
+  double dxHH   =  peak_number*pi*ICA*cos( peak_number * pi*(volumeX[0] - t));
+  double dtHH   = -peak_number*pi*ICA*cos( peak_number * pi*(volumeX[0] - t));
+  memset(Q, .0, nVars*sizeof(double));
+  Q[0]  = 1.0  ;		//\tilde(\gamma)_xx
+  Q[3]  = 1+HH ;		//\tilde(\gamma)_yy
+  Q[5]  = 1-HH ;		//\tilde(\gamma)_zz
+  Q[6]  = 0.0	    ;		//\tilde(A)_xx
+  Q[9]  = -0.5*dtHH ;		//\tilde(A)_yy
+  Q[11] = 0.5*dtHH  ;		//\tilde(A)_zz
+  Q[16] = log(1.0) ;		//ln(\alpha)
+  Q[35] = 0.0       ;		//D_xxx
+  Q[38] = 0.5*dxHH  ;		//D_xyy
+  Q[40] = -0.5*dxHH ;		//D_xzz
+  Q[54] = log(1.0) ;		//ln(\phi)
+}
 
 examples::exahype2::ccz4::CCZ4::CCZ4() {
-  if ( Scenario=="gaugewave-c++" ) {
+  if ( Scenario=="gaugewave-c++" || Scenario=="linearwave-c++") {
     const char* name = "GaugeWave";
     int length = strlen(name);
     initparameters_(&length, name);
@@ -102,6 +128,9 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
   if (tarch::la::equals(t,0.0) ) {
     if ( Scenario=="gaugewave-c++" ) {
       gaugeWave(Q, volumeX, volumeH, t);
+    }
+    else if ( Scenario=="linearwave-c++" ) {
+      LinearWave(Q, volumeX, volumeH, t);
     }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );

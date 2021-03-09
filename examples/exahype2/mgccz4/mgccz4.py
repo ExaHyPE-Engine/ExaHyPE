@@ -271,7 +271,7 @@ if __name__ == "__main__":
     #build_mode = peano4.output.CompileMode.Release
     
     dimensions = 3
-    end_time = 1.0
+    end_time = 3.0
     snapshots = time_step_size*40
     #snapshots = 0
 

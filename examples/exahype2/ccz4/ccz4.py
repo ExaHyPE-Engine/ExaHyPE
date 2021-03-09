@@ -317,8 +317,9 @@ if __name__ == "__main__":
         "Metric.f90 ", "C2P-FOCCZ4.f90 ","ADMConstraints.f90"] 
     )
       
-    peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
-    
+    #peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
+    peano4_project.constants.export_string( "Scenario", "linearwave-c++" )
+
     peano4_project.generate( throw_away_data_after_generation=False )
     
     peano4_project.build( make_clean_first = False )
