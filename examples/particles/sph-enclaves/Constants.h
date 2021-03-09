@@ -4,8 +4,8 @@
 // www.peano-framework.org
 // This is generated. Be careful with adding your own stuff
 //
-#ifndef __PEANOSPH_ENCLAVESPH_CONSTANTS__
-#define __PEANOSPH_ENCLAVESPH_CONSTANTS__
+#ifndef __ENCLAVESPH_CONSTANTS__
+#define __ENCLAVESPH_CONSTANTS__
 
 
 #include <string>
@@ -14,7 +14,6 @@
 
 
 
-namespace peanosph{
 namespace enclavesph{
 
   const double GAMMA = 1.6666666666666667;
@@ -29,7 +28,6 @@ namespace enclavesph{
   const auto DOMAIN_SIZE = {1.0, 1.0};
   const auto EXPLOSION_CENTRE = {0.5, 0.5};
 
-}
 }
 
 

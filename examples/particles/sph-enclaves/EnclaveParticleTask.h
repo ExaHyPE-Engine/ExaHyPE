@@ -20,23 +20,23 @@ class peano4::EnclaveParticleTask: public tarch::multicore::Task {
 
     static tarch::logging::Log _log;
 
-    const std::forward_list<peanosph::enclavesph::globaldata::Particle*> _activeParticles;
-    const std::forward_list<peanosph::enclavesph::globaldata::Particle*> _localParticles;
-    const peano4::datamanagement::VertexEnumerator<peanosph::enclavesph::vertexdata::VertexTaskCounter> _taskCounters;
+    const std::forward_list<enclavesph::globaldata::Particle*> _activeParticles;
+    const std::forward_list<enclavesph::globaldata::Particle*> _localParticles;
+    const peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> _taskCounters;
 
     std::function<void(
-      const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& activeParticles,
-      const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& localParticles
+      const std::forward_list<enclavesph::globaldata::Particle*>& activeParticles,
+      const std::forward_list<enclavesph::globaldata::Particle*>& localParticles
     )> _functor;
 
   public:
     EnclaveParticleTask(
-      const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& activeParticles,
-      const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& localParticles,
-      const peano4::datamanagement::VertexEnumerator<peanosph::enclavesph::vertexdata::VertexTaskCounter>& taskCounters,
+      const std::forward_list<enclavesph::globaldata::Particle*>& activeParticles,
+      const std::forward_list<enclavesph::globaldata::Particle*>& localParticles,
+      const peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter>& taskCounters,
       std::function<void(
-        const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& activeParticles,
-        const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& localParticles
+        const std::forward_list<enclavesph::globaldata::Particle*>& activeParticles,
+        const std::forward_list<enclavesph::globaldata::Particle*>& localParticles
       )> functor
     );
 

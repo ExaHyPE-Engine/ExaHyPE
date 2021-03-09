@@ -8,12 +8,12 @@ tarch::logging::Log  peano4::EnclaveParticleTask::_log( "peano4::EnclaveParticle
 
 
 peano4::EnclaveParticleTask::EnclaveParticleTask(
-  const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& activeParticles,
-  const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& localParticles,
-  const peano4::datamanagement::VertexEnumerator<peanosph::enclavesph::vertexdata::VertexTaskCounter>& taskCounters,
+  const std::forward_list<enclavesph::globaldata::Particle*>& activeParticles,
+  const std::forward_list<enclavesph::globaldata::Particle*>& localParticles,
+  const peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter>& taskCounters,
   std::function<void(
-    const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& activeParticles,
-    const std::forward_list<peanosph::enclavesph::globaldata::Particle*>& localParticles
+    const std::forward_list<enclavesph::globaldata::Particle*>& activeParticles,
+    const std::forward_list<enclavesph::globaldata::Particle*>& localParticles
   )> functor
 ):
   tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority),

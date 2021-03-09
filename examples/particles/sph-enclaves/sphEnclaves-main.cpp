@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
   peano4::initParallelEnvironment(&argc,&argv);
   peano4::fillLookupTables();
-  peanosph::enclavesph::repositories::DataRepository::initDatatypes();
+  enclavesph::repositories::DataRepository::initDatatypes();
   peano4::initSingletons(
     DomainOffset,
     DomainSize,
@@ -96,7 +96,7 @@ int main(int argc, char** argv) {
     //
     int gridConstructionSteps = 0;
     while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
-      peanosph::enclavesph::observers::CreateGrid observer;
+      enclavesph::observers::CreateGrid observer;
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
       gridConstructionSteps++;
       tarch::logging::CommandLineLogger::getInstance().closeOutputStreamAndReopenNewOne();
@@ -104,18 +104,18 @@ int main(int argc, char** argv) {
 
     logInfo( "main()", "finished grid construction after " << gridConstructionSteps << " steps, start timestepping" )
 
-    peanosph::enclavesph::observers::Plot observer;
+    enclavesph::observers::Plot observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     logInfo( "main()", "dumped initial condition" )
     for (int i=0; i<1; i++) {
-      for (int j=0; j<2; j++) {
-        peanosph::enclavesph::observers::PrimaryTraversal primaryObserver;
+      for (int j=0; j<1; j++) {
+        enclavesph::observers::PrimaryTraversal primaryObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(primaryObserver);
-        peanosph::enclavesph::observers::SecondaryTraversal secondaryObserver;
+        enclavesph::observers::SecondaryTraversal secondaryObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(secondaryObserver);
       }
       logInfo( "main()", "plot" )
-      peanosph::enclavesph::observers::Plot observer;
+      enclavesph::observers::Plot observer;
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
 
       tarch::logging::CommandLineLogger::getInstance().closeOutputStreamAndReopenNewOne();
@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
   #endif
 
   peano4::shutdownSingletons();
-  peanosph::enclavesph::repositories::DataRepository::shutdownDatatypes();
+  enclavesph::repositories::DataRepository::shutdownDatatypes();
   peano4::shutdownParallelEnvironment();
 
   return ExitCodeSuccess;

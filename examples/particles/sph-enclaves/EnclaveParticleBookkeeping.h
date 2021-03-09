@@ -19,10 +19,9 @@ namespace peano4 {
 
 
 /**
- * Enclave bookkeeping
+ * Enclave Particle Bookkeeping
  *
- * The enclave bookkeeping is basically a big map which stores results of
- * enclave tasks.
+ * Based on the ExaHyPE2 Enclave Bookkeeping but adapted for PIDT applications.
  */
 class peano4::EnclaveParticleBookkeeping {
   private:
@@ -32,8 +31,7 @@ class peano4::EnclaveParticleBookkeeping {
     const static std::string LookupMissesIdentifier;
 
     /**
-     * Plain map onto ouput array. See lifecycle discussion of EnclaveParticleTask
-     * for details.
+     * Plain set to record finished tasks.
      */
     std::unordered_set<int> _finishedTasks;
 
@@ -44,20 +42,33 @@ class peano4::EnclaveParticleBookkeeping {
   public:
     static EnclaveParticleBookkeeping& getInstance();
 
+    /**
+     * Spawn a new enclave task.
+     *
+     * Spawn EnclaveParticleTasks through this method to correctly/thread-safely
+     * increment vertex counters.
+     */
     void spawnTask(EnclaveParticleTask* task, peano4::parallel::Tasks::TaskType priority, const std::string& location);
+
+    /**
+     * Called per cell during secondary traversal.
+     *
+     * Waits for the task spawned in the calling cell to complete, as well as
+     * the tasks spawned in the (3^D) - 1 neighbouring cells.
+     */
+    void waitForTasksToTerminate(const peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter>& taskCounters);
+
+    /**
+     * Called directly by EnclaveParticleTask.
+     *
+     * Correctly/thread-safely decrement vertex counters.
+     */
+    void finishedTask(int taskNumber, const peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter>& taskCounters);
 
     /**
      * For debugging only. This routine is not thread-safe.
      */
     void dumpStatistics();
-
-    void waitForTasksToTerminate(int number, const peano4::datamanagement::VertexEnumerator<peanosph::enclavesph::vertexdata::VertexTaskCounter>& taskCounters);
-
-    /**
-     * Called directly by EnclaveParticleTask.
-     *
-     */
-    void finishedTask(int taskNumber, const peano4::datamanagement::VertexEnumerator<peanosph::enclavesph::vertexdata::VertexTaskCounter>& taskCounters);
 };
 
 #endif

@@ -39,17 +39,16 @@ void peano4::EnclaveParticleBookkeeping::dumpStatistics() {
 }
 
 
-void peano4::EnclaveParticleBookkeeping::waitForTasksToTerminate(int number, const peano4::datamanagement::VertexEnumerator<peanosph::enclavesph::vertexdata::VertexTaskCounter>& taskCounters) {
+void peano4::EnclaveParticleBookkeeping::waitForTasksToTerminate(const peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter>& taskCounters) {
   logDebug( "waitForTaskToTerminate(int)", "check for completion of task " << number );
   tarch::multicore::Lock finishedTasksLock( _tasksSemaphore );
-  bool isContained = _finishedTasks.count( number );
   bool adjacentTasksCompleted = true;
   for (int i=0; i<TwoPowerD; i++) {
     adjacentTasksCompleted &= taskCounters(i).getNumTasksRemaining() == 0;
   }
   finishedTasksLock.free();
 
-  while (not (isContained and adjacentTasksCompleted)) {
+  while (not adjacentTasksCompleted) {
     ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
 
     bool processedTasks = ::tarch::multicore::processPendingTasks(ThreePowerD);
@@ -59,19 +58,9 @@ void peano4::EnclaveParticleBookkeeping::waitForTasksToTerminate(int number, con
     }
 
     finishedTasksLock.lock();
-    if (not isContained) {
-      isContained = _finishedTasks.count( number );
-      if (isContained) {
-        _finishedTasks.erase( number );
-        tarch::multicore::releaseTaskNumber(number);
-      }
-    }
-
-    if (not adjacentTasksCompleted) {
-      adjacentTasksCompleted = true;
-      for (int i=0; i<TwoPowerD; i++) {
-        adjacentTasksCompleted &= taskCounters(i).getNumTasksRemaining() == 0;
-      }
+    adjacentTasksCompleted = true;
+    for (int i=0; i<TwoPowerD; i++) {
+      adjacentTasksCompleted &= taskCounters(i).getNumTasksRemaining() == 0;
     }
     finishedTasksLock.free();
   }
@@ -95,7 +84,7 @@ void peano4::EnclaveParticleBookkeeping::spawnTask(EnclaveParticleTask* task, pe
 }
 
 
-void peano4::EnclaveParticleBookkeeping::finishedTask(int taskNumber, const peano4::datamanagement::VertexEnumerator<peanosph::enclavesph::vertexdata::VertexTaskCounter>& taskCounters) {
+void peano4::EnclaveParticleBookkeeping::finishedTask(int taskNumber, const peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter>& taskCounters) {
   logDebug( "finishedTask()", "task " << taskNumber << " has terminated. Bookkeep results" );
   tarch::multicore::Lock lockFinishedTasks( _tasksSemaphore );
   assertionEquals( _finishedTasks.count(taskNumber),0 );
