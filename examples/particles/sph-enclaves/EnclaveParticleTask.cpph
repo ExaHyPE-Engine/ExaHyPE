@@ -1,0 +1,45 @@
+#include "EnclaveParticleTask.h"
+#include "EnclaveParticleBookkeeping.h"
+
+#include "tarch/multicore/Core.h"
+
+template <class Particle, class VTC>
+tarch::logging::Log  peano4::EnclaveParticleTask<Particle, VTC>::_log( "peano4::EnclaveParticleTask" );
+
+template <class Particle, class VTC>
+peano4::EnclaveParticleTask<Particle, VTC>::EnclaveParticleTask(
+  const std::forward_list<Particle*>& activeParticles,
+  const std::forward_list<Particle*>& localParticles,
+  const peano4::datamanagement::VertexEnumerator<VTC>& taskCounters,
+  std::function<void(
+    const std::forward_list<Particle*>& activeParticles,
+    const std::forward_list<Particle*>& localParticles
+  )> functor
+):
+  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority),
+  _activeParticles(activeParticles),
+  _localParticles(localParticles),
+  _taskCounters(taskCounters),
+  _functor(functor)
+{
+  logTraceIn( "EnclaveParticleTask(...)" );
+  logTraceOut( "EnclaveParticleTask(...)" );
+}
+
+template <class Particle, class VTC>
+bool peano4::EnclaveParticleTask<Particle, VTC>::run() {
+  logTraceIn( "run()" );
+
+  _functor(_activeParticles, _localParticles);
+
+  EnclaveParticleBookkeeping<Particle, VTC>::getInstance().finishedTask(getTaskId(), _taskCounters);
+
+  logTraceOut( "run()" );
+  return false;
+}
+
+template <class Particle, class VTC>
+void peano4::EnclaveParticleTask<Particle, VTC>::prefetch() {
+  logTraceIn( "prefetch()" );
+  logTraceOut( "prefetch()" );
+}

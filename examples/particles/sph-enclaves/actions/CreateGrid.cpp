@@ -56,7 +56,8 @@ void enclavesph::actions::CreateGrid::createPersistentVertex(
       enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
   tarch::la::Vector<Dimensions,double>  debugX = marker.x();
   tarch::la::Vector<Dimensions,double>  debugH = marker.h();
@@ -123,7 +124,8 @@ void enclavesph::actions::CreateGrid::destroyPersistentVertex(
       enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.
@@ -140,7 +142,8 @@ void enclavesph::actions::CreateGrid::createHangingVertex(
       enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.
@@ -157,7 +160,8 @@ void enclavesph::actions::CreateGrid::destroyHangingVertex(
       enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.
@@ -174,9 +178,14 @@ void enclavesph::actions::CreateGrid::touchVertexFirstTime(
       enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
-  // fineGridVertexVertexTaskCounter.setNumTasksRemaining(0);
+// Feel free to comment in and to add arguments if you want to trace them.
+// Ensure the logTraceOut is activated, too, if you switch on traceIn.
+// logTraceIn( "touchVertexFirstTime()" );
+// @todo Please implement
+// logTraceOut( "touchVertexFirstTime()" );
 
 }
 
@@ -187,7 +196,8 @@ void enclavesph::actions::CreateGrid::touchVertexLastTime(
       enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.
@@ -203,9 +213,11 @@ void enclavesph::actions::CreateGrid::createCell(
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> fineGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> fineGridVerticesVertexTaskCounter,
       enclavesph::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& fineGridCellCellTaskLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.
@@ -221,9 +233,11 @@ void enclavesph::actions::CreateGrid::destroyCell(
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> fineGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> fineGridVerticesVertexTaskCounter,
       enclavesph::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& fineGridCellCellTaskLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.
@@ -239,9 +253,11 @@ void enclavesph::actions::CreateGrid::touchCellFirstTime(
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> fineGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> fineGridVerticesVertexTaskCounter,
       enclavesph::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& fineGridCellCellTaskLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.
@@ -257,9 +273,11 @@ void enclavesph::actions::CreateGrid::touchCellLastTime(
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> fineGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> fineGridVerticesVertexTaskCounter,
       enclavesph::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& fineGridCellCellTaskLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
-      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+      enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
+      enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
 // Feel free to comment in and to add arguments if you want to trace them.
 // Ensure the logTraceOut is activated, too, if you switch on traceIn.
