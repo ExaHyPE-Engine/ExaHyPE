@@ -61,7 +61,7 @@ class ExtractFineGridFilter( Filter ):
     return result
   
   
-  def render(self, cell_data, dof, dimension, unknowns, description, mapping):
+  def render(self, cell_data, dof, dimensions, unknowns, description, mapping):
     """
     
       Overwrite this one for the particular filter. 
@@ -117,5 +117,5 @@ class ExtractFineGridFilter( Filter ):
     if self.verbose:
       print( "extracted " + str( new_num_patches ) + " from the " + str( len(cell_data) ) + " patch(es)" )
 
-    return result_cell_data, dof, dimension, unknowns, description, mapping
+    return result_cell_data, dof, dimensions, unknowns, description, mapping
   
