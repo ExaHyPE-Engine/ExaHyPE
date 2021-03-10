@@ -6,39 +6,40 @@
 
 #include <functional>
 #include <forward_list>
+#include <array>
 
 namespace peano4 {
-  template <class Particle, class VTC>
+  template <class Particle>
   class EnclaveParticleTask;
 
-  template <class Particle, class VTC>
+  template <class Particle>
   class EnclaveParticleBookkeeping;
 }
 
-template <class Particle, class VTC>
+template <class Particle>
 class peano4::EnclaveParticleTask: public tarch::multicore::Task {
   private:
-    friend class EnclaveParticleBookkeeping<Particle, VTC>;
+    friend class EnclaveParticleBookkeeping<Particle>;
 
     static tarch::logging::Log _log;
 
-    const std::forward_list<Particle*> _activeParticles;
-    const std::forward_list<Particle*> _localParticles;
-    const peano4::datamanagement::VertexEnumerator<VTC> _taskCounters;
+    std::forward_list<Particle*> _activeParticles;
+    std::forward_list<Particle*> _localParticles;
+    const std::array<int, TwoPowerD> _vertexIds;
 
     std::function<void(
-      const std::forward_list<Particle*>& activeParticles,
-      const std::forward_list<Particle*>& localParticles
+      std::forward_list<Particle*>& activeParticles,
+      std::forward_list<Particle*>& localParticles
     )> _functor;
 
   public:
     EnclaveParticleTask(
-      const std::forward_list<Particle*>& activeParticles,
-      const std::forward_list<Particle*>& localParticles,
-      const peano4::datamanagement::VertexEnumerator<VTC>& taskCounters,
+      std::forward_list<Particle*>& activeParticles,
+      std::forward_list<Particle*>& localParticles,
+      const std::array<int, TwoPowerD>& vertexIds,
       std::function<void(
-        const std::forward_list<Particle*>& activeParticles,
-        const std::forward_list<Particle*>& localParticles
+        std::forward_list<Particle*>& activeParticles,
+        std::forward_list<Particle*>& localParticles
       )> functor
     );
 

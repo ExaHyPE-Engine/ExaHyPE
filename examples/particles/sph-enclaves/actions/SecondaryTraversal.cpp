@@ -52,9 +52,9 @@ void enclavesph::actions::SecondaryTraversal::endTraversal(
 void enclavesph::actions::SecondaryTraversal::createPersistentVertex(
       const peano4::datamanagement::VertexMarker& marker,
       enclavesph::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
+      enclavesph::vertexdata::VertexLabel& fineGridVertexVertexLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
@@ -70,9 +70,9 @@ void enclavesph::actions::SecondaryTraversal::createPersistentVertex(
 void enclavesph::actions::SecondaryTraversal::destroyPersistentVertex(
       const peano4::datamanagement::VertexMarker& marker,
       enclavesph::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
+      enclavesph::vertexdata::VertexLabel& fineGridVertexVertexLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
@@ -88,9 +88,9 @@ void enclavesph::actions::SecondaryTraversal::destroyPersistentVertex(
 void enclavesph::actions::SecondaryTraversal::createHangingVertex(
       const peano4::datamanagement::VertexMarker& marker,
       enclavesph::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
+      enclavesph::vertexdata::VertexLabel& fineGridVertexVertexLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
@@ -106,9 +106,9 @@ void enclavesph::actions::SecondaryTraversal::createHangingVertex(
 void enclavesph::actions::SecondaryTraversal::destroyHangingVertex(
       const peano4::datamanagement::VertexMarker& marker,
       enclavesph::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
+      enclavesph::vertexdata::VertexLabel& fineGridVertexVertexLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
@@ -124,9 +124,9 @@ void enclavesph::actions::SecondaryTraversal::destroyHangingVertex(
 void enclavesph::actions::SecondaryTraversal::touchVertexFirstTime(
       const peano4::datamanagement::VertexMarker& marker,
       enclavesph::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
+      enclavesph::vertexdata::VertexLabel& fineGridVertexVertexLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
@@ -142,9 +142,9 @@ void enclavesph::actions::SecondaryTraversal::touchVertexFirstTime(
 void enclavesph::actions::SecondaryTraversal::touchVertexLastTime(
       const peano4::datamanagement::VertexMarker& marker,
       enclavesph::vertexdata::ParticleSet& fineGridVertexParticleSet,
-      enclavesph::vertexdata::VertexTaskCounter& fineGridVertexVertexTaskCounter,
+      enclavesph::vertexdata::VertexLabel& fineGridVertexVertexLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
@@ -179,11 +179,11 @@ void enclavesph::actions::SecondaryTraversal::touchVertexLastTime(
 void enclavesph::actions::SecondaryTraversal::createCell(
       const peano4::datamanagement::CellMarker& marker,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> fineGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> fineGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> fineGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& fineGridCellCellTaskLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
@@ -199,11 +199,11 @@ void enclavesph::actions::SecondaryTraversal::createCell(
 void enclavesph::actions::SecondaryTraversal::destroyCell(
       const peano4::datamanagement::CellMarker& marker,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> fineGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> fineGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> fineGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& fineGridCellCellTaskLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
@@ -219,11 +219,11 @@ void enclavesph::actions::SecondaryTraversal::destroyCell(
 void enclavesph::actions::SecondaryTraversal::touchCellFirstTime(
       const peano4::datamanagement::CellMarker& marker,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> fineGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> fineGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> fineGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& fineGridCellCellTaskLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 
@@ -239,11 +239,11 @@ void enclavesph::actions::SecondaryTraversal::touchCellFirstTime(
 void enclavesph::actions::SecondaryTraversal::touchCellLastTime(
       const peano4::datamanagement::CellMarker& marker,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> fineGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> fineGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> fineGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& fineGridCellCellTaskLabel,
       peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
-      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexTaskCounter> coarseGridVerticesVertexTaskCounter,
+      peano4::datamanagement::VertexEnumerator<enclavesph::vertexdata::VertexLabel> coarseGridVerticesVertexLabel,
       enclavesph::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics,
       enclavesph::celldata::CellTaskLabel& coarseGridCellCellTaskLabel) {
 

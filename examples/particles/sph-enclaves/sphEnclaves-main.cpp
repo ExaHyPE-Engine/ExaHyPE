@@ -107,8 +107,8 @@ int main(int argc, char** argv) {
     enclavesph::observers::Plot observer;
     peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
     logInfo( "main()", "dumped initial condition" )
-    for (int i=0; i<1; i++) {
-      for (int j=0; j<1; j++) {
+    for (int i=0; i<10; i++) {
+      for (int j=0; j<200; j++) {
         enclavesph::observers::PrimaryTraversal primaryObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(primaryObserver);
         enclavesph::observers::SecondaryTraversal secondaryObserver;

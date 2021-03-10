@@ -3,43 +3,43 @@
 
 #include "tarch/multicore/Core.h"
 
-template <class Particle, class VTC>
-tarch::logging::Log  peano4::EnclaveParticleTask<Particle, VTC>::_log( "peano4::EnclaveParticleTask" );
+template <class Particle>
+tarch::logging::Log  peano4::EnclaveParticleTask<Particle>::_log( "peano4::EnclaveParticleTask" );
 
-template <class Particle, class VTC>
-peano4::EnclaveParticleTask<Particle, VTC>::EnclaveParticleTask(
-  const std::forward_list<Particle*>& activeParticles,
-  const std::forward_list<Particle*>& localParticles,
-  const peano4::datamanagement::VertexEnumerator<VTC>& taskCounters,
+template <class Particle>
+peano4::EnclaveParticleTask<Particle>::EnclaveParticleTask(
+  std::forward_list<Particle*>& activeParticles,
+  std::forward_list<Particle*>& localParticles,
+  const std::array<int, TwoPowerD>& vertexIds,
   std::function<void(
-    const std::forward_list<Particle*>& activeParticles,
-    const std::forward_list<Particle*>& localParticles
+    std::forward_list<Particle*>& activeParticles,
+    std::forward_list<Particle*>& localParticles
   )> functor
 ):
   tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority),
   _activeParticles(activeParticles),
   _localParticles(localParticles),
-  _taskCounters(taskCounters),
+  _vertexIds(vertexIds),
   _functor(functor)
 {
   logTraceIn( "EnclaveParticleTask(...)" );
   logTraceOut( "EnclaveParticleTask(...)" );
 }
 
-template <class Particle, class VTC>
-bool peano4::EnclaveParticleTask<Particle, VTC>::run() {
+template <class Particle>
+bool peano4::EnclaveParticleTask<Particle>::run() {
   logTraceIn( "run()" );
 
   _functor(_activeParticles, _localParticles);
 
-  EnclaveParticleBookkeeping<Particle, VTC>::getInstance().finishedTask(getTaskId(), _taskCounters);
+  EnclaveParticleBookkeeping<Particle>::getInstance().finishedTask(getTaskId(), _vertexIds);
 
   logTraceOut( "run()" );
   return false;
 }
 
-template <class Particle, class VTC>
-void peano4::EnclaveParticleTask<Particle, VTC>::prefetch() {
+template <class Particle>
+void peano4::EnclaveParticleTask<Particle>::prefetch() {
   logTraceIn( "prefetch()" );
   logTraceOut( "prefetch()" );
 }

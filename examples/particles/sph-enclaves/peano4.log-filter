@@ -7,6 +7,7 @@
 debug  tarch                               -1     black
 debug  peano4                              -1     black
 debug  enclavesph                            -1     black
+#debug  peano4::EnclaveParticleBookkeeping   -1    white
 
 info  tarch                                -1     white
 info  peano4                               -1     white
