@@ -8,4 +8,3 @@ from .ParticleAMR                   import ParticleAMR
 from .ParticleParticleInteraction   import ParticleParticleInteraction
 from .ParticleTreeAnalysis          import ParticleTreeAnalysis
 from .UpdateParticleGridAssociation import UpdateParticleGridAssociation
-from .VertexTaskCounter             import VertexTaskCounter
