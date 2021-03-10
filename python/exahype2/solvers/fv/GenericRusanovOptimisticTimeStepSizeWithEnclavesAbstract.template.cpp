@@ -77,49 +77,37 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     MPI_Allreduce(&newTimeStepSize, &_admissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
     #endif
 
-    const double TimeStapSizeDamping = 0.9;
     if ( tarch::la::equals(_timeStepSize,0.0) ) {
-      _timeStepSize  = TimeStapSizeDamping * _admissibleTimeStepSize;
+       const double TimeStapSizeDamping = 0.98;
+       _timeStepSize  = TimeStapSizeDamping * _admissibleTimeStepSize;
+       _previousAdmissibleTimeStepSize = _admissibleTimeStepSize;
     }
-    else if ( _timeStepSize<=_admissibleTimeStepSize) {
+    else if ( _timeStepSize<=_admissibleTimeStepSize ) {
       _timeStamp    += _timeStepSize;
 
-      double growthOfAdmissibleTimeStepSize = _admissibleTimeStepSize / _previousAdmissibleTimeStepSize;
-      if (growthOfAdmissibleTimeStepSize<1.0) {
-        double creepingAverageNewTimeStepSize = 0.5 * (_timeStepSize + _admissibleTimeStepSize);
-        double biasedAverageNewTimeStepSize   = 0.5 * (_timeStepSize + growthOfAdmissibleTimeStepSize * _admissibleTimeStepSize);
-        //double biasedAverageNewTimeStepSize   = growthOfAdmissibleTimeStepSize * creepingAverageNewTimeStepSize;
+      double growthOfAdmissibleTimeStepSize = std::min( 1.0, _admissibleTimeStepSize / _previousAdmissibleTimeStepSize );
 
-        logInfo( 
-          "finishTimeStepSize()", 
-          "pick biased new time step size " << biasedAverageNewTimeStepSize << " instead of creeping average of " << creepingAverageNewTimeStepSize  <<
-          " (admissible step size=" << _admissibleTimeStepSize << ")"
-        );
-        _timeStepSize  = biasedAverageNewTimeStepSize;
-      }
-      else {
-        double creepingAverageNewTimeStepSize = 0.5 * (_timeStepSize + _admissibleTimeStepSize);
+      double biasedCreepingAverageNewTimeStepSize   = std::min( growthOfAdmissibleTimeStepSize * _admissibleTimeStepSize, 0.5 * (_timeStepSize + growthOfAdmissibleTimeStepSize * _admissibleTimeStepSize));
 
-        logInfo( 
-          "finishTimeStepSize()", 
-          "pick new time step size " << creepingAverageNewTimeStepSize  <<
-          " (admissible step size=" << _admissibleTimeStepSize << ")"
-        );
-
-        _timeStepSize  = creepingAverageNewTimeStepSize;
-      }
+      logInfo(
+        "finishTimeStepSize()",
+        "pick biased new time step size " << biasedCreepingAverageNewTimeStepSize << 
+        " (extrapolation of shrinking time step size; admissible step size=" << _admissibleTimeStepSize << ",growth=" << growthOfAdmissibleTimeStepSize << ")"
+      );
+      _timeStepSize                   = biasedCreepingAverageNewTimeStepSize;
+      _previousAdmissibleTimeStepSize = _admissibleTimeStepSize;
     }
     else {
       logInfo(
         "finishTimeStep()",
         "time step size of " << _timeStepSize << " has been too optimistic as max admissible " <<
-        "step size is " << _admissibleTimeStepSize << ". Rollback and recompute time step"
+        "step size is " << _admissibleTimeStepSize << ". Rollback and recompute time step" 
       );
       _solverState  = SolverState::SecondaryWithInvalidRollback;
-      _timeStepSize = TimeStapSizeDamping * _admissibleTimeStepSize;
+      double overshotFactor = _timeStepSize / _admissibleTimeStepSize;
+      _timeStepSize = _admissibleTimeStepSize / overshotFactor;
     }
 
-    _previousAdmissibleTimeStepSize = _admissibleTimeStepSize;
     _admissibleTimeStepSize         = std::numeric_limits<double>::max();
   }
 
