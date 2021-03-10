@@ -6,188 +6,6 @@ import exahype2
 import exahype2.sympy
 
 
-class CCZ4Solver( SuperClass ):
-  def __init__(self, name, patch_size, min_h, max_h ):
-    unknowns = {
-      "G":6,
-      "K":6,
-      "theta":1,
-      "Z":3,
-      "lapse":1,
-      "shift":3,
-      "b":3,
-      "dLapse":3,
-      "dxShift":3,
-      "dyShift":3,
-      "dzShift":3,
-      "dxG":6,
-      "dyG":6,
-      "dzG":6,
-      "traceK":1,
-      "phi":1,
-      "P":3,
-      "K0":1,
-    }
-    
-    number_of_unknowns = 0
-    for i in unknowns:
-      number_of_unknowns += unknowns[i]
-    
-    if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
-       SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
-      SuperClass.__init__( 
-        self,
-        name=name, patch_size=patch_size, 
-        unknowns=number_of_unknowns, 
-        auxiliary_variables=0, 
-        min_h=min_h, max_h=max_h,
-        time_step_size=1e-6
-      )
-    else:
-      SuperClass.__init__( 
-        self,
-        name=name, patch_size=patch_size, 
-        unknowns=number_of_unknowns, 
-        auxiliary_variables=0, 
-        min_h=min_h, max_h=max_h, 
-        time_step_relaxation=0.1
-      )
-      
-    self._solver_template_file_class_name = SuperClass.__name__
-
-    pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
-  
-    self.set_implementation(
-      boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-      flux=exahype2.solvers.fv.PDETerms.None_Implementation,
-      ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-      source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
-    )   
-    
-
-  def get_user_includes(self):
-    """
-    
-     We take this routine to add a few additional include statements.
-     
-    """
-    return SuperClass.get_user_includes(self) + """
-#include "../PDE.h"
-#include "exahype2/PatchUtils.h"    
-"""
-
-
-  def add_constraint_verification(self):
-    """
-     
-     Add the constraint verification code
-     
-     We introduce new auxiliary variables. Prior to each time step, I 
-     compute the Laplacian and store it in the auxiliary variable. This
-     is kind of a material parameter F(Q) which does not feed back into
-     the solution.
-     
-     Changing the number of unknowns a posteriori is a delicate update
-     to the solver, so we invoke the constructor again to be on the safe
-     side.
-     
-    """
-    self._auxiliary_variables = 6
-  
-    self.set_preprocess_reconstructed_patch_kernel( """
-    const int patchSize = """ + str( self._patch.dim[0] ) + """; 
-    double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-    int n_a_v=6;
-    dfor(cell,patchSize) {
-      tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
-      
-      // This constraint routine will evaluate both the solution per voxel
-      // plus the derivative. The latter is something that we don't have, i.e.
-      // we have to reconstruct it manually.
-
-      // See the docu in PDE.h      
-      double gradQ[3*59]={ 0 };
-      
-      // Lets look left vs right and compute the gradient. Then, lets
-      // loop up and down. So we look three times for the respective
-      // directional gradients
-      for (int d=0; d<3; d++) {
-        tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-        tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-        leftCell(d)  -= 1;
-        rightCell(d) += 1;
-        const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
-        const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
-        for(int i=0; i<59; i++) {
-          gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
-        }
-      }
-
-      // We will use a Fortran routine to compute the constraints per 
-      // Finite Volume
-      double constraints[n_a_v]={ 0 };
-
-      // Central cell
-      const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
-     
-      admconstraints_(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
-	  
-      for(int i=0;i<n_a_v;i++){
-        reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
-      }
-    }
-""")
-    
-    self.create_data_structures()
-    self.create_action_sets()
-
-  
-  def add_derivative_calculation(self):
-    """
-     
-     Add the constraint verification code
-     
-     We introduce new auxiliary variables. Prior to each time step, I 
-     compute the Laplacian and store it in the auxiliary variable. This
-     is kind of a material parameter F(Q) which does not feed back into
-     the solution.
-     
-     Changing the number of unknowns a posteriori is a delicate update
-     to the solver, so we invoke the constructor again to be on the safe
-     side.
-     
-    """
-    self._auxiliary_variables = 59*3
-      
-    self.set_preprocess_reconstructed_patch_kernel( """
-    const int patchSize = """ + str( self._patch.dim[0] ) + """; 
-    double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-    dfor(cell,patchSize) {
-      tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
-      const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
-            
-      // Lets look left vs right and compute the gradient. Then, lets
-      // loop up and down. So we look three times for the respective
-      // directional gradients
-      for (int d=0; d<3; d++) {
-        tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-        tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-        leftCell(d)  -= 1;
-        rightCell(d) += 1;
-        const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
-        const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
-        for (int i=0; i<59; i++) {
-          reconstructedPatch[cellSerialised*(59*4)+59+i*3+d] = 
-            ( reconstructedPatch[rightCellSerialised*(59*4)+i] - reconstructedPatch[leftCellSerialised*(59*4)+i] ) / 2.0 / volumeH;
-        }
-      }
-    }
-""")
-    
-    self.create_data_structures()
-    self.create_action_sets()
-
-
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
@@ -206,7 +24,7 @@ if __name__ == "__main__":
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-adaptive-optimistic"],   default="fv-adaptive-enclave",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     args = parser.parse_args()
 
-    #global SuperClass
+    SuperClass = None
     
     if args.implementation=="fv-fixed":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
@@ -223,6 +41,188 @@ if __name__ == "__main__":
     Here is the aderdg test.
     """
     # SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
+
+
+    class CCZ4Solver( SuperClass ):
+      def __init__(self, name, patch_size, min_h, max_h ):
+        unknowns = {
+          "G":6,
+          "K":6,
+          "theta":1,
+          "Z":3,
+          "lapse":1,
+          "shift":3,
+          "b":3,
+          "dLapse":3,
+          "dxShift":3,
+          "dyShift":3,
+          "dzShift":3,
+          "dxG":6,
+          "dyG":6,
+          "dzG":6,
+          "traceK":1,
+          "phi":1,
+          "P":3,
+          "K0":1,
+        }
+        
+        number_of_unknowns = 0
+        for i in unknowns:
+          number_of_unknowns += unknowns[i]
+        
+        if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
+           SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
+          SuperClass.__init__( 
+            self,
+            name=name, patch_size=patch_size, 
+            unknowns=number_of_unknowns, 
+            auxiliary_variables=0, 
+            min_h=min_h, max_h=max_h,
+            time_step_size=1e-6
+          )
+        else:
+          SuperClass.__init__( 
+            self,
+            name=name, patch_size=patch_size, 
+            unknowns=number_of_unknowns, 
+            auxiliary_variables=0, 
+            min_h=min_h, max_h=max_h, 
+            time_step_relaxation=0.1
+          )
+          
+        self._solver_template_file_class_name = SuperClass.__name__
+    
+        pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
+      
+        self.set_implementation(
+          boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          flux=exahype2.solvers.fv.PDETerms.None_Implementation,
+          ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+        )   
+        
+    
+      def get_user_includes(self):
+        """
+        
+         We take this routine to add a few additional include statements.
+         
+        """
+        return SuperClass.get_user_includes(self) + """
+    #include "../PDE.h"
+    #include "exahype2/PatchUtils.h"    
+    """
+    
+    
+      def add_constraint_verification(self):
+        """
+         
+         Add the constraint verification code
+         
+         We introduce new auxiliary variables. Prior to each time step, I 
+         compute the Laplacian and store it in the auxiliary variable. This
+         is kind of a material parameter F(Q) which does not feed back into
+         the solution.
+         
+         Changing the number of unknowns a posteriori is a delicate update
+         to the solver, so we invoke the constructor again to be on the safe
+         side.
+         
+        """
+        self._auxiliary_variables = 6
+      
+        self.set_preprocess_reconstructed_patch_kernel( """
+        const int patchSize = """ + str( self._patch.dim[0] ) + """; 
+        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        int n_a_v=6;
+        dfor(cell,patchSize) {
+          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+          
+          // This constraint routine will evaluate both the solution per voxel
+          // plus the derivative. The latter is something that we don't have, i.e.
+          // we have to reconstruct it manually.
+    
+          // See the docu in PDE.h      
+          double gradQ[3*59]={ 0 };
+          
+          // Lets look left vs right and compute the gradient. Then, lets
+          // loop up and down. So we look three times for the respective
+          // directional gradients
+          for (int d=0; d<3; d++) {
+            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+            leftCell(d)  -= 1;
+            rightCell(d) += 1;
+            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+            for(int i=0; i<59; i++) {
+              gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+            }
+          }
+    
+          // We will use a Fortran routine to compute the constraints per 
+          // Finite Volume
+          double constraints[n_a_v]={ 0 };
+    
+          // Central cell
+          const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+         
+          admconstraints_(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+          
+          for(int i=0;i<n_a_v;i++){
+            reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
+          }
+        }
+    """)
+        
+        self.create_data_structures()
+        self.create_action_sets()
+    
+      
+      def add_derivative_calculation(self):
+        """
+         
+         Add the constraint verification code
+         
+         We introduce new auxiliary variables. Prior to each time step, I 
+         compute the Laplacian and store it in the auxiliary variable. This
+         is kind of a material parameter F(Q) which does not feed back into
+         the solution.
+         
+         Changing the number of unknowns a posteriori is a delicate update
+         to the solver, so we invoke the constructor again to be on the safe
+         side.
+         
+        """
+        self._auxiliary_variables = 59*3
+          
+        self.set_preprocess_reconstructed_patch_kernel( """
+        const int patchSize = """ + str( self._patch.dim[0] ) + """; 
+        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        dfor(cell,patchSize) {
+          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+          const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+                
+          // Lets look left vs right and compute the gradient. Then, lets
+          // loop up and down. So we look three times for the respective
+          // directional gradients
+          for (int d=0; d<3; d++) {
+            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+            leftCell(d)  -= 1;
+            rightCell(d) += 1;
+            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+            for (int i=0; i<59; i++) {
+              reconstructedPatch[cellSerialised*(59*4)+59+i*3+d] = 
+                ( reconstructedPatch[rightCellSerialised*(59*4)+i] - reconstructedPatch[leftCellSerialised*(59*4)+i] ) / 2.0 / volumeH;
+            }
+          }
+        }
+    """)
+        
+        self.create_data_structures()
+        self.create_action_sets()
 
     
     project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4" )
