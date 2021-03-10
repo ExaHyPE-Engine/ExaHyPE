@@ -267,7 +267,7 @@ if __name__ == "__main__":
 
     #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem3" )
 
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
     peano4_project = project.generate_Peano4_project(verbose=True)
     
