@@ -249,7 +249,16 @@ class PerformanceData(object):
 
   def get_time_step_time_step_size(self):
     return [x for x in self._time_step_size]
-      
+  
+  
+  def timesteps(self):
+    """
+    
+     Should maybe eliminate the time steps that are not really steps 
+     
+    """
+    return len(self._time_step_size)    
+
 
   def normalised_time_of_last_time_step(self):
     """
