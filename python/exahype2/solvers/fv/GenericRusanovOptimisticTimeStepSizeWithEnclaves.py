@@ -469,10 +469,11 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
 
 
   def create_data_structures(self):
-    EnclaveTaskingFV.create_data_structures(self)
-
-    self._reconstructed_patch_backup = peano4.datamodel.Patch( (self._patch_size+2,self._patch_size+2,self._patch_size+2), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "ReconstructedBackup" )
+    """
     
+    See EnclaveTasking.create_data_structures()
+    
+    """    
     self._initialisation_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
@@ -523,6 +524,20 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
+
+    EnclaveTaskingFV.create_data_structures(self)
+
+    #
+    # This is pretty annoying with the present code base: I always have to stream
+    # the reconstructed patches through the stacks, as the ordering otherwise would
+    # be messed up.
+    #
+    self._reconstructed_patch_backup = peano4.datamodel.Patch( (self._patch_size+2,self._patch_size+2,self._patch_size+2), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "ReconstructedBackup" )
+    self._reconstructed_patch_backup.generator.store_persistent_condition = self._store_cell_data_default_predicate()
+    self._reconstructed_patch_backup.generator.load_persistent_condition  = self._load_cell_data_default_predicate()
+    self._reconstructed_patch_backup.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
 
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):

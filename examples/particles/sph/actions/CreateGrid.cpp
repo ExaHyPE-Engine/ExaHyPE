@@ -60,38 +60,55 @@ void peanosph::actions::CreateGrid::createPersistentVertex(
   tarch::la::Vector<Dimensions,double>  debugH = marker.h();
   peanosph::globaldata::Particle::MoveState  moveState( peanosph::globaldata::Particle::MoveState::New );
 
-  if (debugH(0) > 0.2) { return; }
+  if (debugH(0) > 0.13) { return; }
 
-  const double h = 0.02;
-  const double restDensity = 1;
-  const double particleSize = 0.01;
-  const double energySpike = 0.1;
-  const double spikeRadius = 0.08;
+  const tarch::la::Vector<Dimensions,double> zero(0.0);
+  const tarch::la::Vector<Dimensions,double> domainOffset(peanosph::DOMAIN_OFFSET);
+  const tarch::la::Vector<Dimensions,double> domainSize(peanosph::DOMAIN_SIZE);
+  const tarch::la::Vector<Dimensions,double> explosionCentre(peanosph::EXPLOSION_CENTRE);
 
-  const double sigma = spikeRadius / 3;
-  const double backgroundU = 1e-5 / (restDensity * (peanosph::GAMMA - 1));
-  const double particleMass = restDensity * std::pow(particleSize, Dimensions);
-  tarch::la::Vector<Dimensions,double> zero(0.0);
-  tarch::la::Vector<Dimensions,double> ones(1.0);
-  tarch::la::Vector<Dimensions,double> explosionCentre(0.5);
-  const int particlesPerAxis = static_cast<int>(marker.h()(0) / particleSize);
+  const double sigma = peanosph::SPIKE_RADIUS / 3;
+  const double backgroundU = 1e-5 / (peanosph::REST_DENSITY * (peanosph::GAMMA - 1));
+  const int particlesPerAxis = static_cast<int>(marker.h()(0) / peanosph::TARGET_PARTICLE_SIZE);
+
+  // Calculate actual particle size and mass
+  const double empty = marker.h()(0) - (particlesPerAxis * peanosph::TARGET_PARTICLE_SIZE);
+  const double particleSize = peanosph::TARGET_PARTICLE_SIZE + (empty / particlesPerAxis);
+  const double particleMass = peanosph::REST_DENSITY * std::pow(particleSize, Dimensions);
 
   const tarch::la::Vector<Dimensions,double> offset = marker.x() - ((particlesPerAxis-1) * particleSize / 2.0);
 
   dfor(k, particlesPerAxis) {
     const tarch::la::Vector<Dimensions,double> x = offset + tarch::la::convertScalar<double>(k) * particleSize;
+    // const tarch::la::Vector<Dimensions,double> x = offset + tarch::la::convertScalar<double>(k) * (particleSize + gap);
 
-    if (tarch::la::allGreaterEquals(x, zero) && tarch::la::allGreaterEquals(ones, x)) {
-        double u = backgroundU;
-        // Gaussian distribution of energy around explosion centre.
-        const tarch::la::Vector<Dimensions,double> offset = x - explosionCentre;
-        if (tarch::la::norm2(offset) < spikeRadius) {
-        u = energySpike * (1.0 / std::pow(std::sqrt(2*tarch::la::PI)*sigma, Dimensions)) * std::pow(tarch::la::E, -tarch::la::norm2(offset)*tarch::la::norm2(offset) / (2*sigma*sigma));
-        }
+    if (tarch::la::allGreaterEquals(x, domainOffset) && tarch::la::allGreaterEquals((domainOffset+domainSize), x)) {
+      double u = backgroundU;
+      // Gaussian distribution of energy around explosion centre.
+      const tarch::la::Vector<Dimensions,double> offset = x - explosionCentre;
+      if (tarch::la::norm2(offset) < peanosph::SPIKE_RADIUS) {
+        u = peanosph::ENERGY_SPIKE * (1.0 / std::pow(std::sqrt(2*tarch::la::PI)*sigma, Dimensions)) * std::pow(tarch::la::E, -tarch::la::norm2(offset)*tarch::la::norm2(offset) / (2*sigma*sigma));
+      }
 
-        fineGridVertexParticleSet.push_back(
-            new peanosph::globaldata::Particle(debugX,debugH,x,moveState,2*h,zero,zero,particleMass,0,0,u,0,h,0,false,0)
-        );
+      fineGridVertexParticleSet.push_back(
+          new peanosph::globaldata::Particle(
+            debugX,
+            debugH,
+            x,
+            moveState,
+            2*peanosph::INITIAL_H,
+            zero,
+            zero,
+            particleMass,
+            0,
+            0,
+            u,
+            0,
+            peanosph::INITIAL_H,
+            peanosph::globaldata::Particle::Step::calcDensity,
+            x
+          )
+      );
     }
   }
 }

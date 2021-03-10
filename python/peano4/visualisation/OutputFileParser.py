@@ -45,6 +45,7 @@ class OutputFileParser(object):
     self.subdomain_number = subdomain_number
     self.mapping          = []
     self.parsed           = False    
+    self.file_contains_patches = False
     
   def _initialise_default_mapping_if_no_mapping_specified(self):
     vertices_per_axis = self.dof
@@ -116,7 +117,9 @@ class OutputFileParser(object):
             self.__parse_meta_data_line( line )
             line = data_file.readline().strip()
           
-        elif this_line.startswith("begin patch"):        
+        elif this_line.startswith("begin patch"):
+          self.file_contains_patches = True
+          
           #Get patch offset
           this_line = data_file.readline().strip()
           line = this_line.strip().split()           
@@ -236,6 +239,10 @@ class OutputFileParser(object):
     if not self.parsed:
       self.parse_file()
 
+    if not self.file_contains_patches:
+      print("Empty patch file")
+      return []
+
     patch_size = self.get_smallest_patch_size()
 
     patch_boundaries_x, patch_boundaries_y, patch_boundaries_z = self.get_patch_boundaries(patch_size)
@@ -252,7 +259,8 @@ class OutputFileParser(object):
           z_axis > (patch_boundaries_z[-1] + patch_size):
         errors.append("Error: Z coordinate out of range")
     if errors:
-      return errors
+      print(errors)
+      return []
 
     x_axis = self.neighbour_if_gap(patch_boundaries_x, x_axis, patch_size)
     y_axis = self.neighbour_if_gap(patch_boundaries_y, y_axis, patch_size)
@@ -273,5 +281,6 @@ class OutputFileParser(object):
             values.append(patch.values[box_number * self.unknowns + i])
 
           return values
-
-    return ["Error probing " + self.file_path]
+    
+    print("Error probing " + self.file_path)
+    return []

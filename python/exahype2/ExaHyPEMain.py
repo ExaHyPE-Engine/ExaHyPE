@@ -27,10 +27,10 @@ class ExaHyPEMain(peano4.runner.DefaultSequence):
 
   def _get_header_file_template(self):
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    
-    return templatefile_prefix+".h.template"
+    return templatefile_prefix+".template.h"
     
     
   def _get_implementation_file_template(self):
     templatefile_prefix = os.path.realpath(__file__).replace( ".pyc", "" ).replace( ".py", "" )    
-    return templatefile_prefix+".cpp.template"
+    return templatefile_prefix+".template.cpp"
 
