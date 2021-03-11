@@ -3,7 +3,7 @@ import argparse
 
 import peano4
 import exahype2
-import exahype2.sympy
+#import exahype2.sympy
 
 
 modes = { 
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.01, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-adaptive-optimistic"],   default="fv-adaptive-enclave",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave"],   default="fv-adaptive-enclave",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     args = parser.parse_args()
 
     SuperClass = None
@@ -34,7 +34,7 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
     if args.implementation=="fv-adaptive-enclave":
        SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
-    if args.implementation=="fv-adaptive-optimistic":
+    if args.implementation=="fv-optimistic-enclave":
        SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
 
     """
@@ -92,7 +92,7 @@ if __name__ == "__main__":
           
         self._solver_template_file_class_name = SuperClass.__name__
     
-        pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
+        #pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
       
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -227,14 +227,21 @@ if __name__ == "__main__":
     
     project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4" )
 
-   
-    if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
+
+    is_aderdg = False
+    try:
+      if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
+        is_aderdg = True
+    except:
+      print( "Warning: ADER-DG no supported on this machine" )
+
+    if is_aderdg:
       my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
-        "CCZ4", order, unknowns, 0, #auxiliary_variables
-        exahype2.solvers.aderdg.Polynomials.Gauss_Legendre, 
-        min_h, max_h, time_step_size,
-        flux = None,
-        ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+          "CCZ4", order, unknowns, 0, #auxiliary_variables
+          exahype2.solvers.aderdg.Polynomials.Gauss_Legendre, 
+          min_h, max_h, time_step_size,
+          flux = None,
+          ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
       my_solver = CCZ4Solver("CCZ4", args.patch_size, args.max_h, args.max_h)
