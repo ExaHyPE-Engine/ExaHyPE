@@ -13,3 +13,5 @@ from .TimeseriesPlots     import plot_time_step_size_per_step
 from .TimeseriesPlots     import plot_runtime_against_simulated_time
 
 from .utils import linear_runtime_trend_line
+from .utils import next_symbol
+from .utils import next_markevery
