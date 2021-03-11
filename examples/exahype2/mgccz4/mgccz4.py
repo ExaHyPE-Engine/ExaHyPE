@@ -321,6 +321,7 @@ if __name__ == "__main__":
     )
       
     peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
+    #peano4_project.constants.export_string( "Scenario", "linearwave-c++" )
     
     peano4_project.generate( throw_away_data_after_generation=False )
     

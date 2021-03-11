@@ -59,10 +59,36 @@ void gaugeWave(
   Q[61] = dxH;
 }
 
+void LinearWave(
+  double * __restrict__ Q, // Q[64+0],
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double t
+) {
+  constexpr int nVars = 64;
+  constexpr double pi = M_PI;
+  constexpr double peak_number = 2.0;
+  constexpr double ICA = 1e-4; ///< Amplitude of the wave, should be very small to keep linearized.
+  double HH     =  ICA*sin( peak_number*pi*( volumeX[0] - t));
+  double dxHH   =  peak_number*pi*ICA*cos( peak_number * pi*(volumeX[0] - t));
+  double dtHH   = -peak_number*pi*ICA*cos( peak_number * pi*(volumeX[0] - t));
+  memset(Q, .0, nVars*sizeof(double));
+  Q[0]  = 1.0  ;		//\tilde(\gamma)_xx
+  Q[3]  = 1+HH ;		//\tilde(\gamma)_yy
+  Q[5]  = 1-HH ;		//\tilde(\gamma)_zz
+  Q[6]  = 0.0	    ;		//\tilde(A)_xx
+  Q[9]  = -0.5*dtHH ;		//\tilde(A)_yy
+  Q[11] = 0.5*dtHH  ;		//\tilde(A)_zz
+  Q[16] = log(1.0) ;		//ln(\alpha)
+  Q[35] = 0.0       ;		//D_xxx
+  Q[38] = 0.5*dxHH  ;		//D_xyy
+  Q[40] = -0.5*dxHH ;		//D_xzz
+  Q[54] = log(1.0) ;		//ln(\phi)
+}
 
 examples::exahype2::mgccz4::MGCCZ4::MGCCZ4() {
-  if ( Scenario=="gaugewave-c++" ) {
-    const char* name = "GaugeWave";
+  if ( Scenario=="gaugewave-c++" || Scenario=="linearwave-c++") {
+    const char* name = "GaugeWave";//it is a workaround, take care when they use different para setting!
     int length = strlen(name);
     initparameters_(&length, name);
   }
@@ -105,6 +131,9 @@ void examples::exahype2::mgccz4::MGCCZ4::adjustSolution(
   if (tarch::la::equals(t,0.0) ) {
     if ( Scenario=="gaugewave-c++" ) {
       gaugeWave(Q, volumeX, volumeH, t);
+    }
+    else if ( Scenario=="linearwave-c++" ) {
+      LinearWave(Q, volumeX, volumeH, t);
     }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );

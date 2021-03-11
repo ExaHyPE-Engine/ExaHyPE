@@ -227,7 +227,6 @@ if __name__ == "__main__":
     
     project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4" )
 
-
     is_aderdg = False
     try:
       if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
@@ -272,7 +271,7 @@ if __name__ == "__main__":
     
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem3" )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem" )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
