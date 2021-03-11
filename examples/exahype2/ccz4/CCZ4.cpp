@@ -65,7 +65,7 @@ void LinearWave(
   constexpr int nVars = 59;
   constexpr double pi = M_PI;
   constexpr double peak_number = 2.0;
-  constexpr double ICA = 1e-8; ///< Amplitude of the wave, should be very small to keep linearized.
+  constexpr double ICA = 1e-4; ///< Amplitude of the wave, should be very small to keep linearized.
   double HH     =  ICA*sin( peak_number*pi*( volumeX[0] - t));
   double dxHH   =  peak_number*pi*ICA*cos( peak_number * pi*(volumeX[0] - t));
   double dtHH   = -peak_number*pi*ICA*cos( peak_number * pi*(volumeX[0] - t));
@@ -85,7 +85,7 @@ void LinearWave(
 
 examples::exahype2::ccz4::CCZ4::CCZ4() {
   if ( Scenario=="gaugewave-c++" || Scenario=="linearwave-c++") {
-    const char* name = "GaugeWave";
+    const char* name = "GaugeWave"; //it is a workaround, take care when they use different para setting!
     int length = strlen(name);
     initparameters_(&length, name);
   }

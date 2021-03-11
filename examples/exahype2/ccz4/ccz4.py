@@ -228,10 +228,10 @@ if __name__ == "__main__":
     project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4" )
 
     time_step_size      = 0.001
-    max_h               = 0.4
+    max_h               = 0.2
     #max_h               = 0.2
     min_h               = max_h
-    patch_size          = 6
+    patch_size          = 8
     order               = 3
     unknowns            = 59
     
@@ -285,9 +285,9 @@ if __name__ == "__main__":
     
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem3" )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem" )
 
-    #project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
     peano4_project = project.generate_Peano4_project(verbose=True)
     
