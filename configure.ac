@@ -321,7 +321,7 @@ AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$gpu" = xnvidia ])
 # Vendor-specific toolchain (logging devices, memory allocation libraries, ...)
 #
 AC_ARG_WITH(toolchain,
-  AC_HELP_STRING([--with-toolchain], [build with vendor-specific toolchain [default=no,intel,nvidia,chrome]]),
+  AC_HELP_STRING([--with-toolchain], [build with vendor-specific toolchain [default=no,intel,nvidia,scorep,chrome,gnu]]),
   [ AC_MSG_CHECKING(for toolchain)
     case "${withval}" in
       no)        AC_MSG_RESULT(no);                                toolchain=false ;;
