@@ -444,7 +444,7 @@ class Visualiser(object):
     datasets. It does not work on the command line.
   """
   
-  def __init__(self, file_name, verbose ):
+  def __init__(self, file_name, verbose=False ):
     """
     
      file_name: String
