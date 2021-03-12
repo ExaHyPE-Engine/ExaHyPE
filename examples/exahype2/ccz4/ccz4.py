@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
     parser.add_argument("-cs",   "--cell-size",       dest="max_h",           type=float, default=0.4,  help="Mesh size" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=float, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
-    parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.01, help="Plot step size (0 to switch it off)" )
+    parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave"],   default="fv-adaptive-enclave",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     """
     Here is the aderdg test.
     """
-    # SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
+    SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
 
 
     class CCZ4Solver( SuperClass ):
@@ -231,6 +231,9 @@ if __name__ == "__main__":
     try:
       if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
         is_aderdg = True
+        order = 3
+        unknowns = 59
+        time_step_size = 0.001
     except:
       print( "Warning: ADER-DG no supported on this machine" )
 
@@ -238,9 +241,10 @@ if __name__ == "__main__":
       my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
           "CCZ4", order, unknowns, 0, #auxiliary_variables
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre, 
-          min_h, max_h, time_step_size,
+          args.max_h, args.max_h, time_step_size,
           flux = None,
-          ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
+          ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
+          sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
       my_solver = CCZ4Solver("CCZ4", args.patch_size, args.max_h, args.max_h)
@@ -271,7 +275,7 @@ if __name__ == "__main__":
     
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem" )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -303,8 +307,8 @@ if __name__ == "__main__":
         "Metric.f90 ", "C2P-FOCCZ4.f90 ","ADMConstraints.f90"] 
     )
       
-    #peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
-    peano4_project.constants.export_string( "Scenario", "linearwave-c++" )
+    peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
+    #peano4_project.constants.export_string( "Scenario", "linearwave-c++" )
 
     peano4_project.generate( throw_away_data_after_generation=False )
     
