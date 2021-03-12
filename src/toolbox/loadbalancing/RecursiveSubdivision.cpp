@@ -17,7 +17,7 @@
 tarch::logging::Log  toolbox::loadbalancing::RecursiveSubdivision::_log( "toolbox::loadbalancing::RecursiveSubdivision" );
 
 
-toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double targetBalancingRatio):
+toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(bool hasPeriodicBCs, double targetBalancingRatio):
   _TargetBalancingRatio( targetBalancingRatio ),
   _blacklist(),
   _hasSpreadOutOverAllRanks( false ),
@@ -33,7 +33,8 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double target
   _maxTreeWeightAtLastSplit( std::numeric_limits<int>::max() ),
   _blacklistWeight(MinBlacklistWeight),
   _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff(0),
-  _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff(0) {
+  _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff(0),
+  _hasPeriodicBCs(hasPeriodicBCs) {
   #ifdef Parallel
   _globalSumRequest            = nullptr;
   _globalLightestRankRequest   = nullptr;
@@ -292,7 +293,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
     <
     std::max( 
       tarch::multicore::Core::getInstance().getNumberOfThreads(),
-      tarch::mpi::Rank::getInstance().getNumberOfRanks()
+      tarch::mpi::Rank::getInstance().getNumberOfRanks()*( _hasPeriodicBCs ? ThreePowerD : 1 )
     )
   ) {
     _state = StrategyState::PostponedDecisionDueToLackOfCells;
@@ -507,7 +508,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
       break;
     case StrategyStep::SpreadEquallyOverAllRanks:
       {
-        int cellsPerRank = std::max( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks())), 1);
+        int cellsPerRank = 
+          _hasPeriodicBCs ? 
+          std::max( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks()))-ThreePowerD+1, 1) : 
+          std::max( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks())), 1);
 
         _hasSpreadOutOverAllRanks = true;
 
