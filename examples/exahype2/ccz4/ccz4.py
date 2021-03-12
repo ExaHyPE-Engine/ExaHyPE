@@ -3,7 +3,6 @@ import argparse
 
 import peano4
 import exahype2
-#import exahype2.sympy
 
 
 modes = { 
@@ -21,7 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave"],   default="fv-adaptive-enclave",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave"],   default="fv-adaptive-enclave",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     args = parser.parse_args()
 
@@ -37,12 +36,8 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
     if args.implementation=="fv-optimistic-enclave":
        SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
-
-    """
-    Here is the aderdg test.
-    """
-    SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
-
+    if args.implementation=="ader-fixed":
+       SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
 
     class CCZ4Solver( SuperClass ):
       def __init__(self, name, patch_size, min_h, max_h ):
@@ -240,7 +235,7 @@ if __name__ == "__main__":
 
     if is_aderdg:
       my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
-          "CCZ4", order, unknowns, 0, #auxiliary_variables
+          "ADERDGCCZ4", order, unknowns, 0, #auxiliary_variables
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre, 
           args.max_h, args.max_h, time_step_size,
           flux = None,
@@ -248,7 +243,7 @@ if __name__ == "__main__":
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = CCZ4Solver("CCZ4", args.patch_size, args.max_h, args.max_h)
+      my_solver = CCZ4Solver("FiniteVolumeCCZ4", args.patch_size, args.max_h, args.max_h)
       
       if args.extension=="gradient":
         my_solver.add_derivative_calculation()
@@ -295,7 +290,7 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_Fortran_flag( "-lstdc++ -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy -ffree-line-length-512 -fPIC" )
       peano4_project.output.makefile.add_CXX_flag( "-fPIE" )
       peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -lgfortran" )
-    
+    peano4_project.output.makefile.add_cpp_file( "InitialValue.cpp" )
 
     
     #peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -L/usr/lib/x86_64-linux-gnu -lgfortran" )

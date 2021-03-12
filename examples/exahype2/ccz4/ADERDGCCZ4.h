@@ -6,27 +6,26 @@
 // This is generated. If you change fundamental properties, you will have to 
 // generate this file. Backup your manual changes before you do so.
 //
-#ifndef _examples_exahype2_ccz4_CCZ4_H_
-#define _examples_exahype2_ccz4_CCZ4_H_
+#ifndef _examples_exahype2_ccz4_ADERDG_CCZ4_H_
+#define _examples_exahype2_ccz4_ADERDG_CCZ4_H_
 
 
-#include "AbstractCCZ4.h"
+#include "AbstractADERDGCCZ4.h"
 
 #include "tarch/logging/Log.h"
 
 namespace examples {namespace exahype2 {namespace ccz4 {
-  class CCZ4;
-
+  class ADERDGCCZ4;
 }}}
 
 
 
-class examples::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
+class examples::exahype2::ccz4::ADERDGCCZ4: public AbstractCCZ4 {
   private:
     static tarch::logging::Log   _log;
 
   public:
-    CCZ4();
+    ADERDGCCZ4();
 
 
     

@@ -14,10 +14,13 @@
 
 #include "tarch/logging/Log.h"
 
-namespace examples {namespace exahype2 {namespace ccz4 {
-  class FiniteVolumeCCZ4;
-
-}}}
+namespace examples {
+  namespace exahype2 {
+    namespace ccz4 {
+      class FiniteVolumeCCZ4;
+    }
+  }
+}
 
 
 
@@ -26,8 +29,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
     static tarch::logging::Log   _log;
 
   public:
-    
-
+    FiniteVolumeCCZ4();   
 
     
     void adjustSolution(
