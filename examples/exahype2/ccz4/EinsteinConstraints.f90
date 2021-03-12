@@ -2,12 +2,12 @@ SUBROUTINE EnforceCCZ4Constraints(luh)
     USE MainVariables, ONLY : nVar  
     IMPLICIT NONE
     ! Argument list
-    REAL, INTENT(INOUT)  :: luh(nVar)              ! numerical solution  
+    REAL(8), INTENT(INOUT)  :: luh(nVar)              ! numerical solution  
     ! Local variables
     INTEGER :: i,j,k,l,iVar,iDim, iter
-    REAL    :: Q(nVar) 
-    REAL    :: g_cov(3,3), det, g_contr(3,3), Aex(3,3), traceA, phi  
-    REAL    :: DD(3,3,3), traceDk 
+    REAL(8)    :: Q(nVar) 
+    REAL(8)    :: g_cov(3,3), det, g_contr(3,3), Aex(3,3), traceA, phi  
+    REAL(8)    :: DD(3,3,3), traceDk 
 #if defined(CCZ4EINSTEIN) || defined(CCZ4GRMHD) || defined(CCZ4GRHD) || defined(CCZ4GRGPR) 
     !
             Q = luh(:) 
@@ -33,7 +33,7 @@ SUBROUTINE EnforceCCZ4Constraints(luh)
             g_contr(3,2) = -(Q(1)*Q(5)-Q(2)*Q(3))/ det 
             g_contr(3,3) = (Q(1)*Q(4)-Q(2)**2)   / det 
             !
-            phi = det**(-1./6.) 
+            phi = det**(-1.0D0/6.0D0) 
             g_cov = phi**2*g_cov
             det = (g_cov(1,1)*g_cov(2,2)*g_cov(3,3)-g_cov(1,1)*g_cov(2,3)*g_cov(3,2)-g_cov(2,1)*g_cov(1,2)*g_cov(3,3)+g_cov(2,1)*g_cov(1,3)*g_cov(3,2)+g_cov(3,1)*g_cov(1,2)*g_cov(2,3)-g_cov(3,1)*g_cov(1,3)*g_cov(2,2)) 
             g_contr(1,1) =  (g_cov(2,2)*g_cov(3,3)-g_cov(2,3)*g_cov(3,2)) / det 
@@ -58,7 +58,7 @@ SUBROUTINE EnforceCCZ4Constraints(luh)
             !
             traceA = SUM(g_contr*Aex) 
             !
-            Aex = Aex - 1./3.*g_cov*traceA 
+            Aex = Aex - 1.0D0/3.0D0*g_cov*traceA 
             !
             luh( 1) = g_cov(1,1) 
             luh( 2) = g_cov(1,2) 
@@ -113,7 +113,7 @@ SUBROUTINE EnforceCCZ4Constraints(luh)
             !!
             DO l = 1, 3
                 traceDk = SUM(g_contr*DD(l,:,:))
-                DD(l,:,:) = DD(l,:,:) - 1./3.*g_cov*traceDk
+                DD(l,:,:) = DD(l,:,:) - 1.0D0/3.0D0*g_cov*traceDk
             ENDDO
             !
             luh(36) = DD(1,1,1)

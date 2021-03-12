@@ -7,6 +7,9 @@
 #endif
 
 
+#include "tarch/mpi/Rank.h"
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
   _timeStamp(0.0),
@@ -88,21 +91,23 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       double growthOfAdmissibleTimeStepSize = std::min( 1.0, _admissibleTimeStepSize / _previousAdmissibleTimeStepSize );
 
       double biasedCreepingAverageNewTimeStepSize   = std::min( growthOfAdmissibleTimeStepSize * _admissibleTimeStepSize, 0.5 * (_timeStepSize + growthOfAdmissibleTimeStepSize * _admissibleTimeStepSize));
-
-      logInfo(
-        "finishTimeStepSize()",
-        "pick biased new time step size " << biasedCreepingAverageNewTimeStepSize << 
-        " (extrapolation of shrinking time step size; admissible step size=" << _admissibleTimeStepSize << ",growth=" << growthOfAdmissibleTimeStepSize << ")"
-      );
+ 
+      if (tarch::mpi::Rank::getInstance().isGlobalMaster())
+        logInfo(
+          "finishTimeStepSize()",
+          "pick biased new time step size " << biasedCreepingAverageNewTimeStepSize << 
+          " (extrapolation of shrinking time step size; admissible step size=" << _admissibleTimeStepSize << ",growth=" << growthOfAdmissibleTimeStepSize << ")"
+        );
       _timeStepSize                   = biasedCreepingAverageNewTimeStepSize;
       _previousAdmissibleTimeStepSize = _admissibleTimeStepSize;
     }
     else {
-      logInfo(
-        "finishTimeStep()",
-        "time step size of " << _timeStepSize << " has been too optimistic as max admissible " <<
-        "step size is " << _admissibleTimeStepSize << ". Rollback and recompute time step" 
-      );
+      if (tarch::mpi::Rank::getInstance().isGlobalMaster())
+        logInfo(
+          "finishTimeStep()",
+          "time step size of " << _timeStepSize << " has been too optimistic as max admissible " <<
+          "step size is " << _admissibleTimeStepSize << ". Rollback and recompute time step" 
+       );
       _solverState  = SolverState::SecondaryWithInvalidRollback;
       double overshotFactor = _timeStepSize / _admissibleTimeStepSize;
       _timeStepSize = _admissibleTimeStepSize / overshotFactor;
