@@ -17,11 +17,10 @@
 tarch::logging::Log  toolbox::loadbalancing::RecursiveSubdivision::_log( "toolbox::loadbalancing::RecursiveSubdivision" );
 
 
-toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(bool hasPeriodicBCs, double targetBalancingRatio):
+toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double targetBalancingRatio):
   _TargetBalancingRatio( targetBalancingRatio ),
   _blacklist(),
   _hasSpreadOutOverAllRanks( false ),
-  _hasSpreadOutOverAllCores( false ),
   _localNumberOfInnerUnrefinedCell( 0 ),
   _globalNumberOfInnerUnrefinedCells( 0 ),
   _lightestRank(-1),
@@ -33,8 +32,7 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(bool hasPerio
   _maxTreeWeightAtLastSplit( std::numeric_limits<int>::max() ),
   _blacklistWeight(MinBlacklistWeight),
   _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff(0),
-  _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff(0),
-  _hasPeriodicBCs(hasPeriodicBCs) {
+  _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff(0) {
   #ifdef Parallel
   _globalSumRequest            = nullptr;
   _globalLightestRankRequest   = nullptr;
@@ -55,7 +53,6 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
       << ",global-cell-count=" << _globalNumberOfInnerUnrefinedCells 
       << ",lightest-rank=" << _lightestRank
       << ",has-spread-over-all-ranks=" << _hasSpreadOutOverAllRanks 
-      << ",has-spread-over-all-cores=" << _hasSpreadOutOverAllCores
       << ",round-robin-token=" << _roundRobinToken 
       << ",target-balancing-ratio=" << _TargetBalancingRatio
       << ",max-tree-weight-at-last-split=" << _maxTreeWeightAtLastSplit
@@ -101,16 +98,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::waitForGlobalStatisticsExchan
     MPI_Wait( _globalNumberOfSplitsRequest, MPI_STATUS_IGNORE );
     MPI_Wait( _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffRequest, MPI_STATUS_IGNORE );
 
-    if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-      logDebug( "waitForGlobalStatisticsExchange()", "got " << _globalNumberOfSplitsIn );
-
-      assertion( _globalNumberOfSplitsIn>=0 );
-
-      // rollover
-      _globalNumberOfInnerUnrefinedCells  = static_cast<int>( std::round(_globalNumberOfInnerUnrefinedCellsBufferIn) );
-      _lightestRank                       = _lightestRankBufferIn._rank;
-      _globalNumberOfSplits              += _globalNumberOfSplitsIn;
-    }
+    // rollover
+    _globalNumberOfInnerUnrefinedCells  = static_cast<int>( std::round(_globalNumberOfInnerUnrefinedCellsBufferIn) );
+    _lightestRank                       = _lightestRankBufferIn._rank;
+    _globalNumberOfSplits              += _globalNumberOfSplitsIn;
 
     delete _globalSumRequest;
     delete _globalLightestRankRequest;
@@ -267,10 +258,10 @@ bool toolbox::loadbalancing::RecursiveSubdivision::doesRankViolateBalancingCondi
   bool result = illbalancing > 1.0 - _TargetBalancingRatio;
 
   if (result) {
-    logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (local cells=" << localCells << ", threshold=" << threshold << ", balancing-ratio=" << _TargetBalancingRatio << ")" );
+    logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", threshold=" << threshold << ", balancing-ratio=" << _TargetBalancingRatio << ")" );
   }
   else {
-    logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (local cells=" << localCells << ", threshold=" << threshold << ", balancing-ratio=" << _TargetBalancingRatio << ")" );
+    logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", threshold=" << threshold << ", balancing-ratio=" << _TargetBalancingRatio << ")" );
   }
 
   return result;
@@ -293,7 +284,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
     <
     std::max( 
       tarch::multicore::Core::getInstance().getNumberOfThreads(),
-      tarch::mpi::Rank::getInstance().getNumberOfRanks()*( _hasPeriodicBCs ? ThreePowerD : 1 )
+      tarch::mpi::Rank::getInstance().getNumberOfRanks()
     )
   ) {
     _state = StrategyState::PostponedDecisionDueToLackOfCells;
@@ -372,17 +363,45 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
 
 
   if (
-    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
-    and
-    static_cast<double>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()) < tarch::multicore::Core::getInstance().getNumberOfThreads()
-    and
-    not _hasSpreadOutOverAllCores
+    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==1
     and
     canSplitLocally()
   ) {
+    // @todo Debug
+    logInfo(
+      "getStrategyStep()",
+      "local rank does only employ one thread, so try to spread out locally first"
+    );
     return StrategyStep::SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning;
   }
 
+
+  if (
+    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
+    and
+    rankViolatesBalancingCondition
+    and
+    _state == StrategyState::WaitForRoundRobinToken
+  ) {
+    // @todo Debug
+    logInfo(
+      "getStrategyStep()",
+      "local rank violates global balancing condition, but I'm waiting for round robin token"
+    );
+  }
+  else if (
+    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
+    and
+    rankViolatesBalancingCondition
+    and
+    not canSplitLocally()
+  ) {
+    // @todo Debug
+    logInfo(
+      "getStrategyStep()",
+      "local rank violates global balancing condition, but is not allowed to split"
+    );
+  }
 
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
@@ -396,23 +415,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     return peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()>=tarch::multicore::Core::getInstance().getNumberOfThreads()
          ? StrategyStep::SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning
          : StrategyStep::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning;
-  }
-
-
-  if (
-    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
-    and
-    not rankViolatesBalancingCondition
-    and
-    _state != StrategyState::WaitForRoundRobinToken
-    and
-    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() < tarch::multicore::Core::getInstance().getNumberOfThreads()
-    and
-    canSplitLocally()
-  ) {
-    // @todo debug
-    logInfo( "getStrategyStep()", "rank is well-balanced, but does not yet use all local cores; split up rank's trees further" );
-    return StrategyStep::SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning;
   }
 
   return StrategyStep::Wait;
@@ -509,8 +511,6 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
     case StrategyStep::SpreadEquallyOverAllRanks:
       {
         int cellsPerRank = 
-          _hasPeriodicBCs ? 
-          std::max( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks()))-ThreePowerD+1, 1) : 
           std::max( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks())), 1);
 
         _hasSpreadOutOverAllRanks = true;
@@ -537,8 +537,6 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
           for (int i=0; i<numberOfSplits; i++) {
             triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());
           }
-
-          _hasSpreadOutOverAllCores = true;
         }
       }
       break;
