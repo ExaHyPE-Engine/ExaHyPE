@@ -1,8 +1,8 @@
-#include "CCZ4.h"
+#include "ADERDGCCZ4.h"
+#include "InitialValue.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
 
-#include "FiniteVolumeCCZ4.h"
 
 /** it is for aderdg solver with signatures changed from the one with fv.
  * I manually include this header which in turn declared all the
@@ -22,11 +22,11 @@
 #include <stdio.h>
 #include <string.h>
 
-tarch::logging::Log   examples::exahype2::ccz4::CCZ4::_log( "examples::exahype2::ccz4::CCZ4" );
+tarch::logging::Log   examples::exahype2::ccz4::ADERDGCCZ4::_log( "examples::exahype2::ADERDGCCZ4::CCZ4" );
 
 
 
-examples::exahype2::ccz4::CCZ4::CCZ4() {
+examples::exahype2::ccz4::ADERDGCCZ4::ADERDGCCZ4() {
   if ( Scenario=="gaugewave-c++" ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
@@ -39,7 +39,7 @@ examples::exahype2::ccz4::CCZ4::CCZ4() {
 
 
 
-void examples::exahype2::ccz4::CCZ4::algebraicSources(
+void examples::exahype2::ccz4::ADERDGCCZ4::algebraicSources(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
@@ -58,7 +58,7 @@ void examples::exahype2::ccz4::CCZ4::algebraicSources(
 }
 
 
-void examples::exahype2::ccz4::CCZ4::adjustSolution(
+void examples::exahype2::ccz4::ADERDGCCZ4::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t
@@ -89,7 +89,7 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
 
 
 
-double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
+double examples::exahype2::ccz4::ADERDGCCZ4::maxEigenvalue(
   const double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
@@ -128,7 +128,7 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
 }
 
 
-void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
+void examples::exahype2::ccz4::ADERDGCCZ4::nonconservativeProduct(
   const double * __restrict__                  Q, // Q[64+0],
   const double * __restrict__                  deltaQ, // [64+0]
   const tarch::la::Vector<Dimensions,double>&  x,
@@ -160,7 +160,7 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 
 
 
-void examples::exahype2::ccz4::CCZ4::boundaryConditions(
+void examples::exahype2::ccz4::ADERDGCCZ4::boundaryConditions(
   const double * __restrict__                  Qinside,
   double * __restrict__                        Qoutside,
   const tarch::la::Vector<Dimensions,double>&  x,

@@ -110,7 +110,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
 
     {% if SOURCES_IMPLEMENTATION!="<none>" %}
-    virtual void algebraicSources(
+    virtual void algebraicSource(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,

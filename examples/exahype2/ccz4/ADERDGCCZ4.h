@@ -20,7 +20,7 @@ namespace examples {namespace exahype2 {namespace ccz4 {
 
 
 
-class examples::exahype2::ccz4::ADERDGCCZ4: public AbstractCCZ4 {
+class examples::exahype2::ccz4::ADERDGCCZ4: public AbstractADERDGCCZ4 {
   private:
     static tarch::logging::Log   _log;
 

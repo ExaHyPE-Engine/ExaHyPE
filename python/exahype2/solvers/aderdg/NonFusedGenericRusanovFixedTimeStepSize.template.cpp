@@ -106,15 +106,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
 
 {% if SOURCES_IMPLEMENTATION!="<none>" %}
 {% if SOURCES_IMPLEMENTATION!="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::algebraicSources(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::algebraicSource(
     const double * __restrict__                 Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
     const tarch::la::Vector<Dimensions,double>& x,
     double                                      t,
     double * __restrict__                       S
 ) {
-  logTraceInWith2Arguments( "algebraicSources(...)", x, t );
+  logTraceInWith2Arguments( "algebraicSource(...)", x, t );
   // @todo implement
-  logTraceOut( "algebraicSources(...)" );
+  logTraceOut( "algebraicSource(...)" );
 }
 {% endif %}
 {% endif %}
