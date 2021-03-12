@@ -74,7 +74,7 @@ class examples::exahype2::ccz4::ADERDGCCZ4: public AbstractADERDGCCZ4 {
 
 
     
-    virtual void algebraicSources(
+    virtual void algebraicSource(
       const double * __restrict__ Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,

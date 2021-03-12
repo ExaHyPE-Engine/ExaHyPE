@@ -39,7 +39,7 @@ examples::exahype2::ccz4::ADERDGCCZ4::ADERDGCCZ4() {
 
 
 
-void examples::exahype2::ccz4::ADERDGCCZ4::algebraicSources(
+void examples::exahype2::ccz4::ADERDGCCZ4::algebraicSource(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
