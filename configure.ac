@@ -321,12 +321,13 @@ AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$gpu" = xnvidia ])
 # Vendor-specific toolchain (logging devices, memory allocation libraries, ...)
 #
 AC_ARG_WITH(toolchain,
-  AC_HELP_STRING([--with-toolchain], [build with vendor-specific toolchain [default=no,intel,nvidia,chrome]]),
+  AC_HELP_STRING([--with-toolchain], [build with vendor-specific toolchain [default=no,intel,nvidia,scorep,chrome,gnu]]),
   [ AC_MSG_CHECKING(for toolchain)
     case "${withval}" in
       no)        AC_MSG_RESULT(no);                                toolchain=false ;;
       intel)     AC_MSG_RESULT(build with support for the Intel SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);   toolchain=intel  ;;
       nvidia)    AC_MSG_RESULT(build with support for the NVIDIA SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);  toolchain=nvidia ;;
+      scorep)    AC_MSG_RESULT(build with support for the Score-P - please ensure that CXXFLAGS and LDFLAGS are properly set);  toolchain=scorep ;;
       chrome)    AC_MSG_RESULT(build with logging support for Google Chrome); toolchain=chrome ;;
       gnu)       AC_MSG_RESULT(build with specialised GNU flags); toolchain=gnu ;;
       *)         AC_MSG_FAILURE([default=no (no bespoke toolchain)]); toolchain=false ;;
@@ -344,6 +345,15 @@ if test "$toolchain" == intel; then
   AC_CHECK_HEADERS([VT.h],[],[AC_MSG_ERROR([header <VT.h> not found])])
   LDFLAGS+=-ipo
   CXXFLAGS+=" -ip -ipo "
+fi
+
+
+
+if test "$toolchain" == scorep; then
+  AC_DEFINE([UseLogService], [ScorePLogger], [ScorePLogger])
+  AC_DEFINE([UseScoreP],     [UseScoreP], [UseScoreP])
+  #LDFLAGS+=-ipo
+  #CXXFLAGS+=" -ip -ipo "
 fi
 
 if test "$toolchain" == nvidia; then

@@ -117,7 +117,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      *   almost one means we do not accept any ill-balancing. The smaller the value,
      *   the more relaxed we are.
      */
-    RecursiveSubdivision(double targetBalancingRation=0.8);
+    RecursiveSubdivision(double targetBalancingRation=0.9);
     ~RecursiveSubdivision();
 
     /**
@@ -187,7 +187,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     std::map< int, int>    _blacklist;
 
     bool _hasSpreadOutOverAllRanks;
-    bool _hasSpreadOutOverAllCores;
 
     /**
      * Status variable required to compute good load balancing. 

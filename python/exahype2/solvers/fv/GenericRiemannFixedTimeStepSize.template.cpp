@@ -57,7 +57,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
   // @todo implement
-  logTraceOutWith( "sourceTerm(...)" );
+  logTraceOut( "sourceTerm(...)" );
 }
 {% endif %}
 

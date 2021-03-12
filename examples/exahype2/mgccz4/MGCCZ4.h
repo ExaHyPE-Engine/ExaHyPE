@@ -10,17 +10,17 @@
 #define _examples_exahype2_ccz4_CCZ4_H_
 
 
-#include "AbstractCCZ4.h"
+#include "AbstractMGCCZ4.h"
 
 #include "tarch/logging/Log.h"
 
-namespace examples {namespace exahype2 {namespace ccz4 {
-  class CCZ4;
+namespace examples {namespace exahype2 {namespace mgccz4 {
+  class MGCCZ4;
 }}}
 
 
 
-class examples::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
+class examples::exahype2::mgccz4::MGCCZ4: public AbstractMGCCZ4 {
   private:
     static tarch::logging::Log   _log;
 
@@ -32,7 +32,7 @@ class examples::exahype2::ccz4::CCZ4: public AbstractCCZ4 {
      * proper initialisation of the logging et al. Therefore, I don't
      * use any log statements here.
      */
-    CCZ4(); 
+    MGCCZ4(); 
     
     
     /**
