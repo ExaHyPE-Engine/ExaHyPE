@@ -51,7 +51,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
   logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
     if ( Scenario=="gaugewave-c++" ) {
-      gaugeWave(Q, volumeX, t);
+      examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
     }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
@@ -143,6 +143,7 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
     result = std::max(result,std::abs(lambda[i]));
   }
   logTraceOut( "maxEigenvalue(...)" );
+  return result;
 }
 
 
