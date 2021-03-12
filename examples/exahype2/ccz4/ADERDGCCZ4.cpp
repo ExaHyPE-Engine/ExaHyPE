@@ -1,6 +1,8 @@
-#include "CCZ4.h"
+#include "ADERDGCCZ4.h"
+#include "InitialValue.h"
 #include "exahype2/RefinementControl.h"
 #include "exahype2/NonCriticalAssertions.h"
+
 
 /** it is for aderdg solver with signatures changed from the one with fv.
  * I manually include this header which in turn declared all the
@@ -20,43 +22,11 @@
 #include <stdio.h>
 #include <string.h>
 
-tarch::logging::Log   examples::exahype2::ccz4::CCZ4::_log( "examples::exahype2::ccz4::CCZ4" );
-
-void gaugeWave(
-  double * __restrict__ Q, // Q[64+0],
-  const tarch::la::Vector<Dimensions,double>&  x,
-  double t
-) {
-  constexpr int nVars = 59;
-  constexpr double pi = M_PI;
-  constexpr double peak_number = 2.0;
-  constexpr double ICA = 0.1; ///< Amplitude of the wave
-  double HH     = 1.0 - ICA*sin( peak_number*pi*( x[0] - t));
-  double dxH    = -peak_number*pi*ICA*cos( peak_number * pi*(x[0] - t));
-  double dxphi  = - pow(HH,(-7.0/6.0))*dxH/6.0;
-  double phi    = pow(( 1.0 / HH),(1.0/6.0));
-  double Kxx    = - 0.5*peak_number*pi*ICA*cos( peak_number * pi*(x[0] - t))/sqrt( 1.0 - ICA*sin( peak_number*pi*( x[0] - t))  );
-  double traceK = Kxx/HH;
-  memset(Q, .0, nVars*sizeof(double));
-  Q[0]  = phi*phi*HH ;
-  Q[3]  = phi*phi  ;
-  Q[5]  = phi*phi                            ;
-  Q[6]  = phi*phi*(Kxx - 1.0/3.0*traceK*HH ) ;
-  Q[9] =  phi*phi*(0.0 - 1.0/3.0*traceK*1.0) ;
-  Q[11] = phi*phi*(0.0 - 1.0/3.0*traceK*1.0)  ;
-  Q[16] = log(sqrt(HH));
-  Q[13] = 2.0/(3.0*pow(HH,(5.0/3.0)))*dxH        ;
-  Q[23] = 1.0/(2.0*HH)*dxH               ;
-  Q[35] = pow(HH,(-1.0/3.0))*dxH/3.0         ;
-  Q[38] = phi*dxphi                     ;
-  Q[40] = phi*dxphi                    ;
-  Q[53] = traceK;
-  Q[54] = log(phi);
-  Q[55] = dxphi/phi;
-}
+tarch::logging::Log   examples::exahype2::ccz4::ADERDGCCZ4::_log( "examples::exahype2::ADERDGCCZ4::CCZ4" );
 
 
-examples::exahype2::ccz4::CCZ4::CCZ4() {
+
+examples::exahype2::ccz4::ADERDGCCZ4::ADERDGCCZ4() {
   if ( Scenario=="gaugewave-c++" ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
@@ -69,7 +39,7 @@ examples::exahype2::ccz4::CCZ4::CCZ4() {
 
 
 
-void examples::exahype2::ccz4::CCZ4::algebraicSources(
+void examples::exahype2::ccz4::ADERDGCCZ4::algebraicSource(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
@@ -88,7 +58,7 @@ void examples::exahype2::ccz4::CCZ4::algebraicSources(
 }
 
 
-void examples::exahype2::ccz4::CCZ4::adjustSolution(
+void examples::exahype2::ccz4::ADERDGCCZ4::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t
@@ -119,7 +89,7 @@ void examples::exahype2::ccz4::CCZ4::adjustSolution(
 
 
 
-double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
+double examples::exahype2::ccz4::ADERDGCCZ4::maxEigenvalue(
   const double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
@@ -158,7 +128,7 @@ double examples::exahype2::ccz4::CCZ4::maxEigenvalue(
 }
 
 
-void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
+void examples::exahype2::ccz4::ADERDGCCZ4::nonconservativeProduct(
   const double * __restrict__                  Q, // Q[64+0],
   const double * __restrict__                  deltaQ, // [64+0]
   const tarch::la::Vector<Dimensions,double>&  x,
@@ -190,7 +160,7 @@ void examples::exahype2::ccz4::CCZ4::nonconservativeProduct(
 
 
 
-void examples::exahype2::ccz4::CCZ4::boundaryConditions(
+void examples::exahype2::ccz4::ADERDGCCZ4::boundaryConditions(
   const double * __restrict__                  Qinside,
   double * __restrict__                        Qoutside,
   const tarch::la::Vector<Dimensions,double>&  x,
