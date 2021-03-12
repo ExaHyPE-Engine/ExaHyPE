@@ -22,6 +22,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave"],   default="fv-adaptive-enclave",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     args = parser.parse_args()
 
     SuperClass = None
@@ -258,8 +259,12 @@ if __name__ == "__main__":
     dimensions = 3
     end_time = 1.0
 
-    periodic_boundary_conditions = [True,True,True]          # Periodic BC
-    #periodic_boundary_conditions = [False,False,False]
+    if args.periodic_bc:
+      print( "Periodic BC set")
+      periodic_boundary_conditions = [True,True,True]          # Periodic BC
+    else:
+      print( "WARNING: Periodic BC deactivated" )
+      periodic_boundary_conditions = [False,False,False]
         
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
@@ -273,7 +278,7 @@ if __name__ == "__main__":
 
     project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem" )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "(true,0.8)")
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
     peano4_project = project.generate_Peano4_project(verbose=True)
     
