@@ -101,7 +101,7 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCo
 
   coords[0]= t;
   if ( index[0] >= 0 ) {
-    coords[0] + nodes[index[0]] * dt;
+    coords[0] += nodes[index[0]] * dt;
   } 
   for ( int d = 1; d < Dimensions+1; d++ ) { // x -> y -> z
     coords[d] = centre[d-1] + dx/*[d-1]*/ * (nodes[index[d]] - 0.5);
@@ -127,7 +127,7 @@ GPUCallableMethod tarch::la::Vector<Dimensions+1,double> exahype2::aderdg::getCo
 
   coords[0]= t;
   if ( indexOnFace[0] >= 0 ) {
-    coords[0] + nodes[indexOnFace[0]] * dt;
+    coords[0] += nodes[indexOnFace[0]] * dt;
   }
   int e = 1;
   for ( int d = 1; d < Dimensions+1; d++ ) { // x -> y -> z
