@@ -117,7 +117,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      *   almost one means we do not accept any ill-balancing. The smaller the value,
      *   the more relaxed we are.
      */
-    RecursiveSubdivision(double targetBalancingRation=0.8);
+    RecursiveSubdivision(bool hasPeriodicBCs=false, double targetBalancingRation=0.8);
     ~RecursiveSubdivision();
 
     /**
@@ -356,6 +356,15 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     int  _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff;
     int  _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff;
+
+    /**
+     * If a code has periodic BCs, we have to do the MPI splitting more carefully:
+     * As the cells next to the unit cube's boundary cannot be given away, we have
+     * to wait longer until we do the initial cut, i.e. more cells have to be 
+     * available, and we have to reduce the number of cells that we give away when
+     * we cut.
+     */
+    bool _hasPeriodicBCs;
 
     void waitForGlobalStatisticsExchange();
 };
