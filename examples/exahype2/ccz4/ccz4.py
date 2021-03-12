@@ -5,12 +5,18 @@ import peano4
 import exahype2
 
 
-modes = { 
+modes = {
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
   "assert":  peano4.output.CompileMode.Asserts,
   "debug":   peano4.output.CompileMode.Debug,
 }
+
+params = {
+        "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
+        "GLMepsD":1.0, "itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
+        "f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
+        "sk":0.0, "bs":0.0, "LapseType":0}
 
 
 if __name__ == "__main__":
@@ -22,10 +28,13 @@ if __name__ == "__main__":
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+
+    for k, v in params.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
+
     args = parser.parse_args()
 
     SuperClass = None
-    
+
     if args.implementation=="fv-fixed":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
     if args.implementation=="fv-fixed-enclave":
@@ -250,11 +259,12 @@ if __name__ == "__main__":
       if args.extension=="adm":
         my_solver.add_constraint_verification()
 
-   
-    project.add_solver(my_solver)    
-    
+
+    project.add_solver(my_solver)
+    for k, v in params.items(): project.addConstant("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
+
     build_mode = modes[args.mode]
-    
+
     dimensions = 3
     end_time = 1.0
 
@@ -312,6 +322,6 @@ if __name__ == "__main__":
 
     peano4_project.generate( throw_away_data_after_generation=False )
     
-    peano4_project.build( make_clean_first = True )
+    # peano4_project.build( make_clean_first = True )
     #!make -j4
 
