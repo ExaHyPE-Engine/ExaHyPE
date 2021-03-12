@@ -468,6 +468,7 @@ GPUCallableMethod void exahype2::aderdg::spaceTimePredictor_extrapolateInTime_Lo
 #endif
 
 #if defined(__HIPCC__) or defined(__NVCC__)
+#error HIP / CUDA kernels are currently not maintained
 
 // kernels
 __global__ void exahype2::aderdg::spaceTimePredictor_initialGuess_krnl_AoS(
