@@ -162,6 +162,9 @@ void finishGridConstructionStep() {
           rankLocalStats,
           rank,
           statisticsExchangeTag,
+          [&]() {
+            tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+          },
           tarch::mpi::Rank::getInstance().getCommunicator()
         );
         gridStatisticsAfterGridConstruction = gridStatisticsAfterGridConstruction + rankLocalStats;
@@ -174,6 +177,9 @@ void finishGridConstructionStep() {
       gridStatisticsAfterGridConstruction,
       tarch::mpi::Rank::getInstance().getGlobalMasterRank(),
       statisticsExchangeTag,
+      [&]() {
+        tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+      },
       tarch::mpi::Rank::getInstance().getCommunicator()
     );
   }

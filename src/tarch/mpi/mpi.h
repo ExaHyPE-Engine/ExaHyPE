@@ -37,7 +37,7 @@ IntegerMessage::receive(message, rank, BarrierTag, tarch::mpi::Rank::getInstance
 tarch::mpi::IntegerMessage::receive(
   message, rank, BarrierTag,
   [&]() {
-    tarch::mpi::Rank::getInstance().receiveDanglingMessages();
+    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
   },
   tarch::mpi::Rank::getInstance().getCommunicator()
 );
@@ -69,7 +69,7 @@ tarch::mpi::IntegerMessage::receive(
           ) {
             tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "__FILE__", "__LINE__",rank, BarrierTag );
           }
-          tarch::mpi::Rank::getInstance().receiveDanglingMessages();
+          tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
         },
         tarch::mpi::Rank::getInstance().getCommunicator()
       );
