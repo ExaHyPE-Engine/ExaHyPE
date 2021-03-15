@@ -29,6 +29,7 @@ namespace tarch {
     class ChromeTraceFileLogger;
     class NVTXLogger;
     class ITACLogger;
+    class ScorePLogger;
   }
 }
 
