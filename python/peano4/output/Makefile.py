@@ -118,7 +118,7 @@ class Makefile(object):
 
       peano4.output.CompileMode.Debug
 
-      for example
+      for example. Debug is the default.
     """
     if mode==CompileMode.Debug:
       self.d["CXX_MODE_FLAGS"]  = "-g -O0 -DPeanoDebug=4"
@@ -220,12 +220,17 @@ class Makefile(object):
       self.d["CONFIGUREPATH"] = directory
 
       # A posteriori fix for openmp flag propagation
-      if "-fopenmp" in self.d["CXXFLAGS"]:
-          val = self.d["CXXFLAGS"].split("-fopenmp")[-1].split()[0]
-          self.d["LDFLAGS"] += " -fopenmp ".format(val)
       if "-fopenmp-targets" in self.d["CXXFLAGS"]:
           val = self.d["CXXFLAGS"].split("-fopenmp-targets=")[-1].split()[0]
-          self.d["LDFLAGS"] += " -fopenmp -fopenmp-targets={} ".format(val)
+          new_entry = " -fopenmp -fopenmp-targets={} ".format(val)
+          print( "used OpenMP GPU offloading. Augment linker with " + new_entry )
+          self.d["LDFLAGS"] += new_entry
+      elif "-fopenmp" in self.d["CXXFLAGS"]:
+          #val = self.d["CXXFLAGS"].split("-fopenmp")[-1].split()[0]
+          new_entry = " -fopenmp "
+          print( "used OpenMP tasking backend. Augment linker with " + new_entry )
+          self.d["LDFLAGS"] += " -fopenmp "
+          #self.d["LDFLAGS"] += " -fopenmp ".format(val)
 
     except IOError:
       print( """
