@@ -13,20 +13,21 @@ import exahype2.solvers
 
 class Project(object):
   """
-  Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
-  project with a particular set of actions (algorithmic phases)
-  that you can choose from and with particular solver types. It
+   
+  Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4 
+  project with a particular set of actions (algorithmic phases) 
+  that you can choose from and with particular solver types. It 
   realises a builder mechanism, i.e. you build up your ExaHyPE2
   project and then you finally tell the project "give me the Peano4
   project". From hereon, you can use this Peano4 project to actually
   set up the Peano4 application.
-
+  
   The project will have a marker per cell that encodes stuff alike
-  a boundary marker. But it is also used to coordinate different
+  a boundary marker. But it is also used to coordinate different 
   solver types.
-
+  
   @see generate_Peano4_project()
-
+  
   """
   def __init__(self, namespace, project_name, directory = ".", executable="peano4"):
     self._project = peano4.Project(namespace, project_name, directory)
@@ -45,14 +46,11 @@ class Project(object):
     self._periodic_BC   = [False, False, False]
     self._plot_filters  = []
     self._output_path   = "./"
-    self._additional_constants = []
-
-  def addConstant(self, name, value): self._additional_constants.append((name,value))
-
-
+    
+    
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
     """
-
+    
       load_balancer_name: string
         Should be full-qualified name of the load balancer. 
         By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
@@ -130,7 +128,7 @@ class Project(object):
   def remove_all_solvers(self):
     self._solvers = []
     self._project.cleanup()
-
+    
 
   def __export_constants(self):
     self._project.constants.clear()
@@ -143,17 +141,15 @@ class Project(object):
       size_string   += str(self._domain_size[i])
     offset_string += "}"
     size_string   += "}"
-    self._project.constants.add_include( """#include <bitset>""")
+    self._project.constants.add_include( """#include <bitset>""") 
     self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
     self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
     self._project.constants.export( "TerminalTime", str(self._terminal_time) )
     self._project.constants.export( "FirstPlotTimeStamp", str(self._first_plot_time_stamp) )
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
-
+    
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
-
-    for k, v in self._additional_constants: self._project.constants.export(k, str(v))
-
+    
 
   def __configure_makefile(self):
     self._project.output.makefile.set_dimension(self._dimensions)
