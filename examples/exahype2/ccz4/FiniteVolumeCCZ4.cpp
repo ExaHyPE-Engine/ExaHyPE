@@ -34,7 +34,7 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   if ( Scenario=="gaugewave-c++" ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
-    initparameters_(&length, name);
+    //initparameters_(&length, name);
   }
   else {
     std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
@@ -217,6 +217,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::enforceccz4constraintsholger_(d
         g_cov[1][0]*g_cov[0][2]*g_cov[2][1] + g_cov[2][0]*g_cov[0][1]*g_cov[1][2] -
         g_cov[2][0]*g_cov[0][2]*g_cov[1][1];
 
+
     const double invdet = 1./det2;
     const double g_contr[3][3] = {
         { ( g_cov[1][1]*g_cov[2][2]-g_cov[1][2]*g_cov[2][1])*invdet, -(g_cov[0][1]*g_cov[2][2]-g_cov[0][2]*g_cov[2][1])*invdet, -(-g_cov[0][1]*g_cov[1][2]+g_cov[0][2]*g_cov[1][1])*invdet},
@@ -238,6 +239,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::enforceccz4constraintsholger_(d
     luh[ 3] = g_cov[1][1];
     luh[ 4] = g_cov[1][2];
     luh[ 5] = g_cov[2][2];
+
     luh[ 6] =   Aex[0][0];
     luh[ 7] =   Aex[0][1];
     luh[ 8] =   Aex[0][2];
@@ -272,15 +274,17 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::enforceccz4constraintsholger_(d
     luh[35] = DD[0][0][0];
     luh[36] = DD[0][0][1];
     luh[37] = DD[0][0][2];
-    luh[38] = DD[0][2][1];
-    luh[39] = DD[0][2][2];
+    luh[38] = DD[0][1][1];
+    luh[39] = DD[0][1][2];
     luh[40] = DD[0][2][2];
+
     luh[41] = DD[1][0][0];
     luh[42] = DD[1][0][1];
     luh[43] = DD[1][0][2];
     luh[44] = DD[1][1][1];
     luh[45] = DD[1][1][2];
     luh[46] = DD[1][2][2];
+
     luh[47] = DD[2][0][0];
     luh[48] = DD[2][0][1];
     luh[49] = DD[2][0][2];
