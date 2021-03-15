@@ -5,7 +5,7 @@ import sys
 
 import natsort
 
-import peano4.visualisation.OutputFileParser as patch_parser
+from peano4.visualisation.OutputFileParser import OutputFileParser
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Peano 4 - probe a specific '
@@ -23,7 +23,7 @@ if __name__ == "__main__":
       print("Error, specified input file '{}' does not exist, exiting...".format(args.filepath))
       sys.exit(1)
 
-    ofparser = patch_parser.OutputFileParser(args.filepath, args.set_identifier, 0)
+    ofparser = OutputFileParser(args.filepath, args.set_identifier, 0)
 
     with open('probe_output.csv', 'w') as csv_file:
       writer = csv.writer(csv_file, delimiter=',')
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     with open('probe_output.csv', 'w') as csv_file:
       writer = csv.writer(csv_file, delimiter=',')
       for file in natsort.natsorted(os.listdir(args.directory_path)):
-        ofparser = patch_parser.OutputFileParser(os.path.join(args.directory_path, file), args.set_identifier, 0)
+        ofparser = OutputFileParser(os.path.join(args.directory_path, file), args.set_identifier, 0)
         probe_result = ofparser.probe(args.x_axis, args.y_axis, args.z_axis)
         if probe_result:
           writer.writerow(probe_result)
