@@ -66,10 +66,10 @@ void examples::exahype2::ccz4::ADERDGCCZ4::adjustSolution(
   logTraceInWith2Arguments( "adjustSolution(...)", x, t);
   if (tarch::la::equals(t,0.0) ) {
     if ( Scenario=="gaugewave-c++" ) {
-      examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
+      examples::exahype2::ccz4::gaugeWave(Q, x, t);
     }
-    if ( Scenario=="linearwave-c++" ) {
-      examples::exahype2::ccz4::linearWave(Q, volumeX, t);
+    else if ( Scenario=="linearwave-c++" ) {
+      examples::exahype2::ccz4::linearWave(Q, x, t);
     }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );

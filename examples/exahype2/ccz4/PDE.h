@@ -32,7 +32,7 @@ void hllemriemannsolver_(const int* basisSize, const int* normalNonZeroIndex, do
 void admconstraints_(double* constraints, const double* const Q, const double* const gradQ);
 
 void pdecons2prim_(double* V,const double* Q);
-void enforceccz4constraints_(double* Q); 
+void enforceccz4constraints_(double* const Q); 
 
 
 }/* extern "C" */
