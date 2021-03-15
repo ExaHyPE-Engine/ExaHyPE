@@ -328,11 +328,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdesourceholger_(double* S, con
     for (int j=0;j<3;j++) Aex[i][j] -= 1./3. * traceA * g_cov[i][j];
 
     // Matrix multiplications Amix = matmul(g_contr, Aex) Aup  = matmul(g_contr, transpose(Amix))
-    double Amix[3][3]={0};
+    double Amix[3][3]={0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int u = 0; u < 3; u++) Amix[i][j] += g_contr[i][u] * Aex[u][j];
-    double Aup[3][3]={0};
+    double Aup[3][3]={0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int u = 0; u < 3; u++) Aup[i][j] += g_contr[i][u] * Amix[j][u]; // Note the transposition is in the indices
@@ -383,7 +383,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdesourceholger_(double* S, con
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) Zup[i] += phi2 * g_contr[i][j] * Z[j];
 
-    double dChristoffelSrc[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    double dChristoffelSrc[3][3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     double dChristoffel_tildeSrc[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     for (int l = 0; l < 3; l++)
     for (int m = 0; m < 3; m++)
@@ -522,7 +522,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdesourceholger_(double* S, con
     const double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*(RPlusTwoNablaZSrc - Aupdown + 2./3.*traceK*traceK) - alpha*(CCZ4c*Theta*traceK + sumzupaa + CCZ4k1*(2.+CCZ4k2)*Theta);  // Baojiu
 
 
-    double dtGhat[3] = {0};
+    double dtGhat[3] = {0,0,0};
     for (int i = 0; i < 3; i++)
     {
         double temp1=0, temp2=0, temp3=0, temp4=0, temp5=0, temp6=0;
@@ -566,7 +566,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdesourceholger_(double* S, con
 
 
     // Auxiliary variables 
-    double dtA[3];
+    double dtA[3] ={0,0,0};
     for (int i = 0; i < 3; i++)
     {
       dtA[i] = -alpha*AA[i]*(fa+alpha*faa)*(traceK - K0 - 2.*CCZ4c*Theta);
@@ -601,7 +601,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdesourceholger_(double* S, con
       for (int l = 0; l < 3; l++) dtD[k][i][j] += BB[k][l]*DD[l][i][j] + BB[j][l]*DD[k][l][i] + BB[i][l]*DD[k][l][j] - 2./3.*BB[l][l]*DD[k][i][j];
     }
 
-    double dtP[3] = {0};
+    double dtP[3] = {0,0,0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) dtP[i] += BB[i][j]*PP[j];
 
@@ -686,7 +686,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     constexpr int nVar(59);
 
     // First model parameter ds here (ds == CCZ4ds)
-    double gradQin[59][3] ={0};
+    double gradQin[59][3] ={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
     // De-serialise input data and fill static array
     // FIXME the use of 2D arrays can be avoided: all terms not in the normal are 0
@@ -716,11 +716,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     for (int j=0;j<3;j++) Aex[i][j] -= traceA * g_cov[i][j];
 
     // Matrix multiplications Amix = matmul(g_contr, Aex) Aup  = matmul(g_contr, mytranspose(Amix))
-    double Amix[3][3]={0};
+    double Amix[3][3]={0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int u = 0; u < 3; u++) Amix[i][j] += g_contr[i][u] * Aex[u][j];
-    double Aup[3][3]={0};
+    double Aup[3][3]={0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
     for (int u = 0; u < 3; u++) Aup[i][j] += g_contr[i][u] * Amix[j][u]; // Note the transposition is in the indices
@@ -730,7 +730,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
         {{Q[41], Q[42], Q[43]}, {Q[42], Q[44], Q[45]}, {Q[43], Q[45], Q[46]}},
         {{Q[47], Q[48], Q[49]}, {Q[48], Q[50], Q[51]}, {Q[49], Q[51], Q[52]}}
     };
-    double dgup[3][3][3] = {0};
+    double dgup[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     for (int k = 0; k < 3; k++)
     for (int m = 0; m < 3; m++)
     for (int l = 0; l < 3; l++) 
@@ -739,9 +739,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
 
     const double PP[3] = {Q[55], Q[56], Q[57]};
 
-    double Christoffel[3][3][3]       = {0};
-    double Christoffel_tilde[3][3][3] = {0};
-    double Christoffel_kind1[3][3][3] = {0};
+    double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    double Christoffel_tilde[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    double Christoffel_kind1[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
@@ -755,7 +755,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
         }
     }
 
-    double Gtilde[3] = {0};
+    double Gtilde[3] = {0,0,0};
     for (int l = 0; l < 3; l++) 
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++) Gtilde[i] += g_contr[j][l] * Christoffel_tilde[j][l][i];
@@ -765,10 +765,10 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
     const double phi2 = phi*phi;
 
-    double Z[3] = {0};
+    double Z[3] = {0,0,0};
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) Z[i] += ( g_cov[i][j]* (Ghat[j] - Gtilde[j]));
-    double Zup[3] = {0};
+    double Zup[3] = {0,0,0};
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) Zup[i] += phi2 * g_contr[i][j] * Z[j];
 
@@ -818,8 +818,8 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
 
 
 
-    double dChristoffelNCP[3][3][3][3] = {0};
-    double dChristoffel_tildeNCP[3][3][3][3] = {0};
+    double dChristoffelNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    double dChristoffel_tildeNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
     for (int ip = 0; ip < 3; ip++)
     for (int m = 0; m < 3; m++)
@@ -847,12 +847,12 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     for (int m = 0; m < 3; m++)
     for (int k = 0; k < 3; k++) RiemannNCP[i][k][ip][m] = dChristoffelNCP[k][i][ip][m] - dChristoffelNCP[ip][i][k][m];
 
-    double RicciNCP[3][3] = {0};
+    double RicciNCP[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int m = 0; m < 3; m++)
     for (int n = 0; n < 3; n++)
     for (int l = 0; l < 3; l++) RicciNCP[m][n] += RiemannNCP[m][l][n][l];  
 
-    double dGtildeNCP[3][3] = {0};
+    double dGtildeNCP[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
     for (int j = 0; j < 3; j++)
@@ -865,7 +865,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
         {gradQin[13][2],gradQin[14][2],gradQin[15][2]}
     };
     
-    double dZNCP[3][3] = {0};
+    double dZNCP[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++) dZNCP[k][i] += CCZ4ds*0.5*g_cov[i][j]*(dGhat[k][j]-dGtildeNCP[k][j]);  
@@ -939,7 +939,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     const double dTheta[3] = {gradQin[13][0],gradQin[13][1],gradQin[13][2]};
     const double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*( RPlusTwoNablaZNCP ) + beta[0]*dTheta[0] + beta[1]*dTheta[1] + beta[2]*dTheta[2]; // *** original cleaning *** 
 
-    double divAupNCP[3] = {0};
+    double divAupNCP[3] = {0,0,0};
 
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)
@@ -959,7 +959,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
         }
     };
 
-    double dtGhat[3];
+    double dtGhat[3] = {0,0,0};
     for (int i = 0; i < 3; i++)
     {
         double temp=0, temp2=0;
@@ -993,7 +993,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
 
     // Auxiliary variables 
     double dtA[3];
-    double dK0[3] = {0}; // FIXME we just add 0 all the time???
+    double dK0[3] = {0,0,0};
     for (int i = 0; i < 3; i++)
     {
         dtA[i] = -alpha*fa*(dtraceK[i] - dK0[i] - CCZ4c*2*dTheta[i]) + beta[0]*dAA[0][i] + beta[1]*dAA[1][i] + beta[2]*dAA[2][i];
@@ -1052,19 +1052,18 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     double dtP[3];
     for (int i = 0; i < 3; i++) dtP[i] = beta[0]*dPP[0][i] + beta[1]*dPP[1][i] + beta[2]*dPP[2][i];
 
-    // NOTE test for non zero params
     for (int k = 0; k < 3; k++)
     {
         double temp=0;
         for (int m = 0; m < 3; m++)
-        for (int n = 0; n < 3; n++) temp += g_contr[m][n]*dAex[k][m][n]; // TODO we computed this quantity  few lines earlier alrady
+        for (int n = 0; n < 3; n++) temp += g_contr[m][n]*dAex[k][m][n];
         dtP[k] += 1./3*alpha*(dtraceK[k] + CCZ4sk*temp);
         for (int i = 0; i < 3; i++) dtP[k] -= 1./6*(dBB[k][i][i] + dBB[i][k][i]);
     }
 
-    double dtgamma[3][3] = {0};
+    double dtgamma[3][3] = {0,0,0,0,0,0,0,0,0};
     double dtalpha = 0;
-    double dtbeta[3] = {0};
+    double dtbeta[3] = {0,0,0};
     double dtphi = 0;
 
     BgradQ[0]  = -dtgamma[0][0];
