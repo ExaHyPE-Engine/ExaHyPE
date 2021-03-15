@@ -220,6 +220,9 @@ class Makefile(object):
       self.d["CONFIGUREPATH"] = directory
 
       # A posteriori fix for openmp flag propagation
+      if "-fopenmp" in self.d["CXXFLAGS"]:
+          val = self.d["CXXFLAGS"].split("-fopenmp")[-1].split()[0]
+          self.d["LDFLAGS"] += " -fopenmp ".format(val)
       if "-fopenmp-targets" in self.d["CXXFLAGS"]:
           val = self.d["CXXFLAGS"].split("-fopenmp-targets=")[-1].split()[0]
           self.d["LDFLAGS"] += " -fopenmp -fopenmp-targets={} ".format(val)
