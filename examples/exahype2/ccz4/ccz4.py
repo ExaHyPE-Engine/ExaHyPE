@@ -28,6 +28,8 @@ if __name__ == "__main__":
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
+
 
     for k, v in params.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
 
@@ -266,7 +268,6 @@ if __name__ == "__main__":
     build_mode = modes[args.mode]
 
     dimensions = 3
-    end_time = 1.0
 
     if args.periodic_bc:
       print( "Periodic BC set")
@@ -278,7 +279,7 @@ if __name__ == "__main__":
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
       [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
-      end_time,                 # end time
+      args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions
     )
