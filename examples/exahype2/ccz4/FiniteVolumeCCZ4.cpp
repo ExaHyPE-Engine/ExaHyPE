@@ -30,7 +30,7 @@ tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "example
 
 
 examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
-  if ( Scenario=="gaugewave-c++" ) {
+  if ( Scenario=="gaugewave-c++" || Scenario=="linearwave-c++" ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
     initparameters_(&length, name);
@@ -53,12 +53,15 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
     if ( Scenario=="gaugewave-c++" ) {
       examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
     }
+    else if ( Scenario=="linearwave-c++" ) {
+      examples::exahype2::ccz4::linearWave(Q, volumeX, t);
+    }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
     }
 
     for (int i=0; i<NumberOfUnknowns; i++) {
-      assertion3( std::isfinite(Q[i]), x, t, i );
+      assertion3( std::isfinite(Q[i]), volumeX, t, i );
     }
 
     for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
@@ -87,7 +90,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   memset(S, 0, NumberOfUnknowns*sizeof(double));
   pdesource_(S,Q);    //  S(Q)
   for(int i=0; i<NumberOfUnknowns; i++){
-    nonCriticalAssertion3( std::isfinite(S[i]), i, x, t );
+    nonCriticalAssertion3( std::isfinite(S[i]), i, volumeX, t );
   }
   logTraceOut( "sourceTerm(...)" );
 }
@@ -104,7 +107,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
 ) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
   for(int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-    assertion4( Qinside[i]==Qinside[i], x, t, normal, i );
+    assertion4( Qinside[i]==Qinside[i], faceCentre, t, normal, i );
     Qoutside[i]=Qinside[i];
   }
   logTraceOut( "boundaryConditions(...)" );
@@ -124,7 +127,7 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   constexpr int Unknowns = 59;
   double lambda[Unknowns];
   for (int i=0; i<Unknowns; i++) {
-    nonCriticalAssertion4( std::isfinite(Q[i]), i, x, t, normal );
+    nonCriticalAssertion4( std::isfinite(Q[i]), i, faceCentre, t, normal );
     lambda[i] = 1.0;
   }
 
@@ -175,7 +178,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   pdencp_(BgradQ, Q, gradQSerialised);
 
   for (int i=0; i<NumberOfUnknowns; i++) {
-    nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, x, t, normal );
+    nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, faceCentre, t, normal );
   }
   logTraceOut( "nonconservativeProduct(...)" );
 }
