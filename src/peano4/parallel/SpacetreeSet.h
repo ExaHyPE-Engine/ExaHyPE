@@ -560,6 +560,9 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      *
      * Messages are not answered directly. Instead, we buffer them in
      * _unansweredMessages and hand over to replyToUnansweredMessages().
+     *
+     * See the description in mpi.h for a howto where this routine is
+     * used and how to use it.
      */
     void receiveDanglingMessages() override;
 

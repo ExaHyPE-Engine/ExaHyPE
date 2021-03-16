@@ -33,11 +33,11 @@
     !CHARACTER(LEN=20), PARAMETER	:: ICType='NLOPRUPTURE'
   CHARACTER(LEN=20) :: ICType
   TYPE, bind(C) :: tEquations
-      REAL(8)    :: gamma, Pi, c0, g = 9.81, friction = 1.0     
+      REAL(8)    :: gamma, Pi, c0, g = 9.81D0, friction = 1.0D0     
       REAL(8)    :: CCZ4k1, CCZ4k2, CCZ4k3, CCZ4eta, CCZ4itau, CCZ4f, CCZ4g, CCZ4xi, CCZ4e, CCZ4c, CCZ4mu, CCZ4ds, CCZ4sk, CCZ4bs  
-      REAL(8)    :: CCZ4GLMc0 = 0.5, CCZ4GLMc = 0.75, CCZ4GLMd = 0.75, CCZ4GLMepsD = 1e-2, CCZ4GLMepsA = 1e-2, CCZ4GLMepsP = 1e-2, cs, alpha, beta, lambda, cv, rho0, p0, tau1, tau2, mu, kappa ,tau 
-      INTEGER :: CCZ4LapseType, EinsteinAutoAux = 0, ReferenceDepth = 1.0    
-      REAL(8)    :: DivCleaning_a = 1.0 
+      REAL(8)    :: CCZ4GLMc0 = 0.5D0, CCZ4GLMc = 0.75D0, CCZ4GLMd = 0.75D0, CCZ4GLMepsD = 1D-2, CCZ4GLMepsA = 1D-2, CCZ4GLMepsP = 1D-2, cs, alpha, beta, lambda, cv, rho0, p0, tau1, tau2, mu, kappa ,tau 
+      INTEGER :: CCZ4LapseType, EinsteinAutoAux = 0, ReferenceDepth = 1    
+      REAL(8)    :: DivCleaning_a = 1.0D0 
   END TYPE tEquations
   TYPE(tEquations), bind(C, name="mainVar_eqn") :: EQN
 	
@@ -49,14 +49,14 @@
     INTEGER, PARAMETER :: NSTOV_nODE = 4
 #endif
     INTEGER, PARAMETER :: NSTOV_nODE_p = 3, NSTOV_ATMO = 0 ! 1 => Landau atmo
-    REAL(8), PARAMETER :: NSTOV_rho_c = 1.28e-3
-    REAL(8), PARAMETER :: NSTOV_kappa = 100
-    REAL(8), PARAMETER    :: p_floor = 1.0e-16, rho_floor = 1.0e-10
+    REAL(8), PARAMETER :: NSTOV_rho_c = 1.28D-3
+    REAL(8), PARAMETER :: NSTOV_kappa = 100D0
+    REAL(8), PARAMETER    :: p_floor = 1.0D-16, rho_floor = 1.0D-10
     REAL(8) :: NSTOV_rho_atmo != 1e-10
-    REAL(8), PARAMETER :: NSTOV_p_atmo = 1e-15 , NSTOV_t_atm=1.0
+    REAL(8), PARAMETER :: NSTOV_p_atmo = 1D-15 , NSTOV_t_atm=1.0D0
     !
-	REAL(8)            ::  Mbh = 1.0, aom = 0.0 
-	REAL(8), PARAMETER    :: P_eps = 1e-4
+	REAL(8)            ::  Mbh = 1.0D0, aom = 0.0D0 
+	REAL(8), PARAMETER    :: P_eps = 1D-4
 	integer, parameter :: MYRANK=0 	
 
     !
@@ -72,13 +72,13 @@
     END TYPE tNSTOVVar
     TYPE(tNSTOVVar) :: NSTOVVar,NSTOVVar_bar,NSTOVVar_barNew
     !
-    REAL(8), PARAMETER :: CoordTol =1e-11	
+    REAL(8), PARAMETER :: CoordTol =1D-11	
 	
 	
 	
   ! 3-point Gaussian quadrature 
-  REAL, PARAMETER     :: sGP3(3) = (/ 0.5-sqrt(15.)/10.,0.5,0.5+sqrt(15.)/10. /) 
-  REAL, PARAMETER     :: wGP3(3) = (/ 5./18., 8./18., 5./18. /) 
+  REAL(8), PARAMETER     :: sGP3(3) = (/ 0.5D0-Dsqrt(15D0)/10D0,0.5D0,0.5D0+Dsqrt(15D0)/10D0 /) 
+  REAL(8), PARAMETER     :: wGP3(3) = (/ 5D0/18D0, 8D0/18D0, 5D0/18D0 /) 
   INTEGER, PARAMETER  :: nGP3 = 3 
 
   END MODULE MainVariables  

@@ -416,6 +416,9 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
   num_patches = len(cell_data)
   print("Total number of patches:", num_patches)
 
+
+  dof, dimension, unknowns, description, is_data_associated_to_cell, mapping = validate(parsers)
+  print( "Parsing complete. Convert set of " + str(len(cell_data)) + " patches with " + str(unknowns) + " unknowns per " + str(dof) + "^" + str(dimensions) + " patch/cell into VTK data structures" )
   
   if filter!=None:
     if verbose:        
@@ -423,10 +426,7 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
     for p in filter:
      if p.run_on_concatenated_data:
        print( "apply filter " + str(p) + " to concatenated data")
-       cell_data, dof, dimension, unknowns, description, mapping = p.render(cell_data, dof, dimension, unknowns, description, mapping)
-
-  dof, dimensions, unknowns, description, is_data_associated_to_cell, mapping = validate(parsers)
-  print( "Parsing complete. Convert set of " + str(len(cell_data)) + " patches with " + str(unknowns) + " unknowns per " + str(dof) + "^" + str(dimensions) + " patch/cell into VTK data structures" )
+       cell_data, dof, dimensions, unknowns, description, mapping = p.render(cell_data, dof, dimensions, unknowns, description, mapping)
 
   if dimensions == 2 and display_as_tree:
     grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description, is_data_associated_to_cell, mapping, verbose ) 
@@ -444,7 +444,7 @@ class Visualiser(object):
     datasets. It does not work on the command line.
   """
   
-  def __init__(self, file_name, verbose ):
+  def __init__(self, file_name, verbose=False ):
     """
     
      file_name: String
