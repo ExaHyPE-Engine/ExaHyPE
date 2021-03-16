@@ -12,6 +12,7 @@
 #include "Properties.h"
 #include "InitialValue.h"
 
+#include <algorithm>
 /**
  *  * This file is automatically created by Peano. I need it to interact with
  *   * the Python API, i.e. to read out data set there.
@@ -126,11 +127,14 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
 {
 #if defined(CCZ4EINSTEIN)  
   const double qmin = std::min({Q[0],Q[3],Q[5]});
-  const double test = Q[16]+Q[54];
+  //const double test = Q[16]+Q[54];
+  const double test1 = Q[16];
+  const double test2 = Q[54];
   double alpha =  1. / std::sqrt(qmin);
-  if (test>0) alpha *= std::exp(test);
+  if (test1>0) alpha *= std::exp(test1);
+  if (test2>0) alpha *= std::exp(test2);
 #else
- const double alpha = 1.0;
+  const double alpha = 1.0;
 #endif
   constexpr double sqrtwo = 1.4142135623730951;
   // NOTE parameters are stored in Constants.h

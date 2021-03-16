@@ -321,6 +321,6 @@ if __name__ == "__main__":
 
     peano4_project.generate( throw_away_data_after_generation=False )
 
-    # peano4_project.build( make_clean_first = True )
+    peano4_project.build( make_clean_first = True )
     #!make -j4
 
