@@ -34,7 +34,7 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   if ( Scenario=="gaugewave-c++" ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
-    //initparameters_(&length, name);
+    initparameters_(&length, name);
   }
   else {
     std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
@@ -86,6 +86,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   for(int i=0; i<NumberOfUnknowns; i++){
     assertion3( std::isfinite(Q[i]), i, x, t );
   }
+
   memset(S, 0, NumberOfUnknowns*sizeof(double));
   //pdesource_(S,Q);    //  S(Q)
   pdesourceholger_(S,Q);    //  S(Q)
@@ -116,6 +117,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
 
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   const double * __restrict__ Q, // Q[59+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -126,18 +130,17 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
 {
 #if defined(CCZ4EINSTEIN)  
   const double qmin = std::min({Q[0],Q[3],Q[5]});
-  const double test = Q[16]+Q[54];
-  double alpha =  1. / std::sqrt(qmin);
-  if (test>0) alpha *= std::exp(test);
+  const double alpha = std::max({1.0, std::exp(Q[16])}) * std::max({1.0, std::exp(Q[54])}) / std::sqrt(qmin);
 #else
- const double alpha = 1.0;
+  const double alpha = 1.0;
 #endif
+
   constexpr double sqrtwo = 1.4142135623730951;
   // NOTE parameters are stored in Constants.h
   const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
   const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
-  // we are only interested in the maximum eigenvalue
-  return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
+  //// we are only interested in the maximum eigenvalue
+  return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB), std::abs(Q[0]), std::abs(Q[13])});
   
   //logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
   //constexpr int Unknowns = 59;
@@ -162,8 +165,12 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
     //result = std::max(result,std::abs(lambda[i]));
   //}
   //logTraceOut( "maxEigenvalue(...)" );
+  //printf("%f vs %f diff: %f alpha: %f tempA: %f\n\n", result, result2, result-result2, alpha, tempA/alpha);
   //return result;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 
@@ -171,6 +178,9 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
 
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
   const double * __restrict__             deltaQ, // [59+0]
@@ -180,9 +190,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[59]
 )  {
+#if !defined(OpenMPGPUOffloading)
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
   assertion( normal>=0 );
   assertion( normal<Dimensions );
+#endif
   double gradQSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
     gradQSerialised[i+0*NumberOfUnknowns] = 0.0;
@@ -191,14 +203,19 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 
     gradQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  //pdencp_(BgradQ, Q, gradQSerialised);
   pdencpholger_(BgradQ, Q, gradQSerialised, normal);
+  //pdencp_(BgradQ, Q, gradQSerialised);
 
+#if !defined(OpenMPGPUOffloading)
   for (int i=0; i<NumberOfUnknowns; i++) {
     nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, x, t, normal );
   }
   logTraceOut( "nonconservativeProduct(...)" );
+#endif
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -771,7 +788,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
 
     double Z[3] = {0,0,0};
     for (int i=0;i<3;i++)
-    for (int j=0;j<3;j++) Z[i] += ( g_cov[i][j]* (Ghat[j] - Gtilde[j]));
+    for (int j=0;j<3;j++) Z[i] += 0.5*( g_cov[i][j]* (Ghat[j] - Gtilde[j]));
     double Zup[3] = {0,0,0};
     for (int i=0;i<3;i++)
     for (int j=0;j<3;j++) Zup[i] += phi2 * g_contr[i][j] * Z[j];
@@ -821,35 +838,31 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     };
 
 
-
     double dChristoffelNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     double dChristoffel_tildeNCP[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     for (int i = 0; i < 3; i++)
-    for (int ip = 0; ip < 3; ip++)
+    for (int j = 0; j < 3; j++)
     for (int m = 0; m < 3; m++)
     for (int k = 0; k < 3; k++)
     {
-        dChristoffelNCP[k][i][ip][m] = 0;
-        dChristoffel_tildeNCP[k][i][ip][m] = 0;
+        dChristoffelNCP      [k][i][j][m] = 0;
+        dChristoffel_tildeNCP[k][i][j][m] = 0;
         for (int l = 0; l < 3; l++)
         {
-            dChristoffelNCP[k][i][ip][m] +=  0.5*g_contr[m][l] * ( 
-                    dDD[k][i][ip][l] + dDD[i][k][ip][l] + dDD[k][ip][i][l] + dDD[ip][k][i][l] - dDD[k][l][i][ip] + dDD[l][k][i][ip] 
-                    - g_cov[ip][l]*(dPP[k][i] + dPP[i][k]) - g_cov[i][l]*(dPP[k][ip]+dPP[ip][k]) +  g_cov[i][ip]*(dPP[k][l]+dPP[l][k]) );
+            dChristoffelNCP[k][i][j][m] +=  0.5*g_contr[m][l] * ( 
+                    dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j] 
+                    - g_cov[j][l]*(dPP[k][i] + dPP[i][k]) - g_cov[i][l]*(dPP[k][j]+dPP[j][k]) +  g_cov[i][j]*(dPP[k][l]+dPP[l][k]) );
 
-
-
-            dChristoffel_tildeNCP[k][i][ip][m] += 0.5*g_contr[m][l]*(dDD[k][i][ip][l] + dDD[i][k][ip][l] + dDD[k][ip][i][l] + dDD[ip][k][i][l] - dDD[k][l][i][ip] - dDD[l][k][i][ip]);
+            dChristoffel_tildeNCP[k][i][j][m] += 0.5*g_contr[m][l]*(dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]);
             
         }
     }
 
-
     double RiemannNCP[3][3][3][3] = {0};
     for (int i = 0; i < 3; i++)
-    for (int ip = 0; ip < 3; ip++)
+    for (int j = 0; j < 3; j++)
     for (int m = 0; m < 3; m++)
-    for (int k = 0; k < 3; k++) RiemannNCP[i][k][ip][m] = dChristoffelNCP[k][i][ip][m] - dChristoffelNCP[ip][i][k][m];
+    for (int k = 0; k < 3; k++) RiemannNCP[i][k][j][m] = dChristoffelNCP[k][i][j][m] - dChristoffelNCP[j][i][k][m];
 
     double RicciNCP[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int m = 0; m < 3; m++)
@@ -868,6 +881,8 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
         {gradQin[13][1],gradQin[14][1],gradQin[15][1]},
         {gradQin[13][2],gradQin[14][2],gradQin[15][2]}
     };
+
+
     
     double dZNCP[3][3] = {0,0,0,0,0,0,0,0,0};
     for (int j = 0; j < 3; j++)
@@ -900,6 +915,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) nablanablaalphaNCP += g_contr[i][j]*nablaijalphaNCP[i][j]; 
     nablanablaalphaNCP*=phi2;
+    
    
     double SecondOrderTermsNCP[3][3];
     for (int i = 0; i < 3; i++)
@@ -940,7 +956,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++) Aupdown += Aex[i][j]*Aup[i][j];  
 
-    const double dTheta[3] = {gradQin[13][0],gradQin[13][1],gradQin[13][2]};
+    const double dTheta[3] = {gradQin[12][0],gradQin[12][1],gradQin[12][2]};
     const double dtTheta = 0.5*alpha*CCZ4e*CCZ4e*( RPlusTwoNablaZNCP ) + beta[0]*dTheta[0] + beta[1]*dTheta[1] + beta[2]*dTheta[2]; // *** original cleaning *** 
 
     double divAupNCP[3] = {0,0,0};
@@ -1097,18 +1113,21 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     BgradQ[32] = -dtB[0][2];
     BgradQ[33] = -dtB[1][2];
     BgradQ[34] = -dtB[2][2];
+    
     BgradQ[35] = -dtD[0][0][0];
     BgradQ[36] = -dtD[0][0][1];
     BgradQ[37] = -dtD[0][0][2];
     BgradQ[38] = -dtD[0][1][1];
     BgradQ[39] = -dtD[0][1][2];
     BgradQ[40] = -dtD[0][2][2];
+
     BgradQ[41] = -dtD[1][0][0];
     BgradQ[42] = -dtD[1][0][1];
     BgradQ[43] = -dtD[1][0][2];
     BgradQ[44] = -dtD[1][1][1];
     BgradQ[45] = -dtD[1][1][2];
     BgradQ[46] = -dtD[1][2][2];
+
     BgradQ[47] = -dtD[2][0][0];
     BgradQ[48] = -dtD[2][0][1];
     BgradQ[49] = -dtD[2][0][2];
