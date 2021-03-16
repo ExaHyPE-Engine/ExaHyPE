@@ -12,6 +12,7 @@
 #include "Properties.h"
 #include "InitialValue.h"
 
+#include <algorithm>
 /**
  *  * This file is automatically created by Peano. I need it to interact with
  *   * the Python API, i.e. to read out data set there.
