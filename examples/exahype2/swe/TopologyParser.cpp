@@ -38,40 +38,41 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(){
 
   std::ifstream topofile (this->filepath);
   std::string line;
-  std::stringstream ss;
   std::vector <std::string> thisline;
+  std::stringstream ss; 
+  float value;
 
   
   if (topofile.is_open()){
   
     while(getline(topofile,line)){
     
-      thisline = splitline(line, ' ');
-      ss << thisline[0];
-      float dataentry;
+      thisline = splitline(line, ' ');      
+           
+      ss << thisline.at(0);     
+           
+      ss >> value;
     
       if (thisline.size() == 2 && thisline.back() == "ncols"){
-        ss >> this->ncols;
+        this->ncols = value;
       }
       else if (thisline.size() == 2 && thisline.back() == "nrows"){
-        ss >> this->nrows;
+        this->nrows = value;
       }
       else if (thisline.size() == 2 && thisline.back() == "xll"){
-        ss >> this->xlowerleft;
+        this->xlowerleft = value;
       }            
       else if (thisline.size() == 2 && thisline.back() == "yll"){
-        ss >> this->ylowerleft;
+        this->ylowerleft = value;
       }   
       else if (thisline.size() == 2 && thisline.back() == "cellsize"){
-        ss >> this->cellsize;
+        this->cellsize = value;
       }         
       else if (thisline.size() == 2 && thisline.back() == "nodata_value"){
-        ss >> this->nodatavalue;
+        this->nodatavalue = value;
       } 
       else if (thisline.size() == 1){
-        //get topology data
-        ss >> dataentry;
-        this->zvalues.push_back(dataentry);
+        this->zvalues.push_back(value);
       }           
       else{
         std::cout << "Warning: Undefined entry in topology file!"; 
