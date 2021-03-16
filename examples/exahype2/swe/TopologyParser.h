@@ -32,7 +32,10 @@ class examples::exahype2::swe::TopologyParser {
 
   public:
   
-    void parsetopofile(std::string filename);
+    TopologyParser(std::string filename);
+    ~TopologyParser();
+  
+    void parsetopofile();
     float sampletopology(float x, float y);
     
     std::string getfilepath() {return this->filepath;}

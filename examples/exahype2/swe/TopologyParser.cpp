@@ -6,6 +6,17 @@
 
 tarch::logging::Log   examples::exahype2::swe::TopologyParser::_log( "examples::exahype2::swe::TopologyParser" );
 
+examples::exahype2::swe::TopologyParser::TopologyParser(std::string filename){
+
+  this->filepath=filename;
+  this->parsetopofile();
+
+}
+
+examples::exahype2::swe::TopologyParser::~TopologyParser(){
+  std::cout << "Destroy topology parser."; 
+}
+
 std::vector <std::string> examples::exahype2::swe::TopologyParser::splitline(std::string line, char delimiter){
 
     // Vector of string to save tokens 
@@ -23,9 +34,9 @@ std::vector <std::string> examples::exahype2::swe::TopologyParser::splitline(std
     return tokens;
 }
 
-void examples::exahype2::swe::TopologyParser::parsetopofile(std::string filename){
+void examples::exahype2::swe::TopologyParser::parsetopofile(){
 
-  std::ifstream topofile (filename);
+  std::ifstream topofile (this->filepath);
   std::string line;
   std::stringstream ss;
   std::vector <std::string> thisline;
@@ -71,7 +82,7 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(std::string filename
   }
 
   else{
-    std::cout << "Error opening file " << filename; 
+    std::cout << "Error opening file " << this->filepath; 
   }
 
 }
