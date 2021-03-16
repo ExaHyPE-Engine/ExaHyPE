@@ -139,7 +139,7 @@ if __name__ == "__main__":
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        int n_a_v=6;
+        const int n_a_v=6;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
 
@@ -297,7 +297,7 @@ if __name__ == "__main__":
       pass
     else:
       peano4_project.output.makefile.add_Fortran_flag( "-lstdc++ -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy -ffree-line-length-512 -fPIC" )
-      peano4_project.output.makefile.add_CXX_flag( "-fPIE" )
+      peano4_project.output.makefile.add_CXX_flag( "-fPIE -DCCZ4EINSTEIN" )
       peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -lgfortran" )
     peano4_project.output.makefile.add_cpp_file( "InitialValue.cpp" )
 
