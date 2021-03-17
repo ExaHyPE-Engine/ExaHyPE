@@ -640,6 +640,10 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
       }
 
       p = _spacetrees.erase(p);
+
+      for (auto pp = _spacetrees.begin(); pp!=_spacetrees.end(); p++) {
+        pp->informAboutDegeneratedTreeWhichHasBeenRemoved();
+      }
     }
     else if (
       p->mayJoinWithMaster()
@@ -690,6 +694,7 @@ peano4::grid::GridStatistics peano4::parallel::SpacetreeSet::getGridStatistics()
       0,  // __numberOfLocalRefinedCells
       0,  // __numberOfRemoteRefinedCells,
       0,  // __stationarySweeps,
+      false,
       false,
       tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() ) // minH
     );

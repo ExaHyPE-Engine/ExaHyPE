@@ -131,6 +131,7 @@ peano4::grid::GridStatistics operator+( peano4::grid::GridStatistics lhs, peano4
     lhs.getNumberOfRemoteRefinedCells() + rhs.getNumberOfRemoteRefinedCells(),
     std::min(lhs.getStationarySweeps(),rhs.getStationarySweeps()),
     lhs.getCoarseningHasBeenVetoed() | rhs.getCoarseningHasBeenVetoed(),
+    lhs.getRemovedEmptySubtree() | rhs.getRemovedEmptySubtree(),
     tarch::la::min( lhs.getMinH(), rhs.getMinH() )
   );
 }
@@ -142,6 +143,7 @@ void peano4::grid::clear( GridStatistics& statistics, bool isGlobalMasterTree ) 
   statistics.setNumberOfLocalRefinedCells(isGlobalMasterTree ? 1 : 0);
   statistics.setNumberOfRemoteRefinedCells(isGlobalMasterTree ? 0 : 1);
   statistics.setCoarseningHasBeenVetoed(false);
+  statistics.setRemovedEmptySubtree(false);
   statistics.setStationarySweeps( statistics.getStationarySweeps()+1 );
   statistics.setMinH( tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() ) );
 }
