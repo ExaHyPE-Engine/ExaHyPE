@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "gpu"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="swich on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
 
@@ -49,7 +49,7 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
     if args.implementation=="ader-fixed":
        SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
-    if args.implementation=="gpu":
+    if args.implementation=="fv-fixed-gpu":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator
 
     class CCZ4Solver( SuperClass ):
@@ -233,18 +233,25 @@ if __name__ == "__main__":
     project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4" )
 
     is_aderdg = False
+    solver_name = "CCZ4"
     try:
       if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
         is_aderdg = True
         order = 3
         unknowns = 59
         time_step_size = 0.001
+        solver_name    = "ADERDG" + solver_name
+      else:
+        solver_name    = "FiniteVolume" + solver_name
     except:
       print( "Warning: ADER-DG no supported on this machine" )
 
+    if SuperClass == exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator:
+      solver_name += "OnGPU"
+
     if is_aderdg:
       my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
-          "ADERDGCCZ4", order, unknowns, 0, #auxiliary_variables
+          solver_name, order, unknowns, 0, #auxiliary_variables
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
           args.max_h, args.max_h, time_step_size,
           flux = None,
@@ -252,7 +259,7 @@ if __name__ == "__main__":
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = CCZ4Solver("FiniteVolumeCCZ4", args.patch_size, args.max_h, args.max_h)
+      my_solver = CCZ4Solver(solver_name, args.patch_size, args.max_h, args.max_h)
 
       if args.extension=="gradient":
         my_solver.add_derivative_calculation()
