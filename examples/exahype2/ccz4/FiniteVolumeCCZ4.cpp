@@ -8,8 +8,8 @@
  *  * I manually include this header which in turn declared all the
  *   * routines written in Fortran.
  *    */
-#include "PDE.h"
-#include "Properties.h"
+//#include "PDE.h"
+//#include "Properties.h"
 #include "InitialValue.h"
 
 #include <algorithm>
@@ -35,7 +35,7 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   if ( Scenario=="gaugewave-c++" || Scenario=="linearwave-c++" ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
-    initparameters_(&length, name);
+    //initparameters_(&length, name);
   }
   else {
     std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
