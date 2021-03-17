@@ -105,25 +105,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU: public AbstractFiniteVolu
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
-
     
-#pragma omp declare target
-void pdencpholger_(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal);
-#pragma omp end declare target
-
-#pragma omp declare target
-void pdesourceholger_(double* S, const double* const Q);
-#pragma omp end declare target
-  
-#pragma omp declare target
-void pdeeigenvaluesholger_(double* lambda, const double* const Q, const int normal);
-#pragma omp end declare target
-
-#pragma omp declare target
-void enforceccz4constraintsholger_(double * luh);
-#pragma omp end declare target
-  
-   
 };
 
 
