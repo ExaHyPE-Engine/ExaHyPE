@@ -105,43 +105,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       double                                       t,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[59]
-    );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-
-    // Dummy function
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static void flux(
-      const double * __restrict__                  Q, // [9+4],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal,
-      double * __restrict__ F // BgradQ[13]
-     ) {};
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    
-  #pragma omp declare target
-  static void pdencpholger_(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal);
-  #pragma omp end declare target
-  
-  #pragma omp declare target
-  static void pdesourceholger_(double* S, const double* const Q);
-  #pragma omp end declare target
-    
-  #pragma omp declare target
-  void pdeeigenvaluesholger_(double* lambda, const double* const Q, const int normal);
-  #pragma omp end declare target
-  
-  #pragma omp declare target
-  void enforceccz4constraintsholger_(double * luh);
-  #pragma omp end declare target
-    
+    ) override;
 };
 
 
