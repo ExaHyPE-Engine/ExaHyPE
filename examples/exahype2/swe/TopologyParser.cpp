@@ -2,7 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-
+#include <math.h>  
 
 tarch::logging::Log   examples::exahype2::swe::TopologyParser::_log( "examples::exahype2::swe::TopologyParser" );
 
@@ -39,7 +39,7 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(){
   std::ifstream topofile (this->filepath);
   std::string line;
   std::vector <std::string> thisline;
-  std::stringstream ss; 
+  //std::stringstream ss; 
   float value;
 
   
@@ -49,9 +49,14 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(){
     
       thisline = splitline(line, ' ');      
            
-      ss << thisline.at(0);     
+     // ss << thisline.at(0);     
            
-      ss >> value;
+     // ss >> value;
+      
+      value = std::stof(thisline.at(0));
+       
+     // std::cout << thisline.at(0) << "\n";
+     // std::cout << value << "\n";
     
       if (thisline.size() == 2 && thisline.back() == "ncols"){
         this->ncols = value;
@@ -90,9 +95,13 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(){
 
 float examples::exahype2::swe::TopologyParser::sampletopology(float x, float y){
   
-  int index = x*this->ncols + y;
+  int index = floor(y*361.0)*(this->ncols-1) + floor(x*361.0);
+  
+  //std::cout << x << " " << y << " " << index << "\n";
 	
   float z = this->zvalues.at(index);
+  
+  //std::cout << z << "\n";
 	
   return z;
 
