@@ -285,6 +285,8 @@ if __name__ == "__main__":
     project.set_Peano4_installation("../../..", build_mode)
 
     #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem" )
+    #probe_point = [0,0,0]
+    #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -299,10 +301,9 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_Fortran_flag( "-lstdc++ -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy -ffree-line-length-512 -fPIC" )
       peano4_project.output.makefile.add_CXX_flag( "-fPIE -DCCZ4EINSTEIN" )
       peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -lgfortran" )
+      #peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -L/usr/lib/x86_64-linux-gnu -lgfortran" )
+    
     peano4_project.output.makefile.add_cpp_file( "InitialValue.cpp" )
-
-
-    #peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -L/usr/lib/x86_64-linux-gnu -lgfortran" )
 
     # This might work for Intel (not tested)
     #peano4_project.output.makefile.add_Fortran_flag( "-r8 -cpp -auto -qopenmp-simd -O2" )

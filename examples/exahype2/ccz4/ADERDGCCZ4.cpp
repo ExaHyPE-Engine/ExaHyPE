@@ -27,7 +27,7 @@ tarch::logging::Log   examples::exahype2::ccz4::ADERDGCCZ4::_log( "examples::exa
 
 
 examples::exahype2::ccz4::ADERDGCCZ4::ADERDGCCZ4() {
-  if ( Scenario=="gaugewave-c++" ) {
+  if ( Scenario=="gaugewave-c++" || Scenario=="linearwave-c++" ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
     initparameters_(&length, name);
@@ -66,7 +66,10 @@ void examples::exahype2::ccz4::ADERDGCCZ4::adjustSolution(
   logTraceInWith2Arguments( "adjustSolution(...)", x, t);
   if (tarch::la::equals(t,0.0) ) {
     if ( Scenario=="gaugewave-c++" ) {
-      gaugeWave(Q, x, t);
+      examples::exahype2::ccz4::gaugeWave(Q, x, t);
+    }
+    else if ( Scenario=="linearwave-c++" ) {
+      examples::exahype2::ccz4::linearWave(Q, x, t);
     }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );

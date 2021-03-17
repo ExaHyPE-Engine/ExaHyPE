@@ -32,7 +32,7 @@ tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "example
 
 
 examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
-  if ( Scenario=="gaugewave-c++" ) {
+  if ( Scenario=="gaugewave-c++" || Scenario=="linearwave-c++" ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
     initparameters_(&length, name);
@@ -54,6 +54,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
   if (tarch::la::equals(t,0.0) ) {
     if ( Scenario=="gaugewave-c++" ) {
       examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
+    }
+    else if ( Scenario=="linearwave-c++" ) {
+      examples::exahype2::ccz4::linearWave(Q, volumeX, t);
     }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
