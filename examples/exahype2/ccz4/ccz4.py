@@ -289,32 +289,29 @@ if __name__ == "__main__":
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
     peano4_project = project.generate_Peano4_project(verbose=True)
-
-    peano4_project.output.makefile.add_Fortran_flag( "-DCCZ4EINSTEIN -DDim3" )
-
-    use_intel = False
-    if use_intel:
-      pass
-    else:
-      peano4_project.output.makefile.add_Fortran_flag( "-lstdc++ -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy -ffree-line-length-512 -fPIC" )
-      peano4_project.output.makefile.add_CXX_flag( "-fPIE -DCCZ4EINSTEIN" )
-      peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -lgfortran" )
+    peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
     peano4_project.output.makefile.add_cpp_file( "InitialValue.cpp" )
 
-
-    #peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -L/usr/lib/x86_64-linux-gnu -lgfortran" )
+    # NOTE these lines are required to build with the fortran routines --- this will also require to uncomment some
+    # includes etc
+    #
+    # peano4_project.output.makefile.add_Fortran_flag( "-DCCZ4EINSTEIN -DDim3" )
+    # peano4_project.output.makefile.add_Fortran_flag( "-lstdc++ -fdefault-real-8 -fdefault-double-8 -cpp -std=legacy -ffree-line-length-512 -fPIC" )
+    # peano4_project.output.makefile.add_CXX_flag( "-fPIE -DCCZ4EINSTEIN" )
+    # peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -lgfortran" )
+    # peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC -L/usr/lib/x86_64-linux-gnu -lgfortran" )
 
     # This might work for Intel (not tested)
     #peano4_project.output.makefile.add_Fortran_flag( "-r8 -cpp -auto -qopenmp-simd -O2" )
     #peano4_project.output.makefile.add_linker_flag( "-lstdc++ -fPIC" )
     # you might need -lifcore
 
-    peano4_project.output.makefile.add_Fortran_module( "MainVariables.f90" )
+    # peano4_project.output.makefile.add_Fortran_module( "MainVariables.f90" )
 
-    peano4_project.output.makefile.add_Fortran_files(
-      ["PDE.f90 ", "EinsteinConstraints.f90 ", "Properties.f90",
-        "Metric.f90 ", "C2P-FOCCZ4.f90 ","ADMConstraints.f90"]
-    )
+    # peano4_project.output.makefile.add_Fortran_files(
+      # ["PDE.f90 ", "EinsteinConstraints.f90 ", "Properties.f90",
+        # "Metric.f90 ", "C2P-FOCCZ4.f90 ","ADMConstraints.f90"]
+    # )
 
     peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
     #peano4_project.constants.export_string( "Scenario", "linearwave-c++" )
