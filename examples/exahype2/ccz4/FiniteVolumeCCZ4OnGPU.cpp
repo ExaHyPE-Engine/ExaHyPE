@@ -4,21 +4,17 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 
-/** it is for aderdg solver with signatures changed from the one with fv.
- *  * I manually include this header which in turn declared all the
- *   * routines written in Fortran.
- *    */
-//#include "PDE.h"
-//#include "Properties.h"
-#include "InitialValue.h"
+#include "InitialValues.h"
+#include "CCZ4Kernels.h"
 
 #include <algorithm>
+
+
 /**
  *  * This file is automatically created by Peano. I need it to interact with
  *   * the Python API, i.e. to read out data set there.
  *    */
 #include "Constants.h"
-using namespace examples::exahype2::ccz4;
 
 #include <limits>
 

@@ -300,7 +300,8 @@ if __name__ == "__main__":
     peano4_project = project.generate_Peano4_project(verbose=True)
 
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
-    peano4_project.output.makefile.add_cpp_file( "InitialValue.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "InitialValues.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "CCZ4Kernels.cpp" )
 
     # NOTE these lines are required to build with the fortran routines --- this will also require to uncomment some
     # includes etc
