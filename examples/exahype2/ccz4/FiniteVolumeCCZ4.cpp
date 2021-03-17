@@ -78,6 +78,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
 }
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   const double * __restrict__                  Q, // Q[59+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -85,20 +88,29 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   double                                       t,
   double                                       dt,
   double * __restrict__                        S  // S[59
-) {
+)
+{
+
+#if !defined(OpenMPGPUOffloading)
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
   for(int i=0; i<NumberOfUnknowns; i++){
     assertion3( std::isfinite(Q[i]), i, x, t );
   }
+#endif
 
   memset(S, 0, NumberOfUnknowns*sizeof(double));
   //pdesource_(S,Q);    //  S(Q)
   pdesourceholger_(S,Q);    //  S(Q)
+#if !defined(OpenMPGPUOffloading)
   for(int i=0; i<NumberOfUnknowns; i++){
     nonCriticalAssertion3( std::isfinite(S[i]), i, x, t );
   }
   logTraceOut( "sourceTerm(...)" );
+#endif
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 
