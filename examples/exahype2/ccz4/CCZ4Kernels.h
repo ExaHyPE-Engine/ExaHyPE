@@ -8,21 +8,19 @@
 namespace examples {
   namespace exahype2 {
     namespace ccz4 {
+      #if defined(OpenMPGPUOffloading)
       #pragma omp declare target
+      #endif
       void ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal);
-      #pragma omp end declare target
-	
-      #pragma omp declare target
+
       void source(double* S, const double* const Q);
-      #pragma omp end declare target
 	  
-      #pragma omp declare target
       void eigenvalues(double* lambda, const double* const Q, const int normal);
-      #pragma omp end declare target
 	
-      #pragma omp declare target
       void enforceCCZ4constraints(double * luh);
+      #if defined(OpenMPGPUOffloading)
       #pragma omp end declare target
+      #endif
     }
   }
 }
