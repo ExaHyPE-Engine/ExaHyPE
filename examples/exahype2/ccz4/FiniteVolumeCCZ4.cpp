@@ -141,7 +141,7 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
   const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
   //// we are only interested in the maximum eigenvalue
-  return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB), std::abs(Q[0]), std::abs(Q[13])});
+  return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
   
   //logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
   //constexpr int Unknowns = 59;
@@ -1019,7 +1019,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     {
         dtA[i] = -alpha*fa*(dtraceK[i] - dK0[i] - CCZ4c*2*dTheta[i]) + beta[0]*dAA[0][i] + beta[1]*dAA[1][i] + beta[2]*dAA[2][i];
     }
-
+    /*if ((dtA[1]+dtA[2])!=0 && dtA[2]>1e-9) {printf("cpp dtA[1]=%g, dtA[2]=%g\n",dtA[1],dtA[2]);
+    printf("cpp dtheta[1]=%g, dtheta[2]=%g \n",dTheta[1],dTheta[2]);
+    printf("cpp dtracek[1]=%g, dtracek[2]=%g \n",dtraceK[1],dtraceK[2]);
+    }*/
+    //if ((dTheta[0]+dTheta[1]+dTheta[2])!=0) printf("cpp dtheta[0] = %g, dtheta[1] = %g, dtheta[2] = %g \n\n",dTheta[0],dTheta[1],dTheta[2]);
     for (int k = 0; k < 3; k++)
     {
         double temp=0;
@@ -1072,7 +1076,6 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
    
     double dtP[3];
     for (int i = 0; i < 3; i++) dtP[i] = beta[0]*dPP[0][i] + beta[1]*dPP[1][i] + beta[2]*dPP[2][i];
-
     for (int k = 0; k < 3; k++)
     {
         double temp=0;
@@ -1139,6 +1142,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::pdencpholger_(double* BgradQ, c
     BgradQ[54] = -dtphi;
     for (int i = 0; i < 3; i++) BgradQ[55+i] = -dtP[i];
     BgradQ[58] = 0;
+    //if (dtP[1]!=0) printf("dtP[1] = %g, dtP[2] = %g \n\n",dtP[1],dtP[2]);
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
