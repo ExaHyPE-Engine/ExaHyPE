@@ -641,7 +641,7 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
 
       p = _spacetrees.erase(p);
 
-      for (auto pp = _spacetrees.begin(); pp!=_spacetrees.end(); p++) {
+      for (auto pp = _spacetrees.begin(); pp!=_spacetrees.end(); pp++) {
         pp->informAboutDegeneratedTreeWhichHasBeenRemoved();
       }
     }
@@ -650,27 +650,25 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
     ) {
       const int localRank  = Node::getInstance().getRank( p->_id );
       const int masterRank = Node::getInstance().getRank( p->_masterId );
-      if (localRank==masterRank) {
-        if (
-          getSpacetree(p->_masterId).getGridStatistics().getCoarseningHasBeenVetoed()
-          and
-          getSpacetree(p->_masterId).mayJoinWithWorker()
-        ) {
-          // @todo erste Meldung info
-          logError( "traverse(Observer)", "join tree " << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId << " resides on same rank and can't coarsen" );
-          logError( "traverse(Observer)", "not implemented yet");
-          //p->joinWithMaster();
-          //getSpacetree(p->_masterId).joinWithWorker(p->_id);
-        }
-        else {
-          logDebug( "traverse(Observer)", "tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master" );
-        }
+      if (
+        localRank==masterRank
+        and
+        getSpacetree(p->_masterId).getGridStatistics().getCoarseningHasBeenVetoed()
+      ) {
+        // @todo erste Meldung info
+        logError( "traverse(Observer)", "join tree " << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId << " resides on same rank and can't coarsen" );
+        logError( "traverse(Observer)", "not implemented yet");
+        //p->joinWithMaster();
+        //getSpacetree(p->_masterId).joinWithWorker(p->_id);
+      }
+      else if (localRank==masterRank) {
+        logDebug( "traverse(Observer)", "tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master" );
       }
       else {
         // @todo: Aber nur, wenn es noch andere Baeume auf diesem Rank gibt
         // @todo erste Meldung info
-        logError( "cleanUpTrees(...)", "I should merge tree " << p->_id << " to reduce synchronisation: " << p->toString() );
-        logError( "traverse(Observer)", "not implemented yet");
+        logDebug( "cleanUpTrees(...)", "I should merge tree " << p->_id << " to reduce synchronisation: " << p->toString() );
+        logDebug( "traverse(Observer)", "not implemented yet");
       }
     }
     p++;
