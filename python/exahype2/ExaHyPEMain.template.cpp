@@ -173,7 +173,7 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = true;
   }}
   else {{
-    if ( repositories::getMinTimeStamp()>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 ) {{
+    if ( repositories::getMinTimeStamp()>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime ) {{
       nextPlotTimeStamp += TimeInBetweenPlots;
       if ( nextPlotTimeStamp < repositories::getMinTimeStamp() ) {{
         logWarning( "selectNextAlgorithmicStep()", "code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the minimal time step size of the solvers" );
@@ -242,7 +242,7 @@ void step() {{
           and
           peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getRemovedEmptySubtree()
         ) {{
-          logInfo( "step()", "switch off load balancing manually as finest grid resolution met and fork has failed before" );
+          logInfo( "step()", "switch off load balancing manually as finest grid resolution met and fork has failed before: " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().toString() );
           repositories::loadBalancer.enable(false);
         }}
 
