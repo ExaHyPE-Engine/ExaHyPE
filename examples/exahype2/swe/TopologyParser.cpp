@@ -39,8 +39,7 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(){
   std::ifstream topofile (this->filepath);
   std::string line;
   std::vector <std::string> thisline;
-  //std::stringstream ss; 
-  float value;
+  double value;
 
   
   if (topofile.is_open()){
@@ -48,15 +47,8 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(){
     while(getline(topofile,line)){
     
       thisline = splitline(line, ' ');      
-           
-     // ss << thisline.at(0);     
-           
-     // ss >> value;
-      
+                 
       value = std::stof(thisline.at(0));
-       
-     // std::cout << thisline.at(0) << "\n";
-     // std::cout << value << "\n";
     
       if (thisline.size() == 2 && thisline.back() == "ncols"){
         this->ncols = value;
@@ -93,16 +85,12 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(){
 
 }
 
-float examples::exahype2::swe::TopologyParser::sampletopology(float x, float y){
+double examples::exahype2::swe::TopologyParser::sampletopology(double x, double y){
   
-  int index = floor(y*361.0)*(this->ncols-1) + floor(x*361.0);
-  
-  //std::cout << x << " " << y << " " << index << "\n";
+  int index = floor((1.0-y)*361.0)*this->ncols + floor(x*361.0);
 	
   float z = this->zvalues.at(index);
-  
-  //std::cout << z << "\n";
-	
+
   return z;
 
 }

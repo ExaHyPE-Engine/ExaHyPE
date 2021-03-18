@@ -49,7 +49,7 @@ class TopologyParser(object):
     with open(self.filepath, 'r') as data_file:
       for this_line in data_file:
         this_line = this_line.strip()
-        print(this_line)
+        #print(this_line)
           
         if this_line.endswith("ncols"):
           self.ncols = int(this_line.split()[0])
