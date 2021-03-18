@@ -256,7 +256,6 @@ bool tarch::la::allGreaterEquals (
 }
 
 
-
 template<int Size, typename Scalar>
 bool tarch::la::allSmaller (
   const Vector<Size,Scalar>&  lhs,
@@ -282,6 +281,36 @@ bool tarch::la::allSmallerEquals (
 	result &= smallerEquals(lhs(i),rhs(i),tolerance);
   }
   return result;
+}
+
+
+template<int Size, typename Scalar>
+bool tarch::la::oneSmaller (
+  const Vector<Size,Scalar>&  lhs,
+  const Vector<Size,Scalar>&  rhs,
+  const Scalar                tolerance
+) {
+  for ( int i=0; i < Size; i++ ) {
+    if (smaller(lhs(i),rhs(i),tolerance)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
+template<int Size, typename Scalar>
+bool tarch::la::oneSmallerEquals (
+  const Vector<Size,Scalar>&  lhs,
+  const Vector<Size,Scalar>&  rhs,
+  const Scalar                tolerance
+) {
+  for ( int i=0; i < Size; i++ ) {
+    if (smallerEquals(lhs(i),rhs(i),tolerance)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 

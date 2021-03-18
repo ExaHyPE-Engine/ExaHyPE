@@ -50,16 +50,16 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
 
       bool twoEventsAreAdjacent = tarch::la::volume(boundingEventSize) <= (1.0+Tolerance) * (tarch::la::volume(i->getWidth()) + tarch::la::volume(currentEvent.getWidth()));
 
-      auto[&] refinementEventOverrulesCoarsening( const auto& refineEvent, const auto& eraseEvent ) -> bool {
+      auto refinementEventOverrulesCoarsening = [&]( const auto& refineEvent, const auto& eraseEvent ) -> bool {
         bool twoEventsOverlap     = true;
         for (int d=0; d<Dimensions; d++) {
           twoEventsOverlap &  refineEvent.getOffset()(d)+refineEvent.getWidth()(d) >= eraseEvent.getOffset()(d);
           twoEventsOverlap &= refineEvent.getOffset()(d)                           <= eraseEvent.getOffset()(d) + eraseEvent.getWidth()(d);
         }
         return twoEventsOverlap
-           and refineEvent.getRefinementControl()!=GridControlEvent::RefinementControl
-           and eraseEvent.getRefinementControl()!=GridControlEvent::Erase
-           and tarch::la::anySmallerEquals( 1.0/3.0*refineEvent.getH(), eraseEvent.getH() );
+           and refineEvent.getRefinementControl()==GridControlEvent::RefinementControl::Refine
+           and eraseEvent.getRefinementControl()==GridControlEvent::RefinementControl::Erase
+           and tarch::la::oneSmallerEquals( 1.0/3.0*refineEvent.getH(), eraseEvent.getH() );
       };
 
       if (
