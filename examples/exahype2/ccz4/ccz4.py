@@ -95,7 +95,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.001
+            time_step_relaxation=0.01
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -239,7 +239,7 @@ if __name__ == "__main__":
         is_aderdg = True
         order = 3
         unknowns = 59
-        time_step_size = 0.001
+        time_step_size = 1e-5
     except:
       print( "Warning: ADER-DG no supported on this machine" )
 
