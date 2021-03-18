@@ -49,29 +49,28 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
       logDebug( "merge(...)", "compare " << currentEvent.toString() << "+" << i->toString() << " vs. a fused event of " << boundingEventOffset << "x" << boundingEventSize );
 
       bool twoEventsAreAdjacent = tarch::la::volume(boundingEventSize) <= (1.0+Tolerance) * (tarch::la::volume(i->getWidth()) + tarch::la::volume(currentEvent.getWidth()));
-      bool twoEventsOverlap     = true;
-      for (int d=0; d<Dimensions; d++) {
-        twoEventsOverlap &= i->getOffset()(d)+i->getWidth()(d) >= currentEvent.getOffset()(d);
-        twoEventsOverlap &= i->getOffset()(d)                  <= currentEvent.getOffset()(d) + currentEvent.getWidth()(d);
-      }
+
+      auto[&] refinementEventOverrulesCoarsening( const auto& refineEvent, const auto& eraseEvent ) -> bool {
+        bool twoEventsOverlap     = true;
+        for (int d=0; d<Dimensions; d++) {
+          twoEventsOverlap &  refineEvent.getOffset()(d)+refineEvent.getWidth()(d) >= eraseEvent.getOffset()(d);
+          twoEventsOverlap &= refineEvent.getOffset()(d)                           <= eraseEvent.getOffset()(d) + eraseEvent.getWidth()(d);
+        }
+        return twoEventsOverlap
+           and refineEvent.getRefinementControl()!=GridControlEvent::RefinementControl
+           and eraseEvent.getRefinementControl()!=GridControlEvent::Erase
+           and tarch::la::anySmallerEquals( 1.0/3.0*refineEvent.getH(), eraseEvent.getH() );
+      };
 
       if (
-        twoEventsOverlap
-        and
-        currentEvent.getRefinementControl()==GridControlEvent::RefinementControl::Erase
-        and
-        i->getRefinementControl()!=GridControlEvent::RefinementControl::Erase
+        refinementEventOverrulesCoarsening(*i,currentEvent)
       ) {
         logInfo( "merge(...)", "drop event " << currentEvent.toString() );
         i = result.end();
         hasInserted = true;
       }
       else if (
-        twoEventsOverlap
-        and
-        currentEvent.getRefinementControl()!=GridControlEvent::RefinementControl::Erase
-        and
-        i->getRefinementControl()==GridControlEvent::RefinementControl::Erase
+        refinementEventOverrulesCoarsening(currentEvent,*i)
       ) {
         logInfo( "merge(...)", "replace event " << i->toString() << " with " << currentEvent.toString() );
         *i = currentEvent;
