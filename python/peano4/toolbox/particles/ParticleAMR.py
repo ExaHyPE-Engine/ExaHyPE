@@ -19,6 +19,30 @@ class ParticleAMR(ActionSet):
 
   """
   def __init__(self,particle_set,particle_tree_analysis,min_particles_per_cell=1,max_particles_per_cell=65536):
+    """
+    
+    particle_set: peano4.toolbox.particles.ParticleSet
+       Instance of the particle set that is to be used as trigger. Each particle in the
+       set has a cut-off radius and this one is used to guide the AMR.
+     
+    particle_tree_analysis: peano4.toolbox.particles.ParticleTreeAnalysis
+       Tree analysis algorithm. Usually is instantiated over particle_set, but you can 
+       also impose another analysis algorithm.
+       
+    min_particles_per_cell: int
+       The tree is not refined if there are less than min_particles_per_cell particles
+       within the cell. By default, this parameter is set to 1 and thus the code refines
+       always if the is a particle in a cell which is way "smaller" than the cell. Set
+       it to a higher number to ensure that there's (approximately) a certain particle 
+       counter per cell.
+       
+    max_particles_per_cell: int
+       Forces the code to refine even if the cut-off radius would veto a refinement. 
+       In this case, the AMR criterion will refine, but the particles likely would not 
+       drop down further. Has to be used with care therefore. A very high value effectively
+       disables this criterion (default).
+       
+    """
     self.d = {
       "CELL_DATA_NAME":          particle_tree_analysis._cell_data_name,
       "MIN_PARTICLES_PER_CELL":  min_particles_per_cell,

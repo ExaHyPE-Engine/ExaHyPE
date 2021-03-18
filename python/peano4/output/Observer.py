@@ -395,10 +395,10 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         );
       }}
       else if (
-        peano4::grid::PeanoCurve::isInOutStack(inVertexStack
+        peano4::grid::PeanoCurve::isInOutStack(inVertexStack)
         and
         marker.isLocal()
-      )) {{
+      ) {{
         {ACTIVE_ACTION_SET}.touchVertexFirstTime(
            marker
           ,{MAPPING_SIGNATURE_FINE_GRID_VERTICES_ARGUMENTS_PICK_ENTRY}
