@@ -239,7 +239,7 @@ if __name__ == "__main__":
         is_aderdg = True
         order = 3
         unknowns = 59
-        time_step_size = 0.001
+        time_step_size = 1e-5
     except:
       print( "Warning: ADER-DG no supported on this machine" )
 
