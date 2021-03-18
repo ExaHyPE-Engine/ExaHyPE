@@ -79,22 +79,7 @@ class examples::exahype2::ccz4::ADERDGCCZ4: public AbstractADERDGCCZ4 {
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double * __restrict__ S // S[59]
-    );
-  #pragma omp declare target
-  void pdencpholger_(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal);
-  #pragma omp end declare target
-  
-  #pragma omp declare target
-  void pdesourceholger_(double* S, const double* const Q);
-  #pragma omp end declare target
-    
-  #pragma omp declare target
-  void pdeeigenvaluesholger_(double* lambda, const double* const Q, const int normal);
-  #pragma omp end declare target
-  
-  #pragma omp declare target
-  void enforceccz4constraintsholger_(double * luh);
-  #pragma omp end declare target
+    ) override;
 };
 
 
