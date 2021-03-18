@@ -104,9 +104,6 @@ struct peano4::grid::GridTraversalEvent {
     static void sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag );
 #endif
-
-
-
     
 
     #ifdef Parallel

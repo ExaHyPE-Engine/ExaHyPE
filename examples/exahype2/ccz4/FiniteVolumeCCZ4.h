@@ -85,22 +85,6 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[59]
     ) override;
-  #pragma omp declare target
-  void pdencpholger_(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal);
-  #pragma omp end declare target
-  
-  #pragma omp declare target
-  void pdesourceholger_(double* S, const double* const Q);
-  #pragma omp end declare target
-    
-  #pragma omp declare target
-  void pdeeigenvaluesholger_(double* lambda, const double* const Q, const int normal);
-  #pragma omp end declare target
-  
-  #pragma omp declare target
-  void enforceccz4constraintsholger_(double * luh);
-  #pragma omp end declare target
-    
 };
 
 
