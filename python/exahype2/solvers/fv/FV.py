@@ -627,34 +627,30 @@ In-situ preprocessing:  """
 
   @abstractmethod
   def add_entries_to_text_replacement_dictionary(self,d):
-    pass  
+    pass
 
-  
+
   def add_implementation_files_to_project(self,namespace,output):
     """
-    
-     The ExaHyPE2 project will call this operation when it sets 
+     The ExaHyPE2 project will call this operation when it sets
      up the overall environment.
-     
-     
-     
-     output: peano4.output.Output
-      
-    """
-    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" 
 
-    if self._solver_template_file_class_name == None:
+     output: peano4.output.Output
+    """
+    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/"
+
+    if self._solver_template_file_class_name is None:
       templatefile_prefix += self.__class__.__name__
     else:
       templatefile_prefix += self._solver_template_file_class_name
-    
+
     abstractHeaderDictionary = {}
     implementationDictionary = {}
     self._init_dictionary_with_default_parameters(abstractHeaderDictionary)
     self._init_dictionary_with_default_parameters(implementationDictionary)
     self.add_entries_to_text_replacement_dictionary(abstractHeaderDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
-        
+
     generated_abstract_header_file = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + "Abstract.template.h",
       templatefile_prefix + "Abstract.template.cpp",
@@ -711,4 +707,3 @@ In-situ preprocessing:  """
     d[ "MIN_H"] = self._max_h
 
     d[ "INCLUDES"] = self.additional_includes
-   

@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 from .FV                       import *
- 
 from .PDETerms import PDETerms
 
 import peano4
@@ -9,7 +8,7 @@ import exahype2
 
 import jinja2
 
-from .GenericRusanovFixedTimeStepSizeWithEnclaves import GenericRusanovFixedTimeStepSizeWithEnclaves 
+from .GenericRusanovFixedTimeStepSizeWithEnclaves import GenericRusanovFixedTimeStepSizeWithEnclaves
 
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
@@ -24,7 +23,7 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
     1, // halo
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
-  
+
   if (marker.isSkeletonCell()) {
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
@@ -42,26 +41,26 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
       reconstructedPatch
     );
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-    peano4::parallel::Tasks spawn( 
+    peano4::parallel::Tasks spawn(
       newEnclaveTask,
       peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
       peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithAccelerator" )
     );
   }
-  """      
-  
+  """
 
-    
-  
+
+
+
   def __init__(self,solver,use_split_loop=False):
     d = {}
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
-    d["USE_SPLIT_LOOP"] = use_split_loop      
+    d["USE_SPLIT_LOOP"] = use_split_loop
     d["GPU_ENCLAVE_TASK_NAME"] = solver._GPU_enclave_task_name()
-    
+
     self._solver = solver
-    
+
     ReconstructPatchAndApplyFunctor.__init__(self,
       solver._patch,
       solver._patch_overlap,
@@ -77,8 +76,8 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
 
   def get_includes(self):
     return ReconstructPatchAndApplyFunctor.get_includes(self) + """
-#include "tasks/""" + self._solver._GPU_enclave_task_name() + """.h"    
-"""  + self._solver._get_default_includes() + self._solver.get_user_includes() 
+#include "tasks/""" + self._solver._GPU_enclave_task_name() + """.h"
+"""  + self._solver._get_default_includes() + self._solver.get_user_includes()
 
 
 class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeStepSizeWithEnclaves ):
@@ -124,7 +123,10 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     """
     GenericRusanovFixedTimeStepSizeWithEnclaves.add_implementation_files_to_project(self,namespace,output)
 
-    templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
+    # TODO this is not working if we have inheritance
+    # templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
+    templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "GenericRusanovFixedTimeStepSizeWithAccelerator")
+
 
     implementationDictionary = {}
     self._init_dictionary_with_default_parameters(implementationDictionary)
@@ -140,7 +142,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
 
     print( "@@@@@@@@@@@@@@: " + implementationDictionary["NCP_IMPLEMENTATION"] )
     print( "||||||||||||||: " + implementationDictionary["FLUX_IMPLEMENTATION"] )
-    
+
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".GPUEnclaveTask.template.h",
       templatefile_prefix + ".GPUEnclaveTask.template.cpp",
