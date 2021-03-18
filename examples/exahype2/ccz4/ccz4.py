@@ -95,7 +95,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.001
+            time_step_relaxation=0.01
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
