@@ -446,6 +446,11 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   DO k=1,3 
      dtA(k) = dtA(k)-sk*alpha*fa*(SUM(g_contr(:,:)*dAex(k,:,:)))   ! here we can use the constraint that trace A tilde = 0. 
   ENDDO
+  !IF ((dtA(2)/=0) .or. (dtA(3)/=0)) THEN 
+  !   write(*,*) "fortran dtA[1]=", dtA(2), "dtA[2]=", dtA(3)
+  !   write(*,*) "fortran dtheta[1]=", dtheta(2), "dtheta[2]=", dtheta(3)
+  !   write(*,*) "fortran dtraceK[1]= ", dtraceK(2), "dtraceK[2]= ", dtraceK(3)
+  !ENDIF
   !
   ! We have removed the conservative fluxes for CCZ4, so put all the stuff into the NCP and FusedNCP 
   dtB(:,1) = fff*gradQ(21,:)  

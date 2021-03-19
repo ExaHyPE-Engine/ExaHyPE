@@ -417,6 +417,23 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
          : StrategyStep::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning;
   }
 
+
+  if (
+    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
+    and
+    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() < tarch::multicore::Core::getInstance().getNumberOfThreads()
+    and
+    not rankViolatesBalancingCondition
+    and
+    _state != StrategyState::WaitForRoundRobinToken
+    and
+    canSplitLocally()
+  ) {
+    return StrategyStep::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning;
+  }
+
+  logDebug( "getStrategyStep()", "no if becomes valid: " << rankViolatesBalancingCondition << " X " << canSplitLocally() << " X " << toString() );
+
   return StrategyStep::Wait;
 }
 

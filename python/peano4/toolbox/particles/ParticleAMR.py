@@ -89,7 +89,7 @@ class ParticleAMR(ActionSet):
   if (
     not refine
     and
-    fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
+    not fineGridCell{{CELL_DATA_NAME}}.getParentOfRefinedCell()
     and
     fineGridCell{{CELL_DATA_NAME}}.getNumberOfParticles() <= {{MIN_PARTICLES_PER_CELL}}
   ) {

@@ -1160,6 +1160,11 @@ class peano4::grid::Spacetree {
     std::string toString() const;
 
     bool isInvolvedInJoinOrFork() const;
+    
+    /**
+     * Not really a fancy routine. Simply sets the stats field.
+     */
+    void informAboutDegeneratedTreeWhichHasBeenRemoved();
 };
 
 
