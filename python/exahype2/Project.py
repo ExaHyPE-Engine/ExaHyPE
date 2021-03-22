@@ -13,20 +13,21 @@ import exahype2.solvers
 
 class Project(object):
   """
-  Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4
-  project with a particular set of actions (algorithmic phases)
-  that you can choose from and with particular solver types. It
+   
+  Represents an ExaHyPE2 project. An ExaHyPE2 project is a Peano4 
+  project with a particular set of actions (algorithmic phases) 
+  that you can choose from and with particular solver types. It 
   realises a builder mechanism, i.e. you build up your ExaHyPE2
   project and then you finally tell the project "give me the Peano4
   project". From hereon, you can use this Peano4 project to actually
   set up the Peano4 application.
-
+  
   The project will have a marker per cell that encodes stuff alike
-  a boundary marker. But it is also used to coordinate different
+  a boundary marker. But it is also used to coordinate different 
   solver types.
-
+  
   @see generate_Peano4_project()
-
+  
   """
   def __init__(self, namespace, project_name, directory = ".", executable="peano4"):
     self._project = peano4.Project(namespace, project_name, directory)
@@ -45,14 +46,11 @@ class Project(object):
     self._periodic_BC   = [False, False, False]
     self._plot_filters  = []
     self._output_path   = "./"
-    self._additional_constants = []
-
-  def addConstant(self, name, value): self._additional_constants.append((name,value))
-
-
+    
+    
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
     """
-
+    
       load_balancer_name: string
         Should be full-qualified name of the load balancer. 
         By default, I recommend to pass "toolbox::loadbalancing::RecursiveSubdivision"
@@ -130,7 +128,7 @@ class Project(object):
   def remove_all_solvers(self):
     self._solvers = []
     self._project.cleanup()
-
+    
 
   def __export_constants(self):
     self._project.constants.clear()
@@ -143,17 +141,15 @@ class Project(object):
       size_string   += str(self._domain_size[i])
     offset_string += "}"
     size_string   += "}"
-    self._project.constants.add_include( """#include <bitset>""")
+    self._project.constants.add_include( """#include <bitset>""") 
     self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
     self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
     self._project.constants.export( "TerminalTime", str(self._terminal_time) )
     self._project.constants.export( "FirstPlotTimeStamp", str(self._first_plot_time_stamp) )
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
-
+    
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
-
-    for k, v in self._additional_constants: self._project.constants.export(k, str(v))
-
+    
 
   def __configure_makefile(self):
     self._project.output.makefile.set_dimension(self._dimensions)
@@ -245,12 +241,14 @@ class Project(object):
     create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
     init_grid                           = peano4.solversteps.Step( "InitGrid",   False )
     create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
+    create_grid_and_converge_lb         = peano4.solversteps.Step( "CreateGridAndConvergeLoadBalancing", False )
     plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
     perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
         
     self._project.solversteps.add_step(create_grid)
     self._project.solversteps.add_step(init_grid)
     self._project.solversteps.add_step(create_grid_but_postpone_refinement)
+    self._project.solversteps.add_step(create_grid_and_converge_lb)
     self._project.solversteps.add_step(plot_solution)
     self._project.solversteps.add_step(perform_time_step)
    
@@ -267,10 +265,12 @@ class Project(object):
       solver.add_use_data_statements_to_Peano4_solver_step( perform_time_step )
       solver.add_use_data_statements_to_Peano4_solver_step( init_grid )
       solver.add_use_data_statements_to_Peano4_solver_step( create_grid_but_postpone_refinement )
+      solver.add_use_data_statements_to_Peano4_solver_step( create_grid_and_converge_lb )
       
       solver.add_actions_to_create_grid( create_grid,                         evaluate_refinement_criterion=True  )
       solver.add_actions_to_init_grid( init_grid )
       solver.add_actions_to_create_grid( create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
+      solver.add_actions_to_create_grid( create_grid_and_converge_lb,         evaluate_refinement_criterion=False )
       solver.add_actions_to_plot_solution( plot_solution, self._output_path )
       solver.add_actions_to_perform_time_step( perform_time_step )
       
@@ -281,16 +281,20 @@ class Project(object):
 
     face_label = exahype2.grid.create_face_label()  
     self._project.datamodel.add_face(face_label)
+    
     create_grid.use_face(face_label)
     init_grid.use_face(face_label)
     create_grid_but_postpone_refinement.use_face(face_label)
+    create_grid_and_converge_lb.use_face(face_label)
     plot_solution.use_face(face_label)
     perform_time_step.use_face(face_label)
     
     set_labels_action_set = exahype2.grid.SetLabels()
+
     create_grid.add_action_set( set_labels_action_set )
     init_grid.add_action_set( set_labels_action_set )
     create_grid_but_postpone_refinement.add_action_set( set_labels_action_set )
+    create_grid_and_converge_lb.add_action_set( set_labels_action_set )
     plot_solution.add_action_set( set_labels_action_set )
     perform_time_step.add_action_set( set_labels_action_set )
     

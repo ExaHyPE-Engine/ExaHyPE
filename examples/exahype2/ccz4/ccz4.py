@@ -5,38 +5,39 @@ import peano4
 import exahype2
 
 
-modes = {
+modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
   "assert":  peano4.output.CompileMode.Asserts,
   "debug":   peano4.output.CompileMode.Debug,
 }
 
-params = {
+floatparams = {
         "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
         "GLMepsD":1.0, "itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
         "f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-        "sk":0.0, "bs":0.0, "LapseType":0}
-
+        "sk":0.0, "bs":0.0}
+intparams = {"LapseType":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
     parser.add_argument("-cs",   "--cell-size",       dest="max_h",           type=float, default=0.4,  help="Mesh size" )
-    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=float, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
+    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
-    parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="swich on or off the periodic BC" )
+    parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
 
 
-    for k, v in params.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
+    for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
+    for k, v in intparams.items():   parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s")
 
     args = parser.parse_args()
 
     SuperClass = None
-
+    
     if args.implementation=="fv-fixed":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
     if args.implementation=="fv-fixed-enclave":
@@ -86,7 +87,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_size=1e-6
+            time_step_size=1e-2
           )
         else:
           SuperClass.__init__(
@@ -95,7 +96,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.01
+            time_step_relaxation=0.1
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -114,7 +115,7 @@ if __name__ == "__main__":
          We take this routine to add a few additional include statements.
         """
         return SuperClass.get_user_includes(self) + """
-    #include "../PDE.h"
+    #include "../CCZ4Kernels.h"
     #include "exahype2/PatchUtils.h"
     """
 
@@ -172,7 +173,7 @@ if __name__ == "__main__":
           // Central cell
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
 
-          admconstraints_(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+          admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
 
           for(int i=0;i<n_a_v;i++){
             reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
@@ -230,6 +231,9 @@ if __name__ == "__main__":
         self.create_action_sets()
 
 
+
+    userwarnings = []
+
     project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4" )
 
     is_aderdg = False
@@ -239,9 +243,11 @@ if __name__ == "__main__":
         is_aderdg = True
         order = 3
         unknowns = 59
-        time_step_size = 1e-5
-    except:
-      print( "Warning: ADER-DG no supported on this machine" )
+        time_step_size = 0.001
+    except Exception as e:
+        msg = "Warning: ADER-DG no supported on this machine"
+        print(msg)
+        userwarnings.append((msg,e))
 
     if is_aderdg:
       solver_name    = "ADERDG" + solver_name
@@ -268,20 +274,30 @@ if __name__ == "__main__":
       if args.extension=="adm":
         my_solver.add_constraint_verification()
 
+    myscenario = 0 # 0...gaugewave-c++  1...linearwave
+
+    solverconstants=""
+    for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
+    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
+    solverconstants+= "static constexpr int Scenario = {};\n".format(myscenario)
+
+    my_solver.setSolverConstants(solverconstants)
 
     project.add_solver(my_solver)
-    for k, v in params.items(): project.addConstant("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
+
 
     build_mode = modes[args.mode]
-
+    
     dimensions = 3
 
     if args.periodic_bc:
       print( "Periodic BC set")
       periodic_boundary_conditions = [True,True,True]          # Periodic BC
     else:
-      print( "WARNING: Periodic BC deactivated" )
+      msg = "WARNING: Periodic BC deactivated"
+      print(msg)
       periodic_boundary_conditions = [False,False,False]
+      userwarnings.append((msg,None))
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
@@ -325,11 +341,25 @@ if __name__ == "__main__":
       # ["PDE.f90 ", "EinsteinConstraints.f90 ", "Properties.f90","ADMConstraints.f90"]
     # )
 
-    peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
+
+    # peano4_project.constants.export_string( "Scenario", "gaugewave-c++" )
+    # peano4_project.constants.add_target_begin()
+    # for k, v in floatparams.items(): peano4_project.constants.export_constexpr_with_type("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)), "double")
+    # peano4_project.constants.add_target_end()
+    # peano4_project.constants.add_target_begin()
+    # for k, v in intparams.items():   peano4_project.constants.export_constexpr_with_type("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)), "int")
+    # peano4_project.constants.add_target_end()
+    # project.export_const_with_type("NumberOfUnknowns", 59, "int")
     #peano4_project.constants.export_string( "Scenario", "linearwave-c++" )
 
     peano4_project.generate( throw_away_data_after_generation=False )
 
     peano4_project.build( make_clean_first = True )
-    #!make -j4
 
+    # Remind the user of warnings!
+    if len(userwarnings) >0:
+        print("Please note that these warning occured before the build:")
+        for msg, exception in userwarnings:
+            if exception is None:
+                print(msg)
+            else: print(msg, "Exception: {}".format(exception))

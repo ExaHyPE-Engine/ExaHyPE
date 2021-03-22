@@ -336,6 +336,8 @@ class FV(object):
     self._patch_size           = patch_size  
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
+
+    self.solver_constants_ = ""
     
     if min_h>max_h:
        print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
@@ -673,13 +675,16 @@ In-situ preprocessing:  """
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
+  def setSolverConstants(self, datastring): self.solver_constants_ = datastring
+  def getSolverConstants(self): return self.solver_constants_
+
 
   def _init_dictionary_with_default_parameters(self,d):
     """
-    
-      This one is called by all algorithmic steps before I invoke 
+
+      This one is called by all algorithmic steps before I invoke
       add_entries_to_text_replacement_dictionary().
-      
+
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
     d["HALO_SIZE"]                      = int(self._patch_overlap.dim[0]/2)
@@ -689,13 +694,13 @@ In-situ preprocessing:  """
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     d["SOLVER_NUMBER"]                  = 22
-        
+
     d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]  = self._preprocess_reconstructed_patch
-    d[ "POSTPROCESS_UPDATED_PATCH" ]       = self._postprocess_updated_patch  
-    
+    d[ "POSTPROCESS_UPDATED_PATCH" ]       = self._postprocess_updated_patch
+
     if self._patch_overlap.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
-      
+
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
     d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
     d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "nonCriticalAssertion3"
@@ -707,3 +712,5 @@ In-situ preprocessing:  """
     d[ "MIN_H"] = self._max_h
 
     d[ "INCLUDES"] = self.additional_includes
+
+    d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
