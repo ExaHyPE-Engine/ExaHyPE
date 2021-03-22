@@ -47,26 +47,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
 
 
 {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  double * __restrict__ S // Q[{{NUMBER_OF_UNKNOWNS}}
-) {
-  logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
-  // @todo implement
-  logTraceOut( "sourceTerm(...)" );
-}
-{% endif %}
-
-
-{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -75,7 +59,6 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   double * __restrict__ S // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
 ) {
   // @todo implement
-  return 0.0;
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target

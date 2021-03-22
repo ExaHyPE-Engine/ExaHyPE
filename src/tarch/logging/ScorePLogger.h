@@ -19,7 +19,9 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/logging/Log.h"
 
-
+#ifdef UseScoreP
+#include <scorep/SCOREP_User_Types.h>
+#endif
 
 namespace tarch {
   namespace logging {

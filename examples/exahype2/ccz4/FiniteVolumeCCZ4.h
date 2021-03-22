@@ -32,6 +32,9 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
     FiniteVolumeCCZ4();   
 
     
+    //#if defined(OpenMPGPUOffloading)
+    //#pragma omp declare target
+    //#endif
     void adjustSolution(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -39,22 +42,30 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       double                                       t,
       double                                       dt
     )  override;
+    //#if defined(OpenMPGPUOffloading)
+    //#pragma omp end declare target
+    //#endif
     
-
-
     
-    void sourceTerm(
+    //#if defined(OpenMPGPUOffloading)
+    //#pragma omp declare target
+    //#endif
+    static void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       double                                       dt,
       double * __restrict__ S
-    ) override;
+    );
+    //#if defined(OpenMPGPUOffloading)
+    //#pragma omp end declare target
+    //#endif
     
-
     
-    
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
     virtual void boundaryConditions(
       const double * __restrict__ Qinside, // Qinside[59+0]
       double * __restrict__ Qoutside, // Qoutside[59+0]
@@ -63,25 +74,30 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       double                                       t,
       int                                          normal
     )  override;
-    
 
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
 
     
-    double maxEigenvalue(
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static double maxEigenvalue(
       const double * __restrict__ Q, // Q[59+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal
-    ) override;
-    
-
-
-    
-
-
-    
-    void nonconservativeProduct(
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+ 
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static void nonconservativeProduct(
       const double * __restrict__ Q, // Q[59+0],
       const double * __restrict__             deltaQ, // [59+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -90,7 +106,6 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[59]
     ) override;
-    
 };
 
 

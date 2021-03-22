@@ -22,7 +22,9 @@
 #include "ITACLogger.h"
 #endif
 
-
+#if UseLogService==ScorePLogger
+#include "ScorePLogger.h"
+#endif
 
 /**
  * For the machine name. If it doesn't work, switch it off in the file

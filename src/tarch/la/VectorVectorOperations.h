@@ -187,6 +187,20 @@ namespace tarch {
       const Scalar  tolerance = NUMERICAL_ZERO_DIFFERENCE
     );
 
+    template<int Size, typename Scalar>
+    bool oneSmaller (
+      const Vector<Size,Scalar>&  lhs,
+      const Vector<Size,Scalar>&  rhs,
+      const Scalar  tolerance = NUMERICAL_ZERO_DIFFERENCE
+    );
+
+    template<int Size, typename Scalar>
+    bool oneSmallerEquals (
+      const Vector<Size,Scalar>&  lhs,
+      const Vector<Size,Scalar>&  rhs,
+      const Scalar  tolerance = NUMERICAL_ZERO_DIFFERENCE
+    );
+
     /**
      * Component-wise max evaluation
      */

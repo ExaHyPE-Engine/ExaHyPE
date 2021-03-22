@@ -7,13 +7,14 @@
 
 
 
-peano4::grid::GridStatistics::GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, tarch::la::Vector<Dimensions,double>  __minH):
+peano4::grid::GridStatistics::GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<Dimensions,double>  __minH):
     _numberOfLocalUnrefinedCells(__numberOfLocalUnrefinedCells)
   , _numberOfRemoteUnrefinedCells(__numberOfRemoteUnrefinedCells)
   , _numberOfLocalRefinedCells(__numberOfLocalRefinedCells)
   , _numberOfRemoteRefinedCells(__numberOfRemoteRefinedCells)
   , _stationarySweeps(__stationarySweeps)
   , _coarseningHasBeenVetoed(__coarseningHasBeenVetoed)
+  , _removedEmptySubtree(__removedEmptySubtree)
   , _minH(__minH)
   {}
 
@@ -33,6 +34,8 @@ std::string peano4::grid::GridStatistics::toString() const {
   out << "stationarySweeps=" << _stationarySweeps;
   out << ","; 
   out << "coarseningHasBeenVetoed=" << _coarseningHasBeenVetoed;
+  out << ","; 
+  out << "removedEmptySubtree=" << _removedEmptySubtree;
   out << ","; 
   out << "minH=" << _minH;
   out << ")";
@@ -97,6 +100,16 @@ bool   peano4::grid::GridStatistics::getCoarseningHasBeenVetoed() const {
 
 void   peano4::grid::GridStatistics::setCoarseningHasBeenVetoed(bool value) {
   _coarseningHasBeenVetoed = value;
+}
+
+
+bool   peano4::grid::GridStatistics::getRemovedEmptySubtree() const {
+  return _removedEmptySubtree;
+}
+
+
+void   peano4::grid::GridStatistics::setRemovedEmptySubtree(bool value) {
+  _removedEmptySubtree = value;
 }
 
 
@@ -193,11 +206,11 @@ int peano4::grid::GridStatistics::getSenderRank() const {
 void peano4::grid::GridStatistics::initDatatype() {
   peano4::grid::GridStatistics  instances[2];
     
-  MPI_Datatype subtypes[] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_BYTE, MPI_DOUBLE };
+  MPI_Datatype subtypes[] = { MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_BYTE, MPI_BYTE, MPI_DOUBLE };
     
-  int blocklen[] = { 1, 1, 1, 1, 1, 1, Dimensions };
+  int blocklen[] = { 1, 1, 1, 1, 1, 1, 1, Dimensions };
 
-  const int NumberOfAttributes = 7;
+  const int NumberOfAttributes = 8;
     
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
@@ -216,6 +229,8 @@ void peano4::grid::GridStatistics::initDatatype() {
   MPI_Get_address( &(instances[0]._stationarySweeps), &disp[currentAddress] );
   currentAddress++;
   MPI_Get_address( &(instances[0]._coarseningHasBeenVetoed), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._removedEmptySubtree), &disp[currentAddress] );
   currentAddress++;
   MPI_Get_address( &(instances[0]._minH.data()[0]), &disp[currentAddress] );
   currentAddress++;

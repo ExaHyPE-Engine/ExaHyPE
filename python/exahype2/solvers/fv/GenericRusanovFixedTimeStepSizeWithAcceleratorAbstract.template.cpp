@@ -123,7 +123,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
 {% endif %}
 
 
-{% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
+{% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -134,7 +134,9 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
   double                                       t,
   int                                          normal
 ) {
+  {% if EIGENVALUES_IMPLEMENTATION!="<none>" %}
   {{EIGENVALUES_IMPLEMENTATION}}
+  {% endif %}
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
@@ -142,7 +144,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
 {% endif %}
 
 
-{% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
+{% if FLUX_IMPLEMENTATION!="<user-defined>" %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -154,7 +156,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
  int                                          normal,
  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
+  {% if FLUX_IMPLEMENTATION!="<none>" %}
   {{FLUX_IMPLEMENTATION}}
+  {% endif %}
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
@@ -162,7 +166,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 {% endif %}
 
 
-{% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
+{% if NCP_IMPLEMENTATION!="<user-defined>" %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -175,7 +179,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
+  {% if NCP_IMPLEMENTATION!="<none>" %}
   {{NCP_IMPLEMENTATION}}
+  {% endif %}
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
