@@ -1,21 +1,12 @@
 #include "FiniteVolumeCCZ4.h"
 #include "exahype2/RefinementControl.h"
-
-
 #include "exahype2/NonCriticalAssertions.h"
 
-/** it is for aderdg solver with signatures changed from the one with fv.
- *  * I manually include this header which in turn declared all the
- *   * routines written in Fortran.
- *    */
-#include "PDE.h"
-#include "Properties.h"
-#include "InitialValue.h"
+#include "InitialValues.h"
+#include "CCZ4Kernels.h"
 
-/**
- *  * This file is automatically created by Peano. I need it to interact with
- *   * the Python API, i.e. to read out data set there.
- *    */
+#include <algorithm>
+
 #include "Constants.h"
 
 #include <limits>
@@ -30,10 +21,10 @@ tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "example
 
 
 examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
-  if ( Scenario=="gaugewave-c++" ) {
+  if ( Scenario==0 || Scenario==1 ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
-    initparameters_(&length, name);
+    //initparameters_(&length, name);
   }
   else {
     std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
@@ -50,15 +41,18 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
 ) {
   logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
-    if ( Scenario=="gaugewave-c++" ) {
+    if ( Scenario==0 ) {
       examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
+    }
+    else if ( Scenario==1 ) {
+      examples::exahype2::ccz4::linearWave(Q, volumeX, t);
     }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
     }
 
     for (int i=0; i<NumberOfUnknowns; i++) {
-      assertion3( std::isfinite(Q[i]), x, t, i );
+      assertion3( std::isfinite(Q[i]), volumeX, t, i );
     }
 
     for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
@@ -66,7 +60,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
     }
   }
   else {
-    enforceccz4constraints_(Q);
+    enforceCCZ4constraints(Q);
   }
   logTraceOut( "adjustSolution(...)" );
 }
@@ -84,10 +78,12 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   for(int i=0; i<NumberOfUnknowns; i++){
     assertion3( std::isfinite(Q[i]), i, x, t );
   }
+
   memset(S, 0, NumberOfUnknowns*sizeof(double));
-  pdesource_(S,Q);    //  S(Q)
+  //pdesource_(S,Q);    //  S(Q)
+  source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
   for(int i=0; i<NumberOfUnknowns; i++){
-    nonCriticalAssertion3( std::isfinite(S[i]), i, x, t );
+    nonCriticalAssertion3( std::isfinite(S[i]), i, volumeX, t );
   }
   logTraceOut( "sourceTerm(...)" );
 }
@@ -104,13 +100,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
 ) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
   for(int i=0; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-    assertion4( Qinside[i]==Qinside[i], x, t, normal, i );
+    assertion4( Qinside[i]==Qinside[i], faceCentre, t, normal, i );
     Qoutside[i]=Qinside[i];
   }
   logTraceOut( "boundaryConditions(...)" );
 }
-
-
 
 
 double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
@@ -119,37 +113,49 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
-)  {
-  logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
-  constexpr int Unknowns = 59;
-  double lambda[Unknowns];
-  for (int i=0; i<Unknowns; i++) {
-    nonCriticalAssertion4( std::isfinite(Q[i]), i, x, t, normal );
-    lambda[i] = 1.0;
-  }
+)
+{
+#if defined(CCZ4EINSTEIN)
+  const double qmin = std::min({Q[0],Q[3],Q[5]});
+  const double alpha = std::max({1.0, std::exp(Q[16])}) * std::max({1.0, std::exp(Q[54])}) / std::sqrt(qmin);
+#else
+  const double alpha = 1.0;
+#endif
 
-  // routine requires explicit normal vector
-  double normalVector[3];
-  normalVector[0] = normal % 3 == 0 ? 1.0 : 0.0;
-  normalVector[1] = normal % 3 == 1 ? 1.0 : 0.0;
-  normalVector[2] = normal % 3 == 2 ? 1.0 : 0.0;
-  
-  // actual method invocation
-  pdeeigenvalues_(lambda, Q, normalVector);
+  constexpr double sqrtwo = 1.4142135623730951;
+  // NOTE parameters are stored in Constants.h
+  const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
+  const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
+  return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
+  //// we are only interested in the maximum eigenvalue
+  //return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
 
-  // we are only interested in the maximum eigenvalue
-  double result = 0.0;
-  for (int i=0; i<Unknowns; i++) {
-    result = std::max(result,std::abs(lambda[i]));
-  }
-  logTraceOut( "maxEigenvalue(...)" );
-  return result;
+  //logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
+  //constexpr int Unknowns = 59;
+  //double lambda[Unknowns];
+  //for (int i=0; i<Unknowns; i++) {
+    //nonCriticalAssertion4( std::isfinite(Q[i]), i, x, t, normal );
+    //lambda[i] = 1.0;
+  //}
+
+  //// routine requires explicit normal vector
+  //double normalVector[3];
+  //normalVector[0] = normal % 3 == 0 ? 1.0 : 0.0;
+  //normalVector[1] = normal % 3 == 1 ? 1.0 : 0.0;
+  //normalVector[2] = normal % 3 == 2 ? 1.0 : 0.0;
+
+  //// actual method invocation
+  //pdeeigenvalues_(lambda, Q, normalVector);
+
+  //// we are only interested in the maximum eigenvalue
+  //double result = 0.0;
+  //for (int i=0; i<Unknowns; i++) {
+    //result = std::max(result,std::abs(lambda[i]));
+  //}
+  //logTraceOut( "maxEigenvalue(...)" );
+  //printf("%f vs %f diff: %f alpha: %f tempA: %f\n\n", result, result2, result-result2, alpha, tempA/alpha);
+  //return result;
 }
-
-
-
-
-
 
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
@@ -161,9 +167,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[59]
 )  {
+#if !defined(OpenMPGPUOffloading)
   logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
   assertion( normal>=0 );
   assertion( normal<Dimensions );
+#endif
   double gradQSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
     gradQSerialised[i+0*NumberOfUnknowns] = 0.0;
@@ -172,11 +180,13 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 
     gradQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
-  pdencp_(BgradQ, Q, gradQSerialised);
+  ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
+  //pdencp_(BgradQ, Q, gradQSerialised);
 
+#if !defined(OpenMPGPUOffloading)
   for (int i=0; i<NumberOfUnknowns; i++) {
-    nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, x, t, normal );
+    nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, faceCentre, t, normal );
   }
   logTraceOut( "nonconservativeProduct(...)" );
+#endif
 }
-

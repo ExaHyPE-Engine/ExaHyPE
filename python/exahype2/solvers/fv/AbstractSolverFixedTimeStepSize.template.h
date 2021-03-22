@@ -124,8 +124,17 @@
 
     SolverState  getSolverState() const;
 
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
     static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    {{SOLVER_CONSTANTS}}
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+
+
   protected:
     static tarch::logging::Log  _log;
 

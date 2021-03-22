@@ -152,9 +152,6 @@ double exahype2::fv::maxEigenvalue_AoS(
 
 
 
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
 void exahype2::fv::copyPatch (
   const double *__restrict__   QinWithHalo,
   double *__restrict__         QOutWithoutHalo,
@@ -175,9 +172,6 @@ void exahype2::fv::copyPatch (
 
 #if Dimensions==2
   #ifdef SharedOMP
-     #if defined(OpenMPGPUOffloading)
-     #pragma omp target
-     #endif
   #pragma omp parallel for collapse(3)
   #endif
   for (int y=0; y<numberOfVolumesPerAxisInPatch; y++)
@@ -201,9 +195,6 @@ void exahype2::fv::copyPatch (
 
   int helper = numberOfVolumesPerAxisInPatch+haloSize*2;
   #ifdef SharedOMP
-     #if defined(OpenMPGPUOffloading)
-     #pragma omp target
-     #endif
   #pragma omp parallel for collapse(4)
   #endif
   for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
@@ -224,9 +215,6 @@ void exahype2::fv::copyPatch (
   }
 #endif
 }
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
 
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (

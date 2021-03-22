@@ -204,7 +204,7 @@ void exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::testMe() {
       for (int shift = 0; shift < 2; shift++)
       {
         #ifdef SharedOMP
-        #pragma omp parallel for simd collapse(2)
+        #pragma omp parallel for collapse(2)
         #endif
         for (int y = shift; y <= numberOfVolumesPerAxisInPatch; y += 2)
         {
