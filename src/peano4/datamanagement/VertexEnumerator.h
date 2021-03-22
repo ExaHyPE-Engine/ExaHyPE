@@ -21,12 +21,21 @@ struct peano4::datamanagement::VertexEnumerator {
   private:
     Vertex* _vertices[ TwoPowerD ];
   public:
+    VertexEnumerator() {
+      #if PeanoDebug>0
+      for (int i=0; i<TwoPowerD; i++) {
+        _vertices[i] = nullptr;
+      }
+      #endif
+    }
+
     /**
      * Constructs vertex enumerator with default layout for consecutively
      * stored vertices.
      */
     VertexEnumerator(Vertex* firstVertex) {
-      for (int i=0; i<TwoTimesD; i++) {
+      assertion( firstVertex!=nullptr );
+      for (int i=0; i<TwoPowerD; i++) {
         _vertices[i] = firstVertex+i;
       }
     }
@@ -44,8 +53,9 @@ struct peano4::datamanagement::VertexEnumerator {
     }
 
     Vertex& operator()(int i) const {
-      assertion(i>=0);
-      assertion(i<TwoPowerD);
+      assertion1(i>=0,i);
+      assertion1(i<TwoPowerD,i);
+      assertion1( _vertices[i]!=nullptr,i );
       return *(_vertices[i]);
     }
 };

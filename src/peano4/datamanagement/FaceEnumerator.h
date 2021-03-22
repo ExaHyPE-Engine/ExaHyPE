@@ -40,8 +40,9 @@ class peano4::datamanagement::FaceEnumerator {
      * array.
      */
     FaceEnumerator(Face* firstFace) {
+      assertion(firstFace!=nullptr);
       for (int i=0; i<TwoTimesD; i++) {
-      _faces[i] = firstFace+i;
+        _faces[i] = firstFace+i;
       }
     }
 
@@ -57,8 +58,9 @@ class peano4::datamanagement::FaceEnumerator {
 	}
 
 	Face& operator()(int i) const {
-	  assertion(i>=0);
-	  assertion(i<TwoTimesD);
+	  assertion1(i>=0,i);
+	  assertion1(i<TwoTimesD,i);
+	  assertion1( _faces[i]!=nullptr,i );
 	  return *(_faces[i]);
 	}
 };

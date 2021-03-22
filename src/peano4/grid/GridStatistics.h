@@ -39,7 +39,7 @@ struct peano4::grid::GridStatistics {
 
 
     GridStatistics() {}
-    GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, tarch::la::Vector<Dimensions,double>  __minH);
+    GridStatistics(int  __numberOfLocalUnrefinedCells, int  __numberOfRemoteUnrefinedCells, int  __numberOfLocalRefinedCells, int  __numberOfRemoteRefinedCells, int  __stationarySweeps, bool  __coarseningHasBeenVetoed, bool  __removedEmptySubtree, tarch::la::Vector<Dimensions,double>  __minH);
 
     int   getNumberOfLocalUnrefinedCells() const;
     void   setNumberOfLocalUnrefinedCells(int value);
@@ -53,6 +53,8 @@ struct peano4::grid::GridStatistics {
     void   setStationarySweeps(int value);
     bool   getCoarseningHasBeenVetoed() const;
     void   setCoarseningHasBeenVetoed(bool value);
+    bool   getRemovedEmptySubtree() const;
+    void   setRemovedEmptySubtree(bool value);
     tarch::la::Vector<Dimensions,double>   getMinH() const;
     void   setMinH(const tarch::la::Vector<Dimensions,double>& value);
     double   getMinH(int index) const;
@@ -64,9 +66,6 @@ struct peano4::grid::GridStatistics {
     static void sendAndPollDanglingMessages(const peano4::grid::GridStatistics& message, int destination, int tag );
     static void receiveAndPollDanglingMessages(peano4::grid::GridStatistics& message, int source, int tag );
 #endif
-
-
-
     
 
     #ifdef Parallel
@@ -113,6 +112,7 @@ struct peano4::grid::GridStatistics {
     int   _numberOfRemoteRefinedCells;
     int   _stationarySweeps;
     bool   _coarseningHasBeenVetoed;
+    bool   _removedEmptySubtree;
     tarch::la::Vector<Dimensions,double>   _minH;
 
 
