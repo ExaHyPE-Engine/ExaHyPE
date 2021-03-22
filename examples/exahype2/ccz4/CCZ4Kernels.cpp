@@ -3,7 +3,6 @@
 #include "CCZ4Kernels.h"
 
 #include "Constants.h"
-#include "SolverConstants.h"
 
 #include <limits>
 #include <cmath>
