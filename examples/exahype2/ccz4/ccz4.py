@@ -360,4 +360,4 @@ if __name__ == "__main__":
         for msg, exception in userwarnings:
             if exception is None:
                 print(msg)
-            else: print(msg, "Exception: {}".format(e))
+            else: print(msg, "Exception: {}".format(exception))
