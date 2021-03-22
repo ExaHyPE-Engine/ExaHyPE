@@ -306,6 +306,8 @@ if test "$gpu" == nvidia; then
   #if test "$multithreading" == omp; then
   if test "$multithreading" == omp-layered; then
     AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
+  elif test "$multithreading" == omp; then
+    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
   else
     AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi

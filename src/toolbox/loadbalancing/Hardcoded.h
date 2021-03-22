@@ -65,6 +65,9 @@ class toolbox::loadbalancing::Hardcoded {
      */
     void enable(bool);
 
+    bool isEnabled(bool globally) const;
+
+    int getGlobalNumberOfTrees() const;
   private:
     static tarch::logging::Log  _log;
 

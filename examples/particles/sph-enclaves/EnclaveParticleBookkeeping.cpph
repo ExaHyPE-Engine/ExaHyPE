@@ -1,0 +1,131 @@
+#include "EnclaveParticleBookkeeping.h"
+#include "EnclaveParticleTask.h"
+
+#include "tarch/Assertions.h"
+#include "tarch/multicore/Lock.h"
+#include "tarch/multicore/Core.h"
+#include "tarch/multicore/Tasks.h"
+#include "peano4/parallel/Tasks.h"
+
+#include "tarch/logging/Statistics.h"
+
+#include <algorithm>
+#include <array>
+
+template <class Particle>
+tarch::logging::Log peano4::EnclaveParticleBookkeeping<Particle>::_log( "peano4::EnclaveParticleBookkeeping" );
+
+template <class Particle>
+const std::string peano4::EnclaveParticleBookkeeping<Particle>::MemoryAllocationsInLookupTableIdentifier( "peano4::EnclaveParticleBookkeeping::memory-allocations" );
+
+template <class Particle>
+const std::string peano4::EnclaveParticleBookkeeping<Particle>::LookupMissesIdentifier( "peano4::EnclaveParticleBookkeeping::lookup-misses" );
+
+
+
+template <class Particle>
+peano4::EnclaveParticleBookkeeping<Particle>& peano4::EnclaveParticleBookkeeping<Particle>::getInstance() {
+  static EnclaveParticleBookkeeping<Particle> singleton;
+  return singleton;
+}
+
+
+template <class Particle>
+void peano4::EnclaveParticleBookkeeping<Particle>::dumpStatistics() {
+  logInfo( "dumpStatistics()", "active tasks=" << tarch::multicore::getNumberOfReservedTaskNumbers() );
+
+  std::ostringstream finishedTasksMsg;
+  finishedTasksMsg << "(#" << _finishedTasks.size();
+  for (auto& p: _finishedTasks) {
+    finishedTasksMsg << "," << p;
+  }
+  finishedTasksMsg << ")";
+  logInfo( "dumpStatistics()", "finished tasks=" << finishedTasksMsg.str() );
+}
+
+
+template <class Particle>
+int peano4::EnclaveParticleBookkeeping<Particle>::registerVertex() {
+  static int id = 0;
+  _vertexTaskCounters[id] = 0;
+  return id++;
+}
+
+template <class Particle>
+void peano4::EnclaveParticleBookkeeping<Particle>::waitForTasksToTerminate(int taskNumber, const std::array<int, TwoPowerD>& vertexIds) {
+  logDebug( "waitForTaskToTerminate(int)", "check for completion of task " << taskNumber );
+  tarch::multicore::Lock lock( _tasksSemaphore );
+  bool isContained = _finishedTasks.count(taskNumber);
+  bool adjacentTasksCompleted = std::all_of(
+    vertexIds.begin(),
+    vertexIds.end(),
+    [this](int id){ return _vertexTaskCounters[id] == 0; }
+  );
+  lock.free();
+
+  while (not (isContained and adjacentTasksCompleted)) {
+    ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
+
+    bool processedTasks = ::tarch::multicore::processPendingTasks(ThreePowerD);
+
+    if (not processedTasks) {
+      tarch::multicore::yield();
+    }
+
+    lock.lock();
+    if (not isContained) {
+      isContained = _finishedTasks.count(taskNumber);
+      if (isContained) {
+        _finishedTasks.erase(taskNumber);
+        tarch::multicore::releaseTaskNumber(taskNumber);
+      }
+    }
+
+    if (not adjacentTasksCompleted) {
+      adjacentTasksCompleted = std::all_of(
+        vertexIds.begin(),
+        vertexIds.end(),
+        [this](int i){ return _vertexTaskCounters[i] == 0; }
+      );
+    }
+    lock.free();
+  }
+
+  logDebug( "waitForTaskToTerminate()", "returned successfully" );
+}
+
+
+template <class Particle>
+void peano4::EnclaveParticleBookkeeping<Particle>::spawnTask(EnclaveParticleTask<Particle>* task, peano4::parallel::Tasks::TaskType priority, const std::string& location) {
+  logDebug( "spawnTask", "with number " << task->getTaskId() );
+  tarch::multicore::Lock lock( _tasksSemaphore );
+  for (auto& id: task->_vertexIds) {
+    _vertexTaskCounters[id]++;
+  }
+  lock.free();
+
+  peano4::parallel::Tasks spawn(
+    task,
+    priority,
+    peano4::parallel::Tasks::getLocationIdentifier( location )
+  );
+  logDebug( "spawnTask", "returned" );
+}
+
+
+template <class Particle>
+void peano4::EnclaveParticleBookkeeping<Particle>::finishedTask(int taskNumber, const std::array<int, TwoPowerD>& vertexIds) {
+  logDebug( "finishedTask()", "task " << taskNumber << " has terminated. Bookkeep results" );
+  tarch::multicore::Lock lock( _tasksSemaphore );
+  assertionEquals( _finishedTasks.count(taskNumber),0 );
+  auto oldBucketCount = _finishedTasks.bucket_count();
+  _finishedTasks.insert( taskNumber );
+  if (_finishedTasks.bucket_count()>oldBucketCount) {
+    ::tarch::logging::Statistics::getInstance().inc( MemoryAllocationsInLookupTableIdentifier );
+  }
+  for (auto& id: vertexIds) {
+    assertion(_vertexTaskCounters[id] > 0);
+    _vertexTaskCounters[id]--;
+  }
+  lock.free();
+}

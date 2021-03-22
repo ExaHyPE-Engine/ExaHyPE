@@ -74,7 +74,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {% endif %}
 
 
-    {% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
+    {% if FLUX_IMPLEMENTATION!="<user-defined>" %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -92,7 +92,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {% endif %}
 
 
-    {% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
+    {% if NCP_IMPLEMENTATION!="<user-defined>" %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -129,7 +129,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {% endif %}
 
 
-    {% if NCP_IMPLEMENTATION=="<none>" %}
+    {% if NCP_IMPLEMENTATION!="<user-defined>" %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif

@@ -308,3 +308,6 @@ GPUCallableMethod void exahype2::aderdg::interpolate_AoS(
     }
   }
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif

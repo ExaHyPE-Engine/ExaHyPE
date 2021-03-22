@@ -84,23 +84,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
-
-    // Dummy function 
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static void nonconservativeProduct(
-      const double * __restrict__      Q, // Q[5+0],
-      const double * __restrict__ deltaQ, // Q[5+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal,
-      double                                       BgradQ[5]
-    ) {};
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
     {% endif %}
 
 

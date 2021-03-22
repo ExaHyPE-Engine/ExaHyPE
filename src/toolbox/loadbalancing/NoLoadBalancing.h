@@ -37,6 +37,16 @@ class toolbox::loadbalancing::NoLoadBalancing {
     bool hasSplitRecently() const;
 
     void enable(bool);
+    
+    /**
+     * Local operation
+     */
+    bool isEnabled(bool globally) const;
+
+    /**
+     * @return -1 if this information is not available
+     */
+    int getGlobalNumberOfTrees() const;
 };
 
 
