@@ -43,9 +43,9 @@ namespace exahype2 {
       const std::string& location = ""
     );
 
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
+    //#if defined(OpenMPGPUOffloading)
+    //#pragma omp declare target
+    //#endif
     void copyPatch(
       const double* __restrict__  QinWithHalo,
       double* __restrict__        QOutWithoutHalo,
@@ -54,9 +54,9 @@ namespace exahype2 {
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize
     );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
+    //#if defined(OpenMPGPUOffloading)
+    //#pragma omp end declare target
+    //#endif
 
     
     double maxEigenvalue_AoS(
