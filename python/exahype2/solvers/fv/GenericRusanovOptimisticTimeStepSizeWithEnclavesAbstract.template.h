@@ -107,6 +107,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      
     {% include "AbstractSolverAdaptiveTimeStepSize.template.h" %}
   private:
+    /**
+     * This value is required for to extrapolate how the time step 
+     * size changes in the future, i.e. it is reqiured for our biased
+     * time step choice.
+     */
     double _previousAdmissibleTimeStepSize;
 };
 
