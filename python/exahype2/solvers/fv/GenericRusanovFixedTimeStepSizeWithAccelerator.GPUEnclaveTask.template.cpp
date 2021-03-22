@@ -25,9 +25,9 @@ std::vector<std::tuple<double*, const double, int, double, double, double, doubl
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(double* __restrict__  reconstructedPatch, const ::peano4::datamanagement::CellMarker& marker, double* __restrict__  targetPatch) {
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
   #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
+  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(//_SplitLoop(
   #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
+  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(//_SplitLoop(
   #endif
     [&](
       const double* __restrict__                   QL,
