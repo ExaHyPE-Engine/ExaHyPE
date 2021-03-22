@@ -195,7 +195,7 @@ tarch::logging::LogFilter::getInstance().printFilterListToCout();
   \Peano\ uses one-sided MPI to raise/report (non-critical) exceptions accross MPI boundaries.
   Non-critical means that the code continues to finish the current compute step,
   dumps the solution (for debugging) and then terminates. It does not terminate
-  immediately. If you disable one-sided MPI, then such a non-critical assertion
+		immediately. If you disable one-sided MPI (pass \linebreak \texttt{CXXFLAGS=-DnoMPISupportsSingleSidedCommunication} to your \texttt{configure} call), then such a non-critical assertion
   will also terminate immediately.
   \item \textbf{My code crashes unexpectedly with malloc/free errors}. Please
   rerun your code with Intel MPI and the flag \texttt{-check\_mpi}. You should
