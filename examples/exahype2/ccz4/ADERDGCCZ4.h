@@ -79,8 +79,7 @@ class examples::exahype2::ccz4::ADERDGCCZ4: public AbstractADERDGCCZ4 {
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       double * __restrict__ S // S[59]
-    );
-    
+    ) override;
 };
 
 

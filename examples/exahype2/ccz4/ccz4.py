@@ -97,7 +97,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.01
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -252,6 +252,11 @@ if __name__ == "__main__":
         msg = "Warning: ADER-DG no supported on this machine"
         print(msg)
         userwarnings.append((msg,e))
+
+    if is_aderdg:
+      solver_name    = "ADERDG" + solver_name
+    else:
+      solver_name    = "FiniteVolume" + solver_name
 
     if SuperClass == exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator:
       solver_name += "OnGPU"
