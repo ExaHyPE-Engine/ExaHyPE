@@ -1,6 +1,9 @@
+
+#include "tarch/multicore/multicore.h"
 #include "CCZ4Kernels.h"
 
 #include "Constants.h"
+#include "SolverConstants.h"
 
 #include <limits>
 #include <cmath>
@@ -107,9 +110,24 @@ void examples::exahype2::ccz4::enforceCCZ4constraints(double * luh)
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void examples::exahype2::ccz4::source(double* S, const double* const Q)
+void examples::exahype2::ccz4::source(double* S, const double* const Q,
+      const int CCZ4LapseType,
+      const double CCZ4ds,
+      const double CCZ4c,
+      const double CCZ4e,
+      const double CCZ4f,
+      const double CCZ4bs,
+      const double CCZ4sk,
+      const double CCZ4xi,
+      const double CCZ4itau,
+      const double CCZ4eta,
+      const double CCZ4k1,
+      const double CCZ4k2,
+      const double CCZ4k3
+      )
 {
     const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
+    //printf("alpha %f\n",alpha);
     double fa  = 1.0;
     double faa = 0.0;
     if (CCZ4LapseType==1)
@@ -484,9 +502,20 @@ void examples::exahype2::ccz4::source(double* S, const double* const Q)
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal)
+void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const double* const gradQSerialised, const int normal,
+      const int CCZ4LapseType,
+      const double CCZ4ds,
+      const double CCZ4c,
+      const double CCZ4e,
+      const double CCZ4f,
+      const double CCZ4bs,
+      const double CCZ4sk,
+      const double CCZ4xi,
+      const double CCZ4mu
+      )
 {
     const double alpha = std::exp(std::fmax(-20., std::fmin(20.,Q[16])));
+    //printf("alpha %f\n",alpha);
     const double alpha2 = alpha*alpha;
     double fa  = 1.0;
     double faa = 0.0;
@@ -498,7 +527,6 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
 
     constexpr int nVar(59);
 
-    // First model parameter ds here (ds == CCZ4ds)
     double gradQin[59][3] ={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
     // De-serialise input data and fill static array
@@ -734,7 +762,7 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
     for (int i = 0; i < 3; i++)
     for (int j = 0; j < 3; j++)  dtK[i][j] = phi2*SecondOrderTermsNCP[i][j] + beta[0] * dAex[0][i][j] + beta[1] * dAex[1][i][j] + beta[2] * dAex[2][i][j]; // extrinsic curvature
 
-    const double dtraceK[3] = {gradQin[53][0], gradQin[53][1], gradQin[53][1]};
+    const double dtraceK[3] = {gradQin[53][0], gradQin[53][1], gradQin[53][2]};
 
     double dtTraceK = -nablanablaalphaNCP + alpha*RPlusTwoNablaZNCP + beta[0]*dtraceK[0] + beta[1]*dtraceK[1] + beta[2]*dtraceK[2];
 
