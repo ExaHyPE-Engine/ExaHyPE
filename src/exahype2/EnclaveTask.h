@@ -52,6 +52,8 @@ namespace exahype2 {
  * realise this through multiple inheritance. Peano's task interface automatically
  */
 class exahype2::EnclaveTask: public tarch::multicore::Task {
+  public:
+    typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) >  Functor;
   private:
     friend class EnclaveBookkeeping;
 
@@ -60,8 +62,10 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     const ::peano4::datamanagement::CellMarker   _marker;
     double*                                      _inputValues;
     double*                                      _outputValues;
+    double                                       _t;
+    double                                       _dt;
     int                                          _numberOfResultValues;
-    std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                      _functor;
+    Functor                                      _functor;
 
   public:
     /**
@@ -71,9 +75,11 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
      */
     EnclaveTask(
       const ::peano4::datamanagement::CellMarker&    marker,
+      double                                         t,
+      double                                         dt,
       double*                                        inputValues,
       int                                            numberOfResultValues,
-      std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                        functor
+      Functor                                        functor
     );
 
     EnclaveTask(const EnclaveTask& other) = delete;

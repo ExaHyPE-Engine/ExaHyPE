@@ -76,41 +76,44 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if ( _solverState == SolverState::Secondary ) {
     #ifdef Parallel
-    double newTimeStepSize = _admissibleTimeStepSize;
-    MPI_Allreduce(&newTimeStepSize, &_admissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
+    double nextAdmissibleTimeStepSize = 0;
+    MPI_Allreduce(&_admissibleTimeStepSize, &nextAdmissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
+    #else
+    double nextAdmissibleTimeStepSize = _admissibleTimeStepSize;
     #endif
 
     if ( tarch::la::equals(_timeStepSize,0.0) ) {
        const double TimeStapSizeDamping = 0.98;
-       _timeStepSize  = TimeStapSizeDamping * _admissibleTimeStepSize;
-       _previousAdmissibleTimeStepSize = _admissibleTimeStepSize;
+       _timeStepSize  = TimeStapSizeDamping * nextAdmissibleTimeStepSize;
+       _previousAdmissibleTimeStepSize = nextAdmissibleTimeStepSize;
     }
-    else if ( _timeStepSize<=_admissibleTimeStepSize ) {
+    else if ( _timeStepSize<=nextAdmissibleTimeStepSize ) {
       _timeStamp    += _timeStepSize;
 
-      double growthOfAdmissibleTimeStepSize = std::min( 1.0, _admissibleTimeStepSize / _previousAdmissibleTimeStepSize );
+      double growthOfAdmissibleTimeStepSize = std::min( 1.0, nextAdmissibleTimeStepSize / _previousAdmissibleTimeStepSize );
 
-      double biasedCreepingAverageNewTimeStepSize   = std::min( growthOfAdmissibleTimeStepSize * _admissibleTimeStepSize, 0.5 * (_timeStepSize + growthOfAdmissibleTimeStepSize * _admissibleTimeStepSize));
+      double biasedCreepingAverageNewTimeStepSize   = std::min( growthOfAdmissibleTimeStepSize * nextAdmissibleTimeStepSize, 0.5 * (_timeStepSize + growthOfAdmissibleTimeStepSize * nextAdmissibleTimeStepSize));
  
-      if (tarch::mpi::Rank::getInstance().isGlobalMaster())
+      if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
         logInfo(
           "finishTimeStepSize()",
           "pick biased new time step size " << biasedCreepingAverageNewTimeStepSize << 
-          " (extrapolation of shrinking time step size; admissible step size=" << _admissibleTimeStepSize << ",growth=" << growthOfAdmissibleTimeStepSize << ")"
+          " (extrapolation of shrinking time step size; admissible step size=" << nextAdmissibleTimeStepSize << ",growth=" << growthOfAdmissibleTimeStepSize << ")"
         );
+      }
       _timeStepSize                   = biasedCreepingAverageNewTimeStepSize;
-      _previousAdmissibleTimeStepSize = _admissibleTimeStepSize;
+      _previousAdmissibleTimeStepSize = nextAdmissibleTimeStepSize;
     }
     else {
       if (tarch::mpi::Rank::getInstance().isGlobalMaster())
         logInfo(
           "finishTimeStep()",
           "time step size of " << _timeStepSize << " has been too optimistic as max admissible " <<
-          "step size is " << _admissibleTimeStepSize << ". Rollback and recompute time step" 
+          "step size is " << nextAdmissibleTimeStepSize << ". Rollback and recompute time step"
        );
       _solverState  = SolverState::SecondaryWithInvalidRollback;
-      double overshotFactor = _timeStepSize / _admissibleTimeStepSize;
-      _timeStepSize = _admissibleTimeStepSize / overshotFactor;
+      double overshotFactor = _timeStepSize / nextAdmissibleTimeStepSize;
+      _timeStepSize = nextAdmissibleTimeStepSize / overshotFactor;
     }
 
     _admissibleTimeStepSize         = std::numeric_limits<double>::max();

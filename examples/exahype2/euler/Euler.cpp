@@ -153,7 +153,7 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   nonCriticalAssertion4( Qinside[3]==Qinside[3], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
-  nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
+  nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];
