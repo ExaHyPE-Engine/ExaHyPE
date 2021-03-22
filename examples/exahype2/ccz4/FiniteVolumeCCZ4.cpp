@@ -23,7 +23,7 @@ tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "example
 
 
 examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
-  if ( Scenario=="gaugewave-c++" || Scenario=="linearwave-c++" ) {
+  if ( Scenario==0 || Scenario==1 ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
     //initparameters_(&length, name);
@@ -43,10 +43,10 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
 ) {
   logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
-    if ( Scenario=="gaugewave-c++" ) {
+    if ( Scenario==0 ) {
       examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
     }
-    else if ( Scenario=="linearwave-c++" ) {
+    else if ( Scenario==1 ) {
       examples::exahype2::ccz4::linearWave(Q, volumeX, t);
     }
     else {
@@ -68,9 +68,6 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
 }
 
 
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   const double * __restrict__                  Q, // Q[59+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -78,9 +75,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   double                                       t,
   double                                       dt,
   double * __restrict__                        S  // S[59
-)
-{
-
+) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
   for(int i=0; i<NumberOfUnknowns; i++){
     assertion3( std::isfinite(Q[i]), i, x, t );
@@ -88,15 +83,12 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 
   memset(S, 0, NumberOfUnknowns*sizeof(double));
   //pdesource_(S,Q);    //  S(Q)
-  source(S,Q);    //  S(Q)
+  source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
   for(int i=0; i<NumberOfUnknowns; i++){
     nonCriticalAssertion3( std::isfinite(S[i]), i, x, t );
   }
   logTraceOut( "sourceTerm(...)" );
 }
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
 
 
 
@@ -136,8 +128,9 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   // NOTE parameters are stored in Constants.h
   const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
   const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
-  //// we are only interested in the maximum eigenvalue
   return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
+  //// we are only interested in the maximum eigenvalue
+  //return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
 
   //logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
   //constexpr int Unknowns = 59;
@@ -190,7 +183,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
     gradQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
 
-  ncp(BgradQ, Q, gradQSerialised, normal);
+  ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
   //pdencp_(BgradQ, Q, gradQSerialised);
 
 #if !defined(OpenMPGPUOffloading)
