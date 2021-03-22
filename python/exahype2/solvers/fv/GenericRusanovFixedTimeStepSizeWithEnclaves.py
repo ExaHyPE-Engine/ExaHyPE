@@ -152,7 +152,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     {{POSTPROCESS_UPDATED_PATCH}}
   }
   else { // is an enclave cell
-    auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
+    auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
       {{PREPROCESS_RECONSTRUCTED_PATCH}}
       
       ::exahype2::fv::copyPatch(
@@ -260,8 +260,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       },
         marker.x(),
         marker.h(),
-        {{TIME_STAMP}},
-        {{TIME_STEP_SIZE}},
+        t,
+        dt,
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -274,6 +274,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     #if defined(UseSmartMPI)
     ::exahype2::SmartEnclaveTask* newEnclaveTask = new ::exahype2::SmartEnclaveTask(
       marker,
+      {{TIME_STAMP}},
+      {{TIME_STEP_SIZE}},
       reconstructedPatch,
       #if Dimensions==2
       {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
@@ -286,6 +288,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     #else
     ::exahype2::EnclaveTask* newEnclaveTask = new ::exahype2::EnclaveTask(
       marker,
+      {{TIME_STAMP}},
+      {{TIME_STEP_SIZE}},
       reconstructedPatch,
       #if Dimensions==2
       {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
@@ -297,7 +301,6 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     #endif
           
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-
 
     #if defined(UseSmartMPI)
     smartmpi::spawn( newEnclaveTask );
