@@ -21,7 +21,7 @@ tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::_log( "ex
 
 
 examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::FiniteVolumeCCZ4OnGPU() {
-  if ( Scenario=="gaugewave-c++" || Scenario=="linearwave-c++" ) {
+  if ( Scenario==0 || Scenario==1 ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
     //initparameters_(&length, name);
@@ -41,10 +41,10 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::adjustSolution(
 ) {
   logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
   if (tarch::la::equals(t,0.0) ) {
-    if ( Scenario=="gaugewave-c++" ) {
+    if ( Scenario==0 ) {
       examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
     }
-    else if ( Scenario=="linearwave-c++" ) {
+    else if ( Scenario==1 ) {
       examples::exahype2::ccz4::linearWave(Q, volumeX, t);
     }
     else {
@@ -86,11 +86,13 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::sourceTerm(
 
   memset(S, 0, NumberOfUnknowns*sizeof(double));
   //pdesource_(S,Q);    //  S(Q)
-  source(S,Q);    //  S(Q)
+  source(S, Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+#if !defined(OpenMPGPUOffloading)
   for(int i=0; i<NumberOfUnknowns; i++){
     nonCriticalAssertion3( std::isfinite(S[i]), i, x, t );
   }
   logTraceOut( "sourceTerm(...)" );
+#endif
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
@@ -203,7 +205,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::nonconservativeProduct(
     gradQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
 
-  ncp(BgradQ, Q, gradQSerialised, normal);
+  ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
   //pdencp_(BgradQ, Q, gradQSerialised);
 
 #if !defined(OpenMPGPUOffloading)
