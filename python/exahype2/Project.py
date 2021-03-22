@@ -281,13 +281,16 @@ class Project(object):
 
     face_label = exahype2.grid.create_face_label()  
     self._project.datamodel.add_face(face_label)
+    
     create_grid.use_face(face_label)
     init_grid.use_face(face_label)
     create_grid_but_postpone_refinement.use_face(face_label)
+    create_grid_and_converge_lb.use_face(face_label)
     plot_solution.use_face(face_label)
     perform_time_step.use_face(face_label)
     
     set_labels_action_set = exahype2.grid.SetLabels()
+
     create_grid.add_action_set( set_labels_action_set )
     init_grid.add_action_set( set_labels_action_set )
     create_grid_but_postpone_refinement.add_action_set( set_labels_action_set )
