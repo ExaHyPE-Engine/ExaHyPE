@@ -152,6 +152,15 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * Switch on/off.
      */
     void enable(bool);
+
+    /**
+     * Clarifies whether load balancing is, in principle, enabled. Might however
+     * mean that the load balancing is currently (temporarily) disabled. In 
+     * this case, the routine still returns true.
+     */
+    bool isEnabled(bool globally) const;
+
+    int getGlobalNumberOfTrees() const;
   private:
     /**
      * @see getStrategyStep()
@@ -198,6 +207,10 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     int _globalNumberOfInnerUnrefinedCells;
 
+    int _globalNumberOfTrees;
+
+    int _globalNumberOfRanksWithEnabledLoadBalancing; 
+
     int _lightestRank;
 
     /**
@@ -226,7 +239,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     StrategyState  _state;
 
-    bool  _enabled;
+    bool _enabled;
 
     void updateGlobalView();
 
@@ -320,7 +333,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     MPI_Request*    _globalSumRequest;
     MPI_Request*    _globalLightestRankRequest;
     MPI_Request*    _globalNumberOfSplitsRequest;
-    MPI_Request*    _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOffRequest;
+    MPI_Request*    _globalNumberOfTreesRequest;
+    MPI_Request*    _globalNumberOfRanksWithEnabledLoadBalancingRequest;
 
     /**
      * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
@@ -336,6 +350,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     ReductionBuffer _lightestRankBufferOut;
     int             _globalNumberOfSplitsIn;
     int             _localNumberOfSplitsOut;
+    int             _numberOfLocalTreesOut;   
+    int             _globalNumberOfRanksWithEnabledLoadBalancingOut;
     #endif
 
     /**
@@ -345,16 +361,11 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     int _maxTreeWeightAtLastSplit;
 
-    static constexpr int MinBlacklistWeight = 4;
-
     /**
      * Encodes the number of iterations we have to wait before we remove a 
      * split tree from the blacklist again.
      */
-    int _blacklistWeight;
-
-    int  _localNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff;
-    int  _globalNumberOfUnsuccessfulSplitsAsLoadBalancingHadBeenTurnedOff;
+    static constexpr int _BlacklistWeight = 3;
 
     void waitForGlobalStatisticsExchange();
 };
