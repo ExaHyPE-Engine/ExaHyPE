@@ -57,7 +57,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       double                                       t,
       double                                       dt,
       double * __restrict__ S
-    );
+    )  override;
     //#if defined(OpenMPGPUOffloading)
     //#pragma omp end declare target
     //#endif
@@ -89,7 +89,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal
-    );
+    )  override;
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif

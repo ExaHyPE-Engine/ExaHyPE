@@ -27,7 +27,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
-    parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="swich on or off the periodic BC" )
+    parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
 
 
@@ -115,7 +115,7 @@ if __name__ == "__main__":
          We take this routine to add a few additional include statements.
         """
         return SuperClass.get_user_includes(self) + """
-    #include "../PDE.h"
+    #include "../CCZ4Kernels.h"
     #include "exahype2/PatchUtils.h"
     """
 
@@ -173,7 +173,7 @@ if __name__ == "__main__":
           // Central cell
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
 
-          admconstraints_(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+          admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
 
           for(int i=0;i<n_a_v;i++){
             reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
