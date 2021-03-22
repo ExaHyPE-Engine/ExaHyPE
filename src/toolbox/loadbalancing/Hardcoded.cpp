@@ -97,3 +97,13 @@ bool toolbox::loadbalancing::Hardcoded::hasSplitRecently() const {
 void toolbox::loadbalancing::Hardcoded::enable(bool value) {
   _enabled = value;
 }
+
+
+bool toolbox::loadbalancing::Hardcoded::isEnabled(bool globally) const {
+  return _enabled;
+}
+
+
+int toolbox::loadbalancing::Hardcoded::getGlobalNumberOfTrees() const {
+  return -1;
+}
