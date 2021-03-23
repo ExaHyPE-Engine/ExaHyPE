@@ -655,7 +655,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
     logInfo( "triggerSplit()", "wanted to split local rank " << sourceTree << " but failed" );
   }
 
-  if ( _blacklist.count(sourceTree)==0 ) {
+  if ( peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()<=1 ) {
+    logInfo( "triggerSplit()", "do not insert any data into blacklist, as this seems to be the first split on the rank" );
+  }
+  else if ( _blacklist.count(sourceTree)==0 ) {
     const int InitialBlacklistWeight = 3;
     _blacklist.insert( std::pair<int,int>(sourceTree,InitialBlacklistWeight) );
   }
