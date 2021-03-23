@@ -70,10 +70,6 @@ namespace exahype2 {
         double *reconstructedPatch = RP + sourcePatchSize*pidx;
 
 
-
-      //#ifdef SharedOMP
-      //#pragma omp parallel for collapse(2)
-      //#endif
         for (int x = 0; x < numVPAIP; x++)
         {
           for (int y = 0; y < numVPAIP; y++)
@@ -109,10 +105,6 @@ namespace exahype2 {
         
         for (int shift = 0; shift < 2; shift++)
         {
-          //#ifdef SharedOMP
-          //#pragma omp parallel for collapse(2)
-          //#endif
-
           for (int x = shift; x <= numVPAIP; x += 2)
           {
             for (int y = 0; y < numVPAIP; y++)
@@ -191,9 +183,6 @@ namespace exahype2 {
          //////Iterate over other normal
         for (int shift = 0; shift < 2; shift++)
         {
-          //#ifdef SharedOMP
-          //#pragma omp parallel for collapse(2)
-          //#endif
           for (int y = shift; y <= numVPAIP; y += 2)
           {
             for (int x = 0; x < numVPAIP; x++)
@@ -314,7 +303,6 @@ namespace exahype2 {
         std::copy(std::get<0>(patch), std::get<0>(patch)+sourcePatchSize, RP + i*sourcePatchSize);
       }
 
-      //printf("####################### %d (%d)\n", LTOT, sourcePatchSize);
 
 #pragma omp target map(to:T[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:X2[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT])  map(to:H2[0:NPT]) map(to:RP[0:LR]) map(tofrom:destinationPatch[0:LTOT])
 #pragma omp teams
@@ -338,9 +326,6 @@ namespace exahype2 {
 
 
         int helper = numVPAIP+haloSize*2;
-        //#ifdef SharedOMP
-        //#pragma omp parallel for collapse(3)
-        //#endif
         for (int z = 0; z < numVPAIP; z++)
         {
           for (int y = 0; y < numVPAIP; y++)
@@ -385,9 +370,6 @@ namespace exahype2 {
 
         for (int shift = 0; shift < 2; shift++)
         {
-          //#ifdef SharedOMP
-          //#pragma omp parallel for collapse(3)
-          //#endif
           for (int x = shift; x <= numVPAIP; x += 2)
           {
             for (int z = 0; z < numVPAIP; z++)
@@ -466,9 +448,6 @@ namespace exahype2 {
 
         for (int shift = 0; shift < 2; shift++)
         {
-          //#ifdef SharedOMP
-          //#pragma omp parallel for collapse(3)
-          //#endif
           for (int y = shift; y <= numVPAIP; y += 2)
           {
             for (int z = 0; z < numVPAIP; z++)
@@ -546,9 +525,6 @@ namespace exahype2 {
 
         for (int shift = 0; shift < 2; shift++)
         {
-          //#ifdef SharedOMP
-          //#pragma omp parallel for collapse(3)
-          //#endif
           for (int z = shift; z <= numVPAIP; z += 2)
           {
             for (int y = 0; y < numVPAIP; y++)
