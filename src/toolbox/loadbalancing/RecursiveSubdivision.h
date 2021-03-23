@@ -365,7 +365,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * Encodes the number of iterations we have to wait before we remove a 
      * split tree from the blacklist again.
      */
-    static constexpr int _BlacklistWeight = 3;
+    const int _BlacklistWeight = 3;
 
     void waitForGlobalStatisticsExchange();
 };
