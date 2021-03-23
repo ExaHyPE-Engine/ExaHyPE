@@ -77,7 +77,6 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
          * tree _spacetree and finally destroy the local observer copy.
          */
         bool run() override;
-	      void prefetch() override;
     };
 
   public:

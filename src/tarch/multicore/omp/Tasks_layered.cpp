@@ -16,7 +16,7 @@
 
 
 namespace {
-  std::list<tarch::multicore::Task* > nonblockingTasks;
+  std::list< tarch::multicore::Task* > nonblockingTasks;
   std::mutex                           taskQueueMutex;
   const int StandardPriority           = 16;
   const int BackgroundConsumerPriority = 1;
@@ -49,12 +49,49 @@ namespace {
 
 
 /**
- * Process a few tasks from my backlog of tasks and eventually trigger further consumes.
+ * Process a few tasks from my backlog of tasks
  *
- * After we have run through the given number of tasks, we examine whether we have
- * processed something (or have been called with argument 0) or the number of tasks
- * lingering in the background has even increased. In these cases, we span new OpenMP
- * tasks with low priority that continue to run through these pending jobs.
+ * This routine loops through the pending tasks until either maxTasks have been
+ * processed (we decrement this counter by one per loop iteration) or no tasks
+ * are left anymore. In the latter case, we set maxTasks to 0 and thus terminate
+ * the loop.
+ *
+ * Both the way we pick tasks from the queue and extract them from there and the
+ * way we process the tasks depends on the current state of our task processing
+ * strategy. This is incoded via the enum taskProgressionStrategy.
+ *
+ * <h2> Actual task processing </h2>
+ *
+ * There are two variants on the table how to realise the actual task processing:
+ * We can map the task onto a plain OpenMP task and leave it to the runtime to
+ * schedule it, or we can directly do the task ourselves.
+ *
+ * <h2> Task selection </h2>
+ *
+ * There are four different modi operandi:
+ *
+ * - DeployToRemoteDevice: This is currently not supported. We
+ *   therefore only set the internal state to MergeTasks. As the
+ *   attribute myTask continues to point to nullptr, the routine
+ *   "thinks" no further tasks were there and returns. The next
+ *   invocation of processPendingTasks() will react differently,
+ *   as the internal state has been reset.
+ *
+ * - MergeTasks: Extract the first from the queue. Find the
+ *   next N tasks from the queue (N<=maxTasks) which are of the
+ *   same type and call fuse on them. If you haven't been able
+ *   to fuse some tasks, toggle the state and continue FIFO
+ *   from hereon.
+ *
+ * - MapOntoOMPTask: Same strategy as BufferInFIFOQueue.
+ *
+ * - BufferInLIFOQueue: If the queue is not empty, pick the last
+ *   task and process this one. This routine is particularly
+ *   useful if you hope to get a particular task done asap, as
+ *   task outcomes in Peaon typically are requested LIFO.
+ * - BufferInFIFOQueue: If hte queue is not empty, pick the first
+ *   task and process it.
+ *
  */
 bool tarch::multicore::processPendingTasks(int maxTasks) {
   assertion(maxTasks>=0);
@@ -63,13 +100,8 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   if (taskProgressionStrategy==TaskProgressionStrategy::MapOntoOMPTask) {
     ::tarch::logging::Statistics::getInstance().log( MapPendingTasksOnOpenMPTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
   }
-  /*
-            const std::string MapPendingTasksOnOpenMPTasksStatisticsIdentifier( "tarch::multicore::map-pending-tasks-onto-openmp-tasks");
-            const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
-  */
 
   bool  result        = false;
-
   while (maxTasks>0) {
     Task* myTask = nullptr;
 
@@ -78,11 +110,10 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
         {
           #pragma omp critical (backgroundTaskQueue)
           {
-            taskProgressionStrategy = TaskProgressionStrategy::DeployToRemoteDevice;
+            taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
           }
         }
         break;
-      case TaskProgressionStrategy::MapOntoOMPTask:
       case TaskProgressionStrategy::BufferInLIFOQueue:
         {
           #pragma omp critical (backgroundTaskQueue)
@@ -94,6 +125,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
           }
         }
         break;
+      case TaskProgressionStrategy::MapOntoOMPTask:
       case TaskProgressionStrategy::BufferInFIFOQueue:
         {
           #pragma omp critical (backgroundTaskQueue)
@@ -113,10 +145,33 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
               myTask = nonblockingTasks.front();
               nonblockingTasks.pop_front();
             }
-            taskProgressionStrategy = TaskProgressionStrategy::BufferInFIFOQueue;
+
+            std::list< tarch::multicore::Task* > tasksOfSameType;
+            auto pp = nonblockingTasks.begin();
+            while (
+              pp!=nonblockingTasks.end()
+              and
+              (*pp)->getTaskType()==myTask->getTaskType()
+              and
+              tasksOfSameType.size()<=maxTasks
+            ) {
+              tasksOfSameType.push_back( *pp );
+              pp = nonblockingTasks.erase(pp);
+            }
+
+            ::tarch::logging::Statistics::getInstance().log( MergeTasksStatisticsIdentifier, tasksOfSameType.size() );
+
+            if (myTask==nullptr or tasksOfSameType.empty()) {
+              taskProgressionStrategy = TaskProgressionStrategy::BufferInFIFOQueue;
+            }
+            else {
+              if (not myTask->fuse(tasksOfSameType)) {
+                delete myTask;
+                myTask = nullptr;
+              }
+            }
           }
           break;
-
         }
         break;
     }

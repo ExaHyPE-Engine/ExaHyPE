@@ -274,10 +274,6 @@ bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
 }
 
 
-void peano4::parallel::SpacetreeSet::TraverseTask::prefetch() {
-}
-
-
 void peano4::parallel::SpacetreeSet::createObserverCloneIfRequired(peano4::grid::TraversalObserver& observer, int treeId) {
   tarch::multicore::Lock lock(_semaphore);
 
