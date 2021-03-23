@@ -2,6 +2,7 @@
 #include "../StartTraversalMessage.h"
 #include "../TreeManagementMessage.h"
 
+
 #include "tarch/mpi/IntegerMessage.h"
 
 
@@ -47,9 +48,11 @@ namespace {
   class PingPongSendTask: public tarch::multicore::Task {
     private:
       const bool _blockingMPI;
+
+      static constexpr int _taskId = 22;
     public:
       PingPongSendTask(int id, bool blockingMPI):
-        Task(id,0),
+        Task(id,_taskId,0),
         _blockingMPI(blockingMPI) {}
    
       bool run() {
@@ -76,9 +79,11 @@ namespace {
   class PingPongReceiveTask: public tarch::multicore::Task {
     private:
       const bool _blockingMPI;
+
+      static constexpr int _taskId = 23;
     public:
       PingPongReceiveTask(int id, bool blockingMPI):
-        Task(id,0),
+        Task(id,_taskId,0),
         _blockingMPI(blockingMPI) {}
 
       bool run() {

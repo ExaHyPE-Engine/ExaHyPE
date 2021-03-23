@@ -78,10 +78,10 @@ class peano4::parallel::Tasks {
     };
   private:
     static tarch::logging::Log  _log;
-    static tarch::multicore::BooleanSemaphore _tasksema;
-      
+    static tarch::multicore::BooleanSemaphore _tasksema;      
 
     static int                  _locationCounter;
+    static int                  _taskTypeCounter;
 
     /**
      * Find out whether to launch tasks issued by location in parallel.
@@ -121,13 +121,16 @@ class peano4::parallel::Tasks {
      */
     static int getLocationIdentifier(const std::string&  trace);
 
+    static int getTaskType(const std::string&  className);
+    
     /**
      * Spawn One Task
      *
      * This routine spans a task with no wait semantics, i.e. the constructor
      * returns immediately.
      *
-     * @param location          See getLocationIdentifier()
+     * @param location See getLocationIdentifier(). In this particular case, I use the
+     *   negative value of the location identifier as task type id. 
      * @param waitForCompletion
      */
     Tasks(

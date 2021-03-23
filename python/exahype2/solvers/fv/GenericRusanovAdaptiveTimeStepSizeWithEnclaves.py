@@ -175,7 +175,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
   }
   else { // is an enclave cell
-    auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker) -> void {
+    auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
       {{PREPROCESS_RECONSTRUCTED_PATCH}}
       
       ::exahype2::fv::copyPatch(
@@ -283,8 +283,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       },
         marker.x(),
         marker.h(),
-        {{TIME_STAMP}},
-        {{TIME_STEP_SIZE}},
+        t,
+        dt,
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -293,46 +293,37 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       );
       
       {{POSTPROCESS_UPDATED_PATCH}}
+
+      double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+        [] (
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> double {
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+        },
+        marker.x(),
+        marker.h(),
+        t,
+        dt,
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        originalPatch
+      );
+
+      repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
     };
 
-    double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-      [] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-      },
-      marker.x(),
-      marker.h(),
+    static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
+    ::exahype2::EnclaveTask* newEnclaveTask = new ::exahype2::EnclaveTask(
+      enclaveTaskTypeId,
+      marker,
       {{TIME_STAMP}},
       {{TIME_STEP_SIZE}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      originalPatch
-    );
-
-    repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
-
-    #if defined(UseSmartMPI)
-    ::exahype2::SmartEnclaveTask* newEnclaveTask = new ::exahype2::SmartEnclaveTask(
-      marker,
-      reconstructedPatch,
-      #if Dimensions==2
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
-      #else
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
-      #endif
-      perCellFunctor,
-      {{SOLVER_NUMBER}}
-    );    
-    #else
-    ::exahype2::EnclaveTask* newEnclaveTask = new ::exahype2::EnclaveTask(
-      marker,
       reconstructedPatch,
       #if Dimensions==2
       {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
@@ -341,20 +332,14 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       #endif
       perCellFunctor
     );    
-    #endif
           
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
 
-
-    #if defined(UseSmartMPI)
-    smartmpi::spawn( newEnclaveTask );
-    #else
     peano4::parallel::Tasks spawn( 
       newEnclaveTask,
       peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
       peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
     );   
-    #endif   
   }
   """      
     

@@ -95,6 +95,8 @@ bool selectNextAlgorithmicStep() {{
   else if (gridConstructed and not gridBalanced) {{
     if (
       not repositories::loadBalancer.isEnabled(true)
+      and
+      not repositories::loadBalancer.hasSplitRecently()
     ) {{
       logInfo( "selectNextAlgorithmicStep()", "all ranks have switched off their load balancing" );
       gridBalanced = true;
