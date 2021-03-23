@@ -581,13 +581,13 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
 
     double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     double Christoffel_tilde[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    double Christoffel_kind1[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    //double Christoffel_kind1[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
     for (int j = 0; j < 3; j++)
     for (int i = 0; i < 3; i++)
     for (int k = 0; k < 3; k++)
     {
-        Christoffel_kind1[i][j][k] = DD[k][i][j] + DD[j][i][k] - DD[i][j][k];
+        //Christoffel_kind1[i][j][k] = DD[k][i][j] + DD[j][i][k] - DD[i][j][k];
         for (int l = 0; l < 3; l++)
         {
             Christoffel_tilde[i][j][k] += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] );
@@ -964,4 +964,193 @@ void examples::exahype2::ccz4::ncp(double* BgradQ, const double* const Q, const 
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
+#endif
+
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+void examples::exahype2::ccz4::admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised)
+{
+    constexpr int nVar(59);
+    double gradQin[59][3] ={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+    // De-serialise input data and fill static array
+    for (int normal=0; normal<3; normal++)
+    for (int i=0; i<nVar; i++) gradQin[i][normal] = gradQSerialised[i+normal*nVar];
+
+    // Note g_cov is symmetric
+    const double g_cov[3][3] = { {Q[0], Q[1], Q[2]}, {Q[1], Q[3], Q[4]}, {Q[2], Q[4], Q[5]} };
+    const double invdet = 1./( Q[0]*Q[3]*Q[5] - Q[0]*Q[4]*Q[4] - Q[1]*Q[1]*Q[5] + 2*Q[1]*Q[2]*Q[4] -Q[2]*Q[2]*Q[3]);
+
+    const double g_contr[3][3] = {
+        { ( Q[3]*Q[5]-Q[4]*Q[4])*invdet, -( Q[1]*Q[5]-Q[2]*Q[4])*invdet, -(-Q[1]*Q[4]+Q[2]*Q[3])*invdet},
+        {-( Q[1]*Q[5]-Q[4]*Q[2])*invdet,  ( Q[0]*Q[5]-Q[2]*Q[2])*invdet, -( Q[0]*Q[4]-Q[2]*Q[1])*invdet},
+        {-(-Q[1]*Q[4]+Q[3]*Q[2])*invdet, -( Q[0]*Q[4]-Q[1]*Q[2])*invdet,  ( Q[0]*Q[3]-Q[1]*Q[1])*invdet}
+    };
+
+    // NOTE Aex is symmetric
+    double Aex[3][3] = { {Q[6], Q[7], Q[8]}, {Q[7], Q[9], Q[10]}, {Q[8], Q[10], Q[11]} };
+
+    double traceA = 0;
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) traceA+=g_contr[i][j]*Aex[i][j];
+    traceA *= 1./3;
+
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) Aex[i][j] -= traceA * g_cov[i][j];
+
+    const double dAex[3][3][3] = {
+        {{gradQin[6][0],gradQin[7][0],gradQin[8][0]}, {gradQin[7][0], gradQin[9][0], gradQin[10][0]},  {gradQin[8][0], gradQin[10][0], gradQin[11][0]}},
+        {{gradQin[6][1],gradQin[7][1],gradQin[8][1]}, {gradQin[7][1], gradQin[9][1], gradQin[10][1]},  {gradQin[8][1], gradQin[10][1], gradQin[11][1]}},
+        {{gradQin[6][2],gradQin[7][2],gradQin[8][2]}, {gradQin[7][2], gradQin[9][2], gradQin[10][2]},  {gradQin[8][2], gradQin[10][2], gradQin[11][2]}}
+    };
+
+    const double traceK = Q[53];
+    const double dtraceK[3] = {gradQin[53][0], gradQin[53][1], gradQin[53][2]};
+
+    const double phi = std::exp(std::fmax(-20., std::fmin(20.,Q[54])));
+    const double phi2 = phi*phi;
+    const double PP[3] = {Q[55], Q[56], Q[57]};
+
+    const double dPP[3][3] = {
+        {gradQin[55][0],gradQin[56][0],gradQin[57][0]},
+        {gradQin[55][1],gradQin[56][1],gradQin[57][1]},
+        {gradQin[55][2],gradQin[56][2],gradQin[57][2]}
+    };
+
+    const double DD[3][3][3] = {
+        {{Q[35], Q[36], Q[37]}, {Q[36], Q[38], Q[39]}, {Q[37], Q[39], Q[40]}},
+        {{Q[41], Q[42], Q[43]}, {Q[42], Q[44], Q[45]}, {Q[43], Q[45], Q[46]}},
+        {{Q[47], Q[48], Q[49]}, {Q[48], Q[50], Q[51]}, {Q[49], Q[51], Q[52]}}
+    };
+    const double dDD[3][3][3][3] = {
+        {
+                {
+                        {gradQin[35][0],gradQin[36][0],gradQin[37][0]}, {gradQin[36][0],gradQin[38][0],gradQin[39][0]}, {gradQin[37][0],gradQin[39][0],gradQin[40][0]},
+                },
+                {
+                        {gradQin[41][0],gradQin[42][0],gradQin[43][0]}, {gradQin[42][0],gradQin[44][0],gradQin[45][0]}, {gradQin[43][0],gradQin[45][0],gradQin[46][0]},
+                },
+                {
+                        {gradQin[47][0],gradQin[48][0],gradQin[49][0]}, {gradQin[48][0],gradQin[50][0],gradQin[51][0]}, {gradQin[49][0],gradQin[51][0],gradQin[52][0]}
+                }
+        },
+        {
+                {
+                        {gradQin[35][1],gradQin[36][1],gradQin[37][1]}, {gradQin[36][1],gradQin[38][1],gradQin[39][1]}, {gradQin[37][1],gradQin[39][1],gradQin[40][1]},
+                },
+                {
+                        {gradQin[41][1],gradQin[42][1],gradQin[43][1]}, {gradQin[42][1],gradQin[44][1],gradQin[45][1]}, {gradQin[43][1],gradQin[45][1],gradQin[46][1]},
+                },
+                {
+                        {gradQin[47][1],gradQin[48][1],gradQin[49][1]}, {gradQin[48][1],gradQin[50][1],gradQin[51][1]}, {gradQin[49][1],gradQin[51][1],gradQin[52][1]}
+                }
+        },
+        {
+                {
+                        {gradQin[35][2],gradQin[36][2],gradQin[37][2]}, {gradQin[36][2],gradQin[38][2],gradQin[39][2]}, {gradQin[37][2],gradQin[39][2],gradQin[40][2]},
+                },
+                {
+                        {gradQin[41][2],gradQin[42][2],gradQin[43][2]}, {gradQin[42][2],gradQin[44][2],gradQin[45][2]}, {gradQin[43][2],gradQin[45][2],gradQin[46][2]},
+                },
+                {
+                        {gradQin[47][2],gradQin[48][2],gradQin[49][2]}, {gradQin[48][2],gradQin[50][2],gradQin[51][2]}, {gradQin[49][2],gradQin[51][2],gradQin[52][2]}
+                }
+        }
+    };
+
+    double dgup[3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    for (int k = 0; k < 3; k++)
+    for (int m = 0; m < 3; m++)
+    for (int l = 0; l < 3; l++)
+    for (int n = 0; n < 3; n++)
+    for (int j = 0; j < 3; j++) dgup[k][m][l] -= g_contr[m][n]*g_contr[j][l]*2*DD[k][n][j];
+
+    double Kex[3][3]={ 0 };
+    for (int i=0;i<3;i++)
+    for (int j=0;j<3;j++) Kex[i][j]=Aex[i][j]/phi2 + (1./3)*traceK*g_cov[i][j]/phi2;
+    double Kmix[3][3]={0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int u = 0; u < 3; u++) Kmix[i][j] += phi2*g_contr[i][u] * Kex[u][j];
+    double Kup[3][3]={0,0,0,0,0,0,0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int u = 0; u < 3; u++) Kup[i][j] += phi2*g_contr[i][u] * Kmix[j][u]; // Note the transposition is in the indices
+
+    double Christoffel[3][3][3]       = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    for (int j = 0; j < 3; j++)
+    for (int i = 0; i < 3; i++)
+    for (int k = 0; k < 3; k++)
+    for (int l = 0; l < 3; l++) Christoffel[i][j][k]  += g_contr[k][l] * ( DD[i][j][l] + DD[j][i][l] - DD[l][i][j] ) - g_contr[k][l] * ( g_cov[j][l] * PP[i] + g_cov[i][l] * PP[j] - g_cov[i][j] * PP[l] );
+
+    double dChristoffel[3][3][3][3] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int m = 0; m < 3; m++)
+    for (int k = 0; k < 3; k++)
+    for (int l = 0; l < 3; l++)
+    {
+        dChristoffel[k][i][j][m] += 0.5*g_contr[m][l] * (
+            dDD[k][i][j][l] + dDD[i][k][j][l] + dDD[k][j][i][l] + dDD[j][k][i][l] - dDD[k][l][i][j] - dDD[l][k][i][j]
+            - g_cov[j][l]*(dPP[k][i] + dPP[i][k]) - g_cov[i][l]*(dPP[k][j]+dPP[j][k]) +  g_cov[i][j]*(dPP[k][l]+dPP[l][k]) )
+            +dgup[k][m][l]*(DD[i][j][l]+DD[j][i][l]-DD[l][i][j])
+            -dgup[k][m][l]*(g_cov[j][l]*PP[i]+g_cov[i][l]*PP[j]-g_cov[i][j]*PP[l])
+            -2*g_contr[m][l]*(DD[k][j][l]*PP[i]+DD[k][i][l]*PP[j]-DD[k][i][j]*PP[l]);
+    }
+
+    double Riemann[3][3][3][3] = {0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int m = 0; m < 3; m++)
+    for (int k = 0; k < 3; k++){
+        Riemann[i][k][j][m] = dChristoffel[k][i][j][m] - dChristoffel[j][i][k][m];
+        for (int l = 0; l < 3; l++){
+            Riemann[i][k][j][m] += Christoffel[i][j][l]*Christoffel[l][k][m]-Christoffel[i][k][l]*Christoffel[l][j][m];
+        }
+    }
+
+    double Ricci[3][3] = {0,0,0,0,0,0,0,0,0};
+    for (int m = 0; m < 3; m++)
+    for (int n = 0; n < 3; n++)
+    for (int l = 0; l < 3; l++) Ricci[m][n] += Riemann[m][l][n][l];
+
+    double R=0;
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++) R += phi2*g_contr[i][j]*Ricci[i][j];
+    double Kupdown=0;
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++) Kupdown += Kex[i][j]*Kup[i][j];
+
+    double Ham=0;
+    Ham = R-Kupdown+traceK*traceK;
+
+    double dKex[3][3][3]={0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int k = 0; k < 3; k++) dKex[k][i][j]= (1.0/phi2)*(
+            dAex[k][i][j]-2*Aex[i][j]*PP[k]+(1.0/3)*dtraceK[k]*g_cov[i][j]
+            +(2.0/3)*traceK*DD[k][i][j]-(2.0/3)*traceK*g_cov[i][j]*PP[k]);
+
+    double Mom[3]={0,0,0};
+    for (int i = 0; i < 3; i++)
+    for (int j = 0; j < 3; j++)
+    for (int l = 0; l < 3; l++){
+        Mom[i] += phi2*g_contr[j][l]*(dKex[l][i][j]-dKex[i][j][l]);
+        for (int m = 0; m < 3; m++){
+            Mom[i] += phi2*g_contr[j][l]*(-Christoffel[j][l][m]*Kex[m][i]+Christoffel[j][i][m]*Kex[m][l]);
+        }
+    }
+
+    memset(constraints, 0, 6*sizeof(double));
+    constraints[0]  =   Ham;
+    constraints[1]  =   Mom[0];
+    constraints[2]  =   Mom[1];
+    constraints[3]  =   Mom[2];
+    constraints[4]  =   1.0/invdet-1.0;
+    constraints[5]  =   traceA;
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
 #endif
