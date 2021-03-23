@@ -70,7 +70,18 @@ void tarch::multicore::Task::setPriority( int priority ) {
 }
 
 
-void tarch::multicore::Task::prefetch() {
+int tarch::multicore::Task::getTaskType() const {
+  return _taskType;
+}
+
+
+bool tarch::multicore::Task::fuse( const std::list<Task*>& otherTasks ) {
+  for (auto pp: otherTasks) {
+    tarch::multicore::Task* currentTask = pp;
+    while (currentTask->run()) {}
+    delete currentTask;
+  }
+  return true;
 }
 
 

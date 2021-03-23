@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <vector>
+#include <list>
 
 
 namespace tarch {
@@ -58,12 +59,16 @@ namespace tarch {
         static constexpr int DefaultPriority = 0;
 
         /**
-         * @param id Unique number of the task
+         * @param id       Unique number of the task
+         * @param taskType Unique task (type) number for this task. All tasks that do 
+         *        the same, i.e. are of hte same type, should have the same task type 
+         *        integer marker. However, they all should have different ids.
          */
         Task( int id, int taskType, int priority );
 
         virtual ~Task() {}
 
+        int getTaskType() const;
         int getTaskId() const;
         int getPriority() const;
         void setPriority( int priority );
@@ -71,34 +76,25 @@ namespace tarch {
         virtual bool run() = 0;
 
         /**
-         * This operation is called prior to run(). We try to make it as
-         * close to run as possible. The idea is that codes use it to
-         * insert their prefetch macros. Peano gives no guarantee that this
-         * operation is called, i.e. everything done here is solely
-         * optional.
+         * Fuse the task with a list of further tasks. The routine is guaranteed to 
+         * be called only for tasks with the same taskType. So if you carefully 
+         * distinguish your tasks, you can downcast all the arguments, as you might
+         * know the real type.
          *
-         * Prefetching for Intel is specified at
+         * <h2> Default implementation </h2>
+         * 
+         * My default implementation executes all the passed tasks and then returns 
+         * the original task back, i.e. this one is not executed.
          *
-         * https://software.intel.com/en-us/node/684213
+         * <h2> Memory ownership </h2>
+         * 
+         * The ownership for otherTasks goes over to fuse, i.e. you don't have to 
+         * delete anything anymore.
          *
-         * or
-         *
-         * https://software.intel.com/en-us/cpp-compiler-developer-guide-and-reference-cacheability-support-intrinsics-1
-         *
-         * There are basically the following modes: _MM_HINT_T0,
-         * _MM_HINT_T1, _MM_HINT_T2 and _MM_HINT_NTA. T0 means a
-         * prefetch into all cache levels. T1 means into all levels
-         * except L1 (L1 might be populated but we do not enforce it),
-         * T2 means at least L3. NTA is the most defensive one.
-         * It loads stuff as close to the core as possible without
-         * polluting any other caches.
-         *
-         * We usually use mode/hint _MM_HINT_NTA for data on machines with
-         * Optane. This makes the data be loaded into L3. For urgent
-         * computations it might however make sense to use T0.
-         *
+         * @return Is the present task still to be executed or can the runtime 
+         *         destroy it straightaway?
          */
-        virtual void prefetch();
+        virtual bool fuse( const std::list<Task*>& otherTasks );
     };
 
 

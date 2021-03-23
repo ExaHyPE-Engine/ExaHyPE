@@ -93,11 +93,6 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     virtual ~EnclaveTask() = default;
 
     bool run() override;
-
-    /**
-     * nop
-     */
-    void prefetch() override;
 };
 
 
