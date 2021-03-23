@@ -27,18 +27,6 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   const int NumberOfBackedUpEntries = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*( {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}} );
   #endif
   
-  if ( repositories::{{SOLVER_INSTANCE}}.getSolverState() == {{SOLVER_NAME}}::SolverState::PrimaryWithRollback ) {
-    std::copy_n( 
-      fineGridCell{{UNKNOWN_IDENTIFIER}}ReconstructedBackup.value, NumberOfBackedUpEntries, reconstructedPatch
-    );
-  } 
-  else {
-    std::copy_n( 
-      reconstructedPatch, NumberOfBackedUpEntries, fineGridCell{{UNKNOWN_IDENTIFIER}}ReconstructedBackup.value
-    );
-  }
-  
-  
   ::exahype2::fv::validatePatch(
       reconstructedPatch,
       {{NUMBER_OF_UNKNOWNS}},
@@ -364,7 +352,6 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       solver._reconstructed_array_memory_location,
       "not marker.isRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
-      "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryWithRollback or " + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
     )
@@ -463,7 +450,6 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
     self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, 
       self._store_cell_data_default_predicate() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
-      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback             and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
@@ -472,83 +458,71 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
     self._action_set_update_cell = UpdateCellWithEnclaves(self)
 
 
-  def create_data_structures(self):
-    """
-    
-    See EnclaveTasking.create_data_structures()
-    
-    """    
-    self._initialisation_sweep_predicate = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
-      ")"
-      
-    self._first_iteration_after_initialisation_predicate = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
-    ")"
+  #def create_data_structures(self):
+  #  """
+  #  
+  #  See EnclaveTasking.create_data_structures()
+  #  
+  #  """    
+  #  self._initialisation_sweep_predicate = "(" + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
+  #    ")"
+  #    
+  #  self._first_iteration_after_initialisation_predicate = "(" + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
+  #  ")"
+  #
+  #  self._primary_sweep_predicate = "(" + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
+  #    ")"
 
-    self._primary_sweep_predicate = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
-      ")"
+  #  self._primary_sweep_or_plot_predicate = "(" + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
+  #    ")"
 
-    self._primary_sweep_or_plot_predicate = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
-      ")"
+  #  self._primary_or_initialisation_sweep_predicate= "(" + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
+  #    ")"
 
-    self._primary_or_initialisation_sweep_predicate= "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryWithRollback or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
-      ")"
+  #  self._secondary_sweep_predicate = "(" + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
+  #    ")"
 
-    self._secondary_sweep_predicate = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
-      ")"
+  #  self._secondary_sweep_or_grid_construction_predicate = "(" + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
+  #    ")"
 
-    self._secondary_sweep_or_grid_construction_predicate = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
-      ")"
+  #  self._secondary_sweep_or_grid_initialisation_predicate = "(" + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
+  #    ")"
 
-    self._secondary_sweep_or_grid_initialisation_predicate = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
-      ")"
+  #  self._secondary_sweep_or_grid_initialisation_or_plot_predicate = "(" + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
+  #    "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
+  #    ")"
 
-    self._secondary_sweep_or_grid_initialisation_or_plot_predicate = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
-      ")"
-
-    EnclaveTaskingFV.create_data_structures(self)
-
-    #
-    # This is pretty annoying with the present code base: I always have to stream
-    # the reconstructed patches through the stacks, as the ordering otherwise would
-    # be messed up.
-    #
-    self._reconstructed_patch_backup = peano4.datamodel.Patch( (self._patch_size+2,self._patch_size+2,self._patch_size+2), self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "ReconstructedBackup" )
-    self._reconstructed_patch_backup.generator.store_persistent_condition = self._store_cell_data_default_predicate()
-    self._reconstructed_patch_backup.generator.load_persistent_condition  = self._load_cell_data_default_predicate()
-    self._reconstructed_patch_backup.generator.includes  += """
-#include "../repositories/SolverRepository.h"
-"""    
+  #  EnclaveTaskingFV.create_data_structures(self)
 
 
-  def add_to_Peano4_datamodel( self, datamodel, verbose ):
-    EnclaveTaskingFV.add_to_Peano4_datamodel(self,datamodel, verbose)
-    datamodel.add_cell(self._reconstructed_patch_backup)
+  #def add_to_Peano4_datamodel( self, datamodel, verbose ):
+  #  EnclaveTaskingFV.add_to_Peano4_datamodel(self,datamodel, verbose)
+  #  datamodel.add_cell(self._reconstructed_patch_backup)
 
  
-  def add_use_data_statements_to_Peano4_solver_step(self, step):
-    EnclaveTaskingFV.add_use_data_statements_to_Peano4_solver_step(self,step)
-    step.use_cell(self._reconstructed_patch_backup)
+  #def add_use_data_statements_to_Peano4_solver_step(self, step):
+  #  EnclaveTaskingFV.add_use_data_statements_to_Peano4_solver_step(self,step)
+  #  step.use_cell(self._reconstructed_patch_backup)

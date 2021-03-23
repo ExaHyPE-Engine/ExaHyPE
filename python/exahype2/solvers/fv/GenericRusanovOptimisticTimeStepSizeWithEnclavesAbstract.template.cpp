@@ -14,11 +14,12 @@
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
   _timeStamp(0.0),
   _timeStepSize(0.0),
-  _admissibleTimeStepSize(std::numeric_limits<double>::max()),
   _solverState(SolverState::GridConstruction),
   _maxH({{MAX_H}}),
   _minH({{MIN_H}}),
-  _previousAdmissibleTimeStepSize(0.0) {
+  _previousAdmissibleTimeStepSize(0.0),
+  _admissibleTimeStepSize(std::numeric_limits<double>::max()),
+  _predictedTimeStepSize(-1.0) {
 }
 
 
@@ -54,16 +55,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _solverState = SolverState::PrimaryAfterGridInitialisation;
   }
   else if (
-    _solverState == SolverState::Primary
-    or
-    _solverState == SolverState::PrimaryWithRollback
-    or
     _solverState == SolverState::PrimaryAfterGridInitialisation
+     or
+    _solverState == SolverState::Primary
   ) {
     _solverState = SolverState::Secondary;
-  }
-  else if ( _solverState == SolverState::SecondaryWithInvalidRollback ) {
-    _solverState = SolverState::PrimaryWithRollback;
   }
   else {
     _solverState = SolverState::Primary;
@@ -75,48 +71,82 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   if ( _solverState == SolverState::Secondary ) {
+    double nextAdmissibleTimeStepSize      = 0;
+    double localNextAdmissibleTimeStepSize = std::numeric_limits<double>::max();
+    if ( tarch::la::greater(_admissibleTimeStepSize,0.0) ) {
+      localNextAdmissibleTimeStepSize = std::min(localNextAdmissibleTimeStepSize, _admissibleTimeStepSize);
+    }
+    if ( tarch::la::greater(_admissibleTimeStepSizeAfterPrimaryGridSweep,0.0) ) {
+      localNextAdmissibleTimeStepSize = std::min(localNextAdmissibleTimeStepSize, _admissibleTimeStepSizeAfterPrimaryGridSweep);
+    }
     #ifdef Parallel
-    double nextAdmissibleTimeStepSize = 0;
-    MPI_Allreduce(&_admissibleTimeStepSize, &nextAdmissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
+    MPI_Allreduce(&localNextAdmissibleTimeStepSize, &nextAdmissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
     #else
-    double nextAdmissibleTimeStepSize = _admissibleTimeStepSize;
+    nextAdmissibleTimeStepSize = localNextAdmissibleTimeStepSize;
     #endif
 
     if ( tarch::la::equals(_timeStepSize,0.0) ) {
-       const double TimeStapSizeDamping = 0.98;
-       _timeStepSize  = TimeStapSizeDamping * nextAdmissibleTimeStepSize;
-       _previousAdmissibleTimeStepSize = nextAdmissibleTimeStepSize;
+      const double TimeStapSizeDamping = 0.98;
+      _timeStepSize                   = TimeStapSizeDamping * nextAdmissibleTimeStepSize;
+      _predictedTimeStepSize          = -1.0;
+      _previousAdmissibleTimeStepSize = nextAdmissibleTimeStepSize;
     }
-    else if ( _timeStepSize<=nextAdmissibleTimeStepSize ) {
+    else if ( _predictedTimeStepSize <= nextAdmissibleTimeStepSize ) {
       _timeStamp    += _timeStepSize;
 
       double growthOfAdmissibleTimeStepSize = std::min( 1.0, nextAdmissibleTimeStepSize / _previousAdmissibleTimeStepSize );
+      double newPredictedTimeStepSize = 0.5 * (_predictedTimeStepSize + growthOfAdmissibleTimeStepSize * nextAdmissibleTimeStepSize);
 
-      double biasedCreepingAverageNewTimeStepSize   = std::min( growthOfAdmissibleTimeStepSize * nextAdmissibleTimeStepSize, 0.5 * (_timeStepSize + growthOfAdmissibleTimeStepSize * nextAdmissibleTimeStepSize));
- 
-      if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
-        logInfo(
-          "finishTimeStepSize()",
-          "pick biased new time step size " << biasedCreepingAverageNewTimeStepSize << 
-          " (extrapolation of shrinking time step size; admissible step size=" << nextAdmissibleTimeStepSize << ",growth=" << growthOfAdmissibleTimeStepSize << ")"
-        );
-      }
-      _timeStepSize                   = biasedCreepingAverageNewTimeStepSize;
-      _previousAdmissibleTimeStepSize = nextAdmissibleTimeStepSize;
+      _predictedTimeStepSize = newPredictedTimeStepSize;
     }
     else {
-      if (tarch::mpi::Rank::getInstance().isGlobalMaster())
-        logInfo(
-          "finishTimeStep()",
-          "time step size of " << _timeStepSize << " has been too optimistic as max admissible " <<
-          "step size is " << nextAdmissibleTimeStepSize << ". Rollback and recompute time step"
-       );
-      _solverState  = SolverState::SecondaryWithInvalidRollback;
-      double overshotFactor = _timeStepSize / nextAdmissibleTimeStepSize;
-      _timeStepSize = nextAdmissibleTimeStepSize / overshotFactor;
+      _timeStamp             += _timeStepSize;
+      _timeStepSize           = nextAdmissibleTimeStepSize;
+      _predictedTimeStepSize  = -1.0;
     }
+  }
+  else if ( _predictedTimeStepSize<=0.0 ) {
+    double growthOfAdmissibleTimeStepSize = std::min( 1.0, _timeStepSize / _previousAdmissibleTimeStepSize );
+    _predictedTimeStepSize = growthOfAdmissibleTimeStepSize * _timeStepSize;
+  }
+  else if ( _predictedTimeStepSize>0.0 ) {
+    _timeStepSize  = _predictedTimeStepSize;
+  }
 
-    _admissibleTimeStepSize         = std::numeric_limits<double>::max();
+
+  if ( _solverState == SolverState::Secondary and _predictedTimeStepSize>0.0 ) {
+    logInfo(
+      "finishTimeStep()",
+      "continue with primary tree sweep at time stamp " << _timeStamp <<
+      " and issue skeleton tasks with time step size " << _timeStepSize <<
+      ". Some tasks have been optimistically brought forward with " << _predictedTimeStepSiz
+      Bloesinn bzw. nix gewonnen. Sind ja jetzt immer noch da
+      Streut halt besser aus
+      e
+    );
+  }
+  else if ( _solverState == SolverState::Secondary ) {
+    logInfo(
+      "finishTimeStep()",
+      "continue with primary tree sweep at time stamp " << _timeStamp <<
+      " and issue both skeleton and enclave tasks with time step size " << _timeStepSize
+    );
+  }
+  else if ( _predictedTimeStepSize>0.0 ) {
+    logInfo(
+      "finishTimeStep()",
+      "continue with secondary tree sweep at time stamp " << _timeStamp <<
+      ". Enclave tasks finish with time step size " << _timeStepSize <<
+      " and new enclave tasks are triggered optimistically with " << _predictedTimeStepSize
+    );
+  }
+  else {
+    logInfo(
+      "finishTimeStep()",
+      "continue with secondary tree sweep at time stamp " << _timeStamp <<
+      ". Enclave tasks finish with time step size " << _timeStepSize <<
+      ". No new enclave tasks are triggered optimistically. Furthermore, discard pre-computed tasks"
+    );
   }
 
   assertion( _timeStepSize < std::numeric_limits<double>::max() );
@@ -151,12 +181,8 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Primary:
       return "primary";
-    case SolverState::PrimaryWithRollback:
-      return "primary-with-rollback";
     case SolverState::Secondary:
       return "secondary";
-    case SolverState::SecondaryWithInvalidRollback:
-      return "secondary-but-invalid";
     case SolverState::PlottingInitialCondition:
       return "plotting-initial-condition";
     case SolverState::PrimaryAfterGridInitialisation:
