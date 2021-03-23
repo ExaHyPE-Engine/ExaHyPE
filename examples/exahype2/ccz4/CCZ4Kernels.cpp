@@ -1152,5 +1152,5 @@ void examples::exahype2::ccz4::admconstraints(double* constraints, const double*
     constraints[5]  =   traceA;
 }
 #if defined(OpenMPGPUOffloading)
-#pragma omp declare target
+#pragma omp end declare target
 #endif
