@@ -337,7 +337,7 @@ void tarch::multicore::spawnAndWait(
     for (int i=0; i<NumberOfThreads; i++) {
       if ( i<tasks.size() ) {
         while (tasks[i]->run()) {
-          #pragma omp yield
+          #pragma omp taskyield
         }
         delete tasks[i];
       }
