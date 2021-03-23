@@ -10,6 +10,7 @@ tarch::logging::Log  exahype2::EnclaveTask::_log( "exahype2::EnclaveTask" );
 
 
 exahype2::EnclaveTask::EnclaveTask(
+  int                                            enclaveTaskTypeId,
   const ::peano4::datamanagement::CellMarker&    marker,
   double                                         t,
   double                                         dt,
@@ -17,7 +18,7 @@ exahype2::EnclaveTask::EnclaveTask(
   int                                            numberOfResultValues,
   Functor                                        functor
 ):
-  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority),
+  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),enclaveTaskTypeId,tarch::multicore::Task::DefaultPriority),
   _marker(marker),
   _t(t),
   _dt(dt),

@@ -318,22 +318,9 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
     };
 
-    #if defined(UseSmartMPI)
-    ::exahype2::SmartEnclaveTask* newEnclaveTask = new ::exahype2::SmartEnclaveTask(
-      marker,
-      {{TIME_STAMP}},
-      {{TIME_STEP_SIZE}},
-      reconstructedPatch,
-      #if Dimensions==2
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
-      #else
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
-      #endif
-      perCellFunctor,
-      {{SOLVER_NUMBER}}
-    );    
-    #else
+    static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
     ::exahype2::EnclaveTask* newEnclaveTask = new ::exahype2::EnclaveTask(
+      enclaveTaskTypeId,
       marker,
       {{TIME_STAMP}},
       {{TIME_STEP_SIZE}},
@@ -345,20 +332,14 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       #endif
       perCellFunctor
     );    
-    #endif
           
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
 
-
-    #if defined(UseSmartMPI)
-    smartmpi::spawn( newEnclaveTask );
-    #else
     peano4::parallel::Tasks spawn( 
       newEnclaveTask,
       peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
       peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
     );   
-    #endif   
   }
   """      
     

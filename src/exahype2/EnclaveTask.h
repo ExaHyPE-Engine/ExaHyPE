@@ -71,9 +71,14 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     /**
      * Create plain enclave task.
      *
-     * @param inputValues Has to be created on heap via tarch::multicore::allocateMemory().
+     * @param inputValues        Has to be created on heap via tarch::multicore::allocateMemory().
+     * @param enclaveTaskTypeId  Please create it through 
+     * <pre>
+    static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
+</pre>    
      */
     EnclaveTask(
+      int                                            enclaveTaskTypeId,
       const ::peano4::datamanagement::CellMarker&    marker,
       double                                         t,
       double                                         dt,

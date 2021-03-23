@@ -42,6 +42,9 @@ namespace {
    * tarch::multicore::processPendingTasks(int) processes the tasks.
    */
   TaskProgressionStrategy  taskProgressionStrategy = TaskProgressionStrategy::BufferInFIFOQueue;
+
+  const std::string MapPendingTasksOnOpenMPTasksStatisticsIdentifier( "tarch::multicore::map-pending-tasks-onto-openmp-tasks");
+  const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
 }
 
 
@@ -56,7 +59,14 @@ namespace {
 bool tarch::multicore::processPendingTasks(int maxTasks) {
   assertion(maxTasks>=0);
 
-  ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier,        tarch::multicore::getNumberOfPendingTasks() );
+  ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier,                   tarch::multicore::getNumberOfPendingTasks() );
+  if (taskProgressionStrategy==TaskProgressionStrategy::MapOntoOMPTask) {
+    ::tarch::logging::Statistics::getInstance().log( MapPendingTasksOnOpenMPTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
+  }
+  /*
+            const std::string MapPendingTasksOnOpenMPTasksStatisticsIdentifier( "tarch::multicore::map-pending-tasks-onto-openmp-tasks");
+            const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
+  */
 
   bool  result        = false;
 
@@ -283,6 +293,8 @@ void tarch::multicore::spawnAndWait(
       while (busyThreads>0 and not nonblockingTasks.empty()) {
         tarch::multicore::processPendingTasks(nonblockingTasks.size()/2);
       }
+
+      ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
     }
     #pragma omp taskwait
   }
