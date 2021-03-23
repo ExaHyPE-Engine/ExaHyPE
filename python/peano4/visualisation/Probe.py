@@ -10,7 +10,6 @@ if __name__ == "__main__":
                                                'point in a set of Peano patch files')
   parser.add_argument('--input-file',     dest='filepath',       help='File path to a Peano patch file')
   parser.add_argument('--meta-file',      dest='metafile',       help='The main file that links to a set of Peano patch files - these must be in the same directory')
-  #parser.add_argument('--input-dir',      dest='directory_path', help='Directory file path that stores Peano patch files')
   parser.add_argument('-x',               dest='x_axis',         help='coordinate: x-axis', required=True, type=float)
   parser.add_argument('-y',               dest='y_axis',         help='coordinate: y-axis', required=True, type=float)
   parser.add_argument('-z',               dest='z_axis',         help='coordinate: z-axis', type=float)
@@ -38,10 +37,10 @@ if __name__ == "__main__":
     
     patch_file_names = []
     with open(args.metafile, 'r') as metafile:
-        for line in metafile.readlines():
-            words = line.split()
-            if 'include' in words:
-                patch_file_names.append(words[1].strip('"'))
+      for line in metafile.readlines():
+        words = line.split()
+        if 'include' in words:
+          patch_file_names.append(words[1].strip('"'))
     
     with open(args.ofname, 'w') as csv_file:
       writer = csv.writer(csv_file, delimiter=',')
