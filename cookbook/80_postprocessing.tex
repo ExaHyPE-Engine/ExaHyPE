@@ -230,6 +230,40 @@ pvpython .../Peano/python/peano4/visualisation/render.py
 You should see a usage message now. 
 
 
+\subsection{Probing data}
+\label{section:postprocessing:probing}
+
+Probe.py can be used to read out the unknowns at a given point within a Peano patch file.
+That is, it identifies the unknowns that are associated with an individual cell that is
+specified through an x, y and (optional) z coordinate. Crucially, the single cell is 
+found at the finest level of granularity recorded in the peano patch file.
+
+The algorithm does not rely on Paraview/pvpython.
+
+To probe an individual patch file use the following commands:
+
+\begin{code}
+cd Peano
+export PYTHONPATH=python
+python3 python/peano4/visualisation/Probe.py --input-file=<path-to-peano-patch-file> -x=<x-axis> -y=<y-axix> --set-identifier=<set-identifier>
+\end{code}
+
+Here we probe the patch file passed to --input-file. The point to be probed is given
+as a coordinate to -x and -y. If you work with three dimensional data add a -z argument with
+the value of the z axis to be probed. The unkowns at the point (x, y) will be saved in a csv
+file called probe\_output.csv, though the name of this file can be configured by adding
+the --ofname flag to the above command and setting it to the name of the output file.
+
+We can also probe whole sets of patch files at once by swapping the --input-file flag
+used above with the --meta-file flag instead. The --meta-file should be set as the
+path to the main file that links to a set of Peano patch files. The algorithm will
+then probe all files that are listed in the main file.
+
+In this case, each row in the outputted csv file will list the unknowns from an 
+individual patch file. The rows are ordered chronologically. This csv, then, 
+will capture the change in unknowns at a given point within the mesh over time.
+
+
 \section{Offline/command-line conversion (executable)}
 \label{section:postprocessing:command-line}
 
