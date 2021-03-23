@@ -53,8 +53,9 @@ bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
 }
 
 
-tarch::multicore::Task::Task( int id, int priority ):
+tarch::multicore::Task::Task( int id, int taskType, int priority ):
   _id(id),
+  _taskType( taskType ),
   _priority( priority ) {
 }
 
@@ -78,8 +79,8 @@ int tarch::multicore::Task::getTaskId() const {
 }
 
 
-tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int id, int priority, const std::function<bool()>& taskFunctor ):
-  Task(id,priority),
+tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int id, int taskType, int priority, const std::function<bool()>& taskFunctor ):
+  Task(id, taskType, priority),
   _taskFunctor(taskFunctor)  {
 }
 
@@ -89,8 +90,8 @@ bool tarch::multicore::TaskWithCopyOfFunctor::run() {
 }
 
 
-tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( int id, int priority, std::function<bool()>& taskFunctor ):
-  Task(id,priority),
+tarch::multicore::TaskWithoutCopyOfFunctor::TaskWithoutCopyOfFunctor( int id, int taskType, int priority, std::function<bool()>& taskFunctor ):
+  Task(id, taskType, priority),
   _taskFunctor(taskFunctor)  {
 }
 

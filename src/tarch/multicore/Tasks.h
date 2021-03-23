@@ -10,7 +10,6 @@
 
 namespace tarch {
   namespace multicore {
-
     /**
      * Tells task/thread to yield, i.e. to allow other tasks/threads to run.
      * Typically to be used within busy-waiting/polling loops.
@@ -53,11 +52,15 @@ namespace tarch {
     class Task {
       protected:
         const int   _id;
+        const int   _taskType;
         int         _priority;
       public:
         static constexpr int DefaultPriority = 0;
 
-        Task( int id, int priority );
+        /**
+         * @param id Unique number of the task
+         */
+        Task( int id, int taskType, int priority );
 
         virtual ~Task() {}
 
@@ -122,7 +125,7 @@ namespace tarch {
            */
         std::function<bool()>   _taskFunctor;
       public:
-        TaskWithCopyOfFunctor( int id, int priority, const std::function<bool()>& taskFunctor );
+        TaskWithCopyOfFunctor( int id, int taskType, int priority, const std::function<bool()>& taskFunctor );
 
         bool run() override;
     };
@@ -139,7 +142,7 @@ namespace tarch {
             */
     	   std::function<bool()>&   _taskFunctor;
       public:
-        TaskWithoutCopyOfFunctor( int id, int priority, std::function<bool()>& taskFunctor );
+        TaskWithoutCopyOfFunctor( int id, int taskType, int priority, std::function<bool()>& taskFunctor );
 
         bool run() override;
     };

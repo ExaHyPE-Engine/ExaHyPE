@@ -76,7 +76,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
   for(int i=0; i<NumberOfUnknowns; i++){
-    assertion3( std::isfinite(Q[i]), i, x, t );
+    assertion3( std::isfinite(Q[i]), i, volumeX, t );
   }
 
   memset(S, 0, NumberOfUnknowns*sizeof(double));
