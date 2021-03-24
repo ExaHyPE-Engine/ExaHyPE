@@ -321,12 +321,15 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
 
     int             _globalNumberOfInnerUnrefinedCellsBufferIn;
+    int             _globalNumberOfInnerUnrefinedCellsBufferOut;
     ReductionBuffer _lightestRankIn;
     ReductionBuffer _lightestRankOut;
-    int             _globalNumberOfSplitsIn;
-    int             _localNumberOfSplitsOut;
-    int             _numberOfLocalTreesOut;   
-    int             _globalNumberOfRanksWithEnabledLoadBalancingOut;
+    int             _numberOfSplitsIn;
+    int             _numberOfSplitsOut;
+    int             _numberOfTreesIn;
+    int             _numberOfTreesOut;  
+    int             _numberOfRanksWithEnabledLoadBalancingIn;
+    int             _numberOfRanksWithEnabledLoadBalancingOut;
     #endif
 
     /**

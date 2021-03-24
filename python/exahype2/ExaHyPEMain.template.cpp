@@ -25,7 +25,7 @@
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
 
-
+#include "toolbox/loadbalancing/loadbalancing.h"
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
@@ -237,8 +237,9 @@ void step() {{
 
         repositories::finishGridConstructionStep();
 
-        // We always overestimate so give the convergence the opportunity to catch up
-        creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()+ThreePowerD;
+        // We always overestimate so give the convergence the opportunity to catch up. The constant 
+        // here is a magic one. 
+        creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()+tarch::multicore::Core::getInstance().getNumberOfThreads()*3;
       }}
       break;
     case repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing:
@@ -253,7 +254,7 @@ void step() {{
           repositories::loadBalancer.enable(false);
         }}
         if (
-          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() > creepingNumberOfLocalCells
+          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() >= creepingNumberOfLocalCells
           and
           repositories::loadBalancer.isEnabled(false)
         ) {{
@@ -276,7 +277,7 @@ void step() {{
             "have to decrement local cell counter " << creepingNumberOfLocalCells <<
             " as maximum weight is " << ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
           );
-          creepingNumberOfLocalCells--;
+          creepingNumberOfLocalCells = (creepingNumberOfLocalCells + ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree())/2;
         }}
       }}
       break;
