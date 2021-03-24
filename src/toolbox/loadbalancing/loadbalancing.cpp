@@ -49,3 +49,28 @@ void toolbox::loadbalancing::dumpStatistics() {
   logInfo( "dumpStatistics()", msg.str() );
 }
 
+
+int toolbox::loadbalancing::getIdOfHeaviestLocalSpacetree() {
+  std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
+  int result = NoHeaviestTreeAvailable;
+  int maxLocalUnrefinedCells = -1;
+  for (auto p: idsOfLocalSpacetrees) {
+    if (
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>maxLocalUnrefinedCells
+      and
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>=ThreePowerD
+    ) {
+      maxLocalUnrefinedCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
+      result = p;
+    }
+  }
+  return result;
+}
+
+
+int toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() {
+  const int heaviestSpacetree = getIdOfHeaviestLocalSpacetree();
+  return heaviestSpacetree==NoHeaviestTreeAvailable ? -1 : peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(heaviestSpacetree).getNumberOfLocalUnrefinedCells();
+}
+
+
