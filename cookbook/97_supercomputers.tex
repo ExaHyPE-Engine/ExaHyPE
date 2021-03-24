@@ -2,156 +2,147 @@
 \label{chapter:selected-HPC-platforms}
 
 
-\section{SuperMUC-NG}
+\section{Selected supercomputer platforms}
 
-% Brauchen wir -DnoPackedRecords
+% \section{SuperMUC-NG}
+% 
+% All Intel tools are properly preloaded on SuperMUC-NG.
+% Hence, we can directly translate the code with MPI. 
+% However, TBB seems not to be a standard package within the Intel module anymore. 
+% So if you need TBB, you have to load it manually.
+% LRZ's module environment sets all pathes and settings coming along with TBB in
+% environment variables \texttt{TBB\_INC} and \texttt{TBB\_SHLIB}.
+% To pass these variables into Peano, map them onto \texttt{CXXFLAGS} or
+% \texttt{LDFLAGS}.
 % 
 % \begin{code}
-%  ssh -X lu57zat6@skx.supermuc.lrz.de
-%  cd $WORK
-%  export CXX icpc
+%  module load tbb
+%  export CXXFLAGS="$TBB_INC"
+%  export LDFLAGS="$TBB_SHLIB"
+%  ./configure --with-multithreading=tbb --with-mpi=mpiicpc
+%  make clean
+%  make -j
 % \end{code}
-% So geht es auch auf dem Login-Knoten. Aber da gehen keine Tools.
-% export I_MPI_HYDRA_BOOTSTRAP=fork
-
-All Intel tools are properly preloaded on SuperMUC-NG.
-Hence, we can directly translate the code with MPI. 
-However, TBB seems not to be a standard package within the Intel module anymore. 
-So if you need TBB, you have to load it manually.
-LRZ's module environment sets all pathes and settings coming along with TBB in
-environment variables \texttt{TBB\_INC} and \texttt{TBB\_SHLIB}.
-To pass these variables into Peano, map them onto \texttt{CXXFLAGS} or
-\texttt{LDFLAGS}.
-
-\begin{code}
- module load tbb
- export CXXFLAGS="$TBB_INC"
- export LDFLAGS="$TBB_SHLIB"
- ./configure --with-multithreading=tbb --with-mpi=mpiicpc
- make clean
- make -j
-\end{code}
-
-
-\noindent
-Here's the non-MPI variant:
-
-\begin{code}
- module load tbb
- export CXX=icpc
- export CXXFLAGS="$TBB_INC"
- export LDFLAGS="$TBB_SHLIB"
- ./configure --with-multithreading=tbb
- make clean
- make -j
-\end{code}
-
-
-\noindent
-If you want to use the legacy DaStGen variant with Java, you have to load
-Java manually.
-\ExaHyPE\ for example does not need this legacy version anymore.
-Python3 in contrast is preloaded by default.
-
-
-\begin{remark}
- I found it reasonable to always deactivate the energy environment by the LRZ.
- In particular if you combine Peano4 with teaMPI or the Intel tools, the energy
- tools don't work anymore, as they plug into the same MPI interface (PMPI),
- i.e.~they compete for the same hook-in points. So my SLURM scripts always
- contain the line
- \begin{code}
-#SBATCH --ear=off
-module load slurm_setup
- \end{code}
- Please note that load of the package \texttt{slurm\_setup} which seems to be
- required, too.
- Furthermore, LRZ recommends that you use \texttt{mpiexec} rather than
- \texttt{srun}.
-\end{remark}
-
-
-
-\section{AMD MI50 test cluster}
-
-
-The HIP compiler can't do OpenMP offloading at the moment, i.e.~a simple
-translation with hipcc does not work. 
-Instead, we use the command \texttt{hipconfig --cpp\_config} to identify HIP's
-compiler settings and then run the code.
-
-
-Simple clang++ should translate the code for the host:
-\begin{code}
-./configure --enable-exahype CXX="clang++" LDFLAGS="-lm" 
-./configure --enable-exahype --with-multithreading=omp CXX="clang++ CXXFLAGS="-DnoGPUOffloading" LDFLAGS="-lm"
-\end{code}
-
-% The HIP compiler is not yet able to offload computations to the GPU:
+% 
+% 
+% \noindent
+% Here's the non-MPI variant:
+% 
 % \begin{code}
-% ./configure --enable-exahype --with-multithreading=omp CXX="clang++" \
-%   CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr" \
-%   LDFLAGS="-lm"
+%  module load tbb
+%  export CXX=icpc
+%  export CXXFLAGS="$TBB_INC"
+%  export LDFLAGS="$TBB_SHLIB"
+%  ./configure --with-multithreading=tbb
+%  make clean
+%  make -j
 % \end{code}
-
-% If I use the clang compiler from rocl, the stuff does not yet work:
+% 
+% 
+% \noindent
+% If you want to use the legacy DaStGen variant with Java, you have to load
+% Java manually.
+% \ExaHyPE\ for example does not need this legacy version anymore.
+% Python3 in contrast is preloaded by default.
+% 
+% 
+% \begin{remark}
+%  I found it reasonable to always deactivate the energy environment by the LRZ.
+%  In particular if you combine Peano4 with teaMPI or the Intel tools, the energy
+%  tools don't work anymore, as they plug into the same MPI interface (PMPI),
+%  i.e.~they compete for the same hook-in points. So my SLURM scripts always
+%  contain the line
+%  \begin{code}
+% #SBATCH --ear=off
+% module load slurm_setup
+%  \end{code}
+%  Please note that load of the package \texttt{slurm\_setup} which seems to be
+%  required, too.
+%  Furthermore, LRZ recommends that you use \texttt{mpiexec} rather than
+%  \texttt{srun}.
+% \end{remark}
+% 
+% 
+% 
+% \section{AMD MI50 test cluster}
+% 
+% 
+% The HIP compiler can't do OpenMP offloading at the moment, i.e.~a simple
+% translation with hipcc does not work. 
+% Instead, we use the command \texttt{hipconfig --cpp\_config} to identify HIP's
+% compiler settings and then run the code.
+% 
+% 
+% Simple clang++ should translate the code for the host:
 % \begin{code}
-% ./configure --enable-exahype --with-multithreading=omp \
-%  CXX="/opt/rocm-3.5.0/aomp/bin/clang++" \
-%  CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr -I/opt/rocm-3.5.0/aomp/include/ -fopenmp" \
-%  LDFLAGS="-lm -fopenmp"
+% ./configure --enable-exahype CXX="clang++" LDFLAGS="-lm" 
+% ./configure --enable-exahype --with-multithreading=omp CXX="clang++ CXXFLAGS="-DnoGPUOffloading" LDFLAGS="-lm"
 % \end{code}
-
-
-\noindent
-Therefore, we rely on the fact that ROCM is installed at \texttt{/opt/rocm} and
-configure as follows:
-
-\begin{code}
-./configure --enable-exahype --with-multithreading=omp \
- CXX="/opt/rocm/aomp/bin/clang++" \
- CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906" \
- LDFLAGS="-lm -fopenmp"
-\end{code}
-
-
-% ./configure --enable-exahype --with-multithreading=omp \
-%  CXX="/opt/rocm/aomp/bin/clang" \
-%  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906" \
-%  LDFLAGS="-lm -fopenmp"
-
-
-
+% 
+% % The HIP compiler is not yet able to offload computations to the GPU:
+% % \begin{code}
+% % ./configure --enable-exahype --with-multithreading=omp CXX="clang++" \
+% %   CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr" \
+% %   LDFLAGS="-lm"
+% % \end{code}
+% 
+% % If I use the clang compiler from rocl, the stuff does not yet work:
+% % \begin{code}
+% % ./configure --enable-exahype --with-multithreading=omp \
+% %  CXX="/opt/rocm-3.5.0/aomp/bin/clang++" \
+% %  CXXFLAGS="-D__HIP_PLATFORM_HCC__=  -I/opt/rocm-3.5.1/hip/include -I/opt/rocm-3.5.1/llvm/bin/../lib/clang/11.0.0 -I/opt/rocm-3.5.1/hsa/include -D__HIP_ROCclr -I/opt/rocm-3.5.0/aomp/include/ -fopenmp" \
+% %  LDFLAGS="-lm -fopenmp"
+% % \end{code}
+% 
+% 
+% \noindent
+% Therefore, we rely on the fact that ROCM is installed at \texttt{/opt/rocm} and
+% configure as follows:
+% 
+% \begin{code}
 % ./configure --enable-exahype --with-multithreading=omp \
 %  CXX="/opt/rocm/aomp/bin/clang++" \
-%  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --hip-device-lib-path=/opt/rocm-3.5.1/lib" \
+%  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906" \
 %  LDFLAGS="-lm -fopenmp"
+% \end{code}
+% 
+% 
+% % ./configure --enable-exahype --with-multithreading=omp \
+% %  CXX="/opt/rocm/aomp/bin/clang" \
+% %  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906" \
+% %  LDFLAGS="-lm -fopenmp"
+% 
+% 
+% 
+% % ./configure --enable-exahype --with-multithreading=omp \
+% %  CXX="/opt/rocm/aomp/bin/clang++" \
+% %  CXXFLAGS="-target x86_64-pc-linux-gnu -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 --hip-device-lib-path=/opt/rocm-3.5.1/lib" \
+% %  LDFLAGS="-lm -fopenmp"
 
 
 
 
 
 
-\section{Hamilton}
+\subsection{Hamilton}
+
+Most of our runs on Hamilton rely on the Intel toolchain with the classic Intel
+compiler.
+I is strongly recommended to run from \texttt{\$SCRATCH} on the machine:
 
 %  ssh frmh84@hamilton.dur.ac.uk
 %  cd $SCRATCH
 
 \begin{code}
- module purge
- module load intel/2019.5
- module load intelmpi/intel/2019.6
- module load python/3.6.8 
- module unload gcc/8.2.0
- module load gcc/9.3.0
- # for legacy DaStGen (usually not required)
- # module load java/1.8.0
- setenv CXX mpicxx
- setenv CXXFLAGS "-DLogService=ITACLogger -I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include"
- setenv LDFLAGS "-L/ddn/apps/Cluster-Apps/intel/2019.5/tbb/lib/intel64/gcc4.7 -ltbb"
- ./configure --with-multithreading=tbb --with-mpi=mpiicpc
- make clean
- make -j
+module load intel/2020.4
+module load intelmpi/intel/2019.6
+module load python/3.6.8
+# for legacy DaStGen (usually not required)
+# module load java/1.8.0
+setenv CXX mpicxx
+./configure --with-multithreading=tbb-layered --with-mpi=mpiicpc
+make clean
+make -j
 \end{code}
 
 
@@ -160,10 +151,10 @@ configure as follows:
 
 
 \begin{remark}
- It is confirmed that the Python module should not load gcc, and that this will
- be removed in future installations.
- In the meantime, the unload is required.
- If you skip it, then the Intel linker will fail.
+ We faced issues with the Python module loading its own version of gcc.
+ If you run into issues with GCC, you might have to manually unload gcc after
+ you have loaded Python. After that, you can reload the GCC version of your
+ choice.
 \end{remark}
 
 \noindent
@@ -173,16 +164,22 @@ If you decide to use the C++ multithreading, you can leave out the TBB-specific
 settings.
 
 
+
+\paragraph{Intel toolchain}
+
 For Intel's ITAC, we have to load the itac module and reconfigure:
 \begin{code}
 module itac/2020.2
-setenv CXXFLAGS "-DLogService=ITACLogger -I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include -I"$ITAC_HOME"/itac_2020/intel64/include"
-./configure ... --with-intel 
+./configure CXXFLAGS "-DLogService=ITACLogger \
+ -I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include \
+ -I"$ITAC_HOME"/itac_2020/intel64/include"  ... --with-intel
 \end{code}
 
+% setenv CXXFLAGS "-DLogService=ITACLogger -I/ddn/apps/Cluster-Apps/intel/2019.5/tbb/include"
+% setenv LDFLAGS "-L/ddn/apps/Cluster-Apps/intel/2019.5/tbb/lib/intel64/gcc4.7 -ltbb"
 
 
-\section{COSMA/DINE (Durham Intelligent NIC Environment)}
+\subsection{COSMA/DINE (Durham Intelligent NIC Environment)}
 
 
 Log into the first DINE node as by documentation (\texttt{ssh -X b101}) and run
@@ -251,7 +248,7 @@ Sollte nur oneapi sein, nciht das all
 
 
 
-\section{Bede}
+\subsection{Bede}
 
 
 Access to Bede can be requested through SAFE
@@ -262,11 +259,11 @@ The machine then is reachable through \texttt{ssh} with \texttt{ssh
 
 \paragraph{Prepare the Python and bash environment}
 
-You will need to run this option to obtain a proper compile environment:
+You will need to run this commmand once to obtain a proper compile environment:
 \begin{code}
 echo builder > ~/.application_environment
 \end{code}
-and log out and log in again.
+Then log out and log in again.
 
 
 To install Python with all packages, run
@@ -277,85 +274,81 @@ pip install jinja2 sympy
 \end{code}
 
 
+\paragraph{Build with LLVM and MVAPICH}
 
-\paragraph{Build with LLVM}
 
+LLVM is the recommended compiler for \Peano\ on Bede. 
+OpenMPI initially has been more robust on Bede, but the installation struggles
+with single-sided MPI. 
+We therefore prefer newer versions of mvapich:
+
+% module load nsight-systems/2020.3.1 cuda/10.1.243 llvm/11.0.0
+\begin{code}
+module load nsight-systems cuda llvm
+module load mvapich2/2.3.5-2 
+./configure --enable-exahype --enable-loadbalancing-toolbox \
+ --with-multithreading=omp  --with-mpi=mpicxx \
+ CXX=clang++
+\end{code}
+
+\noindent
+The GPU support is added via 
+\begin{code}
+module load nsight-systems cuda llvm
+module load mvapich2/2.3.5-2 
+./configure --enable-exahype --enable-loadbalancing-toolbox \
+ --with-multithreading=omp  --with-mpi=mpicxx --enable-gpu=nvidia \
+ CXX=clang++ \
+ CXXFLAGS="-fopenmp -fopenmp-targets=nvptx64-nvidia-cuda"
+\end{code}
+
+
+ 
+%   \
+%  CXXFLAGS="-std=c++14 -fopenmp \
+%   -fopenmp-targets=nvptx64-nvidia-cuda -fno-exceptions \
+%   -DnoMPISupportsSingleSidedCommunication"  \
+%  LDFLAGS="-L/opt/software/builder/developers/compilers/cuda/10.1.243/1/default/lib64 \ 
+%   -lnvToolsExt"
+
+  
+
+\paragraph{Build with LLVM and OpenMPI}
+
+OpenMPI initially has been more robust on Bede, but the installation struggles
+with single-sided MPI. 
+We therefore prefer newer versions of mvapich (see above).
+If you insist on OpenMPI, you have switch off the non-critical assertions:
 
 \begin{code}
-module load nsight-systems/2020.3.1 cuda/10.1.243 llvm/11.0.0
-./configure --enable-gpu=nvidia --with-multithreading=omp --enable-exahype --enable-loadbalancing-toolbox CXX=clang++ CXXFLAGS="-std=c++14 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -fno-exceptions -DnoMPISupportsSingleSidedCommunication" --with-toolchain=nvidia LDFLAGS="-L/opt/software/builder/developers/compilers/cuda/10.1.243/1/default/lib64 -lnvToolsExt"
-
-
+module load nsight-systems cuda llvm
 module load openmpi
-./configure --with-multithreading=omp --enable-exahype --enable-loadbalancing-toolbox --with-mpi=mpicxx CXXFLAGS="-DnoMPISupportsSingleSidedCommunication"
+./configure ... CXXFLAGS=" ... -DnoMPISupportsSingleSidedCommunication"
 \end{code}
 
-
-\paragraph{Build with the GNU compilers}
-
-
-We do most of our work on Bede with LLVM, but you might want to try out GCC
-nevertheless.
-To build \Peano, run through the following steps:
+% \begin{code}
+% CXXFLAGS=-DnoMPISupportsSingleSidedCommunication
+% \end{code}
 
 
-\begin{code}
-module purge
-module load gcc
-module load cuda
-./configure --with-multithreading=omp --with-toolchain=nvidia CXXFLAGS="-fopenmp \ 
-  -foffload=nvptx-none -lm -fno-fast-math -fno-associative-math -g3 \
-  -DLayeredMultitaskingRuntime" --enable-gpu=nvidia  LDFLAGS="-lnvToolsExt \
-  -fopenmp -lcudart -foffload=-lm -fno-fast-math -fno-associative-math"
-\end{code}
 
 
-% -foffload=-lm-fno-fast-math -fno-associative-math
+% module load cuda
+% 
+% % ./configure --enable-gpu=nvidia --with-multithreading=omp --enable-exahype --enable-loadbalancing-toolbox CXX=clang++ CXXFLAGS="-std=c++14 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -fno-exceptions -DnoMPISupportsSingleSidedCommunication" --with-toolchain=nvidia LDFLAGS="-L/opt/software/builder/developers/compilers/cuda/10.1.243/1/default/lib64 -lnvToolsExt"
+% % ./configure --enable-gpu=nvidia --with-multithreading=omp --enable-exahype --enable-loadbalancing-toolbox CXX=clang++ CXXFLAGS="-std=c++14 -fopenmp -fopenmp-targets=nvptx64-nvidia-cuda -fno-exceptions -DnoMPISupportsSingleSidedCommunication" --with-toolchain=nvidia LDFLAGS="-L/opt/software/builder/developers/compilers/cuda/10.1.243/1/default/lib64 -lnvToolsExt"
+% ./configure --with-multithreading=omp --with-toolchain=nvidia CXXFLAGS="-fopenmp \ 
+%   -foffload=nvptx-none -lm -fno-fast-math -fno-associative-math -g3 \
+%   -DLayeredMultitaskingRuntime" --enable-gpu=nvidia  LDFLAGS="-lnvToolsExt \
+%   -fopenmp -lcudart -foffload=-lm -fno-fast-math -fno-associative-math"
+% 
+% ./configure --enable-gpu=nvidia --with-multithreading=omp --enable-exahype \  
+%   --enable-loadbalancing-toolbox CXX=clang++ CXXFLAGS="-std=c++14 -fopenmp \
+%   -fopenmp-targets=nvptx64-nvidia-cuda -fno-exceptions \
+%   -DnoMPISupportsSingleSidedCommunication"  \
+%   LDFLAGS="-L/opt/software/builder/developers/compilers/cuda/10.1.243/1/default/lib64 \ 
+%   -lnvToolsExt"
 
-
-\paragraph{Build with LLVM}
-
-LLVM is the recommended compiler for \Peano\ on Bede:
-
-\begin{code}
-module purge
-module load llvm openmpi cuda
-
-./configure --enable-gpu=nvidia --with-multithreading=omp --enable-exahype \  
-  --enable-loadbalancing-toolbox CXX=clang++ CXXFLAGS="-std=c++14 -fopenmp \
-  -fopenmp-targets=nvptx64-nvidia-cuda -fno-exceptions \
-  -DnoMPISupportsSingleSidedCommunication"  \
-  LDFLAGS="-L/opt/software/builder/developers/compilers/cuda/10.1.243/1/default/lib64 \ 
-  -lnvToolsExt"
-\end{code}
-
-
-\noindent
-Don't forget to add \texttt{--enable-exahype --enable-loadbalancing-toolbox} if
-you work with \ExaHyPE.
-If you don't need \ExaHyPE, you can likely just omit them.
-
-
-\paragraph{Build with MPI support}
-
-We have so far only used OpenMPI on Bede:
-\begin{code}
-module load openmpi
-\end{code}
-
-\noindent
-There seem to be some issues with single-sided communication on Bede, so it is
-ipmortant that you add
-
-\begin{code}
-CXXFLAGS=-DnoMPISupportsSingleSidedCommunication
-\end{code}
-
-\noindent
-to your configure call. Further to that, you need the flag 
-\begin{code}
---with-mpi=mpiCC
-\end{code}
 
 
 \paragraph{Run code}
@@ -383,7 +376,7 @@ export OMP_NUM_THREADS=32
 
 
 
-\section{Local workstations}
+\subsection{Local workstations}
 
 
 
@@ -421,7 +414,14 @@ source /opt/intel/bin/ifortvars.sh intel64
 to make the compiler \texttt{ifort} available to \Peano.
 
 
-\section{The Intel tools}
+
+\section{External tools}
+
+
+\subsection{Score-P}
+
+
+\subsection{The Intel tools}
 \label{section:supercomputers:IntelTools}
 
 \paragraph{Intel's Threading Building Blocks (TBB)}
@@ -498,7 +498,7 @@ datatypes are not defined.
 \end{remark}
 
 
-\section{Using MUST}
+\subsection{MUST MPI correctness checker}
 \label{section:supercomputers:MUST}
 
 Using MUST is straightfoward with Peano:

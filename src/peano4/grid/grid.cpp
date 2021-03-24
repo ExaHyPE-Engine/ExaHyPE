@@ -53,7 +53,7 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
       auto refinementEventOverrulesCoarsening = [&]( const auto& refineEvent, const auto& eraseEvent ) -> bool {
         bool twoEventsOverlap     = true;
         for (int d=0; d<Dimensions; d++) {
-          twoEventsOverlap &  refineEvent.getOffset()(d)+refineEvent.getWidth()(d) >= eraseEvent.getOffset()(d);
+          twoEventsOverlap &= refineEvent.getOffset()(d)+refineEvent.getWidth()(d) >= eraseEvent.getOffset()(d);
           twoEventsOverlap &= refineEvent.getOffset()(d)                           <= eraseEvent.getOffset()(d) + eraseEvent.getWidth()(d);
         }
         return twoEventsOverlap

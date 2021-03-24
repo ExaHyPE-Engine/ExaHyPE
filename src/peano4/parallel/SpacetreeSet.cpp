@@ -247,13 +247,16 @@ void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId )
 }
 
 
+int peano4::parallel::SpacetreeSet::TraverseTask::_typeId( peano4::parallel::Tasks::getTaskType("peano4::parallel::SpacetreeSet::TraverseTask") );
+
+
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   peano4::grid::Spacetree&          tree,
   SpacetreeSet&                     set,
   peano4::grid::TraversalObserver&  observer,
   bool                              invertTreeTraversalDirectionBeforeWeStart
 ):
-  Task(0,0),
+  Task(0,_typeId,0),
   _spacetree(tree),
   _spacetreeSet(set),
   _observer( observer ),
@@ -268,10 +271,6 @@ bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
   }
   _spacetree.traverse( *_spacetreeSet._clonedObserver[_spacetree._id], true );
   return false;
-}
-
-
-void peano4::parallel::SpacetreeSet::TraverseTask::prefetch() {
 }
 
 

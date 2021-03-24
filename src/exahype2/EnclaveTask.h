@@ -52,6 +52,8 @@ namespace exahype2 {
  * realise this through multiple inheritance. Peano's task interface automatically
  */
 class exahype2::EnclaveTask: public tarch::multicore::Task {
+  public:
+    typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) >  Functor;
   private:
     friend class EnclaveBookkeeping;
 
@@ -60,20 +62,29 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     const ::peano4::datamanagement::CellMarker   _marker;
     double*                                      _inputValues;
     double*                                      _outputValues;
+    double                                       _t;
+    double                                       _dt;
     int                                          _numberOfResultValues;
-    std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                      _functor;
+    Functor                                      _functor;
 
   public:
     /**
      * Create plain enclave task.
      *
-     * @param inputValues Has to be created on heap via tarch::multicore::allocateMemory().
+     * @param inputValues        Has to be created on heap via tarch::multicore::allocateMemory().
+     * @param enclaveTaskTypeId  Please create it through 
+     * <pre>
+    static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
+</pre>    
      */
     EnclaveTask(
+      int                                            enclaveTaskTypeId,
       const ::peano4::datamanagement::CellMarker&    marker,
+      double                                         t,
+      double                                         dt,
       double*                                        inputValues,
       int                                            numberOfResultValues,
-      std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker) >                        functor
+      Functor                                        functor
     );
 
     EnclaveTask(const EnclaveTask& other) = delete;
@@ -82,11 +93,6 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     virtual ~EnclaveTask() = default;
 
     bool run() override;
-
-    /**
-     * nop
-     */
-    void prefetch() override;
 };
 
 

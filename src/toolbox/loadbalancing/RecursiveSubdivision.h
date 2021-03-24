@@ -174,6 +174,15 @@ class toolbox::loadbalancing::RecursiveSubdivision {
       SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning
     };
 
+    /**
+     * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
+     * in some MPI implementations if we use them for integers.
+     */
+    struct ReductionBuffer {
+      double   _unrefinedCells;
+      int      _rank;
+    };
+
     static std::string toString( StrategyStep step );
 
     /**
@@ -211,7 +220,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     int _globalNumberOfRanksWithEnabledLoadBalancing; 
 
-    int _lightestRank;
+    ReductionBuffer  _lightestRank;
 
     /**
      * This is my local accumulator where I keep track of how often I did
@@ -340,14 +349,10 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
      * in some MPI implementations if we use them for integers.
      */
-    struct ReductionBuffer {
-      double   _localUnrefinedCells;
-      int      _rank;
-    };
 
     int             _globalNumberOfInnerUnrefinedCellsBufferIn;
-    ReductionBuffer _lightestRankBufferIn;
-    ReductionBuffer _lightestRankBufferOut;
+    ReductionBuffer _lightestRankIn;
+    ReductionBuffer _lightestRankOut;
     int             _globalNumberOfSplitsIn;
     int             _localNumberOfSplitsOut;
     int             _numberOfLocalTreesOut;   
@@ -360,12 +365,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     int _roundRobinToken;
 
     int _maxTreeWeightAtLastSplit;
-
-    /**
-     * Encodes the number of iterations we have to wait before we remove a 
-     * split tree from the blacklist again.
-     */
-    const int _BlacklistWeight = 3;
 
     void waitForGlobalStatisticsExchange();
 };
