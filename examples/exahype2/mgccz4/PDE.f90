@@ -82,7 +82,7 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   !
   BgradQ = 0.0D0
   !
-#if defined(CCZ4EINSTEIN) || defined(CCZ4GRMHD) || defined(CCZ4GRHD) || defined(CCZ4GRGPR)
+#if defined(MGCCZ4EINSTEIN) || defined(MGCCZ4GRMHD) || defined(MGCCZ4GRHD) || defined(MGCCZ4GRGPR)
   !
   IF(nDim.EQ.2) THEN
      gradQ(:,1:2) = gradQin(:,1:2)
@@ -91,20 +91,20 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
      gradQ = gradQin
   ENDIF 
   !
-  k1   = EQN%CCZ4k1                                             ! kappa_1 
-  k2   = EQN%CCZ4k2                                             ! kappa_2
-  k3   = EQN%CCZ4k3                                             ! kappa_3
-  fff  = EQN%CCZ4f                                              ! multiplied to \partial_k(b^i) in the evolution eqn for BB
-  ggg  = EQN%CCZ4g                                              !
-  e    = EQN%CCZ4e                                              ! e
-  itau = EQN%CCZ4itau                                           ! tau^-1
-  eta  = EQN%CCZ4eta                                            ! eta
-  c    = EQN%CCZ4c                                              ! c
-  mu   = EQN%CCZ4mu                                             ! mu
-  ds   = EQN%CCZ4ds                                             ! s multiplied to Z_i and \nabla_i(Z_j)
-  bs   = EQN%CCZ4bs                                             ! only used in dtbb and dtB
-  xi   = EQN%CCZ4xi                                             ! only used in dtbb 
-  sk   = EQN%CCZ4sk                                             ! s multiplied to \partial_i(B_j^k) and other places
+  k1   = EQN%MGCCZ4k1                                             ! kappa_1 
+  k2   = EQN%MGCCZ4k2                                             ! kappa_2
+  k3   = EQN%MGCCZ4k3                                             ! kappa_3
+  fff  = EQN%MGCCZ4f                                              ! multiplied to \partial_k(b^i) in the evolution eqn for BB
+  ggg  = EQN%MGCCZ4g                                              !
+  e    = EQN%MGCCZ4e                                              ! e
+  itau = EQN%MGCCZ4itau                                           ! tau^-1
+  eta  = EQN%MGCCZ4eta                                            ! eta
+  c    = EQN%MGCCZ4c                                              ! c
+  mu   = EQN%MGCCZ4mu                                             ! mu
+  ds   = EQN%MGCCZ4ds                                             ! s multiplied to Z_i and \nabla_i(Z_j)
+  bs   = EQN%MGCCZ4bs                                             ! only used in dtbb and dtB
+  xi   = EQN%MGCCZ4xi                                             ! only used in dtbb 
+  sk   = EQN%MGCCZ4sk                                             ! s multiplied to \partial_i(B_j^k) and other places
   !
   ! These are the tilde quantities, so be careful!    
   g_cov(1,1) = Q(1)
@@ -132,7 +132,7 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   !   
   alpha = DEXP(DMAX1(-20.0D0,DMIN1(20.0D0,Q(17))))  
   !
-  SELECT CASE(EQN%CCZ4LapseType) 
+  SELECT CASE(EQN%MGCCZ4LapseType) 
      CASE(0)  ! harmonic 
         fa  = 1.0D0 
         faa = 0.0D0 
@@ -445,7 +445,7 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   dtgamma = 0.0D0
   dtMGphi = 0.0D0
   !
-  ! Main variables of the CCZ4 system 
+  ! Main variables of the MGCCZ4 system 
   dtK = phi**2*SecondOrderTermsNCP+beta(1)*dAex(1,:,:)+beta(2)*dAex(2,:,:)+beta(3)*dAex(3,:,:)      ! extrinsic curvature
   !
   dnKphi = (dF_phi*RNCP-(2.0D0*Z_phi+5.0D0*(dF_phi**2/F_phi))*nablanablaMGphiNCP+4.0D0*dF_phi*phi**2*SUM(g_contr*nablaZNCP)/F_phi) &
@@ -492,7 +492,7 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
      dtA(k) = dtA(k)-sk*alpha*fa*(SUM(g_contr(:,:)*dAex(k,:,:)))   ! here we can use the constraint that trace A tilde = 0. 
   ENDDO
   !
-  ! We have removed the conservative fluxes for CCZ4, so put all the stuff into the NCP and FusedNCP 
+  ! We have removed the conservative fluxes for MGCCZ4, so put all the stuff into the NCP and FusedNCP 
   dtB(:,1) = fff*gradQ(21,:)  
   dtB(:,2) = fff*gradQ(22,:)  
   dtB(:,3) = fff*gradQ(23,:)  
@@ -578,15 +578,15 @@ RECURSIVE SUBROUTINE PDEEigenvalues(Lambda,Q,nv)
   ! Local Variables 
   REAL(8) :: lam,mu,irho,VPR(3),cs,c0,uu,alpha
 
-#if defined(CCZ4EINSTEIN)  
+#if defined(MGCCZ4EINSTEIN)  
   alpha = DMAX1(1.0D0,DEXP(Q(17)))*DMAX1(1.0D0,DEXP(Q(55)))/DMIN1(DSQRT(Q(1)),DSQRT(Q(4)),DSQRT(Q(6)))     
 #else
   alpha = 1.0D0
 #endif
 
   Lambda = 0.0D0
-  Lambda(1) = -alpha*DMAX1(DSQRT(2.0D0),EQN%CCZ4e,EQN%CCZ4ds,EQN%CCZ4GLMc/alpha,EQN%CCZ4GLMd/alpha)-DOT_PRODUCT(Q(18:20),nv(:))   ! MAX( SQRT(2.0), EQN%CCZ4e, EQN%CCZ4ds ) + SQRT(SUM(Q(18:20)**2)) 
-  Lambda(2) =  alpha*DMAX1(DSQRT(2.0D0),EQN%CCZ4e,EQN%CCZ4ds,EQN%CCZ4GLMc/alpha,EQN%CCZ4GLMd/alpha)-DOT_PRODUCT(Q(18:20),nv(:))   ! MAX( SQRT(2.0), EQN%CCZ4e, EQN%CCZ4ds ) + SQRT(SUM(Q(18:20)**2)) 
+  Lambda(1) = -alpha*DMAX1(DSQRT(2.0D0),EQN%MGCCZ4e,EQN%MGCCZ4ds,EQN%MGCCZ4GLMc/alpha,EQN%MGCCZ4GLMd/alpha)-DOT_PRODUCT(Q(18:20),nv(:))   ! MAX( SQRT(2.0), EQN%MGCCZ4e, EQN%MGCCZ4ds ) + SQRT(SUM(Q(18:20)**2)) 
+  Lambda(2) =  alpha*DMAX1(DSQRT(2.0D0),EQN%MGCCZ4e,EQN%MGCCZ4ds,EQN%MGCCZ4GLMc/alpha,EQN%MGCCZ4GLMd/alpha)-DOT_PRODUCT(Q(18:20),nv(:))   ! MAX( SQRT(2.0), EQN%MGCCZ4e, EQN%MGCCZ4ds ) + SQRT(SUM(Q(18:20)**2)) 
   Lambda(3) =  Q(1)
   Lambda(4) =  Q(14)
 END SUBROUTINE PDEEigenvalues
@@ -668,22 +668,22 @@ RECURSIVE SUBROUTINE PDESource(S,Q)
   REAL(8) :: dF_phi,dZ_phi,dU_phi     ! all derivatives here are corresponding to phi itself
   REAL(8) :: ddF_phi
   !
-#if defined(CCZ4EINSTEIN) || defined(CCZ4GRHD) || defined(CCZ4GRMHD) || defined(CCZ4GRGPR)
+#if defined(MGCCZ4EINSTEIN) || defined(MGCCZ4GRHD) || defined(MGCCZ4GRMHD) || defined(MGCCZ4GRGPR)
   !
-  k1   = EQN%CCZ4k1                             ! kappa_1
-  k2   = EQN%CCZ4k2                             ! kappa_2
-  k3   = EQN%CCZ4k3                             ! kappa_3
-  fff  = EQN%CCZ4f                              ! multiplied to \partial_k(b^i) in the evolution eqn for BB
-  ggg  = EQN%CCZ4g                              !
-  eta  = EQN%CCZ4eta                            ! eta
-  itau = EQN%CCZ4itau                           ! tau^-1
-  e    = EQN%CCZ4e                              ! e
-  c    = EQN%CCZ4c                              ! c
-  mu   = EQN%CCZ4mu                             ! mu
-  ds   = EQN%CCZ4ds                             ! only multiplied to Z_i and \nabla_i(Z_j)
-  bs   = EQN%CCZ4bs                             ! only used in dtbb and dtB
-  xi   = EQN%CCZ4xi                             ! only used in dtbb
-  sk   = EQN%CCZ4sk                             ! s multiplied to \partial_i(B_j^k) and other places
+  k1   = EQN%MGCCZ4k1                             ! kappa_1
+  k2   = EQN%MGCCZ4k2                             ! kappa_2
+  k3   = EQN%MGCCZ4k3                             ! kappa_3
+  fff  = EQN%MGCCZ4f                              ! multiplied to \partial_k(b^i) in the evolution eqn for BB
+  ggg  = EQN%MGCCZ4g                              !
+  eta  = EQN%MGCCZ4eta                            ! eta
+  itau = EQN%MGCCZ4itau                           ! tau^-1
+  e    = EQN%MGCCZ4e                              ! e
+  c    = EQN%MGCCZ4c                              ! c
+  mu   = EQN%MGCCZ4mu                             ! mu
+  ds   = EQN%MGCCZ4ds                             ! only multiplied to Z_i and \nabla_i(Z_j)
+  bs   = EQN%MGCCZ4bs                             ! only used in dtbb and dtB
+  xi   = EQN%MGCCZ4xi                             ! only used in dtbb
+  sk   = EQN%MGCCZ4sk                             ! s multiplied to \partial_i(B_j^k) and other places
   !
   ! these are the tilde quantities, so be careful!
   g_cov(1,1) = Q(1)
@@ -709,7 +709,7 @@ RECURSIVE SUBROUTINE PDESource(S,Q)
   g_contr(3,3) =  ( g_cov(1,1)*g_cov(2,2)-g_cov(1,2)*g_cov(2,1))/det
   !
   alpha = DEXP(DMAX1(-20.D0,DMIN1(20.D0,Q(17))))
-  SELECT CASE(EQN%CCZ4LapseType)
+  SELECT CASE(EQN%MGCCZ4LapseType)
   CASE(0)  ! harmonic
     fa  = 1.0D0
     faa = 0.0D0
@@ -973,7 +973,7 @@ RECURSIVE SUBROUTINE PDESource(S,Q)
     ENDDO
   ENDDO
   !
-  ! Main variables of the CCZ4 system
+  ! Main variables of the MGCCZ4 system
   ! extrinsic curvature
   dtK = phi**2*SecondOrderTermsSrc+alpha*Aex*(traceK-2.0D0*Theta/F_phi)-2.0D0*alpha*MATMUL(Aex,Amix)-itau*g_cov*traceA
   DO j=1,3
@@ -1213,7 +1213,7 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
   !
   BgradQ = 0.0D0 
   !
-#if defined(CCZ4EINSTEIN) || defined(CCZ4GRHD) || defined(CCZ4GRMHD) || defined(CCZ4GRGPR)
+#if defined(MGCCZ4EINSTEIN) || defined(MGCCZ4GRHD) || defined(MGCCZ4GRMHD) || defined(MGCCZ4GRGPR)
   !
   IF(nDim.EQ.2) THEN
      gradQ(:,1:2)=gradQin(:,1:2)
@@ -1222,20 +1222,20 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
      gradQ=gradQin
   ENDIF 
   !
-  k1   = EQN%CCZ4k1                             ! kappa_1 
-  k2   = EQN%CCZ4k2                             ! kappa_2 
-  k3   = EQN%CCZ4k3                             ! kappa_3 
-  fff  = EQN%CCZ4f                              ! multiplied to \partial_k(b^i) in the evolution eqn for BB
-  ggg  = EQN%CCZ4g                              !
-  eta  = EQN%CCZ4eta                            ! eta
-  itau = EQN%CCZ4itau                           ! tau^-1
-  e    = EQN%CCZ4e                              ! e
-  c    = EQN%CCZ4c                              ! c
-  mu   = EQN%CCZ4mu                             ! mu
-  ds   = EQN%CCZ4ds                             ! only multiplied to Z_i and \nabla_i(Z_j) 
-  bs   = EQN%CCZ4bs                             ! only used in dtbb and dtB
-  xi   = EQN%CCZ4xi                             ! only used in dtbb 
-  sk   = EQN%CCZ4sk                             ! s multiplied to \partial_i(B_j^k) and other places 
+  k1   = EQN%MGCCZ4k1                             ! kappa_1 
+  k2   = EQN%MGCCZ4k2                             ! kappa_2 
+  k3   = EQN%MGCCZ4k3                             ! kappa_3 
+  fff  = EQN%MGCCZ4f                              ! multiplied to \partial_k(b^i) in the evolution eqn for BB
+  ggg  = EQN%MGCCZ4g                              !
+  eta  = EQN%MGCCZ4eta                            ! eta
+  itau = EQN%MGCCZ4itau                           ! tau^-1
+  e    = EQN%MGCCZ4e                              ! e
+  c    = EQN%MGCCZ4c                              ! c
+  mu   = EQN%MGCCZ4mu                             ! mu
+  ds   = EQN%MGCCZ4ds                             ! only multiplied to Z_i and \nabla_i(Z_j) 
+  bs   = EQN%MGCCZ4bs                             ! only used in dtbb and dtB
+  xi   = EQN%MGCCZ4xi                             ! only used in dtbb 
+  sk   = EQN%MGCCZ4sk                             ! s multiplied to \partial_i(B_j^k) and other places 
   !
   ! these are the tilde quantities, so be careful!   
   g_cov(1,1) = Q(1)
@@ -1261,7 +1261,7 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
   g_contr(3,3) =  ( g_cov(1,1)*g_cov(2,2)-g_cov(1,2)*g_cov(2,1))/det 
   !   
   alpha = DEXP(DMAX1(-20.D0,DMIN1(20.D0,Q(17)))) 
-  SELECT CASE(EQN%CCZ4LapseType) 
+  SELECT CASE(EQN%MGCCZ4LapseType) 
      CASE(0)  ! harmonic 
         fa  = 1.0D0 
         faa = 0.0D0 
@@ -1625,7 +1625,7 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
      ENDDO
   ENDDO 
   !
-  ! Main variables of the CCZ4 system 
+  ! Main variables of the MGCCZ4 system 
   dtK = phi**2*SecondOrderTermsNCP+beta(1)*dAex(1,:,:)+beta(2)*dAex(2,:,:)+beta(3)*dAex(3,:,:)      ! extrinsic curvature
   dtK = dtK+phi**2*SecondOrderTermsSrc+alpha*Aex*(traceK-2.0D0*Theta/F_phi)-2.0D0*alpha*MATMUL(Aex,Amix)-itau*g_cov*traceA
   DO j=1,3 
@@ -1722,7 +1722,7 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
      dtA(k) = dtA(k)-sk*alpha*fa*(SUM(g_contr(:,:)*dAex(k,:,:))+SUM(dgup(k,:,:)*Aex(:,:)))   ! here we can use the constraint that trace A tilde = 0. 
   ENDDO    
   ! 
-  ! In CCZ4 we have completely removed all the conservative fluxes. 
+  ! In MGCCZ4 we have completely removed all the conservative fluxes. 
   dtB(:,1) = fff*gradQ(21,:)  
   dtB(:,2) = fff*gradQ(22,:)  
   dtB(:,3) = fff*gradQ(23,:)  
