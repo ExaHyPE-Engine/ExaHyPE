@@ -38,8 +38,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
   private:
     friend class EnclaveBookkeeping;
 
-    static tarch::logging::Log                   _log;
+    static tarch::logging::Log                _log;
     static tarch::multicore::BooleanSemaphore _patchsema;
+    static int                                _gpuEnclaveTaskId;
 
     #if Dimensions==2
     const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
@@ -71,10 +72,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
 
     bool run() override;
 
-    /**
-     * nop
-     */
-    void prefetch() override;
+    bool fuse( const std::list<Task*>& otherTasks ) override;
 };
 
 

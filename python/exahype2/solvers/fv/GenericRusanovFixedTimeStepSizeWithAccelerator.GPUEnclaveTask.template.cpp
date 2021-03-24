@@ -6,6 +6,8 @@
 
 #include "exahype2/fv/Rusanov.h"
 
+#include "peano4/parallel/Tasks.h"
+
 #ifdef UseNVIDIA
 #include <nvToolsExt.h>
 #endif
@@ -14,7 +16,9 @@
 
 
 tarch::multicore::BooleanSemaphore {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchsema;
-tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
+
 
 #if Dimensions==2
 std::vector<std::tuple<double*, const double, int, double, double, double, double> > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchkeeper;
@@ -121,10 +125,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
   const ::peano4::datamanagement::CellMarker&    marker,
   double* __restrict__                           reconstructedPatch
 ):
-  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority)
-{
+tarch::multicore::Task(
+  tarch::multicore::reserveTaskNumber(),
+  _gpuEnclaveTaskId,
+  tarch::multicore::Task::DefaultPriority
+) {
   logTraceIn( "EnclaveTask(...)" );
-  logTraceOut( "EnclaveTask(...)" );
 
   const double timeStamp = repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp();
   tarch::multicore::Lock myLock( _patchsema );
@@ -134,6 +140,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
   _patchkeeper.push_back({reconstructedPatch, timeStamp, getTaskId(), marker.x()[0], marker.h()[0], marker.x()[1], marker.h()[1], marker.x()[2] , marker.h()[2]});
 #endif
   myLock.free();
+
+  logTraceOut( "EnclaveTask(...)" );
 }
 
 
@@ -202,6 +210,15 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::prefetch() {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks ) {
+/*
+  for (auto pp: otherTasks) {
+    tarch::multicore::Task* currentTask = pp;
+    while (currentTask->run()) {}
+    delete currentTask;
+  }
+  return true;
+*/
+  return true;
 }
 
