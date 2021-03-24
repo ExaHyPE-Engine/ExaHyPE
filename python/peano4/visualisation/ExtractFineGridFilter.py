@@ -1,7 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.visualisation.Filter import Filter
-from twisted.trial._synctest import Todo
 
 
 class ExtractFineGridFilter( Filter ):
