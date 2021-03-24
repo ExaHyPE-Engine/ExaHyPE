@@ -244,26 +244,6 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
 }
 
 
-int toolbox::loadbalancing::RecursiveSubdivision::getIdOfHeaviestLocalSpacetree() const {
-  std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
-  int result = NoHeaviestTreeAvailable;
-  int maxLocalUnrefinedCells = -1;
-  for (auto p: idsOfLocalSpacetrees) {
-    if (
-      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>maxLocalUnrefinedCells
-      and
-      _blacklist.count(p)==0
-      and
-      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()>=ThreePowerD
-    ) {
-      maxLocalUnrefinedCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
-      result = p;
-    }
-  }
-  return result;
-}
-
-
 bool toolbox::loadbalancing::RecursiveSubdivision::doesRankViolateBalancingCondition() const {
   int localCells = 0;
   std::set<int> idsOfLocalSpacetrees = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees();
@@ -462,12 +442,6 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString( StrategyStat
 }
 
 
-int toolbox::loadbalancing::RecursiveSubdivision::getWeightOfHeaviestLocalSpacetree() const {
-  const int heaviestSpacetree = getIdOfHeaviestLocalSpacetree();
-  return heaviestSpacetree==NoHeaviestTreeAvailable ? -1 : peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(heaviestSpacetree).getNumberOfLocalUnrefinedCells();
-}
-
-
 bool toolbox::loadbalancing::RecursiveSubdivision::canSplitLocally() const {
   // This is a magic paramter with the 2. You might still run out of memory if you refine while you
   // rebalance.
@@ -553,7 +527,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
     case StrategyStep::SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning:
       {
         int heaviestSpacetree                              = getIdOfHeaviestLocalSpacetree();
-        if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
+        if (heaviestSpacetree!=NoHeaviestTreeAvailable and _blacklist.count(heaviestSpacetree)==0) {
        	  int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
           int cellsPerCore      = std::max(1,numberOfLocalUnrefinedCellsOfHeaviestSpacetree/tarch::multicore::Core::getInstance().getNumberOfThreads());
           int numberOfSplits    = getNumberOfSplitsOnLocalRank();
@@ -572,7 +546,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
     case StrategyStep::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning:
       {
         int heaviestSpacetree                              = getIdOfHeaviestLocalSpacetree();
-        if (heaviestSpacetree!=NoHeaviestTreeAvailable) {
+        if (heaviestSpacetree!=NoHeaviestTreeAvailable and _blacklist.count(heaviestSpacetree)==0) {
           int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
           logInfo(
             "finishStep()",
@@ -591,7 +565,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
     case StrategyStep::SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning:
       {
         int heaviestSpacetree                              = getIdOfHeaviestLocalSpacetree();
-        if (heaviestSpacetree!=NoHeaviestTreeAvailable and _lightestRank._rank!=tarch::mpi::Rank::getInstance().getRank()) {
+        if (heaviestSpacetree!=NoHeaviestTreeAvailable and _blacklist.count(heaviestSpacetree)==0 and _lightestRank._rank!=tarch::mpi::Rank::getInstance().getRank()) {
           int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
           logInfo(
             "finishStep()",
@@ -610,7 +584,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
     case StrategyStep::SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning:
       {
         int heaviestSpacetree                              = getIdOfHeaviestLocalSpacetree();
-        if (heaviestSpacetree!=NoHeaviestTreeAvailable and getWeightOfHeaviestLocalSpacetree()>=ThreePowerD) {
+        if (heaviestSpacetree!=NoHeaviestTreeAvailable and _blacklist.count(heaviestSpacetree)==0) {
           int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
           int cellsPerCore      = std::max(numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,1);
           logInfo(

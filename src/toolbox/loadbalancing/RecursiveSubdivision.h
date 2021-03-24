@@ -191,13 +191,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     StrategyStep getStrategyStep() const;
 
-    /**
-     * Is used by tree identification and either indicates that there are no trees
-     * at all or means that the heaviest tree is on the blacklist. See implementation
-     * remarks in class description.
-     */
-    static constexpr int NoHeaviestTreeAvailable = -1;
-
     static tarch::logging::Log  _log;
 
     const double _TargetBalancingRatio;
@@ -251,30 +244,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     bool _enabled;
 
     void updateGlobalView();
-
-    /**
-     * Determines the maximum spacetree size a tree should have in the
-     * optimal case.
-     *
-     * As this routine does not really adopt the blacklist, it can introduce
-     * cyclles: If we repeatedly try to split the same
-     * rank this means that we have tried to split it, have not been
-     * successful, and tried again. This can happen, as not all trees
-     * can be split. See peano4::grid::Spacetree::isCellSplitCandidate()
-     * for a discussion which cells can be split and which can't. As
-     * not all cells can't be given away, not all trees can be split up.
-     *
-     * @return NoHeaviestTreeAvailable If there are no local trees or
-     *   if the heaviest tree is on the blacklist, i.e. we have to
-     *   assume that it still is splitting.
-     */
-    int getIdOfHeaviestLocalSpacetree() const;
-
-    /**
-     * @return -1 if there is no local tree yet
-     */
-    int getWeightOfHeaviestLocalSpacetree() const;
-
+    
     bool doesRankViolateBalancingCondition() const;
 
     void updateBlacklist();
