@@ -369,15 +369,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
 
   const bool rankViolatesBalancingCondition = doesRankViolateBalancingCondition();
 
-  if (not canSplitLocally() and rankViolatesBalancingCondition) {
-    logInfo( 
-      "getStrategyStep()", 
-      "cannot load balance further as memory available is too small" <<
-      ". used-mem=" << tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte ) <<
-      ", free-mem=" << tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) 
-    );
-  }
-
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==1
     and
@@ -392,6 +383,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
   }
 
 
+  // solely for info
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
     and
@@ -399,7 +391,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     and
     _state == StrategyState::WaitForRoundRobinToken
   ) {
-    // @todo Debug
     logInfo(
       "getStrategyStep()",
       "local rank violates global balancing condition, but I'm waiting for round robin token: " << toString()
@@ -412,7 +403,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     and
     not canSplitLocally()
   ) {
-    // @todo Debug
     logInfo(
       "getStrategyStep()",
       "local rank violates global balancing condition, but is not allowed to split"
@@ -440,11 +430,15 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     and
     not rankViolatesBalancingCondition
     and
-    _state != StrategyState::WaitForRoundRobinToken
+    _state==StrategyState::WaitForRoundRobinToken
     and
     canSplitLocally()
   ) {
-    return StrategyStep::SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning;
+    logInfo(
+      "getStrategyStep()",
+      "rank does not violate global balancing condition and should not balance globally anyway, so try to exploit more local cores"
+    );
+    return StrategyStep::SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning;
   }
 
   logDebug( "getStrategyStep()", "no if becomes valid: " << rankViolatesBalancingCondition << " X " << canSplitLocally() << " X " << toString() );
