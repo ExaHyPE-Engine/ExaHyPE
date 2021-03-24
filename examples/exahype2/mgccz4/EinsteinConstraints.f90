@@ -1,4 +1,4 @@
-SUBROUTINE EnforceCCZ4Constraints(luh)
+SUBROUTINE EnforceMGCCZ4Constraints(luh)
     USE MainVariables, ONLY : nVar  
     IMPLICIT NONE
     ! Argument list
@@ -8,7 +8,7 @@ SUBROUTINE EnforceCCZ4Constraints(luh)
     REAL(8)    :: Q(nVar) 
     REAL(8)    :: g_cov(3,3), det, g_contr(3,3), Aex(3,3), traceA, phi  
     REAL(8)    :: DD(3,3,3), traceDk 
-#if defined(CCZ4EINSTEIN) || defined(CCZ4GRMHD) || defined(CCZ4GRHD) || defined(CCZ4GRGPR) 
+#if defined(MGCCZ4EINSTEIN) || defined(MGCCZ4GRMHD) || defined(MGCCZ4GRHD) || defined(MGCCZ4GRGPR) 
     !
             Q = luh(:) 
             ! 
@@ -137,7 +137,7 @@ SUBROUTINE EnforceCCZ4Constraints(luh)
             luh(52) = DD(3,2,3)
             luh(53) = DD(3,3,3)            
             !
-#ifdef CCZ4GRHD 
+#ifdef MGCCZ4GRHD 
             !IF( Q(60) < 1e-6) THEN
             !    luh(61:63,i,j,k) = 0.0                  ! in the atmosphere, there is no velocity 
             !ENDIF            
@@ -145,5 +145,5 @@ SUBROUTINE EnforceCCZ4Constraints(luh)
             !
 
 #endif 
-END SUBROUTINE EnforceCCZ4Constraints 
+END SUBROUTINE EnforceMGCCZ4Constraints 
                 
