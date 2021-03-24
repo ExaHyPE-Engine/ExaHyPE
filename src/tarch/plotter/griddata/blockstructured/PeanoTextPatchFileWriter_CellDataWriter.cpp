@@ -1,6 +1,8 @@
 #include "PeanoTextPatchFileWriter.h"
 #include "tarch/la/ScalarOperations.h"
 
+#include <iomanip>
+
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::CellDataWriter(
   const std::string& identifier,
@@ -33,6 +35,11 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWri
 
 int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::getCellsPerPatch() const {
   return tarch::la::aPowI(_writer._dimensions,_numberOfCellsPerAxis);
+}
+
+
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::setPrecision(int precision) {
+  _out << std::setprecision(precision);
 }
 
 

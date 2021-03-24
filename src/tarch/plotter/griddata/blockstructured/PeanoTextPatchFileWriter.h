@@ -55,18 +55,6 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     void addNewDatasetToIndexFile();
     void addNewFileToCurrentDataSetInIndexFile( const std::string&  filename );
 
-    /**
-     * Adds a new dataset
-     */
-//    static void addDataFileToIndexFile( const std::string& filename );
-
-    /**
-     * Parallel counterpart of addDataFileToIndexFile. Here, you pass a whole
-     * set of files that logically belong together. They typically are written
-     * by a number of trees concurrently.
-     */
-//    static void addDatasetToIndexFile( const std::vector< std::string >& filenames );
-
   public:
     class CellDataWriter: public tarch::plotter::griddata::blockstructured::PatchWriter::CellDataWriter {
       protected:
@@ -89,6 +77,11 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
           tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter& writer
         );
         virtual ~CellDataWriter();
+        
+        /**
+         * @see https://www.cplusplus.com/reference/iomanip/setprecision/
+         */
+        void setPrecision(int precision);
 
         int getCellsPerPatch() const;
 
@@ -135,6 +128,11 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
            tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter& writer
          );
          ~VertexDataWriter();
+         
+         /**
+          * @see https://www.cplusplus.com/reference/iomanip/setprecision/
+          */
+         void setPrecision(int precision);
 
          int getVerticesPerPatch() const;
 

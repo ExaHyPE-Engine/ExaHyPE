@@ -20,7 +20,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   
   
-  def __init__(self,filename,patch,dataset_name, description, plot_cell_data=True, metadata = "", mapping = [], guard_predicate="true", additional_includes=""):
+  def __init__(self,filename,patch,dataset_name, description, plot_cell_data=True, metadata = "", mapping = [], guard_predicate="true", additional_includes="", precision=3):
     """
     
       plot_cell_data: Boolean
@@ -87,8 +87,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       if i!=patch.dim[0]:
         print( "Error: patch plotter requires patch to have same dimension along all coordinate axes")
 
-    #self.dim       = dim
-    #self.no_of_unknowns = no_of_unknowns
+    self.d[ "PRECISION" ]        = precision
+
 
   __Template_Constructor = """
   _writer      = nullptr;
@@ -234,11 +234,13 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   __Template_BeginTraversal_CellPlot = __Template_BeginTraversal_Generic + """
   _dataWriter = _writer->createCellDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}", "{METADATA}", mapping );
+  _dataWriter->setPrecision( {PRECISION} );
 """
 
 
   __Template_BeginTraversal_VertexPlot = __Template_BeginTraversal_Generic + """
   _dataWriter = _writer->createVertexDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}", "{METADATA}", mapping );
+  _dataWriter->setPrecision( {PRECISION} );
 """
 
 

@@ -504,7 +504,8 @@ In-situ preprocessing:  """
       description=self.plot_description,
       metadata=self.plot_metadata,
       mapping=mapping,
-      plot_cell_data=False
+      plot_cell_data=False,
+      precision="PlotterPrecision"
     ))
 
     if self._plot_grid_properties:    

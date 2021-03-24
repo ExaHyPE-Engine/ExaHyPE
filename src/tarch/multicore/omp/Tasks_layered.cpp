@@ -164,7 +164,8 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
             if (myTask==nullptr or tasksOfSameType.empty()) {
               taskProgressionStrategy = TaskProgressionStrategy::BufferInFIFOQueue;
             }
-            else {
+
+            if (myTask!=nullptr and not tasksOfSameType.empty()) {
               if (not myTask->fuse(tasksOfSameType)) {
                 delete myTask;
                 myTask = nullptr;

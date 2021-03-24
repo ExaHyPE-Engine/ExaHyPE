@@ -595,7 +595,8 @@ In-situ preprocessing:  """
       additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
-"""
+""",
+      precision="PlotterPrecision"
     ))
 
     if self._plot_grid_properties:    
