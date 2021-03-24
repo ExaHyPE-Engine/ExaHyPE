@@ -103,7 +103,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::waitForGlobalStatisticsExchan
 
     // rollover
     _globalNumberOfInnerUnrefinedCells  = static_cast<int>( std::round(_globalNumberOfInnerUnrefinedCellsBufferIn) );
-    _lightestRank._rank                 = _lightestRankIn._unrefinedCells > _localNumberOfInnerUnrefinedCell ? _lightestRankIn._rank : tarch::mpi::Rank::getInstance().getRank();
+    _lightestRank._rank                 = _lightestRankIn._unrefinedCells < _localNumberOfInnerUnrefinedCell ? _lightestRankIn._rank : tarch::mpi::Rank::getInstance().getRank();
     _lightestRank._unrefinedCells       = _lightestRankIn._unrefinedCells;
     _globalNumberOfSplits              += _globalNumberOfSplitsIn;
 
@@ -402,7 +402,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     // @todo Debug
     logInfo(
       "getStrategyStep()",
-      "local rank violates global balancing condition, but I'm waiting for round robin token or until load balancing has converged: " << toString() 
+      "local rank violates global balancing condition, but I'm waiting for round robin token: " << toString()
     );
   }
   else if (
@@ -505,8 +505,8 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
     logInfo( 
       "getNumberOfSplitsOnLocalRank(...)", 
        "not sure if additional trees fit on node. Optimal number of splits is " << numberOfSplits << 
-       ", With current mem footprint of " << worstCaseEstimateForSizeOfSpacetree << " MByte and free memory of " << 
-       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " we manually reduce split count to " << adoptedSplitCount
+       ". With current mem footprint of " << worstCaseEstimateForSizeOfSpacetree << " MByte and free memory of " <<
+       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << ", we manually reduce split count to " << adoptedSplitCount
     );
     numberOfSplits = adoptedSplitCount; 
   }
