@@ -43,9 +43,3 @@ bool exahype2::EnclaveTask::run() {
   return false;
 }
 
-
-void exahype2::EnclaveTask::prefetch() {
-  logTraceIn( "prefetch()" );
-  logTraceOut( "prefetch()" );
-}
-
