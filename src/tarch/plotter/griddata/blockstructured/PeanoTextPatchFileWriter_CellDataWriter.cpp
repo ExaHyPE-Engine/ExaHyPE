@@ -39,7 +39,9 @@ int tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDat
 
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWriter::setPrecision(int precision) {
-  _out << std::setprecision(precision);
+  if (precision>0) {
+    _out << std::setprecision(precision);
+  }
 }
 
 

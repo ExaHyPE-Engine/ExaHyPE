@@ -339,14 +339,18 @@ void tarch::multicore::spawnAndWait(
 
         logDebug( "spawnAndWait()", "Thread " << i << " out of " << NumberOfThreads << " threads is done (still " << busyThreads << " threads busy for " << tasks.size() << " task items)" );
 
+        int magicTaskThreshold = 1;
         while (
           busyThreads>0
           and
           not nonblockingTasks.empty()
         ) {
-          if (not nonblockingTasks.empty()) {
-            const int maxTasks = 1+nonblockingTasks.size()/2;
-            tarch::multicore::processPendingTasks( maxTasks );
+          //if (not nonblockingTasks.empty()) {
+          if (nonblockingTasks.size()>2*magicTaskThreshold) {
+            //const int maxTasks = 1+nonblockingTasks.size()/2;
+            //const int maxTasks = 1;
+            //logInfo( "spawnAndWait()", "Process " << maxTasks << " task" );
+            tarch::multicore::processPendingTasks( magicTaskThreshold );
           }
           else {
             #pragma omp taskyield

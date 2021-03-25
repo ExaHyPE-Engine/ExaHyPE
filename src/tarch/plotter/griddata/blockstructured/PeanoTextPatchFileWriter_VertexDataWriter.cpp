@@ -34,7 +34,9 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataW
 
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::setPrecision(int precision) {
-  _out << std::setprecision(precision);
+  if (precision>0) {
+    _out << std::setprecision(precision);
+  }
 }
 
 
