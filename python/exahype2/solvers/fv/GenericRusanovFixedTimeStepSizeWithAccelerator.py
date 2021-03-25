@@ -25,14 +25,6 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
   ); // previous time step has to be valid
 
   if (marker.isSkeletonCell()) {
-    ::exahype2::fv::copyPatch(
-      reconstructedPatch,
-      originalPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1 // halo size
-    );
     tasks::{{GPU_ENCLAVE_TASK_NAME}}::applyKernelToCell( 
       marker, 
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),

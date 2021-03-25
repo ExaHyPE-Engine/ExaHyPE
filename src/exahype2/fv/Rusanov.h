@@ -16,6 +16,32 @@
 
 namespace exahype2 {
   namespace fv {
+	typedef std::tuple<
+	  double*,       // _reconstructedValues
+	  int,           // _taskId
+	  double,        // x[0]
+	  double,        // h[0]
+	  double,        // x[1]
+	  double,        // h[1]
+	  double,        // t
+	  double         // dt
+	> PatchDescription2d;
+
+	typedef std::tuple<
+	  double*,       // _reconstructedValues
+	  int,           // _taskId
+	  double,        // x[0]
+	  double,        // h[0]
+	  double,        // x[1]
+	  double,        // h[1]
+	  double,        // x[2]
+	  double,        // h[2]
+	  double,        // t
+	  double         // dt
+	> PatchDescription3d;
+
+	typedef std::vector< PatchDescription2d >   PatchContainer2d;
+	typedef std::vector< PatchDescription3d >   PatchContainer3d;
 
     template<
       int                                          numVPAIP, // numberofVolumesPerAxisInPatch
@@ -24,8 +50,7 @@ namespace exahype2 {
       typename SOLVER>
     void Fusanov_2D(
       int                                          haloSize,
-      double                                       dt,
-      std::vector<std::tuple<double*, const double, int, double, double, double, double> > patchVec,
+      const PatchContainer2d&                      patchVec,
       double * __restrict__                        Qout,
       int                                          sourcePatchSize,
       int                                          destPatchSize,
@@ -41,27 +66,29 @@ namespace exahype2 {
       double* RP = ::tarch::allocateMemory(LR, ::tarch::MemoryLocation::Heap);
 
       // Move all data to the device, prepare arrays first
-      double T[NPT], X0[NPT], X1[NPT], H0[NPT], H1[NPT];
+      double T[NPT], DT[NPT], X0[NPT], X1[NPT], H0[NPT], H1[NPT];
       int TID[NPT];
       for (size_t i=0; i<patchVec.size(); i++)
       {
         auto patch = patchVec[i];
-        T[i]    = std::get<1>(patch);
-        TID[i]  = std::get<2>(patch);
-        X0[i]   = std::get<3>(patch);
-        H0[i]   = std::get<4>(patch);
-        X1[i]   = std::get<5>(patch);
-        H1[i]   = std::get<6>(patch);
         std::copy(std::get<0>(patch), std::get<0>(patch)+sourcePatchSize, RP + i*sourcePatchSize);
+        TID[i]  = std::get<1>(patch);
+        X0[i]   = std::get<2>(patch);
+        H0[i]   = std::get<3>(patch);
+        X1[i]   = std::get<4>(patch);
+        H1[i]   = std::get<5>(patch);
+        T[i]    = std::get<6>(patch);
+        DT[i]   = std::get<7>(patch);
       }
 
 
-#pragma omp target map(to:T[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT]) map(to:RP[0:LR]) map(tofrom:destinationPatch[0:LTOT])
+#pragma omp target map(to:T[0:NPT]) map(to:DT[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT]) map(to:RP[0:LR]) map(tofrom:destinationPatch[0:LTOT])
 #pragma omp teams
 #pragma omp distribute 
       for (size_t pidx=0;pidx<NPT;pidx++)
       {
         double                    t =   T[pidx];
+        double                   dt =  DT[pidx];
         int                  taskId = TID[pidx];
         double                   x0 =  X0[pidx];
         double                   h0 =  H0[pidx];
@@ -270,8 +297,7 @@ namespace exahype2 {
       typename SOLVER>
     void Fusanov_3D(
       int                                          haloSize,
-      double                                       dt,
-      std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > patchVec,
+      const PatchContainer3d&                      patchVec,
       double * __restrict__                        Qout,
       int                                          sourcePatchSize,
       int                                          destPatchSize,
@@ -287,29 +313,31 @@ namespace exahype2 {
       double* RP = ::tarch::allocateMemory(LR, ::tarch::MemoryLocation::Heap);
 
       // Move all data to the device, prepare arrays first
-      double T[NPT], X0[NPT], X1[NPT], X2[NPT], H0[NPT], H1[NPT], H2[NPT];
+      double T[NPT], DT[NPT], X0[NPT], X1[NPT], X2[NPT], H0[NPT], H1[NPT], H2[NPT];
       int TID[NPT];
       for (size_t i=0; i<patchVec.size(); i++)
       {
         auto patch = patchVec[i];
-        T[i]    = std::get<1>(patch);
-        TID[i]  = std::get<2>(patch);
-        X0[i]   = std::get<3>(patch);
-        H0[i]   = std::get<4>(patch);
-        X1[i]   = std::get<5>(patch);
-        H1[i]   = std::get<6>(patch);
-        X2[i]   = std::get<7>(patch);
-        H2[i]   = std::get<8>(patch);
         std::copy(std::get<0>(patch), std::get<0>(patch)+sourcePatchSize, RP + i*sourcePatchSize);
+        TID[i]  = std::get<1>(patch);
+        X0[i]   = std::get<2>(patch);
+        H0[i]   = std::get<3>(patch);
+        X1[i]   = std::get<4>(patch);
+        H1[i]   = std::get<5>(patch);
+        X2[i]   = std::get<6>(patch);
+        H2[i]   = std::get<7>(patch);
+        T[i]    = std::get<8>(patch);
+        DT[i]   = std::get<9>(patch);
       }
 
 
-#pragma omp target map(to:T[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:X2[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT])  map(to:H2[0:NPT]) map(to:RP[0:LR]) map(tofrom:destinationPatch[0:LTOT])
+#pragma omp target map(to:T[0:NPT]) map(to:DT[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:X2[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT])  map(to:H2[0:NPT]) map(to:RP[0:LR]) map(tofrom:destinationPatch[0:LTOT])
 #pragma omp teams
 #pragma omp distribute
       for (size_t pidx=0;pidx<NPT;pidx++)
       {
         double                    t =   T[pidx];
+        double                   dt =  DT[pidx];
         int                  taskId = TID[pidx];
         double                   x0 =  X0[pidx];
         double                   h0 =  H0[pidx];

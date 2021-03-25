@@ -369,7 +369,6 @@ void tarch::multicore::spawnAndWait(
   {
     taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
   }
-  logInfo( "spawnAndWait()", "spawn " << nonblockingTasks.size() << " tasks as real OpenMP tasks" );
   tarch::multicore::processPendingTasks(nonblockingTasks.size());
 }
 

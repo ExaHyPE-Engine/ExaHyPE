@@ -171,13 +171,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 #pragma omp declare target
 #endif
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  Q,         // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__                  deltaQ,    // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        BgradQ     // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {% if NCP_IMPLEMENTATION!="<none>" %}
   {{NCP_IMPLEMENTATION}}
