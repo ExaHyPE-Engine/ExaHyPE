@@ -23,28 +23,137 @@ namespace {
 
   /**
    * Determines how to handle the tasks dumped into nonblockingTasks.
+   *
+   * @see tarch::multicore::spawnAndWait()
    */
   enum class TaskProgressionStrategy {
-    BufferInLIFOQueue,
-    BufferInFIFOQueue,
+    BufferInQueueProcessLIFO,
+    BufferInQueueProcessFIFO,
     MapOntoOMPTask,
-    /**
-     * This is usually always the default. Once we cannot deploy stuff
-     * anymore (or should not deploy), the marker switches to BufferInQueue.
-     */
-    DeployToRemoteDevice,
     MergeTasks
   };
 
   /**
    * This flag/strategy is toggled by tarch::multicore::spawnAndWait(). The
    * flag determines how
-   * tarch::multicore::processPendingTasks(int) processes the tasks.
+   * tarch::multicore::processPendingTasks(int) processes the tasks, and it
+   * also controls how spawnTask() works.
+   *
+   * @see tarch::multicore::spawnAndWait()
+   * @see tarch::multicore::processPendingTasks(int)
    */
   TaskProgressionStrategy  taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
 
   const std::string MapPendingTasksOnOpenMPTasksStatisticsIdentifier( "tarch::multicore::map-pending-tasks-onto-openmp-tasks");
   const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
+
+
+  bool processOnePendingTaskLIFO() {
+    tarch::multicore::Task* myTask = nullptr;
+    #pragma omp critical (backgroundTaskQueue)
+    {
+      if (not nonblockingTasks.empty()) {
+        myTask = nonblockingTasks.back();
+        nonblockingTasks.pop_back();
+      }
+    }
+    if (myTask!=nullptr) {
+      bool requeue = myTask->run();
+      if (requeue)
+        spawnTask( myTask );
+      else
+        delete myTask;
+    }
+    return myTask!=nullptr;
+  }
+
+
+  bool processOnePendingTaskFIFO() {
+    tarch::multicore::Task* myTask = nullptr;
+    #pragma omp critical (backgroundTaskQueue)
+    {
+      if (not nonblockingTasks.empty()) {
+        myTask = nonblockingTasks.front();
+        nonblockingTasks.pop_front();
+      }
+    }
+    if (myTask!=nullptr) {
+      bool requeue = myTask->run();
+      if (requeue)
+        spawnTask( myTask );
+      else
+        delete myTask;
+    }
+    return myTask!=nullptr;
+  }
+
+
+  bool mapOnePendingTaskOntoOMPTask() {
+    tarch::multicore::Task* myTask = nullptr;
+    #pragma omp critical (backgroundTaskQueue)
+    {
+      if (not nonblockingTasks.empty()) {
+        myTask = nonblockingTasks.front();
+        nonblockingTasks.pop_front();
+      }
+    }
+    if (myTask!=nullptr) {
+      #pragma omp task priority(BackgroundConsumerPriority)
+      {
+        bool reschedule = myTask->run();
+        if (reschedule)
+          spawnTask(myTask);
+        else
+          delete myTask;
+      }
+    }
+    return myTask!=nullptr;
+  }
+
+
+  bool mergePendingTasks(int maxTasks) {
+    tarch::multicore::Task* myTask = nullptr;
+    std::list< tarch::multicore::Task* > tasksOfSameType;
+      #pragma omp critical (backgroundTaskQueue)
+      {
+      if (not nonblockingTasks.empty()) {
+        myTask = nonblockingTasks.front();
+        nonblockingTasks.pop_front();
+      }
+
+      auto pp = nonblockingTasks.begin();
+      while (
+        pp!=nonblockingTasks.end()
+        and
+        (*pp)->getTaskType()==myTask->getTaskType()
+        and
+        tasksOfSameType.size()<=maxTasks
+      ) {
+        tasksOfSameType.push_back( *pp );
+        pp = nonblockingTasks.erase(pp);
+      }
+    }
+
+    ::tarch::logging::Statistics::getInstance().log( MergeTasksStatisticsIdentifier, tasksOfSameType.size() );
+
+    if (myTask!=nullptr) {
+      #pragma omp task priority(BackgroundConsumerPriority)
+      {
+        bool stillExecuteLocally;
+        if (tasksOfSameType.empty()) {
+          stillExecuteLocally = true;
+        }
+        else {
+          stillExecuteLocally = myTask->fuse(tasksOfSameType);
+        }
+        if (stillExecuteLocally) {
+          spawnTask(myTask);
+        }
+      }
+    }
+
+    return myTask!=nullptr;
+  }
 }
 
 
@@ -58,40 +167,7 @@ namespace {
  *
  * Both the way we pick tasks from the queue and extract them from there and the
  * way we process the tasks depends on the current state of our task processing
- * strategy. This is incoded via the enum taskProgressionStrategy.
- *
- * <h2> Actual task processing </h2>
- *
- * There are two variants on the table how to realise the actual task processing:
- * We can map the task onto a plain OpenMP task and leave it to the runtime to
- * schedule it, or we can directly do the task ourselves.
- *
- * <h2> Task selection </h2>
- *
- * There are four different modi operandi:
- *
- * - DeployToRemoteDevice: This is currently not supported. We
- *   therefore only set the internal state to MergeTasks. As the
- *   attribute myTask continues to point to nullptr, the routine
- *   "thinks" no further tasks were there and returns. The next
- *   invocation of processPendingTasks() will react differently,
- *   as the internal state has been reset.
- *
- * - MergeTasks: Extract the first from the queue. Find the
- *   next N tasks from the queue (N<=maxTasks) which are of the
- *   same type and call fuse on them. If you haven't been able
- *   to fuse some tasks, toggle the state and continue FIFO
- *   from hereon.
- *
- * - MapOntoOMPTask: Same strategy as BufferInFIFOQueue.
- *
- * - BufferInLIFOQueue: If the queue is not empty, pick the last
- *   task and process this one. This routine is particularly
- *   useful if you hope to get a particular task done asap, as
- *   task outcomes in Peaon typically are requested LIFO.
- * - BufferInFIFOQueue: If hte queue is not empty, pick the first
- *   task and process it.
- *
+ * strategy. This is encoded via the enum taskProgressionStrategy.
  */
 bool tarch::multicore::processPendingTasks(int maxTasks) {
   assertion(maxTasks>=0);
@@ -103,119 +179,27 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
 
   bool  result        = false;
   while (maxTasks>0) {
-    Task* myTask = nullptr;
-
+    bool handledATask = false;
     switch (taskProgressionStrategy) {
-      case TaskProgressionStrategy::DeployToRemoteDevice:
-        {
-          #pragma omp critical (backgroundTaskQueue)
-          {
-            taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
-          }
-        }
+      case TaskProgressionStrategy::BufferInQueueProcessLIFO:
+        handledATask = processOnePendingTaskLIFO();
         break;
-      case TaskProgressionStrategy::BufferInLIFOQueue:
-        {
-          #pragma omp critical (backgroundTaskQueue)
-          {
-            if (not nonblockingTasks.empty()) {
-              myTask = nonblockingTasks.back();
-              nonblockingTasks.pop_back();
-            }
-          }
-        }
+      case TaskProgressionStrategy::BufferInQueueProcessFIFO:
+        handledATask = processOnePendingTaskFIFO();
         break;
       case TaskProgressionStrategy::MapOntoOMPTask:
-      case TaskProgressionStrategy::BufferInFIFOQueue:
-        {
-          #pragma omp critical (backgroundTaskQueue)
-          {
-            if (not nonblockingTasks.empty()) {
-              myTask = nonblockingTasks.front();
-              nonblockingTasks.pop_front();
-            }
-          }
-        }
+        handledATask = mapOnePendingTaskOntoOMPTask();
         break;
       case TaskProgressionStrategy::MergeTasks:
-        {
-          #pragma omp critical (backgroundTaskQueue)
-          {
-            if (not nonblockingTasks.empty()) {
-              myTask = nonblockingTasks.front();
-              nonblockingTasks.pop_front();
-            }
-
-            std::list< tarch::multicore::Task* > tasksOfSameType;
-            auto pp = nonblockingTasks.begin();
-            while (
-              pp!=nonblockingTasks.end()
-              and
-              (*pp)->getTaskType()==myTask->getTaskType()
-              and
-              tasksOfSameType.size()<=maxTasks
-            ) {
-              tasksOfSameType.push_back( *pp );
-              pp = nonblockingTasks.erase(pp);
-            }
-
-            ::tarch::logging::Statistics::getInstance().log( MergeTasksStatisticsIdentifier, tasksOfSameType.size() );
-
-            if (myTask==nullptr or tasksOfSameType.empty()) {
-              taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
-            }
-
-            if (myTask!=nullptr and not tasksOfSameType.empty()) {
-              #pragma omp task priority(BackgroundConsumerPriority)
-              {
-                bool stillExecuteLocally = myTask->fuse(tasksOfSameType);
-                if (stillExecuteLocally) {
-                  spawnTask( myTask );
-                }
-                else {
-                  delete myTask;
-                }
-              }
-              myTask = nullptr;
-            }
-          }
-        }
+        handledATask = mergePendingTasks(maxTasks);
         break;
     }
 
-    if (myTask!=nullptr) {
-      switch (taskProgressionStrategy) {
-        case TaskProgressionStrategy::BufferInLIFOQueue:
-        case TaskProgressionStrategy::BufferInFIFOQueue:
-        case TaskProgressionStrategy::MergeTasks:
-          {
-            bool requeue = myTask->run();
-            if (requeue)
-              spawnTask( myTask );
-            else
-              delete myTask;
-          }
-          break;
-        case TaskProgressionStrategy::MapOntoOMPTask:
-        case TaskProgressionStrategy::DeployToRemoteDevice:
-          {
-            #pragma omp task priority(BackgroundConsumerPriority)
-            {
-              bool reschedule = myTask->run();
-              if (reschedule)
-                spawnTask(myTask);
-              else
-                delete myTask;
-            }
-          }
-          break;
-      }
+    if (handledATask) {
       maxTasks--;
       result = true;
     }
-    else {
-      maxTasks = 0;
-    }
+    else maxTasks=0;
   }
 
   return result;
@@ -225,39 +209,32 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
 /**
  * Spawns a single task in a non-blocking fashion
  *
- * Non-blocking means that the routine should return immediately. One might
- * think that this is a great match for OpenMP tasks. However, spawnTasks()
- * is (typically) called by a taskgroup. New OpenMP tasks thus would become descendants
- * and eventually have to complete before the taskgroup completes. This is
- * not what we want: If we spawn a task this way, it really should go into
- * the background and be processed any time later when cores become idle.
- *
- * It is also no option to make the spawning part a task loop where we
- * wait only for the direct children: On the production side, everything
- * then is fine, i.e. we parallel loop fragments mapped onto tasks spawn
- * further task but does not wait for them logically. There are however
- * two problems:
- *
- * - Many scheduler do depth-first and may suspend task execution whenever
- *   a new task is created that is a subtask in a situation where no threads
- *   are idle.
- * - We have other parallel loops which eventually run for the outcome of
- *   the background tasks. As OpenMP has no mechanism alike "call a task
- *   with a lower priority that you haven't done yet", we yield. Yieling
- *   however might mean - if N of these parallel tasks that wait for
- *   background tasks run - that background tasks trigger each other, but
- *   the actual compute task never is invoked.
- *
- * So I simply enqueue these tasks in a local helper data structure and
- * return for the time being. All spawned (background) tasks are put into
- * this local queue. The actual processing then is done via
- * processPendingTasks().
+ * @see tarch::multicore::spawnAndWait()
+ * @see processPendingTasks(int)
  */
-void tarch::multicore::spawnTask(Task*  job) {
-   #pragma omp critical (backgroundTaskQueue)
-   {
-     nonblockingTasks.push_back(job);
-   }
+void tarch::multicore::spawnTask(Task*  task) {
+  switch (taskProgressionStrategy) {
+    case TaskProgressionStrategy::MapOntoOMPTask:
+    case TaskProgressionStrategy::MergeTasks:
+      {
+        #pragma omp task priority(BackgroundConsumerPriority)
+        {
+          bool reschedule = task->run();
+          if (reschedule)  spawnTask(task);
+                      else delete task;
+        }
+      }
+      break;
+    case TaskProgressionStrategy::BufferInQueueProcessLIFO:
+    case TaskProgressionStrategy::BufferInQueueProcessFIFO:
+      {
+        #pragma omp critical (backgroundTaskQueue)
+        {
+          nonblockingTasks.push_back(task);
+        }
+      }
+      break;
+  }
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
 }
@@ -267,20 +244,30 @@ void tarch::multicore::spawnTask(Task*  job) {
 /**
  * Process a set of tasks and wait for their completion
  *
- * I originally thought we could just work with parallel fors. However, this
- * does not work, as we don't want to spawn our own parallel region here. We
- * expect the overarching main loop to be a parallel region. This main things
- * has to be embedded into a single/master statement, so it is only executed
- * on one thread. As a result, by the time we hit spawnAndWait, we are working
- * within a single environment. If we spawn parallel for within a single
- * environment, OpenMP will complain. It won't work, as we operate within
- * single. So I rely here on explicit tasking. Other threads will steal away
- * the guys we create.
+ * Run over a set of task and wait until they are complete. Each of these tasks
+ * can spawn further tasks. We do not have to wait for these guys.
  *
- * The taskloop requires an explicit nogroup statement, as we don't want the
- * loop to wait for all descendents. We only want to wait for direct 
- * children. Therefore, we take away the group property and add an explicit
- * taskwait.
+ * Logically, this is a plain task loop where we wait only for the direct
+ * children only. Technically, we need however something
+ * more sophisticated.
+ *
+ * - OpenMP implementations fail to "backfill" idling threads with OpenMP tasks
+ *   when we hit a taskwait, and we know that the tasks within the passed
+ *   container are highly ill-balanced.
+ * - A lot of OpenMP tools do not support OpenMP's taskloop properly.
+ * - The tasks within tasks spawn a lot of further tiny tasks. All OpenMP
+ *   implementations
+ *
+ * The strategy is thus straightforward: Normally, we map OpenMP tasks directly
+ * onto OpenMP tasks. If we hit this routine, we however start to buffer all
+ * the tiny tasks that are created by the big tasks in the container in a local
+ * queue. We release the tiny ones eventually after the big tasks
+ * have terminated. At the same time, we map the each big task onto a proper
+ * OpenMP tasks which checks towards the end of its lifetime whether its
+ * colleagues have finished, too. If this is not the case, they process a few
+ * of these pending tiny tasks and check again.
+ *
+ * <h2> Problem context </h2>
  *
  * The taskwait pragma allows the scheduler to process other tasks. This way,
  * it should keep cores busy all the time. However, several groups have 
@@ -298,31 +285,29 @@ void tarch::multicore::spawnTask(Task*  job) {
  * we therefore do supply the layered implementation. Also, we need a, again
  * for our GPU/dynamic LB stuff, a variant where we have scheduler control.
  *
+ * Our own ExaHyPE 2 POP review came to the same conclusion.
+ *
+ *
  * <h2> Implementation </h2>
  *
+ * I originally thought we could just work with parallel fors. However, this
+ * does not work, as we don't want to spawn our own parallel region here. We
+ * expect the overarching main loop to be a parallel region. This main things
+ * has to be embedded into a single/master statement, so it is only executed
+ * on one thread. As a result, by the time we hit spawnAndWait, we are working
+ * within a single environment. If we spawn parallel for within a single
+ * environment, OpenMP will complain. It won't work, as we operate within
+ * single. So I rely here a sequential loop which produces tasks.
+ *
  * The implementation is straightforward: We use a counter that we set to the 
- * number of work items. Every task decrements this counter upon completion.
+ * number of work items or number of threads; whichever is bigger. Per loop
+ * iteration, we produce one task. Every task decrements this counter upon completion.
  * That is: each task knows towards the end of its lifetime how many other
- * tasks are still up and running. While there are some other tasks, it can
- * grab a task and process it.
+ * tasks are still up and running.
  *
- * Grabbing only one task at a time is not efficient. The overhead of the 
- * lookups is too big. Therefore, we use a variable max_tasks logcally. It
- * is initialised by the very first task that completes: It analyses the 
- * number of available background tasks at the time, and initialises 
- * max_tasks with this number divided by the number of high-level tasks that
- * have to be completed. This way, we add a dynamic touch to the whole thing. 
+ * @image html layered-openmp-steps.png
  *
- * <h2> Bugs </h2>
- *
- * Due to the above scheduling policy, we have frequently observed that our
- * code deadlocks with GCC if we use more OMP_NUM_THREADS than physical 
- * threads. Notably, if hyperthreading is used, too. In this case, our 
- * domain traversal tasks from tasks seem to starve.
- *
- *
- *
- * @see  processPendingTasks(int).
+ * @see  processPendingTasks(int)
  */
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
@@ -335,7 +320,7 @@ void tarch::multicore::spawnAndWait(
 
     #pragma omp critical
     {
-      taskProgressionStrategy = TaskProgressionStrategy::BufferInFIFOQueue;
+      taskProgressionStrategy = TaskProgressionStrategy::BufferInQueueProcessFIFO;
     }
 
     // for task loop, I need an explicit shared(busyThreads)
@@ -377,12 +362,10 @@ void tarch::multicore::spawnAndWait(
   // Send stuff out to the accelerators
   #pragma omp critical
   {
-    taskProgressionStrategy = TaskProgressionStrategy::DeployToRemoteDevice;
+    taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
   }
-  logInfo( "spawnAndWait()", "deploy " << nonblockingTasks.size() << " tasks to accelerators" );
-  for (int i=0; i<tarch::multicore::Core::getInstance().getNumberOfGPUs(); i++) {
-    tarch::multicore::processPendingTasks(nonblockingTasks.size()/tarch::multicore::Core::getInstance().getNumberOfGPUs());
-  }
+  logInfo( "spawnAndWait()", "merge " << nonblockingTasks.size() << " tasks and deploy to accelerators" );
+  tarch::multicore::processPendingTasks(nonblockingTasks.size()/tarch::multicore::Core::getInstance().getNumberOfGPUs());
 
   // Release all the remaining tasks as proper OpenMP tasks
   #pragma omp critical
@@ -409,7 +392,7 @@ void tarch::multicore::yield() {
 bool tarch::multicore::processTask(int number) {
   #pragma omp critical
   {
-    taskProgressionStrategy = TaskProgressionStrategy::BufferInLIFOQueue;
+    taskProgressionStrategy = TaskProgressionStrategy::BufferInQueueProcessLIFO;
   }
 
   bool foundTask = tarch::multicore::processPendingTasks(1);
