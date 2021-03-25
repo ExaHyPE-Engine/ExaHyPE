@@ -560,6 +560,8 @@ RECURSIVE SUBROUTINE PDENCP(BgradQ,Q,gradQin)
   BgradQ(60)    = dtMGphi
   BgradQ(61)    = dtKphi
   BgradQ(62:64) = dtPi(1:3)
+  !forced flat background
+  BgradQ(1:59)  = 0.0D0
   !
   BgradQ = -BgradQ ! change sign, since we work on the left hand side in PDENCP 
   !
@@ -1121,6 +1123,8 @@ RECURSIVE SUBROUTINE PDESource(S,Q)
   src(60)    = dtMGphi
   src(61)    = dtKphi
   src(62:64) = dtPi(1:3)
+  !forced flat background
+  src(1:59)  = 0.0D0
   !
   S = src    ! here, we do not have to change sign, since we work on the right hand side in the fused subroutine
   !
@@ -1808,6 +1812,8 @@ RECURSIVE SUBROUTINE PDEFusedSrcNCP(Src_BgradQ,Q,gradQin)
   BgradQ(60)    = dtMGphi
   BgradQ(61)    = dtKphi
   BgradQ(62:64) = dtPi(1:3)
+  !forced flat background
+  BgradQ(1:59)  = 0.0D0
   !
   Src_BgradQ = BgradQ    ! here, we do not have to change sign, since we work on the right hand side in the fused subroutine 
   !

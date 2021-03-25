@@ -24,6 +24,7 @@ namespace mgccz4{
   constexpr auto TerminalTime = 1.0;
   constexpr auto FirstPlotTimeStamp = 0.0;
   constexpr auto TimeInBetweenPlots = 0.04;
+  constexpr auto PlotterPrecision = 5;
   const std::bitset<3> PeriodicBC = 0+1+2+4;
 
 }

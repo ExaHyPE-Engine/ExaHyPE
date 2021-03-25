@@ -32,6 +32,11 @@ namespace examples {
         const tarch::la::Vector<Dimensions,double>&  X,
         double t
       );
+      void forcedflat(
+        double * __restrict__ Q, // Q[64+0],
+        const tarch::la::Vector<Dimensions,double>&  X,
+        double t
+      );
     }
   }
 }

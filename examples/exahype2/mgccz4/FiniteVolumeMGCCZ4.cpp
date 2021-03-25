@@ -48,6 +48,9 @@ void examples::exahype2::mgccz4::FiniteVolumeMGCCZ4::adjustSolution(
     else if ( Scenario==1 ) {
       examples::exahype2::mgccz4::linearWave(Q, volumeX, t);
     }
+    else if ( Scenario==2 ) {
+      examples::exahype2::mgccz4::forcedflat(Q, volumeX, t);
+    }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
     }

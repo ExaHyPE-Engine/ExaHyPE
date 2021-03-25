@@ -277,7 +277,7 @@ if __name__ == "__main__":
       if args.extension=="adm":
         my_solver.add_constraint_verification()
 
-    myscenario = 0 # 0...gaugewave-c++  1...linearwave
+    myscenario = 2 # 0...gaugewave-c++  1...linearwave 2...forcedflat
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("MGCCZ4{}".format(k), eval('args.MGCCZ4{}'.format(k)))
