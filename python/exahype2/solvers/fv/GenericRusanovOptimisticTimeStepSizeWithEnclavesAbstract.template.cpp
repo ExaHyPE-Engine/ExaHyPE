@@ -119,10 +119,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       "finishTimeStep()",
       "continue with primary tree sweep at time stamp " << _timeStamp <<
       " and issue skeleton tasks with time step size " << _timeStepSize <<
-      ". Some tasks have been optimistically brought forward with " << _predictedTimeStepSiz
-      Bloesinn bzw. nix gewonnen. Sind ja jetzt immer noch da
-      Streut halt besser aus
-      e
+      ". Some tasks have been optimistically brought forward with " << _predictedTimeStepSize
     );
   }
   else if ( _solverState == SolverState::Secondary ) {
