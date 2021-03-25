@@ -127,7 +127,7 @@ namespace {
         and
         (*pp)->getTaskType()==myTask->getTaskType()
         and
-        tasksOfSameType.size()<=maxTasks
+        tasksOfSameType.size()<maxTasks
       ) {
         tasksOfSameType.push_back( *pp );
         pp = nonblockingTasks.erase(pp);
@@ -323,6 +323,8 @@ void tarch::multicore::spawnAndWait(
       taskProgressionStrategy = TaskProgressionStrategy::BufferInQueueProcessFIFO;
     }
 
+    int numberOfTasksThatShouldBeFused = 64;
+
     // for task loop, I need an explicit shared(busyThreads)
     for (int i=0; i<NumberOfThreads; i++) {
       #pragma omp task shared(busyThreads)
@@ -339,18 +341,17 @@ void tarch::multicore::spawnAndWait(
 
         logDebug( "spawnAndWait()", "Thread " << i << " out of " << NumberOfThreads << " threads is done (still " << busyThreads << " threads busy for " << tasks.size() << " task items)" );
 
-        int magicTaskThreshold = 1;
         while (
           busyThreads>0
           and
           not nonblockingTasks.empty()
         ) {
-          //if (not nonblockingTasks.empty()) {
-          if (nonblockingTasks.size()>2*magicTaskThreshold) {
-            //const int maxTasks = 1+nonblockingTasks.size()/2;
-            //const int maxTasks = 1;
-            //logInfo( "spawnAndWait()", "Process " << maxTasks << " task" );
-            tarch::multicore::processPendingTasks( magicTaskThreshold );
+          if (nonblockingTasks.size()>2*numberOfTasksThatShouldBeFused) {
+            mergePendingTasks(numberOfTasksThatShouldBeFused);
+            numberOfTasksThatShouldBeFused *= 2;
+          }
+          else if (nonblockingTasks.size()>numberOfTasksThatShouldBeFused) {
+            tarch::multicore::processPendingTasks( numberOfTasksThatShouldBeFused );
           }
           else {
             #pragma omp taskyield
@@ -360,16 +361,8 @@ void tarch::multicore::spawnAndWait(
 
       ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
     }
+    #pragma omp taskwait
   }
-  #pragma omp taskwait
-
-  // Send stuff out to the accelerators
-  #pragma omp critical
-  {
-    taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
-  }
-  logInfo( "spawnAndWait()", "merge " << nonblockingTasks.size() << " tasks and deploy to accelerators" );
-  tarch::multicore::processPendingTasks(nonblockingTasks.size()/tarch::multicore::Core::getInstance().getNumberOfGPUs());
 
   // Release all the remaining tasks as proper OpenMP tasks
   #pragma omp critical
