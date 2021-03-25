@@ -15,18 +15,17 @@
 {{INCLUDES}}
 
 
-tarch::multicore::BooleanSemaphore {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchsema;
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
 
 
-#if Dimensions==2
-std::vector<std::tuple<double*, const double, int, double, double, double, double> > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchkeeper;
-#elif Dimensions==3
-std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchkeeper;
-#endif
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(double* __restrict__  reconstructedPatch, const ::peano4::datamanagement::CellMarker& marker, double* __restrict__  targetPatch) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
+  const ::peano4::datamanagement::CellMarker& marker,
+  double                                      t,
+  double                                      dt,
+  double* __restrict__                        reconstructedPatch,
+  double* __restrict__                        targetPatch
+) {
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
   #if Dimensions==2
   ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(//_SplitLoop(
@@ -104,8 +103,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
     },
     marker.x(),
     marker.h(),
-    repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-    repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+    t,
+    dt,
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
     {{NUMBER_OF_UNKNOWNS}},
     {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -118,45 +117,54 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
 }
 
 
-
-
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker&    marker,
-  double* __restrict__                           reconstructedPatch
+  double                                         t,
+  double                                         dt,
+  double* __restrict__                           reconstructedValues
 ):
-tarch::multicore::Task(
-  tarch::multicore::reserveTaskNumber(),
-  _gpuEnclaveTaskId,
-  tarch::multicore::Task::DefaultPriority
-) {
+  tarch::multicore::Task(
+    tarch::multicore::reserveTaskNumber(),
+    _gpuEnclaveTaskId,
+    tarch::multicore::Task::DefaultPriority
+  ),
+  _marker(marker),
+  _t(t),
+  _dt(dt),
+  _reconstructedValues(reconstructedValues) {
   logTraceIn( "EnclaveTask(...)" );
-
-  const double timeStamp = repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp();
-  tarch::multicore::Lock myLock( _patchsema );
-#if Dimensions==2
-  _patchkeeper.push_back({reconstructedPatch, timeStamp, getTaskId(), marker.x()[0], marker.h()[0], marker.x()[1], marker.h()[1]});
-#elif Dimensions==3
-  _patchkeeper.push_back({reconstructedPatch, timeStamp, getTaskId(), marker.x()[0], marker.h()[0], marker.x()[1], marker.h()[1], marker.x()[2] , marker.h()[2]});
-#endif
-  myLock.free();
-
   logTraceOut( "EnclaveTask(...)" );
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
-  tarch::multicore::Lock myLock( _patchsema );
+  // @todo Holger: We should just run the single task here that's represented by this task.
+  //               Can you please add it?
+  logTraceOut( "run()" );
+  return false;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks ) {
+  // @todo Debug
+  logInfo( "fuse(...)", "asked to fuse " << otherTasks.size() << " tasks into one large GPU task" );
+  /*
+  // @todo Holger: This patch container also has to store the timestamp and time step size per patch
+  PatchContainer patchkeeper;
+  for (auto p: otherTask) {
+    {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
+    #if Dimensions==2
+    patchkeeper.push_back({currentTask->_reconstructedPatch, currentTask->_timeStamp, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1]});
+    #elif Dimensions==3
+    patchkeeper.push_back({currentTask->_reconstructedPatch, currentTask->_timeStamp, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], currentTask->_marker.x()[2] , currentTask->_marker.h()[2]});
+    #endif
+  }
+
+  // You don't need any of these. Just process the argument as it is.
+
   const int Nremain = _patchkeeper.size();
   const int Nmax = {{NGRABMAX}}; // This needs to be a template argument --- this (among other things) depends on the patchsize and the machine so GPU memory needs to be taken into account
-
-#if Dimensions==2
-   std::vector<std::tuple<double*, const double, int, double, double, double, double> > localwork;
-#elif Dimensions==3
-   std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > localwork;
-#endif
-
 
   if (Nmax==0)  localwork = std::move(_patchkeeper);
   else
@@ -205,20 +213,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
      ::tarch::freeMemory(destinationPatchOnCPU, ::tarch::MemoryLocation::Heap);
   }
 
-  logTraceOut( "run()" );
-  return false;
-}
-
-
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks ) {
-/*
-  for (auto pp: otherTasks) {
-    tarch::multicore::Task* currentTask = pp;
-    while (currentTask->run()) {}
-    delete currentTask;
-  }
-  return true;
-*/
+  */
   return true;
 }
 

@@ -33,11 +33,19 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       1 // halo size
     );
-    tasks::{{GPU_ENCLAVE_TASK_NAME}}::runComputeKernelsOnSkeletonCell( reconstructedPatch, marker, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+    tasks::{{GPU_ENCLAVE_TASK_NAME}}::applyKernelToCell( 
+      marker, 
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+      reconstructedPatch, 
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value 
+    );
   }
   else { // is an enclave cell
     tasks::{{GPU_ENCLAVE_TASK_NAME}}* newEnclaveTask = new tasks::{{GPU_ENCLAVE_TASK_NAME}}(
       marker,
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       reconstructedPatch
     );
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );

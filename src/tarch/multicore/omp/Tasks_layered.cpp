@@ -41,7 +41,7 @@ namespace {
    * flag determines how
    * tarch::multicore::processPendingTasks(int) processes the tasks.
    */
-  TaskProgressionStrategy  taskProgressionStrategy = TaskProgressionStrategy::BufferInFIFOQueue;
+  TaskProgressionStrategy  taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
 
   const std::string MapPendingTasksOnOpenMPTasksStatisticsIdentifier( "tarch::multicore::map-pending-tasks-onto-openmp-tasks");
   const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
@@ -162,17 +162,23 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
             ::tarch::logging::Statistics::getInstance().log( MergeTasksStatisticsIdentifier, tasksOfSameType.size() );
 
             if (myTask==nullptr or tasksOfSameType.empty()) {
-              taskProgressionStrategy = TaskProgressionStrategy::BufferInFIFOQueue;
+              taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
             }
 
             if (myTask!=nullptr and not tasksOfSameType.empty()) {
-              if (not myTask->fuse(tasksOfSameType)) {
-                delete myTask;
-                myTask = nullptr;
+              #pragma omp task priority(BackgroundConsumerPriority)
+              {
+                bool stillExecuteLocally = myTask->fuse(tasksOfSameType);
+                if (stillExecuteLocally) {
+                  spawnTask( myTask );
+                }
+                else {
+                  delete myTask;
+                }
               }
+              myTask = nullptr;
             }
           }
-          break;
         }
         break;
     }
@@ -321,51 +327,70 @@ void tarch::multicore::spawnTask(Task*  job) {
 void tarch::multicore::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
-  if (not tasks.empty()) {
-    static int NumberOfThreads = tarch::multicore::Core::getInstance().getNumberOfThreads();
+  static tarch::logging::Log _log( "tarch::multicore");
 
-    int busyThreads = NumberOfThreads;
+  if (not tasks.empty()) {
+    const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
+    int       busyThreads     = NumberOfThreads;
 
     #pragma omp critical
     {
-      taskProgressionStrategy = TaskProgressionStrategy::DeployToRemoteDevice;
+      taskProgressionStrategy = TaskProgressionStrategy::BufferInFIFOQueue;
     }
 
-    // I always occupy all threads, though only the first tasks.size()
-    // will actually get work. The others will immediately crawl through
-    // the pending tasks.
-    #pragma omp taskloop nogroup priority(StandardPriority) shared(busyThreads)
+    // for task loop, I need an explicit shared(busyThreads)
     for (int i=0; i<NumberOfThreads; i++) {
-      if ( i<tasks.size() ) {
-        while (tasks[i]->run()) {
-          #pragma omp taskyield
+      #pragma omp task shared(busyThreads)
+      {
+        if (i<tasks.size()) {
+          while (tasks[i]->run()) {
+            #pragma omp taskyield
+          }
+          delete tasks[i];
         }
-        delete tasks[i];
-      }
 
-      #pragma omp atomic
-      busyThreads--;
+        #pragma omp atomic
+        busyThreads--;
 
-      while (busyThreads>0 and not nonblockingTasks.empty()) {
-        tarch::multicore::processPendingTasks(nonblockingTasks.size()/2);
+        logDebug( "spawnAndWait()", "Thread " << i << " out of " << NumberOfThreads << " threads is done (still " << busyThreads << " threads busy for " << tasks.size() << " task items)" );
+
+        while (
+          busyThreads>0
+          and
+          not nonblockingTasks.empty()
+        ) {
+          if (not nonblockingTasks.empty()) {
+            const int maxTasks = 1+nonblockingTasks.size()/2;
+            tarch::multicore::processPendingTasks( maxTasks );
+          }
+          else {
+            #pragma omp taskyield
+          }
+        }
       }
 
       ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
     }
-    #pragma omp taskwait
   }
+  #pragma omp taskwait
 
-  #pragma omp critical
-  {
-    taskProgressionStrategy = TaskProgressionStrategy::BufferInFIFOQueue;
-  }
-
-  tarch::multicore::processPendingTasks(nonblockingTasks.size());
-
+  // Send stuff out to the accelerators
   #pragma omp critical
   {
     taskProgressionStrategy = TaskProgressionStrategy::DeployToRemoteDevice;
   }
+  logInfo( "spawnAndWait()", "deploy " << nonblockingTasks.size() << " tasks to accelerators" );
+  for (int i=0; i<tarch::multicore::Core::getInstance().getNumberOfGPUs(); i++) {
+    tarch::multicore::processPendingTasks(nonblockingTasks.size()/tarch::multicore::Core::getInstance().getNumberOfGPUs());
+  }
+
+  // Release all the remaining tasks as proper OpenMP tasks
+  #pragma omp critical
+  {
+    taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
+  }
+  logInfo( "spawnAndWait()", "spawn " << nonblockingTasks.size() << " tasks as real OpenMP tasks" );
+  tarch::multicore::processPendingTasks(nonblockingTasks.size());
 }
 
 
@@ -387,7 +412,11 @@ bool tarch::multicore::processTask(int number) {
     taskProgressionStrategy = TaskProgressionStrategy::BufferInLIFOQueue;
   }
 
-  return tarch::multicore::processPendingTasks(1);
+  bool foundTask = tarch::multicore::processPendingTasks(1);
+  if (not foundTask) {
+    #pragma omp taskyield
+  }
+  return foundTask;
 }
 
 
