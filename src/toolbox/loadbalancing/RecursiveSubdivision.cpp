@@ -124,19 +124,15 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
     _roundRobinToken          = 0;
   }
 
-  //#ifdef Parallel
-  //_globalNumberOfSplits = _globalNumberOfSplitsIn;
-  //#else
-  //_globalNumberOfSplits = 0;
-  //#endif
-
-  ///if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1) {
-  //  _globalNumberOfInnerUnrefinedCells = ;
-  //  _lightestRank._rank                = 0;
-
-  //_globalNumberOfInnerUnrefinedCellsBufferOut
-  //}
-  //else {
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1) {
+    _globalNumberOfInnerUnrefinedCells           = _localNumberOfInnerUnrefinedCell;
+    _lightestRank._rank                          = 1;
+    _lightestRank._unrefinedCells                = _localNumberOfInnerUnrefinedCell;
+    _globalNumberOfSplits                        = _localNumberOfSplits;
+    _globalNumberOfTrees                         = peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size();
+    _globalNumberOfRanksWithEnabledLoadBalancing = _enabled ? 1 : 0;;
+  }
+  else {
     #ifdef Parallel
     waitForGlobalStatisticsExchange();
 
@@ -147,13 +143,6 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
     _globalNumberOfTrees               = _numberOfTreesIn;
     _globalNumberOfRanksWithEnabledLoadBalancing = _numberOfRanksWithEnabledLoadBalancingIn;
 
-    // rollover
-    //     _globalNumberOfInnerUnrefinedCells  = static_cast<int>( std::round(_globalNumberOfInnerUnrefinedCellsBufferIn) );
-    //         _lightestRank._rank                 = _lightestRankIn._unrefinedCells < _localNumberOfInnerUnrefinedCell ? _lightestRankIn._rank : tarch::mpi::Rank::getInstance().getRank();
-    //             _lightestRank._unrefinedCells       = _lightestRankIn._unrefinedCells;
-    //                 _globalNumberOfSplits              += _globalNumberOfSplitsIn;
-    //
-    //
     if (
       _globalNumberOfInnerUnrefinedCells <= _localNumberOfInnerUnrefinedCell
       and
@@ -237,7 +226,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
       _globalNumberOfSplitsRequest
     );
     #endif
-  //}
+  }
 
   if ( _globalNumberOfSplits==0 and _localNumberOfSplits==0 and _numberOfStateUpdatesWithoutAnySplit<65536) {
     _numberOfStateUpdatesWithoutAnySplit++;
