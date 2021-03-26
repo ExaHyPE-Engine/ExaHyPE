@@ -58,6 +58,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
     #endif
 
   public:
+    /**
+     * Process one cell
+     *
+     * Use this one directly for the skelton cells, e.g. (therefore I made it 
+     * static) or call it per enclave cell. Basically does three things:
+     * 
+     * - copy over the patch content into the new time step
+     * - apply solvers
+     * - free reconstructed memory
+     */
     static void applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
@@ -87,6 +97,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
     bool run() override;
 
     bool fuse( const std::list<Task*>& otherTasks ) override;
+    
+    bool canFuse() const override;
 };
 
 

@@ -99,7 +99,7 @@ namespace tarch {
         /**
          * Is off by default.
          */
-        bool canFuse() const;
+        virtual bool canFuse() const;
     };
 
 

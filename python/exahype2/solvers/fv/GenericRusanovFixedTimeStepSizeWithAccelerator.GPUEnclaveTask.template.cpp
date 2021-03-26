@@ -4,15 +4,16 @@
 
 #include <algorithm>
 
+#include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/fv/Rusanov.h"
 
 #include "peano4/parallel/Tasks.h"
 
+#include "config.h"
+
 #ifdef UseNVIDIA
 #include <nvToolsExt.h>
 #endif
-
-#include "exahype2/EnclaveBookkeeping.h"
 
 
 {{INCLUDES}}
@@ -169,12 +170,19 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
     outputValues
   );
 
-  tarch::freeMemory(_reconstructedValues,tarch::MemoryLocation::Heap );
-
   ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),NumberOfResultValues,outputValues);
 
   logTraceOut( "run()" );
   return false;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
+  #if GPUOffloading
+  return true;
+  #else
+  return false;
+  #endif
 }
 
 
