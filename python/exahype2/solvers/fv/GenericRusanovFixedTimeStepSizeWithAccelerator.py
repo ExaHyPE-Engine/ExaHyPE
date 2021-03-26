@@ -50,8 +50,6 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
   """
 
 
-
-
   def __init__(self,solver,use_split_loop=False):
     d = {}
     solver._init_dictionary_with_default_parameters(d)

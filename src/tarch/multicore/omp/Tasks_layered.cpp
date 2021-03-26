@@ -347,6 +347,11 @@ void tarch::multicore::spawnAndWait(
           busyThreads>0
           and
           not nonblockingTasks.empty()
+          and
+          // Without this yield, the code will deadlock if you have more trees
+          // than cores. As the first p trees on p cores will finish and then
+          // poll. The other >p trees/tasks will starve
+          busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
         ) {
           if (nonblockingTasks.size()>2*numberOfTasksThatShouldBeFused) {
             mergePendingTasks(numberOfTasksThatShouldBeFused);
@@ -371,7 +376,12 @@ void tarch::multicore::spawnAndWait(
   {
     taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
   }
-  tarch::multicore::processPendingTasks(nonblockingTasks.size());
+
+  // This is to avoid that we run into OpenMP deadlocks
+  if ( tarch::multicore::Core::getInstance().getNumberOfThreads()>1 ) {
+    logDebug( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
+    tarch::multicore::processPendingTasks(nonblockingTasks.size());
+  }
 }
 
 

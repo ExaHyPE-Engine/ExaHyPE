@@ -271,7 +271,9 @@ void step() {{
 
         repositories::finishGridConstructionStep();
 
-        if (::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells ) {{
+        if (
+          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
+        ) {{
           logInfo(
             "step()",
             "have to decrement local cell counter " << creepingNumberOfLocalCells <<

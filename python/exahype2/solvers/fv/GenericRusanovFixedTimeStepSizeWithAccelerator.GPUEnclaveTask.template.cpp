@@ -154,13 +154,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
 
-  #if Dimensions==2
-  constexpr int NumberOfResultValues = {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}};
-  #else
-  constexpr int NumberOfResultValues = {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}};
-  #endif
-
-  double* outputValues = tarch::allocateMemory(NumberOfResultValues,tarch::MemoryLocation::Heap);
+  double* outputValues = tarch::allocateMemory(_destinationPatchSize,tarch::MemoryLocation::Heap);
 
   applyKernelToCell(
     _marker,
@@ -170,7 +164,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
     outputValues
   );
 
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),NumberOfResultValues,outputValues);
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,outputValues);
 
   logTraceOut( "run()" );
   return false;
