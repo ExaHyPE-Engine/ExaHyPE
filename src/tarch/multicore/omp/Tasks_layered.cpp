@@ -114,8 +114,8 @@ namespace {
   bool mergePendingTasks(int maxTasks) {
     tarch::multicore::Task* myTask = nullptr;
     std::list< tarch::multicore::Task* > tasksOfSameType;
-      #pragma omp critical (backgroundTaskQueue)
-      {
+    #pragma omp critical (backgroundTaskQueue)
+    {
       if (not nonblockingTasks.empty()) {
         myTask = nonblockingTasks.front();
         nonblockingTasks.pop_front();
@@ -123,6 +123,8 @@ namespace {
 
       auto pp = nonblockingTasks.begin();
       while (
+        myTask->canFuse()
+        and
         pp!=nonblockingTasks.end()
         and
         (*pp)->getTaskType()==myTask->getTaskType()

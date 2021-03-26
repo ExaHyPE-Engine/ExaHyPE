@@ -95,6 +95,11 @@ namespace tarch {
          *         destroy it straightaway?
          */
         virtual bool fuse( const std::list<Task*>& otherTasks );
+
+        /**
+         * Is off by default.
+         */
+        bool canFuse() const;
     };
 
 
