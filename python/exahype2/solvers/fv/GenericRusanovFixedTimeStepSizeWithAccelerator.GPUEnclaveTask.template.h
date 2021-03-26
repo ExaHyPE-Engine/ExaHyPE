@@ -37,6 +37,11 @@
 
 
 
+/**
+ * Single task that can also take multiple tasks and deploy them to the GPU
+ *
+ * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
+ */
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
   private:
     friend class EnclaveBookkeeping;
@@ -44,7 +49,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
     static tarch::logging::Log                _log;
     static int                                _gpuEnclaveTaskId;
 
-    const ::peano4::datamanagement::CellMarker&  _marker;
+    const ::peano4::datamanagement::CellMarker   _marker;
     const double                                 _t;
     const double                                 _dt;
     double*                                      _reconstructedValues;
