@@ -106,6 +106,9 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -120,6 +123,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
   {% endif %}
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 {% endif %}
 
 
@@ -171,13 +177,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 #pragma omp declare target
 #endif
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  Q,         // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__                  deltaQ,    // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        BgradQ     // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
   {% if NCP_IMPLEMENTATION!="<none>" %}
   {{NCP_IMPLEMENTATION}}

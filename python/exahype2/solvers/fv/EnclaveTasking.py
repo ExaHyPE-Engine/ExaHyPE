@@ -135,8 +135,8 @@ class EnclaveTaskingFV( FV ):
     self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate
     self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._primary_sweep_or_plot_predicate
 
-    self._patch_overlap.generator.send_condition               = "not marker.isRefined() and " + self._initialisation_sweep_predicate
-    self._patch_overlap.generator.receive_and_merge_condition  = "not marker.isRefined() and " + self._first_iteration_after_initialisation_predicate
+    self._patch_overlap.generator.send_condition               = self._initialisation_sweep_predicate
+    self._patch_overlap.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_predicate
 
     self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._primary_sweep_predicate
     self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._secondary_sweep_predicate
@@ -176,7 +176,7 @@ class EnclaveTaskingFV( FV ):
       ")"
     )
     self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate)
-
+                                                                                 
 
   def set_implementation(self,
     flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
@@ -219,6 +219,7 @@ class EnclaveTaskingFV( FV ):
       raise Exception( "memory mode without immedidate (call stack) free chosen. This will lead into a segmentation fault" )
 
     self.create_action_sets()
+
     
 
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
@@ -271,6 +272,7 @@ class EnclaveTaskingFV( FV ):
   def add_actions_to_init_grid(self, step):
     FV.add_actions_to_init_grid(self,step)
     step.add_action_set( exahype2.grid.EnclaveLabels( self._name ) )
+    step.add_action_set( ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate(), False) )
 
 
   def add_actions_to_perform_time_step(self, step):

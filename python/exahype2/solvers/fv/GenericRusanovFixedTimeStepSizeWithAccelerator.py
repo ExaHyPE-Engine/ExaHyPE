@@ -25,33 +25,29 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
   ); // previous time step has to be valid
 
   if (marker.isSkeletonCell()) {
-    ::exahype2::fv::copyPatch(
-      reconstructedPatch,
-      originalPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1 // halo size
+    tasks::{{GPU_ENCLAVE_TASK_NAME}}::applyKernelToCell( 
+      marker, 
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+      reconstructedPatch, 
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value 
     );
-    tasks::{{GPU_ENCLAVE_TASK_NAME}}::runComputeKernelsOnSkeletonCell( reconstructedPatch, marker, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
   }
   else { // is an enclave cell
     tasks::{{GPU_ENCLAVE_TASK_NAME}}* newEnclaveTask = new tasks::{{GPU_ENCLAVE_TASK_NAME}}(
       marker,
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       reconstructedPatch
     );
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-    static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
     peano4::parallel::Tasks spawn(
-      enclaveTaskTypeId,
       newEnclaveTask,
       peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
       peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithAccelerator" )
     );
   }
   """
-
-
 
 
   def __init__(self,solver,use_split_loop=False):
@@ -141,9 +137,6 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     # Bit of a hack so we can easily instantiate templates
     implementationDictionary["SKIP_NCP"]  = "true" if implementationDictionary["NCP_IMPLEMENTATION"]  == "<none>" else "false"
     implementationDictionary["SKIP_FLUX"] = "true" if implementationDictionary["FLUX_IMPLEMENTATION"] == "<none>" else "false"
-
-    print( "@@@@@@@@@@@@@@: " + implementationDictionary["NCP_IMPLEMENTATION"] )
-    print( "||||||||||||||: " + implementationDictionary["FLUX_IMPLEMENTATION"] )
 
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".GPUEnclaveTask.template.h",

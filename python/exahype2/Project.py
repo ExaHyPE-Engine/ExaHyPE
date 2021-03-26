@@ -46,6 +46,7 @@ class Project(object):
     self._periodic_BC   = [False, False, False]
     self._plot_filters  = []
     self._output_path   = "./"
+    self._plotter_precision = 5
     
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
@@ -147,7 +148,7 @@ class Project(object):
     self._project.constants.export( "TerminalTime", str(self._terminal_time) )
     self._project.constants.export( "FirstPlotTimeStamp", str(self._first_plot_time_stamp) )
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
-    
+    self._project.constants.export( "PlotterPrecision", str(self._plotter_precision) )
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
     
 
@@ -156,7 +157,7 @@ class Project(object):
     self._project.output.makefile.set_executable_name(self._executable_name)
 
 
-  def set_global_simulation_parameters(self,dimensions,offset,size,end_time,first_plot_time_stamp,time_in_between_plots, periodic_BC = [False, False, False]):
+  def set_global_simulation_parameters(self,dimensions,offset,size,end_time,first_plot_time_stamp,time_in_between_plots, periodic_BC = [False, False, False], plotter_precision=5):
     """
     
       offset and size should be lists with dimensions double entries.
@@ -172,8 +173,11 @@ class Project(object):
     self._first_plot_time_stamp = first_plot_time_stamp
     self._time_in_between_plots = time_in_between_plots
     self._periodic_BC = []
+    self._plotter_precision = plotter_precision
     for d in range(0,dimensions):
       self._periodic_BC.append( periodic_BC[d] )
+    if plotter_precision<=0:
+      raise Exception( "Plotter precision has to be bigger than 0" ) 
     
     
   def  set_output_path(self,path):

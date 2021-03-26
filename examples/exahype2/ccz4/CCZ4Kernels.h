@@ -45,7 +45,15 @@ namespace examples {
       #if defined(OpenMPGPUOffloading)
       #pragma omp end declare target
       #endif
-	  
+
+      #if defined(OpenMPGPUOffloading)
+      #pragma omp declare target
+      #endif
+      void admconstraints(double* constraints, const double* const Q, const double* const gradQSerialised);
+      #if defined(OpenMPGPUOffloading)
+      #pragma omp end declare target
+      #endif
+
       //#if defined(OpenMPGPUOffloading)
       //#pragma omp declare target
       //#endif

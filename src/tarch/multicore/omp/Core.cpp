@@ -66,7 +66,12 @@ bool tarch::multicore::Core::isInitialised() const {
 
 int tarch::multicore::Core::getNumberOfThreads() const {
   return omp_get_max_threads();
-//  return omp_get_num_threads();
+}
+
+
+int tarch::multicore::Core::getNumberOfGPUs() const {
+  // @todo Holger
+  return 1;
 }
 
 

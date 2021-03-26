@@ -304,7 +304,8 @@ if __name__ == "__main__":
       [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
-      periodic_boundary_conditions
+      periodic_boundary_conditions,
+      15  # plotter precision
     )
 
     project.set_Peano4_installation("../../..", build_mode)

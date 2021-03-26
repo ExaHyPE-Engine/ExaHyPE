@@ -229,15 +229,23 @@ class HandleBoundary(AbstractFVActionSet):
 
 
 class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFaces ):
-  def __init__(self,solver, predicate):
-    peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
-      self,
-      solver._patch,
-      solver._patch_overlap_new,
-      predicate, 
-      solver._get_default_includes() + solver.get_user_includes()
-    )
-    
+  def __init__(self,solver, predicate, project_onto_new = True):
+    if project_onto_new:
+      peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
+        self,
+        solver._patch,
+        solver._patch_overlap_new,
+        predicate, 
+        solver._get_default_includes() + solver.get_user_includes()
+      )
+    else:
+      peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
+        self,
+        solver._patch,
+        solver._patch_overlap,
+        predicate, 
+        solver._get_default_includes() + solver.get_user_includes()
+      )
     
     
 class CopyNewPatchOverlapIntoCurrentOverlap( BackupPatchOverlap ):
@@ -595,7 +603,8 @@ In-situ preprocessing:  """
       additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
-"""
+""",
+      precision="PlotterPrecision"
     ))
 
     if self._plot_grid_properties:    

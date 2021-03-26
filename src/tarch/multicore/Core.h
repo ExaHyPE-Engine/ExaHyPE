@@ -92,6 +92,7 @@ class tarch::multicore::Core {
      * @return Number of threads available.
      */
     int getNumberOfThreads() const;
+    int getNumberOfGPUs() const;
 
     /**
      * This is a real string which identifies the (OS) thread.

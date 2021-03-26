@@ -41,6 +41,11 @@ int tarch::multicore::Core::getNumberOfThreads() const {
 }
 
 
+int tarch::multicore::Core::getNumberOfGPUs() const {
+  return 0;
+}
+
+
 std::string tarch::multicore::Core::getThreadId() const {
   return "master";
 }

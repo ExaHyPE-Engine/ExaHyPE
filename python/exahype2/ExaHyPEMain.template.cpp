@@ -25,7 +25,7 @@
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
 
-
+#include "toolbox/loadbalancing/loadbalancing.h"
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
@@ -237,23 +237,29 @@ void step() {{
 
         repositories::finishGridConstructionStep();
 
-        creepingNumberOfLocalCells = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells();
+        // We always overestimate so give the convergence the opportunity to catch up. The constant 
+        // here is a magic one. 
+        creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()+tarch::multicore::Core::getInstance().getNumberOfThreads()*3;
       }}
       break;
     case repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing:
       {{
+        // The smaller here corresponds to the -1 below
         if (
-          peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells() >= creepingNumberOfLocalCells
+          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()<0
+          and
+          repositories::loadBalancer.isEnabled(false)
+        ) {{
+          logInfo( "step()", "rank is degenerated so disable load balancing temporarily" );
+          repositories::loadBalancer.enable(false);
+        }}
+        if (
+          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() >= creepingNumberOfLocalCells
           and
           repositories::loadBalancer.isEnabled(false)
         ) {{
           logInfo( "step()", "grid initialisation on this rank seems to be stable, disable load balancing temporarily" );
           repositories::loadBalancer.enable(false);
-        }}
-        else if (
-          peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells() < creepingNumberOfLocalCells
-        ) {{
-          logInfo( "step()", "local number of cells went down from " << creepingNumberOfLocalCells << " to " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells() );
         }}
 
         repositories::startGridConstructionStep();
@@ -265,7 +271,16 @@ void step() {{
 
         repositories::finishGridConstructionStep();
 
-        creepingNumberOfLocalCells = (creepingNumberOfLocalCells + peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getNumberOfLocalUnrefinedCells()-1) / 2;
+        if (
+          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
+        ) {{
+          logInfo(
+            "step()",
+            "have to decrement local cell counter " << creepingNumberOfLocalCells <<
+            " as maximum weight is " << ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
+          );
+          creepingNumberOfLocalCells = (creepingNumberOfLocalCells + ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree())/2;
+        }}
       }}
       break;
     case repositories::StepRepository::Steps::InitGrid:

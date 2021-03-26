@@ -60,6 +60,11 @@ tarch::multicore::Task::Task( int id, int taskType, int priority ):
 }
 
 
+bool tarch::multicore::Task::canFuse() const {
+  return false;
+}
+
+
 int tarch::multicore::Task::getPriority() const {
   return _priority;
 }
