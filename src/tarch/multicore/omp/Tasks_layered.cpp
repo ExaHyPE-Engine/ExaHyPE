@@ -325,7 +325,7 @@ void tarch::multicore::spawnAndWait(
       taskProgressionStrategy = TaskProgressionStrategy::BufferInQueueProcessFIFO;
     }
 
-    int numberOfTasksThatShouldBeFused = 64;
+    int numberOfTasksThatShouldBeFused = 16;
 
     // for task loop, I need an explicit shared(busyThreads)
     for (int i=0; i<NumberOfThreads; i++) {
@@ -354,6 +354,8 @@ void tarch::multicore::spawnAndWait(
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
         ) {
           if (nonblockingTasks.size()>2*numberOfTasksThatShouldBeFused) {
+            // @todo Debug
+            logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
             mergePendingTasks(numberOfTasksThatShouldBeFused);
             numberOfTasksThatShouldBeFused *= 2;
           }
@@ -379,7 +381,8 @@ void tarch::multicore::spawnAndWait(
 
   // This is to avoid that we run into OpenMP deadlocks
   if ( tarch::multicore::Core::getInstance().getNumberOfThreads()>1 ) {
-    logDebug( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
+    // @todo Debug
+    logInfo( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
     tarch::multicore::processPendingTasks(nonblockingTasks.size());
   }
 }
