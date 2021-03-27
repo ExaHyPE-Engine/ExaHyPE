@@ -17,9 +17,9 @@
   _solverState(SolverState::GridConstruction),
   _maxH({{MAX_H}}),
   _minH({{MIN_H}}),
-  _previousAdmissibleTimeStepSize(0.0),
   _admissibleTimeStepSize(std::numeric_limits<double>::max()),
   _predictedTimeStepSize(-1.0) {
+  _previousAdmissibleTimeStepSize = 0.0;
 }
 
 
@@ -70,15 +70,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
+  const double TimeStapSizeDamping    = 0.98;
+
   if ( _solverState == SolverState::Secondary ) {
+    double localNextAdmissibleTimeStepSize = _admissibleTimeStepSize;
     double nextAdmissibleTimeStepSize      = 0;
-    double localNextAdmissibleTimeStepSize = std::numeric_limits<double>::max();
-    if ( tarch::la::greater(_admissibleTimeStepSize,0.0) ) {
-      localNextAdmissibleTimeStepSize = std::min(localNextAdmissibleTimeStepSize, _admissibleTimeStepSize);
-    }
-    if ( tarch::la::greater(_admissibleTimeStepSizeAfterPrimaryGridSweep,0.0) ) {
-      localNextAdmissibleTimeStepSize = std::min(localNextAdmissibleTimeStepSize, _admissibleTimeStepSizeAfterPrimaryGridSweep);
-    }
     #ifdef Parallel
     MPI_Allreduce(&localNextAdmissibleTimeStepSize, &nextAdmissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
     #else
@@ -86,68 +82,95 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     #endif
 
     if ( tarch::la::equals(_timeStepSize,0.0) ) {
-      const double TimeStapSizeDamping = 0.98;
-      _timeStepSize                   = TimeStapSizeDamping * nextAdmissibleTimeStepSize;
-      _predictedTimeStepSize          = -1.0;
-      _previousAdmissibleTimeStepSize = nextAdmissibleTimeStepSize;
+      _timeStepSize                       = TimeStapSizeDamping * nextAdmissibleTimeStepSize;
+      _predictedTimeStepSize              = 0.0;
+      _previousAdmissibleTimeStepSize     = 0.0;
+      _admissibleTimeStepSize             = std::numeric_limits<double>::max();
+      logInfo(
+        "finishTimeStep()",
+        "end of secondary sweep: initial time step size is set to " << _timeStepSize << ". Do not yet issue tasks optimistically"
+      );
     }
-    else if ( _predictedTimeStepSize <= nextAdmissibleTimeStepSize ) {
-      _timeStamp    += _timeStepSize;
+    /**
+     *  ok, we can continue
+     */
+    else if (
+      _predictedTimeStepSize > nextAdmissibleTimeStepSize
+      or
+      _previousAdmissibleTimeStepSize > nextAdmissibleTimeStepSize
+    ) {
+      logInfo(
+        "finishTimeStep()",
+        "end of secondary sweep: guess has been too optimistic (predicted "<< _predictedTimeStepSize << " after previous one of " << _previousAdmissibleTimeStepSize <<
+        "), admissible time step size is " << nextAdmissibleTimeStepSize << ". Have to throw away optimistic predictions"
+      );
+      _timeStamp                          += _timeStepSize;
+      _timeStepSize                        = nextAdmissibleTimeStepSize;
+      _predictedTimeStepSize               = 0.0;
+      _previousAdmissibleTimeStepSize      = 0.0;
+    }
+    else if ( tarch::la::equals(_predictedTimeStepSize, 0.0) ) {
+      assertion( _predictedTimeStepSize <= nextAdmissibleTimeStepSize );
 
-      double growthOfAdmissibleTimeStepSize = std::min( 1.0, nextAdmissibleTimeStepSize / _previousAdmissibleTimeStepSize );
-      double newPredictedTimeStepSize = 0.5 * (_predictedTimeStepSize + growthOfAdmissibleTimeStepSize * nextAdmissibleTimeStepSize);
-
-      _predictedTimeStepSize = newPredictedTimeStepSize;
+      _timeStamp                          += _timeStepSize;
+      _timeStepSize                        = nextAdmissibleTimeStepSize;
+      _predictedTimeStepSize               = 0.0;
+      _previousAdmissibleTimeStepSize      = 0.0;
+      logInfo(
+        "finishTimeStep()",
+        "end of secondary sweep: no prediction of a time step size had been available. No time steps spawned optimistically. Continue with time step size "<< _timeStepSize
+      );
     }
     else {
-      _timeStamp             += _timeStepSize;
-      _timeStepSize           = nextAdmissibleTimeStepSize;
-      _predictedTimeStepSize  = -1.0;
+      assertion( _predictedTimeStepSize <= nextAdmissibleTimeStepSize );
+
+      _timeStamp                          += _timeStepSize;
+      _timeStepSize                        = _predictedTimeStepSize;
+      _previousAdmissibleTimeStepSize      = _predictedTimeStepSize;
+      _predictedTimeStepSize               = nextAdmissibleTimeStepSize;
+      logInfo(
+        "finishTimeStep()",
+        "end of secondary sweep: predicted time step size "<< _predictedTimeStepSize << " is admissible (max admissible time step size would be " <<
+        nextAdmissibleTimeStepSize << ", so continue with this time step size"
+      );
     }
   }
-  else if ( _predictedTimeStepSize<=0.0 ) {
-    double growthOfAdmissibleTimeStepSize = std::min( 1.0, _timeStepSize / _previousAdmissibleTimeStepSize );
-    _predictedTimeStepSize = growthOfAdmissibleTimeStepSize * _timeStepSize;
-  }
-  else if ( _predictedTimeStepSize>0.0 ) {
-    _timeStepSize  = _predictedTimeStepSize;
-  }
-
-
-  if ( _solverState == SolverState::Secondary and _predictedTimeStepSize>0.0 ) {
-    logInfo(
-      "finishTimeStep()",
-      "continue with primary tree sweep at time stamp " << _timeStamp <<
-      " and issue skeleton tasks with time step size " << _timeStepSize <<
-      ". Some tasks have been optimistically brought forward with " << _predictedTimeStepSize
-    );
-  }
-  else if ( _solverState == SolverState::Secondary ) {
-    logInfo(
-      "finishTimeStep()",
-      "continue with primary tree sweep at time stamp " << _timeStamp <<
-      " and issue both skeleton and enclave tasks with time step size " << _timeStepSize
-    );
-  }
-  else if ( _predictedTimeStepSize>0.0 ) {
-    logInfo(
-      "finishTimeStep()",
-      "continue with secondary tree sweep at time stamp " << _timeStamp <<
-      ". Enclave tasks finish with time step size " << _timeStepSize <<
-      " and new enclave tasks are triggered optimistically with " << _predictedTimeStepSize
-    );
-  }
+  // end of primary time step:
+  //
+  // In the secondary step, we might issue optimistic computations. So this is
+  // the place where we predict.
   else {
-    logInfo(
-      "finishTimeStep()",
-      "continue with secondary tree sweep at time stamp " << _timeStamp <<
-      ". Enclave tasks finish with time step size " << _timeStepSize <<
-      ". No new enclave tasks are triggered optimistically. Furthermore, discard pre-computed tasks"
-    );
+    if ( tarch::la::equals(_timeStepSize, 0.0)  ) {
+      logInfo(
+        "finishTimeStep()",
+        "end of primary sweep: do not yet have a prediction what a valid time step size might look like. Did not spawn optimistic tasks"
+      );
+    }
+    else {
+      if ( tarch::la::equals(_previousAdmissibleTimeStepSize, 0.0)  ) {
+        _predictedTimeStepSize = TimeStapSizeDamping * _timeStepSize;
+      }
+      else {
+        double growthOfAdmissibleTimeStepSize = std::min(1.0, _predictedTimeStepSize / _previousAdmissibleTimeStepSize);
+        _predictedTimeStepSize = 0.5 * growthOfAdmissibleTimeStepSize * (_timeStepSize + _predictedTimeStepSize);
+      }
+      logInfo(
+        "finishTimeStep()",
+        "end of primary sweep: predict that new admissible time step size is " << _predictedTimeStepSize
+      );
+      _previousAdmissibleTimeStepSize = _predictedTimeStepSize;
+    }
   }
+
+// @todo Optimistic gibt es nur mit Enclvaes
 
   assertion( _timeStepSize < std::numeric_limits<double>::max() );
   assertion( _timeStepSize >=0.0 );
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getPredictedTimeStepSize() const {
+  return _predictedTimeStepSize;
 }
 
 
