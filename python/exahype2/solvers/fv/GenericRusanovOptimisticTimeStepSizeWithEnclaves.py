@@ -22,7 +22,31 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 class MergeEnclaveTaskOutcomeAndTriggerOptimisticTimeStep(AbstractFVActionSet):
   Template = """
-  if ( marker.isEnclaveCell() and not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
+  double timeStampOfStandardTask      = repositories::{{SOLVER_INSTANCE}}.getMaxTimeStamp();
+  double timeStepSizeOfStandardTask   = repositories::{{SOLVER_INSTANCE}}.getMaxTimeStamp();
+  double timeStampOfOptimisticTask    = repositories::{{SOLVER_INSTANCE}}.getMaxTimeStamp() + repositories::{{SOLVER_INSTANCE}}.getMaxTimeStepSize();
+  double timeStepSizeOfOptimisticTask = repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize();
+  
+  bool spawnEnclaveTask        = (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Primary 
+                              or repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::PrimaryAfterGridInitialisation)
+                             and marker.isEnclaveCell() and not marker.isRefined() 
+                             and repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize()==0.0; 
+  bool mergeOptimisticTaskAndUpdatePatchSkeleton = 
+                                 (repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Primary 
+                              or repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::PrimaryAfterGridInitialisation)
+                             and marker.isEnclaveCell() and not marker.isRefined() 
+                             and repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize()>0.0; 
+  bool mergeEnclaveOutcome     = marker.isEnclaveCell() and not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary;
+  bool spawnNewOptimisticTask  = mergeEnclaveOutcome and repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize()>0.0;
+  
+  std::cout << std::endl << "@ " << spawnEnclaveTask << 
+                            ","  << mergeOptimisticTaskAndUpdatePatchSkeleton <<
+                            ","  << mergeEnclaveOutcome <<
+                            ","  << spawnNewOptimisticTask <<
+                            " @ " <<
+                            timeStampOfOptimisticTask << " x " << timeStepSizeOfOptimisticTask << std::endl;
+  
+  if ( mergeEnclaveOutcome ) {
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
 
     if ( taskNumber>=0 ) {
@@ -40,9 +64,6 @@ class MergeEnclaveTaskOutcomeAndTriggerOptimisticTimeStep(AbstractFVActionSet):
     );
     
     if ( tarch::la::greater( {{TIME_STEP_SIZE}}, 0.0 ) ) {
-      double timeStampOfOptimisticTask    = repositories::{{SOLVER_INSTANCE}}.getMaxTimeStamp() + repositories::{{SOLVER_INSTANCE}}.getMaxTimeStepSize();
-      double timeStepSizeOfOptimisticTask = repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize();
-      std::cout << std::endl << "@ " << timeStampOfOptimisticTask << " x " << timeStepSizeOfOptimisticTask << std::endl;
 
 
 /*      
