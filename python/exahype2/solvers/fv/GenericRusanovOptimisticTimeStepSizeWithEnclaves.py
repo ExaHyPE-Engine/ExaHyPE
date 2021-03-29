@@ -14,12 +14,20 @@ from .EnclaveTasking                  import EnclaveTaskingFV
 
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
-from .GenericRusanovAdaptiveTimeStepSizeWithEnclaves import GenericRusanovAdaptiveTimeStepSizeWithEnclaves
 
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 
-class UpdateCellWithOptimisticTimeStep(ReconstructPatchAndApplyFunctor):  
+class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):  
+  """
+  
+  Do the skeleton tasks and kick out the enclave tasks, too. Finally, 
+  drop enclave tasks if this is required as we have overestimated the 
+  time step size.
+  
+  """
+  
+  
   TemplateUpdateCell = """
   ::exahype2::fv::validatePatch(
       reconstructedPatch,
@@ -30,14 +38,10 @@ class UpdateCellWithOptimisticTimeStep(ReconstructPatchAndApplyFunctor):
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
     
-  if ( {{PREDICATE_COMPUTE_SKELETON}} ) {
+  if ( marker.isSkeletonCell() ) {
     // @todo Debug
     logInfo( "touchCellFirstTime()", "compute skeleton task for " << marker.toString() );
 
-    assertion1( {{PREDICATE_COMPUTE_SKELETON}}, marker.toString() );
-    assertion1( not ({{PREDICATE_SPAWN_ENCLAVE}}), marker.toString() );
-    assertion1( not ({{PREDICATE_SPAWN_ENCLAVE_AND_DROP_OPTIMISTIC_TASK}}), marker.toString() );
-    
     tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
@@ -46,14 +50,24 @@ class UpdateCellWithOptimisticTimeStep(ReconstructPatchAndApplyFunctor):
       originalPatch
     );
   }
-  else if ( {{PREDICATE_SPAWN_ENCLAVE}} ) {
-    // @todo Debug
-    logInfo( "touchCellFirstTime()", "spawn enclave task for " << marker.toString() );
+  else if ( 
+    marker.isEnclaveCell() 
+    and 
+    repositories::{{SOLVER_INSTANCE}}.spawnEnclaveTaskInPrimaryTraversal() 
+    and 
+    repositories::{{SOLVER_INSTANCE}}.dropOptimisticTaskInPrimaryTraversal() 
+  ) {
+    int taskToDrop = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
+    if ( taskToDrop==::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber ) {
+      // @todo Debug
+      logInfo( "touchCellFirstTime()", "there is no task to drop for " << marker.toString() << ". Continue with spawning enclave task" );
+    }
+    else {
+      // @todo Debug
+      logInfo( "touchCellFirstTime()", "drop task " << taskToDrop << " associated with " << marker.toString() );
+      assertion(false);
+    }
 
-    assertion1( not ({{PREDICATE_COMPUTE_SKELETON}}), marker.toString() );
-    assertion1( {{PREDICATE_SPAWN_ENCLAVE}}, marker.toString() );
-    assertion1( not ({{PREDICATE_SPAWN_ENCLAVE_AND_DROP_OPTIMISTIC_TASK}}), marker.toString() );
-    
     ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
@@ -69,16 +83,10 @@ class UpdateCellWithOptimisticTimeStep(ReconstructPatchAndApplyFunctor):
       peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
     );   
   }
-  else {
+  else if ( marker.isEnclaveCell() and repositories::{{SOLVER_INSTANCE}}.spawnEnclaveTaskInPrimaryTraversal() ) {
     // @todo Debug
-    logInfo( "touchCellFirstTime()", "drop optimistic task and spawn enclave task for " << marker.toString() );
+    logInfo( "touchCellFirstTime()", "spawn enclave task for " << marker.toString() );
 
-    assertion(false);
-    
-    assertion1( not ({{PREDICATE_COMPUTE_SKELETON}}), marker.toString() );
-    assertion1( not ({{PREDICATE_SPAWN_ENCLAVE}}), marker.toString() );
-    assertion1( {{PREDICATE_SPAWN_ENCLAVE_AND_DROP_OPTIMISTIC_TASK}}, marker.toString() );
-    
     ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
@@ -96,32 +104,29 @@ class UpdateCellWithOptimisticTimeStep(ReconstructPatchAndApplyFunctor):
   }
   """      
     
-  def __init__(self,solver,use_split_loop=False,spawn_enclave_task_guard="true"):
-    predicate_compute_skeleton                       = """not marker.isRefined() and marker.isSkeletonCell() and (repositories::""" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation)"
-    predicate_spawn_enclave_and_drop_optimistic_task = """not marker.isRefined() and marker.isEnclaveCell()  and tarch::la::equals( repositories::""" + solver.get_name_of_global_instance() + """.getPredictedTimeStepSize(),0.0) and not tarch::la::equals( repositories::""" + solver.get_name_of_global_instance() + """.getMinTimeStepSize(),0.0) and (repositories::""" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation)"
-    predicate_spawn_enclave                          = """not marker.isRefined() and marker.isEnclaveCell()  and tarch::la::equals( repositories::""" + solver.get_name_of_global_instance() + """.getMinTimeStepSize(),0.0) and (repositories::""" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation)"
-    
+  def __init__(self,solver):
     d = {}
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
-    d["PREDICATE_COMPUTE_SKELETON"]                       = predicate_compute_skeleton
-    d["PREDICATE_SPAWN_ENCLAVE_AND_DROP_OPTIMISTIC_TASK"] = predicate_spawn_enclave_and_drop_optimistic_task
-    d["PREDICATE_SPAWN_ENCLAVE"]                          = predicate_spawn_enclave
     
     ReconstructPatchAndApplyFunctor.__init__(self,
       solver._patch,
       solver._patch_overlap,
       jinja2.Template( self.TemplateUpdateCell ).render(**d),
       solver._reconstructed_array_memory_location,
-      "(" + predicate_compute_skeleton + """) 
-or 
-(""" + predicate_spawn_enclave_and_drop_optimistic_task + """) 
-or 
-(""" + predicate_spawn_enclave + """)""",
-      add_assertions_to_halo_exchange = True
+      """
+not marker.isRefined() 
+and 
+    (repositories::""" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + """::SolverState::PrimaryAfterGridInitialisation)
+and
+ (
+    marker.isSkeletonCell() 
+    or
+    marker.isEnclaveCell() and  repositories::""" + solver.get_name_of_global_instance() + """.spawnEnclaveTaskInPrimaryTraversal()   
+ )   
+    """,
     )
     self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
-
     self._solver    = solver
 
 
@@ -133,12 +138,157 @@ or
 """ + self._solver._get_default_includes() + self._solver.get_user_includes() 
 
 
-#    d["PREDICATE_SPAWN_OPTIMISTIC_TASK"]                  = predicate_spawn_optimistic_task
-# taus hier
-#    predicate_spawn_optimistic_task                  = """not marker.isRefined() and marker.isEnclaveCell()  and repositories::""" + solver.get_name_of_global_instance() + """.getPredictedTimeStepSize()>0.0  and repositories::""" + solver.get_name_of_global_instance() + """.getMinTimeStepSize()>0.0  and repositories::""" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Secondary"
+class MergeInEnclaveTaskOutcomeInSecondarySweep(AbstractFVActionSet):
+  """
+  
+  This is the plain enclave implementation. The difference to the normal
+  implementation is that we switch it off if optimistic time stepping is
+  enabled.
+  
+  """  
+  Template = """
+  if ( 
+    marker.isEnclaveCell() 
+    and 
+    not marker.isRefined() 
+    and 
+    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
+    and 
+    repositories::{{SOLVER_INSTANCE}}.mergeEnclaveTaskOutcomeInSecondaryTraversal()
+  ) {
+    const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+
+    // @todo Debug
+    logInfo( "touchCellFirstTime()", "work in enclave data from task " << taskNumber << " into " << marker.toString() );
+
+    assertion( taskNumber!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+    ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+    fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+      
+    ::exahype2::fv::validatePatch(
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      0,
+      std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
+    );
+  }
+  else if ( 
+    marker.isEnclaveCell() 
+    and 
+    not marker.isRefined() 
+    and 
+    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
+  ) {
+    // @todo Debug
+    logInfo( "touchCellFirstTime()", "ignore enclave cell " << marker.toString() << " as there is an optimistic task in the queue already (predicted time=" << repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize() << ")" );
+  }
+"""
 
 
-class GenericRusanovOptimisticTimeStepSizeWithEnclaves( GenericRusanovAdaptiveTimeStepSizeWithEnclaves ):
+  def __init__(self,solver):
+    AbstractFVActionSet.__init__(self,solver)
+    self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
+
+
+  def get_body_of_operation(self,operation_name):
+    result = ""
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      d = {}
+      self._solver._init_dictionary_with_default_parameters(d)
+      self._solver.add_entries_to_text_replacement_dictionary(d)
+      d[ "LABEL_NAME" ] = self.label_name      
+      result = jinja2.Template(self.Template).render(**d)
+      pass 
+    return result
+
+
+class WorkInAndSpawnOptimisticTimeStep(ReconstructPatchAndApplyFunctor):  
+  """
+  
+  Work in the optimistic task outcome and trigger new time steps.
+  
+  """
+  TemplateUpdateCell = """
+if ( repositories::{{SOLVER_INSTANCE}}.mergeOptimisticTaskOutcomeInSecondaryTraversal() ) {
+  const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+  
+  // @todo Debug
+  logInfo( "touchCellFirstTime()", "merge in optimistic data of task " << taskNumber << " for " << marker.toString() );
+
+  assertion( taskNumber!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+  ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, xxxx );
+  fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+}
+
+
+if ( repositories::{{SOLVER_INSTANCE}}.spawnOptimisticTaskInSecondaryTraversal() ) {
+  // @todo Debug
+  logInfo( "touchCellFirstTime()", "spawn new optimistic task for " << marker.toString() );
+  assertion( tarch::la::greater( repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize(), 0.0 ) );
+  
+  ::exahype2::EnclaveTask* newOptimisticTask = new tasks::{{SOLVER_NAME}}OptimisticTask(
+    marker,
+    repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+    repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+    repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize(),
+    reconstructedPatch
+  );
+          
+  fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newOptimisticTask->getTaskId() );
+
+  peano4::parallel::Tasks spawn( 
+    newOptimisticTask,
+    peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
+    peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovOptimisticTimeStepSizeWithEnclaves" )
+  );   
+}
+
+"""
+
+  def __init__(self,solver,use_split_loop=False,spawn_enclave_task_guard="true"):
+    """
+    
+    It is important that we ask the superclass not to add any assertion.
+    It can happen that the superclass only spawns a new optimistic task
+    but no optimistic tasks are in the pipeline yet. In this case, the
+    reconstructed patch is all wrong at the boundary.
+    
+    """
+    d = {}
+    solver._init_dictionary_with_default_parameters(d)
+    solver.add_entries_to_text_replacement_dictionary(d)
+    
+    ReconstructPatchAndApplyFunctor.__init__(self,
+      solver._patch,
+      solver._patch_overlap,
+      jinja2.Template( self.TemplateUpdateCell ).render(**d),
+      solver._reconstructed_array_memory_location,
+      """
+not marker.isRefined() 
+and 
+    marker.isEnclaveCell()  
+and 
+    repositories::""" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + """::SolverState::Secondary
+and 
+    repositories::""" + solver.get_name_of_global_instance() + """.spawnOptimisticTaskInSecondaryTraversal()
+""",    
+      add_assertions_to_halo_exchange = False
+    )
+    self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
+    self._solver    = solver
+
+
+  def get_includes(self):
+    return ReconstructPatchAndApplyFunctor.get_includes(self) + """
+#include "peano4/parallel/Tasks.h"
+#include "repositories/SolverRepository.h"
+#include "tasks/""" + self._solver._name + """OptimisticTask.h"
+""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
+
+
+class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
   def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, time_step_relaxation=0.1):
     """
     
@@ -147,50 +297,66 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( GenericRusanovAdaptiveTi
     """
     self._time_step_relaxation                = time_step_relaxation
 
-    GenericRusanovAdaptiveTimeStepSizeWithEnclaves.__init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+    EnclaveTaskingFV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+
+    self._action_set_spawn_optimistic_task = None
 
     self.set_implementation(flux=flux,ncp=ncp)
 
 
+  def add_entries_to_text_replacement_dictionary(self,d):
+    """
+     
+     d: Dictionary of string to string
+        in/out argument
+    
+    """
+    EnclaveTaskingFV.add_entries_to_text_replacement_dictionary(self,d)
+    d[ "TIME_STEP_RELAXATION" ]               = self._time_step_relaxation
+
+  
   def create_action_sets(self):
-    GenericRusanovAdaptiveTimeStepSizeWithEnclaves.create_action_sets(self)
-    self._action_set_update_cell = UpdateCellWithOptimisticTimeStep(self)
+    EnclaveTaskingFV.create_action_sets(self)
+    self._action_set_update_cell           = UpdateCellInPrimarySweep(self)
+    self._action_set_spawn_optimistic_task = WorkInAndSpawnOptimisticTimeStep(self)
+    self._merge_enclave_task_outcome       = MergeInEnclaveTaskOutcomeInSecondarySweep(self)
     
-    #self._action_set_update_cell = MergeEnclaveTaskOutcomeAndTriggerOptimisticTimeStep(self)
 
+  def _enclave_task_name(self):
+    return self._name + "EnclaveTask"
 
-  def add_actions_to_perform_time_step(self, step):
-    """
-    
-    We invoke the FV superclass' operation and add the enclave labels, but 
-    we exchange the update cell thing.
- 
-    """
-    FV.add_actions_to_perform_time_step(self,step)
-    step.add_action_set( exahype2.grid.EnclaveLabels(self._name) ) 
-    #step.add_action_set( MergeEnclaveTaskOutcomeAndTriggerOptimisticTimeStep(self) )
-
-
+  
   def add_implementation_files_to_project(self,namespace,output):
     """
 
       Add the enclave task for the GPU
 
     """
-    GenericRusanovAdaptiveTimeStepSizeWithEnclaves.add_implementation_files_to_project(self,namespace,output)
-
-    # TODO this is not working if we have inheritance
-    # templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
-    templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "GenericRusanovOptimisticTimeStepSizeWithEnclaves")
-
+    EnclaveTaskingFV.add_implementation_files_to_project(self,namespace,output)
 
     implementationDictionary = {}
     self._init_dictionary_with_default_parameters(implementationDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
+    templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "GenericRusanovAdaptiveTimeStepSizeWithEnclaves")
+    task_name = self._enclave_task_name()
+    
     implementationDictionary[ "NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_2D" ] = (implementationDictionary["NUMBER_OF_VOLUMES_PER_AXIS"]-2) * (implementationDictionary["NUMBER_OF_VOLUMES_PER_AXIS"]-2) * (implementationDictionary["NUMBER_OF_UNKNOWNS"] + implementationDictionary["NUMBER_OF_AUXILIARY_VARIABLES"])
     implementationDictionary[ "NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_3D" ] = (implementationDictionary["NUMBER_OF_VOLUMES_PER_AXIS"]-2) * (implementationDictionary["NUMBER_OF_VOLUMES_PER_AXIS"]-2) * (implementationDictionary["NUMBER_OF_VOLUMES_PER_AXIS"]-2) * (implementationDictionary["NUMBER_OF_UNKNOWNS"] + implementationDictionary["NUMBER_OF_AUXILIARY_VARIABLES"])
 
+    generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+      templatefile_prefix + ".EnclaveTask.template.h",
+      templatefile_prefix + ".EnclaveTask.template.cpp",
+      task_name,
+      namespace + [ "tasks" ],
+      "tasks",
+      implementationDictionary,
+      True)
+
+    output.add( generated_solver_files )
+    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
+
+    templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "GenericRusanovOptimisticTimeStepSizeWithEnclaves")
     task_name = self._name + "OptimisticTask"
 
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
@@ -204,3 +370,25 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( GenericRusanovAdaptiveTi
 
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
+
+
+  def add_actions_to_perform_time_step(self, step):
+    """
+    
+    There are two modications compated to the superclass (or enclave 
+    tasking in general):
+    
+    - We have an altered update cell mechanism which only merges true
+      enclave cells and not the outcome of optimistic time stepping. 
+      This one is "installed" before we call the superclass. Install
+      means we have to set this before we invoke the superclass
+      operation. See create_action_sets() for this one.
+    - We have an additional action set which issues optimistic time 
+      steps and merges optimistic time step outcomes into the current
+      solution.
+ 
+    """
+    EnclaveTaskingFV.add_actions_to_perform_time_step(self,step)
+    step.add_action_set( self._action_set_spawn_optimistic_task )
+
+

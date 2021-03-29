@@ -61,11 +61,10 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   """      
     
     
-  def __init__(self,solver,use_split_loop=False):
+  def __init__(self,solver):
     d = {}
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
-    d["USE_SPLIT_LOOP"] = use_split_loop      
     
     ReconstructPatchAndApplyFunctor.__init__(self,
       solver._patch,
@@ -131,14 +130,14 @@ self.additional_includes += " ""
   
   def add_entries_to_text_replacement_dictionary(self,d):
     """
+    
+     TIME_STAMP and TIME_STEP_RELAXATION
      
      d: Dictionary of string to string
         in/out argument
     
     """
     EnclaveTaskingFV.add_entries_to_text_replacement_dictionary(self,d)
-    d[ "TIME_STEP_SIZE" ]                     = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStepSize()"
-    d[ "TIME_STAMP" ]                         = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
     d[ "TIME_STEP_RELAXATION" ]               = self._time_step_relaxation
    
 

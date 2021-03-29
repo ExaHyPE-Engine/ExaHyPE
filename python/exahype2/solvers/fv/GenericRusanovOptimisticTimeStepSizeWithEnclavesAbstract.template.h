@@ -101,6 +101,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
      
     double getPredictedTimeStepSize() const;
+    
+    bool spawnEnclaveTaskInPrimaryTraversal() const;
+    bool mergeEnclaveTaskOutcomeInSecondaryTraversal() const;
+    bool spawnOptimisticTaskInSecondaryTraversal() const;
+    bool mergeOptimisticTaskOutcomeInSecondaryTraversal() const;
+    bool dropOptimisticTaskInPrimaryTraversal() const;
 
     {% include "AbstractSolverAdaptiveTimeStepSize.template.h" %}
 
@@ -127,6 +133,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * to zero.
      */
     double _predictedTimeStepSize;
+    
+    bool _mergeEnclaveTaskOutcomeInSecondaryTraversal;
+    bool _spawnEnclaveTaskInPrimaryTraversal;
+    bool _dropOptimisticTaskInPrimaryTraversal;
+    bool _mergeOptimisticTaskOutcomeInSecondaryTraversal;
+    bool _spawnOptimisticTaskInSecondaryTraversal;
 };
 
 

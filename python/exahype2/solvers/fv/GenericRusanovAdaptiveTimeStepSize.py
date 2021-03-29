@@ -9,6 +9,9 @@ import exahype2
 
 import jinja2
 
+from .EnclaveTasking                  import MergeEnclaveTaskOutcome
+from .EnclaveTasking                  import EnclaveTaskingFV
+
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
 
