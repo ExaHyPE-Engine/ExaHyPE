@@ -41,7 +41,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
     );
   
   }
-  else { // is an enclave cell
+  else {
+    assertion( marker.isEnclaveCell() );
     ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
@@ -95,44 +96,30 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
   def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, time_step_relaxation=0.1):
     """
     
-    A fixed time stepping scheme with enclave tasking
+    An adaptive time stepping scheme with enclave tasking
     
     This is a simple implementation of a FV scheme using a generic 
     Rusanov solver. It applies the concept of enclave tasking and 
     thus exhibits a higher concurrency level than a plain FV 
-    counterpart. The price to pay is a higher memory pressure and 
-    further admin overhead.
+    counterpart. The code also adds adaptive time stepping, i.e. the
+    solver analyses the eigenvalues and sets the time step size 
+    accordingly.
     
-    Algorithmic workflow:
+    !! Adding your own includes and source code 
     
-    The enclave tasking variant here is simpler than the original
-    enclave tasking as proposed by Charrier et al. The reason that 
-    we keep it simpler is that the baseline code scales better.
-    Therefore, it is reasonable to keep the enclave complexity and
-    overhead down more aggressively.
+    To add further includes to the generated task, add them to your
+    solver via a statement similar to 
+    <pre>
     
-    The basic idea behind enclave tasking is that each time step 
-    consists of two grid sweeps and that we distinguish enclave 
-    tasks from skeleton cells. Skeleton cells are cells that are
-    adjacent to a resolution transition or adjacent to a domain 
-    boundary. The FV steps are distributed among these two sweeps
-    as follows:
+self.additional_includes += " ""
+ #include "../CCZ4Kernels.h"
+" ""
     
-    image:: GenericRusanovFixedTimeStepSizeWithEnclaves_state-transitions.svg
+    </pre>
     
-    The variant of enclave tasking as it is discussed here has nothing
-    in common with the fused tasking as discussed by Charrier and 
-    Weinzierl.
+    The actual task will be dumped into a subdirectory task, so the .. 
+    ensures that the relative path starts at the project's root.
     
-    
-    
-    Methods:
-  
-    We extend the superclass' add_actions_to_perform_time_step(), 
-    add_to_Peano4_datamodel() and add_use_data_statements_to_Peano4_solver_step().
-    For the actions, I add a further action which administers the task
-    spawning over the enclaves. I plug into the data model routines to 
-    add the marker to the cell which holds the semaphore/cell number.      
     
     """
     self._time_step_relaxation                = time_step_relaxation

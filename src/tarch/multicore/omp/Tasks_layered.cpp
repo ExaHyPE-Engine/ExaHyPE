@@ -354,7 +354,9 @@ void tarch::multicore::spawnAndWait(
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
         ) {
           if (nonblockingTasks.size()>2*numberOfTasksThatShouldBeFused) {
-            logDebug( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
+            #if PeanoDebug>=2
+            logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
+            #endif
             mergePendingTasks(numberOfTasksThatShouldBeFused);
             numberOfTasksThatShouldBeFused *= 2;
           }
@@ -380,7 +382,9 @@ void tarch::multicore::spawnAndWait(
 
   // This is to avoid that we run into OpenMP deadlocks
   if ( tarch::multicore::Core::getInstance().getNumberOfThreads()>1 ) {
-    logDebug( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
+    #if PeanoDebug>=2
+    logInfo( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
+    #endif
     tarch::multicore::processPendingTasks(nonblockingTasks.size());
   }
 }

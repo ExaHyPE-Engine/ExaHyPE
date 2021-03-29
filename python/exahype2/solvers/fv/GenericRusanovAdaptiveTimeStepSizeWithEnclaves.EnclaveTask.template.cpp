@@ -8,6 +8,8 @@
 #include "exahype2/EnclaveTask.h"
 #include "exahype2/SmartEnclaveTask.h"
 
+#include "peano4/utils/Loop.h"
+
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );

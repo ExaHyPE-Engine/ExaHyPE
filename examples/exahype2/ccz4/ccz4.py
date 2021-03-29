@@ -137,6 +137,11 @@ if __name__ == "__main__":
         """
         self._auxiliary_variables = 6
 
+        self.additional_includes += """
+    #include "../CCZ4Kernels.h"
+    """
+
+
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
