@@ -14,17 +14,20 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "libtwopunctures/TwoPunctures.h"
 
+TP::TwoPunctures* tp = new TP::TwoPunctures();
 
 tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "examples::exahype2::ccz4::FiniteVolumeCCZ4" );
-
-
-
 examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   if ( Scenario==0 || Scenario==1 ) {
     const char* name = "GaugeWave";
     int length = strlen(name);
     //initparameters_(&length, name);
+  }
+  if ( Scenario==2 ) {
+  //TODO something for tp
+    tp->PrintParameters();
   }
   else {
     std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
@@ -46,6 +49,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
     }
     else if ( Scenario==1 ) {
       examples::exahype2::ccz4::linearWave(Q, volumeX, t);
+    }
+    else if ( Scenario==2 ) {
+      examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, t);
     }
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );

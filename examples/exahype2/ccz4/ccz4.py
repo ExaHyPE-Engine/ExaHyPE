@@ -279,7 +279,7 @@ if __name__ == "__main__":
       if args.extension=="adm":
         my_solver.add_constraint_verification()
 
-    myscenario = 0 # 0...gaugewave-c++  1...linearwave
+    myscenario = 2 # 0...gaugewave-c++  1...linearwave 2...twopunctures
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
@@ -326,6 +326,9 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
     peano4_project.output.makefile.add_cpp_file( "InitialValues.cpp" )
     peano4_project.output.makefile.add_cpp_file( "CCZ4Kernels.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Utilities.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Parameters.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Logging.cpp" )
 
     # NOTE these lines are required to build with the fortran routines --- this will also require to uncomment some
     # includes etc

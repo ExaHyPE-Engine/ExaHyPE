@@ -75,6 +75,16 @@ void examples::exahype2::ccz4::linearWave(
   Q[54] = log(1.0) ;		//ln(\phi)
 }
 
+void examples::exahype2::ccz4::ApplyTwoPunctures(
+  double * __restrict__ Q, // Q[64+0],
+  const tarch::la::Vector<Dimensions,double>&  X,
+  double t
+) {
+  constexpr int nVars = 59;
+  memset(Q, .0, nVars*sizeof(double));
+  //tp = new TP::TwoPunctures(); TODO better to pre-run before go into interpolate
 
+  //tp->PrintParameters();
+}
 
 
