@@ -12,13 +12,22 @@
 #include "peano4/utils/Loop.h"
 
 
+#include <algorithm>
+
+
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_optimisticTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
 
 
 double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __restrict__ patchData) {
-  assertion(false);
-  return nullptr;
+  #if Dimensions==2
+  constexpr int Number = {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}};
+  #else
+  constexpr int Number = {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}};
+  #endif
+  double* result = new double[Number];
+  std::copy_n(patchData, Number, result);
+  return result;
 }
 
 
@@ -185,3 +194,19 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
   )
 {}
 
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeTaskOutcomeIntoPatch(
+  int                    taskNumber,
+  double* __restrict__   reconstructedPatch
+) {
+  #if Dimensions==2
+  constexpr int SizeOfOutput = {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_2D}};
+  #else
+  constexpr int SizeOfOutput = {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_3D}};
+  #endif
+  double temp[SizeOfOutput];
+  ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, temp );
+
+  // @todo
+}

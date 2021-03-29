@@ -58,15 +58,9 @@ class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):
     repositories::{{SOLVER_INSTANCE}}.dropOptimisticTaskInPrimaryTraversal() 
   ) {
     int taskToDrop = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
-    if ( taskToDrop==::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber ) {
-      // @todo Debug
-      logInfo( "touchCellFirstTime()", "there is no task to drop for " << marker.toString() << ". Continue with spawning enclave task" );
-    }
-    else {
-      // @todo Debug
-      logInfo( "touchCellFirstTime()", "drop task " << taskToDrop << " associated with " << marker.toString() );
-      assertion(false);
-    }
+    assertion( taskToDrop!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+    logInfo( "touchCellFirstTime()", "drop task " << taskToDrop << " associated with " << marker.toString() );
+    ::exahype2::EnclaveBookkeeping::getInstance().cancelTask(taskToDrop);
 
     ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
@@ -212,14 +206,19 @@ class WorkInAndSpawnOptimisticTimeStep(ReconstructPatchAndApplyFunctor):
   """
   TemplateUpdateCell = """
 if ( repositories::{{SOLVER_INSTANCE}}.mergeOptimisticTaskOutcomeInSecondaryTraversal() ) {
-  const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+  const int taskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
   
   // @todo Debug
   logInfo( "touchCellFirstTime()", "merge in optimistic data of task " << taskNumber << " for " << marker.toString() );
 
   assertion( taskNumber!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-  ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, xxxx );
-  fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+  
+  tasks::{{SOLVER_NAME}}OptimisticTask::mergeTaskOutcomeIntoPatch(
+    taskNumber,
+    reconstructedPatch
+  );
+
+  fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
 }
 
 

@@ -63,6 +63,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
       double                                      predictedTimeStepSize,
       double* __restrict__                        patchData
     );
+    
+    static void mergeTaskOutcomeIntoPatch(
+      int taskNumber,
+      double* __restrict__                        reconstructedPatch
+    );
 };
 
 

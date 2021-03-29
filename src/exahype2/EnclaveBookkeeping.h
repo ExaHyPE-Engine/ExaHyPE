@@ -43,6 +43,8 @@ class exahype2::EnclaveBookkeeping {
      * for details.
      */
     std::unordered_map<int, std::pair<int,double*> >       _finishedTasks;
+    
+    std::set<int>  _tasksThatHaveToBeCancelled;
 
     tarch::multicore::BooleanSemaphore  _finishedTasksSemaphore;
 
@@ -58,6 +60,8 @@ class exahype2::EnclaveBookkeeping {
     void dumpStatistics();
 
     void waitForTaskToTerminateAndCopyResultOver(int number, double* destination);
+
+    void cancelTask(int number);
 
     /**
      * Usually called directly by EnclaveTask.
