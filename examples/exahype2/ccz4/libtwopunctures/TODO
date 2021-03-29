@@ -1,0 +1,10 @@
+# Remove parameters associated with Cactus stuff, and the code that gets activated by them. We won't ever use it.
+
+# Add/remove stdout messages from the code, so that it gives useful and well formatted info. Also make it so that verbose=false
+# completely switches off those messages, like a quiet switch.
+
+# Have the code write out the physical properties of the computed data in a separate ASCII file, just like the Cactus version
+
+# Add a parfile parser, so we can read parameters from an external file.
+
+# Clean the code a bit, make spacing and indentation consistent.
