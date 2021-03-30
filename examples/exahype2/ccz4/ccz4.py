@@ -16,8 +16,16 @@ floatparams = {
         "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
         "GLMepsD":1.0, "itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
         "f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-        "sk":0.0, "bs":0.0}
-intparams = {"LapseType":0}
+        "sk":0.0, "bs":0.0#, \
+	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
+	#"target_m_plus":1.0, "par_p_plus_x":0.0, "par_p_plus_y":0.0, "par_p_plus_z":0.0, \
+	#"par_s_plus_x":0.0, "par_s_plus_y":0.0, "par_s_plus_z":0.0, \
+	#"target_m_minus":1.0, "par_p_minus_x":0.0, "par_p_minus_y":0.0, "par_p_minus_z":0.0, \
+	#"par_s_minus_x":0.0, "par_s_minus_y":0.0, "par_s_minus_z":0.0, \
+	#"tp_epsilon":1e-6
+}
+
+intparams = {"LapseType":0, "tp_grid_setup":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -326,9 +334,16 @@ if __name__ == "__main__":
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
     peano4_project.output.makefile.add_cpp_file( "InitialValues.cpp" )
     peano4_project.output.makefile.add_cpp_file( "CCZ4Kernels.cpp" )
+
+    peano4_project.output.makefile.add_linker_flag( "-lm -L/cosma/local/gsl/2.4/lib -lgsl -L/cosma/local/gsl/2.4/lib -lgslcblas" )
     peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Utilities.cpp" )
     peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Parameters.cpp" )
     peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Logging.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TwoPunctures.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "libtwopunctures/CoordTransf.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "libtwopunctures/Equations.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "libtwopunctures/FuncAndJacobian.cpp" )
+    peano4_project.output.makefile.add_cpp_file( "libtwopunctures/Newton.cpp" )
 
     # NOTE these lines are required to build with the fortran routines --- this will also require to uncomment some
     # includes etc

@@ -1,6 +1,5 @@
 #include "InitialValues.h"
 #include "Properties.h"
-
 /**
  *  *  * This file is automatically created by Peano. I need it to interact with
  *   *   * the Python API, i.e. to read out data set there.
@@ -13,7 +12,6 @@
 
 #include <stdio.h>
 #include <string.h>
-
 
 
 void examples::exahype2::ccz4::gaugeWave(
@@ -78,13 +76,25 @@ void examples::exahype2::ccz4::linearWave(
 void examples::exahype2::ccz4::ApplyTwoPunctures(
   double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  X,
-  double t
+  double t,
+  TP::TwoPunctures* tp
 ) {
   constexpr int nVars = 59;
+  const double coor[3]={X[0],X[1],X[2]};
+  double LgradQ[3*nVars];
   memset(Q, .0, nVars*sizeof(double));
-  //tp = new TP::TwoPunctures(); TODO better to pre-run before go into interpolate
+  tp->Interpolate(coor,Q);				//do the interpolate
+  //std::cout << coor[0] <<coor[1] << coor[2] << "\n";
+  //std::cout << "real quantites without tilde" <<"\n";
+  //for (int i=0;i<nVars;i++){std::cout << i <<"\t"<< Q[i] << "\n";}
+  TP_bindding::SOCCZ4Cal(Q);				//calculate corresponding soccz4 quantities
+  //std::cout << "after treatment" <<"\n";
+  //for (int i=0;i<nVars;i++){std::cout << i <<"\t" << Q[i] << "\n";}
+  TP_bindding::GradientCal(coor, Q, LgradQ, nVars, tp);	//calculate gradient for auxiliary variables
+  //for (int d=0;d<3;d++)
+  //for (int i=0;i<nVars;i++) {std::cout << d <<"\t" << i <<"\t" << LgradQ[d*nVars+i] << "\n";}
 
-  //tp->PrintParameters();
+  exit(0);
 }
 
 

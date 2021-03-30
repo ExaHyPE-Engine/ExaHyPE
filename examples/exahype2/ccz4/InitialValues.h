@@ -8,16 +8,10 @@
 #ifndef __EXAHYPE_CCZ4_INITIAL_VALUES__
 #define __EXAHYPE_CCZ4_INITIAL_VALUES__
 
-
-
-
-
-
 #include "tarch/la/Vector.h"
 
 #include "peano4/utils/Globals.h"
-
-
+#include "libtwopunctures/TP_bindding.h"
 
 namespace examples {
   namespace exahype2 {
@@ -35,12 +29,11 @@ namespace examples {
       void ApplyTwoPunctures(
         double * __restrict__ Q, // Q[64+0],
         const tarch::la::Vector<Dimensions,double>&  X,
-        double t
+        double t,
+	TP::TwoPunctures* tp
       );
     }
   }
 }
-
-
 
 #endif /* __EXAHYPE_USER_PDE__ */
