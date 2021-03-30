@@ -151,6 +151,24 @@ double exahype2::fv::maxEigenvalue_AoS(
 }
 
 
+void exahype2::fv::insertPatch(
+  const double* __restrict__  Qin,
+  double* __restrict__        QOut,
+  int    unknowns,
+  int    auxiliaryVariables,
+  int    numberOfVolumesPerAxisInPatch,
+  int    haloSizeAroundQin
+) {
+  dfor(k,numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin) {
+    tarch::la::Vector<Dimensions,int>   destination = k + tarch::la::Vector<Dimensions,int>(haloSizeAroundQin);
+    int sourceSerialised      = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch-haloSizeAroundQin*2);
+    int destinationSerialised = peano4::utils::dLinearised(destination,numberOfVolumesPerAxisInPatch);
+    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      QOut[destinationSerialised*(unknowns+auxiliaryVariables)+i] = Qin[sourceSerialised*(unknowns+auxiliaryVariables)+i];
+    }
+  }
+}
+
 
 void exahype2::fv::copyPatch (
   const double *__restrict__   QinWithHalo,

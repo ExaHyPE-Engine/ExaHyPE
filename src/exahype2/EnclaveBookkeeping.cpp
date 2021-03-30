@@ -57,8 +57,7 @@ void exahype2::EnclaveBookkeeping::cancelTask(int number) {
 }
 
 
-void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination) {
-  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double)", "fetch results of task " << number );
+std::pair<int, double*>  exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndReturnResult(int number) {
   tarch::multicore::Lock finishedTasksLock( _finishedTasksSemaphore );
   bool isContained = _finishedTasks.count( number );
   finishedTasksLock.free();
@@ -84,6 +83,15 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
   finishedTasksLock.free();
 
   tarch::multicore::releaseTaskNumber(number);
+
+  return storedData;
+}
+
+
+void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination) {
+  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double)", "fetch results of task " << number );
+
+  std::pair<int, double*> storedData = waitForTaskToTerminateAndReturnResult(number);
 
   std::copy_n( storedData.second, storedData.first, destination );
 

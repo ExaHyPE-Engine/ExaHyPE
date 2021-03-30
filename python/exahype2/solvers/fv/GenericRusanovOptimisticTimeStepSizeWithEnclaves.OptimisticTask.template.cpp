@@ -199,24 +199,26 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeTaskOutcomeIntoPatch(
   int                    taskNumber,
-  double* __restrict__   reconstructedPatch
+  double* __restrict__   patch
 ) {
+  std::pair<int, double*> optimisticTaskOutcome = ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndReturnResult(taskNumber);
+
   #if Dimensions==2
-  constexpr int SizeOfOutput = {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_2D}};
+  assertionEquals( optimisticTaskOutcome.first, {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_2D}} );
   #else
-  constexpr int SizeOfOutput = {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_3D}};
+  assertionEquals( optimisticTaskOutcome.first, {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_3D}} );
   #endif
-  double temp[SizeOfOutput];
-  ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, temp );
 
-  /*
-  Kommt der Merger auch sicher vor dem erneuten Spawn? Eher net
-      Ich hab hier uebrigens den ganzen Task incl des reconstructed Dings. Also
-  // @todo
+  ::exahype2::fv::insertPatch(
+    optimisticTaskOutcome.second,
+    patch,
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    1
+  );
 
-
-      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
-  */
+  tarch::freeMemory( optimisticTaskOutcome.second, tarch::MemoryLocation::Heap );
 }
 
 
