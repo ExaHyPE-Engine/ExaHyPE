@@ -27,8 +27,7 @@ namespace {
    * @see tarch::multicore::spawnAndWait()
    */
   enum class TaskProgressionStrategy {
-    BufferInQueueProcessLIFO,
-    BufferInQueueProcessFIFO,
+    BufferInQueue,
     MapOntoOMPTask,
     MergeTasks
   };
@@ -183,10 +182,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   while (maxTasks>0) {
     bool handledATask = false;
     switch (taskProgressionStrategy) {
-      case TaskProgressionStrategy::BufferInQueueProcessLIFO:
-        handledATask = processOnePendingTaskLIFO();
-        break;
-      case TaskProgressionStrategy::BufferInQueueProcessFIFO:
+      case TaskProgressionStrategy::BufferInQueue:
         handledATask = processOnePendingTaskFIFO();
         break;
       case TaskProgressionStrategy::MapOntoOMPTask:
@@ -227,8 +223,7 @@ void tarch::multicore::spawnTask(Task*  task) {
         }
       }
       break;
-    case TaskProgressionStrategy::BufferInQueueProcessLIFO:
-    case TaskProgressionStrategy::BufferInQueueProcessFIFO:
+    case TaskProgressionStrategy::BufferInQueue:
       {
         #pragma omp critical (backgroundTaskQueue)
         {
@@ -322,7 +317,7 @@ void tarch::multicore::spawnAndWait(
 
     #pragma omp critical
     {
-      taskProgressionStrategy = TaskProgressionStrategy::BufferInQueueProcessFIFO;
+      taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
     }
 
     int numberOfTasksThatShouldBeFused = 16;
@@ -403,11 +398,6 @@ void tarch::multicore::yield() {
  * continue.
  */
 bool tarch::multicore::processTask(int number) {
-  #pragma omp critical
-  {
-    taskProgressionStrategy = TaskProgressionStrategy::BufferInQueueProcessLIFO;
-  }
-
   bool foundTask = tarch::multicore::processPendingTasks(1);
   if (not foundTask) {
     #pragma omp taskyield

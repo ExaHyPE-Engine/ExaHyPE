@@ -39,8 +39,7 @@ class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):
   ); // previous time step has to be valid
     
   if ( marker.isSkeletonCell() ) {
-    // @todo Debug
-    logInfo( "touchCellFirstTime()", "compute skeleton task for " << marker.toString() );
+    logDebug( "touchCellFirstTime()", "compute skeleton task for " << marker.toString() );
 
     tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
@@ -59,7 +58,7 @@ class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):
   ) {
     int taskToDrop = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
     assertion( taskToDrop!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-    logInfo( "touchCellFirstTime()", "drop task " << taskToDrop << " associated with " << marker.toString() );
+    logDebug( "touchCellFirstTime()", "drop task " << taskToDrop << " associated with " << marker.toString() );
     ::exahype2::EnclaveBookkeeping::getInstance().cancelTask(taskToDrop);
 
     ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
@@ -78,8 +77,7 @@ class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):
     );   
   }
   else if ( marker.isEnclaveCell() and repositories::{{SOLVER_INSTANCE}}.spawnEnclaveTaskInPrimaryTraversal() ) {
-    // @todo Debug
-    logInfo( "touchCellFirstTime()", "spawn enclave task for " << marker.toString() );
+    logDebug( "touchCellFirstTime()", "spawn enclave task for " << marker.toString() );
 
     ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
@@ -96,7 +94,23 @@ class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):
       peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
     );   
   }
+  else if ( 
+    marker.isEnclaveCell() 
+    and 
+    repositories::{{SOLVER_INSTANCE}}.mergeOptimisticTaskOutcomeInSecondaryTraversal() 
+  ) {
+    logDebug( "touchCellFirstTime()", "optimistic task for " << marker.toString() << " is already spawned. Update boundary only" );
+
+    tasks::{{SOLVER_NAME}}OptimisticTask::applyKernelToCellBoundary(
+      marker,
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+      reconstructedPatch,
+      originalPatch
+    );
+  }
   """      
+  
     
   def __init__(self,solver):
     d = {}
@@ -117,6 +131,8 @@ and
     marker.isSkeletonCell() 
     or
     marker.isEnclaveCell() and  repositories::""" + solver.get_name_of_global_instance() + """.spawnEnclaveTaskInPrimaryTraversal()   
+    or
+    marker.isEnclaveCell() and  repositories::""" + solver.get_name_of_global_instance() + """.mergeOptimisticTaskOutcomeInSecondaryTraversal() 
  )   
     """,
     )
@@ -129,6 +145,7 @@ and
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
+#include "tasks/""" + self._solver._name + """OptimisticTask.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_includes() 
 
 
@@ -152,8 +169,7 @@ class MergeInEnclaveTaskOutcomeInSecondarySweep(AbstractFVActionSet):
   ) {
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
 
-    // @todo Debug
-    logInfo( "touchCellFirstTime()", "work in enclave data from task " << taskNumber << " into " << marker.toString() );
+    logDebug( "touchCellFirstTime()", "work in enclave data from task " << taskNumber << " into " << marker.toString() );
 
     assertion( taskNumber!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
     ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
@@ -168,16 +184,71 @@ class MergeInEnclaveTaskOutcomeInSecondarySweep(AbstractFVActionSet):
       std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
     );
   }
-  else if ( 
+  
+
+  if ( 
     marker.isEnclaveCell() 
     and 
     not marker.isRefined() 
     and 
     repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
+    and 
+    repositories::{{SOLVER_INSTANCE}}.mergeOptimisticTaskOutcomeInSecondaryTraversal() 
   ) {
-    // @todo Debug
-    logInfo( "touchCellFirstTime()", "ignore enclave cell " << marker.toString() << " as there is an optimistic task in the queue already (predicted time=" << repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize() << ")" );
+    const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+
+    logDebug( "touchCellFirstTime()", "work in optimistic data from task " << taskNumber << " into " << marker.toString() );
+
+    assertion( taskNumber!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+    
+    tasks::{{SOLVER_NAME}}OptimisticTask::mergeTaskOutcomeIntoPatch(
+      taskNumber,
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value
+    );
+
+    fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+      
+    ::exahype2::fv::validatePatch(
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      0,
+      std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
+    );
   }
+
+  if ( 
+    marker.isEnclaveCell() 
+    and 
+    not marker.isRefined() 
+    and 
+    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
+    and 
+    repositories::{{SOLVER_INSTANCE}}.spawnOptimisticTaskInSecondaryTraversal() 
+  ) {
+    logDebug( "touchCellFirstTime()", "spawn new optimistic task for " << marker.toString() );
+    assertion( tarch::la::greater( repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize(), 0.0 ) );
+  
+    ::exahype2::EnclaveTask* newOptimisticTask = new tasks::{{SOLVER_NAME}}OptimisticTask(
+      marker,
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+      repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize(),
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value      
+    );
+          
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newOptimisticTask->getTaskId() );
+
+    logDebug( "touchCellFirstTime()", "optimistic task number is " << newOptimisticTask->getTaskId() );
+
+    peano4::parallel::Tasks spawn( 
+      newOptimisticTask,
+      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
+      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovOptimisticTimeStepSizeWithEnclaves" )
+    );   
+  }
+
 """
 
 
@@ -198,91 +269,11 @@ class MergeInEnclaveTaskOutcomeInSecondarySweep(AbstractFVActionSet):
     return result
 
 
-class WorkInAndSpawnOptimisticTimeStep(ReconstructPatchAndApplyFunctor):  
-  """
-  
-  Work in the optimistic task outcome and trigger new time steps.
-  
-  """
-  TemplateUpdateCell = """
-if ( repositories::{{SOLVER_INSTANCE}}.mergeOptimisticTaskOutcomeInSecondaryTraversal() ) {
-  const int taskNumber = fineGridCell{{SEMAPHORE_LABEL}}.getSemaphoreNumber();
-  
-  // @todo Debug
-  logInfo( "touchCellFirstTime()", "merge in optimistic data of task " << taskNumber << " for " << marker.toString() );
-
-  assertion( taskNumber!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-  
-  tasks::{{SOLVER_NAME}}OptimisticTask::mergeTaskOutcomeIntoPatch(
-    taskNumber,
-    reconstructedPatch
-  );
-
-  fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-}
-
-
-if ( repositories::{{SOLVER_INSTANCE}}.spawnOptimisticTaskInSecondaryTraversal() ) {
-  // @todo Debug
-  logInfo( "touchCellFirstTime()", "spawn new optimistic task for " << marker.toString() );
-  assertion( tarch::la::greater( repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize(), 0.0 ) );
-  
-  ::exahype2::EnclaveTask* newOptimisticTask = new tasks::{{SOLVER_NAME}}OptimisticTask(
-    marker,
-    repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-    repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-    repositories::{{SOLVER_INSTANCE}}.getPredictedTimeStepSize(),
-    reconstructedPatch
-  );
-          
-  fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newOptimisticTask->getTaskId() );
-
-  peano4::parallel::Tasks spawn( 
-    newOptimisticTask,
-    peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
-    peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovOptimisticTimeStepSizeWithEnclaves" )
-  );   
-}
-
-"""
-
-  def __init__(self,solver,use_split_loop=False,spawn_enclave_task_guard="true"):
-    """
-    
-    It is important that we ask the superclass not to add any assertion.
-    It can happen that the superclass only spawns a new optimistic task
-    but no optimistic tasks are in the pipeline yet. In this case, the
-    reconstructed patch is all wrong at the boundary.
-    
-    """
-    d = {}
-    solver._init_dictionary_with_default_parameters(d)
-    solver.add_entries_to_text_replacement_dictionary(d)
-    
-    ReconstructPatchAndApplyFunctor.__init__(self,
-      solver._patch,
-      solver._patch_overlap,
-      jinja2.Template( self.TemplateUpdateCell ).render(**d),
-      solver._reconstructed_array_memory_location,
-      """
-not marker.isRefined() 
-and 
-    marker.isEnclaveCell()  
-and 
-    repositories::""" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + """::SolverState::Secondary
-and 
-    repositories::""" + solver.get_name_of_global_instance() + """.spawnOptimisticTaskInSecondaryTraversal()
-""",    
-      add_assertions_to_halo_exchange = False
-    )
-    self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
-    self._solver    = solver
-
-
   def get_includes(self):
-    return ReconstructPatchAndApplyFunctor.get_includes(self) + """
+    return AbstractFVActionSet.get_includes(self) + """
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
+#include "tasks/""" + self._solver._name + """EnclaveTask.h"
 #include "tasks/""" + self._solver._name + """OptimisticTask.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_includes() 
 
@@ -297,8 +288,6 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
     self._time_step_relaxation                = time_step_relaxation
 
     EnclaveTaskingFV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-
-    self._action_set_spawn_optimistic_task = None
 
     self.set_implementation(flux=flux,ncp=ncp)
 
@@ -317,7 +306,6 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
   def create_action_sets(self):
     EnclaveTaskingFV.create_action_sets(self)
     self._action_set_update_cell           = UpdateCellInPrimarySweep(self)
-    self._action_set_spawn_optimistic_task = WorkInAndSpawnOptimisticTimeStep(self)
     self._merge_enclave_task_outcome       = MergeInEnclaveTaskOutcomeInSecondarySweep(self)
     
 
@@ -369,25 +357,5 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
 
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
-
-
-  def add_actions_to_perform_time_step(self, step):
-    """
-    
-    There are two modications compated to the superclass (or enclave 
-    tasking in general):
-    
-    - We have an altered update cell mechanism which only merges true
-      enclave cells and not the outcome of optimistic time stepping. 
-      This one is "installed" before we call the superclass. Install
-      means we have to set this before we invoke the superclass
-      operation. See create_action_sets() for this one.
-    - We have an additional action set which issues optimistic time 
-      steps and merges optimistic time step outcomes into the current
-      solution.
- 
-    """
-    EnclaveTaskingFV.add_actions_to_perform_time_step(self,step)
-    step.add_action_set( self._action_set_spawn_optimistic_task )
 
 

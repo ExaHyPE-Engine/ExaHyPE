@@ -25,7 +25,8 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
   #else
   constexpr int Number = {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}};
   #endif
-  double* result = new double[Number];
+
+  double* result = tarch::allocateMemory(Number,tarch::MemoryLocation::Heap );
   std::copy_n(patchData, Number, result);
   return result;
 }
@@ -43,7 +44,7 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
     marker,
     t+dt,
     predictedTimeStepSize,
-    patchData,
+    copyPatchData( patchData ),
     #if Dimensions==2
     {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_2D}},
     #else
@@ -186,7 +187,7 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
             {{NUMBER_OF_VOLUMES_PER_AXIS}}-2,
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            copyPatchData( originalPatch )
+            originalPatch
           );
 
           repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
@@ -208,5 +209,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeTaskOutcomeIntoPatch(
   double temp[SizeOfOutput];
   ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, temp );
 
+  /*
+  Kommt der Merger auch sicher vor dem erneuten Spawn? Eher net
+      Ich hab hier uebrigens den ganzen Task incl des reconstructed Dings. Also
   // @todo
+
+
+      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+  */
+}
+
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCellBoundary(
+  const ::peano4::datamanagement::CellMarker& marker,
+  double                                      t,
+  double                                      dt,
+  double* __restrict__                        reconstructedPatch,
+  double* __restrict__                        patchData
+) {
+
 }

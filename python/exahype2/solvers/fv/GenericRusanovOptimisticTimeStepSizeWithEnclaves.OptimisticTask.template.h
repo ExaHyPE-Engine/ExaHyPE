@@ -68,6 +68,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
       int taskNumber,
       double* __restrict__                        reconstructedPatch
     );
+
+    static void applyKernelToCellBoundary(
+      const ::peano4::datamanagement::CellMarker& marker, 
+      double                                      t,
+      double                                      dt,
+      double* __restrict__                        reconstructedPatch,
+      double* __restrict__                        patchData
+    );
 };
 
 
