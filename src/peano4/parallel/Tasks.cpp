@@ -28,13 +28,22 @@ int peano4::parallel::Tasks::getLocationIdentifier(const std::string&  trace) {
 }
 
 
-int peano4::parallel::Tasks::getTaskType(const std::string&  className) {
-  tarch::multicore::Lock myLock( _tasksema );
-  int result = _taskTypeCounter;
-  _taskTypeCounter++;
-  myLock.free();
+int peano4::parallel::Tasks::getTaskType(const std::string&  className, bool useLock) {
+   int result(-1);
+   if (useLock)
+   {
+      tarch::multicore::Lock myLock( _tasksema );
+      result = _taskTypeCounter;
+      _taskTypeCounter++;
+      myLock.free();
+   }
+   else
+   {
+      result = _taskTypeCounter;
+      _taskTypeCounter++;
+   }
 
-  return _taskTypeCounter;
+  return result;//_taskTypeCounter;
 }
 
 

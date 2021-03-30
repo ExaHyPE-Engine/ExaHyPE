@@ -18,7 +18,12 @@
   _maxH({{MAX_H}}),
   _minH({{MIN_H}}),
   _admissibleTimeStepSize(std::numeric_limits<double>::max()),
-  _predictedTimeStepSize(-1.0) {
+  _predictedTimeStepSize(0.0),
+  _mergeEnclaveTaskOutcomeInSecondaryTraversal(true),
+  _spawnEnclaveTaskInPrimaryTraversal(true),
+  _dropOptimisticTaskInPrimaryTraversal(false),
+  _mergeOptimisticTaskOutcomeInSecondaryTraversal(false),
+  _spawnOptimisticTaskInSecondaryTraversal(false) {
   _previousAdmissibleTimeStepSize = 0.0;
 }
 
@@ -90,6 +95,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         "finishTimeStep()",
         "end of secondary sweep: initial time step size is set to " << _timeStepSize << ". Do not yet issue tasks optimistically"
       );
+      _mergeEnclaveTaskOutcomeInSecondaryTraversal    = true;
+      _spawnEnclaveTaskInPrimaryTraversal      = true;
+      _dropOptimisticTaskInPrimaryTraversal           = false;
+      _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
+      _spawnOptimisticTaskInSecondaryTraversal        = false;
     }
     /**
      *  ok, we can continue
@@ -108,6 +118,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       _timeStepSize                        = nextAdmissibleTimeStepSize;
       _predictedTimeStepSize               = 0.0;
       _previousAdmissibleTimeStepSize      = 0.0;
+      _mergeEnclaveTaskOutcomeInSecondaryTraversal    = true;
+      _spawnEnclaveTaskInPrimaryTraversal      = true;
+      _dropOptimisticTaskInPrimaryTraversal           = true;
+      _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
+      _spawnOptimisticTaskInSecondaryTraversal        = false;
     }
     else if ( tarch::la::equals(_predictedTimeStepSize, 0.0) ) {
       assertion( _predictedTimeStepSize <= nextAdmissibleTimeStepSize );
@@ -120,6 +135,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         "finishTimeStep()",
         "end of secondary sweep: no prediction of a time step size had been available. No time steps spawned optimistically. Continue with time step size "<< _timeStepSize
       );
+      _mergeEnclaveTaskOutcomeInSecondaryTraversal    = true;
+      _spawnEnclaveTaskInPrimaryTraversal      = true;
+      _dropOptimisticTaskInPrimaryTraversal           = false;
+      _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
+      _spawnOptimisticTaskInSecondaryTraversal        = true;
     }
     else {
       assertion( _predictedTimeStepSize <= nextAdmissibleTimeStepSize );
@@ -133,6 +153,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         "end of secondary sweep: predicted time step size "<< _predictedTimeStepSize << " is admissible (max admissible time step size would be " <<
         nextAdmissibleTimeStepSize << ", so continue with this time step size"
       );
+      _mergeEnclaveTaskOutcomeInSecondaryTraversal    = false;
+      _spawnEnclaveTaskInPrimaryTraversal             = false;
+      _dropOptimisticTaskInPrimaryTraversal           = false;
+      _mergeOptimisticTaskOutcomeInSecondaryTraversal = true;
+      _spawnOptimisticTaskInSecondaryTraversal        = true;
     }
   }
   // end of primary time step:
@@ -145,6 +170,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         "finishTimeStep()",
         "end of primary sweep: do not yet have a prediction what a valid time step size might look like. Did not spawn optimistic tasks"
       );
+      _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
     }
     else {
       if ( tarch::la::equals(_previousAdmissibleTimeStepSize, 0.0)  ) {
@@ -159,10 +185,18 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         "end of primary sweep: predict that new admissible time step size is " << _predictedTimeStepSize
       );
       _previousAdmissibleTimeStepSize = _predictedTimeStepSize;
+      _spawnOptimisticTaskInSecondaryTraversal        = true;
     }
   }
 
-// @todo Optimistic gibt es nur mit Enclvaes
+  // @todo Debug
+  logInfo( "finishTimeStep()",
+    "mergeEnclaveTaskOutcomeInSecondaryTraversal=" << _mergeEnclaveTaskOutcomeInSecondaryTraversal <<
+    ",spawnEnclaveTaskInPrimaryTraversal=" << _spawnEnclaveTaskInPrimaryTraversal <<
+    ",dropOptimisticTaskInPrimaryTraversal=" << _dropOptimisticTaskInPrimaryTraversal <<
+    ",mergeOptimisticTaskOutcomeInSecondaryTraversal=" << _mergeOptimisticTaskOutcomeInSecondaryTraversal <<
+    ",spawnOptimisticTaskInSecondaryTraversal=" << _spawnOptimisticTaskInSecondaryTraversal
+  );
 
   assertion( _timeStepSize < std::numeric_limits<double>::max() );
   assertion( _timeStepSize >=0.0 );
@@ -278,3 +312,30 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   {% endif %}
 }
 {% endif %}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeEnclaveTaskOutcomeInSecondaryTraversal() const {
+  return _mergeEnclaveTaskOutcomeInSecondaryTraversal;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spawnEnclaveTaskInPrimaryTraversal() const {
+  return _spawnEnclaveTaskInPrimaryTraversal;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::dropOptimisticTaskInPrimaryTraversal() const {
+  assertion( not _dropOptimisticTaskInPrimaryTraversal or _spawnEnclaveTaskInPrimaryTraversal );
+  return _dropOptimisticTaskInPrimaryTraversal;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeOptimisticTaskOutcomeInSecondaryTraversal() const {
+  assertion( not _mergeOptimisticTaskOutcomeInSecondaryTraversal or _spawnOptimisticTaskInSecondaryTraversal);
+  return _mergeOptimisticTaskOutcomeInSecondaryTraversal;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::spawnOptimisticTaskInSecondaryTraversal() const {
+  return _spawnOptimisticTaskInSecondaryTraversal;
+}

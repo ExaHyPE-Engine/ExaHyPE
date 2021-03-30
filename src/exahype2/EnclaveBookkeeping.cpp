@@ -41,6 +41,22 @@ void exahype2::EnclaveBookkeeping::dumpStatistics() {
 }
 
 
+void exahype2::EnclaveBookkeeping::cancelTask(int number) {
+  tarch::multicore::Lock finishedTasksLock( _finishedTasksSemaphore );
+  int elementsRemoved = _finishedTasks.erase( number );
+  finishedTasksLock.free();
+
+  if (elementsRemoved==1) {
+    tarch::multicore::releaseTaskNumber(number);
+  }
+  else {
+    finishedTasksLock.lock();
+    _tasksThatHaveToBeCancelled.insert(number);
+    finishedTasksLock.free();
+  }
+}
+
+
 void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination) {
   logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double)", "fetch results of task " << number );
   tarch::multicore::Lock finishedTasksLock( _finishedTasksSemaphore );
@@ -81,13 +97,21 @@ void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResu
 
   tarch::multicore::Lock lockFinishedTasks( _finishedTasksSemaphore );
   assertionEquals( _finishedTasks.count(taskNumber),0 );
-  auto oldBucketCount = _finishedTasks.bucket_count();
-  std::pair<int,double*> newEntry(numberOfResultValues,data);
-  _finishedTasks.insert( std::pair<int, std::pair<int,double*> >(taskNumber,newEntry) );
-  if (_finishedTasks.bucket_count()>oldBucketCount) {
-    ::tarch::logging::Statistics::getInstance().inc( MemoryAllocationsInLookupTableIdentifier );
+  if (_tasksThatHaveToBeCancelled.count(taskNumber)) {
+    _tasksThatHaveToBeCancelled.erase(taskNumber);
+    delete[] data;
+    lockFinishedTasks.free();
+    tarch::multicore::releaseTaskNumber(taskNumber);
   }
-  lockFinishedTasks.free();
+  else {
+    auto oldBucketCount = _finishedTasks.bucket_count();
+    std::pair<int,double*> newEntry(numberOfResultValues,data);
+    _finishedTasks.insert( std::pair<int, std::pair<int,double*> >(taskNumber,newEntry) );
+    if (_finishedTasks.bucket_count()>oldBucketCount) {
+      ::tarch::logging::Statistics::getInstance().inc( MemoryAllocationsInLookupTableIdentifier );
+    }
+    lockFinishedTasks.free();
+  }
 }
 
 
