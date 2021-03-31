@@ -93,6 +93,9 @@ void examples::exahype2::ccz4::ApplyTwoPunctures(
   TP_bindding::GradientCal(coor, Q, LgradQ, nVars, tp);	//calculate gradient for auxiliary variables
   //for (int d=0;d<3;d++)
   //for (int i=0;i<nVars;i++) {std::cout << d <<"\t" << i <<"\t" << LgradQ[d*nVars+i] << "\n";}
+  TP_bindding::AuxiliaryCal(Q, LgradQ, nVars); //calculate the auxiliary variables
+  std::cout << "after treatment" <<"\n";
+  for (int i=0;i<nVars;i++){std::cout << i <<"\t" << Q[i] << "\n";}
 
   exit(0);
 }
