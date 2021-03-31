@@ -43,9 +43,11 @@ namespace exahype2 {
       const std::string& location = ""
     );
 
-    //#if defined(OpenMPGPUOffloading)
-    //#pragma omp declare target
-    //#endif
+    /**
+     * Copy the patch data from a patch representation with halo into
+     * a representation without halo. If you set haloSize to zero, then
+     * it is a direct memcopy.
+     */
     void copyPatch(
       const double* __restrict__  QinWithHalo,
       double* __restrict__        QOutWithoutHalo,
@@ -54,10 +56,21 @@ namespace exahype2 {
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize
     );
-    //#if defined(OpenMPGPUOffloading)
-    //#pragma omp end declare target
-    //#endif
 
+    /**
+     *
+     * @param numberOfVolumesPerAxisInPatch That's the number of volumes in QOut, i.e.
+     *        Qin has numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin volumes per 
+     *        axis.
+     */
+    void insertPatch(
+      const double* __restrict__  Qin,
+      double* __restrict__        QOut,
+      int    unknowns,
+      int    auxiliaryVariables,
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSizeAroundQin
+    );
     
     double maxEigenvalue_AoS(
       std::function< double(

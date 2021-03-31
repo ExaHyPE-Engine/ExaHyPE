@@ -10,6 +10,7 @@
 #include <queue>
 #include <mutex>
 #include <list>
+#include <cstdlib>
 #include "../Tasks.h"
 
 #include "tarch/logging/Statistics.h"
@@ -27,8 +28,7 @@ namespace {
    * @see tarch::multicore::spawnAndWait()
    */
   enum class TaskProgressionStrategy {
-    BufferInQueueProcessLIFO,
-    BufferInQueueProcessFIFO,
+    BufferInQueue,
     MapOntoOMPTask,
     MergeTasks
   };
@@ -183,10 +183,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   while (maxTasks>0) {
     bool handledATask = false;
     switch (taskProgressionStrategy) {
-      case TaskProgressionStrategy::BufferInQueueProcessLIFO:
-        handledATask = processOnePendingTaskLIFO();
-        break;
-      case TaskProgressionStrategy::BufferInQueueProcessFIFO:
+      case TaskProgressionStrategy::BufferInQueue:
         handledATask = processOnePendingTaskFIFO();
         break;
       case TaskProgressionStrategy::MapOntoOMPTask:
@@ -227,8 +224,7 @@ void tarch::multicore::spawnTask(Task*  task) {
         }
       }
       break;
-    case TaskProgressionStrategy::BufferInQueueProcessLIFO:
-    case TaskProgressionStrategy::BufferInQueueProcessFIFO:
+    case TaskProgressionStrategy::BufferInQueue:
       {
         #pragma omp critical (backgroundTaskQueue)
         {
@@ -320,12 +316,15 @@ void tarch::multicore::spawnAndWait(
     const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
     int       busyThreads     = NumberOfThreads;
 
+    const char* valueFuseNum = getenv("FUSENUM");
+    const char* valueFuseMax = getenv("FUSEMAX");
+    int numberOfTasksThatShouldBeFused = valueFuseNum ? std::atoi(valueFuseNum) : 16;
+    int maxFuseGPU =                     valueFuseMax ? std::atoi(valueFuseMax) : 1000;
+
     #pragma omp critical
     {
-      taskProgressionStrategy = TaskProgressionStrategy::BufferInQueueProcessFIFO;
+      taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
     }
-
-    int numberOfTasksThatShouldBeFused = 16;
 
     // for task loop, I need an explicit shared(busyThreads)
     for (int i=0; i<NumberOfThreads; i++) {
@@ -353,12 +352,17 @@ void tarch::multicore::spawnAndWait(
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
         ) {
-          if (nonblockingTasks.size()>2*numberOfTasksThatShouldBeFused) {
+          if (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maxFuseGPU>0) {
             #if PeanoDebug>=2
             logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
             #endif
             mergePendingTasks(numberOfTasksThatShouldBeFused);
+
+            #pragma omp atomic
             numberOfTasksThatShouldBeFused *= 2;
+            
+            #pragma omp atomic
+            maxFuseGPU--; //
           }
           else if (nonblockingTasks.size()>numberOfTasksThatShouldBeFused) {
             tarch::multicore::processPendingTasks( numberOfTasksThatShouldBeFused );
@@ -372,20 +376,29 @@ void tarch::multicore::spawnAndWait(
       ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
     }
     #pragma omp taskwait
-  }
 
-  // Release all the remaining tasks as proper OpenMP tasks
-  #pragma omp critical
-  {
-    taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
-  }
+    while (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maxFuseGPU>0) {
+      #if PeanoDebug>=2
+      logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
+      #endif
+      mergePendingTasks(numberOfTasksThatShouldBeFused);
+      #pragma omp atomic
+      maxFuseGPU--; //
+    }
 
-  // This is to avoid that we run into OpenMP deadlocks
-  if ( tarch::multicore::Core::getInstance().getNumberOfThreads()>1 ) {
-    #if PeanoDebug>=2
-    logInfo( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
-    #endif
-    tarch::multicore::processPendingTasks(nonblockingTasks.size());
+    // Release all the remaining tasks as proper OpenMP tasks
+    #pragma omp critical
+    {
+      taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
+    }
+
+    // This is to avoid that we run into OpenMP deadlocks
+    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()>1 ) {
+      #if PeanoDebug>=2
+      logInfo( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
+      #endif
+      tarch::multicore::processPendingTasks(nonblockingTasks.size());
+    }
   }
 }
 
@@ -403,11 +416,6 @@ void tarch::multicore::yield() {
  * continue.
  */
 bool tarch::multicore::processTask(int number) {
-  #pragma omp critical
-  {
-    taskProgressionStrategy = TaskProgressionStrategy::BufferInQueueProcessLIFO;
-  }
-
   bool foundTask = tarch::multicore::processPendingTasks(1);
   if (not foundTask) {
     #pragma omp taskyield
