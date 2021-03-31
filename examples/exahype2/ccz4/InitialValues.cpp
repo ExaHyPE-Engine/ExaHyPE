@@ -94,10 +94,10 @@ void examples::exahype2::ccz4::ApplyTwoPunctures(
   //for (int d=0;d<3;d++)
   //for (int i=0;i<nVars;i++) {std::cout << d <<"\t" << i <<"\t" << LgradQ[d*nVars+i] << "\n";}
   TP_bindding::AuxiliaryCal(Q, LgradQ, nVars); //calculate the auxiliary variables
-  std::cout << "after treatment" <<"\n";
-  for (int i=0;i<nVars;i++){std::cout << i <<"\t" << Q[i] << "\n";}
+  //std::cout << "after treatment" <<"\n";
+  //for (int i=0;i<nVars;i++){std::cout << i <<"\t" << Q[i] << "\n";}
 
-  exit(0);
+  //exit(0);
 }
 
 
