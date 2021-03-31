@@ -10,6 +10,7 @@
 #include <queue>
 #include <mutex>
 #include <list>
+#include <cstdlib>
 #include "../Tasks.h"
 
 #include "tarch/logging/Statistics.h"
@@ -315,7 +316,10 @@ void tarch::multicore::spawnAndWait(
     const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
     int       busyThreads     = NumberOfThreads;
 
-    int numberOfTasksThatShouldBeFused = 8;
+    const char* valueFuseNum = getenv("FUSENUM");
+    const char* valueFuseMax = getenv("FUSEMAX");
+    int numberOfTasksThatShouldBeFused = valueFuseNum ? std::atoi(valueFuseNum) : 16;
+    int maxFuseGPU =                     valueFuseMax ? std::atoi(valueFuseMax) : 1000;
 
     #pragma omp critical
     {
@@ -348,7 +352,7 @@ void tarch::multicore::spawnAndWait(
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
         ) {
-          if (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused) {
+          if (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maxFuseGPU>0) {
             #if PeanoDebug>=2
             logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
             #endif
@@ -356,6 +360,9 @@ void tarch::multicore::spawnAndWait(
 
             #pragma omp atomic
             numberOfTasksThatShouldBeFused *= 2;
+            
+            #pragma omp atomic
+            maxFuseGPU--; //
           }
           else if (nonblockingTasks.size()>numberOfTasksThatShouldBeFused) {
             tarch::multicore::processPendingTasks( numberOfTasksThatShouldBeFused );
@@ -370,14 +377,15 @@ void tarch::multicore::spawnAndWait(
     }
     #pragma omp taskwait
 
-    while (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused) {
+    while (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maxFuseGPU>0) {
       #if PeanoDebug>=2
       logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
       #endif
       mergePendingTasks(numberOfTasksThatShouldBeFused);
-
       #pragma omp atomic
       numberOfTasksThatShouldBeFused *= 2;
+      #pragma omp atomic
+      maxFuseGPU--; //
     }
 
     // Release all the remaining tasks as proper OpenMP tasks
