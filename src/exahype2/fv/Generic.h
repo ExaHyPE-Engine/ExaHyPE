@@ -57,20 +57,6 @@ namespace exahype2 {
       int    haloSize
     );
 
-    /**
-     *
-     * @param numberOfVolumesPerAxisInPatch That's the number of volumes in QOut, i.e.
-     *        Qin has numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin volumes per 
-     *        axis.
-     */
-    void insertPatch(
-      const double* __restrict__  Qin,
-      double* __restrict__        QOut,
-      int    unknowns,
-      int    auxiliaryVariables,
-      int    numberOfVolumesPerAxisInPatch,
-      int    haloSizeAroundQin
-    );
     
     double maxEigenvalue_AoS(
       std::function< double(
@@ -188,25 +174,7 @@ namespace exahype2 {
       double * __restrict__                        Qout
     );
 
-    
-    /**
-     * The routine has exactly the same semantics as applySplit1DRiemannToPatch_Overlap1AoS2d()
-     * but runs through the faces slightly differently. 
-     *
-     * @image html applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop.png
-     *
-     * As in applySplit1DRiemannToPatch_Overlap1AoS2d(), we have two big
-     * blocks. The first one runs through all vertical faces, the second one 
-     * through all horizontal ones. Each block now runs through the whole data
-     * twice though with a spacing of two and an offset of 0 or 1. That is, 
-     * we run through every second face (faces 0, 2, 4 along the x-axis) and 
-     * then through the other ones (1,3,5,...). 
-     *
-     * Each face writes to its left and right adjacent volume in Qout. As we
-     * skip every second face, we know that all writes are parallel. No race
-     * conditions can arise. That is: Though we now run through the data structure
-     * twice, we can process the for loops embarassingly parallel.
-     */
+
     void applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
       std::function< void(
         const double * __restrict__ QL,
@@ -238,7 +206,7 @@ namespace exahype2 {
       double * __restrict__                        Qout
     );
 
-
+    
     void applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
       std::function< void(
         const double * __restrict__ QL,
@@ -268,6 +236,92 @@ namespace exahype2 {
       int                                          auxiliaryVariables,
       const double * __restrict__                  Qin,
       double * __restrict__                        Qout
+    );
+
+
+    
+    /**
+     * @param numberOfVolumesPerAxisInPatch That's the number of volumes in QOut, i.e.
+     *        Qin has numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin volumes per 
+     *        axis.
+     * @param copyPredicate Define per image volume whether to copy over or not, i.e. 
+     *        argument in functor is position of image voxel (0<=i<numberOfVolumesPerAxisInPatch).
+     */
+    void copyPatch(
+      const double* __restrict__  QinWithHalo,
+      double* __restrict__        QOutWithoutHalo,
+      int    unknowns,
+      int    auxiliaryVariables,
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSize,
+      std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        copyPredicate
+    );
+
+    /**
+     *
+     * @param numberOfVolumesPerAxisInPatch That's the number of volumes in QOut, i.e.
+     *        Qin has numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin volumes per 
+     *        axis.
+     */
+    void insertPatch(
+      const double* __restrict__  Qin,
+      double* __restrict__        QOut,
+      int    unknowns,
+      int    auxiliaryVariables,
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSizeAroundQin
+    );
+
+    void applySplit1DRiemannToPatch_Overlap1AoS(
+      std::function< void(
+        const double * __restrict__ QL,
+        const double * __restrict__ QR,
+        const tarch::la::Vector<Dimensions,double>&           faceCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double * __restrict__ FL,
+        double * __restrict__ FR
+      ) >   splitRiemannSolve1d,
+      std::function< void(
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&           volueCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__ S
+      ) >   sourceTerm,
+      const tarch::la::Vector<Dimensions,double>&           patchCentre,
+      const tarch::la::Vector<Dimensions,double>&           patchSize,
+      double                                       t,
+      double                                       dt,
+      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      const double * __restrict__                  Qin,
+      double * __restrict__                        Qout,
+      std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        updatePredicate
+    );        
+
+    double maxEigenvalue_AoS(
+      std::function< double(
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) >   eigenvalues,
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
+      double                                       dt,
+      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      const double * __restrict__                  Q,
+      std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        analysePredicate
     );
   }
 }

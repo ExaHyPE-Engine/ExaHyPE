@@ -870,3 +870,168 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
   logTraceOut( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)" );
 }
 
+
+void exahype2::fv::copyPatch(
+  const double* __restrict__  QinWithHalo,
+  double* __restrict__        QOutWithoutHalo,
+  int    unknowns,
+  int    auxiliaryVariables,
+  int    numberOfVolumesPerAxisInPatch,
+  int    haloSize,
+  std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        copyPredicate
+) {
+  dfor(k,numberOfVolumesPerAxisInPatch) {
+    if ( copyPredicate(k) ) {
+      tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
+      int sourceSerialised      = peano4::utils::dLinearised(source,numberOfVolumesPerAxisInPatch+haloSize*2);
+      int destinationSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
+      for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+        QOutWithoutHalo[destinationSerialised*(unknowns+auxiliaryVariables)+i] = QinWithHalo[sourceSerialised*(unknowns+auxiliaryVariables)+i];
+      }
+    }
+  }
+}
+
+
+void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS(
+  std::function< void(
+    const double * __restrict__ QL,
+    const double * __restrict__ QR,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    double                                       volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double * __restrict__ FL,
+    double * __restrict__ FR
+  ) >   splitRiemannSolve1d,
+  std::function< void(
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  volueCentre,
+    double                                       volumeH,
+    double                                       t,
+    double                                       dt,
+    double * __restrict__ S
+  ) >   sourceTerm,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  double                                       t,
+  double                                       dt,
+  int                                          numberOfVolumesPerAxisInPatch,
+  int                                          unknowns,
+  int                                          auxiliaryVariables,
+  const double * __restrict__                  Qin,
+  double * __restrict__                        Qout,
+  std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        updatePredicate
+) {
+  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+      patchSize, numberOfVolumesPerAxisInPatch);
+
+  double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
+  double * numericalFluxR = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
+
+  dfor(k,numberOfVolumesPerAxisInPatch) {
+    if ( updatePredicate(k) ) {
+      int volumeInImage    = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
+      int volumeInPreimage = peano4::utils::dLinearised(k + tarch::la::Vector<Dimensions, int>(1),numberOfVolumesPerAxisInPatch+2);
+      tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+          - 0.5 * patchSize;
+      volumeX += tarch::la::multiplyComponents( tarch::la::convertScalar<double>(k) + 0.5, volumeH );
+
+      sourceTerm(
+        Qin + volumeInPreimage * (unknowns + auxiliaryVariables),
+        volumeX, volumeH(0), t, dt,
+        numericalFluxL
+      );
+
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        Qout[volumeInImage * (unknowns + auxiliaryVariables) + unknown] += dt * numericalFluxL[unknown];
+      }
+
+      for (int d=0; d<Dimensions; d++) {
+        tarch::la::Vector<Dimensions, int> leftNeighbour = k + tarch::la::Vector<Dimensions, int>(1);
+        leftNeighbour(d) -= 1;
+        int leftVolumeInPreimage    = peano4::utils::dLinearised(leftNeighbour,numberOfVolumesPerAxisInPatch+2);
+        tarch::la::Vector<Dimensions, double> leftFaceCentre = volumeX;
+        leftFaceCentre(d) -= 0.5 * volumeH(d);
+
+        splitRiemannSolve1d (
+          Qin + leftVolumeInPreimage * (unknowns + auxiliaryVariables),
+          Qin + volumeInPreimage     * (unknowns + auxiliaryVariables),
+          volumeX, volumeH (0), t, dt, d, //  last argument = normal
+          numericalFluxL, numericalFluxR
+        );
+
+        for (int unknown = 0; unknown < unknowns; unknown++) {
+          Qout[volumeInImage * (unknowns + auxiliaryVariables) + unknown] += dt * numericalFluxR[unknown];
+        }
+
+        tarch::la::Vector<Dimensions, int> rightNeighbour = k + tarch::la::Vector<Dimensions, int>(1);
+        rightNeighbour(d) -= 1;
+        int rightVolumeInPreimage    = peano4::utils::dLinearised(leftNeighbour,numberOfVolumesPerAxisInPatch+2);
+        tarch::la::Vector<Dimensions, double> rightFaceCentre = volumeX;
+        rightFaceCentre(d) += 0.5 * volumeH(d);
+
+        splitRiemannSolve1d (
+          Qin + volumeInPreimage     * (unknowns + auxiliaryVariables),
+          Qin + rightVolumeInPreimage * (unknowns + auxiliaryVariables),
+          volumeX, volumeH (0), t, dt, d, //  last argument = normal
+          numericalFluxL, numericalFluxR
+        );
+
+        for (int unknown = 0; unknown < unknowns; unknown++) {
+          Qout[volumeInImage * (unknowns + auxiliaryVariables) + unknown] -= dt * numericalFluxL[unknown];
+        }
+      }
+    }
+  }
+
+  ::tarch::freeMemory(numericalFluxL, tarch::MemoryLocation::Heap);
+  ::tarch::freeMemory(numericalFluxR, tarch::MemoryLocation::Heap);
+}
+
+
+double exahype2::fv::maxEigenvalue_AoS(
+  std::function< double(
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  ) >   eigenvalues,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  double                                       t,
+  double                                       dt,
+  int                                          numberOfVolumesPerAxisInPatch,
+  int                                          unknowns,
+  int                                          auxiliaryVariables,
+  const double * __restrict__                  Q,
+  std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        analysePredicate
+) {
+  double result = 0.0;
+
+  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+      patchSize, numberOfVolumesPerAxisInPatch);
+
+  dfor(k,numberOfVolumesPerAxisInPatch) {
+    if ( analysePredicate(k) ) {
+      int voxelSerialised = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<Dimensions, double> volumeX = patchCentre
+          - 0.5 * patchSize;
+      volumeX += tarch::la::multiplyComponents( tarch::la::convertScalar<double>(k) + 0.5, volumeH );
+
+      for (int d=0; d<Dimensions; d++) {
+        result = std::max(
+          result,
+          eigenvalues(
+            Q + voxelSerialised * (unknowns + auxiliaryVariables),
+            volumeX, volumeH, t, dt, d
+          )
+        );
+      }
+    }
+  }
+  return result;
+}

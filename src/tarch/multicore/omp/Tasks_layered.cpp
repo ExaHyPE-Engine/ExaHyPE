@@ -315,7 +315,7 @@ void tarch::multicore::spawnAndWait(
     const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
     int       busyThreads     = NumberOfThreads;
 
-    int numberOfTasksThatShouldBeFused = 16;
+    int numberOfTasksThatShouldBeFused = 8;
 
     #pragma omp critical
     {
@@ -375,6 +375,9 @@ void tarch::multicore::spawnAndWait(
       logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
       #endif
       mergePendingTasks(numberOfTasksThatShouldBeFused);
+
+      #pragma omp atomic
+      numberOfTasksThatShouldBeFused *= 2;
     }
 
     // Release all the remaining tasks as proper OpenMP tasks

@@ -177,15 +177,35 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
         _predictedTimeStepSize = TimeStapSizeDamping * _timeStepSize;
       }
       else {
+        // nextAdmissibleTimeStepSize is stored now within _predictedTimeStepSize as of last
+        // termination of secondary sweep
         double growthOfAdmissibleTimeStepSize = std::min(1.0, _predictedTimeStepSize / _previousAdmissibleTimeStepSize);
-        _predictedTimeStepSize = 0.5 * growthOfAdmissibleTimeStepSize * (_timeStepSize + _predictedTimeStepSize);
+
+        double backupOfPredictedTimeStepSize = _predictedTimeStepSize;
+
+        if ( tarch::la::equals(growthOfAdmissibleTimeStepSize,1.0) ) {
+          _predictedTimeStepSize = 0.5 * (_timeStepSize + _predictedTimeStepSize);
+          logInfo(
+            "finishTimeStep()",
+            "end of primary sweep: pick creeping average new predicted time step size for optimistic tasking (predicted dt=" <<
+            _predictedTimeStepSize << ", current dt=" <<
+            _timeStepSize << ", admissible dt=" << backupOfPredictedTimeStepSize <<
+            ")"
+          );
+        }
+        else {
+          _predictedTimeStepSize = 0.5 * growthOfAdmissibleTimeStepSize * growthOfAdmissibleTimeStepSize * (_timeStepSize + _predictedTimeStepSize);
+          logInfo(
+            "finishTimeStep()",
+            "end of primary sweep: pick biased new predicted time step size for optimistic tasking (predicted dt=" <<
+            _predictedTimeStepSize << ", current dt=" <<
+            _timeStepSize << ", admissible dt=" << backupOfPredictedTimeStepSize <<
+            ", extrapolated growth=" << growthOfAdmissibleTimeStepSize << ")"
+          );
+        }
       }
-      logInfo(
-        "finishTimeStep()",
-        "end of primary sweep: predict that new admissible time step size is " << _predictedTimeStepSize
-      );
-      _previousAdmissibleTimeStepSize = _predictedTimeStepSize;
-      _spawnOptimisticTaskInSecondaryTraversal        = true;
+      _previousAdmissibleTimeStepSize          = _predictedTimeStepSize;
+      _spawnOptimisticTaskInSecondaryTraversal = true;
     }
   }
 

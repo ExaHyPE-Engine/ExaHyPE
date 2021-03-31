@@ -52,6 +52,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
      * location might change later
      */
     static double* copyPatchData( double* __restrict__ patchData);
+    
   public:
     /**
      * @param patchData This is the real patch data, i.e. NxNxN. No outer halo or so.
