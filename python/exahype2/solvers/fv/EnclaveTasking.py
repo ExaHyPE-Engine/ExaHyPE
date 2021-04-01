@@ -125,12 +125,10 @@ class EnclaveTaskingFV( FV ):
     FV.create_data_structures(self)
     self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
 
-    ## @todo check
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
       self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
       self._primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
-
     
     self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate
     self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._primary_sweep_or_plot_predicate
