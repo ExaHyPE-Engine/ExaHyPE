@@ -353,9 +353,7 @@ void tarch::multicore::spawnAndWait(
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
         ) {
           if (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maximumNumberOfFusedTaskAssembliesToGPU>0) {
-            #if PeanoDebug>=2
-            logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
-            #endif
+            logDebug( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
             mergePendingTasks(numberOfTasksThatShouldBeFused);
 
             #pragma omp atomic
@@ -382,9 +380,7 @@ void tarch::multicore::spawnAndWait(
       and
       maximumNumberOfFusedTaskAssembliesToGPU>0
     ) {
-      #if PeanoDebug>=2
-      logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
-      #endif
+      logDebug( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
       mergePendingTasks(numberOfTasksThatShouldBeFused);
 
       #pragma omp atomic
@@ -399,9 +395,7 @@ void tarch::multicore::spawnAndWait(
 
     // This is to avoid that we run into OpenMP deadlocks
     if ( tarch::multicore::Core::getInstance().getNumberOfThreads()>1 ) {
-      #if PeanoDebug>=2
-      logInfo( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
-      #endif
+      logDebug( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
       tarch::multicore::processPendingTasks(nonblockingTasks.size());
     }
   }
