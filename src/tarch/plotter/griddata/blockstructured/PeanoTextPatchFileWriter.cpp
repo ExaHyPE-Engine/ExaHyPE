@@ -42,6 +42,8 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
   }
   ifs.close();
 
+  assertion1(lines.size()>=2, filename);
+
   if ( lines[lines.size()-1].find( Token_EndDataSet )==std::string::npos ) {
     logWarning(
       "addNewFileToCurrentDataSetInIndexFile(...)",

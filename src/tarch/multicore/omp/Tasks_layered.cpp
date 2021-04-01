@@ -139,7 +139,7 @@ namespace {
     ::tarch::logging::Statistics::getInstance().log( MergeTasksStatisticsIdentifier, tasksOfSameType.size() );
 
     if (myTask!=nullptr) {
-      #pragma omp task priority(BackgroundConsumerPriority)
+      #pragma omp task priority(BackgroundConsumerPriority) if (tarch::multicore::Core::getInstance().getNumberOfThreads()>1)
       {
         bool stillExecuteLocally;
         if (tasksOfSameType.empty()) {
@@ -319,7 +319,7 @@ void tarch::multicore::spawnAndWait(
     const char* valueFuseNum = getenv("FUSENUM");
     const char* valueFuseMax = getenv("FUSEMAX");
     int numberOfTasksThatShouldBeFused = valueFuseNum ? std::atoi(valueFuseNum) : 16;
-    int maxFuseGPU =                     valueFuseMax ? std::atoi(valueFuseMax) : 1000;
+    int maximumNumberOfFusedTaskAssembliesToGPU =                     valueFuseMax ? std::atoi(valueFuseMax) : 1000;
 
     #pragma omp critical
     {
@@ -352,7 +352,7 @@ void tarch::multicore::spawnAndWait(
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
         ) {
-          if (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maxFuseGPU>0) {
+          if (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maximumNumberOfFusedTaskAssembliesToGPU>0) {
             #if PeanoDebug>=2
             logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
             #endif
@@ -362,7 +362,7 @@ void tarch::multicore::spawnAndWait(
             numberOfTasksThatShouldBeFused *= 2;
             
             #pragma omp atomic
-            maxFuseGPU--; //
+            maximumNumberOfFusedTaskAssembliesToGPU--; //
           }
           else if (nonblockingTasks.size()>numberOfTasksThatShouldBeFused) {
             tarch::multicore::processPendingTasks( numberOfTasksThatShouldBeFused );
@@ -377,15 +377,18 @@ void tarch::multicore::spawnAndWait(
     }
     #pragma omp taskwait
 
-    while (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maxFuseGPU>0) {
+    while (
+      nonblockingTasks.size()>=numberOfTasksThatShouldBeFused
+      and
+      maximumNumberOfFusedTaskAssembliesToGPU>0
+    ) {
       #if PeanoDebug>=2
       logInfo( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
       #endif
       mergePendingTasks(numberOfTasksThatShouldBeFused);
+
       #pragma omp atomic
-      numberOfTasksThatShouldBeFused *= 2;
-      #pragma omp atomic
-      maxFuseGPU--; //
+      maximumNumberOfFusedTaskAssembliesToGPU--;
     }
 
     // Release all the remaining tasks as proper OpenMP tasks

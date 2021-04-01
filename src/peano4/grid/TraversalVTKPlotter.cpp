@@ -42,44 +42,38 @@ void peano4::grid::TraversalVTKPlotter::beginTraversal(
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h
 ) {
-  static bool calledBefore = false;
+  static int counter = 0;
 
-  assertion(_writer==nullptr);
+  static tarch::multicore::BooleanSemaphore localSemaphore;
+  tarch::multicore::Lock  localLock( localSemaphore );
 
-  static int rankLocalCounter = 0;
-  static tarch::multicore::BooleanSemaphore booleanSemaphore;
+  int isFirstBarrierHitOnThisRank = ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank(_filename + "-init");
 
-  int counter;
-  {
-    tarch::multicore::Lock lock(booleanSemaphore);
-    counter = rankLocalCounter;
-    rankLocalCounter++;
-  }
+  std::ostringstream snapshotFileName;
+  snapshotFileName << _filename << "-" << counter;
 
-  std::ostringstream snapshotName;
-  snapshotName << _filename << "-tree-" << _spacetreeId << "-" << counter;
-
-  if ( _spacetreeId==0 and not calledBefore ) {
-    calledBefore = true;
+  if ( counter==0 and isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
     _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
-      snapshotName.str(),
+        snapshotFileName.str(),
       _filename,
       tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew
     );
-    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("peano4::grid::TraversalVTKPlotter");
   }
-  else if ( _spacetreeId==0 ) {
+  else if ( isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
     _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
-      snapshotName.str(),
+        snapshotFileName.str(),
       _filename,
       tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet
     );
-    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("peano4::grid::TraversalVTKPlotter");
   }
-  else {
-    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("peano4::grid::TraversalVTKPlotter");
+
+  counter++;
+
+  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank(_filename + "-write");
+
+  if ( _writer==nullptr ) {
     _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
-      snapshotName.str(),
+        snapshotFileName.str(),
       _filename,
       tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData
     );
