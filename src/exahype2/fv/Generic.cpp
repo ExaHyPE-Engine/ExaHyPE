@@ -159,6 +159,8 @@ void exahype2::fv::insertPatch(
   int    numberOfVolumesPerAxisInPatch,
   int    haloSizeAroundQin
 ) {
+  // @todo kann spaeter mal raus
+  assertionEquals(haloSizeAroundQin,1);
   dfor(k,numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin) {
     tarch::la::Vector<Dimensions,int>   destination = k + tarch::la::Vector<Dimensions,int>(haloSizeAroundQin);
     int sourceSerialised      = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch-haloSizeAroundQin*2);
@@ -880,6 +882,8 @@ void exahype2::fv::copyPatch(
   int    haloSize,
   std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        copyPredicate
 ) {
+  // @todo remove
+  assertionEquals( haloSize, 1 );
   dfor(k,numberOfVolumesPerAxisInPatch) {
     if ( copyPredicate(k) ) {
       tarch::la::Vector<Dimensions,int>   source = k + tarch::la::Vector<Dimensions,int>(haloSize);
@@ -932,10 +936,12 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS(
 
   dfor(k,numberOfVolumesPerAxisInPatch) {
     if ( updatePredicate(k) ) {
+      tarch::la::Vector<Dimensions, int> volume = k + tarch::la::Vector<Dimensions, int>(1);
+
       int volumeInImage    = peano4::utils::dLinearised(k,numberOfVolumesPerAxisInPatch);
-      int volumeInPreimage = peano4::utils::dLinearised(k + tarch::la::Vector<Dimensions, int>(1),numberOfVolumesPerAxisInPatch+2);
-      tarch::la::Vector<Dimensions, double> volumeX = patchCentre
-          - 0.5 * patchSize;
+      int volumeInPreimage = peano4::utils::dLinearised(volume,numberOfVolumesPerAxisInPatch+2);
+
+      tarch::la::Vector<Dimensions, double> volumeX = patchCentre - 0.5 * patchSize;
       volumeX += tarch::la::multiplyComponents( tarch::la::convertScalar<double>(k) + 0.5, volumeH );
 
       sourceTerm(
@@ -949,7 +955,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS(
       }
 
       for (int d=0; d<Dimensions; d++) {
-        tarch::la::Vector<Dimensions, int> leftNeighbour = k + tarch::la::Vector<Dimensions, int>(1);
+        tarch::la::Vector<Dimensions, int> leftNeighbour = volume;
         leftNeighbour(d) -= 1;
         int leftVolumeInPreimage    = peano4::utils::dLinearised(leftNeighbour,numberOfVolumesPerAxisInPatch+2);
         tarch::la::Vector<Dimensions, double> leftFaceCentre = volumeX;
@@ -958,29 +964,29 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS(
         splitRiemannSolve1d (
           Qin + leftVolumeInPreimage * (unknowns + auxiliaryVariables),
           Qin + volumeInPreimage     * (unknowns + auxiliaryVariables),
-          volumeX, volumeH (0), t, dt, d, //  last argument = normal
+          leftFaceCentre, volumeH (0), t, dt, d, //  last argument = normal
           numericalFluxL, numericalFluxR
         );
 
         for (int unknown = 0; unknown < unknowns; unknown++) {
-          Qout[volumeInImage * (unknowns + auxiliaryVariables) + unknown] += dt * numericalFluxR[unknown];
+          Qout[volumeInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH(0) * numericalFluxR[unknown];
         }
 
-        tarch::la::Vector<Dimensions, int> rightNeighbour = k + tarch::la::Vector<Dimensions, int>(1);
-        rightNeighbour(d) -= 1;
-        int rightVolumeInPreimage    = peano4::utils::dLinearised(leftNeighbour,numberOfVolumesPerAxisInPatch+2);
+        tarch::la::Vector<Dimensions, int> rightNeighbour = volume;
+        rightNeighbour(d) += 1;
+        int rightVolumeInPreimage    = peano4::utils::dLinearised(rightNeighbour,numberOfVolumesPerAxisInPatch+2);
         tarch::la::Vector<Dimensions, double> rightFaceCentre = volumeX;
         rightFaceCentre(d) += 0.5 * volumeH(d);
 
         splitRiemannSolve1d (
-          Qin + volumeInPreimage     * (unknowns + auxiliaryVariables),
+          Qin + volumeInPreimage      * (unknowns + auxiliaryVariables),
           Qin + rightVolumeInPreimage * (unknowns + auxiliaryVariables),
-          volumeX, volumeH (0), t, dt, d, //  last argument = normal
+          rightFaceCentre, volumeH (0), t, dt, d, //  last argument = normal
           numericalFluxL, numericalFluxR
         );
 
         for (int unknown = 0; unknown < unknowns; unknown++) {
-          Qout[volumeInImage * (unknowns + auxiliaryVariables) + unknown] -= dt * numericalFluxL[unknown];
+          Qout[volumeInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH(0) * numericalFluxL[unknown];
         }
       }
     }

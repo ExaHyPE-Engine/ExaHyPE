@@ -119,7 +119,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       _predictedTimeStepSize               = 0.0;
       _previousAdmissibleTimeStepSize      = 0.0;
       _mergeEnclaveTaskOutcomeInSecondaryTraversal    = true;
-      _spawnEnclaveTaskInPrimaryTraversal      = true;
+      _spawnEnclaveTaskInPrimaryTraversal             = true;
       _dropOptimisticTaskInPrimaryTraversal           = true;
       _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
       _spawnOptimisticTaskInSecondaryTraversal        = false;

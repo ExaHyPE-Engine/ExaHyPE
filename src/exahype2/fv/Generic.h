@@ -258,6 +258,12 @@ namespace exahype2 {
     );
 
     /**
+     * Insert a (small) subpatch into another patch
+     *
+     * I assume that Qin is a subpatch inside QOut and that its values are to
+     * be inserted. I use this routine for the optimistic tasking where I
+     * compute partial results ahead of time and then have to insert them into
+     * the solution later on.
      *
      * @param numberOfVolumesPerAxisInPatch That's the number of volumes in QOut, i.e.
      *        Qin has numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin volumes per 
@@ -272,11 +278,27 @@ namespace exahype2 {
       int    haloSizeAroundQin
     );
 
+    /**
+     * A dimension-generic implementation of the update with guard
+     *
+     * This is a dimension-generic implementation of the patch update which
+     * is realised in a cell-wise manner: I loop over the whole image patch
+     * and solve 2d Riemann problems per cell. This is (usually) very
+     * inefficient, as we solve each Riemann problem twice even though we
+     * could take the solution and immediately pass it into two adjacent
+     * cells. The implementation also exhibits no internal parallelism
+     * compared to its dimension-specific peers which even exist in various
+     * implementation variants.
+     *
+     * The big advantage is that this implementation has a guard predicate.
+     * With the functor, you can determine which cells of the image are to
+     * be updated. I use this routine to update the skeleton around a cell.
+     */
     void applySplit1DRiemannToPatch_Overlap1AoS(
       std::function< void(
         const double * __restrict__ QL,
         const double * __restrict__ QR,
-        const tarch::la::Vector<Dimensions,double>&           faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
         double                                       volumeH,
         double                                       t,
         double                                       dt,
@@ -304,6 +326,16 @@ namespace exahype2 {
       std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        updatePredicate
     );        
 
+    /**
+     * Compute maximum eigenvalue over selection of patch
+     *
+     * This is an extended alternative to maxEigenvalue_AoS(). It is less efficient
+     * as I wrote it completely dimension-generic. However, it allows you to filter
+     * out voxels, i.e. you can determine via the functor which volumes of the
+     * image to update or not.
+     *
+     * @see maxEigenvalue_AoS()
+     */
     double maxEigenvalue_AoS(
       std::function< double(
         const double * __restrict__ Q,

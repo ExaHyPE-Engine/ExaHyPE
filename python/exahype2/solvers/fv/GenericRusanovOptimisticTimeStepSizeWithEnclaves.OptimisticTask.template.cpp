@@ -193,7 +193,9 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
           repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
         }
   )
-{}
+{
+  logDebug( "{{CLASSNAME}}(...)", "spawn optimistic task for " << marker.toString() << " with t=" << (t+dt) << ", dt=" << predictedTimeStepSize );
+}
 
 
 
@@ -230,6 +232,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCellBoundary(
   double* __restrict__                        reconstructedPatch,
   double* __restrict__                        patchData
 ) {
+  logDebug( "applyKernelToCellBoundary(...)", "update boundary of cell " << marker.toString() << " with t=" << t << ", dt=" << dt );
+
   {% if PREPROCESS_RECONSTRUCTED_PATCH!="" %}
   assertionMsg(false, "optimistic time stepping does not support pre- and postprocessing" );
   {% endif %}

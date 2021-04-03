@@ -75,16 +75,17 @@ class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):
       peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
       peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
     );   
+    logDebug( "touchCellFirstTime()", "issue new enclave task " << newEnclaveTask->getTaskId() << " associated with " << marker.toString() );
   }
   else if ( marker.isEnclaveCell() and repositories::{{SOLVER_INSTANCE}}.spawnEnclaveTaskInPrimaryTraversal() ) {
-    logDebug( "touchCellFirstTime()", "spawn enclave task for " << marker.toString() );
-
     ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       reconstructedPatch
     );
+
+    logDebug( "touchCellFirstTime()", "spawn enclave task for " << marker.toString() << ", task number=" << newEnclaveTask->getTaskId() );
           
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
 
@@ -357,5 +358,19 @@ class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
 
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
+
+
+  def create_data_structures(self):
+    """
+    
+     The vanilla enclave variant does not store/copy the enclave cells 
+     in-between the primary and secondary sweep. We can't do this trick
+     here, as the data flow/update pattern is relatively complex.
+     
+    """
+    EnclaveTaskingFV.create_data_structures(self)
+
+    self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate()
+    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate()
 
 
