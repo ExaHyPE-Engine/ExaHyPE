@@ -16,8 +16,16 @@ floatparams = {
         "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
         "GLMepsD":1.0, "itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
         "f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-        "sk":0.0, "bs":0.0}
-intparams = {"LapseType":0}
+        "sk":0.0, "bs":0.0#, \
+	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
+	#"target_m_plus":1.0, "par_p_plus_x":0.0, "par_p_plus_y":0.0, "par_p_plus_z":0.0, \
+	#"par_s_plus_x":0.0, "par_s_plus_y":0.0, "par_s_plus_z":0.0, \
+	#"target_m_minus":1.0, "par_p_minus_x":0.0, "par_p_minus_y":0.0, "par_p_minus_z":0.0, \
+	#"par_s_minus_x":0.0, "par_s_minus_y":0.0, "par_s_minus_z":0.0, \
+	#"tp_epsilon":1e-6
+}
+
+intparams = {"LapseType":0, "tp_grid_setup":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -29,6 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
+    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "two-punctures"], required="True", help="Scenario" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -137,6 +146,11 @@ if __name__ == "__main__":
         """
         self._auxiliary_variables = 6
 
+        self.additional_includes += """
+    #include "../CCZ4Kernels.h"
+    """
+
+
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
@@ -230,6 +244,18 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
+        
+      def pick_Gauge_wave_scenario(self):
+        """
+        
+        """
+        self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
+
+      def pick_Linear_wave_scenario(self):
+        self.add_solver_constants( """static constexpr int Scenario=1; /* Linear wave */  """ )
+
+      def pick_two_puncture_scenario(self):
+        self.add_solver_constants( """static constexpr int Scenario=2; /* Two-puncture wave */  """ )
 
 
     userwarnings = []
@@ -274,14 +300,19 @@ if __name__ == "__main__":
       if args.extension=="adm":
         my_solver.add_constraint_verification()
 
-    myscenario = 0 # 0...gaugewave-c++  1...linearwave
-
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
-    solverconstants+= "static constexpr int Scenario = {};\n".format(myscenario)
+    my_solver.set_solver_constants(solverconstants)
 
-    my_solver.setSolverConstants(solverconstants)
+    if args.scenario=="gauge":
+      my_solver.pick_Gauge_wave_scenario()
+    elif args.scenario=="linear":
+      my_solver.pick_Linear_wave_scenario()
+    elif args.scenario=="two-punctures":
+      my_solver.pick_two_puncture_scenario()
+    else:
+      raise Exception( "Scenario " + args.scenario + " is now known")        
 
     project.add_solver(my_solver)
 
@@ -310,13 +341,37 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/tem" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1" )
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
     peano4_project = project.generate_Peano4_project(verbose=True)
+
+    if args.scenario=="gauge":
+      pass
+    elif args.scenario=="linear":
+      pass
+    elif args.scenario=="two-punctures":
+      #
+      # There are two different things to do when we pick a scneario: We have
+      # to configure the solver accordingly (and keep in mind that every solver
+      # needs its own config), and then we might have to adopt the build 
+      # environment.
+      #
+      peano4_project.output.makefile.add_linker_flag( "-lm -L/cosma/local/gsl/2.4/lib -lgsl -L/cosma/local/gsl/2.4/lib -lgslcblas" )
+      peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Utilities.cpp" )
+      peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Parameters.cpp" )
+      peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TP_Logging.cpp" )
+      peano4_project.output.makefile.add_cpp_file( "libtwopunctures/TwoPunctures.cpp" )
+      peano4_project.output.makefile.add_cpp_file( "libtwopunctures/CoordTransf.cpp" )
+      peano4_project.output.makefile.add_cpp_file( "libtwopunctures/Equations.cpp" )
+      peano4_project.output.makefile.add_cpp_file( "libtwopunctures/FuncAndJacobian.cpp" )
+      peano4_project.output.makefile.add_cpp_file( "libtwopunctures/Newton.cpp" )
+      peano4_project.output.makefile.add_CXX_flag( "-DIncludeTwoPunctures" )
+    else:
+      raise Exception( "Scenario " + args.scenario + " is now known")        
 
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
     peano4_project.output.makefile.add_cpp_file( "InitialValues.cpp" )

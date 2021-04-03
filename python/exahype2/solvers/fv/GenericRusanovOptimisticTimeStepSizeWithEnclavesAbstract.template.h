@@ -100,7 +100,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
      
+    double getPredictedTimeStepSize() const;
+    
+    bool spawnEnclaveTaskInPrimaryTraversal() const;
+    bool mergeEnclaveTaskOutcomeInSecondaryTraversal() const;
+    bool spawnOptimisticTaskInSecondaryTraversal() const;
+    bool mergeOptimisticTaskOutcomeInSecondaryTraversal() const;
+    bool dropOptimisticTaskInPrimaryTraversal() const;
+
     {% include "AbstractSolverAdaptiveTimeStepSize.template.h" %}
+
+    
   private:
     /**
      * This value is required for to extrapolate how the time step 
@@ -108,16 +118,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * time step choice.
      */
     double _previousAdmissibleTimeStepSize;
-    
-    /**
-     * The adaptive time stepping reduces the admissible time step size
-     * in its field _admissibleTimeStepSize. As we have enclave tasks from
-     * two different time steps active at any time, I backup the 
-     * admissible time step size and continue to reduce. This way, I get a
-     * mixture, but that's the price to pay for the increase of 
-     * asynchronicity.
-     */
-    double _admissibleTimeStepSizeAfterPrimaryGridSweep;
     
     /**
      * The _timeStepSize is fixed from the start of the primary sweep till
@@ -133,6 +133,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * to zero.
      */
     double _predictedTimeStepSize;
+    
+    bool _mergeEnclaveTaskOutcomeInSecondaryTraversal;
+    bool _spawnEnclaveTaskInPrimaryTraversal;
+    bool _dropOptimisticTaskInPrimaryTraversal;
+    bool _mergeOptimisticTaskOutcomeInSecondaryTraversal;
+    bool _spawnOptimisticTaskInSecondaryTraversal;
 };
 
 

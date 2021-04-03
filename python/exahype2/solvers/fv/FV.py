@@ -196,7 +196,7 @@ class HandleBoundary(AbstractFVActionSet):
         marker.x(),
         marker.h(),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        {{TIME_STEP_SIZE}},
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
@@ -684,8 +684,11 @@ In-situ preprocessing:  """
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
-  def setSolverConstants(self, datastring): self.solver_constants_ = datastring
-  def getSolverConstants(self): return self.solver_constants_
+  def set_solver_constants(self, datastring): self.solver_constants_ = datastring
+
+  def add_solver_constants(self, datastring): self.solver_constants_ += datastring
+
+  def get_solver_constants(self): return self.solver_constants_
 
 
   def _init_dictionary_with_default_parameters(self,d):

@@ -43,6 +43,8 @@ class exahype2::EnclaveBookkeeping {
      * for details.
      */
     std::unordered_map<int, std::pair<int,double*> >       _finishedTasks;
+    
+    std::set<int>  _tasksThatHaveToBeCancelled;
 
     tarch::multicore::BooleanSemaphore  _finishedTasksSemaphore;
 
@@ -58,6 +60,22 @@ class exahype2::EnclaveBookkeeping {
     void dumpStatistics();
 
     void waitForTaskToTerminateAndCopyResultOver(int number, double* destination);
+    
+    /**
+     * You have the sole ownership of the result which should be deleted 
+     * later via 
+     * <pre>
+    
+  tarch::freeMemory( result, tarch::MemoryLocation::Heap );
+    
+       </pre>
+     * 
+     * @return Tuple of an integer (how big is the result patch) and a pointer
+     *         to this patch.
+     */
+    std::pair<int, double*> waitForTaskToTerminateAndReturnResult(int number);
+
+    void cancelTask(int number);
 
     /**
      * Usually called directly by EnclaveTask.

@@ -32,306 +32,23 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   ); // previous time step has to be valid
     
   if (marker.isSkeletonCell()) {
-    {{PREPROCESS_RECONSTRUCTED_PATCH}}
-    
-    ::exahype2::fv::copyPatch(
-      reconstructedPatch,
-      originalPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1 // halo size
-    );
-
-    {% if USE_SPLIT_LOOP %}
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-    #endif
-    {% else %}
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-    #endif
-    {% endif %}
-      [&](
-        const double* __restrict__                   QL,
-        const double* __restrict__                   QR,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       FL[],
-        double                                       FR[]
-      ) -> void {
-        ::exahype2::fv::splitRusanov1d(
-          [] (
-           const double * __restrict__ Q,
-           const tarch::la::Vector<Dimensions,double>&  faceCentre,
-           const tarch::la::Vector<Dimensions,double>&  volumeH,
-           double                                       t,
-           double                                       dt,
-           int                                          normal,
-           double * __restrict__                        F
-          ) -> void {
-            {% if FLUX_IMPLEMENTATION=="<none>" %}
-            for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
-            {% else %}
-            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
-            {% endif %}
-          },
-          [] (
-            const double* __restrict__                   Q,
-            const double * __restrict__                  deltaQ,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       BgradQ[]
-          ) -> void {
-            {% if NCP_IMPLEMENTATION!="<none>" %}
-            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
-            {% endif %}
-          },
-          [] (
-            const double* __restrict__                   Q,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-          ) -> double {
-            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-          },
-          QL, QR, x, dx, t, dt, normal,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR,
-          {% if FLUX_IMPLEMENTATION=="<none>" %}
-          true,
-          {% else %}
-          false,
-          {% endif %}
-          {% if NCP_IMPLEMENTATION=="<none>" %}
-          true
-          {% else %}
-          false
-          {% endif %}
-        );
-      },
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        double * __restrict__                        S
-      ) -> void {
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(
-          Q,
-          x, dx, t, dt, 
-          S
-        );
-      },
-      marker.x(),
-      marker.h(),
-      {{TIME_STAMP}},
-      {{TIME_STEP_SIZE}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      reconstructedPatch,
-      originalPatch
-    );
-    
-    {{FREE_SKELETON_MEMORY}}
-    {{POSTPROCESS_UPDATED_PATCH}}
-
-    double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-      [] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-      },
-      marker.x(),
-      marker.h(),
-      {{TIME_STAMP}},
-      {{TIME_STEP_SIZE}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      originalPatch
-    );
-
-    repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
-  }
-  else { // is an enclave cell
-    auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
-      {{PREPROCESS_RECONSTRUCTED_PATCH}}
-      
-      ::exahype2::fv::copyPatch(
-        reconstructedPatch,
-        originalPatch,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        1 // halo size
-      );
-
-      {% if USE_SPLIT_LOOP %}
-      #if Dimensions==2
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-      #else
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-      #endif
-      {% else %}
-      #if Dimensions==2
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-      #else
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-      #endif
-      {% endif %}
-        [&](
-          const double* __restrict__                   QL,
-          const double* __restrict__                   QR,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       dx,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double                                       FL[],
-          double                                       FR[]
-        ) -> void {
-        ::exahype2::fv::splitRusanov1d(
-          [] (
-           const double * __restrict__ Q,
-           const tarch::la::Vector<Dimensions,double>&  faceCentre,
-           const tarch::la::Vector<Dimensions,double>&  volumeH,
-           double                                       t,
-           double                                       dt,
-           int                                          normal,
-           double * __restrict__                        F
-          ) -> void {
-            {% if FLUX_IMPLEMENTATION=="<none>" %}
-            for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
-            {% else %}
-            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
-            {% endif %}
-          },
-          [] (
-            const double* __restrict__                   Q,
-            const double * __restrict__                  deltaQ,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       BgradQ[]
-          ) -> void {
-            {% if NCP_IMPLEMENTATION!="<none>" %}
-            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
-            {% endif %}
-          },
-          [] (
-            const double* __restrict__                   Q,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-          ) -> double {
-            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-          },
-          QL, QR, x, dx, t, dt, normal,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR,
-          {% if FLUX_IMPLEMENTATION=="<none>" %}
-          true,
-          {% else %}
-          false,
-          {% endif %}
-          {% if NCP_IMPLEMENTATION=="<none>" %}
-          true
-          {% else %}
-          false
-          {% endif %}
-        );
-        },
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        double * __restrict__                        S
-      ) -> void {
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(
-          Q,
-          x, dx, t, dt, 
-          S
-        );
-      },
-        marker.x(),
-        marker.h(),
-        t,
-        dt,
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        reconstructedPatch,
-        originalPatch
-      );
-      
-      {{POSTPROCESS_UPDATED_PATCH}}
-
-      double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-        [] (
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> double {
-          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-        },
-        marker.x(),
-        marker.h(),
-        t,
-        dt,
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        originalPatch
-      );
-
-      repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
-    };
-
-    static int enclaveTaskTypeId = peano4::parallel::Tasks::getTaskType("{{SOLVER_INSTANCE}}");
-    ::exahype2::EnclaveTask* newEnclaveTask = new ::exahype2::EnclaveTask(
-      enclaveTaskTypeId,
+    tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
-      {{TIME_STAMP}},
-      {{TIME_STEP_SIZE}},
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       reconstructedPatch,
-      #if Dimensions==2
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
-      #else
-      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
-      #endif
-      perCellFunctor
-    );    
+      originalPatch
+    );
+  
+  }
+  else {
+    assertion( marker.isEnclaveCell() );
+    ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+      marker,
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+      reconstructedPatch
+    );
           
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
 
@@ -344,11 +61,10 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   """      
     
     
-  def __init__(self,solver,use_split_loop=False):
+  def __init__(self,solver):
     d = {}
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
-    d["USE_SPLIT_LOOP"] = use_split_loop      
     
     ReconstructPatchAndApplyFunctor.__init__(self,
       solver._patch,
@@ -369,13 +85,9 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 
   def get_includes(self):
     return ReconstructPatchAndApplyFunctor.get_includes(self) + """
-#include "exahype2/fv/Generic.h"
-#include "exahype2/fv/Rusanov.h"
-#include "exahype2/EnclaveBookkeeping.h"
-#include "exahype2/EnclaveTask.h"
-#include "exahype2/SmartEnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
+#include "tasks/""" + self._solver._name + """EnclaveTask.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_includes() 
 
 
@@ -383,44 +95,30 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
   def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, time_step_relaxation=0.1):
     """
     
-    A fixed time stepping scheme with enclave tasking
+    An adaptive time stepping scheme with enclave tasking
     
     This is a simple implementation of a FV scheme using a generic 
     Rusanov solver. It applies the concept of enclave tasking and 
     thus exhibits a higher concurrency level than a plain FV 
-    counterpart. The price to pay is a higher memory pressure and 
-    further admin overhead.
+    counterpart. The code also adds adaptive time stepping, i.e. the
+    solver analyses the eigenvalues and sets the time step size 
+    accordingly.
     
-    Algorithmic workflow:
+    !! Adding your own includes and source code 
     
-    The enclave tasking variant here is simpler than the original
-    enclave tasking as proposed by Charrier et al. The reason that 
-    we keep it simpler is that the baseline code scales better.
-    Therefore, it is reasonable to keep the enclave complexity and
-    overhead down more aggressively.
+    To add further includes to the generated task, add them to your
+    solver via a statement similar to 
+    <pre>
     
-    The basic idea behind enclave tasking is that each time step 
-    consists of two grid sweeps and that we distinguish enclave 
-    tasks from skeleton cells. Skeleton cells are cells that are
-    adjacent to a resolution transition or adjacent to a domain 
-    boundary. The FV steps are distributed among these two sweeps
-    as follows:
+self.additional_includes += " ""
+ #include "../CCZ4Kernels.h"
+" ""
     
-    image:: GenericRusanovFixedTimeStepSizeWithEnclaves_state-transitions.svg
+    </pre>
     
-    The variant of enclave tasking as it is discussed here has nothing
-    in common with the fused tasking as discussed by Charrier and 
-    Weinzierl.
+    The actual task will be dumped into a subdirectory task, so the .. 
+    ensures that the relative path starts at the project's root.
     
-    
-    
-    Methods:
-  
-    We extend the superclass' add_actions_to_perform_time_step(), 
-    add_to_Peano4_datamodel() and add_use_data_statements_to_Peano4_solver_step().
-    For the actions, I add a further action which administers the task
-    spawning over the enclaves. I plug into the data model routines to 
-    add the marker to the cell which holds the semaphore/cell number.      
     
     """
     self._time_step_relaxation                = time_step_relaxation
@@ -432,14 +130,14 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
   
   def add_entries_to_text_replacement_dictionary(self,d):
     """
+    
+     TIME_STAMP and TIME_STEP_RELAXATION
      
      d: Dictionary of string to string
         in/out argument
     
     """
     EnclaveTaskingFV.add_entries_to_text_replacement_dictionary(self,d)
-    d[ "TIME_STEP_SIZE" ]                     = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStepSize()"
-    d[ "TIME_STAMP" ]                         = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
     d[ "TIME_STEP_RELAXATION" ]               = self._time_step_relaxation
    
 
@@ -447,3 +145,39 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
     EnclaveTaskingFV.create_action_sets(self)
 
     self._action_set_update_cell = UpdateCellWithEnclaves(self)
+
+
+  def _enclave_task_name(self):
+    return self._name + "EnclaveTask"
+
+
+  def add_implementation_files_to_project(self,namespace,output):
+    """
+
+      Add the enclave task for the GPU
+
+    """
+    EnclaveTaskingFV.add_implementation_files_to_project(self,namespace,output)
+
+    # TODO this is not working if we have inheritance
+    # templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
+    templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "GenericRusanovAdaptiveTimeStepSizeWithEnclaves")
+
+
+    implementationDictionary = {}
+    self._init_dictionary_with_default_parameters(implementationDictionary)
+    self.add_entries_to_text_replacement_dictionary(implementationDictionary)
+
+    task_name = self._enclave_task_name()
+
+    generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
+      templatefile_prefix + ".EnclaveTask.template.h",
+      templatefile_prefix + ".EnclaveTask.template.cpp",
+      task_name,
+      namespace + [ "tasks" ],
+      "tasks",
+      implementationDictionary,
+      True)
+
+    output.add( generated_solver_files )
+    output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )

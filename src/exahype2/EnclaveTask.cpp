@@ -32,7 +32,7 @@ exahype2::EnclaveTask::EnclaveTask(
 
 
 bool exahype2::EnclaveTask::run() {
-  logTraceIn( "run()" );
+  logTraceInWith1Argument( "run()", getTaskId() );
   _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
   _functor(_inputValues,_outputValues,_marker,_t,_dt);

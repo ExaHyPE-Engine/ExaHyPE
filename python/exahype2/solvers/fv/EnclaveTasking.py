@@ -125,12 +125,10 @@ class EnclaveTaskingFV( FV ):
     FV.create_data_structures(self)
     self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
 
-    ## @todo check
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
       self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
       self._primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
-
     
     self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate
     self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._primary_sweep_or_plot_predicate
@@ -176,8 +174,9 @@ class EnclaveTaskingFV( FV ):
       ")"
     )
     self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate)
-                                                                                 
-
+    self._merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+    
+    
   def set_implementation(self,
     flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
@@ -295,7 +294,7 @@ class EnclaveTaskingFV( FV ):
     """
     FV.add_actions_to_perform_time_step(self,step)
     step.add_action_set( exahype2.grid.EnclaveLabels(self._name) ) 
-    step.add_action_set( MergeEnclaveTaskOutcome(self) )
+    step.add_action_set( self._merge_enclave_task_outcome )
  
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):

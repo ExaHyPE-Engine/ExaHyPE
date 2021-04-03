@@ -25,7 +25,11 @@ namespace tarch {
 
 
 /**
- * Boolean Semaphore
+ * Boolean semaphore accross MPI ranks
+ *
+ * This means that only one thread on one rank gets access to a certain code region. 
+ * Different to shared memory semaphores, the MPI+X sempahores require a dedicated
+ * identifier.
  *
  * @see Constructor for details
  *

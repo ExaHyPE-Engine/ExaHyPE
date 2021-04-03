@@ -811,10 +811,12 @@ const peano4::grid::Spacetree&  peano4::parallel::SpacetreeSet::getSpacetree(int
 }
 
 
-void peano4::parallel::SpacetreeSet::orderedBarrier(const std::string& identifier) {
-  logTraceIn( "orderedBarrier()" );
+bool peano4::parallel::SpacetreeSet::synchroniseFirstThreadPerRank(const std::string& identifier) {
+  logTraceIn( "synchroniseFirstThreadPerRank()" );
 
   static tarch::multicore::BooleanSemaphore  semaphore;
+
+  bool isFirstBarrierHitOnThisRank = false;
 
   {
     tarch::multicore::Lock lock(semaphore);
@@ -832,9 +834,11 @@ void peano4::parallel::SpacetreeSet::orderedBarrier(const std::string& identifie
         }
       );
       _hasPassedOrderedBarrier[ identifier ] = true;
+      isFirstBarrierHitOnThisRank            = true;
     }
   }
 
-  logTraceOut( "orderedBarrier()" );
+  logTraceOutWith1Argument( "synchroniseFirstThreadPerRank()", isFirstBarrierHitOnThisRank );
+  return isFirstBarrierHitOnThisRank;
 }
 

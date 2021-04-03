@@ -707,31 +707,23 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     std::set<int> getLocalSpacetrees() const;
 
     /**
-     * Try to order the thread execution to some degree.
+     * Synchronise first thread per rank 
      *
-     * This routine is used by some plotters and other routines. It basically works
-     * as follows:
-     *
-     * - The first thread that hits the barrier in a set traversal synchronises with
-     *   all other ranks. All other local threads have to wait meanwhile.
-     * - After that, the other ranks are allowed to pass one by one.
-     *
-     * The name is misleading, as the barrier per se does not really order stuff.
-     * However, you can use the barrier to impose an ordering: You can invoke the
-     * barrier on three 0 after you've done critical stuf and you can invoke it on
-     * all other ranks before you do critical stuff.
-     *
+     * This routine synchronises the ranks weakly. It waits until one (arbitrary)
+     * thread per rank hits a barrier. After that, all following threads are just
+     * piped through and they do not have wait wait anymore. In the next grid
+     * iteration, we again synchronise the first thread.
      *
      * <h2> Usage </h2>
      *
      * The class behaves similar to any other barrier, i.e. you have to call it on
-     * all ranks. You may call it on all threads per rank, too. The first thread
+     * all ranks. You may call it on all threads per rank, too, but you don't have
+     * to. The first thread
      * that encounters the barrier will synchronise with all the other ranks. The
      * other threads will not sync anymore, i.e. you can have different thread counts
      * per rank, but they will not continue concurrently.
      *
      * You can use a barrier with an identifier only once per iteration.
-     *
      *
      * <h2> Implementation </h2>
      *
@@ -741,8 +733,10 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * we enter a barrier.
      *
      * The barrier map is cleared once per iteration.
+     *
+     * @param identifier Unique string identifier of this particular barrier
      */
-    void orderedBarrier( const std::string& identifier );
+    bool synchroniseFirstThreadPerRank( const std::string& identifier );
     
 };
 
