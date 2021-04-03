@@ -11,7 +11,11 @@
 #include "tarch/la/Vector.h"
 
 #include "peano4/utils/Globals.h"
+
+#ifdef IncludeTwoPunctures
 #include "libtwopunctures/TP_bindding.h"
+#endif
+
 
 namespace examples {
   namespace exahype2 {
@@ -26,12 +30,15 @@ namespace examples {
         const tarch::la::Vector<Dimensions,double>&  X,
         double t
       );
+
+      #ifdef IncludeTwoPunctures
       void ApplyTwoPunctures(
         double * __restrict__ Q, // Q[64+0],
         const tarch::la::Vector<Dimensions,double>&  X,
         double t,
 	TP::TwoPunctures* tp
       );
+      #endif
     }
   }
 }

@@ -73,6 +73,8 @@ void examples::exahype2::ccz4::linearWave(
   Q[54] = log(1.0) ;		//ln(\phi)
 }
 
+
+#ifdef IncludeTwoPunctures
 void examples::exahype2::ccz4::ApplyTwoPunctures(
   double * __restrict__ Q, // Q[64+0],
   const tarch::la::Vector<Dimensions,double>&  X,
@@ -99,5 +101,5 @@ void examples::exahype2::ccz4::ApplyTwoPunctures(
 
   //exit(0);
 }
-
+#endif
 

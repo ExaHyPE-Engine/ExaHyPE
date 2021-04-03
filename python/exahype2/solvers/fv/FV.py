@@ -684,8 +684,11 @@ In-situ preprocessing:  """
     output.makefile.add_cpp_file( "Abstract" + self._name + ".cpp" )
     output.makefile.add_cpp_file( self._name + ".cpp" )
 
-  def setSolverConstants(self, datastring): self.solver_constants_ = datastring
-  def getSolverConstants(self): return self.solver_constants_
+  def set_solver_constants(self, datastring): self.solver_constants_ = datastring
+
+  def add_solver_constants(self, datastring): self.solver_constants_ += datastring
+
+  def get_solver_constants(self): return self.solver_constants_
 
 
   def _init_dictionary_with_default_parameters(self,d):

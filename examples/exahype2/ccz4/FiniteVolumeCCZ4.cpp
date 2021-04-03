@@ -14,10 +14,6 @@
 #include <stdio.h>
 #include <string.h>
 
-//#include "libtwopunctures/TP_bindding.h"
-
-//using namespace TP_bindding;
-TP::TwoPunctures* tp = new TP::TwoPunctures();
 
 tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "examples::exahype2::ccz4::FiniteVolumeCCZ4" );
 examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
@@ -26,10 +22,12 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
     int length = strlen(name);
     //initparameters_(&length, name);
   }
+  #ifdef IncludeTwoPunctures
   if ( Scenario==2 ) {
     TP_bindding::prepare(tp);//we solve the puncture equation here.
     //exit(0);
   }
+  #endif
   else {
     std::cerr << "initial scenario " << Scenario << " is not supported" << std::endl << std::endl << std::endl;
   }
@@ -51,9 +49,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
     else if ( Scenario==1 ) {
       examples::exahype2::ccz4::linearWave(Q, volumeX, t);
     }
+    #ifdef IncludeTwoPunctures
     else if ( Scenario==2 ) {
       examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, t, tp); //we interpolate for real IC here.
     }
+    #endif
     else {
       logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
     }

@@ -14,6 +14,8 @@
 
 #include "tarch/logging/Log.h"
 
+#include "libtwopunctures/TwoPunctures.h"
+
 namespace examples {
   namespace exahype2 {
     namespace ccz4 {
@@ -27,6 +29,10 @@ namespace examples {
 class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ4 {
   private:
     static tarch::logging::Log   _log;
+
+    #ifdef IncludeTwoPunctures
+    TP::TwoPunctures _tp;
+    #endif
 
   public:
     FiniteVolumeCCZ4();   
