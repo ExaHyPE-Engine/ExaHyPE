@@ -255,7 +255,7 @@ if __name__ == "__main__":
         self.add_solver_constants( """static constexpr int Scenario=1; /* Linear wave */  """ )
 
       def pick_two_puncture_scenario(self):
-        self.add_solver_constants( """static constexpr int Scenario=2; /* Two-puncture wave */  """ )
+        self.add_solver_constants( """static constexpr int Scenario=2; /* Two-puncture */  """ )
 
 
     userwarnings = []
@@ -341,7 +341,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1" )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv4" )
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 
