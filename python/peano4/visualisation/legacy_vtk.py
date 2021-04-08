@@ -104,7 +104,7 @@ if __name__ == "__main__":
                     args.filepath))
             sys.exit(1)
 
-        output_file = 'vtk_file_' + os.path.basename(args.filepath)
+        output_file = 'vtk_file_' + os.path.basename(args.filepath).replace('.peano-patch-file','.txt')
         peano_patch_to_legacy_vtk_2d(args.filepath, output_file)
 
     if args.metafile:
@@ -122,7 +122,7 @@ if __name__ == "__main__":
                     patch_file_names.append(words[1].strip('"'))
 
         for file in patch_file_names:
-            output_file = 'vtk_file_' + file
+            output_file = 'vtk_file_' + file.replace('.peano-patch-file', '.txt')
             peano_patch_to_legacy_vtk_2d(
                 os.path.join(
                     os.path.dirname(
