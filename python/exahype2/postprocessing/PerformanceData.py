@@ -165,7 +165,7 @@ class PerformanceData(object):
           self._simulated_time_stamp.append( float( line.split("=")[-1]) )
 
         if "finest mesh resolution of" in line:
-          token = line.split( "h_min=[" )[1].split(",")[0]
+          token = line.split( "finest mesh resolution of " )[1].split("reached")[0]
           self._h = float(token)
           print( "h_min=" + str(self._h) )
           
@@ -300,6 +300,11 @@ def extract_times_per_step(performance_data_points,show_data_for_last_time_step,
   """
      
    Returns a tuple of arrays to be plotted
+   
+   max_cores_per_rank: Integer
+    Should be set to -1 if you analyse single node data. Should be set to 0 if you have only
+    one core count measurement per rank count. Should be set to something bigger than 0 if 
+    you scale over both the mpi rank count and the core count.
     
   """
   x_data = []
@@ -307,9 +312,13 @@ def extract_times_per_step(performance_data_points,show_data_for_last_time_step,
     
   for point in performance_data_points:
     if point.total_time_stepping_steps>0:
-      x_value = point._ranks
+      x_value = 0.0
       if max_cores_per_rank>0:
-        x_value += 0.5*point._threads/max_cores_per_rank
+        x_value = point._ranks + 0.5*point._threads/max_cores_per_rank
+      if max_cores_per_rank==0:
+        x_value = point._ranks
+      if max_cores_per_rank<0:
+        x_value = point._threads
       insert_at_position = 0
       while insert_at_position<len(x_data) and x_data[insert_at_position]<x_value:
         insert_at_position += 1
