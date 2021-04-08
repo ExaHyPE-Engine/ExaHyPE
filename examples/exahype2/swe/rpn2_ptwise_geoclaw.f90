@@ -74,7 +74,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     ixy = ixy+1
     
     !inform of a bad riemann problem from the start
-    if (qr(1) < 0.d0 .or. ql(1) < 0.d0) then
+    if (qr(1) < -0.0000001d0 .or. ql(1) < -0.0000001d0) then
         print *, "Negative input: hl, hr = ", qr(1), ql(1)
         stop 
     end if
