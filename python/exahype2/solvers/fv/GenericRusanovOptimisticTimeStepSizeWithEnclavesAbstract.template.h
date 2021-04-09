@@ -38,15 +38,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
-      Primary,
-      PrimaryWithRollback,
-      Secondary,
-      /**
-       * Only used temporarily to flag a posteriori if something has gone wrong
-       */
-      SecondaryWithInvalidRollback,
-      PlottingInitialCondition,
       PrimaryAfterGridInitialisation,
+      Primary,
+      Secondary,
+      PlottingInitialCondition,
       Plotting
     };
 
@@ -105,9 +100,45 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
      
+    double getPredictedTimeStepSize() const;
+    
+    bool spawnEnclaveTaskInPrimaryTraversal() const;
+    bool mergeEnclaveTaskOutcomeInSecondaryTraversal() const;
+    bool spawnOptimisticTaskInSecondaryTraversal() const;
+    bool mergeOptimisticTaskOutcomeInSecondaryTraversal() const;
+    bool dropOptimisticTaskInPrimaryTraversal() const;
+
     {% include "AbstractSolverAdaptiveTimeStepSize.template.h" %}
+
+    
   private:
+    /**
+     * This value is required for to extrapolate how the time step 
+     * size changes in the future, i.e. it is reqiured for our biased
+     * time step choice.
+     */
     double _previousAdmissibleTimeStepSize;
+    
+    /**
+     * The _timeStepSize is fixed from the start of the primary sweep till
+     * the end of the secondary one. If the predicted time step size is set
+     * to zero (or smaller), then we do not issue any optimistic time step 
+     * sizes and we also have to undo any time steps used before.
+     *
+     * In the secondary sweep, we use the predictedTimeStepSize (if it is
+     * bigger than zero) to issue some tasks optimistically. After the 
+     * secondary grid sweep, we roll over the predictedTimeStepSize into 
+     * _timeStepSize if it had been admissible. If it has not been admissible,
+     * we set _timeStepSize to the valid one and reset the predicted value 
+     * to zero.
+     */
+    double _predictedTimeStepSize;
+    
+    bool _mergeEnclaveTaskOutcomeInSecondaryTraversal;
+    bool _spawnEnclaveTaskInPrimaryTraversal;
+    bool _dropOptimisticTaskInPrimaryTraversal;
+    bool _mergeOptimisticTaskOutcomeInSecondaryTraversal;
+    bool _spawnOptimisticTaskInSecondaryTraversal;
 };
 
 

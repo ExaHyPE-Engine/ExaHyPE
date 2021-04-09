@@ -43,9 +43,11 @@ namespace exahype2 {
       const std::string& location = ""
     );
 
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
+    /**
+     * Copy the patch data from a patch representation with halo into
+     * a representation without halo. If you set haloSize to zero, then
+     * it is a direct memcopy.
+     */
     void copyPatch(
       const double* __restrict__  QinWithHalo,
       double* __restrict__        QOutWithoutHalo,
@@ -54,9 +56,6 @@ namespace exahype2 {
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize
     );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
 
     
     double maxEigenvalue_AoS(
@@ -175,25 +174,7 @@ namespace exahype2 {
       double * __restrict__                        Qout
     );
 
-    
-    /**
-     * The routine has exactly the same semantics as applySplit1DRiemannToPatch_Overlap1AoS2d()
-     * but runs through the faces slightly differently. 
-     *
-     * @image html applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop.png
-     *
-     * As in applySplit1DRiemannToPatch_Overlap1AoS2d(), we have two big
-     * blocks. The first one runs through all vertical faces, the second one 
-     * through all horizontal ones. Each block now runs through the whole data
-     * twice though with a spacing of two and an offset of 0 or 1. That is, 
-     * we run through every second face (faces 0, 2, 4 along the x-axis) and 
-     * then through the other ones (1,3,5,...). 
-     *
-     * Each face writes to its left and right adjacent volume in Qout. As we
-     * skip every second face, we know that all writes are parallel. No race
-     * conditions can arise. That is: Though we now run through the data structure
-     * twice, we can process the for loops embarassingly parallel.
-     */
+
     void applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
       std::function< void(
         const double * __restrict__ QL,
@@ -225,7 +206,7 @@ namespace exahype2 {
       double * __restrict__                        Qout
     );
 
-
+    
     void applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
       std::function< void(
         const double * __restrict__ QL,
@@ -255,6 +236,124 @@ namespace exahype2 {
       int                                          auxiliaryVariables,
       const double * __restrict__                  Qin,
       double * __restrict__                        Qout
+    );
+
+
+    
+    /**
+     * @param numberOfVolumesPerAxisInPatch That's the number of volumes in QOut, i.e.
+     *        Qin has numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin volumes per 
+     *        axis.
+     * @param copyPredicate Define per image volume whether to copy over or not, i.e. 
+     *        argument in functor is position of image voxel (0<=i<numberOfVolumesPerAxisInPatch).
+     */
+    void copyPatch(
+      const double* __restrict__  QinWithHalo,
+      double* __restrict__        QOutWithoutHalo,
+      int    unknowns,
+      int    auxiliaryVariables,
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSize,
+      std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        copyPredicate
+    );
+
+    /**
+     * Insert a (small) subpatch into another patch
+     *
+     * I assume that Qin is a subpatch inside QOut and that its values are to
+     * be inserted. I use this routine for the optimistic tasking where I
+     * compute partial results ahead of time and then have to insert them into
+     * the solution later on.
+     *
+     * @param numberOfVolumesPerAxisInPatch That's the number of volumes in QOut, i.e.
+     *        Qin has numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin volumes per 
+     *        axis.
+     */
+    void insertPatch(
+      const double* __restrict__  Qin,
+      double* __restrict__        QOut,
+      int    unknowns,
+      int    auxiliaryVariables,
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSizeAroundQin
+    );
+
+    /**
+     * A dimension-generic implementation of the update with guard
+     *
+     * This is a dimension-generic implementation of the patch update which
+     * is realised in a cell-wise manner: I loop over the whole image patch
+     * and solve 2d Riemann problems per cell. This is (usually) very
+     * inefficient, as we solve each Riemann problem twice even though we
+     * could take the solution and immediately pass it into two adjacent
+     * cells. The implementation also exhibits no internal parallelism
+     * compared to its dimension-specific peers which even exist in various
+     * implementation variants.
+     *
+     * The big advantage is that this implementation has a guard predicate.
+     * With the functor, you can determine which cells of the image are to
+     * be updated. I use this routine to update the skeleton around a cell.
+     */
+    void applySplit1DRiemannToPatch_Overlap1AoS(
+      std::function< void(
+        const double * __restrict__ QL,
+        const double * __restrict__ QR,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal,
+        double * __restrict__ FL,
+        double * __restrict__ FR
+      ) >   splitRiemannSolve1d,
+      std::function< void(
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&           volueCentre,
+        double                                       volumeH,
+        double                                       t,
+        double                                       dt,
+        double * __restrict__ S
+      ) >   sourceTerm,
+      const tarch::la::Vector<Dimensions,double>&           patchCentre,
+      const tarch::la::Vector<Dimensions,double>&           patchSize,
+      double                                       t,
+      double                                       dt,
+      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      const double * __restrict__                  Qin,
+      double * __restrict__                        Qout,
+      std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        updatePredicate
+    );        
+
+    /**
+     * Compute maximum eigenvalue over selection of patch
+     *
+     * This is an extended alternative to maxEigenvalue_AoS(). It is less efficient
+     * as I wrote it completely dimension-generic. However, it allows you to filter
+     * out voxels, i.e. you can determine via the functor which volumes of the
+     * image to update or not.
+     *
+     * @see maxEigenvalue_AoS()
+     */
+    double maxEigenvalue_AoS(
+      std::function< double(
+        const double * __restrict__ Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) >   eigenvalues,
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchSize,
+      double                                       t,
+      double                                       dt,
+      int                                          numberOfVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      const double * __restrict__                  Q,
+      std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        analysePredicate
     );
   }
 }

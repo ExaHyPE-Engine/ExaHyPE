@@ -30,3 +30,15 @@ bool toolbox::loadbalancing::NoLoadBalancing::hasSplitRecently() const {
 
 void toolbox::loadbalancing::NoLoadBalancing::enable(bool value) {
 }
+
+
+bool toolbox::loadbalancing::NoLoadBalancing::isEnabled(bool globally) const {
+  return false;
+}
+
+
+int toolbox::loadbalancing::NoLoadBalancing::getGlobalNumberOfTrees() const {
+  return -1;
+}
+
+

@@ -9,8 +9,7 @@ ToolboxLoadBalancing_SOURCES = \
   Hardcoded.cpp \
   loadbalancing.cpp \
   NoLoadBalancing.cpp \
-  RecursiveSubdivision.cpp \
-  TwoLevelGreedy.cpp
+  RecursiveSubdivision.cpp
   
 
 libToolboxLoadBalancing2d_a_CXXFLAGS         = -DDimensions=2 -DPeanoDebug=0 

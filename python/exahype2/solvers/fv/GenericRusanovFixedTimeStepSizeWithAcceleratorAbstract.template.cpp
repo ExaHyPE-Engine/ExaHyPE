@@ -106,6 +106,9 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 
 
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -120,10 +123,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
   {% endif %}
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 {% endif %}
 
 
-{% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
+{% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -134,7 +140,9 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
   double                                       t,
   int                                          normal
 ) {
+  {% if EIGENVALUES_IMPLEMENTATION!="<none>" %}
   {{EIGENVALUES_IMPLEMENTATION}}
+  {% endif %}
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
@@ -142,7 +150,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
 {% endif %}
 
 
-{% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
+{% if FLUX_IMPLEMENTATION!="<user-defined>" %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -154,7 +162,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
  int                                          normal,
  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
+  {% if FLUX_IMPLEMENTATION!="<none>" %}
   {{FLUX_IMPLEMENTATION}}
+  {% endif %}
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
@@ -162,20 +172,22 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
 {% endif %}
 
 
-{% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
+{% if NCP_IMPLEMENTATION!="<user-defined>" %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+  const double * __restrict__                  Q,         // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__                  deltaQ,    // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+  double * __restrict__                        BgradQ     // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
+  {% if NCP_IMPLEMENTATION!="<none>" %}
   {{NCP_IMPLEMENTATION}}
+  {% endif %}
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target

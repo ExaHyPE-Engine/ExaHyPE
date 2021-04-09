@@ -110,36 +110,40 @@ class PlotParticlesInVTKFormat(ActionSet):
 
 
   __Template_BeginTraversal = jinja2.Template("""
-  static int rankLocalCounter = 0;
-  static tarch::mpi::BooleanSemaphore booleanSemaphore("{{FILENAME}}");
-  static bool calledBefore = false;
+  static int counter = 0;
 
-  int counter;
-  {
-    tarch::mpi::Lock lock(booleanSemaphore);
-    counter = rankLocalCounter;
-    rankLocalCounter++;
-  }
+  static tarch::multicore::BooleanSemaphore localSemaphore;
+  tarch::multicore::Lock  localLock( localSemaphore );
+
+  int isFirstBarrierHitOnThisRank = ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{{FILENAME}}-init");
+
   std::ostringstream snapshotFileName;
-  snapshotFileName << "{{FILENAME}}" << "-tree-" << _treeNumber << "-" << counter;
+  snapshotFileName << "{FILENAME}" << "-" << counter;
 
-  // This stuff only ensures that the overview file remains correct. The
-  // sync and add of the individual dumps is then managed within the actual
-  // plotter files.
-  if ( _treeNumber==0 and not calledBefore ) {
-    calledBefore = true;
-    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}}, snapshotFileName.str(), "{{FILENAME}}",tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew);
-    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{{FILENAME}}");
+  if ( counter==0 and isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
+    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+      Dimensions, snapshotFileName.str(), "{FILENAME}",
+      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::CreateNew
+    );    
   }
-  else if ( _treeNumber==0 ) {
-    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}}, snapshotFileName.str(), "{{FILENAME}}",tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet);
-    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{{FILENAME}}");
+  else if ( isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
+    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+      Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet
+    );
   }
-  else {
-    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{{FILENAME}}");
-    _writer     = new tarch::plotter::pointdata::vtk::VTKWriter({{WRITE_BINARY}}, snapshotFileName.str(), "{{FILENAME}}",tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData);
-  }
+  
+  counter++;
 
+  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-write");
+
+  if ( _writer==nullptr ) {
+    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+      Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
+    );
+  }
+  
   _positionWriter    = _writer->createPointDataWriter( "x", 3 );
   _cutOffWriter      = _writer->createPointDataWriter( "cut-off-radius", 1 );
   _associationWriter = _writer->createPointDataWriter( "association", 3 );

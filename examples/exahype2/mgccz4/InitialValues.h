@@ -5,8 +5,8 @@
  *
  */
 
-#ifndef __EXAHYPE_CCZ4_INITIAL_VALUE__
-#define __EXAHYPE_CCZ4_INITIAL_VALUE__
+#ifndef __EXAHYPE_MGCCZ4_INITIAL_VALUES__
+#define __EXAHYPE_MGCCZ4_INITIAL_VALUES__
 
 
 
@@ -21,10 +21,20 @@
 
 namespace examples {
   namespace exahype2 {
-    namespace ccz4 {
+    namespace mgccz4 {
       void gaugeWave(
         double * __restrict__ Q, // Q[64+0],
         const tarch::la::Vector<Dimensions,double>&  x,
+        double t
+      );
+      void linearWave(
+        double * __restrict__ Q, // Q[64+0],
+        const tarch::la::Vector<Dimensions,double>&  X,
+        double t
+      );
+      void forcedflat(
+        double * __restrict__ Q, // Q[64+0],
+        const tarch::la::Vector<Dimensions,double>&  X,
         double t
       );
     }

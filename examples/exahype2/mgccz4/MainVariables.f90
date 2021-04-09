@@ -25,7 +25,7 @@
     INTEGER, PARAMETER             	:: nDim = 2                   ! The number of space dimensions
 #endif
 	INTEGER, PARAMETER             	:: nAux = 0
-    INTEGER, PARAMETER             	:: nVar = 64                           ! The number of variables of the PDE system
+    INTEGER, PARAMETER             	:: nVar = 64                          ! The number of variables of the PDE system 
     INTEGER, PARAMETER 				:: nLin = 0
 	INTEGER, PARAMETER				:: nParam=0
 	INTEGER, PARAMETER				:: d=3
@@ -34,9 +34,9 @@
   CHARACTER(LEN=20) :: ICType
   TYPE, bind(C) :: tEquations
       REAL(8)    :: gamma, Pi, c0, g = 9.81D0, friction = 1.0D0     
-      REAL(8)    :: CCZ4k1, CCZ4k2, CCZ4k3, CCZ4eta, CCZ4itau, CCZ4f, CCZ4g, CCZ4xi, CCZ4e, CCZ4c, CCZ4mu, CCZ4ds, CCZ4sk, CCZ4bs  
-      REAL(8)    :: CCZ4GLMc0 = 0.5D0, CCZ4GLMc = 0.75D0, CCZ4GLMd = 0.75D0, CCZ4GLMepsD = 1D-2, CCZ4GLMepsA = 1D-2, CCZ4GLMepsP = 1D-2, cs, alpha, beta, lambda, cv, rho0, p0, tau1, tau2, mu, kappa ,tau 
-      INTEGER :: CCZ4LapseType, EinsteinAutoAux = 0, ReferenceDepth = 1    
+      REAL(8)    :: MGCCZ4k1, MGCCZ4k2, MGCCZ4k3, MGCCZ4eta, MGCCZ4itau, MGCCZ4f, MGCCZ4g, MGCCZ4xi, MGCCZ4e, MGCCZ4c, MGCCZ4mu, MGCCZ4ds, MGCCZ4sk, MGCCZ4bs  
+      REAL(8)    :: MGCCZ4GLMc0 = 0.5D0, MGCCZ4GLMc = 0.75D0, MGCCZ4GLMd = 0.75D0, MGCCZ4GLMepsD = 1D-2, MGCCZ4GLMepsA = 1D-2, MGCCZ4GLMepsP = 1D-2, cs, alpha, beta, lambda, cv, rho0, p0, tau1, tau2, mu, kappa ,tau 
+      INTEGER :: MGCCZ4LapseType, EinsteinAutoAux = 0, ReferenceDepth = 1    
       REAL(8)    :: DivCleaning_a = 1.0D0 
   END TYPE tEquations
   TYPE(tEquations), bind(C, name="mainVar_eqn") :: EQN

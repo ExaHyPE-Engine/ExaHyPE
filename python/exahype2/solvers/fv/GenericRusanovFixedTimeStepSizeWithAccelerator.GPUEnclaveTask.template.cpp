@@ -4,30 +4,47 @@
 
 #include <algorithm>
 
+#include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/fv/Rusanov.h"
+
+#include "peano4/parallel/Tasks.h"
+
+#include "config.h"
 
 #ifdef UseNVIDIA
 #include <nvToolsExt.h>
 #endif
 
+
 {{INCLUDES}}
 
 
-tarch::multicore::BooleanSemaphore {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchsema;
-tarch::logging::Log  {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}", false) );
 
-#if Dimensions==2
-std::vector<std::tuple<double*, const double, int, double, double, double, double> > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchkeeper;
-#elif Dimensions==3
-std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_patchkeeper;
-#endif
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(double* __restrict__  reconstructedPatch, const ::peano4::datamanagement::CellMarker& marker, double* __restrict__  targetPatch) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
+  const ::peano4::datamanagement::CellMarker& marker,
+  double                                      t,
+  double                                      dt,
+  double* __restrict__                        reconstructedPatch,
+  double* __restrict__                        targetPatch
+) {
   {{PREPROCESS_RECONSTRUCTED_PATCH}}
+
+  ::exahype2::fv::copyPatch(
+    reconstructedPatch,
+    targetPatch,
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    1 // halo size
+  );
+
   #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
+  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(//_SplitLoop(
   #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
+  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(//_SplitLoop(
   #endif
     [&](
       const double* __restrict__                   QL,
@@ -100,8 +117,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
     },
     marker.x(),
     marker.h(),
-    repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-    repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+    t,
+    dt,
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
     {{NUMBER_OF_UNKNOWNS}},
     {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -114,94 +131,109 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runComputeKernelsOnSkeletonCell(
 }
 
 
-
-
-
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker&    marker,
-  double* __restrict__                           reconstructedPatch
+  double                                         t,
+  double                                         dt,
+  double* __restrict__                           reconstructedValues
 ):
-  tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),tarch::multicore::Task::DefaultPriority)
-{
+  tarch::multicore::Task(
+    tarch::multicore::reserveTaskNumber(),
+    _gpuEnclaveTaskId,
+    tarch::multicore::Task::DefaultPriority
+  ),
+  _marker(marker),
+  _t(t),
+  _dt(dt),
+  _reconstructedValues(reconstructedValues) {
   logTraceIn( "EnclaveTask(...)" );
   logTraceOut( "EnclaveTask(...)" );
-
-  const double timeStamp = repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp();
-  tarch::multicore::Lock myLock( _patchsema );
-#if Dimensions==2
-  _patchkeeper.push_back({reconstructedPatch, timeStamp, getTaskId(), marker.x()[0], marker.h()[0], marker.x()[1], marker.h()[1]});
-#elif Dimensions==3
-  _patchkeeper.push_back({reconstructedPatch, timeStamp, getTaskId(), marker.x()[0], marker.h()[0], marker.x()[1], marker.h()[1], marker.x()[2] , marker.h()[2]});
-#endif
-  myLock.free();
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
-  tarch::multicore::Lock myLock( _patchsema );
-  const int Nremain = _patchkeeper.size();
-  const int Nmax = {{NGRABMAX}}; // This needs to be a template argument --- this (among other things) depends on the patchsize and the machine so GPU memory needs to be taken into account
 
-#if Dimensions==2
-   std::vector<std::tuple<double*, const double, int, double, double, double, double> > localwork;
-#elif Dimensions==3
-   std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > localwork;
-#endif
+  double* outputValues = tarch::allocateMemory(_destinationPatchSize,tarch::MemoryLocation::Heap);
 
+  applyKernelToCell(
+    _marker,
+    _t,
+    _dt,
+    _reconstructedValues,
+    outputValues
+  );
 
-  if (Nmax==0)  localwork = std::move(_patchkeeper);
-  else
-  {
-     if (_patchkeeper.size()>0)
-     {
-        const int maxwork = std::min(Nremain, Nmax); // Don't request more work than there is
-        for (int i=1;i<maxwork+1;i++)
-        {
-           localwork.push_back(_patchkeeper[Nremain-i]);
-        }
-        _patchkeeper.resize(Nremain-maxwork);
-     }
-  }
-  myLock.free();
-
-  //
-  // If the user specifies some pre-processing, it is inserted here. If
-  // the preprocessing is empty, this loop should be removed by the
-  // compiler.
-  //
-  for (int i=0;i<static_cast<int>(localwork.size());i++) {
-    // const auto& marker =
-    // PREPROCESS_RECONSTRUCTED_PATCH has to go in here, but the marker can't be copied yet
-  }
-
-  if (localwork.size() >0)
-  {
-     double* destinationPatchOnCPU = ::tarch::allocateMemory(_destinationPatchSize*localwork.size(), ::tarch::MemoryLocation::Heap);
-#if Dimensions==2
-        ::exahype2::fv::Fusanov_2D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
-#elif Dimensions==3
-        ::exahype2::fv::Fusanov_3D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
-#endif
-           (1,{{TIME_STEP_SIZE}},  localwork, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize, {{SKIP_FLUX}}, {{SKIP_NCP}});
-
-     for (int i=0;i<static_cast<int>(localwork.size());i++)
-     {
-        const int taskid = std::get<2>(localwork[i]);
-        double* outpatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-        std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, outpatch);
-        {{POSTPROCESS_UPDATED_PATCH}}
-        ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, outpatch);
-        ::tarch::freeMemory(std::get<0>(localwork[i]), ::tarch::MemoryLocation::Heap);
-     }
-     ::tarch::freeMemory(destinationPatchOnCPU, ::tarch::MemoryLocation::Heap);
-  }
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,outputValues);
 
   logTraceOut( "run()" );
   return false;
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::prefetch() {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
+  #if GPUOffloading
+  return true;
+  #else
+  return false;
+  #endif
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks ) {
+  // @todo Debug
+  logInfo( "fuse(...)", "asked to fuse " << otherTasks.size() << " tasks into one large GPU task" );
+
+  assertion( not otherTasks.empty() );
+
+  // @todo Holger: This patch container also has to store the timestamp and time step size per patch
+  #if Dimensions==2
+  ::exahype2::fv::PatchContainer2d patchkeeper;
+  for (auto p: otherTasks) {
+    {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
+    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], _t, _dt});
+  }
+  #endif
+
+  #if Dimensions==3
+  ::exahype2::fv::PatchContainer3d patchkeeper;
+  for (auto p: otherTasks) {
+    {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
+    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], currentTask->_marker.x()[2] , currentTask->_marker.h()[2], _t, _dt});
+  }
+  #endif
+
+  //
+  // If the user specifies some pre-processing, it is inserted here. If
+  // the preprocessing is empty, this loop should be removed by the
+  // compiler.
+  //
+  //for (int i=0;i<static_cast<int>(localwork.size());i++) {
+    // const auto& marker =
+    // PREPROCESS_RECONSTRUCTED_PATCH has to go in here, but the marker can't be copied yet
+  //}
+
+  double* destinationPatchOnCPU = ::tarch::allocateMemory(
+    _destinationPatchSize*otherTasks.size(),
+    ::tarch::MemoryLocation::Heap
+  );
+  #if Dimensions==2
+  ::exahype2::fv::Fusanov_2D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
+  #elif Dimensions==3
+  ::exahype2::fv::Fusanov_3D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
+  #endif
+    (1, patchkeeper, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize, {{SKIP_FLUX}}, {{SKIP_NCP}});
+
+  for (int i=0;i<static_cast<int>(patchkeeper.size());i++) {
+    const int taskid = std::get<1>(patchkeeper[i]);
+    double* outpatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
+    std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, outpatch);
+    {{POSTPROCESS_UPDATED_PATCH}}
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, outpatch);
+    ::tarch::freeMemory(std::get<0>(patchkeeper[i]), ::tarch::MemoryLocation::Heap);
+  }
+  ::tarch::freeMemory(destinationPatchOnCPU, ::tarch::MemoryLocation::Heap);
+
+  return true;
 }
 

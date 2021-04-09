@@ -409,6 +409,11 @@ std::bitset<TwoTimesD> peano4::grid::Spacetree::areFacesLocal(GridVertex  vertic
 }
 
 
+void peano4::grid::Spacetree::informAboutDegeneratedTreeWhichHasBeenRemoved() {
+  _statistics.setRemovedEmptySubtree(true);
+}
+
+
 bool peano4::grid::Spacetree::isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]) {
   bool result = false;
   dfor2(k)
@@ -767,7 +772,7 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
       if ( vertex.getHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep() ) {
         logDebug( "updateVertexAfterLoad(...)", "vertex " << vertex.toString() << " may not be erased on tree " << _id << " as it is father of further refined vertices. Unroll flag" );
         vertex.setState( GridVertex::State::Refined );
-  	    _statistics.setCoarseningHasBeenVetoed(true);
+        _statistics.setCoarseningHasBeenVetoed(true);
         _statistics.setStationarySweeps( 0 );
       }
       else {

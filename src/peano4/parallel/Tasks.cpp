@@ -9,6 +9,8 @@
 
 tarch::logging::Log  peano4::parallel::Tasks::_log( "peano4::parallel::Tasks" );
 int                  peano4::parallel::Tasks::_locationCounter(0);
+int                  peano4::parallel::Tasks::_taskTypeCounter(0);
+
 
 tarch::multicore::BooleanSemaphore peano4::parallel::Tasks::_tasksema;
 
@@ -17,13 +19,32 @@ int peano4::parallel::Tasks::getLocationIdentifier(const std::string&  trace) {
   logTraceInWith1Argument( "getLocationIdentifier(trace)", trace );
 
   tarch::multicore::Lock myLock( _tasksema );
+  int result = _locationCounter;
   _locationCounter++;
   myLock.free();
 
-  logTraceOutWith1Argument( "getLocationIdentifier(trace)", (_locationCounter-1) );
-  return _locationCounter-1;
+  logTraceOutWith1Argument( "getLocationIdentifier(trace)", result );
+  return result;
 }
 
+
+int peano4::parallel::Tasks::getTaskType(const std::string&  className, bool useLock) {
+   int result(-1);
+   if (useLock)
+   {
+      tarch::multicore::Lock myLock( _tasksema );
+      result = _taskTypeCounter;
+      _taskTypeCounter++;
+      myLock.free();
+   }
+   else
+   {
+      result = _taskTypeCounter;
+      _taskTypeCounter++;
+   }
+
+  return result;//_taskTypeCounter;
+}
 
 
 bool peano4::parallel::Tasks::taskForLocationShouldBeIssuedAsTask( int location, int taskCount ) const {
@@ -65,7 +86,7 @@ peano4::parallel::Tasks::Tasks(
   int                     location
 ):
   Tasks(
-    new tarch::multicore::TaskWithCopyOfFunctor(-1,getPriority(type),function),
+    new tarch::multicore::TaskWithCopyOfFunctor(-1,-location,getPriority(type),function),
     type,
     location
   ) {

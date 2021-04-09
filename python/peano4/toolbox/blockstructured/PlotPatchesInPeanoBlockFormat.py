@@ -20,7 +20,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   
   
-  def __init__(self,filename,patch,dataset_name, description, plot_cell_data=True, metadata = "", mapping = [], guard_predicate="true", additional_includes=""):
+  def __init__(self,filename,patch,dataset_name, description, plot_cell_data=True, metadata = "", mapping = [], guard_predicate="true", additional_includes="", precision=3):
     """
     
       plot_cell_data: Boolean
@@ -87,8 +87,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
       if i!=patch.dim[0]:
         print( "Error: patch plotter requires patch to have same dimension along all coordinate axes")
 
-    #self.dim       = dim
-    #self.no_of_unknowns = no_of_unknowns
+    self.d[ "PRECISION" ]        = precision
+
 
   __Template_Constructor = """
   _writer      = nullptr;
@@ -187,36 +187,34 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   __Template_BeginTraversal_Generic = """
-  static int rankLocalCounter = 0;
-  static tarch::mpi::BooleanSemaphore booleanSemaphore("{FILENAME}");
-  static bool calledBefore = false;
-  
-  int counter;
-  {{
-    tarch::mpi::Lock lock(booleanSemaphore);
-    counter = rankLocalCounter;
-    rankLocalCounter++;
-  }}
-  std::ostringstream snapshotFileName;
-  snapshotFileName << "{FILENAME}" << "-tree-" << _treeNumber << "-" << counter;
+  static int counter = 0;
 
-  if ( _treeNumber==0 and not calledBefore ) {{
-    calledBefore = true;
+  static tarch::multicore::BooleanSemaphore localSemaphore;
+  tarch::multicore::Lock  localLock( localSemaphore );
+
+  int isFirstBarrierHitOnThisRank = ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-init");
+
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "{FILENAME}" << "-" << counter;
+
+  if ( counter==0 and isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
       Dimensions, snapshotFileName.str(), "{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::CreateNew
-    );
-    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
+    );    
   }}
-  else if ( _treeNumber==0 ) {{
+  else if ( isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
       Dimensions, snapshotFileName.str(), "{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet
     );
-    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
   }}
-  else {{
-    ::peano4::parallel::SpacetreeSet::getInstance().orderedBarrier("{FILENAME}");
+  
+  counter++;
+
+  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-write");
+
+  if ( _writer==nullptr ) {{
     _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
       Dimensions, snapshotFileName.str(), "{FILENAME}",
       tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
@@ -234,11 +232,13 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
   __Template_BeginTraversal_CellPlot = __Template_BeginTraversal_Generic + """
   _dataWriter = _writer->createCellDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}", "{METADATA}", mapping );
+  _dataWriter->setPrecision( {PRECISION} );
 """
 
 
   __Template_BeginTraversal_VertexPlot = __Template_BeginTraversal_Generic + """
   _dataWriter = _writer->createVertexDataWriter( "{NAME}", {DOFS_PER_AXIS}, {UNKNOWNS}, "{DESCRIPTION}", "{METADATA}", mapping );
+  _dataWriter->setPrecision( {PRECISION} );
 """
 
 

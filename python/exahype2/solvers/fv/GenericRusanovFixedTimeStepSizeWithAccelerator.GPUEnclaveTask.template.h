@@ -22,6 +22,9 @@
 #include "repositories/SolverRepository.h"
 
 
+#include <vector>
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -34,27 +37,49 @@
 
 
 
+/**
+ * Single task that can also take multiple tasks and deploy them to the GPU
+ *
+ * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
+ */
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
   private:
     friend class EnclaveBookkeeping;
 
-    static tarch::logging::Log                   _log;
-    static tarch::multicore::BooleanSemaphore _patchsema;
+    static tarch::logging::Log                _log;
+    static int                                _gpuEnclaveTaskId;
+
+    const ::peano4::datamanagement::CellMarker   _marker;
+    const double                                 _t;
+    const double                                 _dt;
+    double*                                      _reconstructedValues;
 
     #if Dimensions==2
     const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     const int _sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    static std::vector<std::tuple<double*, const double, int, double, double, double, double> > _patchkeeper;
     #elif Dimensions==3
     const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     const int _sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    static std::vector<std::tuple<double*, const double, int, double, double, double, double, double, double> > _patchkeeper;
     #endif
 
-
-
   public:
-    static void runComputeKernelsOnSkeletonCell(double* __restrict__  reconstructedPatch, const ::peano4::datamanagement::CellMarker& marker, double* __restrict__  targetPatch);
+    /**
+     * Process one cell
+     *
+     * Use this one directly for the skelton cells, e.g. (therefore I made it 
+     * static) or call it per enclave cell. Basically does three things:
+     * 
+     * - copy over the patch content into the new time step
+     * - apply solvers
+     * - free reconstructed memory
+     */
+    static void applyKernelToCell(
+      const ::peano4::datamanagement::CellMarker& marker, 
+      double                                      t,
+      double                                      dt,
+      double* __restrict__                        reconstructedPatch, 
+      double* __restrict__                        targetPatch
+    );
 
     /**
      * Create plain enclave task.
@@ -63,18 +88,22 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task {
      */
     {{CLASSNAME}}(
       const ::peano4::datamanagement::CellMarker&    marker,
+      double                                         t,
+      double                                         dt,
       double*                                        reconstructedValues
     );
 
     {{CLASSNAME}}(const {{CLASSNAME}}& other) = delete;
     {{CLASSNAME}}(const {{CLASSNAME}}&& other) = delete;
 
+    /**
+     * This is a plain invocation of an enclave task
+     */
     bool run() override;
 
-    /**
-     * nop
-     */
-    void prefetch() override;
+    bool fuse( const std::list<Task*>& otherTasks ) override;
+    
+    bool canFuse() const override;
 };
 
 

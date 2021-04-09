@@ -247,13 +247,16 @@ void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId )
 }
 
 
+int peano4::parallel::SpacetreeSet::TraverseTask::_typeId( peano4::parallel::Tasks::getTaskType("peano4::parallel::SpacetreeSet::TraverseTask") );
+
+
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
   peano4::grid::Spacetree&          tree,
   SpacetreeSet&                     set,
   peano4::grid::TraversalObserver&  observer,
   bool                              invertTreeTraversalDirectionBeforeWeStart
 ):
-  Task(0,0),
+  Task(0,_typeId,0),
   _spacetree(tree),
   _spacetreeSet(set),
   _observer( observer ),
@@ -268,10 +271,6 @@ bool peano4::parallel::SpacetreeSet::TraverseTask::run() {
   }
   _spacetree.traverse( *_spacetreeSet._clonedObserver[_spacetree._id], true );
   return false;
-}
-
-
-void peano4::parallel::SpacetreeSet::TraverseTask::prefetch() {
 }
 
 
@@ -640,33 +639,35 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
       }
 
       p = _spacetrees.erase(p);
+
+      for (auto pp = _spacetrees.begin(); pp!=_spacetrees.end(); pp++) {
+        pp->informAboutDegeneratedTreeWhichHasBeenRemoved();
+      }
     }
     else if (
       p->mayJoinWithMaster()
     ) {
       const int localRank  = Node::getInstance().getRank( p->_id );
       const int masterRank = Node::getInstance().getRank( p->_masterId );
-      if (localRank==masterRank) {
-        if (
-          getSpacetree(p->_masterId).getGridStatistics().getCoarseningHasBeenVetoed()
-          and
-          getSpacetree(p->_masterId).mayJoinWithWorker()
-        ) {
-          // @todo erste Meldung info
-          logError( "traverse(Observer)", "join tree " << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId << " resides on same rank and can't coarsen" );
-          logError( "traverse(Observer)", "not implemented yet");
-          //p->joinWithMaster();
-          //getSpacetree(p->_masterId).joinWithWorker(p->_id);
-        }
-        else {
-          logDebug( "traverse(Observer)", "tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master" );
-        }
+      if (
+        localRank==masterRank
+        and
+        getSpacetree(p->_masterId).getGridStatistics().getCoarseningHasBeenVetoed()
+      ) {
+        // @todo erste Meldung info
+        logError( "traverse(Observer)", "join tree " << p->_id << " as it is deteriorated (encodes no hierarchical data) while master " << p->_masterId << " resides on same rank and can't coarsen" );
+        logError( "traverse(Observer)", "not implemented yet");
+        //p->joinWithMaster();
+        //getSpacetree(p->_masterId).joinWithWorker(p->_id);
+      }
+      else if (localRank==masterRank) {
+        logDebug( "traverse(Observer)", "tree " << p->_id << " is deteriorated (encodes no hierarchical data) yet seems not to constrain its master" );
       }
       else {
         // @todo: Aber nur, wenn es noch andere Baeume auf diesem Rank gibt
         // @todo erste Meldung info
-        logError( "cleanUpTrees(...)", "I should merge tree " << p->_id << " to reduce synchronisation: " << p->toString() );
-        logError( "traverse(Observer)", "not implemented yet");
+        logDebug( "cleanUpTrees(...)", "I should merge tree " << p->_id << " to reduce synchronisation: " << p->toString() );
+        logDebug( "traverse(Observer)", "not implemented yet");
       }
     }
     p++;
@@ -690,6 +691,7 @@ peano4::grid::GridStatistics peano4::parallel::SpacetreeSet::getGridStatistics()
       0,  // __numberOfLocalRefinedCells
       0,  // __numberOfRemoteRefinedCells,
       0,  // __stationarySweeps,
+      false,
       false,
       tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() ) // minH
     );
@@ -809,10 +811,12 @@ const peano4::grid::Spacetree&  peano4::parallel::SpacetreeSet::getSpacetree(int
 }
 
 
-void peano4::parallel::SpacetreeSet::orderedBarrier(const std::string& identifier) {
-  logTraceIn( "orderedBarrier()" );
+bool peano4::parallel::SpacetreeSet::synchroniseFirstThreadPerRank(const std::string& identifier) {
+  logTraceIn( "synchroniseFirstThreadPerRank()" );
 
   static tarch::multicore::BooleanSemaphore  semaphore;
+
+  bool isFirstBarrierHitOnThisRank = false;
 
   {
     tarch::multicore::Lock lock(semaphore);
@@ -830,9 +834,11 @@ void peano4::parallel::SpacetreeSet::orderedBarrier(const std::string& identifie
         }
       );
       _hasPassedOrderedBarrier[ identifier ] = true;
+      isFirstBarrierHitOnThisRank            = true;
     }
   }
 
-  logTraceOut( "orderedBarrier()" );
+  logTraceOutWith1Argument( "synchroniseFirstThreadPerRank()", isFirstBarrierHitOnThisRank );
+  return isFirstBarrierHitOnThisRank;
 }
 

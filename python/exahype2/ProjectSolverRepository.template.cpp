@@ -191,6 +191,8 @@ void finishGridInitialisationStep() {
   {% for item in SOLVERS -%}
   {{ item[1] }}.finishGridInitialisationStep();
   {%- endfor %}
+
+  loadBalancer.finishStep();
 }
 
 

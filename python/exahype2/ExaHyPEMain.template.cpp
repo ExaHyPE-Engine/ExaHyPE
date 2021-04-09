@@ -20,11 +20,12 @@
 
 #include "observers/CreateGrid.h"
 #include "observers/CreateGridButPostponeRefinement.h"
+#include "observers/CreateGridAndConvergeLoadBalancing.h"
 #include "observers/InitGrid.h"
 #include "observers/PlotSolution.h"
 #include "observers/TimeStep.h"
 
-
+#include "toolbox/loadbalancing/loadbalancing.h"
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
@@ -71,22 +72,15 @@ tarch::timing::Measurement   plotMeasurement;
  */
 bool selectNextAlgorithmicStep() {{
   static bool   gridConstructed                             = false;
+  static bool   gridInitialised                             = false;
+  static bool   gridBalanced                                = false;
   static double nextPlotTimeStamp                           = FirstPlotTimeStamp;
   static bool   haveJustWrittenSnapshot                     = false;
   static bool   haveReceivedNoncriticialAssertion           = false;
   static bool   addGridSweepWithoutGridRefinementNext       = false;
-  static int    iterationsWithoutGridRefinement             = 0;
-  static int    initGridIterations                               = 0;
-  static tarch::la::Vector<Dimensions,double> minH               = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
-
+  static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
+  static int    globalNumberOfTrees                         = 0;
   bool          continueToSolve   = true;
-  
-  // Once we have hit the finest grid, we have to inject a few
-  // CreateGrid sweeps, as some subpartitions might lag behind
-  // by means of the mesh construction. As a consequence, there
-  // might still be an adaptive mesh even though we want to 
-  // operate with a regular one. See the FAQ in the guidebook 
-  const int InitGridIterations = 3;
   
   if (exahype2::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {{
     peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -98,76 +92,78 @@ bool selectNextAlgorithmicStep() {{
   else if (exahype2::hasNonCriticalAssertionBeenViolated()) {{
     continueToSolve = false;
   }}
-  else if (gridConstructed and initGridIterations<InitGridIterations) {{
-    initGridIterations++;
-    
-    if (initGridIterations==InitGridIterations) {{
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitGrid )
-      );
+  else if (gridConstructed and not gridBalanced) {{
+    if (
+      not repositories::loadBalancer.isEnabled(true)
+      and
+      not repositories::loadBalancer.hasSplitRecently()
+    ) {{
+      logInfo( "selectNextAlgorithmicStep()", "all ranks have switched off their load balancing" );
+      gridBalanced = true;
     }}
-    else {{
-      peano4::parallel::Node::getInstance().setNextProgramStep(
-        repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CreateGrid )
-      );
-    }}
+
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing )
+    );
+
+    assertionNumericalEquals( repositories::getMinTimeStamp(), 0.0 );
+  }}
+  else if (gridBalanced and not gridInitialised) {{
+    peano4::parallel::Node::getInstance().setNextProgramStep(
+      repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::InitGrid )
+    );
+
+    gridInitialised = true;
  
     assertionNumericalEquals( repositories::getMinTimeStamp(), 0.0 );
   }}
   else if (not gridConstructed) {{
+    // Grid construction termination criterion
     if (
       tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinMeshSize()
+      and
+      repositories::loadBalancer.getGlobalNumberOfTrees()<=globalNumberOfTrees
     ) {{
-      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << repositories::getMinMeshSize() << " reached with h_min=" << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() );
+      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << repositories::getMinMeshSize() << " reached." );
       gridConstructed = true;
       addGridSweepWithoutGridRefinementNext = false;
+      globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }}
+    else if ( tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < tarch::la::max( minH ) ) {{
+      minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
+      logDebug( "selectNextAlgorithmicStep()", "mesh has refined, so reset minH=" << minH << " and postpone further refinement" );
+      addGridSweepWithoutGridRefinementNext = true;
+    }}
+    else if (repositories::loadBalancer.getGlobalNumberOfTrees()>globalNumberOfTrees) {{
+      logInfo( 
+        "selectNextAlgorithmicStep()", 
+        "mesh has rebalanced recently, so postpone further refinement)" 
+      );
+      addGridSweepWithoutGridRefinementNext = true;
+      globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
+    }} 
     else {{
-      logDebug( "selectNextAlgorithmicStep()", "finest mesh resolution of " << peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() << " does not yet meet mesh requirements of " << repositories::getMinMeshSize() );
+      logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so study whether to refine mesh further in next sweep" );
+      addGridSweepWithoutGridRefinementNext = false;
+      globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }}
 
+    // Actual grid traversal choice
     if (addGridSweepWithoutGridRefinementNext) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CreateGridButPostponeRefinement )
       );
-      iterationsWithoutGridRefinement++;
     }}
     else {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CreateGrid )
       );
-      iterationsWithoutGridRefinement = 0;
-    }}
-
-    static int maxNumberOfLocalSpacetrees         = 0;
-    if ( tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) < tarch::la::max( minH ) ) {{
-      minH = peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH();
-      logDebug( "selectNextAlgorithmicStep()", "mesh has refined, so reset minH=" << minH << " and postpone further refinement" );
-      addGridSweepWithoutGridRefinementNext           = true;
-    }}
-    else {{
-      if (repositories::loadBalancer.hasSplitRecently() and static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size())>=maxNumberOfLocalSpacetrees) {{
-        logInfo( "selectNextAlgorithmicStep()", "mesh has rebalanced recently, so postpone further refinement (former max tree count " << maxNumberOfLocalSpacetrees << ", current count " << peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() << ")" );
-        addGridSweepWithoutGridRefinementNext = true;
-      }} 
-      else if (repositories::loadBalancer.hasSplitRecently()) {{
-        logInfo( "selectNextAlgorithmicStep()", "mesh wanted to rebalance recently but it seems splits have been unsuccessful" );
-        addGridSweepWithoutGridRefinementNext = false;
-      }}
-      else {{
-        logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so study whether to refine mesh further in next sweep" );
-        addGridSweepWithoutGridRefinementNext = false;
-      }}
-
-      if (static_cast<int>(peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size())>maxNumberOfLocalSpacetrees) {{
-        maxNumberOfLocalSpacetrees += 1;
-      }}
     }}
 
     continueToSolve = true;
   }}
   else {{
-    if ( repositories::getMinTimeStamp()>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 ) {{
+    if ( repositories::getMinTimeStamp()>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime ) {{
       nextPlotTimeStamp += TimeInBetweenPlots;
       if ( nextPlotTimeStamp < repositories::getMinTimeStamp() ) {{
         logWarning( "selectNextAlgorithmicStep()", "code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the minimal time step size of the solvers" );
@@ -215,6 +211,8 @@ void step() {{
 
   tarch::timing::Watch  watch( "::", "step()", false );
 
+  static int creepingNumberOfLocalCells = 0;
+
   switch ( stepName ) {{
     case repositories::StepRepository::Steps::CreateGridButPostponeRefinement:
       {{
@@ -230,13 +228,6 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::CreateGrid:
       {{
-        if (
-          tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinMeshSize()
-        ) {{
-          logInfo( "step()", "switch off load balancing manually as finest grid resolution met (to be removed in later releases)" );
-          repositories::loadBalancer.enable(false);
-        }}
-
         repositories::startGridConstructionStep();
         
         observers::CreateGrid  observer;
@@ -245,17 +236,57 @@ void step() {{
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
 
         repositories::finishGridConstructionStep();
+
+        // We always overestimate so give the convergence the opportunity to catch up. The constant 
+        // here is a magic one. 
+        creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()+tarch::multicore::Core::getInstance().getNumberOfThreads()*3;
+      }}
+      break;
+    case repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing:
+      {{
+        // The smaller here corresponds to the -1 below
+        if (
+          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()<0
+          and
+          repositories::loadBalancer.isEnabled(false)
+        ) {{
+          logInfo( "step()", "rank is degenerated so disable load balancing temporarily" );
+          repositories::loadBalancer.enable(false);
+        }}
+        if (
+          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() >= creepingNumberOfLocalCells
+          and
+          repositories::loadBalancer.isEnabled(false)
+        ) {{
+          logInfo( "step()", "grid initialisation on this rank seems to be stable, disable load balancing temporarily" );
+          repositories::loadBalancer.enable(false);
+        }}
+
+        repositories::startGridConstructionStep();
+
+        observers::CreateGridButPostponeRefinement  observer;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
+        watch.stop();
+        gridConstructionMeasurement.setValue( watch.getCalendarTime() );
+
+        repositories::finishGridConstructionStep();
+
+        if (
+          ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
+        ) {{
+          logInfo(
+            "step()",
+            "have to decrement local cell counter " << creepingNumberOfLocalCells <<
+            " as maximum weight is " << ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()
+          );
+          creepingNumberOfLocalCells = (creepingNumberOfLocalCells + ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree())/2;
+        }}
       }}
       break;
     case repositories::StepRepository::Steps::InitGrid:
       {{
-        if (
-          tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinMeshSize()
-        ) {{
-          logInfo( "step()", "disable load balancing throughout initialisation (to be removed in later releases)" );
-          repositories::loadBalancer.enable(false);
-        }}
-    
+        repositories::loadBalancer.enable(false);
+
         repositories::startGridInitialisationStep();
         
         observers::InitGrid  observer;
@@ -285,6 +316,11 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::TimeStep:
       {{
+        if (repositories::loadBalancer.isEnabled(false)) {{
+          logInfo( "step()", "disable load balancing throughout initialisation (to be removed in later releases)" );
+          repositories::loadBalancer.enable(false);
+        }}
+
         const double minTimeStamp    = repositories::getMinTimeStamp();
         const double maxTimeStamp    = repositories::getMaxTimeStamp();
         const double minTimeStepSize = repositories::getMinTimeStepSize();

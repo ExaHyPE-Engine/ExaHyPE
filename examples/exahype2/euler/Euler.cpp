@@ -19,7 +19,8 @@ void examples::exahype2::euler::Euler::adjustSolution(
     // Manual offset to make the wave originate slightly to the left of the center --- helps
     // to detect if wave is moving to the left or right
     #if Dimensions==2
-    tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3};
+//    tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3};
+    tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
     #else
     tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
     #endif
@@ -153,7 +154,7 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   nonCriticalAssertion4( Qinside[3]==Qinside[3], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
-  nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
+  nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];

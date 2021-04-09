@@ -1,6 +1,8 @@
 #include "PeanoTextPatchFileWriter.h"
 #include "tarch/la/ScalarOperations.h"
 
+#include <iomanip>
+
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::VertexDataWriter(
   const std::string& identifier,
@@ -28,6 +30,13 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataW
 
 
 tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::~VertexDataWriter() {
+}
+
+
+void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataWriter::setPrecision(int precision) {
+  if (precision>0) {
+    _out << std::setprecision(precision);
+  }
 }
 
 

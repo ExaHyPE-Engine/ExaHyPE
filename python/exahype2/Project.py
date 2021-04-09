@@ -46,6 +46,7 @@ class Project(object):
     self._periodic_BC   = [False, False, False]
     self._plot_filters  = []
     self._output_path   = "./"
+    self._plotter_precision = 5
     
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
@@ -147,7 +148,7 @@ class Project(object):
     self._project.constants.export( "TerminalTime", str(self._terminal_time) )
     self._project.constants.export( "FirstPlotTimeStamp", str(self._first_plot_time_stamp) )
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
-    
+    self._project.constants.export( "PlotterPrecision", str(self._plotter_precision) )
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
     
 
@@ -156,7 +157,7 @@ class Project(object):
     self._project.output.makefile.set_executable_name(self._executable_name)
 
 
-  def set_global_simulation_parameters(self,dimensions,offset,size,end_time,first_plot_time_stamp,time_in_between_plots, periodic_BC = [False, False, False]):
+  def set_global_simulation_parameters(self,dimensions,offset,size,end_time,first_plot_time_stamp,time_in_between_plots, periodic_BC = [False, False, False], plotter_precision=5):
     """
     
       offset and size should be lists with dimensions double entries.
@@ -172,8 +173,11 @@ class Project(object):
     self._first_plot_time_stamp = first_plot_time_stamp
     self._time_in_between_plots = time_in_between_plots
     self._periodic_BC = []
+    self._plotter_precision = plotter_precision
     for d in range(0,dimensions):
       self._periodic_BC.append( periodic_BC[d] )
+    if plotter_precision<=0:
+      raise Exception( "Plotter precision has to be bigger than 0" ) 
     
     
   def  set_output_path(self,path):
@@ -241,12 +245,14 @@ class Project(object):
     create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
     init_grid                           = peano4.solversteps.Step( "InitGrid",   False )
     create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
+    create_grid_and_converge_lb         = peano4.solversteps.Step( "CreateGridAndConvergeLoadBalancing", False )
     plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
     perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
         
     self._project.solversteps.add_step(create_grid)
     self._project.solversteps.add_step(init_grid)
     self._project.solversteps.add_step(create_grid_but_postpone_refinement)
+    self._project.solversteps.add_step(create_grid_and_converge_lb)
     self._project.solversteps.add_step(plot_solution)
     self._project.solversteps.add_step(perform_time_step)
    
@@ -263,10 +269,12 @@ class Project(object):
       solver.add_use_data_statements_to_Peano4_solver_step( perform_time_step )
       solver.add_use_data_statements_to_Peano4_solver_step( init_grid )
       solver.add_use_data_statements_to_Peano4_solver_step( create_grid_but_postpone_refinement )
+      solver.add_use_data_statements_to_Peano4_solver_step( create_grid_and_converge_lb )
       
       solver.add_actions_to_create_grid( create_grid,                         evaluate_refinement_criterion=True  )
       solver.add_actions_to_init_grid( init_grid )
       solver.add_actions_to_create_grid( create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
+      solver.add_actions_to_create_grid( create_grid_and_converge_lb,         evaluate_refinement_criterion=False )
       solver.add_actions_to_plot_solution( plot_solution, self._output_path )
       solver.add_actions_to_perform_time_step( perform_time_step )
       
@@ -277,16 +285,20 @@ class Project(object):
 
     face_label = exahype2.grid.create_face_label()  
     self._project.datamodel.add_face(face_label)
+    
     create_grid.use_face(face_label)
     init_grid.use_face(face_label)
     create_grid_but_postpone_refinement.use_face(face_label)
+    create_grid_and_converge_lb.use_face(face_label)
     plot_solution.use_face(face_label)
     perform_time_step.use_face(face_label)
     
     set_labels_action_set = exahype2.grid.SetLabels()
+
     create_grid.add_action_set( set_labels_action_set )
     init_grid.add_action_set( set_labels_action_set )
     create_grid_but_postpone_refinement.add_action_set( set_labels_action_set )
+    create_grid_and_converge_lb.add_action_set( set_labels_action_set )
     plot_solution.add_action_set( set_labels_action_set )
     perform_time_step.add_action_set( set_labels_action_set )
     
