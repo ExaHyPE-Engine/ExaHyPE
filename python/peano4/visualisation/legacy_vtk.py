@@ -23,9 +23,9 @@ def peano_patch_to_legacy_vtk_2d(patch_file, vtk_file_name):
             "insert some description of the data here\n"
             "ASCII\n"
             "DATASET STRUCTURED_POINTS\n"
-            f"DIMENSIONS {num_cells_on_axis} {num_cells_on_axis}\n"
-            f"ORIGIN {patch_boundaries_x[0]} {patch_boundaries_x[0]}\n"
-            f"SPACING {spacing}\n"
+            f"DIMENSIONS {num_cells_on_axis} {num_cells_on_axis} 1\n" # change '1' for 3D
+            f"ORIGIN {patch_boundaries_x[0]} {patch_boundaries_x[0]} {patch_boundaries_x[0]}\n"
+            f"SPACING {spacing} {spacing} {spacing}\n"
         )
 
         # To reduce time complexity I create a structured
@@ -66,9 +66,11 @@ def peano_patch_to_legacy_vtk_2d(patch_file, vtk_file_name):
                                               p_first_value + ofparser.unknowns]:
                             structured_values.append(unknown)
 
+        numPoints = num_cells_on_axis * num_cells_on_axis # assumes x==y==z (will have to be diff for 3D!)
         numComp = 1
         for unknown in range(ofparser.unknowns):
             vtk.write(
+                f"POINT_DATA {numPoints}\n"
                 f"SCALARS unknown_{unknown+1} float {numComp}\n"
                 f"LOOKUP_TABLE unknown_{unknown+1}_table\n"
             )
@@ -104,7 +106,7 @@ if __name__ == "__main__":
                     args.filepath))
             sys.exit(1)
 
-        output_file = 'vtk_file_' + os.path.basename(args.filepath).replace('.peano-patch-file','.txt')
+        output_file = 'vtk_file_' + os.path.basename(args.filepath).replace('.peano-patch-file','.vtk')
         peano_patch_to_legacy_vtk_2d(args.filepath, output_file)
 
     if args.metafile:
@@ -122,7 +124,7 @@ if __name__ == "__main__":
                     patch_file_names.append(words[1].strip('"'))
 
         for file in patch_file_names:
-            output_file = 'vtk_file_' + file.replace('.peano-patch-file', '.txt')
+            output_file = 'vtk_file_' + file.replace('.peano-patch-file', '.vtk')
             peano_patch_to_legacy_vtk_2d(
                 os.path.join(
                     os.path.dirname(
