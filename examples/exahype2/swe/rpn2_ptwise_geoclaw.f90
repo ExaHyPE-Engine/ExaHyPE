@@ -51,7 +51,7 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     real(kind=8) :: s1m,s2m
     real(kind=8) :: hstar,hstartest,hstarHLL,sLtest,sRtest
     real(kind=8) :: tw,dxdc
-    real(kind=8) :: g, drytol, rho, earth_radius
+    real(kind=8) :: g, drytol, rho, earth_radius, eps
 
     logical :: rare1,rare2
        
@@ -73,8 +73,10 @@ subroutine rpn2(ixy,meqn,maux,mwaves,ql,qr,auxl,auxr,fwave,s,amdq,apdq)
     
     ixy = ixy+1
     
+    eps = 1d-6
+    
     !inform of a bad riemann problem from the start
-    if (qr(1) < -0.0000001d0 .or. ql(1) < -0.0000001d0) then
+    if (qr(1) < -eps .or. ql(1) < -eps) then
         print *, "Negative input: hl, hr = ", qr(1), ql(1)
         stop 
     end if
