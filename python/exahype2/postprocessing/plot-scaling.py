@@ -25,12 +25,12 @@ A generic script to create speedup plots.
 """)
   parser.add_argument("file",   help="filename of the file to parse (should be a tar.gz file). If you have multiple files, seperate them with a comma")
   parser.add_argument("-v",                  "--verbose", help="increase output verbosity", action="store_true" )
-  parser.add_argument("--last-iteration", dest="last_iteration", help="measure only the last iteration", action="store_true" )
   parser.add_argument("--max-cores-per-rank", dest="max_cores_per_rank", type=int, help="max number of cores per rank (pick 0 if you have only one core count per rank, pick -1 if you want to plot single-node data)", default=0)
-  parser.add_argument("--log",                dest="log", help="plot with logarithmic axes", action="store_true" )
+  parser.add_argument("--log-x",              dest="log_x",           help="plot with logarithmic axes", action="store_true" )
+  parser.add_argument("--log-y",              dest="log_y",           help="plot with logarithmic axes", action="store_true" )
   parser.add_argument("--plot-efficiency",    dest="plot_efficiency", help="Don't plot raw times but efficiency", action="store_true" )
-  parser.add_argument("--labels",             dest="labels", help="Plot labels", default="" )
-  parser.add_argument("--output", dest="output", help="output file prefix (file name extension is added automatically)", default="" )
+  parser.add_argument("--labels",             dest="labels",          help="Plot labels", default="" )
+  parser.add_argument("--output",             dest="output",          help="output file prefix (file name extension is added automatically)", default="" )
   args = parser.parse_args()
 
 
@@ -53,13 +53,16 @@ A generic script to create speedup plots.
 
     data_points = []
     for data_file in data_files:
+      print( "========================================================================")
+      print( data_file + " from " + file )
+      print( "========================================================================")
       tar.extract( data_file )
       new_data = exahype2.postprocessing.PerformanceData(data_file, args.verbose)
       if new_data.valid:
         data_points.append( new_data ) 
       os.remove( data_file )
 
-    (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.last_iteration, args.max_cores_per_rank )    
+    (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.max_cores_per_rank )    
      
     if len(x_data)>0:
       max_nodes = max(max_nodes,x_data[-1])
@@ -90,9 +93,10 @@ A generic script to create speedup plots.
     plt.ylabel( "Efficiency" )
   else:
     plt.ylabel( "Time [t]=s" )
-  if args.log:
-    plt.xscale( "log", basex=2 )
-    plt.yscale( "log" )
+  if args.log_x:
+    plt.xscale( "log", base=2 )
+  if args.log_y:
+    plt.yscale( "log", base=2 )
   if args.max_cores_per_rank<0:
     plt.xlabel( "Cores" )
   else:
