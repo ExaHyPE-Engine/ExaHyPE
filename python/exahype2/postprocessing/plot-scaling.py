@@ -72,14 +72,17 @@ A generic script to create speedup plots.
         y_data = [y/float(args.max_cores_per_rank) for y in y_data]
       y_data = [ min(y,1.1) for y in y_data]
       
-    symbol = "-" + Symbols[ args.file.index(file) % len(Symbols) ]
+    symbol = "-" + Symbols[ args.file.split(",").index(file) % len(Symbols) ]
     my_markevery = 0.9
-    my_color = Colors[ args.file.index(file) % len(Colors) ]
+    my_color = Colors[ args.file.split(",").index(file) % len(Colors) ]
 
     if args.labels=="":
       plt.plot( x_data, y_data, symbol, color=my_color, markevery=my_markevery )
     else:
-      my_label = args.labels.split(",")[ args.file.index(file) ]
+      try:
+        my_label = args.labels.split(",")[ args.file.split(",").index(file) ]
+      except:
+        raise Exception( "Unable to extract " + str(args.file.split(",").index(file)) + "th entry from " + args.labels + ": " + str(args.labels.split(",")) )
       plt.plot( x_data, y_data, symbol, label=my_label, color=my_color, markevery=my_markevery )
       
   
