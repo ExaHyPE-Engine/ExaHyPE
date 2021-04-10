@@ -48,6 +48,7 @@ parser.add_argument("-t",   "--type",                  dest="type",             
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
+parser.add_argument("--no-compile",                    dest="compile",          action="store_false", default="True", help="Compile (on by default)" )
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
@@ -173,7 +174,11 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" 
 project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )
-peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+if args.compile:
+  peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+else:
+  peano4_project.generate()
+
 
 print("Done. Executable is: {}".format(args.out))
 print( "Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")
