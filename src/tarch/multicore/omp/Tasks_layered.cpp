@@ -22,13 +22,16 @@ namespace {
 
   enum class Realisation {
     MapOntoOMPTasks,
-    HoldBackTasksInLocalQueue
+    HoldBackTasksInLocalQueue,
+    HoldBackTasksInLocalQueueAndBackfill
   };
 
   #if LayeredMultitaskingRuntime==0
   constexpr Realisation realisation = Realisation::MapOntoOMPTasks;
   #elif LayeredMultitaskingRuntime==1
   constexpr Realisation realisation = Realisation::HoldBackTasksInLocalQueue;
+  #elif LayeredMultitaskingRuntime==2
+  constexpr Realisation realisation = Realisation::HoldBackTasksInLocalQueueAndBackfill;
   #else
   #error LayeredMultitaskingRuntime set to invalid value
   #endif
@@ -344,6 +347,7 @@ void tarch::multicore::spawnAndWait(
         }
         break;
       case Realisation::HoldBackTasksInLocalQueue:
+      case Realisation::HoldBackTasksInLocalQueueAndBackfill:
         #pragma omp critical
         {
           taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
@@ -378,6 +382,8 @@ void tarch::multicore::spawnAndWait(
           and
           realisation!=Realisation::HoldBackTasksInLocalQueue
         ) {
+
+
 /*
           if (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maximumNumberOfFusedTaskAssembliesToGPU>0) {
             logDebug( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
@@ -394,7 +400,7 @@ void tarch::multicore::spawnAndWait(
           }
           else {
 */
-          if (not nonblockingTasks.empty()) {
+          if (realisation==Realisation::HoldBackTasksInLocalQueueAndBackfill and not nonblockingTasks.empty()) {
             tarch::multicore::processPendingTasks( 1 );
           }
           #pragma omp taskyield
@@ -409,6 +415,7 @@ void tarch::multicore::spawnAndWait(
       case Realisation::MapOntoOMPTasks:
         break;
       case Realisation::HoldBackTasksInLocalQueue:
+      case Realisation::HoldBackTasksInLocalQueueAndBackfill:
         {
           while (not nonblockingTasks.empty()) {
             tarch::multicore::processPendingTasks( nonblockingTasks.size() );

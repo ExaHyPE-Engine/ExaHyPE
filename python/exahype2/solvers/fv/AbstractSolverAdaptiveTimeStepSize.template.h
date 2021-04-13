@@ -125,10 +125,11 @@
     double getMinMeshSize() const override;
     
     /**
-     * Inform about maximum eigenvalue
+     * Inform about maximum eigenvalue of a patch
      *
      * The routine automatically computes the admissible time step size 
-     * for the next time step.
+     * for the next time step. Is to be called per patch from the solver.
+     *
      *
      * This operation is thread-safe.
      */
