@@ -7,6 +7,7 @@
 #include <functional>
 #include <vector>
 #include <list>
+#include <string>
 
 
 namespace tarch {
@@ -19,6 +20,13 @@ namespace tarch {
       HoldTasksBackInLocalQueueMergeBackfillAndRelease
     };
 
+    std::string toString( Realisation realisation );
+
+    /**
+     * Use toString() to see valid options
+     */
+    void parseRealisation( const std::string& realisation );
+    std::string getListOfRealisations();
     void setRealisation( Realisation realisation );
     Realisation getRealisation();
 

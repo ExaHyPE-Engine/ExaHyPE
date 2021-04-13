@@ -177,6 +177,55 @@ namespace {
 }
 
 
+std::string tarch::multicore::getListOfRealisations() {
+  return toString(Realisation::MapOntoNativeTasks)
+       + ","
+       + toString(Realisation::HoldTasksBackInLocalQueue)
+       + ","
+       + toString(Realisation::HoldTasksBackInLocalQueueAndBackfill)
+       + ","
+       + toString(Realisation::HoldTasksBackInLocalQueueBackfillAndRelease)
+       + ","
+       + toString(Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease);
+}
+
+
+std::string tarch::multicore::toString( Realisation realisation ) {
+  switch (realisation) {
+    case Realisation::MapOntoNativeTasks:
+      return "native";
+    case Realisation::HoldTasksBackInLocalQueue:
+      return "hold-back";
+    case Realisation::HoldTasksBackInLocalQueueAndBackfill:
+      return "backfill";
+    case Realisation::HoldTasksBackInLocalQueueBackfillAndRelease:
+      return "backfill-and-release";
+    case Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease:
+      return "merge";
+  }
+  return "<undef>";
+}
+
+
+void tarch::multicore::parseRealisation( const std::string& realisationString ) {
+  if ( realisationString.compare( "native" )!=std::string::npos ) {
+    realisation = Realisation::MapOntoNativeTasks;
+  }
+  else if (realisationString.compare( "hold-back" )!=std::string::npos ) {
+    realisation = Realisation::HoldTasksBackInLocalQueue;
+  }
+  else if (realisationString.compare( "backfill" )!=std::string::npos ) {
+    realisation = Realisation::HoldTasksBackInLocalQueueAndBackfill;
+  }
+  else if (realisationString.compare( "backfill-and-release" )!=std::string::npos ) {
+    realisation = Realisation::HoldTasksBackInLocalQueueBackfillAndRelease;
+  }
+  else if (realisationString.compare( "merge" )!=std::string::npos ) {
+    realisation = Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease;
+  }
+}
+
+
 void tarch::multicore::configureTaskFusion( int maxNumberOfFusedAssemblies, int maxSizeOfFusedTaskSet ) {
   numberOfTasksThatShouldBeFused  = maxSizeOfFusedTaskSet;
   maxNumberOfFusedTasksAssemblies = maxNumberOfFusedAssemblies;
