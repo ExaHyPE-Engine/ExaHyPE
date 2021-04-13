@@ -11,6 +11,22 @@
 
 namespace tarch {
   namespace multicore {
+    enum class Realisation {
+      MapOntoNativeTasks,
+      HoldTasksBackInLocalQueue,
+      HoldTasksBackInLocalQueueAndBackfill,
+      HoldTasksBackInLocalQueueBackfillAndRelease,
+      HoldTasksBackInLocalQueueMergeBackfillAndRelease
+    };
+
+    void setRealisation( Realisation realisation );
+    Realisation getRealisation();
+
+    /**
+     * Constrain the fusion.
+     */
+    void configureTaskFusion( int maxNumberOfFusedAssemblies, int maxSizeOfFusedTaskSet );
+
     /**
      * Tells task/thread to yield, i.e. to allow other tasks/threads to run.
      * Typically to be used within busy-waiting/polling loops.
@@ -185,6 +201,13 @@ namespace tarch {
     void spawnAndWait(
       const std::vector< Task* >&  tasks
     );
+
+    namespace native {
+      void spawnTask(Task*  job);
+      void spawnAndWait( const std::vector< Task* >&  tasks );
+      void yield();
+      int getNumberOfPendingTasks();
+    }
   }
 }
 
