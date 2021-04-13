@@ -35,7 +35,7 @@ namespace {
     const std::vector< tarch::multicore::Task* >&  tasks
   ) {
     assertion( not tasks.empty() );
-    assertion( getRealisation()!=Realisation::MapOntoNativeTasks );
+    assertion( tarch::multicore::getRealisation()!=tarch::multicore::Realisation::MapOntoNativeTasks );
 
     const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
     int       busyThreads     = NumberOfThreads;
@@ -62,14 +62,12 @@ namespace {
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
           and
-          getRealisation()!=Realisation::HoldTasksBackInLocalQueue
+          tarch::multicore::getRealisation()!=tarch::multicore::Realisation::HoldTasksBackInLocalQueue
         ) {
           tarch::multicore::processPendingTasks( 1 );
           #pragma omp taskyield
         }
       }
-
-      ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
     }
     #pragma omp taskwait
   }
@@ -102,10 +100,10 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  * synchronisation left over et al. However, I want a sync over all the tasks
  * produced by the loop. Therefore, I have to add a manual taskwait.
  */
-void tarch::multicore::spawnAndWait(
+void tarch::multicore::native::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
-  switch (realisation) {
+  switch (tarch::multicore::getRealisation()) {
     case Realisation::MapOntoNativeTasks:
       spawnAndWaitAsTaskLoop(tasks);
       break;
