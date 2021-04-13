@@ -14,7 +14,11 @@ modes = {
 
 floatparams = {
         "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
-        "GLMepsD":1.0, "itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
+        "GLMepsD":1.0, 
+	#"itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
+        #"f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
+        #"sk":0.0, "bs":0.0#, \
+	"itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
         "f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":0.0, "bs":0.0#, \
 	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
@@ -332,8 +336,8 @@ if __name__ == "__main__":
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
-      [-20, -20, -20],  [40.0, 40.0, 40.0],
-      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      #[-20, -20, -20],  [40.0, 40.0, 40.0],
+      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
