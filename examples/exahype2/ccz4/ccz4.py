@@ -105,7 +105,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.004
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -332,7 +332,8 @@ if __name__ == "__main__":
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
-      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      [-20, -20, -20],  [40.0, 40.0, 40.0],
+      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -341,7 +342,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv4" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv2" )
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 
