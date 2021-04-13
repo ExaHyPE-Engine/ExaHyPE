@@ -82,7 +82,9 @@ AC_ARG_WITH(
       cpp)    AC_MSG_RESULT([build with C++11 threading support]);                          multithreading=cpp ;;
       tbb)    AC_MSG_RESULT([build with TBB (Intel Threading Building Blocks) support - please ensure that CXXFLAGS and LDFLAGS are properly set]); multithreading=tbb ;;
       omp)    AC_MSG_RESULT([build with OpenMP]); multithreading=omp ;;
-      omp-layered)    AC_MSG_RESULT([build with OpenMP, layered]); multithreading=omp-layered ;;
+      omp-layered-0)    AC_MSG_RESULT([build with OpenMP, layered]); multithreading=omp-layered-0 ;;
+      omp-layered-1)    AC_MSG_RESULT([build with OpenMP, layered]); multithreading=omp-layered-1 ;;
+      omp-layered)      AC_MSG_RESULT([build with OpenMP, layered]); multithreading=omp-layered-1 ;;
       *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or tbb to define target]);            multithreading=false ;;
     esac
   ], 
@@ -109,17 +111,27 @@ if test "$multithreading" == omp; then
   AC_DEFINE([SharedOMP], [1], [SharedOMP])
 
   CXXFLAGS+=" $OPENMP_CXXFLAGS "
-  LDFLAGS+=" $OPENMP_CXXFLAGS "
+  LDFLAGS+=" $OPENMP_LDFLAGS "
 fi
 
-if test "$multithreading" == omp-layered; then
+if test "$multithreading" == omp-layered-0; then
+  AC_OPENMP()
+  AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
+  AC_DEFINE([SharedOMP], [1], [SharedOMP])
+  AC_DEFINE([LayeredMultitaskingRuntime], [0], [LayeredMultitaskingRuntime])
+
+  CXXFLAGS+=" $OPENMP_CXXFLAGS "
+  LDFLAGS+=" $OPENMP_LDFLAGS "
+fi
+
+if test "$multithreading" == omp-layered-1; then
   AC_OPENMP()
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([SharedOMP], [1], [SharedOMP])
   AC_DEFINE([LayeredMultitaskingRuntime], [1], [LayeredMultitaskingRuntime])
 
   CXXFLAGS+=" $OPENMP_CXXFLAGS "
-  LDFLAGS+=" $OPENMP_CXXFLAGS "
+  LDFLAGS+=" $OPENMP_LDFLAGS "
 fi
 
 #

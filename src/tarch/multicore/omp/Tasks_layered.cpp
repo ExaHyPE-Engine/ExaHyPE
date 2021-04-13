@@ -25,7 +25,13 @@ namespace {
     HoldBackTasksInLocalQueue
   };
 
+  #if LayeredMultitaskingRuntime==0
   constexpr Realisation realisation = Realisation::MapOntoOMPTasks;
+  #elif LayeredMultitaskingRuntime==1
+  constexpr Realisation realisation = Realisation::HoldBackTasksInLocalQueue;
+  #else
+  #error LayeredMultitaskingRuntime set to invalid value
+  #endif
 
   const int StandardPriority           = 16;
   const int BackgroundConsumerPriority = 1;
@@ -368,9 +374,9 @@ void tarch::multicore::spawnAndWait(
           // Without this yield, the code will deadlock if you have more trees
           // than cores. As the first p trees on p cores will finish and then
           // poll. The other >p trees/tasks will starve
-          busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
+          realisation!=Realisation::MapOntoOMPTasks
           and
-          taskProgressionStrategy != TaskProgressionStrategy::MapOntoOMPTask
+          realisation!=Realisation::HoldBackTasksInLocalQueue
         ) {
 /*
           if (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maximumNumberOfFusedTaskAssembliesToGPU>0) {
@@ -388,6 +394,9 @@ void tarch::multicore::spawnAndWait(
           }
           else {
 */
+          if (not nonblockingTasks.empty()) {
+            tarch::multicore::processPendingTasks( 1 );
+          }
           #pragma omp taskyield
         }
       }
@@ -395,6 +404,18 @@ void tarch::multicore::spawnAndWait(
       ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
     }
     #pragma omp taskwait
+
+    switch (realisation) {
+      case Realisation::MapOntoOMPTasks:
+        break;
+      case Realisation::HoldBackTasksInLocalQueue:
+        {
+          while (not nonblockingTasks.empty()) {
+            tarch::multicore::processPendingTasks( nonblockingTasks.size() );
+          }
+        }
+        break;
+    }
 
 /*    while (
       nonblockingTasks.size()>=numberOfTasksThatShouldBeFused
