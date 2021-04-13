@@ -208,20 +208,24 @@ std::string tarch::multicore::toString( Realisation realisation ) {
 
 
 void tarch::multicore::parseRealisation( const std::string& realisationString ) {
-  if ( realisationString.compare( "native" )!=std::string::npos ) {
+  if ( realisationString.compare( "native" )==0 ) {
     realisation = Realisation::MapOntoNativeTasks;
   }
-  else if (realisationString.compare( "hold-back" )!=std::string::npos ) {
+  else if (realisationString.compare( "hold-back" )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueue;
   }
-  else if (realisationString.compare( "backfill" )!=std::string::npos ) {
+  else if (realisationString.compare( "backfill" )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueAndBackfill;
   }
-  else if (realisationString.compare( "backfill-and-release" )!=std::string::npos ) {
+  else if (realisationString.compare( "backfill-and-release" )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueBackfillAndRelease;
   }
-  else if (realisationString.compare( "merge" )!=std::string::npos ) {
+  else if (realisationString.compare( "merge" )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease;
+  }
+  else {
+    tarch::logging::Log _log( "tarch::multicore" );
+    logError( "parseRealisation(std::string)", "realisation variant " << realisationString << " not known" );
   }
 }
 
