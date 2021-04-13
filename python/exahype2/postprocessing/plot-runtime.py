@@ -10,9 +10,10 @@ import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description="""
-ExaHyPE 2 scaling plotter
+ExaHyPE 2 runtime plotter:
 
-Default plotter for various standard ExaHyPE dumps.
+Default plotter for various standard ExaHyPE dumps. The plotter examines
+and illustrates the runtime per time step behaviour.
 
 """)
   parser.add_argument("file", nargs="+",    help="filename of the file to parse (should be a tar.gz file)")

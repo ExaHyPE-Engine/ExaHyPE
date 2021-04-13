@@ -14,7 +14,6 @@ class PerformanceData(object):
         
     self._start_time_stepping    Is a time stamp
     self._end_time_stepping      Is a time stamp
-    self._start_last_time_step   Is a time stamp
     
     """
     self._file_name            = file_name
@@ -40,6 +39,9 @@ class PerformanceData(object):
     self._time_step_size              = []
 
     self._number_of_time_steps = 0
+
+    self.number_of_grid_sweeps_per_timeStep = 1
+    self.adaptive_time_stepping             = False
     
     """
      The code tries to parse the machine format first. This format however is only
@@ -108,6 +110,9 @@ class PerformanceData(object):
   def parse(self,verbose):
     file       = open(self._file_name, "r")
     self.valid = True
+    
+    first_dt   = -1
+    second_dt  = -1
 
     print( "parse " + self._file_name )
 
@@ -133,6 +138,16 @@ class PerformanceData(object):
           elif "mpi" in line:
             self._ranks = int( line.split( "ranks)" )[0].split( "(")[-1] )
 
+        if "dt_{max}" in line and first_dt<0:
+            first_dt = float( line.split( "=" )[-1] )
+            if first_dt<1e-8:
+              print( "First dt equals zero. Assume this is an adaptive time stepping solver")
+              self.adaptive_time_stepping = True
+        elif "dt_{max}" in line and first_dt>=0 and second_dt<0:
+            second_dt = float( line.split( "=" )[-1] )
+            if second_dt<1e-8:
+              print( "Second dt equals zero. Assume this is an adaptive time stepping solver which requires two sweeps per time step (reset via number_of_grid_sweeps_per_timeStep)")
+              self.number_of_grid_sweeps_per_timeStep = 2
 
         if "run" in line and "TimeStep" in line and "rank:0" in line:
           time_stamp = self.__extract_time_stamp_from_run_call(line)
@@ -165,34 +180,29 @@ class PerformanceData(object):
           self._simulated_time_stamp.append( float( line.split("=")[-1]) )
 
         if "finest mesh resolution of" in line:
-          token = line.split( "h_min=[" )[1].split(",")[0]
+          token = line.split( "finest mesh resolution of " )[1].split("reached")[0]
           self._h = float(token)
           print( "h_min=" + str(self._h) )
           
 
-        search_pattern = r"\d+\.\d+s"
-        
         if "initial grid construction:" in line and not "#measurements=0" in line:
-          match = re.findall( search_pattern, line)
-          self.total_construction_time  = float( match[0].split( "s" )[0] )
+          self.total_construction_time  = float( line.split("grid construction:")[1].split( "s" )[0] )
           match = re.findall( r"measurements=\d+", line)
           self.total_construction_steps  = int( match[0].split( "=" )[1] )
           print( "grid construction lasts " + str(self.total_construction_time) + " over " + str(self.total_construction_steps) + " steps")
             
         
         if "time stepping:" in line and not "#measurements=0" in line:
-          match = re.findall( search_pattern, line)
-          if match:
-            self.total_time_stepping_time  = float( match[0].split( "s" )[0] )
+          self.total_time_stepping_time  = float( line.split("time stepping:")[1].split( "s" )[0] )
           match = re.findall( r"measurements=\d+", line)
           if match:
             self.total_time_stepping_steps  = int( match[0].split( "=" )[1] )
           print( "time stepping lasts " + str(self.total_time_stepping_time) + " over " + str(self.total_time_stepping_steps) + " steps" )
+          print( "assume normalised time per time step of " + str(self.normalised_time_per_time_step()) )
         
         
         if "plotting:" in line and not "#measurements=0" in line:
-          match = re.findall( search_pattern, line)
-          self.total_plotting_time  = float( match[0].split( "s" )[0] )
+          self.total_plotting_time  = float( line.split("plotting:")[1].split( "s" )[0] )
           match = re.findall( r"measurements=\d+", line)
           self.total_plotting_steps  = int( match[0].split( "=" )[1] )
           print( "plotting lasts " + str(self.total_plotting_time) + " over " + str(self.total_plotting_steps) + " steps" )
@@ -209,8 +219,13 @@ class PerformanceData(object):
     
     
   def get_time_per_time_step(self):
+    """
+    
+        self.number_of_grid_sweeps_per_timeStep = 1
+
+    """
     result = []
-    for i in range(1,len(self._start_time_step_time_stamp)):
+    for i in range(1,len(self._start_time_step_time_stamp),self.number_of_grid_sweeps_per_timeStep):
       result.append( self._start_time_step_time_stamp[i]-self._start_time_step_time_stamp[i-1] )
     return result
 
@@ -257,22 +272,18 @@ class PerformanceData(object):
      Should maybe eliminate the time steps that are not really steps 
      
     """
-    return len(self._time_step_size)    
-
-
-  def normalised_time_of_last_time_step(self):
-    """
-      Time of last time step normalised (multiplied) with h^d 
-    """
-    raw_data = self._end_time_stepping - self._start_last_time_step
-    return raw_data * self._h**self._d
+    return len(self._time_step_size)/self.number_of_grid_sweeps_per_timeStep    
 
 
   def normalised_time_per_time_step(self):
     """
       Time of last time step normalised (multiplied) with h^d 
+      
+      
+      self.number_of_grid_sweeps_per_timeStep
+      
     """
-    raw_data = self.total_time_stepping_time / self.total_time_stepping_steps
+    raw_data = self.total_time_stepping_time / self.total_time_stepping_steps * self.number_of_grid_sweeps_per_timeStep
     return raw_data * self._h**self._d
 
       
@@ -296,10 +307,21 @@ def extract_grid_construction_times(performance_data_points):
   return (x_data,y_data)
 
 
-def extract_times_per_step(performance_data_points,show_data_for_last_time_step,max_cores_per_rank=0):
+def extract_times_per_step(performance_data_points, max_cores_per_rank=0):
   """
      
    Returns a tuple of arrays to be plotted
+   
+   This is a rather simple routine. Its big USP is that it accepts an unsorted list of 
+   measurements and returns properly sorted measurements. 
+   
+   performance_data_points: [exahype2.postprocessing.PerformanceData]
+    Set of measurements.
+   
+   max_cores_per_rank: Integer
+    Should be set to -1 if you analyse single node data. Should be set to 0 if you have only
+    one core count measurement per rank count. Should be set to something bigger than 0 if 
+    you scale over both the mpi rank count and the core count.
     
   """
   x_data = []
@@ -307,19 +329,18 @@ def extract_times_per_step(performance_data_points,show_data_for_last_time_step,
     
   for point in performance_data_points:
     if point.total_time_stepping_steps>0:
-      x_value = point._ranks
+      x_value = 0.0
       if max_cores_per_rank>0:
-        x_value += 0.5*point._threads/max_cores_per_rank
+        x_value = point._ranks + 0.5*point._threads/max_cores_per_rank
+      if max_cores_per_rank==0:
+        x_value = point._ranks
+      if max_cores_per_rank<0:
+        x_value = point._threads
       insert_at_position = 0
       while insert_at_position<len(x_data) and x_data[insert_at_position]<x_value:
         insert_at_position += 1
       x_data.insert( insert_at_position, x_value )
-      raw_data = 0
-      if show_data_for_last_time_step:
-        raw_data = point.normalised_time_of_last_time_step()
-      else:
-        raw_data = point.normalised_time_per_time_step()
-      
+      raw_data = point.normalised_time_per_time_step()
       y_data.insert( insert_at_position, raw_data )
     
   return (x_data,y_data)

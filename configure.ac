@@ -105,7 +105,7 @@ fi
 
 if test "$multithreading" == omp; then
   AC_OPENMP()
-  AC_CHECK_HEADERS([omp.h],[],[AC_MSG_ERROR([header <omp.h> not found])])
+  AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([SharedOMP], [1], [SharedOMP])
 
   CXXFLAGS+=" $OPENMP_CXXFLAGS "
@@ -114,7 +114,7 @@ fi
 
 if test "$multithreading" == omp-layered; then
   AC_OPENMP()
-  AC_CHECK_HEADERS([omp.h],[],[AC_MSG_ERROR([header <omp.h> not found])])
+  AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([SharedOMP], [1], [SharedOMP])
   AC_DEFINE([LayeredMultitaskingRuntime], [1], [LayeredMultitaskingRuntime])
 

@@ -19,6 +19,14 @@
 namespace {
   std::list< tarch::multicore::Task* > nonblockingTasks;
   std::mutex                           taskQueueMutex;
+
+  enum class Realisation {
+    MapOntoOMPTasks,
+    HoldBackTasksInLocalQueue
+  };
+
+  constexpr Realisation realisation = Realisation::MapOntoOMPTasks;
+
   const int StandardPriority           = 16;
   const int BackgroundConsumerPriority = 1;
 
@@ -316,15 +324,27 @@ void tarch::multicore::spawnAndWait(
     const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
     int       busyThreads     = NumberOfThreads;
 
+/*
     const char* valueFuseNum = getenv("FUSENUM");
     const char* valueFuseMax = getenv("FUSEMAX");
     int numberOfTasksThatShouldBeFused = valueFuseNum ? std::atoi(valueFuseNum) : 16;
     int maximumNumberOfFusedTaskAssembliesToGPU =                     valueFuseMax ? std::atoi(valueFuseMax) : 1000;
+*/
 
-    #pragma omp critical
-    {
-      taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
+    switch (realisation) {
+      case Realisation::MapOntoOMPTasks:
+        {
+          taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
+        }
+        break;
+      case Realisation::HoldBackTasksInLocalQueue:
+        #pragma omp critical
+        {
+          taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
+        }
+        break;
     }
+
 
     // for task loop, I need an explicit shared(busyThreads)
     for (int i=0; i<NumberOfThreads; i++) {
@@ -345,13 +365,14 @@ void tarch::multicore::spawnAndWait(
         while (
           busyThreads>0
           and
-          not nonblockingTasks.empty()
-          and
           // Without this yield, the code will deadlock if you have more trees
           // than cores. As the first p trees on p cores will finish and then
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
+          and
+          taskProgressionStrategy != TaskProgressionStrategy::MapOntoOMPTask
         ) {
+/*
           if (nonblockingTasks.size()>=numberOfTasksThatShouldBeFused and maximumNumberOfFusedTaskAssembliesToGPU>0) {
             logDebug( "spawnAndWait()", "merge " << numberOfTasksThatShouldBeFused << " tasks" );
             mergePendingTasks(numberOfTasksThatShouldBeFused);
@@ -366,8 +387,8 @@ void tarch::multicore::spawnAndWait(
             tarch::multicore::processPendingTasks( numberOfTasksThatShouldBeFused );
           }
           else {
-            #pragma omp taskyield
-          }
+*/
+          #pragma omp taskyield
         }
       }
 
@@ -375,7 +396,7 @@ void tarch::multicore::spawnAndWait(
     }
     #pragma omp taskwait
 
-    while (
+/*    while (
       nonblockingTasks.size()>=numberOfTasksThatShouldBeFused
       and
       maximumNumberOfFusedTaskAssembliesToGPU>0
@@ -387,16 +408,15 @@ void tarch::multicore::spawnAndWait(
       maximumNumberOfFusedTaskAssembliesToGPU--;
     }
 
-    // Release all the remaining tasks as proper OpenMP tasks
-    #pragma omp critical
-    {
-      taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
-    }
-
     // This is to avoid that we run into OpenMP deadlocks
     if ( tarch::multicore::Core::getInstance().getNumberOfThreads()>1 ) {
       logDebug( "spawnAndWait()", "release " << nonblockingTasks.size() << " tasks as proper OpenMP tasks" );
       tarch::multicore::processPendingTasks(nonblockingTasks.size());
+    }*/
+    // Release all the remaining tasks as proper OpenMP tasks
+    #pragma omp critical
+    {
+      taskProgressionStrategy = TaskProgressionStrategy::MapOntoOMPTask;
     }
   }
 }
