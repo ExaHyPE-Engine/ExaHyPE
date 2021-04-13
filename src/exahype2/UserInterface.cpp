@@ -6,6 +6,8 @@
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/LogFilterFileReader.h"
 
+#include "tarch/multicore/Tasks.h"
+
 
 namespace {
   tarch::logging::Log _log( "exahype2" );
