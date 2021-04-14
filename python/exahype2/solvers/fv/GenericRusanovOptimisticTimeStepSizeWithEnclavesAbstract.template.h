@@ -117,7 +117,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * size changes in the future, i.e. it is reqiured for our biased
      * time step choice.
      */
-    double _previousAdmissibleTimeStepSize;
+    double _previousAdmissibleTimeStepSize[2];
     
     /**
      * The _timeStepSize is fixed from the start of the primary sweep till
