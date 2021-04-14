@@ -109,8 +109,7 @@ void tarch::multicore::native::spawnAndWait(
       break;
     case Realisation::HoldTasksBackInLocalQueue:
     case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-    case Realisation::HoldTasksBackInLocalQueueBackfillAndRelease:
-    case Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease:
+    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
       spawnAndWaitAsExplicitTasksWithPolling(tasks);
       break;
   }

@@ -62,7 +62,7 @@ namespace {
   const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
 
   int numberOfTasksThatShouldBeFused  = std::numeric_limits<int>::max();
-  int maxNumberOfFusedTasksAssemblies = std::numeric_limits<int>::max();
+  int maxNumberOfFusedTasksAssemblies = 2;
   int numberOfFusedTasksAssemblies    = 0;
 
   /**
@@ -184,9 +184,7 @@ std::string tarch::multicore::getListOfRealisations() {
        + ","
        + toString(Realisation::HoldTasksBackInLocalQueueAndBackfill)
        + ","
-       + toString(Realisation::HoldTasksBackInLocalQueueBackfillAndRelease)
-       + ","
-       + toString(Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease);
+       + toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill);
 }
 
 
@@ -198,10 +196,8 @@ std::string tarch::multicore::toString( Realisation realisation ) {
       return "hold-back";
     case Realisation::HoldTasksBackInLocalQueueAndBackfill:
       return "backfill";
-    case Realisation::HoldTasksBackInLocalQueueBackfillAndRelease:
-      return "backfill-and-release";
-    case Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease:
-      return "merge";
+    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
+      return "merge-and-backfill";
   }
   return "<undef>";
 }
@@ -217,11 +213,8 @@ void tarch::multicore::parseRealisation( const std::string& realisationString ) 
   else if (realisationString.compare( "backfill" )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueAndBackfill;
   }
-  else if (realisationString.compare( "backfill-and-release" )==0 ) {
-    realisation = Realisation::HoldTasksBackInLocalQueueBackfillAndRelease;
-  }
   else if (realisationString.compare( "merge" )==0 ) {
-    realisation = Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease;
+    realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
   }
   else {
     tarch::logging::Log _log( "tarch::multicore" );
@@ -504,10 +497,9 @@ const std::vector< Task* >&  tasks
         break;
       case Realisation::HoldTasksBackInLocalQueue:
       case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-      case Realisation::HoldTasksBackInLocalQueueBackfillAndRelease:
         taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
         break;
-      case Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease:
+      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
         numberOfFusedTasksAssemblies = 0;
         taskProgressionStrategy      = TaskProgressionStrategy::MergeTasks;
         break;
@@ -522,21 +514,13 @@ const std::vector< Task* >&  tasks
       case Realisation::HoldTasksBackInLocalQueue:
       case Realisation::HoldTasksBackInLocalQueueAndBackfill:
         {
-          taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
-          while (not nonblockingTasks.empty()) {
-            tarch::multicore::processPendingTasks( nonblockingTasks.size() );
-          }
-        }
-      break;
-      case Realisation::HoldTasksBackInLocalQueueBackfillAndRelease:
-        {
           taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
           while (not nonblockingTasks.empty()) {
             tarch::multicore::processPendingTasks( nonblockingTasks.size() );
           }
         }
         break;
-      case Realisation::HoldTasksBackInLocalQueueMergeBackfillAndRelease:
+      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
         {
           taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
           tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );

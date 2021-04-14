@@ -16,8 +16,7 @@ namespace tarch {
       MapOntoNativeTasks,
       HoldTasksBackInLocalQueue,
       HoldTasksBackInLocalQueueAndBackfill,
-      HoldTasksBackInLocalQueueBackfillAndRelease,
-      HoldTasksBackInLocalQueueMergeBackfillAndRelease
+      HoldTasksBackInLocalQueueMergeAndBackfill
     };
 
     std::string toString( Realisation realisation );
