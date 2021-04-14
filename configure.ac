@@ -147,6 +147,8 @@ fi
 
 AX_COMPILER_VENDOR
 
+AX_CXX_COMPILE_STDCXX_14
+
 
 ##
 ## VTK Options
