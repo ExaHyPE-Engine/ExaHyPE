@@ -92,7 +92,7 @@ A generic script to create speedup plots.
   if args.plot_efficiency:
     plt.ylabel( "Efficiency" )
   else:
-    plt.ylabel( "Time [t]=s" )
+    plt.ylabel( "Normalised time [t]=s" )
   if args.log_x:
     plt.xscale( "log", base=2 )
   if args.log_y:

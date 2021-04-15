@@ -109,6 +109,8 @@ class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):
       reconstructedPatch,
       originalPatch
     );
+    
+    tarch::freeMemory( reconstructedPatch, tarch::MemoryLocation::Heap );
   }
   """      
   

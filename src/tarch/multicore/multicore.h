@@ -233,15 +233,7 @@ and
       * @see file Tasks.h
       */
      void yield();
-
-     const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
-     const std::string ConsumerTaskCountStatisticsIdentifier( "tarch::multicore::consumer-tasks");
-     const std::string TasksPerConsumerRunStatisticsIdentifier( "tarch::multicore::tasks-per-consumer-run");
       
-     #if !defined(UseAMD)
-     #endif
-     
-     
      #if defined(GPUOffloading) and defined(UseAMD)
        #define  GPUCallableMethod __global__ __device__
        #undef   OpenMPGPUOffloading
@@ -268,14 +260,15 @@ and
 	 */
     ManagedAcceleratorMemory
   };
-#if defined(OpenMPGPUOffloading)
-#pragma omp declare target
-#endif
+
+  #if defined(OpenMPGPUOffloading)
+  #pragma omp declare target
+  #endif
   double* allocateMemory(int size, MemoryLocation location);
   void freeMemory(double* data, MemoryLocation location);
-#if defined(OpenMPGPUOffloading)
-#pragma omp end declare target
-#endif
+  #if defined(OpenMPGPUOffloading)
+  #pragma omp end declare target
+  #endif
 }
 
 #endif

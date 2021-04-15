@@ -134,7 +134,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       originalPatch
     );
 
-    double maxEigvenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+    double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
       [] (
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -157,7 +157,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     
     {{POSTPROCESS_UPDATED_PATCH}}
     
-    repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigvenvalue );
+    repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
   """ 
 
 
