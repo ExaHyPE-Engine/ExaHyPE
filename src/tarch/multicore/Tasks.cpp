@@ -490,7 +490,21 @@ void tarch::multicore::spawnTask(Task*  task) {
 void tarch::multicore::spawnAndWait(
 const std::vector< Task* >&  tasks
 ) {
+  static tarch::logging::Log _log( "tarch::multicore" );
   if (not tasks.empty()) {
+    if (
+      tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
+      and
+      realisation!=Realisation::HoldTasksBackInLocalQueue
+    ) {
+      logWarning(
+        "spawnAndWait()",
+        "threading model is not set to " << toString(Realisation::HoldTasksBackInLocalQueue) <<
+        ". However, as we have only one core, any other threading model will deadlock. Switch model therefore"
+      );
+      realisation = Realisation::HoldTasksBackInLocalQueue;
+    }
+
     switch (realisation) {
       case Realisation::MapOntoNativeTasks:
         taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
@@ -513,7 +527,17 @@ const std::vector< Task* >&  tasks
         break;
       case Realisation::HoldTasksBackInLocalQueue:
       case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-        {
+        if (
+          tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
+          and
+          not nonblockingTasks.empty()
+        ) {
+          logInfo( "spawnAndWait()", "there are low priority tasks but no multithreading is enabled. Process all tasks immediately now")
+          while (not nonblockingTasks.empty()) {
+            tarch::multicore::processPendingTasks( nonblockingTasks.size() );
+          }
+        }
+        else {
           taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
           while (not nonblockingTasks.empty()) {
             tarch::multicore::processPendingTasks( nonblockingTasks.size() );
