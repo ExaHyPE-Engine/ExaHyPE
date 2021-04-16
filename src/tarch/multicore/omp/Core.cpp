@@ -26,7 +26,8 @@ tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 
-tarch::multicore::Core::Core() {
+tarch::multicore::Core::Core():
+  _numberOfThreads( omp_get_max_threads() ) {
 }
 
 
@@ -47,10 +48,12 @@ void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConc
     }
 
     omp_set_num_threads(numberOfThreads);
+    _numberOfThreads = numberOfThreads;
     logInfo( "configure(...)", "manually reset number of threads used to " << numberOfThreads );
   }
   else {
     omp_set_num_threads(omp_get_max_threads());
+    _numberOfThreads = omp_get_max_threads();
   }
 }
 
@@ -65,7 +68,7 @@ bool tarch::multicore::Core::isInitialised() const {
 
 
 int tarch::multicore::Core::getNumberOfThreads() const {
-  return omp_get_max_threads();
+  return _numberOfThreads;
 }
 
 
