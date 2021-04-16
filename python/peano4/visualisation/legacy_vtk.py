@@ -13,7 +13,7 @@ def write_preamble(vtk_file, num_cells_on_axis, origin, spacing, dimensions):
         z_axis_depth = num_cells_on_axis
     else:
         print("Error, specified dimensions '{}' not supported, exiting...".format(
-                    dimensions))
+            dimensions))
         sys.exit(1)
 
     vtk_file.write(
@@ -25,6 +25,7 @@ def write_preamble(vtk_file, num_cells_on_axis, origin, spacing, dimensions):
         f"ORIGIN {origin} {origin} {origin}\n"
         f"SPACING {spacing} {spacing} {spacing}\n"
     )
+
 
 def get_structured_values_2d(patch_boundaries, ofparser, patch_size):
     # To reduce time complexity I create a structured
@@ -58,7 +59,13 @@ def get_structured_values_2d(patch_boundaries, ofparser, patch_size):
                         structured_values.append(unknown)
     return structured_values
 
-def get_structured_values_3d(patch_boundaries_x, patch_boundaries_y, patch_boundaries_z, ofparser, patch_size):
+
+def get_structured_values_3d(
+        patch_boundaries_x,
+        patch_boundaries_y,
+        patch_boundaries_z,
+        ofparser,
+        patch_size):
     # To reduce time complexity I create a structured
     # matrix of patches from the unstructured set of
     # patches that make up the Peano patch file
@@ -70,36 +77,30 @@ def get_structured_values_3d(patch_boundaries_x, patch_boundaries_y, patch_bound
             y_pos_matrix = patch_boundaries_y.index(patch.offset[1])
             z_pos_matrix = patch_boundaries_z.index(patch.offset[2])
             patch_matrix[z_pos_matrix][y_pos_matrix][x_pos_matrix] = patch
-    
+
     structured_values = []
-    #num_rows = 0
     for z_axis_of_patches in range(len(patch_boundaries_x)):
-        for z_axis_of_patch in range(ofparser.dof): # !
-            for y_axis_position in range(len(patch_boundaries_x)): 
-                    
-                    for j in range(ofparser.dof): # !
-                        print("y axis in patch: ", j)
-                        for k in range(len(patch_boundaries_x)):
-                            #num_rows += 1
-                            #print(z_axis_of_patches)
-                            #print(y_axis_position)
-                            #print(k)
-                            #print()
-                            try:
-                                values = patch_matrix[z_axis_of_patches][y_axis_position][k].values
-                                p_first_val = (z_axis_of_patch * ofparser.dof * ofparser.dof * ofparser.unknowns) + (j * ofparser.dof * ofparser.unknowns)
-                                for val in values[p_first_val : p_first_val + (ofparser.dof * ofparser.unknowns)]:
-                                    structured_values.append(val)
-                            except AttributeError: # Thrown when patch file has no data 
-                                                   # for this position in the mesh
-                                for val in range(ofparser.dof * ofparser.unknowns):
-                                    structured_values.append(0.0)
-                        
-    
-    #print("LEN STRUCTURED_VALUES: ", len(structured_values))
-    #print("NUM ROWS ACCESSED: ", num_rows)
-    #print(structured_values)
+        for z_axis_of_patch in range(ofparser.dof):
+            for y_axis_position in range(len(patch_boundaries_x)):
+
+                for j in range(ofparser.dof):
+                    print("y axis in patch: ", j)
+                    for k in range(len(patch_boundaries_x)):
+                        try:
+                            values = patch_matrix[z_axis_of_patches][y_axis_position][k].values
+                            p_first_val = (
+                                z_axis_of_patch * ofparser.dof * ofparser.dof * ofparser.unknowns) + (
+                                j * ofparser.dof * ofparser.unknowns)
+                            for val in values[p_first_val: p_first_val +
+                                              (ofparser.dof * ofparser.unknowns)]:
+                                structured_values.append(val)
+                        except AttributeError:  # Thrown when patch file has no data
+                                                # for this position in the mesh
+                            for val in range(ofparser.dof * ofparser.unknowns):
+                                structured_values.append(0.0)
+
     return structured_values
+
 
 def peano_patch_to_legacy_vtk(patch_file, vtk_file, dimensions):
     ofparser = OutputFileParser(patch_file, '', 0)
@@ -111,19 +112,31 @@ def peano_patch_to_legacy_vtk(patch_file, vtk_file, dimensions):
         ofparser.dof   # assumes x==y==z
     spacing = ((patch_boundaries_x[-1] + patch_size) -
                patch_boundaries_x[0]) / num_cells_on_axis
-    
+
     with open(vtk_file, "w") as vtk:
-        write_preamble(vtk, num_cells_on_axis, patch_boundaries_x[0], spacing, dimensions)
+        write_preamble(
+            vtk,
+            num_cells_on_axis,
+            patch_boundaries_x[0],
+            spacing,
+            dimensions)
 
         numPoints = 0
         structured_values = []
         if dimensions == 2:
-            structured_values = get_structured_values_2d(patch_boundaries_x, ofparser, patch_size)
-            numPoints = num_cells_on_axis * num_cells_on_axis # assumes x==y
-        else: # for 3D
-            structured_values = get_structured_values_3d(patch_boundaries_x, patch_boundaries_y, patch_boundaries_z, ofparser, patch_size)
+            structured_values = get_structured_values_2d(
+                patch_boundaries_x, ofparser, patch_size)
+            numPoints = num_cells_on_axis * num_cells_on_axis  # assumes x==y
+        else:  # for 3D
+            structured_values = get_structured_values_3d(
+                patch_boundaries_x,
+                patch_boundaries_y,
+                patch_boundaries_z,
+                ofparser,
+                patch_size)
             print("num_cells_on_axis: ", num_cells_on_axis)
-            numPoints = num_cells_on_axis * num_cells_on_axis * num_cells_on_axis # assumes x==y==z
+            numPoints = num_cells_on_axis * num_cells_on_axis * \
+                num_cells_on_axis  # assumes x==y==z
 
         numComp = 1
         for unknown in range(ofparser.unknowns):
@@ -170,7 +183,13 @@ if __name__ == "__main__":
                     args.filepath))
             sys.exit(1)
 
-        output_file = os.path.join(args.output_dir, 'vtk_file_' + os.path.basename(args.filepath).replace('.peano-patch-file','.vtk'))
+        output_file = os.path.join(
+            args.output_dir,
+            'vtk_file_' +
+            os.path.basename(
+                args.filepath).replace(
+                '.peano-patch-file',
+                '.vtk'))
         peano_patch_to_legacy_vtk(args.filepath, output_file, args.n_dims)
 
     if args.metafile:
@@ -188,7 +207,12 @@ if __name__ == "__main__":
                     patch_file_names.append(words[1].strip('"'))
 
         for file in patch_file_names:
-            output_file = os.path.join(args.output_dir, 'vtk_file_' + file.replace('.peano-patch-file', '.vtk'))
+            output_file = os.path.join(
+                args.output_dir,
+                'vtk_file_' +
+                file.replace(
+                    '.peano-patch-file',
+                    '.vtk'))
             peano_patch_to_legacy_vtk(
                 os.path.join(
                     os.path.dirname(
