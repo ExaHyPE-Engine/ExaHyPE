@@ -47,6 +47,8 @@ parser.add_argument("-f",  "--force",                  dest="force",            
 parser.add_argument("-t",   "--type",                  dest="type",                     choices=["default", "default-ats", "enclave", "enclave-ats", "enclave-ots", "gpu"], default="default", help="Pick implementation variant" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
+parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
+parser.add_argument("--no-compile",                    dest="compile",          action="store_false", default="True", help="Compile (on by default)" )
 args = parser.parse_args()
 
 if args.dim not in [2,3]:
@@ -76,13 +78,12 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 #
 # Add the Finite Volumes solver
 #
-patch_size     = 17
 unknowns       = 5
 time_step_size = 0.000001
 min_h          = args.h
 max_h          = args.h
 
-admissible_time_step_size = min_h/patch_size*0.01
+admissible_time_step_size = min_h/args.patch_size*0.01
 
 #
 # Still the same solver, but this time we use named arguments. This is the way
@@ -97,7 +98,7 @@ if args.type=="gpu":
   print("Turning on OpenMP for GPUs")
   thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator(
     "EulerOnGPU",
-    patch_size,
+    args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     admissible_time_step_size,
@@ -106,7 +107,7 @@ if args.type=="gpu":
 elif args.type=="enclave":
   thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
     "Euler",
-    patch_size,
+    args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     admissible_time_step_size,
@@ -115,7 +116,7 @@ elif args.type=="enclave":
 elif args.type=="enclave-ats":
   thesolver = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves(
     "Euler",
-    patch_size,
+    args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
@@ -123,7 +124,7 @@ elif args.type=="enclave-ats":
 elif args.type=="enclave-ots":
   thesolver = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves(
     "Euler",
-    patch_size,
+    args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
@@ -131,7 +132,7 @@ elif args.type=="enclave-ots":
 elif args.type=="default":
   thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize(
     "Euler",
-    patch_size,
+    args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     admissible_time_step_size,
@@ -140,7 +141,7 @@ elif args.type=="default":
 elif args.type=="default-ats":
   thesolver = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize(
     "Euler",
-    patch_size,
+    args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
@@ -173,7 +174,11 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" 
 project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project(args.verbose)
 peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )
-peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+if args.compile:
+  peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
+else:
+  peano4_project.generate()
+
 
 print("Done. Executable is: {}".format(args.out))
 print( "Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-Euler.peano-patch-file")

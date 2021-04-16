@@ -247,7 +247,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId )
 }
 
 
-int peano4::parallel::SpacetreeSet::TraverseTask::_typeId( peano4::parallel::Tasks::getTaskType("peano4::parallel::SpacetreeSet::TraverseTask") );
+int peano4::parallel::SpacetreeSet::TraverseTask::_typeId( peano4::parallel::Tasks::getTaskType("peano4::parallel::SpacetreeSet::TraverseTask", false) );
 
 
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(

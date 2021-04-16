@@ -6,6 +6,8 @@
 #include "tarch/logging/LogFilter.h"
 #include "tarch/logging/LogFilterFileReader.h"
 
+#include "tarch/multicore/Tasks.h"
+
 
 namespace {
   tarch::logging::Log _log( "exahype2" );
@@ -100,12 +102,16 @@ Options: \n\
   -h, --help                 Display help on commandline options. \n\
   --threads <no>             Specify how many threads to use (per rank). Option \n\
                              has no meaning if code base has not been \n\
-                             translated with shared memory support. \n\
+                             translated with shared memory support. Not all \n\
+                             runtimes allow you to set the thread count via the \n\
+                             code. \n\
   --log-filter-file <file>   Specify which log filter file to use. Default file \n\
                              is exahype.log-filter \n\
   --timeout <t>              Set timeout. t is given in seconds and can be 0 to \n\
                              switch timeouts off. \n\
-";
+  --threading-model <t>      Set threading model. \n\
+\n\n\n\
+Supported threading models: " << tarch::multicore::getListOfRealisations() << std::endl;
 }
 
 
@@ -139,6 +145,10 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
       int timeout = std::atoi(argv[argument+1]);
       tarch::mpi::Rank::getInstance().setDeadlockTimeOut( timeout );
       logInfo( "parseCommandLineArguments(...)", "manually set timeout to " << timeout );
+    }
+    else if ( select.compare( "--threading-model" ) == 0 ) {
+      tarch::multicore::parseRealisation( argv[argument+1] );
+      logInfo( "parseCommandLineArguments(...)", "manually set threading model to " << tarch::multicore::toString(tarch::multicore::getRealisation()) );
     }
     else {
       printUsage(argv);
