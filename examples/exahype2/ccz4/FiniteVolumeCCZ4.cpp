@@ -14,6 +14,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef IncludeTwoPunctures
+TP::TwoPunctures* _tp = new TP::TwoPunctures();
+#endif
 
 tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "examples::exahype2::ccz4::FiniteVolumeCCZ4" );
 examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
@@ -24,7 +27,7 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   }
   #ifdef IncludeTwoPunctures
   if ( Scenario==2 ) {
-    TP_bindding::prepare(tp);//we solve the puncture equation here.
+    TP_bindding::prepare(_tp);//we solve the puncture equation here.
     //exit(0);
   }
   #endif
@@ -51,7 +54,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
     }
     #ifdef IncludeTwoPunctures
     else if ( Scenario==2 ) {
-      examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, t, tp); //we interpolate for real IC here.
+      examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, t, _tp); //we interpolate for real IC here.
     }
     #endif
     else {

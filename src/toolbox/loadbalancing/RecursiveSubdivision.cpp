@@ -347,6 +347,8 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==1
     and
+    tarch::multicore::Core::getInstance().getNumberOfThreads()>1
+    and
     canSplitLocally()
   ) {
     // @todo Debug

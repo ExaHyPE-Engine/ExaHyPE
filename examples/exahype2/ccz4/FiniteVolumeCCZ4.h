@@ -14,7 +14,9 @@
 
 #include "tarch/logging/Log.h"
 
+#ifdef IncludeTwoPunctures
 #include "libtwopunctures/TwoPunctures.h"
+#endif
 
 namespace examples {
   namespace exahype2 {
@@ -30,9 +32,6 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
   private:
     static tarch::logging::Log   _log;
 
-    #ifdef IncludeTwoPunctures
-    TP::TwoPunctures _tp;
-    #endif
 
   public:
     FiniteVolumeCCZ4();   
@@ -63,7 +62,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       double                                       t,
       double                                       dt,
       double * __restrict__ S
-    );
+    ) override;
     //#if defined(OpenMPGPUOffloading)
     //#pragma omp end declare target
     //#endif
@@ -86,7 +85,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal
-    );
+    ) override;
  
     void nonconservativeProduct(
       const double * __restrict__ Q, // Q[59+0],
@@ -96,7 +95,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       double                                       t,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[59]
-    );
+    ) override;
 };
 
 

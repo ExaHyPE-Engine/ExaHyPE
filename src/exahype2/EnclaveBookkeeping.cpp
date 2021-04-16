@@ -43,23 +43,22 @@ void exahype2::EnclaveBookkeeping::dumpStatistics() {
 
 void exahype2::EnclaveBookkeeping::cancelTask(int number) {
   tarch::multicore::Lock finishedTasksLock( _finishedTasksSemaphore );
-  int elementsRemoved = _finishedTasks.erase( number );
-  finishedTasksLock.free();
 
-  if (elementsRemoved==1) {
+  if (_finishedTasks.count( number )>0) {
+    std::pair<int, double*> storedData = _finishedTasks[number];
+    _finishedTasks.erase( number );
+    tarch::freeMemory(storedData.second,tarch::MemoryLocation::Heap );
     tarch::multicore::releaseTaskNumber(number);
   }
   else {
-    finishedTasksLock.lock();
     _tasksThatHaveToBeCancelled.insert(number);
-    finishedTasksLock.free();
   }
 }
 
 
 std::pair<int, double*>  exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndReturnResult(int number) {
   tarch::multicore::Lock finishedTasksLock( _finishedTasksSemaphore );
-  bool isContained = _finishedTasks.count( number );
+  bool isContained = _finishedTasks.count( number )>0;
   finishedTasksLock.free();
 
   while (not isContained) {
@@ -72,7 +71,7 @@ std::pair<int, double*>  exahype2::EnclaveBookkeeping::waitForTaskToTerminateAnd
     }
 
     finishedTasksLock.lock();
-    isContained = _finishedTasks.count( number );
+    isContained = _finishedTasks.count( number )>0;
     finishedTasksLock.free();
   }
 

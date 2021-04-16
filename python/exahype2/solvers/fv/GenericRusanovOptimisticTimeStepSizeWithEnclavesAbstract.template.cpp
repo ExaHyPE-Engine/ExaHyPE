@@ -24,7 +24,8 @@
   _dropOptimisticTaskInPrimaryTraversal(false),
   _mergeOptimisticTaskOutcomeInSecondaryTraversal(false),
   _spawnOptimisticTaskInSecondaryTraversal(false) {
-  _previousAdmissibleTimeStepSize = 0.0;
+  _previousAdmissibleTimeStepSize[0] = 0.0;
+  _previousAdmissibleTimeStepSize[1] = 0.0;
 }
 
 
@@ -85,137 +86,185 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     #else
     nextAdmissibleTimeStepSize = localNextAdmissibleTimeStepSize;
     #endif
+    _admissibleTimeStepSize             = std::numeric_limits<double>::max();
+
+    _previousAdmissibleTimeStepSize[0] = _previousAdmissibleTimeStepSize[1];
+    _previousAdmissibleTimeStepSize[1] = nextAdmissibleTimeStepSize;
+
+    logDebug(
+      "finishTimeStep()",
+      "end of secondary sweep: admissible time step size=" << nextAdmissibleTimeStepSize
+    );
 
     if ( tarch::la::equals(_timeStepSize,0.0) ) {
-      _timeStepSize                       = TimeStapSizeDamping * nextAdmissibleTimeStepSize;
-      _predictedTimeStepSize              = 0.0;
-      _previousAdmissibleTimeStepSize     = 0.0;
-      _admissibleTimeStepSize             = std::numeric_limits<double>::max();
-      logInfo(
-        "finishTimeStep()",
-        "end of secondary sweep: initial time step size is set to " << _timeStepSize << ". Do not yet issue tasks optimistically"
-      );
+      _timeStamp                           = 0.0;
+      _timeStepSize                        = TimeStapSizeDamping * nextAdmissibleTimeStepSize;
+      _predictedTimeStepSize               = 0.0;
+
       _mergeEnclaveTaskOutcomeInSecondaryTraversal    = true;
-      _spawnEnclaveTaskInPrimaryTraversal      = true;
+      _spawnEnclaveTaskInPrimaryTraversal             = true;
       _dropOptimisticTaskInPrimaryTraversal           = false;
       _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
       _spawnOptimisticTaskInSecondaryTraversal        = false;
-    }
-    /**
-     *  ok, we can continue
-     */
-    else if (
-      _predictedTimeStepSize > nextAdmissibleTimeStepSize
-      or
-      _previousAdmissibleTimeStepSize > nextAdmissibleTimeStepSize
-    ) {
-      logInfo(
+
+      logDebug(
         "finishTimeStep()",
-        "end of secondary sweep: guess has been too optimistic (predicted "<< _predictedTimeStepSize << " after previous one of " << _previousAdmissibleTimeStepSize <<
-        "), admissible time step size is " << nextAdmissibleTimeStepSize << ". Have to throw away optimistic predictions"
+        "initial time step size set to " << _timeStepSize
       );
+    }
+    else if (
+      _predictedTimeStepSize >= nextAdmissibleTimeStepSize
+      and
+      _spawnOptimisticTaskInSecondaryTraversal
+    ) {
       _timeStamp                          += _timeStepSize;
       _timeStepSize                        = nextAdmissibleTimeStepSize;
       _predictedTimeStepSize               = 0.0;
-      _previousAdmissibleTimeStepSize      = 0.0;
+
       _mergeEnclaveTaskOutcomeInSecondaryTraversal    = true;
       _spawnEnclaveTaskInPrimaryTraversal             = true;
       _dropOptimisticTaskInPrimaryTraversal           = true;
       _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
       _spawnOptimisticTaskInSecondaryTraversal        = false;
-    }
-    else if ( tarch::la::equals(_predictedTimeStepSize, 0.0) ) {
-      assertion( _predictedTimeStepSize <= nextAdmissibleTimeStepSize );
 
-      _timeStamp                          += _timeStepSize;
-      _timeStepSize                        = nextAdmissibleTimeStepSize;
-      _predictedTimeStepSize               = 0.0;
-      _previousAdmissibleTimeStepSize      = 0.0;
       logInfo(
         "finishTimeStep()",
-        "end of secondary sweep: no prediction of a time step size had been available. No time steps spawned optimistically. Continue with time step size "<< _timeStepSize
+        "guess has been too optimistic. Throw away optimistic predictions, reset time step size to " << _timeStepSize << ", and erase prediction"
       );
+    }
+    else if (
+      _predictedTimeStepSize>0.0
+      and
+      not _spawnOptimisticTaskInSecondaryTraversal
+    ) {
+      _timeStamp                          += _timeStepSize;
+      _timeStepSize                        = nextAdmissibleTimeStepSize;
+      _predictedTimeStepSize               = nextAdmissibleTimeStepSize;
+
       _mergeEnclaveTaskOutcomeInSecondaryTraversal    = true;
-      _spawnEnclaveTaskInPrimaryTraversal      = true;
+      _spawnEnclaveTaskInPrimaryTraversal             = true;
       _dropOptimisticTaskInPrimaryTraversal           = false;
       _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
       _spawnOptimisticTaskInSecondaryTraversal        = true;
-    }
-    else {
-      assertion( _predictedTimeStepSize <= nextAdmissibleTimeStepSize );
 
+      logDebug(
+        "finishTimeStep()",
+        "start to spawn optimistic time steps after next primary traversal"
+      );
+    }
+    else if (
+      _predictedTimeStepSize>0.0
+      and
+      _spawnOptimisticTaskInSecondaryTraversal
+    ) {
       _timeStamp                          += _timeStepSize;
       _timeStepSize                        = _predictedTimeStepSize;
-      _previousAdmissibleTimeStepSize      = _predictedTimeStepSize;
       _predictedTimeStepSize               = nextAdmissibleTimeStepSize;
-      logInfo(
-        "finishTimeStep()",
-        "end of secondary sweep: predicted time step size "<< _predictedTimeStepSize << " is admissible (max admissible time step size would be " <<
-        nextAdmissibleTimeStepSize << ", so continue with this time step size"
-      );
+
       _mergeEnclaveTaskOutcomeInSecondaryTraversal    = false;
       _spawnEnclaveTaskInPrimaryTraversal             = false;
       _dropOptimisticTaskInPrimaryTraversal           = false;
       _mergeOptimisticTaskOutcomeInSecondaryTraversal = true;
       _spawnOptimisticTaskInSecondaryTraversal        = true;
+
+      logDebug(
+        "finishTimeStep()",
+        "optimistic time stepping reasonably conservative"
+      );
+    }
+    else if ( tarch::la::equals(_predictedTimeStepSize,0.0) ) {
+      _timeStamp                          += _timeStepSize;
+      _timeStepSize                        = nextAdmissibleTimeStepSize;
+      _predictedTimeStepSize               = nextAdmissibleTimeStepSize;
+
+      _mergeEnclaveTaskOutcomeInSecondaryTraversal    = true;
+      _spawnEnclaveTaskInPrimaryTraversal             = true;
+      _dropOptimisticTaskInPrimaryTraversal           = false;
+      _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
+      _spawnOptimisticTaskInSecondaryTraversal        = false;
+
+      logDebug(
+        "finishTimeStep()",
+        "have no valid predicted time step size yet (previous guess had been too optimistic)"
+      );
+    }
+    else {
+      assertion( _predictedTimeStepSize <= nextAdmissibleTimeStepSize );
+      assertion( _predictedTimeStepSize > 0.0 );
+
+      _timeStamp                          += _timeStepSize;
+      _timeStepSize                        = _predictedTimeStepSize;
+      _predictedTimeStepSize               = nextAdmissibleTimeStepSize;
+
+      _mergeEnclaveTaskOutcomeInSecondaryTraversal    = false;
+      _spawnEnclaveTaskInPrimaryTraversal             = false;
+      _dropOptimisticTaskInPrimaryTraversal           = false;
+      _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
+      _spawnOptimisticTaskInSecondaryTraversal        = true;
+
+      logDebug(
+        "finishTimeStep()",
+        "predicted time step size "<< _predictedTimeStepSize << " is admissible (max admissible time step size would be " <<
+        nextAdmissibleTimeStepSize << "), so roll over predicted time step size"
+      );
     }
   }
   // end of primary time step:
   //
-  // In the secondary step, we might issue optimistic computations. So this is
-  // the place where we predict.
+  // In the secondary step, we predict. But we do not change any state
+  // (even though that would be possible - but I want to keep things
+  // simple and straight)!
   else {
     if ( tarch::la::equals(_timeStepSize, 0.0)  ) {
       logInfo(
         "finishTimeStep()",
-        "end of primary sweep: do not yet have a prediction what a valid time step size might look like. Did not spawn optimistic tasks"
+        "end of initial primary sweep"
       );
-      _mergeOptimisticTaskOutcomeInSecondaryTraversal = false;
+    }
+    else if ( tarch::la::equals(_previousAdmissibleTimeStepSize[0], 0.0)  ) {
+      _predictedTimeStepSize = TimeStapSizeDamping * _timeStepSize;
+      logInfo(
+        "finishTimeStep()",
+        "finish primary sweep and predict time step size of " << _predictedTimeStepSize
+        << " due to artificial damping"
+      );
     }
     else {
-      if ( tarch::la::equals(_previousAdmissibleTimeStepSize, 0.0)  ) {
-        _predictedTimeStepSize = TimeStapSizeDamping * _timeStepSize;
+      // nextAdmissibleTimeStepSize is stored now within _predictedTimeStepSize as of last
+      // termination of secondary sweep
+      double growthOfAdmissibleTimeStepSize = std::min(1.0, _previousAdmissibleTimeStepSize[1] / _previousAdmissibleTimeStepSize[0]);
+
+      if ( tarch::la::equals(growthOfAdmissibleTimeStepSize,1.0) ) {
+        _predictedTimeStepSize = 0.5 * (_timeStepSize + _predictedTimeStepSize);
+        logInfo(
+            "finishTimeStep()",
+            "end of primary sweep: pick creeping average as new predicted time step size for optimistic tasking (predicted dt=" <<
+            _predictedTimeStepSize << ", current dt=" <<
+            _timeStepSize << 
+            ")"
+        );
       }
       else {
-        // nextAdmissibleTimeStepSize is stored now within _predictedTimeStepSize as of last
-        // termination of secondary sweep
-        double growthOfAdmissibleTimeStepSize = std::min(1.0, _predictedTimeStepSize / _previousAdmissibleTimeStepSize);
-
-        double backupOfPredictedTimeStepSize = _predictedTimeStepSize;
-
-        if ( tarch::la::equals(growthOfAdmissibleTimeStepSize,1.0) ) {
-          _predictedTimeStepSize = 0.5 * (_timeStepSize + _predictedTimeStepSize);
-          logInfo(
+        const double biasedFutureTimeStepSize = growthOfAdmissibleTimeStepSize * _predictedTimeStepSize;
+        _predictedTimeStepSize = std::min( biasedFutureTimeStepSize, 0.5 * (_timeStepSize + biasedFutureTimeStepSize) );
+        logInfo(
             "finishTimeStep()",
-            "end of primary sweep: pick creeping average new predicted time step size for optimistic tasking (predicted dt=" <<
+            "end of primary sweep: pick min of biased time step size and biased average (new predicted dt=" <<
             _predictedTimeStepSize << ", current dt=" <<
-            _timeStepSize << ", admissible dt=" << backupOfPredictedTimeStepSize <<
-            ")"
-          );
-        }
-        else {
-          _predictedTimeStepSize = 0.5 * growthOfAdmissibleTimeStepSize * growthOfAdmissibleTimeStepSize * (_timeStepSize + _predictedTimeStepSize);
-          logInfo(
-            "finishTimeStep()",
-            "end of primary sweep: pick biased new predicted time step size for optimistic tasking (predicted dt=" <<
-            _predictedTimeStepSize << ", current dt=" <<
-            _timeStepSize << ", admissible dt=" << backupOfPredictedTimeStepSize <<
-            ", extrapolated growth=" << growthOfAdmissibleTimeStepSize << ")"
-          );
-        }
+            _timeStepSize << ", biased dt=" << biasedFutureTimeStepSize <<
+            ", extrapolated growth=" << growthOfAdmissibleTimeStepSize << 
+            ", admissible dt[0]=" << _previousAdmissibleTimeStepSize[0] << ", admissible dt[1]=" << _previousAdmissibleTimeStepSize[1] << ")"
+        );
       }
-      _previousAdmissibleTimeStepSize          = _predictedTimeStepSize;
-      _spawnOptimisticTaskInSecondaryTraversal = true;
     }
   }
 
-  // @todo Debug
-  logInfo( "finishTimeStep()",
-    "mergeEnclaveTaskOutcomeInSecondaryTraversal=" << _mergeEnclaveTaskOutcomeInSecondaryTraversal <<
-    ",spawnEnclaveTaskInPrimaryTraversal=" << _spawnEnclaveTaskInPrimaryTraversal <<
-    ",dropOptimisticTaskInPrimaryTraversal=" << _dropOptimisticTaskInPrimaryTraversal <<
+  logDebug( "finishTimeStep()",
+    "spawnEnclaveTaskInPrimaryTraversal=" << _spawnEnclaveTaskInPrimaryTraversal <<
+    ",mergeEnclaveTaskOutcomeInSecondaryTraversal=" << _mergeEnclaveTaskOutcomeInSecondaryTraversal <<
+    ",spawnOptimisticTaskInSecondaryTraversal=" << _spawnOptimisticTaskInSecondaryTraversal <<
     ",mergeOptimisticTaskOutcomeInSecondaryTraversal=" << _mergeOptimisticTaskOutcomeInSecondaryTraversal <<
-    ",spawnOptimisticTaskInSecondaryTraversal=" << _spawnOptimisticTaskInSecondaryTraversal
+    ",dropOptimisticTaskInPrimaryTraversal=" << _dropOptimisticTaskInPrimaryTraversal
   );
 
   assertion( _timeStepSize < std::numeric_limits<double>::max() );

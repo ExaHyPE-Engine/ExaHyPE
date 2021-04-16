@@ -14,7 +14,11 @@ modes = {
 
 floatparams = {
         "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
-        "GLMepsD":1.0, "itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
+        "GLMepsD":1.0, 
+	#"itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
+        #"f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
+        #"sk":0.0, "bs":0.0#, \
+	"itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
         "f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":0.0, "bs":0.0#, \
 	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
@@ -105,7 +109,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.004
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -255,7 +259,7 @@ if __name__ == "__main__":
         self.add_solver_constants( """static constexpr int Scenario=1; /* Linear wave */  """ )
 
       def pick_two_puncture_scenario(self):
-        self.add_solver_constants( """static constexpr int Scenario=2; /* Two-puncture wave */  """ )
+        self.add_solver_constants( """static constexpr int Scenario=2; /* Two-puncture */  """ )
 
 
     userwarnings = []
@@ -332,6 +336,7 @@ if __name__ == "__main__":
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
+      #[-20, -20, -20],  [40.0, 40.0, 40.0],
       [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
@@ -341,7 +346,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv2" )
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 

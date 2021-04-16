@@ -7,7 +7,7 @@
 #include "tarch/logging/Statistics.h"
 
 
-#if defined(SharedTBB) and !defined(LayeredMultitaskingRuntime)
+#if defined(SharedTBB)
 
 
 #include "../Tasks.h"

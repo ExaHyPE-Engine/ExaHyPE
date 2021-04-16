@@ -13,6 +13,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef IncludeTwoPunctures
+#include "libtwopunctures/TP_bindding.h"
+#endif
 
 void examples::exahype2::ccz4::gaugeWave(
   double * __restrict__ Q, // Q[64+0],
