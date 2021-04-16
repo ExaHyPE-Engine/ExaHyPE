@@ -197,23 +197,23 @@ std::string tarch::multicore::toString( Realisation realisation ) {
     case Realisation::HoldTasksBackInLocalQueueAndBackfill:
       return "backfill";
     case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-      return "merge-and-backfill";
+      return "merge";
   }
   return "<undef>";
 }
 
 
 void tarch::multicore::parseRealisation( const std::string& realisationString ) {
-  if ( realisationString.compare( "native" )==0 ) {
+  if ( realisationString.compare( toString(Realisation::MapOntoNativeTasks) )==0 ) {
     realisation = Realisation::MapOntoNativeTasks;
   }
-  else if (realisationString.compare( "hold-back" )==0 ) {
+  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueue) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueue;
   }
-  else if (realisationString.compare( "backfill" )==0 ) {
+  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndBackfill) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueAndBackfill;
   }
-  else if (realisationString.compare( "merge" )==0 ) {
+  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
   }
   else {
