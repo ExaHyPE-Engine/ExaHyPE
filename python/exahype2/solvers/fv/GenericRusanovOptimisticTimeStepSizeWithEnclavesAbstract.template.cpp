@@ -236,7 +236,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
       if ( tarch::la::equals(growthOfAdmissibleTimeStepSize,1.0) ) {
         _predictedTimeStepSize = 0.5 * (_timeStepSize + _predictedTimeStepSize);
-        logInfo(
+        logDebug(
             "finishTimeStep()",
             "end of primary sweep: pick creeping average as new predicted time step size for optimistic tasking (predicted dt=" <<
             _predictedTimeStepSize << ", current dt=" <<
@@ -247,7 +247,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       else {
         const double biasedFutureTimeStepSize = growthOfAdmissibleTimeStepSize * _predictedTimeStepSize;
         _predictedTimeStepSize = std::min( biasedFutureTimeStepSize, 0.5 * (_timeStepSize + biasedFutureTimeStepSize) );
-        logInfo(
+        logDebug(
             "finishTimeStep()",
             "end of primary sweep: pick min of biased time step size and biased average (new predicted dt=" <<
             _predictedTimeStepSize << ", current dt=" <<
