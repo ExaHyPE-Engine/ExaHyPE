@@ -36,6 +36,7 @@ A generic script to create speedup plots.
 
   single_node_time = -1
   max_nodes        = -1
+  max_time         = -1
   
   plt.clf()
   
@@ -76,9 +77,11 @@ A generic script to create speedup plots.
       y_data = [ min(y,1.1) for y in y_data]
       
     symbol = "-" + Symbols[ args.file.split(",").index(file) % len(Symbols) ]
-    my_markevery = 0.9
+    my_markevery = 0.1 + 0.8 * (args.file.split(",").index(file)/len(args.file.split(",")))**3
     my_color = Colors[ args.file.split(",").index(file) % len(Colors) ]
 
+    max_time = max(y_data[0], max_time)
+    
     if args.labels=="":
       plt.plot( x_data, y_data, symbol, color=my_color, markevery=my_markevery )
     else:
