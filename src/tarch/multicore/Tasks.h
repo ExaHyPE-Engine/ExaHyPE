@@ -8,6 +8,7 @@
 #include <vector>
 #include <list>
 #include <string>
+#include <limits>
 
 
 namespace tarch {
@@ -182,7 +183,7 @@ namespace tarch {
      *
      * @return There have been tasks
      */
-    bool processPendingTasks(int maxTasks = getNumberOfPendingTasks());
+    bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max());
 
     /**
      * Process a particular task.
@@ -190,7 +191,7 @@ namespace tarch {
      * @param number  Has to be a number acquired before via reserveTaskNumber.
      * @return Found this one and have done it.
      */
-    bool processTask(int number);
+    //bool processTask(int number);
 
     /**
      * Kick out a new job. The job's type has to be set properly: It
