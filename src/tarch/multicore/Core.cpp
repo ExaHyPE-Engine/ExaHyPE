@@ -1,4 +1,5 @@
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -7,6 +8,24 @@
 #include <sched.h>
 #endif
 
+
+int tarch::multicore::getNumberOfUnmaskedThreads() {
+  #ifdef CompilerHasSysinfo
+  cpu_set_t mask;
+  sched_getaffinity(0, sizeof(cpu_set_t), &mask);
+
+  int result = 0;
+  for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
+    if ( CPU_ISSET(i, &mask)!=0 ) {
+      result++;
+    }
+  }
+
+  return result;
+  #else
+  return std::thread::hardware_concurrency();
+  #endif
+}
 
 
 #ifndef SharedMemoryParallelisation
@@ -51,12 +70,17 @@ std::string tarch::multicore::Core::getThreadId() const {
 }
 
 
+int tarch::multicore::Core::getThreadNumber() const {
+  return 0;
+}
+
+
 int tarch::multicore::Core::getCoreNumber() const {
   #ifdef CompilerHasSysinfo
   return sched_getcpu();
   #else
   //  https://stackoverflow.com/questions/33745364/sched-getcpu-equivalent-for-os-x
-  return 1;
+  return 0;
   #endif
 }
 

@@ -574,6 +574,8 @@ void tarch::multicore::yield() {
 * LIFO. Therefore, I change the general processing pattern and
 * continue.
 */
+
+/*
 bool tarch::multicore::processTask(int number) {
   int lastTaskProcessed = -1;
   assertion(number>=0);
@@ -586,6 +588,7 @@ bool tarch::multicore::processTask(int number) {
   }
   return lastTaskProcessed==number;
 }
+*/
 
 
 int tarch::multicore::getNumberOfPendingTasks() {

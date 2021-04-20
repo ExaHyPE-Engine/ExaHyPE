@@ -87,30 +87,6 @@ int tarch::multicore::Core::getCoreNumber() const {
 
 
 
-int tarch::multicore::Core::getNumberOfUnmaskedThreads() {
-  #ifdef CompilerHasSysinfo
-  cpu_set_t mask;
-  sched_getaffinity(0, sizeof(cpu_set_t), &mask);
-
-  int result = 0;
-  for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
-    if ( CPU_ISSET(i, &mask)!=0 ) {
-      result++;
-    }
-  }
-
-  return result;
-/*
-  cpu_set_t cpuset;
-  CPU_ZERO(&cpuset);
-  CPU_SET(i, &cpuset);
-
-  int sched_setaffinity(pid_t pid,size_t cpusetsize,cpu_set_t *mask);
-*/
-  #else
-  return std::thread::hardware_concurrency();
-  #endif
-}
 
 
 #endif
