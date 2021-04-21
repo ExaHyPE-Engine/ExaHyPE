@@ -518,7 +518,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
         if (heaviestSpacetree!=NoHeaviestTreeAvailable and _blacklist.count(heaviestSpacetree)==0) {
        	  int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
           int numberOfSplits    = getNumberOfSplitsOnLocalRank();
-          int cellsPerCore      = std::max(1,numberOfLocalUnrefinedCellsOfHeaviestSpacetree/numberOfSplits);
+          int cellsPerCore      = std::max(1,numberOfLocalUnrefinedCellsOfHeaviestSpacetree/(numberOfSplits+1));
 
           logInfo(
             "finishStep()",
