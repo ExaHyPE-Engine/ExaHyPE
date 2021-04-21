@@ -336,9 +336,9 @@ if __name__ == "__main__":
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
-      #[-20, -20, -20],  [40.0, 40.0, 40.0],
+      [-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
