@@ -88,7 +88,6 @@ def get_structured_values_3d(
             for y_axis_position in range(len(patch_boundaries_x)):
 
                 for j in range(ofparser.dof):
-                    print("y axis in patch: ", j)
                     for k in range(len(patch_boundaries_x)):
                         try:
                             values = patch_matrix[z_axis_of_patches][y_axis_position][k].values
@@ -138,7 +137,6 @@ def peano_patch_to_legacy_vtk(patch_file, vtk_file, dimensions):
                 patch_boundaries_z,
                 ofparser,
                 patch_size)
-            print("num_cells_on_axis: ", num_cells_on_axis)
             numPoints = num_cells_on_axis * num_cells_on_axis * \
                 num_cells_on_axis  # assumes x==y==z
 
@@ -146,8 +144,8 @@ def peano_patch_to_legacy_vtk(patch_file, vtk_file, dimensions):
         for unknown in range(ofparser.unknowns):
             vtk.write(
                 f"CELL_DATA {numPoints}\n"
-                f"SCALARS unknown_{unknown+1} float {numComp}\n"
-                f"LOOKUP_TABLE unknown_{unknown+1}_table\n"
+                f"SCALARS unknown_{unknown} float {numComp}\n"
+                f"LOOKUP_TABLE unknown_{unknown}_table\n"
             )
             for val in structured_values[unknown::ofparser.unknowns]:
                 vtk.write(str(float(val)))
