@@ -10,7 +10,8 @@ def write_preamble(vtk_file, num_cells_on_axis, origin, spacing, dimensions):
     if dimensions == 2:
         z_axis_depth = 1
     elif dimensions == 3:
-        z_axis_depth = num_cells_on_axis
+        z_axis_depth = num_cells_on_axis + 1 # Add one described here:
+                                             # https://discourse.vtk.org/t/dimensions-field-of-the-vtk-legacy-format/1810
     else:
         print("Error, specified dimensions '{}' not supported, exiting...".format(
             dimensions))
@@ -21,7 +22,10 @@ def write_preamble(vtk_file, num_cells_on_axis, origin, spacing, dimensions):
         "insert some description of the data here\n"
         "ASCII\n"
         "DATASET STRUCTURED_POINTS\n"
-        f"DIMENSIONS {num_cells_on_axis} {num_cells_on_axis} {z_axis_depth}\n"
+        f"DIMENSIONS {num_cells_on_axis+1} {num_cells_on_axis+1} {z_axis_depth}\n" 
+                      # Add one described here:
+                      # https://discourse.vtk.org/t/dimensions-field-of-the-vtk-legacy-format/1810
+                      # incrementation of z_axis_depth covered above
         f"ORIGIN {origin} {origin} {origin}\n"
         f"SPACING {spacing} {spacing} {spacing}\n"
     )
@@ -141,7 +145,7 @@ def peano_patch_to_legacy_vtk(patch_file, vtk_file, dimensions):
         numComp = 1
         for unknown in range(ofparser.unknowns):
             vtk.write(
-                f"POINT_DATA {numPoints}\n"
+                f"CELL_DATA {numPoints}\n"
                 f"SCALARS unknown_{unknown+1} float {numComp}\n"
                 f"LOOKUP_TABLE unknown_{unknown+1}_table\n"
             )
