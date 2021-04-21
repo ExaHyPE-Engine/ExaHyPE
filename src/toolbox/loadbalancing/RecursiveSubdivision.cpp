@@ -123,7 +123,6 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
     not _hasSpreadOutOverAllRanks
   ) {
     _hasSpreadOutOverAllRanks = true;
-    _roundRobinToken          = 0;
   }
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<=1) {
@@ -145,11 +144,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
     _globalNumberOfTrees               = _numberOfTreesIn;
     _globalNumberOfRanksWithEnabledLoadBalancing = _numberOfRanksWithEnabledLoadBalancingIn;
 
-    if (
-      _globalNumberOfInnerUnrefinedCells <= _localNumberOfInnerUnrefinedCell
-      and
-      not _hasSpreadOutOverAllRanks
-    ) {
+    if ( _globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCell ) {
       logInfo(
         "updateGlobalView()",
         "global number of cells lags behind local one. Use local number of cells (" << _localNumberOfInnerUnrefinedCell <<
@@ -157,15 +152,6 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
       );
       _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCell;
       _lightestRank._rank                = tarch::mpi::Rank::getInstance().getRank();
-    }
-    else if (_globalNumberOfInnerUnrefinedCells <= _localNumberOfInnerUnrefinedCell ) {
-      _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCell * tarch::mpi::Rank::getInstance().getNumberOfRanks();
-      logInfo(
-        "updateGlobalView()",
-        "global number of cells lags behind local one. Code has spread over ranks already. Therefore, assume that we use global data from previous time step. Extrapolate " << _localNumberOfInnerUnrefinedCell 
-        << " to guide partitioning. Assume it equals " << _globalNumberOfInnerUnrefinedCells
-      );
-      _lightestRank._rank        = tarch::mpi::Rank::getInstance().getRank();
     }
 
     _globalSumRequest            = new MPI_Request();
@@ -255,11 +241,11 @@ bool toolbox::loadbalancing::RecursiveSubdivision::doesRankViolateBalancingCondi
   bool result = illbalancing > 1.0 - _TargetBalancingRatio;
 
   if (result) {
-    logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", threshold=" << threshold << ", balancing-ratio=" << _TargetBalancingRatio << ")" );
+    logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", rank-local threshold=" << threshold << ", balancing-ratio=" << _TargetBalancingRatio << ")" );
   }
   else {
-    logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", threshold=" << threshold << ", balancing-ratio=" << _TargetBalancingRatio << ")" );
   }
+    logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", rank-local threshold=" << threshold << ", balancing-ratio=" << _TargetBalancingRatio << ")" );
 
   return result;
 }
@@ -535,7 +521,11 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
           int cellsPerCore      = std::max(1,numberOfLocalUnrefinedCellsOfHeaviestSpacetree/tarch::multicore::Core::getInstance().getNumberOfThreads());
           int numberOfSplits    = getNumberOfSplitsOnLocalRank();
 
-          logInfo( "finishStep()", "insufficient number of cores occupied on this rank, so split " << cellsPerCore << " cells " << numberOfSplits << " times from tree " << heaviestSpacetree << " on local rank (hosts " << numberOfLocalUnrefinedCellsOfHeaviestSpacetree << " unrefined cells)" );
+          logInfo(
+            "finishStep()",
+            "insufficient number of cores occupied on this rank, so split " << cellsPerCore << " cells " << numberOfSplits <<
+            " times from tree " << heaviestSpacetree << " on local rank (hosts " << numberOfLocalUnrefinedCellsOfHeaviestSpacetree <<
+            " unrefined cells with" << tarch::multicore::Core::getInstance().getNumberOfThreads() << " threads per rank)" );
 
           for (int i=0; i<numberOfSplits; i++) {
             triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());

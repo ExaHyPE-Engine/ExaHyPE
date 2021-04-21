@@ -49,6 +49,7 @@ A generic script to create speedup plots.
     else:
       print( "Warning: passed file should end with tar.gz or tar" )
 
+    tar = None
     try:
         tar = tarfile.open( file, "r:gz" )
         data_files = tar.getnames()
@@ -93,6 +94,7 @@ A generic script to create speedup plots.
           plt.plot( x_data, y_data, symbol, label=my_label, color=my_color, markevery=my_markevery )
     except Exception as e:
       print( "Error: " + str(e) )
+      tar = None
 
   if args.plot_efficiency:
     plt.ylabel( "Efficiency" )
@@ -119,5 +121,6 @@ A generic script to create speedup plots.
       output_file_name = filename
   plt.savefig( output_file_name + ".pdf" )
   plt.savefig( output_file_name + ".png" )
-  
-  tar.close()
+
+  if tar!=None:   
+    tar.close()
