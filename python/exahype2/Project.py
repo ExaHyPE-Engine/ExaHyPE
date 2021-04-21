@@ -274,7 +274,7 @@ class Project(object):
       solver.add_actions_to_create_grid( create_grid,                         evaluate_refinement_criterion=True  )
       solver.add_actions_to_init_grid( init_grid )
       solver.add_actions_to_create_grid( create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
-      solver.add_actions_to_create_grid( create_grid_and_converge_lb,         evaluate_refinement_criterion=False )
+      solver.add_actions_to_create_grid( create_grid_and_converge_lb,         evaluate_refinement_criterion=True  )
       solver.add_actions_to_plot_solution( plot_solution, self._output_path )
       solver.add_actions_to_perform_time_step( perform_time_step )
       
