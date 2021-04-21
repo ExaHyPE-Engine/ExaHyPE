@@ -147,10 +147,8 @@ def peano_patch_to_legacy_vtk(patch_file, vtk_file, dimensions):
                 f"SCALARS unknown_{unknown} float {numComp}\n"
                 f"LOOKUP_TABLE unknown_{unknown}_table\n"
             )
-            for val in structured_values[unknown::ofparser.unknowns]:
-                vtk.write(str(float(val)))
-                vtk.write(' ')
-            vtk.write('\n')
+            # write values            
+            vtk.write(' '.join([str(float(i)) for i in structured_values[unknown::ofparser.unknowns]]) + '\n')
 
 
 if __name__ == "__main__":
