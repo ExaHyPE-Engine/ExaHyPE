@@ -82,7 +82,11 @@ bool tarch::logging::LogFilterFileReader::parseLine(std::ifstream& file, const s
     return false;
   }
   else {
-    return interpretTokens(tokens[0],tokens[1],tokens[2],tokens[3]);
+    bool result = interpretTokens(tokens[0],tokens[1],tokens[2],tokens[3]);
+    if (not result) {
+      logError( "parsePlainTextFile(string)", "syntax error in input file " << filename << ", line " << linenumber << ":" << line );
+    }
+    return result;
   }
 }
 
