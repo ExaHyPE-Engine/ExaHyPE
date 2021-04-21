@@ -8,7 +8,7 @@ namespace TP_bindding {
 	//pre-process, solve the puncture equations
 	inline void prepare(TP::TwoPunctures* tp){
 	    //first we set the parameter. TODO:find a way to read parameter from python script
-	    int swi=0;//0--single black hole, 1--double black holes
+	    int swi=1;//0--single black hole, 1--double black holes
 	    
 	    if (swi==0){
 		tp->par_b=1.0;
@@ -26,10 +26,10 @@ namespace TP_bindding {
 		tp->par_b=7.0;
 		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 		tp->target_M_plus=1.0;//adm mass
-		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.0; tp->par_P_plus[2]=0.0;//linear momentum
+		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=1.0; tp->par_P_plus[2]=0.0;//linear momentum
 		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
 		tp->target_M_minus=1.0;//adm mass
-		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=0.0; tp->par_P_minus[2]=0.0;//linear momentum
+		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-1.0; tp->par_P_minus[2]=0.0;//linear momentum
 		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
 		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 		tp->TP_epsilon=1e-6;}
