@@ -19,7 +19,9 @@ namespace {
   /**
    * Temporary task queue which is used if and only if we hold back tasks
    */
-  std::list< tarch::multicore::Task* > nonblockingTasks;
+  typedef std::list< tarch::multicore::Task* > NonblockingTasks;
+
+  NonblockingTasks                     nonblockingTasks;
   tarch::multicore::BooleanSemaphore   nonblockingTasksSemaphore;
 
   tarch::multicore::Realisation realisation = tarch::multicore::Realisation::MapOntoNativeTasks;
@@ -131,6 +133,53 @@ namespace {
   }
 
 
+  /**
+   * @return Number of processed tasks
+   */
+  int processPendingTasksFIFO(int maxTasks) {
+    NonblockingTasks extractedTasks;
+
+    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
+    maxTasks = std::min( maxTasks, static_cast<int>(nonblockingTasks.size()) );
+    NonblockingTasks::iterator cutIteration = extractedTasks.begin();
+    for (int i=0; i<maxTasks; i++) cutIteration++;
+    nonblockingTasks.splice( extractedTasks.begin(), extractedTasks, extractedTasks.begin(), cutIteration );
+    lock.free();
+
+    for (auto& task: extractedTasks) {
+      bool requeue = task->run();
+      if (requeue)
+        spawnTask( task );
+      else
+        delete task;
+    }
+    return not extractedTasks.empty();
+  }
+
+
+  /**
+   * @return Number of processed tasks
+   */
+  int mapPendingTasksOntoNativeTasks(int maxTasks) {
+    NonblockingTasks extractedTasks;
+
+    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
+    maxTasks = std::min( maxTasks, static_cast<int>(nonblockingTasks.size()) );
+    NonblockingTasks::iterator cutIteration = extractedTasks.begin();
+    for (int i=0; i<maxTasks; i++) cutIteration++;
+    nonblockingTasks.splice( extractedTasks.begin(), extractedTasks, extractedTasks.begin(), cutIteration );
+    lock.free();
+
+    for (auto& task: extractedTasks) {
+      tarch::multicore::native::spawnTask(task);
+    }
+    return not extractedTasks.empty();
+  }
+
+
+  /**
+   * @return Number of merged/processed tasks
+   */
   bool fusePendingTasks(int maxTasks) {
     tarch::multicore::Task* myTask = nullptr;
     std::list< tarch::multicore::Task* > tasksOfSameType;
@@ -172,7 +221,7 @@ namespace {
       }
     }
 
-    return myTask!=nullptr;
+    return myTask==nullptr ? 0 : tasksOfSameType.size()+1;
   }
 }
 
@@ -361,13 +410,15 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
 
   bool  result        = false;
   while (maxTasks>0) {
-    bool handledATask = false;
+    int handledTasks = 0;
     switch (taskProgressionStrategy) {
       case TaskProgressionStrategy::BufferInQueue:
-        handledATask = processOnePendingTaskFIFO();
+        //handledTasks = processOnePendingTaskFIFO() ? 1 : 0;
+        handledTasks = processPendingTasksFIFO(maxTasks);
         break;
       case TaskProgressionStrategy::MapOntoNativeTask:
-        handledATask = mapOnePendingTaskOntoNativeTask();
+        //handledTasks = mapOnePendingTaskOntoNativeTask() ? 1 : 0;
+        handledTasks = mapPendingTasksOntoNativeTasks(maxTasks);
         break;
       case TaskProgressionStrategy::MergeTasks:
         if (
@@ -375,16 +426,20 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
           and
           nonblockingTasks.size()>numberOfTasksThatShouldBeFused
         ) {
-          handledATask =  fusePendingTasks(numberOfTasksThatShouldBeFused);
+          handledTasks = fusePendingTasks(numberOfTasksThatShouldBeFused);
+        }
+        else if (numberOfFusedTasksAssemblies >= maxNumberOfFusedTasksAssemblies) {
+          handledTasks = processPendingTasksFIFO(maxTasks);
         }
         else {
-          handledATask = processOnePendingTaskFIFO();
+          handledTasks = processOnePendingTaskFIFO() ? 1 : 0;
+          //handledTasks = processPendingTasksFIFO(maxTasks);
         }
         break;
     }
 
-    if (handledATask) {
-      maxTasks--;
+    if (handledTasks>0) {
+      maxTasks -= handledTasks;
       result = true;
     }
     else maxTasks=0;
@@ -574,6 +629,8 @@ void tarch::multicore::yield() {
 * LIFO. Therefore, I change the general processing pattern and
 * continue.
 */
+
+/*
 bool tarch::multicore::processTask(int number) {
   int lastTaskProcessed = -1;
   assertion(number>=0);
@@ -586,6 +643,7 @@ bool tarch::multicore::processTask(int number) {
   }
   return lastTaskProcessed==number;
 }
+*/
 
 
 int tarch::multicore::getNumberOfPendingTasks() {

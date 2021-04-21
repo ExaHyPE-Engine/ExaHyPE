@@ -1,4 +1,5 @@
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -42,9 +43,14 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 
 
 void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConcurrentBackgroundTasks, int maxNumberOfConcurrentBandwidthBoundTasks ) {
+  if ( omp_get_num_procs() != omp_get_max_threads() ) {
+    logWarning( "configure(int,int,int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads << ". Take maximum" );
+  }
+  int maxThreads = std::max(omp_get_num_procs(), omp_get_max_threads());
+
   if (numberOfThreads!=UseDefaultNumberOfThreads) {
-    if ( omp_get_max_threads()!=numberOfThreads ) {
-      logWarning( "configure(int,int,int)", "number of threads configured (" << numberOfThreads << ") does not match system thread level of " << omp_get_max_threads() << ". OpenMP may ignore manual thread count reset");
+    if ( maxThreads!=numberOfThreads ) {
+      logWarning( "configure(int,int,int)", "number of threads configured (" << numberOfThreads << ") does not match system thread level of " << maxThreads << ". OpenMP may ignore manual thread count reset");
     }
 
     omp_set_num_threads(numberOfThreads);
@@ -52,8 +58,12 @@ void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConc
     logInfo( "configure(...)", "manually reset number of threads used to " << numberOfThreads );
   }
   else {
-    omp_set_num_threads(omp_get_max_threads());
+    omp_set_num_threads(maxThreads);
     _numberOfThreads = omp_get_max_threads();
+  }
+
+  if (_numberOfThreads>getNumberOfUnmaskedThreads()) {
+    logWarning( "configure(int,int,int)", "number of configured threads (" << _numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
   }
 }
 
@@ -82,6 +92,11 @@ std::string tarch::multicore::Core::getThreadId() const {
   std::ostringstream msg;
   msg << omp_get_thread_num();
   return msg.str();
+}
+
+
+int tarch::multicore::Core::getThreadNumber() const {
+  return omp_get_thread_num();
 }
 
 

@@ -48,8 +48,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setMaximumEigenvalue( double value ) {
   if ( value>tarch::la::NUMERICAL_ZERO_DIFFERENCE ) {
-    tarch::multicore::Lock lock(_sempahore);
     double newAdmissibleTimeStep = {{TIME_STEP_RELAXATION}} * getMinMeshSize() / {{NUMBER_OF_VOLUMES_PER_AXIS}} / value;
+    tarch::multicore::Lock lock(_sempahore);
     _admissibleTimeStepSize = std::min(_admissibleTimeStepSize, newAdmissibleTimeStep);
   }
 }

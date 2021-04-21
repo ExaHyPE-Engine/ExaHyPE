@@ -38,6 +38,8 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double target
   _globalNumberOfSplitsRequest = nullptr;
   _globalNumberOfTreesRequest  = nullptr;
   _globalNumberOfRanksWithEnabledLoadBalancingRequest = nullptr;
+  #else
+  _hasSpreadOutOverAllRanks = true;
   #endif
 }
 
@@ -268,12 +270,16 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
   _roundRobinToken = _roundRobinToken % tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
   if (
-    _localNumberOfInnerUnrefinedCell
-    <
-    std::max( 
-      tarch::multicore::Core::getInstance().getNumberOfThreads(),
-      tarch::mpi::Rank::getInstance().getNumberOfRanks()
-    )
+    not _hasSpreadOutOverAllRanks
+    and
+    _localNumberOfInnerUnrefinedCell < tarch::mpi::Rank::getInstance().getNumberOfRanks()
+  ) {
+    _state = StrategyState::PostponedDecisionDueToLackOfCells;
+  }
+  else if (
+    _hasSpreadOutOverAllRanks
+    and
+    _localNumberOfInnerUnrefinedCell < tarch::multicore::Core::getInstance().getNumberOfThreads()
   ) {
     _state = StrategyState::PostponedDecisionDueToLackOfCells;
   }
