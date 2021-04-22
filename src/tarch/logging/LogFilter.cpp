@@ -16,6 +16,8 @@ const std::string tarch::logging::LogFilter::FilterListEntry::TargetInfo  = "inf
 const std::string tarch::logging::LogFilter::FilterListEntry::TargetDebug = "debug";
 const std::string tarch::logging::LogFilter::FilterListEntry::TargetTrace = "trace";
 
+const std::string tarch::logging::LogFilter::FilterListEntry::AlwaysOn = "always-on";
+
 const bool tarch::logging::LogFilter::FilterListEntry::BlackListEntry = true;
 const bool tarch::logging::LogFilter::FilterListEntry::WhiteListEntry = false;
 
@@ -24,16 +26,18 @@ tarch::logging::LogFilter::FilterListEntry::FilterListEntry( const std::string& 
   _targetName(targetName),
   _rank(AnyRank),
   _namespaceName(""),
-  _isBlackEntry(isBlackListEntry) {
+  _isBlackEntry(isBlackListEntry),
+  _programPhase(AlwaysOn) {
   assertion1( targetName==TargetInfo or targetName==TargetDebug or targetName==TargetAll or targetName==TargetTrace, targetName );
 }
 
 
-tarch::logging::LogFilter::FilterListEntry::FilterListEntry( const std::string& targetName, int rank, const std::string& className, bool isBlackListEntry ):
+tarch::logging::LogFilter::FilterListEntry::FilterListEntry( const std::string& targetName, int rank, const std::string& className, bool isBlackListEntry, const std::string& programPhase ):
   _targetName(targetName),
   _rank(rank),
   _namespaceName(className),
-  _isBlackEntry(isBlackListEntry) {
+  _isBlackEntry(isBlackListEntry),
+  _programPhase(programPhase) {
   assertion1( targetName==TargetInfo or targetName==TargetDebug or targetName==TargetAll or targetName==TargetTrace, targetName );
 }
 
@@ -53,6 +57,7 @@ std::string tarch::logging::LogFilter::FilterListEntry::toString() const {
   else {
     msg << "whitelist-entry";
   }
+  msg << ",phase:" << _programPhase;
   msg << ")";
   return msg.str();
 }
@@ -64,7 +69,10 @@ bool tarch::logging::LogFilter::FilterListEntry::operator<(const FilterListEntry
 
 
 bool tarch::logging::LogFilter::FilterListEntry::operator==(const FilterListEntry& b) const {
-  return _rank == b._rank || _namespaceName == b._namespaceName || _targetName == b._targetName;
+  return  _rank == b._rank
+      and _namespaceName == b._namespaceName
+      and _targetName == b._targetName
+      and _programPhase == b._programPhase;
 }
 
 
@@ -94,6 +102,11 @@ void tarch::logging::LogFilter::printFilterListToCout() const {
 tarch::logging::LogFilter& tarch::logging::LogFilter::getInstance() {
   static LogFilter* _singleton = new LogFilter();
   return *_singleton;
+}
+
+
+void tarch::logging::LogFilter::switchProgramPhase(const std::string& activeProgramPhase) {
+  _activeProgramPhase = activeProgramPhase;
 }
 
 
@@ -145,10 +158,12 @@ bool tarch::logging::LogFilter::filterOut(
     if ( length >= lengthActive ) {
       if (
         ( targetName == p->_targetName or p->_targetName==FilterListEntry::TargetAll )
-		and
+        and
+        ( _activeProgramPhase == p->_programPhase or p->_programPhase==FilterListEntry::AlwaysOn )
+        and
         (className.find(p->_namespaceName,0)==0)
         #ifdef Parallel
-        &&
+        and
         (p->_rank == FilterListEntry::AnyRank || p->_rank == tarch::mpi::Rank::getInstance().getRank())
         #endif
       ) {

@@ -201,7 +201,8 @@ A log filter entry is created by
 \begin{code}
 tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
   tarch::logging::LogFilter::FilterListEntry::TargetInfo, 
-  tarch::logging::LogFilter::FilterListEntry::AnyRank, "peano4", false
+  tarch::logging::LogFilter::FilterListEntry::AnyRank, "peano4", false,
+  tarch::logging::LogFilter::FilterListEntry::AlwaysOn
 ));
 \end{code} 
 
@@ -225,22 +226,23 @@ tarch::logging::LogFilterFileReader::parsePlainTextFile( "my.log-filter" );
 
 \noindent
 and the format is very simple:
+{\footnotesize
 \begin{verbatim}
-# Level             Trace                    Rank          Black/white
+# Level             Trace                    Rank          Black/white  When on
 # info/debug/trace  trace of class affected  -1=all ranks
-  debug             tarch                    -1            black
-  debug             peano4                   -1            black
-  info              tarch                    -1            black
-  info              peano4                   -1            black
-  trace             tarch                    -1            black
-  trace             peano                    -1            black 
+  debug             tarch                    -1            black       always-on
+  debug             peano4                   -1            black       always-on
+  info              tarch                    -1            black       always-on
+  info              peano4                   -1            black       always-on
+  trace             tarch                    -1            black       always-on
+  trace             peano                    -1            black       always-on
 
 # Lines starting with hash are comments
 
 # Switch on info output from one class on one rank only
-info     examples::subdirectory::myClass    15    white
+info     examples::subdirectory::myClass    15    white  my-phase
 \end{verbatim}
-
+}
 
 \noindent
 For performance reasons, it is important to take two facts into account:
@@ -265,6 +267,22 @@ For performance reasons, it is important to take two facts into account:
  Select the right one if you wanna see messages from the core or tarch.
 \end{remark}
 
+
+\noindent
+You can have different log entries for different program phases.
+By default, the log filter does not keep track of the program phase, i.e.~it
+does not know which program phase is on.
+You can use 
+\begin{code}
+tarch::logging::LogFilter::getInstance().switchProgramPhase("my-phase");
+\end{code}
+
+\noindent
+From hereon, only the log filter entries labelled with \texttt{my-phase} or with
+\texttt{always-on} will be used.
+You can use any string for \texttt{my-phase}.
+Some higher-level frameworks such as \ExaHyPE\ define some program phases a
+priori.
 
 \section{Assertions}
 
