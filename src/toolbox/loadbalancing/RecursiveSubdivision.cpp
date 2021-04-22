@@ -522,12 +522,16 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 
           logInfo(
             "finishStep()",
-            "insufficient number of cores occupied on this rank, so split " << cellsPerCore << " cells " << numberOfSplits <<
+            "so split " << cellsPerCore << " cells " << numberOfSplits <<
             " times from tree " << heaviestSpacetree << " on local rank (hosts " << numberOfLocalUnrefinedCellsOfHeaviestSpacetree <<
             " unrefined cells with " << tarch::multicore::Core::getInstance().getNumberOfThreads() << " threads per rank)" );
 
           for (int i=0; i<numberOfSplits; i++) {
-            triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());
+            int thisCellsPerCore = cellsPerCore;
+            if (i<numberOfLocalUnrefinedCellsOfHeaviestSpacetree % (numberOfSplits+1)) {
+              thisCellsPerCore++;
+            }
+            triggerSplit(heaviestSpacetree, thisCellsPerCore, tarch::mpi::Rank::getInstance().getRank());
           }
         }
         else {
