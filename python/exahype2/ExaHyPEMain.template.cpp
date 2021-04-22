@@ -273,6 +273,8 @@ void step() {{
 
         if (
           ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
+	  and
+	  not repositories::loadBalancer.hasSplitRecently()
         ) {{
           logInfo(
             "step()",
