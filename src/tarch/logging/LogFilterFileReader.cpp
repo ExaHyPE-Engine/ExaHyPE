@@ -13,7 +13,7 @@
 tarch::logging::Log  tarch::logging::LogFilterFileReader::_log( "tarch::logging::LogFilterFileReader" );
 
 
-bool tarch::logging::LogFilterFileReader::interpretTokens( const std::string& levelToken, const std::string& classNameToken, const std::string& rankToken, const std::string& onOffToken ) {
+bool tarch::logging::LogFilterFileReader::interpretTokens( const std::string& levelToken, const std::string& classNameToken, const std::string& rankToken, const std::string& onOffToken, const std::string& phaseToken ) {
   bool result = true;
 
   if (
@@ -44,7 +44,9 @@ bool tarch::logging::LogFilterFileReader::interpretTokens( const std::string& le
   if (result) {
     LogFilter::getInstance().addFilterListEntry(
       ::tarch::logging::LogFilter::FilterListEntry(
-        levelToken, rank, classNameToken, isFilter )
+        levelToken, rank, classNameToken, isFilter,
+        phaseToken
+      )
     );
   }
 
@@ -56,7 +58,7 @@ bool tarch::logging::LogFilterFileReader::parseLine(std::ifstream& file, const s
 
   //Loop through line
   int characterPosition = 0;
-  const int NumberOfTokensPerLine = 4;
+  const int NumberOfTokensPerLine = 5;
   std::string tokens[NumberOfTokensPerLine];
   int currentToken = 0;
   while (currentToken<NumberOfTokensPerLine && !file.eof() && characterPosition < static_cast<int>(lineWithNewline.length())) {
@@ -77,12 +79,22 @@ bool tarch::logging::LogFilterFileReader::parseLine(std::ifstream& file, const s
     characterPosition++;
   }
 
+  if (currentToken == NumberOfTokensPerLine-1) {
+    logWarning( "parsePlainTextFile(string)", "legacy filter file. Please add program phase (default:" << LogFilter::FilterListEntry::AlwaysOn << ") as last argument" );
+    tokens[4] = LogFilter::FilterListEntry::AlwaysOn;
+    currentToken++;
+  }
+
   if (currentToken != NumberOfTokensPerLine) {
     logError( "parsePlainTextFile(string)", "syntax error in input file " << filename << ", line " << linenumber << ":" << line );
     return false;
   }
   else {
-    return interpretTokens(tokens[0],tokens[1],tokens[2],tokens[3]);
+    bool result = interpretTokens(tokens[0],tokens[1],tokens[2],tokens[3],tokens[4]);
+    if (not result) {
+      logError( "parsePlainTextFile(string)", "syntax error in input file " << filename << ", line " << linenumber << ":" << line );
+    }
+    return result;
   }
 }
 
@@ -105,7 +117,8 @@ bool tarch::logging::LogFilterFileReader::parsePlainTextFile( const std::string&
     tarch::logging::LogFilter::FilterListEntry::TargetAll,
     tarch::logging::LogFilter::FilterListEntry::AnyRank,
     "",
-    tarch::logging::LogFilter::FilterListEntry::WhiteListEntry
+    tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
+    tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
 
   std::ifstream file;

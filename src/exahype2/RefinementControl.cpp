@@ -91,8 +91,11 @@ void exahype2::RefinementControl::addCommand(
 
 
 void exahype2::RefinementControl::finishStep() {
-  if (not _newEvents.empty()) {
-    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/coarsening instructions" );
+  if (_newEvents.size()==1) {
+    logInfo( "finishStep()", "activate refinement/coarsening instruction " << _newEvents.begin()->toString() << " (can be taken into account in next grid sweep)" );
+  }
+  else if (not _newEvents.empty()) {
+    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/coarsening instructions (can be taken into account in next grid sweep)" );
   }
   _committedEvents.clear();
   _committedEvents.insert( _committedEvents.end(), _newEvents.begin(), _newEvents.end() );

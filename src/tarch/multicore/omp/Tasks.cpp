@@ -19,7 +19,7 @@ namespace {
     // important, otherwise taskwait synchronises
     assertion( not tasks.empty() );
 
-    #pragma omp taskloop nogroup priority(StandardPriority)
+    #pragma omp taskloop nogroup priority(StandardPriority) untied
     for (int i=0; i<static_cast<int>(tasks.size()); i++) {
       while (tasks[i]->run()) {}
       delete tasks[i];
@@ -64,7 +64,7 @@ namespace {
           and
           tarch::multicore::getRealisation()!=tarch::multicore::Realisation::HoldTasksBackInLocalQueue
         ) {
-          tarch::multicore::processPendingTasks( 1 );
+          tarch::multicore::processPendingTasks( std::max(1,tarch::multicore::getNumberOfPendingTasks()/2) );
           #pragma omp taskyield
         }
       }
@@ -78,7 +78,7 @@ void tarch::multicore::native::spawnTask(Task*  job) {
   #pragma omp atomic
   nonblockingTasks++;
 
-  #pragma omp task priority(BackgroundConsumerPriority)
+  #pragma omp task priority(BackgroundConsumerPriority) untied
   {
     while (job->run()) {
       #pragma omp taskyield

@@ -96,7 +96,7 @@ double exahype2::fv::maxEigenvalue_AoS(
 
   #if Dimensions==2
   #ifdef SharedOMP
-  #pragma omp parallel for collapse(2) reduction(max:result)
+  //#pragma omp parallel for collapse(2) reduction(max:result)
   #endif
   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
@@ -270,7 +270,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
   double * numericalFluxR = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
 
   #ifdef SharedOMP
-  #pragma omp parallel for collapse(2)
+  //#pragma omp parallel for collapse(2)
   #endif
   for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
   for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
@@ -297,7 +297,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
 
   for (int x = 0; x <= numberOfVolumesPerAxisInPatch; x++) {
     #ifdef SharedOMP
-    #pragma omp parallel for
+    //#pragma omp parallel for
     #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
       const int leftVoxelInPreimage = x
@@ -334,7 +334,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
 
   for (int y = 0; y <= numberOfVolumesPerAxisInPatch; y++) {
     #ifdef SharedOMP
-    #pragma omp parallel for
+    //#pragma omp parallel for
     #endif
     for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
       const int lowerVoxelInPreimage = x + 1

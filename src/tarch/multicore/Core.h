@@ -11,6 +11,14 @@
 namespace tarch {
   namespace multicore {
     class Core;
+
+    /**
+     * This routine runs through the Unix thread mask and counts how many
+     * threads SLURM allows a code to use. It returns this count. If you
+     * use multiple MPI ranks per node, each rank usually gets the permission
+     * to access the same number of cores exclusively.
+     */
+    int getNumberOfUnmaskedThreads();
   }
 }
 
@@ -103,14 +111,7 @@ class tarch::multicore::Core {
      * @return Physical core the process is running on
      */
     int getCoreNumber() const;
-
-    /**
-     * This routine runs through the Unix thread mask and counts how many
-     * threads SLURM allows a code to use. It returns this count. If you
-     * use multiple MPI ranks per node, each rank usually gets the permission
-     * to access the same number of cores exclusively.
-     */
-    static int getNumberOfUnmaskedThreads();
+    int getThreadNumber() const;
 };
 
 

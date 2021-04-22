@@ -162,9 +162,11 @@ class EnclaveTaskingFV( FV ):
     # AMR and adjust cell have to be there always, i.e. also throughout 
     # the grid construction.
     #
-    self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate)
-    self._action_set_AMR                                 = AMROnPatch(self, "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate)
-    self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate)
+    self._action_set_adjust_cell.predicate                         = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate
+    self._action_set_AMR.predicate                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
+    self._action_set_AMR_commit_without_further_analysis.predicate = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
+    self._action_set_handle_boundary.predicate                     = self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate
+    
     self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self,
       self._store_cell_data_default_predicate() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
@@ -174,6 +176,7 @@ class EnclaveTaskingFV( FV ):
       ")"
     )
     self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate)
+
     self._merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
     
     
