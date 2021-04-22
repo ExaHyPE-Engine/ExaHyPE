@@ -109,7 +109,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.002
+            time_step_relaxation=0.02
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -347,7 +347,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv5" )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv6" )
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 
