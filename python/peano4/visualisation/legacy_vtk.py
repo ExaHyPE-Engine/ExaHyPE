@@ -105,7 +105,7 @@ def get_structured_values_3d(
     return structured_values
 
 
-def peano_patch_to_legacy_vtk(patch_file, vtk_file, dimensions):
+def peano_patch_to_legacy_vtk(patch_file, output_dir, vtk_file, dimensions):
     ofparser = OutputFileParser(patch_file, '', 0)
     ofparser.parse_file()
     patch_size = ofparser.get_smallest_patch_size()
@@ -116,32 +116,35 @@ def peano_patch_to_legacy_vtk(patch_file, vtk_file, dimensions):
     spacing = ((patch_boundaries_x[-1] + patch_size) -
                patch_boundaries_x[0]) / num_cells_on_axis
 
-    with open(vtk_file, "w") as vtk:
-        write_preamble(
-            vtk,
-            num_cells_on_axis,
-            patch_boundaries_x[0],
-            spacing,
-            dimensions)
+    numPoints = 0
+    structured_values = []
+    if dimensions == 2:
+        structured_values = get_structured_values_2d(
+            patch_boundaries_x, ofparser, patch_size)
+        numPoints = num_cells_on_axis * num_cells_on_axis  # assumes x==y
+    else:  # for 3D
+        structured_values = get_structured_values_3d(
+            patch_boundaries_x,
+            patch_boundaries_y,
+            patch_boundaries_z,
+            ofparser,
+            patch_size)
+        numPoints = num_cells_on_axis * num_cells_on_axis * \
+            num_cells_on_axis  # assumes x==y==z
+    
+    for unknown in range(ofparser.unknowns):
+        os.makedirs(os.path.join(output_dir, f"unknown_{unknown}"), exist_ok=True)
 
-        numPoints = 0
-        structured_values = []
-        if dimensions == 2:
-            structured_values = get_structured_values_2d(
-                patch_boundaries_x, ofparser, patch_size)
-            numPoints = num_cells_on_axis * num_cells_on_axis  # assumes x==y
-        else:  # for 3D
-            structured_values = get_structured_values_3d(
-                patch_boundaries_x,
-                patch_boundaries_y,
-                patch_boundaries_z,
-                ofparser,
-                patch_size)
-            numPoints = num_cells_on_axis * num_cells_on_axis * \
-                num_cells_on_axis  # assumes x==y==z
+    for unknown in range(ofparser.unknowns):
+        with open(os.path.join(output_dir, f"unknown_{unknown}", vtk_file), "w") as vtk:
+            write_preamble(
+                vtk,
+                num_cells_on_axis,
+                patch_boundaries_x[0],
+                spacing,
+                dimensions)
 
-        numComp = 1
-        for unknown in range(ofparser.unknowns):
+            numComp = 1
             vtk.write(
                 f"CELL_DATA {numPoints}\n"
                 f"SCALARS unknown_{unknown} float {numComp}\n"
@@ -183,14 +186,11 @@ if __name__ == "__main__":
                     args.filepath))
             sys.exit(1)
 
-        output_file = os.path.join(
-            args.output_dir,
-            'vtk_file_' +
-            os.path.basename(
+        output_file = 'vtk_file_' + os.path.basename(
                 args.filepath).replace(
                 '.peano-patch-file',
-                '.vtk'))
-        peano_patch_to_legacy_vtk(args.filepath, output_file, args.n_dims)
+                '.vtk')
+        peano_patch_to_legacy_vtk(args.filepath, args.output_dir, output_file, args.n_dims)
 
     if args.metafile:
         if not os.path.exists(args.metafile):
@@ -207,16 +207,14 @@ if __name__ == "__main__":
                     patch_file_names.append(words[1].strip('"'))
 
         for file in patch_file_names:
-            output_file = os.path.join(
-                args.output_dir,
-                'vtk_file_' +
-                file.replace(
+            output_file = 'vtk_file_' + file.replace(
                     '.peano-patch-file',
-                    '.vtk'))
+                    '.vtk')
             peano_patch_to_legacy_vtk(
                 os.path.join(
                     os.path.dirname(
                         args.metafile),
                     file),
+                args.output_dir,
                 output_file,
                 args.n_dims)
