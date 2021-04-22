@@ -43,27 +43,29 @@ std::string toString( exahype2::RefinementCommand value );
  *
  * <h2> Refinement process </h2>
  *
- * We have a two stage refinement process. This is yet another two stages and
- * has nothing to do with the fact that we always trigger the refinement and
- * then refine in the subsequent grid sweep: ExaHyPE first collects all
- * refinement requests within this class. After the sweep, we roll over the
- * refinement requests and deliver them to the grid traversal automaton.
- * finishStep() does the roll-over, the delivery happens once you call
- * getGridControlEvents().
+ * We have a two stage refinement process in ExaHyPE. This is ExaHyPE-specific stages and
+ * has nothing to do with the fact that we always trigger the refinement and then refine
+ * in the subsequent grid sweep, i.e. it has nothing do do with the fact that ExaHyPE
+ * needs two grid sweeps to realise (commit) adaptive mesh refinement:
  *
- * So the refinement happens actually in actually three steps/grid traversals:
+ * ExaHyPE first collects all refinement requests within this class. After the sweep, we
+ * roll over the refinement requests and deliver them to the grid traversal automaton.
+ * finishStep() does the roll-over, the delivery happens once you call
+ * getGridControlEvents() through the AMR observer.
+ *
+ * Hence, the overall refinement spawns three grid traversals:
  *
  * - The container collects the refinement requests in the first sweep. Towards
- *   the end of the sweep, the requests are rolled over.
+ *   the end of the sweep, the requests are rolled over (committed).
  * - The second sweep grabs the refinement requests from the container and runs
  *   through the mesh. It triggers the refinement for all affected vertices.
  *   Nothing is changed yet.
  * - In the third grid sweep, the mesh is refined actually.
  *
- * Due to the overall three-step mechanism, we make the bookkeeping here quite
- * persistent. There is a list of new events and one we finish a traversal, we
- * move the elements in there over into a set of committed events. The latter
- * is erased only when some other class grabs it.
+ * Due to the overall three-step mechanism, we make the bookkeeping persistent. There is
+ * a list of new events and one we finish a traversal, we move the elements in there
+ * over into a set of committed events. The latter is erased only when some other class
+ * grabs it.
  *
  *
  * <h2> Multithreading </h2>
