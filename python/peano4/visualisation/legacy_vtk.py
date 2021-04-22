@@ -10,8 +10,7 @@ def write_preamble(vtk_file, num_cells_on_axis, origin, spacing, dimensions):
     if dimensions == 2:
         z_axis_depth = 1
     elif dimensions == 3:
-        z_axis_depth = num_cells_on_axis + 1 # Add one described here:
-                                             # https://discourse.vtk.org/t/dimensions-field-of-the-vtk-legacy-format/1810
+        z_axis_depth = num_cells_on_axis
     else:
         print("Error, specified dimensions '{}' not supported, exiting...".format(
             dimensions))
@@ -22,10 +21,7 @@ def write_preamble(vtk_file, num_cells_on_axis, origin, spacing, dimensions):
         "insert some description of the data here\n"
         "ASCII\n"
         "DATASET STRUCTURED_POINTS\n"
-        f"DIMENSIONS {num_cells_on_axis+1} {num_cells_on_axis+1} {z_axis_depth}\n" 
-                      # Add one described here:
-                      # https://discourse.vtk.org/t/dimensions-field-of-the-vtk-legacy-format/1810
-                      # incrementation of z_axis_depth covered above
+        f"DIMENSIONS {num_cells_on_axis} {num_cells_on_axis} {z_axis_depth}\n"
         f"ORIGIN {origin} {origin} {origin}\n"
         f"SPACING {spacing} {spacing} {spacing}\n"
     )
@@ -98,7 +94,7 @@ def get_structured_values_3d(
                                               (ofparser.dof * ofparser.unknowns)]:
                                 structured_values.append(val)
                         except AttributeError:  # Thrown when patch file has no data
-                                                # for this position in the mesh
+                            # for this position in the mesh
                             for val in range(ofparser.dof * ofparser.unknowns):
                                 structured_values.append(0.0)
 
@@ -131,27 +127,24 @@ def peano_patch_to_legacy_vtk(patch_file, output_dir, vtk_file, dimensions):
             patch_size)
         numPoints = num_cells_on_axis * num_cells_on_axis * \
             num_cells_on_axis  # assumes x==y==z
-    
-    for unknown in range(ofparser.unknowns):
-        os.makedirs(os.path.join(output_dir, f"unknown_{unknown}"), exist_ok=True)
 
-    for unknown in range(ofparser.unknowns):
-        with open(os.path.join(output_dir, f"unknown_{unknown}", vtk_file), "w") as vtk:
-            write_preamble(
-                vtk,
-                num_cells_on_axis,
-                patch_boundaries_x[0],
-                spacing,
-                dimensions)
+    os.makedirs(output_dir, exist_ok=True)
 
-            numComp = 1
-            vtk.write(
-                f"CELL_DATA {numPoints}\n"
-                f"SCALARS unknown_{unknown} float {numComp}\n"
-                f"LOOKUP_TABLE unknown_{unknown}_table\n"
-            )
-            # write values            
-            vtk.write(' '.join([str(float(i)) for i in structured_values[unknown::ofparser.unknowns]]) + '\n')
+    with open(os.path.join(output_dir, vtk_file), "w") as vtk:
+        write_preamble(
+            vtk,
+            num_cells_on_axis,
+            patch_boundaries_x[0],
+            spacing,
+            dimensions)
+
+        vtk.write(
+            f"POINT_DATA {numPoints}\n"
+            f"SCALARS unknowns float {ofparser.unknowns}\n"
+            f"LOOKUP_TABLE unknowns_table\n"
+        )
+        # write values
+        vtk.write(' '.join([str(float(i)) for i in structured_values]) + '\n')
 
 
 if __name__ == "__main__":
@@ -187,10 +180,14 @@ if __name__ == "__main__":
             sys.exit(1)
 
         output_file = 'vtk_file_' + os.path.basename(
-                args.filepath).replace(
-                '.peano-patch-file',
+            args.filepath).replace(
+            '.peano-patch-file',
                 '.vtk')
-        peano_patch_to_legacy_vtk(args.filepath, args.output_dir, output_file, args.n_dims)
+        peano_patch_to_legacy_vtk(
+            args.filepath,
+            args.output_dir,
+            output_file,
+            args.n_dims)
 
     if args.metafile:
         if not os.path.exists(args.metafile):
@@ -208,8 +205,8 @@ if __name__ == "__main__":
 
         for file in patch_file_names:
             output_file = 'vtk_file_' + file.replace(
-                    '.peano-patch-file',
-                    '.vtk')
+                '.peano-patch-file',
+                '.vtk')
             peano_patch_to_legacy_vtk(
                 os.path.join(
                     os.path.dirname(
