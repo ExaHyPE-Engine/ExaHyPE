@@ -19,13 +19,13 @@ Symbols = [ "o", "s", "<", ">" , "v", "^" ]
 
 def visualise( data_points, symbol_counter, colour_counter):
     global single_node_time 
-    global max_nodes        
+    global max_x        
     global max_time         
     
     (x_data, y_data) = exahype2.postprocessing.extract_times_per_step( data_points, args.max_cores_per_rank )    
      
     if len(x_data)>0:
-      max_nodes = max(max_nodes,x_data[-1])
+      max_x = max(max_x,x_data[-1])
     
     if args.plot_efficiency:
       normalised_fasted_time = y_data[0] * x_data[0]
@@ -74,7 +74,7 @@ A generic script to create speedup plots.
 
 
   single_node_time = -1
-  max_nodes        = -1
+  max_x        = -1
   max_time         = -1
   
   plt.clf()
@@ -143,16 +143,20 @@ A generic script to create speedup plots.
     plt.xscale( "log", base=2 )
   if args.log_y:
     plt.yscale( "log", base=2 )
+
+  
   if args.max_cores_per_rank<0:
     plt.xlabel( "Cores" )
   else:
     plt.xlabel( "Ranks" )
-    xtics   = [ 1 ]
-    xlabels = [ "1" ]
-    while xtics[-1]<max_nodes:
-      xtics.append( xtics[-1]*2 )
-      xlabels.append( str(xtics[-1]) )
-    plt.xticks( xtics, xlabels )
+
+  xtics   = [ 1 ]
+  xlabels = [ "1" ]
+  while xtics[-1]<max_x:
+    xtics.append( xtics[-1]*2 )
+    xlabels.append( str(xtics[-1]) )
+  plt.xticks( xtics, xlabels )
+  
   plt.legend()
   filename = args.file.replace( ".tar.gz", "").replace( ".tar", "" )
   output_file_name = args.output
