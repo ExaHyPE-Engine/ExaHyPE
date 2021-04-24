@@ -39,9 +39,10 @@ def visualise( data_points, symbol_counter, colour_counter):
     my_color  = Colors[ colour_counter % len(Colors) ]
     # my_markevery = ( 0.1 + 0.8 * (colour_counter+1/len(Colors) )**3, 0.1 * 0.8 * symbol_counter / len(Symbols) )
     # First entry is first marker (start to to count with 0), second is spacing
-    my_markevery = ( symbol_counter % len(Symbols) % len(x_data), int( len(x_data)/8 )+1 )
+    my_markevery = ( symbol_counter % len(Symbols) % (len(x_data)+1), int( len(x_data)/8 )+1 )
     
-    max_time = max(y_data[0], max_time)
+    if len(y_data)>0:
+      max_time = max(y_data[0], max_time)
     
     if args.labels=="":
       plt.plot( x_data, y_data, symbol, color=my_color, markevery=my_markevery )
