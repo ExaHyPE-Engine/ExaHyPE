@@ -140,9 +140,17 @@ namespace {
     NonblockingTasks extractedTasks;
 
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    maxTasks = std::min( maxTasks, static_cast<int>(nonblockingTasks.size()) );
-    NonblockingTasks::iterator cutIteration = extractedTasks.begin();
-    for (int i=0; i<maxTasks; i++) cutIteration++;
+
+    NonblockingTasks::iterator cutIteration = nonblockingTasks.begin();
+    while (
+      cutIteration!=nonblockingTasks.end()
+      and
+      maxTasks>0
+    ) {
+      maxTasks--;
+      cutIteration++;
+    }
+
     nonblockingTasks.splice( extractedTasks.begin(), extractedTasks, extractedTasks.begin(), cutIteration );
     lock.free();
 
@@ -153,7 +161,8 @@ namespace {
       else
         delete task;
     }
-    return not extractedTasks.empty();
+
+    return extractedTasks.size();
   }
 
 
@@ -164,16 +173,25 @@ namespace {
     NonblockingTasks extractedTasks;
 
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    maxTasks = std::min( maxTasks, static_cast<int>(nonblockingTasks.size()) );
-    NonblockingTasks::iterator cutIteration = extractedTasks.begin();
-    for (int i=0; i<maxTasks; i++) cutIteration++;
+    
+    NonblockingTasks::iterator cutIteration = nonblockingTasks.begin();
+    while (
+      cutIteration!=nonblockingTasks.end()
+      and
+      maxTasks>0
+    ) {
+      maxTasks--;
+      cutIteration++;
+    }
+    
     nonblockingTasks.splice( extractedTasks.begin(), extractedTasks, extractedTasks.begin(), cutIteration );
     lock.free();
 
     for (auto& task: extractedTasks) {
       tarch::multicore::native::spawnTask(task);
     }
-    return not extractedTasks.empty();
+
+    return extractedTasks.size();
   }
 
 

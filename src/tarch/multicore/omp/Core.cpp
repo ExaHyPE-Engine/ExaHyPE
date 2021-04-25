@@ -44,7 +44,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 
 void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConcurrentBackgroundTasks, int maxNumberOfConcurrentBandwidthBoundTasks ) {
   if ( omp_get_num_procs() != omp_get_max_threads() ) {
-    logWarning( "configure(int,int,int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads << ". Take maximum" );
+    logWarning( "configure(int,int,int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads() << ". Take maximum" );
   }
   int maxThreads = std::max(omp_get_num_procs(), omp_get_max_threads());
 
