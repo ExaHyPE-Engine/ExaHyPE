@@ -254,6 +254,21 @@ default filter rules, i.e.~dump the information to the terminal that I consider
 to be most important.
 If you want to adopt the output, I strongly recommend that you add a log filter
 configuration file. 
+
+
+Often, users are only interested in a particular phase of the simulation or want 
+to specify different log entries per program phase. The program phases offered
+by default are
+\begin{itemize}
+  \item \texttt{create-grid-but-postpone-refinement}
+  \item \texttt{create-grid}
+  \item \texttt{create-grid-and-converge-load-balancing}
+  \item \texttt{init-grid}
+  \item \texttt{plot-solution}
+  \item \texttt{time-step}
+\end{itemize}
+
+\noindent
 The syntax of log filter files is discussed in Section
 \ref{section:logging:log-filter}.
 

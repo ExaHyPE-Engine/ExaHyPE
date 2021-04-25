@@ -23,6 +23,7 @@ namespace tarch {
  */
 class tarch::logging::LogFilter {
   private:
+    std::string  _activeProgramPhase;
   public:
     /**
      * Represents one entry of the filter list. Syntax:
@@ -36,6 +37,8 @@ class tarch::logging::LogFilter {
       static const std::string TargetInfo;
       static const std::string TargetDebug;
       static const std::string TargetTrace;
+
+      static const std::string AlwaysOn;
 
       static const bool BlackListEntry;
       static const bool WhiteListEntry;
@@ -66,6 +69,12 @@ class tarch::logging::LogFilter {
        */
       bool        _isBlackEntry;
 
+      /**
+       * AlwaysOn if the filter entry applies for all phases. Otherwise,
+       * it only applies for a specific phase.
+       */
+      std::string _programPhase;
+
       bool operator<(const FilterListEntry& b) const;
       bool operator==(const FilterListEntry& b) const;
       bool operator!=(const FilterListEntry& b) const;
@@ -74,7 +83,7 @@ class tarch::logging::LogFilter {
        * Construct filter list entry for one target without any
        */
       FilterListEntry( const std::string& targetName="", bool isBlackListEntry=false );
-      FilterListEntry( const std::string& targetName, int rank, const std::string& className, bool isBlackListEntry );
+      FilterListEntry( const std::string& targetName, int rank, const std::string& className, bool isBlackListEntry, const std::string& programPhase );
 
       std::string toString() const;
     };
@@ -125,6 +134,8 @@ class tarch::logging::LogFilter {
     bool writeDebug(const std::string& trace);
     bool writeInfo(const std::string& trace);
     bool writeTrace(const std::string& trace);
+
+    void switchProgramPhase(const std::string& activeProgramPhase);
 };
 
 

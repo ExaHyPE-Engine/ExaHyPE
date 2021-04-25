@@ -59,7 +59,7 @@ class tarch::logging::LogFilterFileReader {
     /**
      * @return Parsing has been successful
      */
-    static bool interpretTokens( const std::string& levelToken, const std::string& classNameToken, const std::string& rankToken, const std::string& onOffToken );
+    static bool interpretTokens( const std::string& levelToken, const std::string& classNameToken, const std::string& rankToken, const std::string& onOffToken, const std::string& phaseToken );
 
     /**
      * @return Parsing has been successful
