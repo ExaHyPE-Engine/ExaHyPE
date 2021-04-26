@@ -289,11 +289,20 @@ bool tarch::multicore::parseRealisation( const std::string& realisationString ) 
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueue) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueue;
   }
+  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask) )==0 ) {
+    realisation = Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask;
+  }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndBackfill) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueAndBackfill;
   }
+  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask) )==0 ) {
+    realisation = Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask;
+  }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
+  }
+  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask) )==0 ) {
+    realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask;
   }
   else {
     tarch::logging::Log _log( "tarch::multicore" );
