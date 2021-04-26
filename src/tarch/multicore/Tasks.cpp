@@ -595,10 +595,13 @@ const std::vector< Task* >&  tasks
         taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
         break;
       case Realisation::HoldTasksBackInLocalQueue:
+      case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
       case Realisation::HoldTasksBackInLocalQueueAndBackfill:
+      case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
         taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
         break;
       case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
+      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
         numberOfFusedTasksAssemblies = 0;
         taskProgressionStrategy      = TaskProgressionStrategy::MergeTasks;
         break;
