@@ -16,8 +16,11 @@ namespace tarch {
     enum class Realisation {
       MapOntoNativeTasks,
       HoldTasksBackInLocalQueue,
+      HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask,
       HoldTasksBackInLocalQueueAndBackfill,
-      HoldTasksBackInLocalQueueMergeAndBackfill
+      HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask,
+      HoldTasksBackInLocalQueueMergeAndBackfill,
+      HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask
     };
 
     std::string toString( Realisation realisation );
@@ -180,6 +183,8 @@ namespace tarch {
      *   the task system to occupy some other threads with task processing. This is
      *   a routine we typically invoke just before we enter a (quasi-)serial program
      *   phase such as the data exchange.
+     *
+     * @param maxTasks Maximum number of tasks to process
      *
      * @return There have been tasks
      */

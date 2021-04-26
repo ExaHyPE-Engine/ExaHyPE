@@ -249,9 +249,15 @@ std::string tarch::multicore::getListOfRealisations() {
        + ","
        + toString(Realisation::HoldTasksBackInLocalQueue)
        + ","
+       + toString(Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask)
+       + ","
        + toString(Realisation::HoldTasksBackInLocalQueueAndBackfill)
        + ","
-       + toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill);
+       + toString(Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask)
+       + ","
+       + toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill)
+       + ","
+       + toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask);
 }
 
 
@@ -261,10 +267,16 @@ std::string tarch::multicore::toString( Realisation realisation ) {
       return "native";
     case Realisation::HoldTasksBackInLocalQueue:
       return "hold-back";
+    case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
+      return "hold-back-and-eventually-map-onto-native-task";
     case Realisation::HoldTasksBackInLocalQueueAndBackfill:
       return "backfill";
+    case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
+      return "backfill-and-eventually-map-onto-native-task";
     case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
       return "merge";
+    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
+      return "merge-and-eventually-map-onto-native-task";
   }
   return "<undef>";
 }
@@ -430,13 +442,11 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   while (maxTasks>0) {
     int handledTasks = 0;
     switch (taskProgressionStrategy) {
-      case TaskProgressionStrategy::BufferInQueue:
-        //handledTasks = processOnePendingTaskFIFO() ? 1 : 0;
-        handledTasks = processPendingTasksFIFO(maxTasks);
-        break;
       case TaskProgressionStrategy::MapOntoNativeTask:
-        //handledTasks = mapOnePendingTaskOntoNativeTask() ? 1 : 0;
         handledTasks = mapPendingTasksOntoNativeTasks(maxTasks);
+        break;
+      case TaskProgressionStrategy::BufferInQueue:
+        handledTasks = processPendingTasksFIFO(maxTasks);
         break;
       case TaskProgressionStrategy::MergeTasks:
         if (
@@ -594,39 +604,32 @@ const std::vector< Task* >&  tasks
 
     native::spawnAndWait(tasks);
 
+    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
+      taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
+      tarch::multicore::processPendingTasks();
+    }
+
     switch (realisation) {
       case Realisation::MapOntoNativeTasks:
         assertion(nonblockingTasks.empty());
         break;
       case Realisation::HoldTasksBackInLocalQueue:
       case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-        if (
-          tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
-          and
-          not nonblockingTasks.empty()
-        ) {
-          logInfo( "spawnAndWait()", "there are low priority tasks but no multithreading is enabled. Process all tasks immediately now")
-          while (not nonblockingTasks.empty()) {
-            tarch::multicore::processPendingTasks( nonblockingTasks.size() );
-          }
-        }
-        else {
-          taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
-          while (not nonblockingTasks.empty()) {
-            tarch::multicore::processPendingTasks( nonblockingTasks.size() );
-          }
-        }
         break;
       case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-        {
-          taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
-          tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );
-
-          taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
-          while (not nonblockingTasks.empty()) {
-            tarch::multicore::processPendingTasks( nonblockingTasks.size() );
-          }
-        }
+        taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
+        tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );
+        break;
+      case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
+      case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
+        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
+        tarch::multicore::processPendingTasks();
+        break;
+      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
+        taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
+        tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );
+        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
+        tarch::multicore::processPendingTasks();
         break;
     }
   }
