@@ -159,7 +159,9 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
       logInfo( "parseCommandLineArguments(...)", "manually set timeout to " << timeout );
     }
     else if ( select.compare( "--threading-model" ) == 0 ) {
-      tarch::multicore::parseRealisation( argv[argument+1] );
+      if ( not tarch::multicore::parseRealisation( argv[argument+1] ) ) {
+        return false;
+      }
       logInfo( "parseCommandLineArguments(...)", "manually set threading model to " << tarch::multicore::toString(tarch::multicore::getRealisation()) );
     }
     else {
