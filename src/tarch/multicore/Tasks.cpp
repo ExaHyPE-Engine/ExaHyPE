@@ -151,7 +151,7 @@ namespace {
       cutIteration++;
     }
 
-    nonblockingTasks.splice( extractedTasks.begin(), extractedTasks, extractedTasks.begin(), cutIteration );
+    extractedTasks.splice( extractedTasks.begin(), extractedTasks, nonblockingTasks.begin(), cutIteration );
     lock.free();
 
     for (auto& task: extractedTasks) {
@@ -184,7 +184,7 @@ namespace {
       cutIteration++;
     }
     
-    nonblockingTasks.splice( extractedTasks.begin(), extractedTasks, extractedTasks.begin(), cutIteration );
+    extractedTasks.splice( extractedTasks.begin(), extractedTasks, nonblockingTasks.begin(), cutIteration );
     lock.free();
 
     for (auto& task: extractedTasks) {
@@ -282,7 +282,7 @@ std::string tarch::multicore::toString( Realisation realisation ) {
 }
 
 
-void tarch::multicore::parseRealisation( const std::string& realisationString ) {
+bool tarch::multicore::parseRealisation( const std::string& realisationString ) {
   if ( realisationString.compare( toString(Realisation::MapOntoNativeTasks) )==0 ) {
     realisation = Realisation::MapOntoNativeTasks;
   }
@@ -298,7 +298,9 @@ void tarch::multicore::parseRealisation( const std::string& realisationString ) 
   else {
     tarch::logging::Log _log( "tarch::multicore" );
     logError( "parseRealisation(std::string)", "realisation variant " << realisationString << " not known" );
+    return false;
   }
+  return true;
 }
 
 
@@ -611,14 +613,21 @@ const std::vector< Task* >&  tasks
 
     switch (realisation) {
       case Realisation::MapOntoNativeTasks:
+        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
         assertion(nonblockingTasks.empty());
         break;
       case Realisation::HoldTasksBackInLocalQueue:
       case Realisation::HoldTasksBackInLocalQueueAndBackfill:
+        taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
+        // @todo Debug
+        logInfo( "spawnAndWait()", "left over tasks=" << tarch::multicore::getNumberOfPendingTasks() );
+        ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
         break;
       case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
         taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
         tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );
+        taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
+        ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
         break;
       case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
       case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
@@ -633,8 +642,6 @@ const std::vector< Task* >&  tasks
         break;
     }
   }
-
-  taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
 }
 
 

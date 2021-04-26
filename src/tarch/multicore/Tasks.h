@@ -28,7 +28,7 @@ namespace tarch {
     /**
      * Use toString() to see valid options
      */
-    void parseRealisation( const std::string& realisation );
+    bool parseRealisation( const std::string& realisation );
     std::string getListOfRealisations();
     void setRealisation( Realisation realisation );
     Realisation getRealisation();
