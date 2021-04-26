@@ -622,8 +622,6 @@ const std::vector< Task* >&  tasks
       case Realisation::HoldTasksBackInLocalQueue:
       case Realisation::HoldTasksBackInLocalQueueAndBackfill:
         taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
-        // @todo Debug
-        logInfo( "spawnAndWait()", "left over tasks=" << tarch::multicore::getNumberOfPendingTasks() );
         ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
         break;
       case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
