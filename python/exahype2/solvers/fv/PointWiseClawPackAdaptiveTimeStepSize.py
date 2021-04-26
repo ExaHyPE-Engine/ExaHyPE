@@ -115,7 +115,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       
       //s = u +- sqrt(g * h)
       
-      return std::max(Q[0] + std::sqrt(9.81*volumeH[0]), Q[0] - std::sqrt(9.81*volumeH[0]));
+      return std::max(Q[normal] + std::sqrt(9.81*Q[3]), Q[normal] - std::sqrt(9.81*Q[3]));
      //   return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
       },
       marker.x(),
