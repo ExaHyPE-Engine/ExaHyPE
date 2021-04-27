@@ -1,8 +1,8 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 if UseExaHyPE
-  lib_LIBRARIES = libExaHyPE2Core2d.a  libExaHyPE2Core2d_debug.a  libExaHyPE2Core2d_asserts.a  libExaHyPE2Core2d_trace.a \
-                  libExaHyPE2Core3d.a  libExaHyPE2Core3d_debug.a  libExaHyPE2Core3d_asserts.a  libExaHyPE2Core3d_trace.a
+  lib_LIBRARIES = libExaHyPE2Core2d.a  libExaHyPE2Core2d_debug.a  libExaHyPE2Core2d_stats.a  libExaHyPE2Core2d_asserts.a  libExaHyPE2Core2d_trace.a \
+                  libExaHyPE2Core3d.a  libExaHyPE2Core3d_debug.a  libExaHyPE2Core3d_stats.a  libExaHyPE2Core3d_asserts.a  libExaHyPE2Core3d_trace.a
 endif
 
 
@@ -33,15 +33,18 @@ ExaHyPE2Sources = \
 
  
 libExaHyPE2Core2d_a_CXXFLAGS          = -DDimensions=2 -DPeanoDebug=0  
-libExaHyPE2Core2d_trace_a_CXXFLAGS    = -DDimensions=2 -DPeanoDebug=1  
-libExaHyPE2Core2d_asserts_a_CXXFLAGS  = -DDimensions=2 -DPeanoDebug=2  
-libExaHyPE2Core2d_debug_a_CXXFLAGS    = -DDimensions=2 -DPeanoDebug=4  
+libExaHyPE2Core2d_trace_a_CXXFLAGS    = -DDimensions=2 -g3 -DPeanoDebug=1  
+libExaHyPE2Core2d_asserts_a_CXXFLAGS  = -DDimensions=2 -g3 -DPeanoDebug=2  
+libExaHyPE2Core2d_debug_a_CXXFLAGS    = -DDimensions=2 -g3 -O0 -DPeanoDebug=4  
+libExaHyPE2Core2d_stats_a_CXXFLAGS    = -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics
 
  
 libExaHyPE2Core3d_a_CXXFLAGS          = -DDimensions=3 -DPeanoDebug=0  
-libExaHyPE2Core3d_trace_a_CXXFLAGS    = -DDimensions=3 -DPeanoDebug=1  
-libExaHyPE2Core3d_asserts_a_CXXFLAGS  = -DDimensions=3 -DPeanoDebug=2  
-libExaHyPE2Core3d_debug_a_CXXFLAGS    = -DDimensions=3 -DPeanoDebug=4  
+libExaHyPE2Core3d_trace_a_CXXFLAGS    = -DDimensions=3 -g3 -DPeanoDebug=1  
+libExaHyPE2Core3d_asserts_a_CXXFLAGS  = -DDimensions=3 -g3 -DPeanoDebug=2  
+libExaHyPE2Core3d_debug_a_CXXFLAGS    = -DDimensions=3 -g3 -O0 -DPeanoDebug=4  
+libExaHyPE2Core3d_stats_a_CXXFLAGS    = -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics
+
 
 
 
@@ -49,10 +52,13 @@ libExaHyPE2Core2d_a_SOURCES         = $(ExaHyPE2Sources)
 libExaHyPE2Core2d_trace_a_SOURCES   = $(ExaHyPE2Sources)
 libExaHyPE2Core2d_asserts_a_SOURCES = $(ExaHyPE2Sources)
 libExaHyPE2Core2d_debug_a_SOURCES   = $(ExaHyPE2Sources)
+libExaHyPE2Core2d_stats_a_SOURCES   = $(ExaHyPE2Sources)
 
 
 libExaHyPE2Core3d_a_SOURCES         = $(ExaHyPE2Sources)
 libExaHyPE2Core3d_trace_a_SOURCES   = $(ExaHyPE2Sources)
 libExaHyPE2Core3d_asserts_a_SOURCES = $(ExaHyPE2Sources)
 libExaHyPE2Core3d_debug_a_SOURCES   = $(ExaHyPE2Sources)
+libExaHyPE2Core3d_stats_a_SOURCES   = $(ExaHyPE2Sources)
+
 

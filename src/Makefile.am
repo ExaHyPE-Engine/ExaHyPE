@@ -32,25 +32,28 @@ SUBDIRS += unittests convert
 # that I have a couple of singletons and I did struggle with singletons and 
 # shared libraries. 
 #
-lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a        libTarch_trace.a \
-                libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a \
-                libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a
+lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a        libTarch_trace.a        libTarch_stats.a \
+                libPeano4Core2d.a libPeano4Core2d_debug.a libPeano4Core2d_asserts.a libPeano4Core2d_trace.a libPeano4Core2d_stats.a \
+                libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
 
 
 libTarch_a_CXXFLAGS         = -DPeanoDebug=0 
 libTarch_trace_a_CXXFLAGS   = -DPeanoDebug=1 -g3
 libTarch_asserts_a_CXXFLAGS = -DPeanoDebug=2 -g3 -O0
 libTarch_debug_a_CXXFLAGS   = -DPeanoDebug=4 -g3 -O0
+libTarch_stats_a_CXXFLAGS   = -DPeanoDebug=0 -DTrackStatistics
 
 
 libPeano4Core2d_a_CXXFLAGS          = -DDimensions=2 -DPeanoDebug=0
+libPeano4Core2d_stats_a_CXXFLAGS    = -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics
 libPeano4Core2d_trace_a_CXXFLAGS    = -DDimensions=2 -DPeanoDebug=1 -g3
-libPeano4Core2d_asserts_a_CXXFLAGS  = -DDimensions=2 -DPeanoDebug=2 -g3 -O0
+libPeano4Core2d_asserts_a_CXXFLAGS  = -DDimensions=2 -DPeanoDebug=2 -g3 
 libPeano4Core2d_debug_a_CXXFLAGS    = -DDimensions=2 -DPeanoDebug=4 -g3 -O0
 libPeano4Core3d_a_CXXFLAGS          = -DDimensions=3 -DPeanoDebug=0
 libPeano4Core3d_trace_a_CXXFLAGS    = -DDimensions=3 -DPeanoDebug=1 -g3
-libPeano4Core3d_asserts_a_CXXFLAGS  = -DDimensions=3 -DPeanoDebug=2 -g3 -O0
+libPeano4Core3d_asserts_a_CXXFLAGS  = -DDimensions=3 -DPeanoDebug=2 -g3
 libPeano4Core3d_debug_a_CXXFLAGS    = -DDimensions=3 -DPeanoDebug=4 -g3 -O0
+libPeano4Core3d_stats_a_CXXFLAGS    = -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics
 
 #
 # All sources below
@@ -175,6 +178,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
 # Map defined source sequences onto libraries
 #
 libTarch_a_SOURCES         = $(Tarch_SOURCES)
+libTarch_stats_a_SOURCES   = $(Tarch_SOURCES)
 libTarch_trace_a_SOURCES   = $(Tarch_SOURCES)
 libTarch_asserts_a_SOURCES = $(Tarch_SOURCES)
 libTarch_debug_a_SOURCES   = $(Tarch_SOURCES)
@@ -183,8 +187,10 @@ libPeano4Core2d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core2d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core2d_asserts_a_SOURCES = $(Peano4Core_SOURCES)
 libPeano4Core2d_debug_a_SOURCES   = $(Peano4Core_SOURCES)
+libPeano4Core2d_stats_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_a_SOURCES         = $(Peano4Core_SOURCES)
 libPeano4Core3d_trace_a_SOURCES   = $(Peano4Core_SOURCES)
 libPeano4Core3d_asserts_a_SOURCES = $(Peano4Core_SOURCES)
 libPeano4Core3d_debug_a_SOURCES   = $(Peano4Core_SOURCES)
+libPeano4Core3d_stats_a_SOURCES   = $(Peano4Core_SOURCES)
 
