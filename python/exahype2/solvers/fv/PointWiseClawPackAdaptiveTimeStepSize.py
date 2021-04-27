@@ -115,7 +115,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       
       //s = u +- sqrt(g * h)
       
-      return std::max(Q[normal] + std::sqrt(9.81*Q[3]), Q[normal] - std::sqrt(9.81*Q[3]));
+      return std::max(std::abs(Q[1+normal]) + std::sqrt(9.81*Q[0]), std::abs(Q[1+normal]) - std::sqrt(9.81*Q[0]));
      //   return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
       },
       marker.x(),
@@ -206,7 +206,7 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
   
 
   
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = None, discriminate_normal=False, time_step_relaxation = 0.1):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, clawpack_Riemann_solver, Riemann_solver_implementation_files = [], plot_grid_properties=False, kernel_implementation = None, discriminate_normal=False, time_step_relaxation = 0.9):
     """
     
       Instantiate a generic FV scheme with an overlap of 1.
