@@ -64,7 +64,11 @@ namespace {
           and
           tarch::multicore::getRealisation()!=tarch::multicore::Realisation::HoldTasksBackInLocalQueue
         ) {
-          tarch::multicore::processPendingTasks( std::max(1,tarch::multicore::getNumberOfPendingTasks()/2) );
+          //int numberOfTasks = 1;
+          int numberOfTasks = std::max(1,busyThreads);
+          //int numberOfTasks = std::max(1,tarch::multicore::getNumberOfPendingTasks()/2);
+          //int numberOfTasks = std::max(1,tarch::multicore::getNumberOfPendingTasks() / (NumberOfThreads-busyThreads)  / 2);
+          tarch::multicore::processPendingTasks( numberOfTasks );
           #pragma omp taskyield
         }
       }

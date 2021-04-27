@@ -188,7 +188,7 @@ namespace tarch {
      *
      * @return There have been tasks
      */
-    bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max());
+    bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo=true);
 
     /**
      * Process a particular task.

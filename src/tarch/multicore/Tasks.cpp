@@ -70,7 +70,7 @@ namespace {
   /**
    * @return -1 if nothing found, otherwise task id
    */
-  int processOnePendingTaskLIFO() {
+  bool processOnePendingTaskLIFO() {
     tarch::multicore::Task* myTask = nullptr;
 
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
@@ -80,16 +80,14 @@ namespace {
     }
     lock.free();
 
-    int result = -1;
     if (myTask!=nullptr) {
-      result = myTask->getTaskId();
       bool requeue = myTask->run();
       if (requeue)
         spawnTask( myTask );
       else
         delete myTask;
     }
-    return result;
+    return myTask!=nullptr;
   }
 
 
@@ -151,7 +149,7 @@ namespace {
       cutIteration++;
     }
 
-    extractedTasks.splice( extractedTasks.begin(), extractedTasks, nonblockingTasks.begin(), cutIteration );
+    extractedTasks.splice( extractedTasks.begin(), nonblockingTasks, nonblockingTasks.begin(), cutIteration );
     lock.free();
 
     for (auto& task: extractedTasks) {
@@ -184,7 +182,7 @@ namespace {
       cutIteration++;
     }
     
-    extractedTasks.splice( extractedTasks.begin(), extractedTasks, nonblockingTasks.begin(), cutIteration );
+    extractedTasks.splice( extractedTasks.begin(), nonblockingTasks, nonblockingTasks.begin(), cutIteration );
     lock.free();
 
     for (auto& task: extractedTasks) {
@@ -444,7 +442,7 @@ bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
 * way we process the tasks depends on the current state of our task processing
 * strategy. This is encoded via the enum taskProgressionStrategy.
 */
-bool tarch::multicore::processPendingTasks(int maxTasks) {
+bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
   assertion(maxTasks>=0);
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
@@ -454,12 +452,20 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
     int handledTasks = 0;
     switch (taskProgressionStrategy) {
       case TaskProgressionStrategy::MapOntoNativeTask:
+        assertion(fifo);
         handledTasks = mapPendingTasksOntoNativeTasks(maxTasks);
         break;
       case TaskProgressionStrategy::BufferInQueue:
-        handledTasks = processPendingTasksFIFO(maxTasks);
+        assertion(fifo or maxTasks==1);
+        if (fifo) {
+          handledTasks = processPendingTasksFIFO(maxTasks);
+        }
+        else {
+          handledTasks = processOnePendingTaskLIFO() ? 1 : 0;
+        } 
         break;
       case TaskProgressionStrategy::MergeTasks:
+        assertion(fifo or maxTasks==1);
         if (
           numberOfFusedTasksAssemblies < maxNumberOfFusedTasksAssemblies
           and
@@ -471,8 +477,9 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
           handledTasks = processPendingTasksFIFO(maxTasks);
         }
         else {
+          // we do only one, so there is a chance that more and more tasks
+          // drop in and we eventually can merge
           handledTasks = processOnePendingTaskFIFO() ? 1 : 0;
-          //handledTasks = processPendingTasksFIFO(maxTasks);
         }
         break;
     }
@@ -585,6 +592,7 @@ void tarch::multicore::spawnAndWait(
 const std::vector< Task* >&  tasks
 ) {
   static tarch::logging::Log _log( "tarch::multicore" );
+
   if (not tasks.empty()) {
     if (
       tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
@@ -658,30 +666,6 @@ const std::vector< Task* >&  tasks
 void tarch::multicore::yield() {
   tarch::multicore::native::yield();
 }
-
-
-/**
-* Process one particular task
-*
-* If we search for a particular task, we typically should search
-* LIFO. Therefore, I change the general processing pattern and
-* continue.
-*/
-
-/*
-bool tarch::multicore::processTask(int number) {
-  int lastTaskProcessed = -1;
-  assertion(number>=0);
-  while (
-    not nonblockingTasks.empty()
-    and
-    lastTaskProcessed!=number
-  ) {
-    lastTaskProcessed = processOnePendingTaskLIFO();
-  }
-  return lastTaskProcessed==number;
-}
-*/
 
 
 int tarch::multicore::getNumberOfPendingTasks() {
