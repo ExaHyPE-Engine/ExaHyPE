@@ -21,4 +21,5 @@ trace  examples                            -1     black
 trace  exahype2                            -1     black
 trace  toolbox                             -1     black
 
+#info  toolbox::loadbalancing              -1  black time-step
 

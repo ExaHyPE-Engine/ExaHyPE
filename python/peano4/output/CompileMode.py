@@ -10,7 +10,8 @@ class CompileMode(Enum):
     Makefile template.
   
   """
-  Debug = 0
-  Trace = 1
+  Debug   = 0
+  Trace   = 1
   Asserts = 2
   Release = 3
+  Stats   = 4

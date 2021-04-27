@@ -1,7 +1,10 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#if !defined( _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_TBB_H_) && defined(SharedTBB)
-#define _TARCH_MULTICORE_BOOLEAN_SEMAPHORE_TBB_H_
+#ifndef _TARCH_MULTICORE_TBB_BOOLEAN_SEMAPHORE_H_
+#define _TARCH_MULTICORE_TBB_BOOLEAN_SEMAPHORE_H_
+
+#include <string>
+#include "tarch/multicore/multicore.h"
 
 
 namespace tarch {
@@ -12,16 +15,16 @@ namespace tarch {
 }
 
 
-
-#include <string>
-#include <tbb/spin_mutex.h>
+#if defined(SharedCPP)
+#include <mutex>
 
 
 class tarch::multicore::BooleanSemaphore {
   private:
-    friend class tarch::multicore::Lock;
+    std::mutex   _mutex;
 
-    tbb::spin_mutex          _mutex;
+    friend class tarch::multicore::Lock;
+    friend class RecursiveSemaphore;
 
     void enterCriticalSection();
     void leaveCriticalSection();
@@ -40,4 +43,7 @@ class tarch::multicore::BooleanSemaphore {
     BooleanSemaphore();
     ~BooleanSemaphore();
 };
+#endif
+
+
 #endif

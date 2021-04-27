@@ -1,5 +1,4 @@
 #include "tarch/multicore/Core.h"
-#include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
@@ -42,20 +41,20 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 }
 
 
-void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConcurrentBackgroundTasks, int maxNumberOfConcurrentBandwidthBoundTasks ) {
+void tarch::multicore::Core::configure( int numberOfThreads ) {
   if ( omp_get_num_procs() != omp_get_max_threads() ) {
-    logWarning( "configure(int,int,int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads() << ". Take maximum" );
+    logWarning( "configure(int)", "omp_get_num_procs reports " << omp_get_num_procs() << " while omp_get_max_threads reports " << omp_get_max_threads() << ". Take maximum" );
   }
   int maxThreads = std::max(omp_get_num_procs(), omp_get_max_threads());
 
   if (numberOfThreads!=UseDefaultNumberOfThreads) {
     if ( maxThreads!=numberOfThreads ) {
-      logWarning( "configure(int,int,int)", "number of threads configured (" << numberOfThreads << ") does not match system thread level of " << maxThreads << ". OpenMP may ignore manual thread count reset");
+      logWarning( "configure(int)", "number of threads configured (" << numberOfThreads << ") does not match system thread level of " << maxThreads << ". OpenMP may ignore manual thread count reset");
     }
 
     omp_set_num_threads(numberOfThreads);
     _numberOfThreads = numberOfThreads;
-    logInfo( "configure(...)", "manually reset number of threads used to " << numberOfThreads );
+    logInfo( "configure(int)", "manually reset number of threads used to " << numberOfThreads );
   }
   else {
     omp_set_num_threads(maxThreads);
@@ -63,7 +62,7 @@ void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConc
   }
 
   if (_numberOfThreads>getNumberOfUnmaskedThreads()) {
-    logWarning( "configure(int,int,int)", "number of configured threads (" << _numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
+    logWarning( "configure(int)", "number of configured threads (" << _numberOfThreads << ") is bigger than available unmasked threads (" << getNumberOfUnmaskedThreads() << ")" );
   }
 }
 
@@ -85,18 +84,6 @@ int tarch::multicore::Core::getNumberOfThreads() const {
 int tarch::multicore::Core::getNumberOfGPUs() const {
   // @todo Holger
   return 1;
-}
-
-
-std::string tarch::multicore::Core::getThreadId() const {
-  std::ostringstream msg;
-  msg << omp_get_thread_num();
-  return msg.str();
-}
-
-
-int tarch::multicore::Core::getThreadNumber() const {
-  return omp_get_thread_num();
 }
 
 
