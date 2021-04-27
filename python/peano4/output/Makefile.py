@@ -126,11 +126,14 @@ class Makefile(object):
     elif mode==CompileMode.Asserts:
       self.d["CXX_MODE_FLAGS"]  = "-g -O2 -DPeanoDebug=2"
       self.d["LIBRARY_POSTFIX"] = "_asserts"
+    elif mode==CompileMode.Stats:
+      self.d["CXX_MODE_FLAGS"]  = "-O3 -DPeanoDebug=2"
+      self.d["LIBRARY_POSTFIX"] = "_stats"
     elif mode==CompileMode.Trace:
       self.d["CXX_MODE_FLAGS"]  = "-g -O2 -DPeanoDebug=1"
       self.d["LIBRARY_POSTFIX"] = "_trace"
     elif mode==CompileMode.Release:
-      self.d["CXX_MODE_FLAGS"]  = "-O2 -DPeanoDebug=0"
+      self.d["CXX_MODE_FLAGS"]  = "-O3 -DPeanoDebug=0"
       self.d["LIBRARY_POSTFIX"] = ""
     else:
       assert(False)

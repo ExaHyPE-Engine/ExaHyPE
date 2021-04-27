@@ -75,6 +75,7 @@ class Project(object):
   LibraryRelease = ""
   LibraryTrace   = "_trace"
   LibraryAsserts = "_asserts"
+  LibraryStats   = "_stats"
     
     
   def set_Peano4_installation(self, src_path, mode ):
