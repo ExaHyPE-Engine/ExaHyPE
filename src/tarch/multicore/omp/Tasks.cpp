@@ -4,6 +4,11 @@
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
 
+
+#include "tarch/logging/Statistics.h"
+
+
+
 #if defined(SharedOMP)
 
 namespace {
@@ -11,6 +16,8 @@ namespace {
 
   const int StandardPriority           = 16;
   const int BackgroundConsumerPriority = 1;
+
+  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
 
 
   void spawnAndWaitAsTaskLoop(
@@ -21,8 +28,10 @@ namespace {
 
     #pragma omp taskloop nogroup priority(StandardPriority) untied
     for (int i=0; i<static_cast<int>(tasks.size()); i++) {
+      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0 );
       while (tasks[i]->run()) {}
       delete tasks[i];
+      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0 );
     }
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
@@ -44,6 +53,7 @@ namespace {
     for (int i=0; i<NumberOfThreads; i++) {
       #pragma omp task shared(busyThreads)
       {
+        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0 );
         if (i<tasks.size()) {
           while (tasks[i]->run()) {
             #pragma omp taskyield
@@ -51,6 +61,8 @@ namespace {
           delete tasks[i];
         }
 
+        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0 );
+  
         #pragma omp atomic
         busyThreads--;
 

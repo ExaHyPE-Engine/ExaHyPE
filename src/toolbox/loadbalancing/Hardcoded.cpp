@@ -30,7 +30,10 @@ toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStam
     destinationRank++;
   }
 
-  logInfo( "Hardcoded(...)", "created hardcoded load balancing strategy with " << _splits.size() << " decomposition(s)" );
+  // I would love to have some info output here, but some codes use the lb as static attribute
+  // so it might come up before the logging infrastructure is up. This means that the logInfo
+  // will crash.
+  // logInfo( "Hardcoded(...)", "created hardcoded load balancing strategy with " << _splits.size() << " decomposition(s)" );
 }
 
 
@@ -78,10 +81,6 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
   }
 
   dumpStatistics();
-}
-
-
-void toolbox::loadbalancing::Hardcoded::dumpStatistics() {
 }
 
 

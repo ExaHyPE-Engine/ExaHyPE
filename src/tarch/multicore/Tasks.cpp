@@ -62,6 +62,8 @@ namespace {
 
   const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
   const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
+  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
+
 
   int numberOfTasksThatShouldBeFused  = std::numeric_limits<int>::max();
   int maxNumberOfFusedTasksAssemblies = 2;
