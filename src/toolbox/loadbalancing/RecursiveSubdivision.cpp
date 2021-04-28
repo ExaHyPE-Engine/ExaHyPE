@@ -448,17 +448,20 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
   int worstCaseEstimateForSizeOfSpacetree = tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
   int maxAdditionalSplitsDueToMemory      = tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) / worstCaseEstimateForSizeOfSpacetree;
 
-  if (maxAdditionalSplitsDueToMemory==0) {
-    logInfo( 
-      "getNumberOfSplitsOnLocalRank(...)", 
-       "not sure if additional tree fits on node; in particular if mesh should refine regularly. Split once instead of " << numberOfSplits << 
-       " times (current mem footprint=" << worstCaseEstimateForSizeOfSpacetree << " MBytes, free mem=" <<
-       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " MBytes)" 
+  if (
+    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()<=1
+    or
+    maxAdditionalSplitsDueToMemory>=numberOfSplits
+  ) {
+    logInfo(
+      "getNumberOfSplitsOnLocalRank(...)",
+       "assume enough memory is available, so split " << numberOfSplits <<
+       " times (current mem footprint=" << worstCaseEstimateForSizeOfSpacetree << " MByte, free memory=" <<
+       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " MByte)"
     );
-    numberOfSplits = 1;
   }
-  else if (maxAdditionalSplitsDueToMemory<numberOfSplits) {
-    int adoptedSplitCount = maxAdditionalSplitsDueToMemory;
+  else {
+    int adoptedSplitCount = std::max(1,maxAdditionalSplitsDueToMemory);
     logInfo( 
       "getNumberOfSplitsOnLocalRank(...)", 
        "not sure if additional trees fit on node. Optimal number of splits is " << numberOfSplits << 
@@ -466,14 +469,6 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
        tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << ", we manually reduce split count to " << adoptedSplitCount
     );
     numberOfSplits = adoptedSplitCount; 
-  }
-  else {
-    logInfo(
-      "getNumberOfSplitsOnLocalRank(...)",
-       "there seems to be enough memory available, so split " << numberOfSplits <<
-       " times (current mem footprint=" << worstCaseEstimateForSizeOfSpacetree << " MByte, free memory=" <<
-       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " MByte)"
-    );
   }
 
   return numberOfSplits;
