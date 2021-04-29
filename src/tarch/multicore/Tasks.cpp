@@ -1,47 +1,20 @@
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
+
 #include "BooleanSemaphore.h"
 #include "Lock.h"
 #include "Core.h"
 
-
 #include <thread>
 #include <queue>
 #include <set>
+
+
 #include "Tasks.h"
 #include "multicore.h"
 
 
 namespace {
-  void addBibTeXEntry() {
-    #if defined(SharedOMP)
-    peano4::addBibTeXEntry(
-"## User-level tasking ##                                  \n"
-"                                                                            \n"
-"Your Peano run uses a wrapper around OpenMP to obtain a high task efficiency. "
-"The wrapper can be read as user-level threading implemented on top of OpenMP's "
-"tasking mechanism. It is described in "
-"                                                                            \n"
-"       @article{Schulz:2021:Tasking,   \n"
-"         title = {ExaHyPE: An engine for parallel dynamically adaptive simulations of wave problems},   \n"
-"         journal = {Computer Physics Communications},   \n"
-"         volume = {254},   \n"
-"         pages = {107251},   \n"
-"         year = {2020},   \n"
-"         issn = {0010-4655},   \n"
-"         doi = {https://doi.org/10.1016/j.cpc.2020.107251},   \n"
-"         url = {https://www.sciencedirect.com/science/article/pii/S001046552030076X},   \n"
-"         author = {Anne Reinarz and Dominic E. Charrier and Michael Bader and Luke Bovard and Michael Dumbser and Kenneth Duru and Francesco Fambri and Alice-Agnes Gabriel and Jean-Matthieu Gallard and Sven Köppel and Lukas Krenz and Leonhard Rannabauer and Luciano Rezzolla and Philipp Samfass and Maurizio Tavelli and Tobias Weinzierl},   \n"
-"         keywords = {Hyperbolic, PDE, ADER-DG, Finite volumes, AMR, MPI, TBB, MPI+X},   \n"
-"         abstract = {ExaHyPE (“An Exascale Hyperbolic PDE Engine”) is a software engine for solving systems of first-order hyperbolic partial differential equations (PDEs). Hyperbolic PDEs are typically derived from the conservation laws of physics and are useful in a wide range of application areas. Applications powered by ExaHyPE can be run on a student’s laptop, but are also able to exploit thousands of processor cores on state-of-the-art supercomputers. The engine is able to dynamically increase the accuracy of the simulation using adaptive mesh refinement where required. Due to the robustness and shock capturing abilities of ExaHyPE’s numerical methods, users of the engine can simulate linear and non-linear hyperbolic PDEs with very high accuracy. Users can tailor the engine to their particular PDE by specifying evolved quantities, fluxes, and source terms. A complete simulation code for a new hyperbolic PDE can often be realised within a few hours — a task that, traditionally, can take weeks, months, often years for researchers starting from scratch. In this paper, we showcase ExaHyPE’s workflow and capabilities through real-world scenarios from our two main application areas: seismology and astrophysics.   \n"
-"           Program summary   \n"
-"           Program title: ExaHyPE-Engine Program Files doi: http://dx.doi.org/10.17632/6sz8h6hnpz.1 Licensing provisions: BSD 3-clause Programming languages: C++, Python, Fortran Nature of Problem: The ExaHyPE PDE engine offers robust algorithms to solve linear and non-linear hyperbolic systems of PDEs written in first order form. The systems may contain both conservative and non-conservative terms. Solution method: ExaHyPE employs the discontinuous Galerkin (DG) method combined with explicit one-step ADER (arbitrary high-order derivative) time-stepping. An a-posteriori limiting approach is applied to the ADER-DG solution, whereby spurious solutions are discarded and recomputed with a robust, patch-based finite volume scheme. ExaHyPE uses dynamical adaptive mesh refinement to enhance the accuracy of the solution around shock waves, complex geometries, and interesting features. \n"
-"         }   \n"
-"       } \n"
-"\n\n\n\n" );
-    #endif
-  }
-
   tarch::multicore::BooleanSemaphore  activeTasksSemaphore;
   std::set<int>                       activeTaskNumbers;
 
@@ -317,27 +290,21 @@ bool tarch::multicore::parseRealisation( const std::string& realisationString ) 
   }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueue) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueue;
-    addBibTeXEntry();
   }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask;
-    addBibTeXEntry();
   }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndBackfill) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueAndBackfill;
-    addBibTeXEntry();
   }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask;
-    addBibTeXEntry();
   }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
-    addBibTeXEntry();
   }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask;
-    addBibTeXEntry();
   }
   else {
     tarch::logging::Log _log( "tarch::multicore" );
