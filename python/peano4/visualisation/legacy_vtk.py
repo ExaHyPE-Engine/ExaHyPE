@@ -191,22 +191,30 @@ if __name__ == "__main__":
           args.directory_path))
       sys.exit(1)
 
-    patch_file_names = []
+    in_out_file_names = []
     with open(args.metafile, 'r') as metafile:
       for line in metafile.readlines():
         words = line.split()
         if 'include' in words:
-          patch_file_names.append(words[1].strip('"'))
+          file_path = words[1].strip('"') # this is input path
+          
+          # Where the filepath listed in the meta-file is not
+          # an absolute path with assume the file lives in the
+          # same directory as the meta-file itself:
+          if not os.path.isabs(file_path):
+              file_path = os.path.join(os.path.dirname(args.metafile), file_path)
 
-    for file in patch_file_names:
-      output_file = 'vtk_file_' + file.replace(
-        '.peano-patch-file',
-        '.vtk')
+          out_name = os.path.basename(file_path)
+          out_name = 'vtk_file_' + out_name.replace(
+            '.peano-patch-file',
+            '.vtk')
+          
+          in_out_file_names.append([file_path, out_name])
+
+    for file_names in in_out_file_names:
+      print(str(in_out_file_names[0]))
       peano_patch_to_legacy_vtk(
-        os.path.join(
-          os.path.dirname(
-            args.metafile),
-          file),
+        file_names[0],
         args.output_dir,
-        output_file,
+        file_names[1],
         args.n_dims)
