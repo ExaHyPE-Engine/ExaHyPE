@@ -64,7 +64,7 @@ std::pair<int, double*>  exahype2::EnclaveBookkeeping::waitForTaskToTerminateAnd
   while (not isContained) {
     ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
 
-    bool processedTask = ::tarch::multicore::processPendingTasks(1);
+    bool processedTask = ::tarch::multicore::processPendingTasks(1,false);
 
     if (not processedTask) {
       tarch::multicore::yield();

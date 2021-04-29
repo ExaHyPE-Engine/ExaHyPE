@@ -53,11 +53,6 @@ class toolbox::loadbalancing::Hardcoded {
 
     void finishSimulation();
 
-    /**
-     * I need the stats here mainly for debugging purposes.
-     */
-    void dumpStatistics();
-
     bool hasSplitRecently() const;
 
     /**

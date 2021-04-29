@@ -1,19 +1,10 @@
-#include "tarch/multicore/multicore.h"
+#include "BooleanSemaphore.h"
 
+
+// This implementation is valid iff neither OpenMP nor TBBs nor any other
+// shared memory parallelisation are active
 
 #if defined(SharedTBB)
-#include "tarch/multicore/BooleanSemaphore.h"
-#include "tarch/multicore/Core.h"
-#include "tarch/logging/Log.h"
-
-
-#include <limits>
-
-
-#include <tbb/tbb_machine.h>
-#include <tbb/task.h>
-#include <tbb/tbb_thread.h>
-
 
 tarch::multicore::BooleanSemaphore::BooleanSemaphore() {
 }
@@ -32,7 +23,10 @@ void tarch::multicore::BooleanSemaphore::leaveCriticalSection() {
   _mutex.unlock();
 }
 
+
 bool tarch::multicore::BooleanSemaphore::tryEnterCriticalSection() {
   return _mutex.try_lock();
 }
+
+
 #endif

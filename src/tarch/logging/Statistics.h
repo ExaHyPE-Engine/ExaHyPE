@@ -65,8 +65,8 @@ class tarch::logging::Statistics {
 
     static tarch::multicore::BooleanSemaphore  _semaphore;
 
-    int                   _minCountInBetweenTwoMeasurements;
-    double                _minTimeInBetweenTwoMeasurements;
+    int                   _maxCountInBetweenTwoMeasurements;
+    double                _maxTimeInBetweenTwoMeasurements;
 
     tarch::timing::Watch  _globalWatch;
 

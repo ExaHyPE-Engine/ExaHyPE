@@ -1,12 +1,9 @@
-#include "tarch/multicore/multicore.h"
-
-
-#ifdef SharedTBB
 #include "RecursiveSemaphore.h"
 
 
-tarch::multicore::RecursiveSemaphore::RecursiveSemaphore():
-  _recursiveMutex() {
+#ifdef SharedTBB
+
+tarch::multicore::RecursiveSemaphore::RecursiveSemaphore() {
 }
 
 
@@ -14,19 +11,18 @@ tarch::multicore::RecursiveSemaphore::~RecursiveSemaphore() {
 }
 
 
-bool tarch::multicore::RecursiveSemaphore::tryEnterCriticalSection() {
-  return _recursiveMutex.try_lock();
-  //return _recursiveMutex.try_lock_for(std::chrono::milliseconds(100));
-}
-
-
 void tarch::multicore::RecursiveSemaphore::enterCriticalSection() {
-  _recursiveMutex.lock();
+  _mutex.lock();
 }
 
 
 void tarch::multicore::RecursiveSemaphore::leaveCriticalSection() {
-  _recursiveMutex.unlock();
+  _mutex.unlock();
+}
+
+
+bool tarch::multicore::RecursiveSemaphore::tryEnterCriticalSection() {
+  return _mutex.try_lock();
 }
 
 #endif

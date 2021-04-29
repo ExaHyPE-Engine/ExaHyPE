@@ -42,7 +42,7 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
   return instance;
 }
 
-void tarch::multicore::Core::configure( int numberOfThreads, int maxNumberOfConcurrentBackgroundTasks, int maxNumberOfConcurrentBandwidthBoundTasks ) {
+void tarch::multicore::Core::configure( int numberOfThreads ) {
 }
 
 
@@ -61,16 +61,6 @@ int tarch::multicore::Core::getNumberOfThreads() const {
 
 
 int tarch::multicore::Core::getNumberOfGPUs() const {
-  return 0;
-}
-
-
-std::string tarch::multicore::Core::getThreadId() const {
-  return "master";
-}
-
-
-int tarch::multicore::Core::getThreadNumber() const {
   return 0;
 }
 
