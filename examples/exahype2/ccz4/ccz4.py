@@ -248,11 +248,34 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
-        
+      def add_PunctureTracker(self):
+        """
+        """
+        self.set_preprocess_reconstructed_patch_kernel( """
+        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+
+		readin x1,y1,z1,x2,y2,z2;
+		tarch::la::Vector<Dimensions,double> puncutre1_position_p={x1,y1,z1};
+		tarch::la::Vector<Dimensions,double> puncutre2_position_p={x2,y2,z2};
+		
+		if (marker.isContained(puncutre1_position_p)){
+			target_position=puncutre1_position_p;
+			find_cloest_8cells(target_position);
+			beta{3}=interpolate(8cells);
+			updateposition(target_position,next_position,beta);
+			writedown next_position;
+		}
+		
+		same for puncutre2;
+    """)
+
+        self.create_data_structures()
+        self.create_action_sets()
+       
+
+
       def pick_Gauge_wave_scenario(self):
-        """
-        
-        """
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
 
       def pick_Linear_wave_scenario(self):
@@ -303,6 +326,8 @@ if __name__ == "__main__":
         my_solver.add_derivative_calculation()
       if args.extension=="adm":
         my_solver.add_constraint_verification()
+
+        #my_solver.add_PunctureTracker()
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
