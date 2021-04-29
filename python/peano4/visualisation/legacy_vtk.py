@@ -197,9 +197,10 @@ if __name__ == "__main__":
         words = line.split()
         if 'include' in words:
           file_path = words[1].strip('"') # this is input path
+          
           # Where the filepath listed in the meta-file is not
           # an absolute path with assume the file lives in the
-          # same directory as the meta-file itself.
+          # same directory as the meta-file itself:
           if not os.path.isabs(file_path):
               file_path = os.path.join(os.path.dirname(args.metafile), file_path)
 
