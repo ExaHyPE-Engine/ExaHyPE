@@ -2,6 +2,7 @@
 #include "loadbalancing.h"
 
 #include "tarch/Assertions.h"
+#include "tarch/multicore/Core.h"
 
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -10,9 +11,10 @@
 tarch::logging::Log  toolbox::loadbalancing::Hardcoded::_log( "toolbox::loadbalancing::Hardcoded" );
 
 
-toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks):
+toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore):
   _currentTimeStamp(0),
-  _enabled(true) {
+  _enabled(true),
+  _handOutOnePartitionPerCore(handOutOnePartitionPerCore) {
   assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
   assertionEquals4( splittingTrees.size(),   numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
   assertionEquals4( destinationRanks.size(), numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
@@ -67,6 +69,18 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
           "wanted to split " << split.numberOfCells << " cell(s) from tree " <<
           split.splittingTree << " and to deploy them to new tree on rank " << split.destinationRank <<
           ". However, load (re-)balancing is deactivated"
+        );
+      }
+      else if (
+        split.destinationRank == tarch::mpi::Rank::getInstance().getRank() 
+        and
+        _handOutOnePartitionPerCore
+        and 
+       peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= tarch::multicore::Core::getInstance().getNumberOfThreads()
+      ) {
+        logWarning( 
+          "finishStep()", "ignore instruction to split rank further by  cutting of " << split.numberOfCells << 
+          ", as lb is told not to overbook local cores"
         );
       }
       else if (not peano4::parallel::SpacetreeSet::getInstance().split(split.splittingTree,split.numberOfCells,split.destinationRank)) {
