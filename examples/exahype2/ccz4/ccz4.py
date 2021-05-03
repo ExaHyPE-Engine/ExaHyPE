@@ -18,7 +18,7 @@ floatparams = {
 	#"itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
         #"f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":0.0, "bs":0.0#, \
-	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":0.0,
+	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0#, \
 	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
@@ -372,7 +372,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv4" )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv5" )
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 
