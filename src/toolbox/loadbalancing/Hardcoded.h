@@ -47,7 +47,7 @@ class toolbox::loadbalancing::Hardcoded {
      * then tree 2 will split in the grid sweeps 4, 5 and eight. It will try to
      * deploy 11, 12 or 13 cells to the ranks 22, 23 or 24, respectively.
      */
-    Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks );
+    Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore);
 
     void finishStep();
 
@@ -83,6 +83,8 @@ class toolbox::loadbalancing::Hardcoded {
      */
     int    _currentTimeStamp;
     bool   _enabled;
+
+    const bool _handOutOnePartitionPerCore;
 };
 
 
