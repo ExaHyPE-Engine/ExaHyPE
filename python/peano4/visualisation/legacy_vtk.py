@@ -1,3 +1,5 @@
+# This file is part of the Peano project. For conditions of distribution and
+# use, please see the copyright notice at www.peano-framework.org
 import argparse
 import os
 import sys
@@ -212,7 +214,6 @@ if __name__ == "__main__":
           in_out_file_names.append([file_path, out_name])
 
     for file_names in in_out_file_names:
-      print(str(in_out_file_names[0]))
       peano_patch_to_legacy_vtk(
         file_names[0],
         args.output_dir,
