@@ -5,7 +5,7 @@ LINKGSL=-lgsl -lgslcblas -lm
 OPTIMIZE=-O2
 library=libtwopunctures.a
 # enable parallelization
-OMP=-fopenmp
+#OMP=-fopenmp
 
 INC=-I../
 STD=--std=c++11
