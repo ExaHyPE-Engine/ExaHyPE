@@ -74,7 +74,15 @@
  * Peano's core layer. It sits on top of the technical architecture.
  */
 namespace peano4 {
+  /**
+   * You can invoke this operation manually, but it will also implicitly be
+   * triggered by the init routines.
+   */
   void writeCopyrightMessage();
+
+  void writeBibTeXMessage();
+
+  void addBibTeXEntry( const std::string& newEntry );
 
   /**
    * Fill Lookup Tables
