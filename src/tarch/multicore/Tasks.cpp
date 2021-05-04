@@ -1,13 +1,15 @@
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
+
 #include "BooleanSemaphore.h"
 #include "Lock.h"
 #include "Core.h"
 
-
 #include <thread>
 #include <queue>
 #include <set>
+
+
 #include "Tasks.h"
 #include "multicore.h"
 
