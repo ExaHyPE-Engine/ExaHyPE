@@ -351,6 +351,22 @@ Further, legacy\_vtk.py can translate a whole set of patch files simultaneously 
 
 Naming conventions for Legacy VTK files are as follows: a patch file named `solution-SWE-tree-0-94.peano-patch-file' will be mapped to `vtk\_file\_solution-SWE-tree-0-94.vtk'. That is, the patch file's name will be prepended with the string `vtk\_file\_' and its file handle will be changed from `.peano-patch-file' to `.vtk'.
 
+\begin{remark}
+ If you work with partial patch files - i.e. cases where patches that
+ belong to the same mesh are saved in multiple patch files - you need to
+ merge these files before translating them into Legacy VTK. This can be done
+ by calling merge\_partial\_patch\_files.py:
+    \begin{code}
+        python3 python/peano4/visualisation/merge_partial_patch_files.py
+            --meta-file=<path-to-meta-file>
+    \end{code}
+ This script will merge partial patch files and record the newly created files
+ in the same directory as the existing metafile. It will also generate a new metafile
+ for the newly merged patch files. This will also be saved in the same directory as the 
+ existing metafile and is named merged\_meta\_file.peano-patch-file. Be 
+ sure to pass this new metafile to legacy\_vtk.py.
+\end{remark}
+
 \section{Probing data}
 \label{section:postprocessing:probing}
 
