@@ -368,7 +368,7 @@ if __name__ == "__main__":
       if args.extension=="adm":
         my_solver.add_constraint_verification()
 
-      my_solver.add_PunctureTracker()
+      #my_solver.add_PunctureTracker()
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
@@ -413,7 +413,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbhpa2" )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbhpa3" )
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 
