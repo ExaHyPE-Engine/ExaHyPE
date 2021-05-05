@@ -595,7 +595,12 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 
 void toolbox::loadbalancing::RecursiveSubdivision::updateBlacklist() {
   for (std::map<int,int>::iterator p = _blacklist.begin(); p!=_blacklist.end(); ) {
-    if (p->second>0) {
+    if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p->first).getRemovedEmptySubtree() ) {
+      p->second++;
+      logInfo( "updateBlacklist()", "tree " << p->first << " has already been on local blacklist and had degenerated child. Keep it longer on blacklist" );
+      p++;
+    }
+    else if (p->second>0) {
       p->second--;
       p++;
     }
@@ -629,6 +634,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
   // Not always known a priori for example when we spread accross all
   // local ranks, then this field might not be yet set.
   if (getWeightOfHeaviestLocalSpacetree()>0) {
+// @todo raus damit
     _maxTreeWeightAtLastSplit = getWeightOfHeaviestLocalSpacetree();
   }
 
