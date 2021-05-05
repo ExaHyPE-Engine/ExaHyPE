@@ -29,8 +29,7 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double target
   _numberOfStateUpdatesWithoutAnySplit(0),
   _state( StrategyState::Standard ),
   _enabled(true),
-  _roundRobinToken(0),
-  _maxTreeWeightAtLastSplit( std::numeric_limits<int>::max() ) 
+  _roundRobinToken(0)
 {
   #ifdef Parallel
   _globalSumRequest            = nullptr;
@@ -55,7 +54,6 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
       << ",has-spread-over-all-ranks=" << _hasSpreadOutOverAllRanks 
       << ",round-robin-token=" << _roundRobinToken 
       << ",target-balancing-ratio=" << _TargetBalancingRatio
-      << ",max-tree-weight-at-last-split=" << _maxTreeWeightAtLastSplit
       << ",number-of-state-updated-without-any-split=" << _numberOfStateUpdatesWithoutAnySplit
       << ",global-number-of-splits=" << _globalNumberOfSplits
       << ",local-number-of-splits=" << _localNumberOfSplits
@@ -595,7 +593,12 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 
 void toolbox::loadbalancing::RecursiveSubdivision::updateBlacklist() {
   for (std::map<int,int>::iterator p = _blacklist.begin(); p!=_blacklist.end(); ) {
-    if (p->second>0) {
+    if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p->first).getRemovedEmptySubtree() ) {
+      p->second++;
+      logInfo( "updateBlacklist()", "tree " << p->first << " has already been on local blacklist and had degenerated child. Keep it longer on blacklist" );
+      p++;
+    }
+    else if (p->second>0) {
       p->second--;
       p++;
     }
@@ -624,12 +627,6 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
       "triggerSplit()",
       "split local rank " << sourceTree << " though it had been on the blacklist"
     );
-  }
-
-  // Not always known a priori for example when we spread accross all
-  // local ranks, then this field might not be yet set.
-  if (getWeightOfHeaviestLocalSpacetree()>0) {
-    _maxTreeWeightAtLastSplit = getWeightOfHeaviestLocalSpacetree();
   }
 
   _localNumberOfSplits++;

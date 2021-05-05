@@ -337,8 +337,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     int _roundRobinToken;
 
-    int _maxTreeWeightAtLastSplit;
-
     void waitForGlobalStatisticsExchange();
 };
 
