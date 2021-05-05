@@ -409,11 +409,6 @@ std::bitset<TwoTimesD> peano4::grid::Spacetree::areFacesLocal(GridVertex  vertic
 }
 
 
-void peano4::grid::Spacetree::informAboutDegeneratedTreeWhichHasBeenRemoved() {
-  _statistics.setRemovedEmptySubtree(true);
-}
-
-
 bool peano4::grid::Spacetree::isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]) {
   bool result = false;
   dfor2(k)
