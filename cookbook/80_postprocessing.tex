@@ -3,8 +3,7 @@ scripts}
 \label{chapter:postprocessing}
 
 
-
-We do offer three different ways to handle \Peano\ output, i.e.~the native Peano
+We offer five different ways to handle \Peano\ output, i.e.~the native Peano
 patch files:
 
 \begin{enumerate}
@@ -14,11 +13,13 @@ patch files:
   \item You convert the patch files via a C++ command line tool into VTK and
   postprocess the data from there
   (Section~\ref{section:postprocessing:command-line}).
+  \item You can convert patch files via a python tool into legacy VTK. These can be generated directly on the cluster without the need for paraview/pvpython. This is useful if the cluster does not have the version of paraview installed that is required by the C++ command line tool mentioned above. See section~\ref{section:postprocessing:legacy-vtk} for more detail.
+  \item If you want to extract the data for a single point directly from a patch file or set of patch files without any need for Paraview/pvpython/VTK then it is worth exploring the probe mechanism (section~\ref{section:postprocessing:probing})
 \end{enumerate}
 
 
 \noindent
-The following three sections discuss these three routes, before I give some
+The following five sections discuss these three routes, before I give some
 general visualisation comments in
 Section~\ref{section:postprocessing:tweaking-pictures}. 
 Furthermore, I sketch further Python scripts that can be used to postprocess
@@ -230,41 +231,6 @@ pvpython .../Peano/python/peano4/visualisation/render.py
 You should see a usage message now. 
 
 
-\subsection{Probing data}
-\label{section:postprocessing:probing}
-
-Probe.py can be used to read out the unknowns at a given point within a Peano patch file.
-That is, it identifies the unknowns that are associated with an individual cell that is
-specified through an x, y and (optional) z coordinate. Crucially, the single cell is 
-found at the finest level of granularity recorded in the peano patch file.
-
-The algorithm does not rely on Paraview/pvpython.
-
-To probe an individual patch file use the following commands:
-
-\begin{code}
-cd Peano
-export PYTHONPATH=python
-python3 python/peano4/visualisation/Probe.py --input-file=<path-to-peano-patch-file> 
-    -x=<x-axis> -y=<y-axix> --set-identifier=<set-identifier>
-\end{code}
-
-Here we probe the patch file passed to --input-file. The point to be probed is given
-as a coordinate to -x and -y. If you work with three dimensional data add a -z argument with
-the value of the z axis to be probed. The unkowns at the point (x, y) will be saved in a csv
-file called probe\_output.csv, though the name of this file can be configured by adding
-the --ofname flag to the above command and setting it to the name of the output file.
-
-We can also probe whole sets of patch files at once by swapping the --input-file flag
-used above with the --meta-file flag instead. The --meta-file should be set as the
-path to the main file that links to a set of Peano patch files. The algorithm will
-then probe all files that are listed in the main file.
-
-In this case, each row in the outputted csv file will list the unknowns from an 
-individual patch file. The rows are ordered chronologically. This csv, then, 
-will capture the change in unknowns at a given point within the mesh over time.
-
-
 \section{Offline/command-line conversion (executable)}
 \label{section:postprocessing:command-line}
 
@@ -364,6 +330,76 @@ A standard postprocessing workflow on the command line reads as follows:
  now find within the Python-based tools. Things alike mesh distortion are
  missing here.
 \end{remark}
+
+\section{Writing Legacy VTK files}
+\label{section:postprocessing:legacy-vtk}
+
+Here we describe a method of translating native Peano patch files into Legacy VTK files that can be visualised within Paraview. The advantage of this method of translating patch files is that it does not require an installation of Paraview/pvpython (as is the case in section \ref{section:postprocessing:command-line}) and therefore might be of particular use to those who work with very large datasets on clusters that do not have Paraview installed.
+
+To convert a single patch file into Legacy VTK format issue the following commands:
+
+\begin{code}
+cd Peano
+export PYTHONPATH=python
+python3 python/peano4/visualisation/legacy_vtk.py --input-file=<path-to-peano-patch-file>
+    --n-dims=<num-dimensions> --output-dir=<path-to-output-dir>
+\end{code}
+
+Here we translate the patch file (.peano-patch-file) passed to --input-file. The number of dimensions (either 2 or 3) must be specified by the argument --n-dim. Finally, the --output-dir is an optional argument that allows users to specify a directory in which they want the generated Legacy VTK files to be saved. The default output directory is named vtk\_files and will be created in the current working directory.
+
+Further, legacy\_vtk.py can translate a whole set of patch files simultaneously if the --input-file argument is swapped for the --meta-file argument. Users should set the --meta-file argument to the main file that links to a set of patch files. The algorithm will then translate all files that are listed in the main file and place them all in the output directory.
+
+Naming conventions for Legacy VTK files are as follows: a patch file named `solution-SWE-tree-0-94.peano-patch-file' will be mapped to `vtk\_file\_solution-SWE-tree-0-94.vtk'. That is, the patch file's name will be prepended with the string `vtk\_file\_' and its file handle will be changed from `.peano-patch-file' to `.vtk'.
+
+\begin{remark}
+ If you work with partial patch files - i.e. cases where patches that
+ belong to the same mesh are saved in multiple patch files - you need to
+ merge these files before translating them into Legacy VTK. This can be done
+ by calling merge\_partial\_patch\_files.py:
+    \begin{code}
+        python3 python/peano4/visualisation/merge_partial_patch_files.py
+            --meta-file=<path-to-meta-file>
+    \end{code}
+ This script will merge partial patch files and record the newly created files
+ in the same directory as the existing metafile. It will also generate a new metafile
+ for the newly merged patch files. This will also be saved in the same directory as the 
+ existing metafile and is named merged\_meta\_file.peano-patch-file. Be 
+ sure to pass this new metafile to legacy\_vtk.py.
+\end{remark}
+
+\section{Probing data}
+\label{section:postprocessing:probing}
+
+Probe.py can be used to read out the unknowns at a given point within a Peano patch file.
+That is, it identifies the unknowns that are associated with an individual cell that is
+specified through an x, y and (optional) z coordinate. Crucially, the single cell is 
+found at the finest level of granularity recorded in the peano patch file.
+
+The algorithm does not rely on Paraview/pvpython.
+
+To probe an individual patch file use the following commands:
+
+\begin{code}
+cd Peano
+export PYTHONPATH=python
+python3 python/peano4/visualisation/Probe.py --input-file=<path-to-peano-patch-file> 
+    -x=<x-axis> -y=<y-axix> --set-identifier=<set-identifier>
+\end{code}
+
+Here we probe the patch file passed to --input-file. The point to be probed is given
+as a coordinate to -x and -y. If you work with three dimensional data add a -z argument with
+the value of the z axis to be probed. The unkowns at the point (x, y) will be saved in a csv
+file called probe\_output.csv, though the name of this file can be configured by adding
+the --ofname flag to the above command and setting it to the name of the output file.
+
+We can also probe whole sets of patch files at once by swapping the --input-file flag
+used above with the --meta-file flag instead. The --meta-file should be set as the
+path to the main file that links to a set of Peano patch files. The algorithm will
+then probe all files that are listed in the main file.
+
+In this case, each row in the outputted csv file will list the unknowns from an 
+individual patch file. The rows are ordered chronologically. This csv, then, 
+will capture the change in unknowns at a given point within the mesh over time.
 
 
     
