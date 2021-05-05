@@ -18,7 +18,7 @@ floatparams = {
 	#"itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
         #"f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":0.0, "bs":0.0#, \
-	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":0.0,
+	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0#, \
 	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
@@ -248,11 +248,75 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
-        
+      def add_PunctureTracker(self):
+        """
+        """
+        self.additional_includes += """
+	#include "../libtwopunctures/TP_PunctureTracker.h"
+    """
+
+        self.set_preprocess_reconstructed_patch_kernel( """
+        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+		std::fstream fin;
+
+		if (tarch::la::equals(t,0.0)){
+			fin.open("puncture1.txt",std::ios::out|std::ios::trunc);
+			fin << "7.0 0.0 0.0" << std::endl;
+			fin.close();
+			fin.open("puncture2.txt",std::ios::out|std::ios::trunc);
+			fin << "-7.0 0.0 0.0" << std::endl;
+			fin.close();
+			fin.open("ztem.txt",std::ios::out|std::ios::trunc);
+			fin << "tem file" << std::endl;
+			fin.close();		 
+		} else {
+			fin.open("puncture1.txt",std::ios::in);
+			std::string pos=getLastLine(fin);
+			fin.close();
+			//std::cout << pos <<std::endl;
+			double coor1[3]={0};
+			CoorReadIn(coor1,pos);
+			if (marker.isContained(coor1)){
+				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor1,marker.getOffset(),volumeH,patchSize);
+				tarch::la::Vector<Dimensions,int> IndexForInterpolate[8]=FindInterIndex(IndexOfCell);
+				double raw[8][3];
+				for (int i=0;i<8;i++){
+					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
+					for (int j=0;j<Dimensions;j++) {raw[i][j]=reconstructedPatch[rightCellSerialised*59+17+j];}
+				}
+				double shift[3]=Interpolation(IndexForInterpolate,raw,coor1,marker.getOffset(),volumeH,patchSize);
+				
+				coor1[0]-=2.89; coor1[1]-=2.02; coor1[2]+=0.97;
+				fin.open("puncture1.txt",std::ios::app);
+				fin << coor1[0] << " " << coor1[1] << " " << coor1[2] << std::endl;
+				fin.close();
+				fin.open("ztem.txt",std::ios::app);
+				fin << IndexOfCell(0) << " " << IndexOfCell(1) << " " << IndexOfCell(2) << " " << IndexOfCell(3) << " " << IndexOfCell(4) << " " << IndexOfCell(5) << std::endl;
+				fin.close();
+			}
+		}
+		
+		//tarch::la::Vector<Dimensions,double> puncutre1_position_p={x1,y1,z1};
+		
+		/*
+		if (marker.isContained(puncutre1_position_p)){
+			target_position=puncutre1_position_p;
+			find_cloest_8cells(target_position);
+			beta{3}=interpolate(8cells);
+			updateposition(target_position,next_position,beta);
+			writedown next_position;
+		}
+		
+		same for puncutre2;*/
+    """)
+
+        self.create_data_structures()
+        self.create_action_sets()
+       
+
+
       def pick_Gauge_wave_scenario(self):
-        """
-        
-        """
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
 
       def pick_Linear_wave_scenario(self):
@@ -304,6 +368,8 @@ if __name__ == "__main__":
       if args.extension=="adm":
         my_solver.add_constraint_verification()
 
+      my_solver.add_PunctureTracker()
+
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
@@ -340,14 +406,14 @@ if __name__ == "__main__":
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
       #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
-      0.0, args.plot_step_size,   # snapshots
+      110.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv4" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbhpa2" )
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 
