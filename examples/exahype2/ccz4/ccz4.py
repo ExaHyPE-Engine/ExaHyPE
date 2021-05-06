@@ -109,7 +109,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.01
+            time_step_relaxation=0.02
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -261,17 +261,17 @@ if __name__ == "__main__":
 		std::fstream fin;
 
 		if (tarch::la::equals(t,0.0)){
-			fin.open("puncture1.txt",std::ios::out|std::ios::trunc);
+			fin.open("puncture1_b5.txt",std::ios::out|std::ios::trunc);
 			fin << "7.0 0.0 0.0" << std::endl;
 			fin.close();
-			fin.open("puncture2.txt",std::ios::out|std::ios::trunc);
+			fin.open("puncture2_b5.txt",std::ios::out|std::ios::trunc);
 			fin << "-7.0 0.0 0.0" << std::endl;
 			fin.close();
-			fin.open("ztem.txt",std::ios::out|std::ios::trunc);
+			fin.open("ztem_b5.txt",std::ios::out|std::ios::trunc);
 			fin << "tem file" << std::endl;
 			fin.close();		 
 		} else {
-			fin.open("puncture1.txt",std::ios::in);
+			fin.open("puncture1_b5.txt",std::ios::in);
 			std::string pos=getLastLine(fin);
 			fin.close();
 			//std::cout << pos <<std::endl;
@@ -279,20 +279,27 @@ if __name__ == "__main__":
 			CoorReadIn(coor1,pos);
 			if (marker.isContained(coor1)){
 				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor1,marker.getOffset(),volumeH,patchSize);
-				tarch::la::Vector<Dimensions,int> IndexForInterpolate[8]=FindInterIndex(IndexOfCell);
-				double raw[8][3];
+				tarch::la::Vector<Dimensions,int> IndexForInterpolate[8];
+				FindInterIndex(IndexForInterpolate,IndexOfCell);
+				double raw[8*3];
 				for (int i=0;i<8;i++){
 					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
-					for (int j=0;j<Dimensions;j++) {raw[i][j]=reconstructedPatch[rightCellSerialised*59+17+j];}
+					for (int j=0;j<Dimensions;j++) {raw[i*3+j]=reconstructedPatch[Lindex*(59+6)+17+j];}
 				}
-				double shift[3]=Interpolation(IndexForInterpolate,raw,coor1,marker.getOffset(),volumeH,patchSize);
+				double shift[3];
+				Interpolation(shift,IndexForInterpolate,raw,coor1,marker.getOffset(),volumeH,patchSize);
 				
-				coor1[0]-=2.89; coor1[1]-=2.02; coor1[2]+=0.97;
-				fin.open("puncture1.txt",std::ios::app);
+				coor1[0]-=dt*shift[0]; coor1[1]-=dt*shift[1]; coor1[2]-=dt*shift[2];
+				fin.open("puncture1_b5.txt",std::ios::app);
 				fin << coor1[0] << " " << coor1[1] << " " << coor1[2] << std::endl;
 				fin.close();
-				fin.open("ztem.txt",std::ios::app);
-				fin << IndexOfCell(0) << " " << IndexOfCell(1) << " " << IndexOfCell(2) << " " << IndexOfCell(3) << " " << IndexOfCell(4) << " " << IndexOfCell(5) << std::endl;
+				fin.open("ztem_b5.txt",std::ios::app);
+				fin << "for cellindex" << IndexOfCell(0) << " " << IndexOfCell(1) << " " << IndexOfCell(2) << " " << IndexOfCell(3) << " " << IndexOfCell(4) << " " << IndexOfCell(5) << std::endl;
+				for (int i=0;i<8;i++){
+				fin << IndexForInterpolate[i](0) << " " << IndexForInterpolate[i](1) << " " << IndexForInterpolate[i](2) << std::endl;
+				fin << raw[i*3+0] << " " << raw[i*3+1] << " " << raw[i*3+2] << std::endl;
+				}
+				fin << "after inter" << shift[0] << " " << shift[1] << " " << shift[2] << std::endl;
 				fin.close();
 			}
 		}
@@ -368,7 +375,7 @@ if __name__ == "__main__":
       if args.extension=="adm":
         my_solver.add_constraint_verification()
 
-      #my_solver.add_PunctureTracker()
+      my_solver.add_PunctureTracker()
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
@@ -406,14 +413,14 @@ if __name__ == "__main__":
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
       #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
-      110.0, args.plot_step_size,   # snapshots
+      9990.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbhpa3" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbhpa1" )
     #probe_point = [0,0,0]
     #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
 

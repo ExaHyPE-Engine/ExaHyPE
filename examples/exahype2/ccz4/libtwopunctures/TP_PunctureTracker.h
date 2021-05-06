@@ -28,6 +28,15 @@ std::string getLastLine(std::fstream& in)
     return line;
 }
 
+double linearInter(double x1, double f1, double x2, double f2, double target){
+	if ((x1-x2)<10e-8){
+		return (f1+f2)/2;
+	} else {
+		return f2*((target-x1)/(x2-x1))+f1*((x2-target)/(x2-x1));
+	}
+}
+
+
 void CoorReadIn(double* coor, std::string line)
 {
 	int index=0;
@@ -87,26 +96,100 @@ tarch::la::Vector<Dimensions*2,int> FindCellIndex(
 }
 
 //output index for 8 nearest cells
-tarch::la::Vector<Dimensions,int>* FindInterIndex(tarch::la::Vector<Dimensions*2,int> IndexOfCell)
+void FindInterIndex(tarch::la::Vector<Dimensions,int>* InterIndex, tarch::la::Vector<Dimensions*2,int> IndexOfCell)
 {	
-
-
+	int x[2],y[2],z[2];
+	
+	if (IndexOfCell(3)==1) {
+		x[0]=IndexOfCell(0);x[1]=IndexOfCell(0)+1;
+	} else if (IndexOfCell(3)==-1) {
+		x[0]=IndexOfCell(0)-1;x[1]=IndexOfCell(0);
+	} else {
+		x[0]=IndexOfCell(0);x[1]=IndexOfCell(0);}
+		
+	if (IndexOfCell(4)==1) {
+		y[0]=IndexOfCell(1);y[1]=IndexOfCell(1)+1;
+	} else if (IndexOfCell(4)==-1) {
+		y[0]=IndexOfCell(1)-1;y[1]=IndexOfCell(1);
+	} else {
+		y[0]=IndexOfCell(1);y[1]=IndexOfCell(1);}
+		
+	if (IndexOfCell(5)==1) {
+		z[0]=IndexOfCell(2);z[1]=IndexOfCell(2)+1;
+	} else if (IndexOfCell(5)==-1) {
+		z[0]=IndexOfCell(2)-1;z[1]=IndexOfCell(2);
+	} else {
+		z[0]=IndexOfCell(2);z[1]=IndexOfCell(2);}	
+	
+	for(int i=0;i<2;i++)
+	for(int j=0;j<2;j++)
+	for(int k=0;k<2;k++){
+		InterIndex[i*4+j*2+k]={x[i],y[j],z[k]};
+	}
+	
 }
 
+
 //do the real interpolation
-double* Interpolation(
-  tarch::la::Vector<Dimensions,int>* IndexForInterpolate,
-  double** raw,
+void Interpolation(
+  double* result,
+  tarch::la::Vector<Dimensions,int>* IndexForInter,
+  double* raw,
   const double* coor,
   tarch::la::Vector<Dimensions,double> Offset,
   double volumeH,
   int patchSize
 ){
-
-
+	//calculate the actual coordinates
+	double CoorsForInter1[8][3];
+	double raw1[8][3];
+	for(int i=0;i<2;i++)
+	for(int j=0;j<2;j++)
+	for(int k=0;k<2;k++){
+		for (int m=0;m<3;m++){
+			CoorsForInter1[i*4+j*2+k][m]=Offset(m)+(IndexForInter[i*4+j*2+k](m)-0.5)*volumeH;
+			raw1[i*4+j*2+k][m]=raw[(i*4+j*2+k)*3+m];
+		}
+	}
+	
+	//first interpolate along x axis
+	double CoorsForInter2[4][3];
+	double raw2[4][3];
+	for (int n=0;n<4;n++){
+		CoorsForInter2[n][0]=coor[0];
+		CoorsForInter2[n][1]=CoorsForInter1[n][1];
+		CoorsForInter2[n][2]=CoorsForInter1[n][2];
+		for (int m=0;m<3;m++){
+			raw2[n][m]=linearInter(CoorsForInter1[n][0],raw1[n][m],CoorsForInter1[n+4][0],raw1[n+4][m],coor[0]);
+		} 
+	}
+	
+	//second interpolate along y axis
+	double CoorsForInter3[2][3];
+	double raw3[2][3];
+	for (int n=0;n<2;n++){
+		CoorsForInter3[n][0]=coor[0];
+		CoorsForInter3[n][1]=coor[1];
+		CoorsForInter3[n][2]=CoorsForInter1[n][2];
+		for (int m=0;m<3;m++){
+			raw3[n][m]=linearInter(CoorsForInter2[n][1],raw2[n][m],CoorsForInter2[n+2][1],raw2[n+2][m],coor[1]);
+		} 
+	}
+	
+	//finally interpolate along z axis
+	double CoorsForInter4[1][3];
+	double raw4[1][3];
+	for (int n=0;n<1;n++){
+		CoorsForInter4[n][0]=coor[0];
+		CoorsForInter4[n][1]=coor[1];
+		CoorsForInter4[n][2]=coor[2];
+		for (int m=0;m<3;m++){
+			raw4[n][m]=linearInter(CoorsForInter3[n][2],raw3[n][m],CoorsForInter3[n+1][2],raw3[n+1][m],coor[2]);
+		} 
+	}	
+	
+	result[0]=raw4[0][0]; result[1]=raw4[0][1]; result[2]=raw4[0][2];
 }
-
-
 
 
 
