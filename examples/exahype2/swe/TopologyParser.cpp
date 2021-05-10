@@ -6,14 +6,21 @@
 
 tarch::logging::Log   examples::exahype2::swe::TopologyParser::_log( "examples::exahype2::swe::TopologyParser" );
 
-examples::exahype2::swe::TopologyParser::TopologyParser(std::string filename){
+examples::exahype2::swe::TopologyParser::TopologyParser(std::string filename, std::string dispfilename){
 
   this->filepath=filename;
   this->parsetopofile();
+  
+  this->dispfilepath=dispfilename;
+  this->parsedisplacementfile();
 
 }
 
 examples::exahype2::swe::TopologyParser::~TopologyParser(){
+  this->zvalues.clear();
+  this->zvalues.shrink_to_fit();
+  this->displacement.clear();
+  this->displacement.shrink_to_fit();
   std::cout << "Destroy topology parser."; 
 }
 
@@ -21,14 +28,16 @@ std::vector <std::string> examples::exahype2::swe::TopologyParser::splitline(std
 
     // Vector of string to save tokens 
     std::vector <std::string> tokens; 
-       
+
     std::stringstream strstream(line);  
     std::string intermediate; 
       
     //Split
     while(getline(strstream, intermediate, delimiter)) 
     { 
-        tokens.push_back(intermediate); 
+        if(!isspace(intermediate[0]) && !intermediate.empty()){
+          tokens.push_back(intermediate); 
+        }
     } 
     
     return tokens;
@@ -46,8 +55,7 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(){
   
     while(getline(topofile,line)){
     
-      thisline = splitline(line, ' ');      
-                 
+      thisline = splitline(line, ' ');                
       value = std::stof(thisline.at(0));
     
       if (thisline.size() == 2 && thisline.back() == "ncols"){
@@ -87,7 +95,7 @@ void examples::exahype2::swe::TopologyParser::parsetopofile(){
 
 double examples::exahype2::swe::TopologyParser::sampletopology(double x, double y){
   
-  int index = floor((1.0-y)*361.0)*this->ncols + floor(x*361.0);
+  int index = floor((1.0-y)*this->ncols)*this->nrows + floor(x*this->nrows);
 	
   float z = this->zvalues.at(index);
 
@@ -96,7 +104,94 @@ double examples::exahype2::swe::TopologyParser::sampletopology(double x, double 
 }
 
 
+void examples::exahype2::swe::TopologyParser::parsedisplacementfile(){
+  std::ifstream dispfile (this->dispfilepath);
+  std::string line;
+  std::vector <std::string> thisline;
+  double value;
 
+  
+  if (dispfile.is_open()){
+  
+    while(getline(dispfile,line)){
+    
+      thisline = splitline(line, ' '); 
+                 
+      value = std::stof(thisline.at(0));
+    
+      if (thisline.size() == 2 && thisline.back() == "mx"){
+        this->dispmx = value;
+      }
+      else if (thisline.size() == 2 && thisline.back() == "my"){
+        this->dispmy = value;
+      }
+      else if (thisline.size() == 2 && thisline.back() == "mt"){
+        this->dispmt = value;
+      }      
+      else if (thisline.size() == 2 && thisline.back() == "xlower"){
+        this->dispxlowerleft = value;
+      }            
+      else if (thisline.size() == 2 && thisline.back() == "ylower"){
+        this->dispylowerleft = value;
+      }   
+      else if (thisline.size() == 2 && thisline.back() == "t0"){
+        this->dispt0 = value;
+      }         
+      else if (thisline.size() == 2 && thisline.back() == "dx"){
+        this->dispdx = value;
+      } 
+      else if (thisline.size() == 2 && thisline.back() == "dy"){
+        this->dispdy = value;
+      } 
+      else if (thisline.size() == 2 && thisline.back() == "dt"){
+        this->dispdt = value;
+      }             
+      else if (thisline.size() > 2){
+        for(int i=0; i < thisline.size(); i++){
+            value = std::stof(thisline.at(i));
+            this->displacement.push_back(value);
+          }
+      }           
+      else{
+        std::cout << "Warning: Undefined entry in topology file!"; 
+      } 
+    }
+
+    dispfile.close();
+  }
+
+  else{
+    std::cout << "Error opening file " << this->dispfilepath; 
+  }
+}
+
+double mapCoordinate(double c_in, double dc_in, double clower_in, double dc_out, double clower_out){
+
+  double c_out = (clower_out - clower_in) + c_in*(dc_in/dc_out) - 1;
+  
+  return c_out;
+
+}
+
+
+double examples::exahype2::swe::TopologyParser::sampledisplacement(double x, double y, double t){
+
+  double disp_x = mapCoordinate(x, this->cellsize, this->xlowerleft, this->dispdx, this->dispxlowerleft);
+  double disp_y = mapCoordinate(y, this->cellsize, this->ylowerleft, this->dispdy, this->dispylowerleft);
+
+  if(disp_x < this->dispxlowerleft || disp_y < this->dispylowerleft || 
+     disp_x > this->dispxlowerleft + this->dispmx*this->dispdx ||
+     disp_y > this->dispylowerleft + this->dispmy*this->dispdy){
+    return 0.0;
+  } 
+
+  int index =  floor((t - 1)*this->dispmx*this->dispmy) + floor((1.0-disp_y)*this->dispmx)*this->dispmy + floor(disp_x*this->dispmy);
+	
+  float z = this->displacement.at(index);
+
+  return z;
+
+}
 
 
 

@@ -1,5 +1,6 @@
 #include "{{CLASSNAME}}.h"
 #include "Constants.h"
+#include "TopologyParser.h"
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
 
