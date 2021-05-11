@@ -18,7 +18,7 @@ floatparams = {
 	#"itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
         #"f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":0.0, "bs":0.0#, \
-	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
+	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":0.5,
         "f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0#, \
 	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm", "PTadm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -109,7 +109,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.02
+            time_step_relaxation=0.04
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -248,35 +248,44 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
-      def add_PunctureTracker(self):
+      def add_PunctureTracker_Lconstraintwriter(self):
         """
         """
+        self._auxiliary_variables = 6
+        
         self.additional_includes += """
 	#include "../libtwopunctures/TP_PunctureTracker.h"
+	#include "../CCZ4Kernels.h"
     """
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        
 		std::fstream fin;
+		std::string att="_hoc.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 
 		if (tarch::la::equals(t,0.0)){
-			fin.open("puncture1_b5.txt",std::ios::out|std::ios::trunc);
-			fin << "7.0 0.0 0.0" << std::endl;
+			fin.open((p1+att),std::ios::out|std::ios::trunc);
+			fin << "5.0 0.0 0.0 0.0" << std::endl;
 			fin.close();
-			fin.open("puncture2_b5.txt",std::ios::out|std::ios::trunc);
-			fin << "-7.0 0.0 0.0" << std::endl;
+			fin.open((p2+att),std::ios::out|std::ios::trunc);
+			fin << "-5.0 0.0 0.0 0.0" << std::endl;
 			fin.close();
-			fin.open("ztem_b5.txt",std::ios::out|std::ios::trunc);
+			fin.open((tem+att),std::ios::out|std::ios::trunc);
 			fin << "tem file" << std::endl;
 			fin.close();		 
 		} else {
-			fin.open("puncture1_b5.txt",std::ios::in);
+			fin.open((p1+att),std::ios::in);
 			std::string pos=getLastLine(fin);
 			fin.close();
-			//std::cout << pos <<std::endl;
-			double coor1[3]={0};
+			double coor1[4]={0};
 			CoorReadIn(coor1,pos);
+			fin.open((p2+att),std::ios::in);
+			std::string pos2=getLastLine(fin);
+			fin.close();
+			double coor2[4]={0};
+			CoorReadIn(coor2,pos2);
 			if (marker.isContained(coor1)){
 				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor1,marker.getOffset(),volumeH,patchSize);
 				tarch::la::Vector<Dimensions,int> IndexForInterpolate[8];
@@ -290,32 +299,105 @@ if __name__ == "__main__":
 				Interpolation(shift,IndexForInterpolate,raw,coor1,marker.getOffset(),volumeH,patchSize);
 				
 				coor1[0]-=dt*shift[0]; coor1[1]-=dt*shift[1]; coor1[2]-=dt*shift[2];
-				fin.open("puncture1_b5.txt",std::ios::app);
-				fin << coor1[0] << " " << coor1[1] << " " << coor1[2] << std::endl;
+				fin.open((p1+att),std::ios::app);
+				fin << coor1[0] << " " << coor1[1] << " " << coor1[2] << " " << t << std::endl;
 				fin.close();
-				fin.open("ztem_b5.txt",std::ios::app);
+				fin.open((tem+att),std::ios::app);
 				fin << "for cellindex" << IndexOfCell(0) << " " << IndexOfCell(1) << " " << IndexOfCell(2) << " " << IndexOfCell(3) << " " << IndexOfCell(4) << " " << IndexOfCell(5) << std::endl;
 				for (int i=0;i<8;i++){
 				fin << IndexForInterpolate[i](0) << " " << IndexForInterpolate[i](1) << " " << IndexForInterpolate[i](2) << std::endl;
 				fin << raw[i*3+0] << " " << raw[i*3+1] << " " << raw[i*3+2] << std::endl;
 				}
-				fin << "after inter" << shift[0] << " " << shift[1] << " " << shift[2] << std::endl;
+				fin << "after inter" << shift[0] << " " << shift[1] << " " << shift[2] << " " << t << std::endl;
+				fin.close();
+			}
+			if (marker.isContained(coor2)){
+				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor2,marker.getOffset(),volumeH,patchSize);
+				tarch::la::Vector<Dimensions,int> IndexForInterpolate[8];
+				FindInterIndex(IndexForInterpolate,IndexOfCell);
+				double raw[8*3];
+				for (int i=0;i<8;i++){
+					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
+					for (int j=0;j<Dimensions;j++) {raw[i*3+j]=reconstructedPatch[Lindex*(59+6)+17+j];}
+				}
+				double shift[3];
+				Interpolation(shift,IndexForInterpolate,raw,coor2,marker.getOffset(),volumeH,patchSize);
+				
+				coor2[0]-=dt*shift[0]; coor2[1]-=dt*shift[1]; coor2[2]-=dt*shift[2];
+				fin.open((p2+att),std::ios::app);
+				fin << coor2[0] << " " << coor2[1] << " " << coor2[2] << " " << t << std::endl;
 				fin.close();
 			}
 		}
 		
-		//tarch::la::Vector<Dimensions,double> puncutre1_position_p={x1,y1,z1};
-		
-		/*
-		if (marker.isContained(puncutre1_position_p)){
-			target_position=puncutre1_position_p;
-			find_cloest_8cells(target_position);
-			beta{3}=interpolate(8cells);
-			updateposition(target_position,next_position,beta);
-			writedown next_position;
+		const int n_a_v=6;
+		std::string l2="L2_constri"; std::string teml2="ztem_constri";
+		double cons[6]={0,0,0,0,0,0};
+        dfor(cell,patchSize) {
+        	tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+
+			double gradQ[3*59]={ 0 };
+
+			for (int d=0; d<3; d++) {
+				tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+				tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+				leftCell(d)  -= 1;
+				rightCell(d) += 1;
+				const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+				const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+				for(int i=0; i<59; i++) {
+					gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
+				}
+			}
+			double constraints[n_a_v]={ 0 };
+			const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+
+			admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+
+			for(int i=0;i<n_a_v;i++){
+				reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
+				cons[i]+=constraints[i]*constraints[i];
+			}
 		}
-		
-		same for puncutre2;*/
+		for(int i=0;i<n_a_v;i++){cons[i]=cons[i]/(patchSize*patchSize*patchSize);}
+			
+		if (tarch::la::equals(t,0.0)){
+			fin.open((teml2+att),std::ios::out|std::ios::trunc);
+			fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
+			fin.close();
+			fin.open((l2+att),std::ios::out|std::ios::trunc);
+			fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
+			fin.close();
+		} else {
+			fin.open((teml2+att),std::ios::in);
+			std::string checkingline=getLastLine(fin);
+			fin.close();
+			double checkingcons[7]={0};
+			ConsReadIn(checkingcons,checkingline);
+			if (std::abs(t-checkingcons[0])<1e-6){ //if they are stil in the same timestep
+				fin.open((teml2+att),std::ios::app);
+				fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
+				fin.close();
+			} else {
+				//std::cout << "current t " << t << " file t " << checkingcons[0] << std::endl;
+				fin.open((teml2+att),std::ios::in);
+				int count=0; std::string line; double consOutput[6]={0,0,0,0,0,0};
+				while (std::getline(fin,line)){
+					count++;
+					double constem[7]={0};
+					ConsReadIn(constem,line);
+					for(int i=1;i<(n_a_v+1);i++){consOutput[i-1]+=constem[i];}
+				}
+				for(int i=0;i<n_a_v;i++){consOutput[i]/=count;}
+				fin.close();
+				fin.open((l2+att),std::ios::app);
+				fin << t << " " <<consOutput[0] << " " <<consOutput[1] << " " <<consOutput[2] << " " <<consOutput[3] << " " <<consOutput[4] << " " <<consOutput[5] << std::endl;
+				fin.close();
+				fin.open((teml2+att),std::ios::out|std::ios::trunc);
+				fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
+				fin.close();
+			}
+		}				
     """)
 
         self.create_data_structures()
@@ -374,8 +456,8 @@ if __name__ == "__main__":
         my_solver.add_derivative_calculation()
       if args.extension=="adm":
         my_solver.add_constraint_verification()
-
-      my_solver.add_PunctureTracker()
+      if args.extension=="PTadm":
+        my_solver.add_PunctureTracker_Lconstraintwriter()
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
@@ -413,16 +495,16 @@ if __name__ == "__main__":
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
       #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
-      9990.0, args.plot_step_size,   # snapshots
+      0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbhpa1" )
-    #probe_point = [0,0,0]
-    #project.add_plot_filter( probe_point,[0.0,0.0,0.0],1 )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv1" )
+    probe_point = [-5,-5,-5]
+    project.add_plot_filter( probe_point,[10.0,10.0,10.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
