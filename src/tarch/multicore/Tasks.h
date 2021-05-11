@@ -16,8 +16,11 @@ namespace tarch {
     enum class Realisation {
       MapOntoNativeTasks,
       HoldTasksBackInLocalQueue,
+      HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask,
       HoldTasksBackInLocalQueueAndBackfill,
-      HoldTasksBackInLocalQueueMergeAndBackfill
+      HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask,
+      HoldTasksBackInLocalQueueMergeAndBackfill,
+      HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask
     };
 
     std::string toString( Realisation realisation );
@@ -25,7 +28,7 @@ namespace tarch {
     /**
      * Use toString() to see valid options
      */
-    void parseRealisation( const std::string& realisation );
+    bool parseRealisation( const std::string& realisation );
     std::string getListOfRealisations();
     void setRealisation( Realisation realisation );
     Realisation getRealisation();
@@ -181,9 +184,11 @@ namespace tarch {
      *   a routine we typically invoke just before we enter a (quasi-)serial program
      *   phase such as the data exchange.
      *
+     * @param maxTasks Maximum number of tasks to process
+     *
      * @return There have been tasks
      */
-    bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max());
+    bool processPendingTasks(int maxTasks = std::numeric_limits<int>::max(), bool fifo=true);
 
     /**
      * Process a particular task.

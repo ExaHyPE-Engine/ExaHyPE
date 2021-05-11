@@ -4,6 +4,11 @@
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
 
+
+#include "tarch/logging/Statistics.h"
+
+
+
 #if defined(SharedOMP)
 
 namespace {
@@ -11,6 +16,8 @@ namespace {
 
   const int StandardPriority           = 16;
   const int BackgroundConsumerPriority = 1;
+
+  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
 
 
   void spawnAndWaitAsTaskLoop(
@@ -21,8 +28,10 @@ namespace {
 
     #pragma omp taskloop nogroup priority(StandardPriority) untied
     for (int i=0; i<static_cast<int>(tasks.size()); i++) {
+      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
       while (tasks[i]->run()) {}
       delete tasks[i];
+      ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
     }
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
@@ -44,6 +53,7 @@ namespace {
     for (int i=0; i<NumberOfThreads; i++) {
       #pragma omp task shared(busyThreads)
       {
+        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
         if (i<tasks.size()) {
           while (tasks[i]->run()) {
             #pragma omp taskyield
@@ -51,6 +61,8 @@ namespace {
           delete tasks[i];
         }
 
+        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+  
         #pragma omp atomic
         busyThreads--;
 
@@ -64,7 +76,11 @@ namespace {
           and
           tarch::multicore::getRealisation()!=tarch::multicore::Realisation::HoldTasksBackInLocalQueue
         ) {
-          tarch::multicore::processPendingTasks( std::max(1,tarch::multicore::getNumberOfPendingTasks()/2) );
+          //int numberOfTasks = 1;
+          int numberOfTasks = std::max(1,busyThreads);
+          //int numberOfTasks = std::max(1,tarch::multicore::getNumberOfPendingTasks()/2);
+          //int numberOfTasks = std::max(1,tarch::multicore::getNumberOfPendingTasks() / (NumberOfThreads-busyThreads)  / 2);
+          tarch::multicore::processPendingTasks( numberOfTasks );
           #pragma omp taskyield
         }
       }
@@ -110,6 +126,9 @@ void tarch::multicore::native::spawnAndWait(
     case Realisation::HoldTasksBackInLocalQueue:
     case Realisation::HoldTasksBackInLocalQueueAndBackfill:
     case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
+    case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
+    case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
+    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
       spawnAndWaitAsExplicitTasksWithPolling(tasks);
       break;
   }

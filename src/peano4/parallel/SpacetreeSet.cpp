@@ -636,13 +636,9 @@ void peano4::parallel::SpacetreeSet::cleanUpTrees(peano4::grid::TraversalObserve
       else {
         logDebug( "traverse(Observer)", "parent tree " << p->_masterId << " is local on this rank. Remove child reference" );
         getSpacetree( p->_masterId )._childrenIds.erase(p->_id);
+        getSpacetree( p->_masterId )._statistics.setRemovedEmptySubtree(true);
       }
-
       p = _spacetrees.erase(p);
-
-      for (auto pp = _spacetrees.begin(); pp!=_spacetrees.end(); pp++) {
-        pp->informAboutDegeneratedTreeWhichHasBeenRemoved();
-      }
     }
     else if (
       p->mayJoinWithMaster()

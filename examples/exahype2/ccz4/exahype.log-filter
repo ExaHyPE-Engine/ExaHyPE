@@ -1,6 +1,5 @@
 # Level (info or debug)   Trace   Rank (-1 means all ranks)   Black or white list entry
 
-
 #
 # General debug settings
 #
@@ -22,13 +21,8 @@ trace  exahype2                            -1     black
 trace  toolbox                             -1     black
 
 
-# info  peano4::grid                  -1     black
-trace examples::exahype2::euler::Euler                   -1   black
-trace examples::exahype2::euler::observers::PlotSolution -1   black
-trace exahype2::RefinementControl                        -1   black
-
-info release examples::exahype2::ccz4::observers		 -1   black
-info examples::exahype2::ccz4::observers		 -1   black
+info  peano4::grid                  	   -1     black
+trace exahype2::RefinementControl          -1     black
 
 info peano4::grid                          -1     white
 

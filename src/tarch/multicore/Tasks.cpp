@@ -1,13 +1,15 @@
 #include "tarch/Assertions.h"
 #include "tarch/logging/Statistics.h"
+
 #include "BooleanSemaphore.h"
 #include "Lock.h"
 #include "Core.h"
 
-
 #include <thread>
 #include <queue>
 #include <set>
+
+
 #include "Tasks.h"
 #include "multicore.h"
 
@@ -62,6 +64,8 @@ namespace {
 
   const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
   const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
+  const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
+
 
   int numberOfTasksThatShouldBeFused  = std::numeric_limits<int>::max();
   int maxNumberOfFusedTasksAssemblies = 2;
@@ -70,7 +74,7 @@ namespace {
   /**
    * @return -1 if nothing found, otherwise task id
    */
-  int processOnePendingTaskLIFO() {
+  bool processOnePendingTaskLIFO() {
     tarch::multicore::Task* myTask = nullptr;
 
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
@@ -80,16 +84,14 @@ namespace {
     }
     lock.free();
 
-    int result = -1;
     if (myTask!=nullptr) {
-      result = myTask->getTaskId();
       bool requeue = myTask->run();
       if (requeue)
         spawnTask( myTask );
       else
         delete myTask;
     }
-    return result;
+    return myTask!=nullptr;
   }
 
 
@@ -140,10 +142,18 @@ namespace {
     NonblockingTasks extractedTasks;
 
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    maxTasks = std::min( maxTasks, static_cast<int>(nonblockingTasks.size()) );
-    NonblockingTasks::iterator cutIteration = extractedTasks.begin();
-    for (int i=0; i<maxTasks; i++) cutIteration++;
-    nonblockingTasks.splice( extractedTasks.begin(), extractedTasks, extractedTasks.begin(), cutIteration );
+
+    NonblockingTasks::iterator cutIteration = nonblockingTasks.begin();
+    while (
+      cutIteration!=nonblockingTasks.end()
+      and
+      maxTasks>0
+    ) {
+      maxTasks--;
+      cutIteration++;
+    }
+
+    extractedTasks.splice( extractedTasks.begin(), nonblockingTasks, nonblockingTasks.begin(), cutIteration );
     lock.free();
 
     for (auto& task: extractedTasks) {
@@ -153,7 +163,8 @@ namespace {
       else
         delete task;
     }
-    return not extractedTasks.empty();
+
+    return extractedTasks.size();
   }
 
 
@@ -164,16 +175,25 @@ namespace {
     NonblockingTasks extractedTasks;
 
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-    maxTasks = std::min( maxTasks, static_cast<int>(nonblockingTasks.size()) );
-    NonblockingTasks::iterator cutIteration = extractedTasks.begin();
-    for (int i=0; i<maxTasks; i++) cutIteration++;
-    nonblockingTasks.splice( extractedTasks.begin(), extractedTasks, extractedTasks.begin(), cutIteration );
+    
+    NonblockingTasks::iterator cutIteration = nonblockingTasks.begin();
+    while (
+      cutIteration!=nonblockingTasks.end()
+      and
+      maxTasks>0
+    ) {
+      maxTasks--;
+      cutIteration++;
+    }
+    
+    extractedTasks.splice( extractedTasks.begin(), nonblockingTasks, nonblockingTasks.begin(), cutIteration );
     lock.free();
 
     for (auto& task: extractedTasks) {
       tarch::multicore::native::spawnTask(task);
     }
-    return not extractedTasks.empty();
+
+    return extractedTasks.size();
   }
 
 
@@ -231,9 +251,15 @@ std::string tarch::multicore::getListOfRealisations() {
        + ","
        + toString(Realisation::HoldTasksBackInLocalQueue)
        + ","
+       + toString(Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask)
+       + ","
        + toString(Realisation::HoldTasksBackInLocalQueueAndBackfill)
        + ","
-       + toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill);
+       + toString(Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask)
+       + ","
+       + toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill)
+       + ","
+       + toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask);
 }
 
 
@@ -243,32 +269,49 @@ std::string tarch::multicore::toString( Realisation realisation ) {
       return "native";
     case Realisation::HoldTasksBackInLocalQueue:
       return "hold-back";
+    case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
+      return "hold-back-and-eventually-map-onto-native-task";
     case Realisation::HoldTasksBackInLocalQueueAndBackfill:
       return "backfill";
+    case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
+      return "backfill-and-eventually-map-onto-native-task";
     case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
       return "merge";
+    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
+      return "merge-and-eventually-map-onto-native-task";
   }
   return "<undef>";
 }
 
 
-void tarch::multicore::parseRealisation( const std::string& realisationString ) {
+bool tarch::multicore::parseRealisation( const std::string& realisationString ) {
   if ( realisationString.compare( toString(Realisation::MapOntoNativeTasks) )==0 ) {
     realisation = Realisation::MapOntoNativeTasks;
   }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueue) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueue;
   }
+  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask) )==0 ) {
+    realisation = Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask;
+  }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndBackfill) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueAndBackfill;
+  }
+  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask) )==0 ) {
+    realisation = Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask;
   }
   else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill) )==0 ) {
     realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
   }
+  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask) )==0 ) {
+    realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask;
+  }
   else {
     tarch::logging::Log _log( "tarch::multicore" );
     logError( "parseRealisation(std::string)", "realisation variant " << realisationString << " not known" );
+    return false;
   }
+  return true;
 }
 
 
@@ -403,7 +446,7 @@ bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
 * way we process the tasks depends on the current state of our task processing
 * strategy. This is encoded via the enum taskProgressionStrategy.
 */
-bool tarch::multicore::processPendingTasks(int maxTasks) {
+bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
   assertion(maxTasks>=0);
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
@@ -412,15 +455,21 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
   while (maxTasks>0) {
     int handledTasks = 0;
     switch (taskProgressionStrategy) {
-      case TaskProgressionStrategy::BufferInQueue:
-        //handledTasks = processOnePendingTaskFIFO() ? 1 : 0;
-        handledTasks = processPendingTasksFIFO(maxTasks);
-        break;
       case TaskProgressionStrategy::MapOntoNativeTask:
-        //handledTasks = mapOnePendingTaskOntoNativeTask() ? 1 : 0;
+        assertion(fifo);
         handledTasks = mapPendingTasksOntoNativeTasks(maxTasks);
         break;
+      case TaskProgressionStrategy::BufferInQueue:
+        assertion(fifo or maxTasks==1);
+        if (fifo) {
+          handledTasks = processPendingTasksFIFO(maxTasks);
+        }
+        else {
+          handledTasks = processOnePendingTaskLIFO() ? 1 : 0;
+        } 
+        break;
       case TaskProgressionStrategy::MergeTasks:
+        assertion(fifo or maxTasks==1);
         if (
           numberOfFusedTasksAssemblies < maxNumberOfFusedTasksAssemblies
           and
@@ -432,8 +481,9 @@ bool tarch::multicore::processPendingTasks(int maxTasks) {
           handledTasks = processPendingTasksFIFO(maxTasks);
         }
         else {
+          // we do only one, so there is a chance that more and more tasks
+          // drop in and we eventually can merge
           handledTasks = processOnePendingTaskFIFO() ? 1 : 0;
-          //handledTasks = processPendingTasksFIFO(maxTasks);
         }
         break;
     }
@@ -546,6 +596,7 @@ void tarch::multicore::spawnAndWait(
 const std::vector< Task* >&  tasks
 ) {
   static tarch::logging::Log _log( "tarch::multicore" );
+
   if (not tasks.empty()) {
     if (
       tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
@@ -565,10 +616,13 @@ const std::vector< Task* >&  tasks
         taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
         break;
       case Realisation::HoldTasksBackInLocalQueue:
+      case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
       case Realisation::HoldTasksBackInLocalQueueAndBackfill:
+      case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
         taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
         break;
       case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
+      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
         numberOfFusedTasksAssemblies = 0;
         taskProgressionStrategy      = TaskProgressionStrategy::MergeTasks;
         break;
@@ -576,74 +630,46 @@ const std::vector< Task* >&  tasks
 
     native::spawnAndWait(tasks);
 
+    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
+      taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
+      tarch::multicore::processPendingTasks();
+    }
+
     switch (realisation) {
       case Realisation::MapOntoNativeTasks:
+        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
         assertion(nonblockingTasks.empty());
         break;
       case Realisation::HoldTasksBackInLocalQueue:
       case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-        if (
-          tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
-          and
-          not nonblockingTasks.empty()
-        ) {
-          logInfo( "spawnAndWait()", "there are low priority tasks but no multithreading is enabled. Process all tasks immediately now")
-          while (not nonblockingTasks.empty()) {
-            tarch::multicore::processPendingTasks( nonblockingTasks.size() );
-          }
-        }
-        else {
-          taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
-          while (not nonblockingTasks.empty()) {
-            tarch::multicore::processPendingTasks( nonblockingTasks.size() );
-          }
-        }
+        taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
+        ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
         break;
       case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-        {
-          taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
-          tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );
-
-          taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
-          while (not nonblockingTasks.empty()) {
-            tarch::multicore::processPendingTasks( nonblockingTasks.size() );
-          }
-        }
+        taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
+        tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );
+        taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
+        ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
+        break;
+      case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
+      case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
+        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
+        tarch::multicore::processPendingTasks();
+        break;
+      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
+        taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
+        tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );
+        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
+        tarch::multicore::processPendingTasks();
         break;
     }
   }
-
-  taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
 }
 
 
 void tarch::multicore::yield() {
   tarch::multicore::native::yield();
 }
-
-
-/**
-* Process one particular task
-*
-* If we search for a particular task, we typically should search
-* LIFO. Therefore, I change the general processing pattern and
-* continue.
-*/
-
-/*
-bool tarch::multicore::processTask(int number) {
-  int lastTaskProcessed = -1;
-  assertion(number>=0);
-  while (
-    not nonblockingTasks.empty()
-    and
-    lastTaskProcessed!=number
-  ) {
-    lastTaskProcessed = processOnePendingTaskLIFO();
-  }
-  return lastTaskProcessed==number;
-}
-*/
 
 
 int tarch::multicore::getNumberOfPendingTasks() {

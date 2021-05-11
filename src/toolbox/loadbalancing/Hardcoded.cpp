@@ -2,6 +2,7 @@
 #include "loadbalancing.h"
 
 #include "tarch/Assertions.h"
+#include "tarch/multicore/Core.h"
 
 #include "peano4/parallel/Node.h"
 #include "peano4/parallel/SpacetreeSet.h"
@@ -10,9 +11,10 @@
 tarch::logging::Log  toolbox::loadbalancing::Hardcoded::_log( "toolbox::loadbalancing::Hardcoded" );
 
 
-toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks):
+toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStamps, std::initializer_list<int> splittingTrees, std::initializer_list<int> numberOfCells,  std::initializer_list<int> destinationRanks, bool handOutOnePartitionPerCore):
   _currentTimeStamp(0),
-  _enabled(true) {
+  _enabled(true),
+  _handOutOnePartitionPerCore(handOutOnePartitionPerCore) {
   assertionEquals4( timeStamps.size(),       numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
   assertionEquals4( splittingTrees.size(),   numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
   assertionEquals4( destinationRanks.size(), numberOfCells.size(), timeStamps.size(), splittingTrees.size(), numberOfCells.size(), destinationRanks.size() );
@@ -30,7 +32,10 @@ toolbox::loadbalancing::Hardcoded::Hardcoded(std::initializer_list<int> timeStam
     destinationRank++;
   }
 
-  logInfo( "Hardcoded(...)", "created hardcoded load balancing strategy with " << _splits.size() << " decomposition(s)" );
+  // I would love to have some info output here, but some codes use the lb as static attribute
+  // so it might come up before the logging infrastructure is up. This means that the logInfo
+  // will crash.
+  // logInfo( "Hardcoded(...)", "created hardcoded load balancing strategy with " << _splits.size() << " decomposition(s)" );
 }
 
 
@@ -66,6 +71,18 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
           ". However, load (re-)balancing is deactivated"
         );
       }
+      else if (
+        split.destinationRank == tarch::mpi::Rank::getInstance().getRank() 
+        and
+        _handOutOnePartitionPerCore
+        and 
+       peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >= tarch::multicore::Core::getInstance().getNumberOfThreads()
+      ) {
+        logWarning( 
+          "finishStep()", "ignore instruction to split rank further by  cutting of " << split.numberOfCells << 
+          ", as lb is told not to overbook local cores"
+        );
+      }
       else if (not peano4::parallel::SpacetreeSet::getInstance().split(split.splittingTree,split.numberOfCells,split.destinationRank)) {
         logWarning(
           "finishStep()",
@@ -78,10 +95,6 @@ void toolbox::loadbalancing::Hardcoded::finishStep() {
   }
 
   dumpStatistics();
-}
-
-
-void toolbox::loadbalancing::Hardcoded::dumpStatistics() {
 }
 
 

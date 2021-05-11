@@ -47,6 +47,19 @@ class AbstractFVActionSet( ActionSet ):
 
 
 class AMROnPatch(AbstractFVActionSet):
+  """
+  
+  The action set to realise AMR
+  
+  AMR is a multistep process in ExaHyPE. Most of the relevant documentation 
+  on it is documented in the class exahype2::RefinementControl. As it is a 
+  multistep algorithm, it is also clear even observers that do not want AMR
+  have to include this action set - though with a context-specific choice 
+  of boolean flags.
+  
+  """
+  
+  
   TemplateAMR = """  
   if ({{PREDICATE}}) { 
     ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
@@ -79,30 +92,51 @@ class AMROnPatch(AbstractFVActionSet):
   """
   
     
-  def __init__(self,solver, predicate):
+  def __init__(self, solver, predicate, build_up_new_refinement_instructions, implement_previous_refinement_instructions):
+    """
+    
+    predicate: C++ expression which evaluates to true or false
+      A per cell decision whether we should study a cell or not.
+    
+    build_up_new_refinement_instructions: Boolean
+      See remarks on multistep realisation of AMR in C++ class 
+      exahype2::RefinementControl.
+        
+    implement_previous_refinement_instructions: Boolean
+      See remarks on multistep realisation of AMR in C++ class 
+      exahype2::RefinementControl.
+    
+    """
     AbstractFVActionSet.__init__(self,solver)
-    self._predicate = predicate
+    self.predicate                                   = predicate
+    self._build_up_new_refinement_instructions       = build_up_new_refinement_instructions
+    self._implement_previous_refinement_instructions = implement_previous_refinement_instructions
 
   
   def get_body_of_getGridControlEvents(self):
-    return """
-  return repositories::refinementControl.getGridControlEvents();
+    if self._implement_previous_refinement_instructions:
+      return """
+    return repositories::refinementControl.getGridControlEvents();
 """ 
+    else:
+      return """
+    return std::vector< peano4::grid::GridControlEvent >();
+"""      
 
 
   def get_body_of_operation(self,operation_name):
     result = ""
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
+    if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
       result = """
   _localRefinementControl.clear();
 """
 
-    if operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
+    if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
       result = """
   repositories::refinementControl.merge( _localRefinementControl );
 """
     
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+    if self._build_up_new_refinement_instructions and operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       d = {}
       if self._solver._patch.dim[0] != self._solver._patch.dim[1]:
         raise Exception( "Error: Can only handle square patches." )
@@ -112,7 +146,7 @@ class AMROnPatch(AbstractFVActionSet):
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver._patch.name
-      d[ "PREDICATE" ]          = self._predicate
+      d[ "PREDICATE" ]          = self.predicate
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)      
       result = jinja2.Template( self.TemplateAMR ).render(**d)
@@ -145,7 +179,7 @@ class AdjustPatch(AbstractFVActionSet):
   
   def __init__(self,solver,predicate):
     AbstractFVActionSet.__init__(self,solver)
-    self._predicate = predicate
+    self.predicate = predicate
 
 
   def get_body_of_operation(self,operation_name):
@@ -154,7 +188,7 @@ class AdjustPatch(AbstractFVActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ] = self._predicate      
+      d[ "PREDICATE" ] = self.predicate      
       result = jinja2.Template(self.TemplateAdjustCell).render(**d)
       pass 
     return result
@@ -206,7 +240,7 @@ class HandleBoundary(AbstractFVActionSet):
 """
   def __init__(self,solver,predicate):
     AbstractFVActionSet.__init__(self,solver)
-    self._predicate = predicate
+    self.predicate = predicate
 
 
   def get_body_of_operation(self,operation_name):
@@ -215,7 +249,7 @@ class HandleBoundary(AbstractFVActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ] = self._predicate      
+      d[ "PREDICATE" ] = self.predicate      
       result = jinja2.Template(self.TemplateHandleBoundary).render(**d)
       pass 
     return result
@@ -448,12 +482,13 @@ In-situ preprocessing:  """
      action sets.
      
     """
-    self._action_set_adjust_cell              = AdjustPatch(self, "not marker.isRefined()")
-    self._action_set_AMR                      = AMROnPatch(self, "not marker.isRefined()")
-    self._action_set_handle_boundary          = HandleBoundary(self, self._store_face_data_default_predicate() )
-    self._action_set_project_patch_onto_faces = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
-    self._action_set_copy_new_patch_overlap_into_overlap     = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
-    self._action_set_update_cell              = None
+    self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined()")
+    self._action_set_AMR                                 = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() )
+    self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
+    self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
+    self._action_set_update_cell                         = None
 
 
   def _store_cell_data_default_predicate(self):
@@ -576,7 +611,9 @@ In-situ preprocessing:  """
     step.add_action_set( self._action_set_adjust_cell )
     if evaluate_refinement_criterion:
       step.add_action_set( self._action_set_AMR )
-  
+    else:
+      step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+          
   
   def set_plot_description(self,description):
     """
@@ -594,6 +631,8 @@ In-situ preprocessing:  """
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     
+    step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._patch, 

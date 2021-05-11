@@ -3,6 +3,7 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/logging/Statistics.h"
+#include "tarch/logging/LogFilter.h"
 #include "tarch/UnitTests.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Core.h"
@@ -216,6 +217,7 @@ void step() {{
   switch ( stepName ) {{
     case repositories::StepRepository::Steps::CreateGridButPostponeRefinement:
       {{
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid-but-postpone-refinement" );
         repositories::startGridConstructionStep();
 
         observers::CreateGridButPostponeRefinement  observer;
@@ -228,6 +230,7 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::CreateGrid:
       {{
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
         repositories::startGridConstructionStep();
         
         observers::CreateGrid  observer;
@@ -244,6 +247,7 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing:
       {{
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid-and-converge-load-balancing" );
         // The smaller here corresponds to the -1 below
         if (
           ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()<0
@@ -273,6 +277,10 @@ void step() {{
 
         if (
           ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
+	  and
+	  not repositories::loadBalancer.hasSplitRecently()
+          and
+          repositories::loadBalancer.isEnabled(false)
         ) {{
           logInfo(
             "step()",
@@ -285,6 +293,7 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::InitGrid:
       {{
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "init-grid" );
         repositories::loadBalancer.enable(false);
 
         repositories::startGridInitialisationStep();
@@ -299,6 +308,7 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::PlotSolution:
       {{
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "plot-solution" );
         const double minTimeStamp    = repositories::getMinTimeStamp();
         const double maxTimeStamp    = repositories::getMaxTimeStamp();
         const double minTimeStepSize = repositories::getMinTimeStepSize();
@@ -316,6 +326,7 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::TimeStep:
       {{
+        tarch::logging::LogFilter::getInstance().switchProgramPhase( "time-step" );
         if (repositories::loadBalancer.isEnabled(false)) {{
           logInfo( "step()", "disable load balancing throughout initialisation (to be removed in later releases)" );
           repositories::loadBalancer.enable(false);

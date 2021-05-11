@@ -136,7 +136,12 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   // NOTE parameters are stored in Constants.h
   const double tempA = alpha * std::max({sqrtwo, CCZ4e, CCZ4ds, CCZ4GLMc/alpha, CCZ4GLMd/alpha});
   const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
-  return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
+  double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
+  bool flag = false;
+  for(int i=0; i<(NumberOfUnknowns-1); i++){
+    if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
+  }
+  return flag? 2*tem: tem;
   //// we are only interested in the maximum eigenvalue
   //return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
 

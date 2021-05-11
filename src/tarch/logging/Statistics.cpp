@@ -18,8 +18,8 @@ tarch::logging::Statistics& tarch::logging::Statistics::getInstance() {
 
 
 tarch::logging::Statistics::Statistics():
-  _minCountInBetweenTwoMeasurements(100),
-  _minTimeInBetweenTwoMeasurements(1.0),
+  _maxCountInBetweenTwoMeasurements(100),
+  _maxTimeInBetweenTwoMeasurements(2.0),
   _globalWatch( "tarch::logging::Statistics", "Statistics", false) {
 }
 
@@ -44,8 +44,8 @@ bool tarch::logging::Statistics::acceptNewData(const std::string& identifier, bo
   _map[identifier]._counter++;
   _map[identifier]._watch.stop();
 
-  bool counterGuard = _map[identifier]._counter>_minCountInBetweenTwoMeasurements;
-  bool timerGuard   = _map[identifier]._watch.getCalendarTime() > _minTimeInBetweenTwoMeasurements;
+  bool counterGuard = _map[identifier]._counter>_maxCountInBetweenTwoMeasurements;
+  bool timerGuard   = _map[identifier]._watch.getCalendarTime() > _maxTimeInBetweenTwoMeasurements;
 
   bool guard = disableSampling or counterGuard or timerGuard;
 
@@ -74,20 +74,23 @@ void tarch::logging::Statistics::log( const std::string& identifier, double valu
 void tarch::logging::Statistics::inc( const std::string& identifier, double value, bool disableSampling ) {
   tarch::multicore::Lock lock(_semaphore);
 
-  _globalWatch.stop();
-  double t = _globalWatch.getCalendarTime();
-
   if ( _map.count( identifier )==0 ) {
+     _globalWatch.stop();
+     double t = _globalWatch.getCalendarTime();
+
     _map.insert( std::pair<std::string,DataSet>( identifier, DataSet() ));
     _map[identifier]._data.push_back( std::pair<double,double>(t,value) );
     _map[identifier]._data.push_back( std::pair<double,double>(t,value) ); // second one will be updated
   }
   else {
     double newValue = _map[identifier]._data.back().second + value;
-    _map[identifier]._data.back().first  = t;
     _map[identifier]._data.back().second = newValue;
 
     if ( acceptNewData(identifier, disableSampling) ) {
+      _globalWatch.stop();
+      double t = _globalWatch.getCalendarTime();
+      _map[identifier]._data.back().first  = t;
+
       _map[identifier]._data.push_back( std::pair<double,double>(t,newValue) );
     }
   }
@@ -113,14 +116,21 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
   file << std::endl;
 
   double t = 0.0;
-  bool   dataRemaining = true;
-  while (dataRemaining) {
-    dataRemaining = false;
-    file << t;
+  while (t<std::numeric_limits<double>::max()) {
+    t = std::numeric_limits<double>::max();
     for (auto& p: _map) {
       if (not p.second._data.empty()) {
-        dataRemaining = true;
-        if ( p.second._data[0].first < t + _minTimeInBetweenTwoMeasurements ) {
+        t = std::min(t,p.second._data.front().first);
+      }
+    } 
+    if (t<std::numeric_limits<double>::max()) {
+      file << t; 
+      for (auto& p: _map) {
+        if (
+          not p.second._data.empty()
+          and
+          p.second._data.front().first < t + _maxTimeInBetweenTwoMeasurements
+        ) {
           file << ", " << p.second._data[0].second;
           p.second._data.erase(p.second._data.begin());
         }
@@ -128,12 +138,8 @@ void tarch::logging::Statistics::writeToCSV( std::string filename ) {
           file << ", ";
         }
       }
-      else {
-        file << ", ";
-      }
     }
-    file << "\n";
-    t += _minTimeInBetweenTwoMeasurements;
+    file << std::endl;
   }
 
   file.close();

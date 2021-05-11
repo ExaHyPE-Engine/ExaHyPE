@@ -80,7 +80,7 @@ class tarch::multicore::Core {
      *        of threads) or it equals DefaultNumberOfThreads which means that the code should
      *        use the default number of threads.
      */
-    void configure( int numberOfThreads = UseDefaultNumberOfThreads, int maxNumberOfConcurrentBackgroundTasks = UseDefaultNumberOfThreads, int maxNumberOfConcurrentBandwidthBoundTasks = UseDefaultNumberOfThreads );
+    void configure( int numberOfThreads = UseDefaultNumberOfThreads );
 
     /**
      * Shutdown parallel environment.
@@ -103,15 +103,9 @@ class tarch::multicore::Core {
     int getNumberOfGPUs() const;
 
     /**
-     * This is a real string which identifies the (OS) thread.
-     */
-    std::string getThreadId() const;
-
-    /**
      * @return Physical core the process is running on
      */
     int getCoreNumber() const;
-    int getThreadNumber() const;
 };
 
 
