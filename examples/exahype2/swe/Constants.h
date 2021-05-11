@@ -11,16 +11,21 @@
 #include <string>
 
 
+#include <bitset>
+
+
 
 namespace examples{
 namespace exahype2{
 namespace swe{
 
-  constexpr auto DomainOffset = {0.0,0.0};
-  constexpr auto DomainSize = {1.0,1.0};
-  constexpr auto TerminalTime = 0.005;
+  const std::initializer_list<double> DomainOffset = {0.0,0.0};
+  const std::initializer_list<double> DomainSize = {1.0,1.0};
+  constexpr auto TerminalTime = 0.001;
   constexpr auto FirstPlotTimeStamp = 0.0;
-  constexpr auto TimeInBetweenPlots = 0.001;
+  constexpr auto TimeInBetweenPlots = 1e-05;
+  constexpr auto PlotterPrecision = 5;
+  const std::bitset<2> PeriodicBC = 0;
 
 }
 }

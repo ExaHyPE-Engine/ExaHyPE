@@ -43,9 +43,9 @@ struct examples::exahype2::swe::facedata::SWEQ {
   #endif
 
   #if Dimensions==2
-  double                                 value[88];
+  double                                 value[320];
   #else
-  double                                 value[968];
+  double                                 value[12800];
   #endif
   
   SWEQ();

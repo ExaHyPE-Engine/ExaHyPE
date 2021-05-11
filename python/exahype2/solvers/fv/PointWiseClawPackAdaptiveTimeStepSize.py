@@ -211,6 +211,10 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
     
       Instantiate a generic FV scheme with an overlap of 1.
       
+      It is important that the superclass constructor is invoked late. It triggers
+      the create_action_sets() routine which in return expect that a lot of the 
+      solver-specific fields are properly set beforehand.
+      
       
       Riemann_solver_implementation_files: list of strings
         These are the Fortran files the code should add to the compile.
@@ -220,9 +224,7 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
         I prefer ClawPack solvers which are written point-wisely. Alternatively, I 
         can misuse 1d solvers.  
       
-    """
-    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-        
+    """        
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
@@ -233,18 +235,21 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
     
     self._discriminate_normal = discriminate_normal
     
+    self._postprocess_patch = ""
+    
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
+    
+    self._time_step_relaxation = time_step_relaxation
+    self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
+
+    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
 
     self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
     self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
 
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
-    
-    self._time_step_relaxation = time_step_relaxation
-    self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
-
 
     self.set_implementation()
 
@@ -274,13 +279,36 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
     if use_split_loop!=None:
       self._use_split_loop = use_split_loop
 
+      
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
-    self._action_set_update_cell = UpdateCell(self)
+    self.create_action_sets()
 
+
+  def create_action_sets(self):
+    FV.create_action_sets(self)
+    self._action_set_update_cell = UpdateCell(self)     
+    
+    print( "This is what I had: " + self._postprocess_updated_patch )
+
+  
+  def set_postprocess_updated_patch_kernel_point_wise(self,kernel):
+    """
+  
+    Most subclasses will redefine/overwrite this operation as they have
+    to incorporate the kernel into their generated stuff
+  
+    """
+    self.set_postprocess_updated_patch_kernel( """
+dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+  double values = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
+  lala
+  index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+}
+""")
 
   
   def add_entries_to_text_replacement_dictionary(self,d):
@@ -298,8 +326,8 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
     d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
-    d[ "DISCRIMINATE_NORMAL"] = self._discriminate_normal
-    d[ "TIME_STEP_RELAXATION" ] = self._time_step_relaxation
+    d[ "DISCRIMINATE_NORMAL"]                 = self._discriminate_normal
+    d[ "TIME_STEP_RELAXATION" ]               = self._time_step_relaxation
     d[ "EIGENVALUES_IMPLEMENTATION"]          = self._eigenvalues_implementation
 
   

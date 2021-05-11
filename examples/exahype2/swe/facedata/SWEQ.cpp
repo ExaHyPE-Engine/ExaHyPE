@@ -3,7 +3,9 @@
 
 
 #include "peano4/utils/Loop.h"
-#include "observers/SolverRepository.h" 
+#include "repositories/SolverRepository.h" 
+
+#include "../repositories/SolverRepository.h"
 
 
 
@@ -18,9 +20,9 @@ examples::exahype2::swe::facedata::SWEQ::SWEQ(const SWEQ& other) {
   #endif
 
   #if Dimensions==2
-  std::copy(other.value, other.value+88,value);
+  std::copy(other.value, other.value+320,value);
   #else
-  std::copy(other.value, other.value+968,value);
+  std::copy(other.value, other.value+12800,value);
   #endif
 }
 
@@ -32,17 +34,24 @@ examples::exahype2::swe::facedata::SWEQ& examples::exahype2::swe::facedata::SWEQ
   #endif
   
   #if Dimensions==2
-  std::copy(other.value, other.value+88,value);
+  std::copy(other.value, other.value+320,value);
   #else
-  std::copy(other.value, other.value+968,value);
+  std::copy(other.value, other.value+12800,value);
   #endif
   return *this;
 }
 
 
 std::string examples::exahype2::swe::facedata::SWEQ::toString() const {
-  std::string result = std::string("()");
-  return result;
+  std::ostringstream result;
+  result << "(";
+  #if PeanoDebug>=1
+  result << "x=" << _debugX;
+  result << ",";
+  result << "h=" << _debugH;
+  #endif
+  result << ")";
+  return result.str();
 }
 
 
@@ -80,7 +89,7 @@ void examples::exahype2::swe::facedata::SWEQ::merge(const SWEQ& neighbour, const
         base *= 1.0*2;
       }
       else {
-        base *= 11;
+        base *= 40;
       }
     }
     return result;
@@ -88,7 +97,7 @@ void examples::exahype2::swe::facedata::SWEQ::merge(const SWEQ& neighbour, const
   
 
   const int faceNormal = marker.getSelectedFaceNumber() % Dimensions;
-  dfore(i,11,faceNormal,0) {
+  dfore(i,40,faceNormal,0) {
     for (int j=0; j<1.0; j++) {
       tarch::la::Vector<Dimensions,int> volume = i;
       volume(faceNormal) += marker.outerNormal()(faceNormal)>0 ? j + 1.0 : j;
@@ -117,22 +126,22 @@ void examples::exahype2::swe::facedata::SWEQ::merge(const SWEQ& neighbour, const
 
 
 bool examples::exahype2::swe::facedata::SWEQ::send(const peano4::datamanagement::FaceMarker& marker) {
-  return not marker.isRefined() and observers::InstanceOfSWE.getSolverState()!=SWE::SolverState::GridConstruction;
+  return false;
 }
 
 
 bool examples::exahype2::swe::facedata::SWEQ::receiveAndMerge(const peano4::datamanagement::FaceMarker& marker) {
-  return not marker.isRefined() and observers::InstanceOfSWE.getSolverState()!=SWE::SolverState::GridConstruction and observers::InstanceOfSWE.getSolverState()!=SWE::SolverState::GridInitialisation;
+  return false;
 }
 
 
 bool examples::exahype2::swe::facedata::SWEQ::storePersistently(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+  return false;
 }
 
 
 bool examples::exahype2::swe::facedata::SWEQ::loadPersistently(const peano4::datamanagement::FaceMarker& marker) {
-  return true;
+  return false;
 }
 #ifdef Parallel
 void examples::exahype2::swe::facedata::SWEQ::initDatatype() {
@@ -142,9 +151,9 @@ void examples::exahype2::swe::facedata::SWEQ::initDatatype() {
     MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_DOUBLE };
 
     #if Dimensions==2
-    int blocklen[] = { Dimensions, Dimensions, 88 };
+    int blocklen[] = { Dimensions, Dimensions, 320 };
     #else
-    int blocklen[] = { Dimensions, Dimensions, 968 };
+    int blocklen[] = { Dimensions, Dimensions, 12800 };
     #endif
 
     const int NumberOfAttributes = 3;
@@ -152,9 +161,9 @@ void examples::exahype2::swe::facedata::SWEQ::initDatatype() {
     MPI_Datatype subtypes[] = { MPI_DOUBLE };
     
     #if Dimensions==2
-    int blocklen[] = { 88 };
+    int blocklen[] = { 320 };
     #else
-    int blocklen[] = { 968 };
+    int blocklen[] = { 12800 };
     #endif
   
     const int NumberOfAttributes = 1;  
