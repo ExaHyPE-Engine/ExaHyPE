@@ -26,7 +26,7 @@ namespace {
   NonblockingTasks                     nonblockingTasks;
   tarch::multicore::BooleanSemaphore   nonblockingTasksSemaphore;
 
-  tarch::multicore::Realisation realisation = tarch::multicore::Realisation::MapOntoNativeTasks;
+  tarch::multicore::Realisation realisation = tarch::multicore::Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
 
   /**
    * Determines how to handle the tasks dumped into nonblockingTasks.
