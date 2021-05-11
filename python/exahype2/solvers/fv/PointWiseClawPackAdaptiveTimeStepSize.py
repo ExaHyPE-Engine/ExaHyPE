@@ -291,22 +291,27 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
   def create_action_sets(self):
     FV.create_action_sets(self)
     self._action_set_update_cell = UpdateCell(self)     
-    
-    print( "This is what I had: " + self._postprocess_updated_patch )
 
   
-  def set_postprocess_updated_patch_kernel_point_wise(self,kernel):
+  def set_postprocess_updated_patch_kernel_point_wisely(self,kernel):
     """
   
-    Most subclasses will redefine/overwrite this operation as they have
-    to incorporate the kernel into their generated stuff
+    This is a routine to implement some a posteriori constraints on 
+    the solution point-wisely. So you can make kernel holds a C++
+    string similar to
+        
+if (Q[1]>43.2) {
+ Q[2] = Q[4];
+}
   
     """
     self.set_postprocess_updated_patch_kernel( """
-dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-  double values = fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
-  lala
-  index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+int postProcessingIndex = 0;
+dfor( volume, """ + str(self._patch_size) + """ ) {
+  double* Q = originalPatch + postProcessingIndex;
+  """ + kernel + """
+  postProcessingIndex += """ + str(self._unknowns) + """;
+  postProcessingIndex += """ + str(self._auxiliary_variables) + """;
 }
 """)
 
