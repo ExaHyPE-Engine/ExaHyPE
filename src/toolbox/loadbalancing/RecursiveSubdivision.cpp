@@ -64,9 +64,11 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
     msg << ",blacklist is empty";
   }
   else {
+    msg << ",blacklist={";
     for (auto p: _blacklist) {
-      msg << ",(#" << p.first << ":" << p.second << ")";
+      msg << "(#" << p.first << ":" << p.second << ")";
     }
+    msg << "}";
   }
 
   msg << ",heaviest-local-tree=" << getIdOfHeaviestLocalSpacetree() << " (analysed)"
@@ -308,7 +310,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
   }
 
   if (
-    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > peano4::parallel::Node::MaxSpacetreesPerRank/4*3
+    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 2*tarch::multicore::Core::getInstance().getNumberOfThreads()
   ) {
     logDebug( "getStrategyStep()", "afraid to use too many trees and hence to overbook system" );
     return StrategyStep::Wait;
@@ -343,7 +345,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     and
     canSplitLocally()
   ) {
-    // @todo Debug
     logInfo(
       "getStrategyStep()",
       "local rank does only employ one thread, so try to spread out locally first"
@@ -618,7 +619,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
   }
 
   if ( _blacklist.count(sourceTree)==0 ) {
-    const int InitialBlacklistWeight = 3;
+	// first term is an offset, second term takes into account that we have round robin tokens
+    const int InitialBlacklistWeight = 3 + tarch::mpi::Rank::getInstance().getNumberOfRanks();
     _blacklist.insert( std::pair<int,int>(sourceTree,InitialBlacklistWeight) );
   }
   else {
