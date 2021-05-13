@@ -404,14 +404,14 @@ Auxiliary variables:    """ + str( self._auxiliary_variables ) + """
 h_min:                  """ + str( self._min_h ) + """
 h_max:                  """ + str( self._max_h ) + """
 In-situ preprocessing:  """ 
-    if self._preprocess_reconstructed_patch:
+    if self._preprocess_reconstructed_patch != "":
       result += """yes
 """
     else:
       result += """no
 """
     result += "In-situ postprocessing: """ 
-    if self._postprocess_updated_patch:
+    if self._postprocess_updated_patch != "":
       result += """yes
 """
     else:

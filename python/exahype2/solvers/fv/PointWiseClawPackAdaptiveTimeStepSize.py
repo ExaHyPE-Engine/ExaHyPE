@@ -103,6 +103,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       originalPatch
     );
     
+   
+    {{POSTPROCESS_UPDATED_PATCH}}
+    
     double maxEigvenvalue = ::exahype2::fv::maxEigenvalue_AoS(
       [] (
         const double * __restrict__                  Q,
@@ -126,8 +129,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       originalPatch
     );
-    
-    {{POSTPROCESS_UPDATED_PATCH}}
     
     repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigvenvalue );
   """ 
@@ -234,8 +235,6 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
     
     self._discriminate_normal = discriminate_normal
     
-    self._postprocess_patch = ""
-    
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
     
@@ -244,13 +243,18 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
 
     FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
 
+    self.set_implementation()
+
+
+  def create_data_structures(self):
+    FV.create_data_structures(self)
+
     self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
     self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
 
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
 
-    self.set_implementation()
 
 
   def set_implementation(self,
