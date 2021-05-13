@@ -113,10 +113,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         int                                          normal
       ) -> double {
       
-      //s = u +- sqrt(g * h)
-      
+      //return max Eigenvalue
+      //approximation: s = u +- sqrt(g * h)
       return std::max(std::abs(Q[1+normal]) + std::sqrt(9.81*Q[0]), std::abs(Q[1+normal]) - std::sqrt(9.81*Q[0]));
-     //   return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
       },
       marker.x(),
       marker.h(),
