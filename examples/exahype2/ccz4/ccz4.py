@@ -265,12 +265,12 @@ if __name__ == "__main__":
 		std::fstream fin;
 		std::string att="_hoc.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 
-		if (tarch::la::equals(t,0.0)){
+		if (tarch::la::equals(t,0.0)){//initialization
 			fin.open((p1+att),std::ios::out|std::ios::trunc);
-			fin << "5.0 0.0 0.0 0.0" << std::endl;
+			fin << "4 0.0 0.0 0.0" << std::endl;//4.461538
 			fin.close();
 			fin.open((p2+att),std::ios::out|std::ios::trunc);
-			fin << "-5.0 0.0 0.0 0.0" << std::endl;
+			fin << "-4 0.0 0.0 0.0" << std::endl;//-5.538462
 			fin.close();
 			fin.open((tem+att),std::ios::out|std::ios::trunc);
 			fin << "tem file" << std::endl;
@@ -279,7 +279,7 @@ if __name__ == "__main__":
 			fin.open((p1+att),std::ios::in);
 			std::string pos=getLastLine(fin);
 			fin.close();
-			double coor1[4]={0};
+			double coor1[4]={0};//read in previous coordinates
 			CoorReadIn(coor1,pos);
 			fin.open((p2+att),std::ios::in);
 			std::string pos2=getLastLine(fin);
@@ -287,19 +287,19 @@ if __name__ == "__main__":
 			double coor2[4]={0};
 			CoorReadIn(coor2,pos2);
 			if (marker.isContained(coor1)){
-				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor1,marker.getOffset(),volumeH,patchSize);
+				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor1,marker.getOffset(),volumeH,patchSize); //find where the puncture is
 				tarch::la::Vector<Dimensions,int> IndexForInterpolate[8];
-				FindInterIndex(IndexForInterpolate,IndexOfCell);
+				FindInterIndex(IndexForInterpolate,IndexOfCell);//find the closest 8 cells
 				double raw[8*3];
 				for (int i=0;i<8;i++){
 					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
-					for (int j=0;j<Dimensions;j++) {raw[i*3+j]=reconstructedPatch[Lindex*(59+6)+17+j];}
+					for (int j=0;j<Dimensions;j++) {raw[i*3+j]=reconstructedPatch[Lindex*(59+6)+17+j];} //read in corresponding beta
 				}
 				double shift[3];
 				Interpolation(shift,IndexForInterpolate,raw,coor1,marker.getOffset(),volumeH,patchSize);
 				
-				coor1[0]-=dt*shift[0]; coor1[1]-=dt*shift[1]; coor1[2]-=dt*shift[2];
-				fin.open((p1+att),std::ios::app);
+				coor1[0]-=dt*shift[0]; coor1[1]-=dt*shift[1]; coor1[2]-=dt*shift[2];//updates position
+				fin.open((p1+att),std::ios::app);//output
 				fin << coor1[0] << " " << coor1[1] << " " << coor1[2] << " " << t << std::endl;
 				fin.close();
 				fin.open((tem+att),std::ios::app);
@@ -311,7 +311,7 @@ if __name__ == "__main__":
 				fin << "after inter" << shift[0] << " " << shift[1] << " " << shift[2] << " " << t << std::endl;
 				fin.close();
 			}
-			if (marker.isContained(coor2)){
+			if (marker.isContained(coor2)){//do the same for the second puncutre
 				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor2,marker.getOffset(),volumeH,patchSize);
 				tarch::la::Vector<Dimensions,int> IndexForInterpolate[8];
 				FindInterIndex(IndexForInterpolate,IndexOfCell);
@@ -359,45 +359,49 @@ if __name__ == "__main__":
 				cons[i]+=constraints[i]*constraints[i];
 			}
 		}
+		/*
 		for(int i=0;i<n_a_v;i++){cons[i]=cons[i]/(patchSize*patchSize*patchSize);}
-			
-		if (tarch::la::equals(t,0.0)){
-			fin.open((teml2+att),std::ios::out|std::ios::trunc);
-			fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
-			fin.close();
-			fin.open((l2+att),std::ios::out|std::ios::trunc);
-			fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
-			fin.close();
-		} else {
-			fin.open((teml2+att),std::ios::in);
-			std::string checkingline=getLastLine(fin);
-			fin.close();
-			double checkingcons[7]={0};
-			ConsReadIn(checkingcons,checkingline);
-			if (std::abs(t-checkingcons[0])<1e-6){ //if they are stil in the same timestep
-				fin.open((teml2+att),std::ios::app);
-				fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
+
+		//if (marker.isContained({0,0,0})){	
+			if (tarch::la::equals(t,0.0)){
+				fin.open((teml2+att),std::ios::out|std::ios::trunc);
+				fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
+				fin.close();
+				fin.open((l2+att),std::ios::out|std::ios::trunc);
+				fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
 				fin.close();
 			} else {
-				//std::cout << "current t " << t << " file t " << checkingcons[0] << std::endl;
 				fin.open((teml2+att),std::ios::in);
-				int count=0; std::string line; double consOutput[6]={0,0,0,0,0,0};
-				while (std::getline(fin,line)){
-					count++;
-					double constem[7]={0};
-					ConsReadIn(constem,line);
-					for(int i=1;i<(n_a_v+1);i++){consOutput[i-1]+=constem[i];}
+				std::string checkingline=getLastLine(fin);
+				fin.close();
+				double checkingcons[7]={0};
+				ConsReadIn(checkingcons,checkingline);
+				if (std::abs(t-checkingcons[0])<(dt/100.0)){ //if they are stil in the same timestep
+					fin.open((teml2+att),std::ios::app);
+					fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
+					fin.close();
+				} else {
+					//std::cout << "current t " << t << " file t " << checkingcons[0] << std::endl;
+					fin.open((teml2+att),std::ios::in);
+					int count=0; std::string line; double consOutput[6]={0,0,0,0,0,0};
+					while (std::getline(fin,line)){
+						count++;
+						double constem[7]={0};
+						ConsReadIn(constem,line);
+						for(int i=1;i<(n_a_v+1);i++){consOutput[i-1]+=constem[i];}
+					}
+					for(int i=0;i<n_a_v;i++){consOutput[i]/=count;}
+					fin.close();
+					fin.open((l2+att),std::ios::app);
+					fin << t << " " <<consOutput[0] << " " <<consOutput[1] << " " <<consOutput[2] << " " <<consOutput[3] << " " <<consOutput[4] << " " <<consOutput[5] << std::endl;
+					fin.close();
+					fin.open((teml2+att),std::ios::out|std::ios::trunc);
+					fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
+					fin.close();
 				}
-				for(int i=0;i<n_a_v;i++){consOutput[i]/=count;}
-				fin.close();
-				fin.open((l2+att),std::ios::app);
-				fin << t << " " <<consOutput[0] << " " <<consOutput[1] << " " <<consOutput[2] << " " <<consOutput[3] << " " <<consOutput[4] << " " <<consOutput[5] << std::endl;
-				fin.close();
-				fin.open((teml2+att),std::ios::out|std::ios::trunc);
-				fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
-				fin.close();
 			}
-		}				
+		//}
+		*/				
     """)
 
         self.create_data_structures()
