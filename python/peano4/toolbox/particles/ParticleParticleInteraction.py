@@ -82,7 +82,7 @@ class ParticleParticleInteraction(ActionSet):
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "CELL_COMPUTE_KERNEL" ]      = cell_compute_kernel
     self.d[ "VERTEX_COMPUTE_KERNEL" ]    = touch_vertex_first_time_compute_kernel
-
+    
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   auto& localParticles = fineGridVertex{{PARTICLES_CONTAINER}};

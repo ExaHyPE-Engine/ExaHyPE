@@ -41,8 +41,37 @@ namespace {
 "         }   \n"
 "       } \n"
 "\n\n\n\n" );
+
+    #if defined(SharedMemoryParallelisation)
+    peano4::addBibTeXEntry(
+"## Shared memory parallelisation ##                                  \n"
+"                                                                            \n"
+"Peano relies on a mixture of classic domain decomposition and task-based  "
+"parallelism. The domain decomposition provides the baseline performance,  "
+"and the tasking adds the big flexibility and scalability gain on top. The "
+"key publication discussing the overall idea and algorithmic ingredients is "
+"the SISC paper\n"
+"                                                                            \n"
+"       @article{Charrier:2020:Enclave,\n"
+"         author = {Charrier, Dominic Etienne and Hazelwood, Benjamin and Weinzierl, Tobias},\n"
+"         title = {Enclave Tasking for DG Methods on Dynamically Adaptive Meshes},\n"
+"         journal = {SIAM Journal on Scientific Computing},\n"
+"         volume = {42},\n"
+"         number = {3},\n"
+"         pages = {C69-C96},\n"
+"         year = {2020},\n"
+"         doi = {10.1137/19M1276194},\n"
+"         URL = {https://doi.org/10.1137/19M1276194},\n"
+"         eprint = {https://doi.org/10.1137/19M1276194}\n"
+"       }\n"
+"\n\n\n\n" );
+    #endif
   }
 }
+
+
+//Enclave nur manhcmal reporten
+//pidt paper rein
 
 
 void exahype2::setDefaultLogStatements() {

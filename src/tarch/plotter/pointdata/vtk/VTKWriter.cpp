@@ -10,7 +10,7 @@ tarch::mpi::BooleanSemaphore  tarch::plotter::pointdata::vtk::VTKWriter::_sempah
 tarch::plotter::pointdata::vtk::VTKWriter::VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode) {
   if (binaryFile) {
     _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter(fileName, indexFileName, mode);
-    assertionMsg(mode==tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile, "time series files are not supported with legacy vtk formats");
+    //assertionMsg(mode==tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile, "time series files are not supported with legacy vtk formats");
   }
   else {
     _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(fileName, indexFileName, mode);
