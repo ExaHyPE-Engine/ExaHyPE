@@ -9,7 +9,7 @@ import jinja2
 
 
 class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction):
-  def __init__(self,particle_set,solver,velocity_indices,data_indices,scaling_of_velocities):
+  def __init__(self,particle_set,solver,velocity_indices,data_indices,scaling_of_velocities,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"):
     """
 
     Very simple particle seed which inserts particles into every unrefined
@@ -47,6 +47,8 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
     self.tracerDict[ "VELOCITY_INDICES" ]               = velocity_indices
     self.tracerDict[ "DATA_INDICES" ]                   = data_indices
     self.tracerDict[ "SCALE_VELOCITIES" ]               = scaling_of_velocities
+    self.tracerDict[ "TIME_STEPPING_KERNEL" ]           = time_stepping_kernel
+    
     
     # There should be a check whether the list lenght and the no of 
     # data points does match. But I don't know how to get this data
@@ -63,28 +65,40 @@ if ( not marker.isRefined() ) {
       marker.isContained( p->getX() )
     ) {
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::Moved;
-      
-      tarch::la::Vector<Dimensions,int> voxel = toolbox::particles::mapParticleOntoVoxel(marker,{{PATCH_SIZE}},*p);
-      int voxelIndex = peano4::utils::dLinearised(voxel,{{PATCH_SIZE}});
-      double* Q      = fineGridCell{{SOLVER_NAME}}Q.value + voxelIndex * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
-"""    
+"""      
 
     if velocity_indices != []:
       cell_compute_kernel += """
-      tarch::la::Vector<Dimensions,double> v;
       #if Dimensions==2
-      v(0) = *(Q + {{VELOCITY_INDICES[0]}});
-      v(1) = *(Q + {{VELOCITY_INDICES[1]}});
+      tarch::la::Vector<Dimensions,double> x = {{TIME_STEPPING_KERNEL}}(
+        marker,
+        {{PATCH_SIZE}},
+        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        { {{VELOCITY_INDICES[0]}},{{VELOCITY_INDICES[1]}} },
+        _timeStepSize * {{SCALE_VELOCITIES}},
+        fineGridCell{{SOLVER_NAME}}Q.value,
+        p->getX()
+      );
       #else
-      v(0) = *(Q + {{VELOCITY_INDICES[0]}});
-      v(1) = *(Q + {{VELOCITY_INDICES[1]}});
-      v(2) = *(Q + {{VELOCITY_INDICES[2]}});
+      tarch::la::Vector<Dimensions,double> x = {{TIME_STEPPING_KERNEL}}(
+        marker,
+        {{PATCH_SIZE}},
+        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        { {{VELOCITY_INDICES[0]}},{{VELOCITY_INDICES[1]}},{{VELOCITY_INDICES[2]}} },
+        _timeStepSize * {{SCALE_VELOCITIES}},
+        fineGridCell{{SOLVER_NAME}}Q.value,
+        p->getX()
+      );
       #endif
-      p->setX( p->getX() + _timeStepSize * {{SCALE_VELOCITIES}} * v );
+      p->setX( x );
 """
 
+      
     if data_indices!=[]:
       cell_compute_kernel += """
+      tarch::la::Vector<Dimensions,int> voxel = toolbox::particles::mapParticleOntoVoxel(marker,{{PATCH_SIZE}},p->getX());
+      int voxelIndex = peano4::utils::dLinearised(voxel,{{PATCH_SIZE}});
+      double* Q      = fineGridCell{{SOLVER_NAME}}Q.value + voxelIndex * ({{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}});
       tarch::la::Vector<Dimensions,double> data;
 """
       data_counter = 0

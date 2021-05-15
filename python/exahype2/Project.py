@@ -280,6 +280,8 @@ class Project(object):
     self.plot_solution.add_action_set( particle_plotter ) 
     self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
 
+    self._project.output.makefile.add_library( "ToolboxParticles$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
+
     return particles
 
 

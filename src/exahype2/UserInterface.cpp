@@ -70,8 +70,6 @@ namespace {
 }
 
 
-//Enclave nur manhcmal reporten
-//pidt paper rein
 
 
 void exahype2::setDefaultLogStatements() {

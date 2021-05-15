@@ -396,7 +396,6 @@ AC_ARG_ENABLE(multiprecision-toolbox,
 AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$multiprecision-toolbox" = xtrue])
 
 
-
 #
 # Load balancing toolbox
 #
@@ -409,6 +408,20 @@ AC_ARG_ENABLE(loadbalancing-toolbox,
     esac ],
   [ AC_MSG_CHECKING(for loadbalancing-toolbox); AC_MSG_RESULT(no); loadbalancing_toolbox=false ])
 AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$loadbalancing-toolbox" = xtrue])
+
+
+#
+# Particles toolbox
+#
+AC_ARG_ENABLE(particles-toolbox,
+  AC_HELP_STRING([--enable-particles-toolbox], [enable particles toolbox [default=false]]),
+  [ AC_MSG_CHECKING(for particles-toolbox)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    particles_toolbox=false ;;
+      *)     AC_MSG_RESULT(yes);   particles_toolbox=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for particles-toolbox); AC_MSG_RESULT(no); particles_toolbox=false ])
+AM_CONDITIONAL([UseToolboxParticles],[test "x$particles-toolbox" = xtrue])
 
 
 #
@@ -484,7 +497,7 @@ fi
 AC_OUTPUT(
   Makefile 
   src/Makefile 
-  src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile
+  src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile

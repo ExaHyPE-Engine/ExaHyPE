@@ -8,6 +8,10 @@ AUTOMAKE_OPTIONS = subdir-objects
 #
 SUBDIRS = . 
 
+#if UseToolboxParticles
+SUBDIRS += toolbox/particles
+#endif
+
 if UseToolboxFiniteElements
 SUBDIRS += toolbox/finiteelements
 endif

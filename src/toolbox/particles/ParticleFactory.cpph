@@ -1,0 +1,28 @@
+#include "peano4/utils/Loop.h"
+
+
+template <class T>
+std::vector<T*> toolbox::particles::createEquallySpacedParticles(double h, const peano4::datamanagement::VertexMarker& marker) {
+  std::vector<T*> result;
+
+  const int particlesPerAxis   = h<=0.0 ? 1 : static_cast<int>(marker.h()(0) / h);
+  const double particleSpacing = marker.h()(0)/particlesPerAxis;
+
+  const tarch::la::Vector<Dimensions,double> offset = marker.x() - ((particlesPerAxis-1) * particleSpacing / 2.0);
+
+  dfor(k, particlesPerAxis) {
+    const tarch::la::Vector<Dimensions,double> x = offset + particleSpacing * tarch::la::convertScalar<double>(k);
+    // const tarch::la::Vector<Dimensions,double> x = offset + tarch::la::convertScalar<double>(k) * (particleSize + gap);
+    T* newParticle = new T();
+    #if PeanoDebug>0
+    newParticle->setDebugX( marker.x() );
+    newParticle->setDebugH( marker.h() );
+    #endif
+    newParticle->setX(x);
+    newParticle->setCutOffRadius( 0.9*tarch::la::min(marker.h()) );
+    newParticle->setMoveState( T::MoveState::New );
+    result.push_back(newParticle);
+  }
+
+  return result;
+}
