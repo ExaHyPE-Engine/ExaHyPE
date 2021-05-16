@@ -19,9 +19,11 @@ if ( not marker.isRefined() ) {
 </pre>
      * @param h Spacing of particles. Pick it smaller or equal to 0 and we'll always
      *   create one particle in the center.
+     * @param roundDown Always round down. In this case, you get a totally equal-spaced
+     *   initial particle layout, but it will not match h globally.
      */
     template <class T>
-    std::vector<T*> createEquallySpacedParticles(double h, const peano4::datamanagement::VertexMarker& marker);
+    std::vector<T*> createEquallySpacedParticles(double h, const peano4::datamanagement::VertexMarker& marker, bool roundDown, bool addNoise);
   }
 }
 

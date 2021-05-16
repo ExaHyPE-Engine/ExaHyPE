@@ -222,7 +222,7 @@ class Project(object):
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
     
       
-  def add_tracer(self,name,attribute_count=0,h=-1):
+  def add_tracer(self,name,attribute_count=0,h=-1,noise=False):
     """
     
     name: String
@@ -232,9 +232,8 @@ class Project(object):
       Number of attributes that we track per particle (scalar values added
       pre particle). Can be 0 if you don't want any attributes.
       
-    h: Float
-      Spacing between two particles. If you have something equal to zero
-      or small, then we use one particle per patch.    
+    h and noise:
+      See tracer.InsertParticles
     
     Returns the particle set that you can use to modify further 
     
@@ -263,7 +262,7 @@ class Project(object):
     #
     # Initialisation
     #
-    self.init_grid.add_action_set( exahype2.tracer.InsertParticles( particles, h ))    
+    self.init_grid.add_action_set( exahype2.tracer.InsertParticles( particles, h, noise ))    
     self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
     
     #

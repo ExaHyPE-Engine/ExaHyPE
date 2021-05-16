@@ -6,6 +6,7 @@ lib_LIBRARIES = libToolboxParticles.a libToolboxParticles_debug.a libToolboxPart
 
 ToolboxParticles_SOURCES = \
   Tracer.cpp \
+  TrajectoryDatabase.cpp \
   particles.cpp
   
 

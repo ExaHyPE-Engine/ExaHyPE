@@ -11,9 +11,9 @@ import dastgen2.attributes.Integer
 
 
 class InsertParticles(ActionSet):
-  def __init__(self,particle_set,h=-1):
+  def __init__(self,particle_set,h=-1,round_down = False, noise=True):
     """
-
+=
     Very simple particle seed which inserts particles into every unrefined
     cell. Logically, the particles align along a Cartesian mesh with mesh 
     size h even though I insert at least one particle per cell.
@@ -21,8 +21,8 @@ class InsertParticles(ActionSet):
     particle_set: ParticleSet
  
     h: Float
-     Initial spacing of particles. Use -1 if you want to have one particle
-     per cell.
+     Initial spacing of particles. See C++ functions in toolbox/particles/ParticleFactory
+     for an explanation of the parameters.
 
     """
     #self._particle_set = particle_set
@@ -31,11 +31,19 @@ class InsertParticles(ActionSet):
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "H" ]                        = h
+    if noise:
+      self.d[ "NOISE" ]                  = "true"
+    else:
+      self.d[ "NOISE" ]                  = "false"
+    if round_down:
+      self.d[ "ROUND_DOWN" ]                  = "true"
+    else:
+      self.d[ "ROUND_DOWN" ]                  = "false"
 
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   if ( not marker.isRefined() ) {
-    auto newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>({{H}},marker);
+    auto newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>({{H}},marker,{{ROUND_DOWN}},{{NOISE}});
     for (auto& p: newParticles) {
       p->setNumber(0,_spacetreeId);
       p->setNumber(1,_particleNumberOnThisTree);
