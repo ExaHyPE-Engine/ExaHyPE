@@ -34,7 +34,8 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
       p->getNumber(1) * peano4::parallel::Node::MaxSpacetreesPerRank + p->getNumber(0),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       p->getX(),
-      p->getData()
+      p->getData().size(),
+      p->getData().data()
     );
   };
 """)
@@ -76,5 +77,10 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
 
   def get_attributes(self):
     return """
-    toolbox::particles::TrajectoryDatabase  _database;
+    static toolbox::particles::TrajectoryDatabase  _database;
+"""
+
+  def get_static_initialisations(self,full_qualified_classname):
+    return """
+toolbox::particles::TrajectoryDatabase  """ + full_qualified_classname + """::_database;
 """
