@@ -24,9 +24,27 @@ void toolbox::particles::TrajectoryDatabase::setDeltaBetweenTwoSnapsots( double 
 void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   int number,
   double timestamp,
-  const tarch::la::Vector<Dimensions,double>& x,
-  const auto& data
+  const tarch::la::Vector<Dimensions,double>& x
 ) {
 
 }
 
+
+void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
+    int number,
+    double timestamp,
+    const tarch::la::Vector<Dimensions,double>& x,
+    double data
+  ) {
+
+}
+
+
+void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
+    int number,
+    double timestamp,
+    const tarch::la::Vector<Dimensions,double>& x,
+    const tarch::la::Vector<2,double>& data
+  ) {
+
+}

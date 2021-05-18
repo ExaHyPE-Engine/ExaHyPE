@@ -3,3 +3,4 @@
 from .DumpTrajectoryIntoDatabase  import DumpTrajectoryIntoDatabase
 from .InsertParticles             import InsertParticles
 from .FiniteVolumesTracing        import FiniteVolumesTracing
+from .TracerInteraction           import perserveCartesianTracerLayout

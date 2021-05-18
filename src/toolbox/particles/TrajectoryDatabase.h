@@ -29,8 +29,21 @@ class toolbox::particles::TrajectoryDatabase {
     void addParticleSnapshot(
       int number,
       double timestamp,
+      const tarch::la::Vector<Dimensions,double>& x
+    );
+
+    void addParticleSnapshot(
+      int number,
+      double timestamp,
       const tarch::la::Vector<Dimensions,double>& x,
-      const auto& data
+      double data
+    );
+
+    void addParticleSnapshot(
+      int number,
+      double timestamp,
+      const tarch::la::Vector<Dimensions,double>& x,
+      const tarch::la::Vector<2,double>& data
     );
 };
 

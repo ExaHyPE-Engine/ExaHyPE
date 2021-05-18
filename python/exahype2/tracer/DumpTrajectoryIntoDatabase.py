@@ -9,7 +9,7 @@ import jinja2
 
 
 class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
-  def __init__(self,particle_set,delta_between_two_snapsots,filename):
+  def __init__(self,particle_set,solver,delta_between_two_snapsots,filename):
     """
      
     delta_between_two_snapshots: Float
@@ -18,17 +18,21 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
      
     """
     self.d = {}
-    self.d[ "PARTICLE_SET" ] = particle_set.name
+    self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
+    self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "DELTA" ]        = delta_between_two_snapsots
     self.d[ "FILENAME" ]     = filename
+    self.d[ "SOLVER_NAME" ]              = solver._name
+    self.d[ "SOLVER_INSTANCE" ]          = solver.get_name_of_global_instance()
 
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
-  auto& localParticles = fineGridVertex{{PARTICLE_SET}};
+  auto& localParticles = fineGridVertex{{PARTICLES_CONTAINER}};
   
   for (auto& p: localParticles) {
     _database.addParticleSnapshot( 
       p->getNumber(1) * peano4::parallel::Node::MaxSpacetreesPerRank + p->getNumber(0),
+      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       p->getX(),
       p->getData()
     );
@@ -53,18 +57,24 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
 
   def get_constructor_body(self):
     template = jinja2.Template("""
-  _database.setOutputFileName( {{FILENAME}} );
+  _database.setOutputFileName( "{{FILENAME}}" );
   _database.setDeltaBetweenTwoSnapsots( {{DELTA}} );
 """)
     return template.render(**self.d)
 
 
   def get_includes(self):
-    return """
+    result = jinja2.Template( """
 #include "toolbox/particles/TrajectoryDatabase.h"
-"""
+#include "vertexdata/{{PARTICLES_CONTAINER}}.h"
+#include "globaldata/{{PARTICLE}}.h"
+#include "peano4/parallel/Node.h"
+#include "repositories/SolverRepository.h"
+""" )
+    return result.render(**self.d)
+    
 
-  def get_includes(self):
+  def get_attributes(self):
     return """
-  toolbox::particles::TrajectoryDatabase  _database;
+    toolbox::particles::TrajectoryDatabase  _database;
 """
