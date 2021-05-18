@@ -1,7 +1,9 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 
+if UseSmartMPI
 lib_LIBRARIES = libsmartmpi.a libsmartmpi_debug.a
+endif
 
 
 SmartMPI_SOURCES = \

@@ -32,7 +32,6 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
       p->getX(),
       p->getData()
     );
-    p->setMoveState(globaldata::MyTracer::MoveState::NotMovedYet);
   };
 """)
   

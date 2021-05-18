@@ -6,29 +6,14 @@ AUTOMAKE_OPTIONS = subdir-objects
 # configure.ac script and rerun the whole autotool pipeline (see comment 
 # within configure.ac as well as its very last line).
 #
-SUBDIRS = . 
-
-#if UseToolboxParticles
-SUBDIRS += toolbox/particles
-#endif
-
-if UseToolboxFiniteElements
-SUBDIRS += toolbox/finiteelements
-endif
-
-if UseToolboxMultiprecision
-SUBDIRS += toolbox/multiprecision
-endif
-
-if UseExaHyPE
-SUBDIRS += toolbox/loadbalancing exahype2
-endif
-
-if UseSmartMPI
-SUBDIRS += smartmpi
-endif
-
-SUBDIRS += unittests convert
+SUBDIRS = . \
+  toolbox/particles \
+  toolbox/finiteelements \
+  toolbox/multiprecision \
+  toolbox/loadbalancing \
+  exahype2 \
+  smartmpi \
+  unittests convert
 
 #
 # I want Peano4 to be as fast as possible and thus build it as static library

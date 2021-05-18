@@ -1,13 +1,16 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 
+if UseToolboxParticles
 lib_LIBRARIES = libToolboxParticles.a libToolboxParticles_debug.a libToolboxParticles_trace.a libToolboxParticles_stats.a libToolboxParticles_asserts.a
+endif
 
 
 ToolboxParticles_SOURCES = \
   Tracer.cpp \
   TrajectoryDatabase.cpp \
-  particles.cpp
+  particles.cpp \
+  potentials/Springs.cpp
   
 
 libToolboxParticles_a_CXXFLAGS         = -DDimensions=2 -DPeanoDebug=0 

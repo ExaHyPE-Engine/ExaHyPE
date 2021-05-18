@@ -155,13 +155,15 @@ project.set_global_simulation_parameters(
 #
 # See the documentation for some more arguments
 # python3 example-scripts/finitevolumes-plus-tracer.py -m assert -cs 0.1 -f -pdt 1e-4
+particle_spacing = min_h/4.0
 if args.dim==2:
-  tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2, h=min_h/4.0 )
+  tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2, h=particle_spacing )
   project.add_action_set_to_timestepping( exahype2.tracer.FiniteVolumesTracing(tracer_particles,thesolver,[1,2],[0,4],1.1*patch_size) )
 if args.dim==3:
-  tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2, h=min_h/4.0 )
+  tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2, h=particle_spacing )
   project.add_action_set_to_timestepping( exahype2.tracer.FiniteVolumesTracing(tracer_particles,thesolver,[1,2,3],[0,4],1.1*patch_size) )
-project.add_action_set_to_timestepping( exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,0.01,"TracerDB") )
+project.add_action_set_to_timestepping( exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,particle_spacing,"TracerDB") )
+#project.add_action_set_to_timestepping( exahype2.tracer.Apply(tracer_particles,particle_spacing) )
 
 
 

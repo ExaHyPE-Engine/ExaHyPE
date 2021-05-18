@@ -1,8 +1,10 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 
+if UseToolboxFiniteElements
 lib_LIBRARIES = libToolboxFiniteElements2d.a libToolboxFiniteElements2d_asserts.a libToolboxFiniteElements2d_stats.a libToolboxFiniteElements2d_debug.a libToolboxFiniteElements2d_trace.a \
                 libToolboxFiniteElements3d.a libToolboxFiniteElements3d_asserts.a libToolboxFiniteElements3d_stats.a libToolboxFiniteElements3d_debug.a libToolboxFiniteElements3d_trace.a
+endif
 
 
 ToolboxFiniteElements_SOURCES = \
