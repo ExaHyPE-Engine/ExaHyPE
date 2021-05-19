@@ -127,6 +127,22 @@ namespace tarch {
          * Is off by default.
          */
         virtual bool canFuse() const;
+
+        /**
+         * Follows the signature of fuse(). Please hand in an (empty) list
+         * of producedTasks which is befilled by split(). The routine returns
+         * true if the original task that is split still has to be executed.
+         * It returns false if you can safely delete the task.
+         *
+         * We require a strict parent-child relation on the splitting, i.e.
+         *
+         * todo: Alles nicht ausgegoren!
+         *
+         * @return Is the present task still to be executed or can the runtime
+         *         destroy it straightaway?
+         */
+        virtual bool split(std::list<Task*>& producedTasks);
+        virtual bool canSplit() const;
     };
 
 

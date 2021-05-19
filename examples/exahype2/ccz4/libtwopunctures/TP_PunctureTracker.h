@@ -40,7 +40,7 @@ double linearInter(double x1, double f1, double x2, double f2, double target){
 void CoorReadIn(double* coor, std::string line)
 {
 	int index=0;
-	std::string var[3]={"","",""};
+	std::string var[4]={"","","",""};
 	for (auto x : line){
 		if (x == ' '){
 			coor[index]=std::stod(var[index]);
@@ -51,6 +51,22 @@ void CoorReadIn(double* coor, std::string line)
 	}
 	coor[index]=std::stod(var[index]);
 }
+
+void ConsReadIn(double* cons, std::string line)
+{
+	int index=0;
+	std::string var[7]={"","","","","","",""};
+	for (auto x : line){
+		if (x == ' '){
+			cons[index]=std::stod(var[index]);
+			index++;
+		} else {
+			var[index]=var[index]+x;
+		}
+	}
+	cons[index]=std::stod(var[index]);
+}
+
 
 tarch::la::Vector<Dimensions*2,int> FindCellIndex(
   const double* coor,

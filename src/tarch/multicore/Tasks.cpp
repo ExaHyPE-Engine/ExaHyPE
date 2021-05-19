@@ -411,6 +411,16 @@ int tarch::multicore::Task::getTaskId() const {
 }
 
 
+bool tarch::multicore::Task::split(std::vector<tarch::multicore::Task*>&) {
+  return true;
+}
+
+
+bool canSplit() const {
+  return false;
+}
+
+
 tarch::multicore::TaskWithCopyOfFunctor::TaskWithCopyOfFunctor( int id, int taskType, int priority, const std::function<bool()>& taskFunctor ):
   Task(id, taskType, priority),
   _taskFunctor(taskFunctor)  {

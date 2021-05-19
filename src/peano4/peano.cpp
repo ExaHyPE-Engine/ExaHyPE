@@ -62,30 +62,6 @@ namespace {
 "        }                    \n"
 "\n\n\n\n" );
 
-    #if defined(SharedMemoryParallelisation)
-    peano4::addBibTeXEntry(
-"## Shared memory parallelisation ##                                  \n"
-"                                                                            \n"
-"Peano relies on a mixture of classic domain decomposition and task-based  "
-"parallelism. The domain decomposition provides the baseline performance,  "
-"and the tasking adds the big flexibility and scalability gain on top. The "
-"key publication discussing the overall idea and algorithmic ingredients is "
-"the SISC paper\n"
-"                                                                            \n"
-"       @article{Charrier:2020:Enclave,\n"
-"         author = {Charrier, Dominic Etienne and Hazelwood, Benjamin and Weinzierl, Tobias},\n"
-"         title = {Enclave Tasking for DG Methods on Dynamically Adaptive Meshes},\n"
-"         journal = {SIAM Journal on Scientific Computing},\n"
-"         volume = {42},\n"
-"         number = {3},\n"
-"         pages = {C69-C96},\n"
-"         year = {2020},\n"
-"         doi = {10.1137/19M1276194},\n"
-"         URL = {https://doi.org/10.1137/19M1276194},\n"
-"         eprint = {https://doi.org/10.1137/19M1276194}\n"
-"       }\n"
-"\n\n\n\n" );
-    #endif
 
 
     #if defined(Parallel)
@@ -181,6 +157,7 @@ namespace {
 "        } \n"
 "\n\n\n\n" );
 
+
     peano4::addBibTeXEntry(
 "## Memory access characteristics ##                                  \n"
 "                                                                            \n"
@@ -226,20 +203,10 @@ namespace {
 "tasking mechanism. It is described in "
 "                                                                            \n"
 "       @article{Schulz:2021:Tasking,   \n"
-"         title = {ExaHyPE: An engine for parallel dynamically adaptive simulations of wave problems},   \n"
-"         journal = {Computer Physics Communications},   \n"
-"         volume = {254},   \n"
-"         pages = {107251},   \n"
-"         year = {2020},   \n"
-"         issn = {0010-4655},   \n"
-"         doi = {https://doi.org/10.1016/j.cpc.2020.107251},   \n"
-"         url = {https://www.sciencedirect.com/science/article/pii/S001046552030076X},   \n"
-"         author = {Anne Reinarz and Dominic E. Charrier and Michael Bader and Luke Bovard and Michael Dumbser and Kenneth Duru and Francesco Fambri and Alice-Agnes Gabriel and Jean-Matthieu Gallard and Sven Köppel and Lukas Krenz and Leonhard Rannabauer and Luciano Rzzolla and Philipp Samfass and Maurizio Tavelli and Tobias Weinzierl},   \n"
-"         keywords = {Hyperbolic, PDE, ADER-DG, Finite volumes, AMR, MPI, TBB, MPI+X},   \n"
-"         abstract = {ExaHyPE (An Exascale Hyperbolic PDE Engine) is a software engine for solving systems of first-order hyperbolic partial differential equations (PDEs). Hyperbolic PDEs are typically derived from the conservation laws of physics and are useful in a wide range of application areas. Applications powered by ExaHyPE can be run on a student's laptop, but are also able to exploit thousands of processor cores on state-of-the-art supercomputers. The engine is able to dynamically increase the accuracy of the simulation using adaptive mesh refinement where required. Due to the robustness and shock capturing abilities of ExaHyPE's numerical methods, users of the engine can simulate linear and non-linear hyperbolic PDEs with very high accuracy. Users can tailor the engine to their particular PDE by specifying evolved quantities, fluxes, and source terms. A complete simulation code for a new hyperbolic PDE can often be realised within a few hours - a task that, traditionally, can take weeks, months, often years for researchers starting from scratch. In this paper, we showcase ExaHyPE's workflow and capabilities through real-world scenarios from our two main application areas: seismology and astrophysics.   \n"
-"           Program summary   \n"
-"           Program title: ExaHyPE-Engine Program Files doi: http://dx.doi.org/10.17632/6sz8h6hnpz.1 Licensing provisions: BSD 3-clause Programming languages: C++, Python, Fortran Nature of Problem: The ExaHyPE PDE engine offers robust algorithms to solve linear and non-linear hyperbolic systems of PDEs written in first order form. The systems may contain both conservative and non-conservative terms. Solution method: ExaHyPE employs the discontinuous Galerkin (DG) method combined with explicit one-step ADER (arbitrary high-order derivative) time-stepping. An a-posteriori limiting approach is applied to the ADER-DG solution, whereby spurious solutions are discarded and recomputed with a robust, patch-based finite volume scheme. ExaHyPE uses dynamical adaptive mesh refinement to enhance the accuracy of the solution around shock waves, complex geometries, and interesting features. \n"
-"         }   \n"
+"         title = {Task inefficiency patterns for a wave equation solver},   \n"
+"         journal = {IWOMP},   \n"
+"         year = {2021},   \n"
+"         author = {Holger Schulz and Gonzalo Brito Gadeschi and Oleksandr Rudyy and Tobias Weinzierl},   \n"
 "       } \n"
 "\n\n\n\n" );
     #endif

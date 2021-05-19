@@ -142,11 +142,12 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     d[ "USE_SPLIT_LOOP" ] = solver._use_split_loop
 
     ReconstructPatchAndApplyFunctor.__init__(self,
-      solver._patch,
-      solver._patch_overlap,
-      jinja2.Template( self.RusanovCallOverPatch ).render(**d),
-      solver._reconstructed_array_memory_location,
-      "not marker.isRefined()"
+      patch = solver._patch,
+      patch_overlap = solver._patch_overlap,
+      functor_implementation = jinja2.Template( self.RusanovCallOverPatch ).render(**d),
+      reconstructed_array_memory_location = solver._reconstructed_array_memory_location,
+      guard = "not marker.isRefined()",
+      add_assertions_to_halo_exchange = False
     )
     
     self._solver = solver

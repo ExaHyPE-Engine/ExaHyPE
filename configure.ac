@@ -368,47 +368,60 @@ fi
 
 
 #
-# FEM toolbox
+# FEM 
 #
-AC_ARG_ENABLE(fem-toolbox,
-  AC_HELP_STRING([--enable-fem-toolbox], [enable FEM toolbox [default=false]]),
-  [ AC_MSG_CHECKING(for fem-toolbox)
+AC_ARG_ENABLE(fem,
+  AC_HELP_STRING([--enable-fem], [enable FEM  [default=false]]),
+  [ AC_MSG_CHECKING(for fem)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    fem_toolbox=false ;;
-      *)     AC_MSG_RESULT(yes);   fem_toolbox=true  ;;
+      no)    AC_MSG_RESULT(no);    fem=false ;;
+      *)     AC_MSG_RESULT(yes);   fem=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for fem-toolbox); AC_MSG_RESULT(no); fem_toolbox=false ])
-AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$fem-toolbox" = xtrue])
+  [ AC_MSG_CHECKING(for fem); AC_MSG_RESULT(no); fem=false ])
+AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$fem" = xtrue])
 
 
 
 #
-# Multiprecision toolbox
+# Multiprecision 
 #
-AC_ARG_ENABLE(multiprecision-toolbox,
-  AC_HELP_STRING([--enable-multiprecision-toolbox], [enable multiprecision toolbox [default=false]]),
-  [ AC_MSG_CHECKING(for multiprecision-toolbox)
+AC_ARG_ENABLE(multiprecision,
+  AC_HELP_STRING([--enable-multiprecision], [enable multiprecision  [default=false]]),
+  [ AC_MSG_CHECKING(for multiprecision)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    multiprecision_toolbox=false ;;
-      *)     AC_MSG_RESULT(yes);   multiprecision_toolbox=true  ;;
+      no)    AC_MSG_RESULT(no);    multiprecision=false ;;
+      *)     AC_MSG_RESULT(yes);   multiprecision=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for multiprecision-toolbox); AC_MSG_RESULT(no); multiprecision_toolbox=false ])
-AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$multiprecision-toolbox" = xtrue])
-
+  [ AC_MSG_CHECKING(for multiprecision); AC_MSG_RESULT(no); multiprecision=false ])
+AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$multiprecision" = xtrue])
 
 
 #
-# Load balancing toolbox
+# Load balancing 
 #
-AC_ARG_ENABLE(loadbalancing-toolbox,
-  AC_HELP_STRING([--enable-loadbalancing-toolbox], [enable loadbalancing toolbox [default=false]]),
-  [ AC_MSG_CHECKING(for loadbalancing-toolbox)
+AC_ARG_ENABLE(loadbalancing,
+  AC_HELP_STRING([--enable-loadbalancing], [enable loadbalancing  [default=false]]),
+  [ AC_MSG_CHECKING(for loadbalancing)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    loadbalancing_toolbox=false ;;
-      *)     AC_MSG_RESULT(yes);   loadbalancing_toolbox=true  ;;
+      no)    AC_MSG_RESULT(no);    loadbalancing=false ;;
+      *)     AC_MSG_RESULT(yes);   loadbalancing=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for loadbalancing-toolbox); AC_MSG_RESULT(no); loadbalancing_toolbox=false ])
-AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$loadbalancing-toolbox" = xtrue])
+  [ AC_MSG_CHECKING(for loadbalancing); AC_MSG_RESULT(no); loadbalancing=false ])
+AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$loadbalancing" = xtrue])
+
+
+#
+# Particles 
+#
+AC_ARG_ENABLE(particles,
+  AC_HELP_STRING([--enable-particles], [enable particles  [default=false]]),
+  [ AC_MSG_CHECKING(for particles)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    particles=false ;;
+      *)     AC_MSG_RESULT(yes);   particles=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for particles); AC_MSG_RESULT(no); particles=false ])
+AM_CONDITIONAL([UseToolboxParticles],[test "x$particles" = xtrue])
 
 
 #
@@ -425,8 +438,8 @@ AC_ARG_ENABLE(exahype,
 AM_CONDITIONAL([UseExaHyPE],[test "x$exahype" = xtrue])
 if test "$exahype" != false; then
   AC_DEFINE([UseExaHyPE], [1], [UseExaHyPE])
-  if test "$loadbalancing_toolbox" == false; then
-    AC_MSG_ERROR([ExaHyPE2 requires the load balancing toolbox])
+  if test "$loadbalancing_" == false; then
+    AC_MSG_ERROR([ExaHyPE2 requires the load balancing ])
   fi
 fi
 
@@ -484,7 +497,7 @@ fi
 AC_OUTPUT(
   Makefile 
   src/Makefile 
-  src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile
+  src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile

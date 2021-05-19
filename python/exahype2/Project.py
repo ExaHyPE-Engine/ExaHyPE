@@ -47,6 +47,15 @@ class Project(object):
     self._plot_filters  = []
     self._output_path   = "./"
     self._plotter_precision = 5
+
+    self.create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
+    self.init_grid                           = peano4.solversteps.Step( "InitGrid",   False )
+    self.create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
+    self.create_grid_and_converge_lb         = peano4.solversteps.Step( "CreateGridAndConvergeLoadBalancing", False )
+    self.plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
+    self.perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
+    
+    self._add_particles_library = False
     
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
@@ -212,7 +221,75 @@ class Project(object):
     self._project.output.add( generated_solver_files )
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
     
+      
+  def add_tracer(self,name,attribute_count=0,h=-1,noise=False):
+    """
     
+    name: String
+      Has to be a unique name for this tracer
+      
+    attribute_count: integer
+      Number of attributes that we track per particle (scalar values added
+      pre particle). Can be 0 if you don't want any attributes.
+      
+    h and noise:
+      See tracer.InsertParticles
+    
+    Returns the particle set that you can use to modify further 
+    
+    """
+    particle          = peano4.toolbox.particles.Particle( name )
+
+    if attribute_count>0:
+      particle_attr    = peano4.dastgen2.Peano4DoubleArray("data",str(attribute_count))
+      particle.data.add_attribute(particle_attr)
+
+    particle_number = peano4.dastgen2.Peano4DoubleArray("number","2")
+    particle.data.add_attribute(particle_number)
+
+    particles = peano4.toolbox.particles.ParticleSet(particle)
+
+    self._project.datamodel.add_global_object(particle)
+    self._project.datamodel.add_vertex(particles)
+
+    self.plot_solution.use_vertex(particles)
+    self.init_grid.use_vertex(particles)
+    self.perform_time_step.use_vertex(particles)
+    self.create_grid.use_vertex(particles)
+    self.create_grid_but_postpone_refinement.use_vertex(particles)
+    self.create_grid_and_converge_lb.use_vertex(particles)
+
+    #
+    # Initialisation
+    #
+    self.init_grid.add_action_set( exahype2.tracer.InsertParticles( particles, h, noise ))    
+    self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
+    
+    #
+    # Move particles
+    #
+    self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
+    
+    #
+    # Plotter
+    #
+    particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( name, particles )
+    if attribute_count>0:
+      particle_plotter.add_attribute_to_plot(particle_attr,attribute_count)
+    particle_plotter.add_attribute_to_plot(particle_number,2)
+      
+    self.plot_solution.add_action_set( particle_plotter ) 
+    self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
+
+    self._add_particles_library = True
+
+    return particles
+
+
+  def add_action_set_to_timestepping(self, action_set):
+    self.perform_time_step.add_action_set( action_set )
+
+        
   def generate_Peano4_project(self, verbose=False):
     """
     
@@ -223,39 +300,32 @@ class Project(object):
      to this call.
      
      
-     !!! create_grid
+     !!! self.create_grid
      
      
-     !!! create_grid_but_postpone_refinement
+     !!! self.create_grid_but_postpone_refinement
      
-     The same as create_grid, but this traversal type does not evaluate the AMR 
-     criteria. The rationale is that a create_grid call might add quite a lot
+     The same as self.create_grid, but this traversal type does not evaluate the AMR 
+     criteria. The rationale is that a self.create_grid call might add quite a lot
      of mesh elements and consequently require some rebalancing. This is 
      expensive memory- and time-wisely and might trigger follow-up rebalancing.
      If we ran the next mesh refinement immediately afterwards, we would likely
      run out of memory at one point and the mesh construction would last 
-     forever. With create_grid_but_postpone_refinement, we give the main code
+     forever. With self.create_grid_but_postpone_refinement, we give the main code
      the opportunity to insert a few "empty"ish traversals in-between.
      
     """
-    self._project.cleanup()
+    #self._project.cleanup()
 
     self.__export_constants()
     self.__configure_makefile()
-    
-    create_grid                         = peano4.solversteps.Step( "CreateGrid", False )
-    init_grid                           = peano4.solversteps.Step( "InitGrid",   False )
-    create_grid_but_postpone_refinement = peano4.solversteps.Step( "CreateGridButPostponeRefinement", False )
-    create_grid_and_converge_lb         = peano4.solversteps.Step( "CreateGridAndConvergeLoadBalancing", False )
-    plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
-    perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
-        
-    self._project.solversteps.add_step(create_grid)
-    self._project.solversteps.add_step(init_grid)
-    self._project.solversteps.add_step(create_grid_but_postpone_refinement)
-    self._project.solversteps.add_step(create_grid_and_converge_lb)
-    self._project.solversteps.add_step(plot_solution)
-    self._project.solversteps.add_step(perform_time_step)
+            
+    self._project.solversteps.add_step(self.create_grid)
+    self._project.solversteps.add_step(self.init_grid)
+    self._project.solversteps.add_step(self.create_grid_but_postpone_refinement)
+    self._project.solversteps.add_step(self.create_grid_and_converge_lb)
+    self._project.solversteps.add_step(self.plot_solution)
+    self._project.solversteps.add_step(self.perform_time_step)
    
     for solver in self._solvers:
       print( "---------------------------------------")
@@ -265,19 +335,19 @@ class Project(object):
       
       solver.add_to_Peano4_datamodel( self._project.datamodel, verbose )
       
-      solver.add_use_data_statements_to_Peano4_solver_step( create_grid )
-      solver.add_use_data_statements_to_Peano4_solver_step( plot_solution )
-      solver.add_use_data_statements_to_Peano4_solver_step( perform_time_step )
-      solver.add_use_data_statements_to_Peano4_solver_step( init_grid )
-      solver.add_use_data_statements_to_Peano4_solver_step( create_grid_but_postpone_refinement )
-      solver.add_use_data_statements_to_Peano4_solver_step( create_grid_and_converge_lb )
+      solver.add_use_data_statements_to_Peano4_solver_step( self.create_grid )
+      solver.add_use_data_statements_to_Peano4_solver_step( self.plot_solution )
+      solver.add_use_data_statements_to_Peano4_solver_step( self.perform_time_step )
+      solver.add_use_data_statements_to_Peano4_solver_step( self.init_grid )
+      solver.add_use_data_statements_to_Peano4_solver_step( self.create_grid_but_postpone_refinement )
+      solver.add_use_data_statements_to_Peano4_solver_step( self.create_grid_and_converge_lb )
       
-      solver.add_actions_to_create_grid( create_grid,                         evaluate_refinement_criterion=True  )
-      solver.add_actions_to_init_grid( init_grid )
-      solver.add_actions_to_create_grid( create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
-      solver.add_actions_to_create_grid( create_grid_and_converge_lb,         evaluate_refinement_criterion=False )
-      solver.add_actions_to_plot_solution( plot_solution, self._output_path )
-      solver.add_actions_to_perform_time_step( perform_time_step )
+      solver.add_actions_to_create_grid( self.create_grid,                         evaluate_refinement_criterion=True  )
+      solver.add_actions_to_init_grid( self.init_grid )
+      solver.add_actions_to_create_grid( self.create_grid_but_postpone_refinement, evaluate_refinement_criterion=False )
+      solver.add_actions_to_create_grid( self.create_grid_and_converge_lb,         evaluate_refinement_criterion=False )
+      solver.add_actions_to_plot_solution( self.plot_solution, self._output_path )
+      solver.add_actions_to_perform_time_step( self.perform_time_step )
       
       solver.add_implementation_files_to_project( self._project.namespace, self._project.output )
       
@@ -287,21 +357,21 @@ class Project(object):
     face_label = exahype2.grid.create_face_label()  
     self._project.datamodel.add_face(face_label)
     
-    create_grid.use_face(face_label)
-    init_grid.use_face(face_label)
-    create_grid_but_postpone_refinement.use_face(face_label)
-    create_grid_and_converge_lb.use_face(face_label)
-    plot_solution.use_face(face_label)
-    perform_time_step.use_face(face_label)
+    self.create_grid.use_face(face_label)
+    self.init_grid.use_face(face_label)
+    self.create_grid_but_postpone_refinement.use_face(face_label)
+    self.create_grid_and_converge_lb.use_face(face_label)
+    self.plot_solution.use_face(face_label)
+    self.perform_time_step.use_face(face_label)
     
     set_labels_action_set = exahype2.grid.SetLabels()
 
-    create_grid.add_action_set( set_labels_action_set )
-    init_grid.add_action_set( set_labels_action_set )
-    create_grid_but_postpone_refinement.add_action_set( set_labels_action_set )
-    create_grid_and_converge_lb.add_action_set( set_labels_action_set )
-    plot_solution.add_action_set( set_labels_action_set )
-    perform_time_step.add_action_set( set_labels_action_set )
+    self.create_grid.add_action_set( set_labels_action_set )
+    self.init_grid.add_action_set( set_labels_action_set )
+    self.create_grid_but_postpone_refinement.add_action_set( set_labels_action_set )
+    self.create_grid_and_converge_lb.add_action_set( set_labels_action_set )
+    self.plot_solution.add_action_set( set_labels_action_set )
+    self.perform_time_step.add_action_set( set_labels_action_set )
     
     self._project.main = exahype2.ExaHyPEMain(self._project,self._periodic_BC,self._dimensions)
 
@@ -309,6 +379,11 @@ class Project(object):
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
     self._project.output.makefile.add_library( "ExaHyPE2Core$(DIMENSIONS)d$(LIBRARY_POSTFIX)",          self._Peano_src_directory + "/src/exahype2" )
     self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
+
+    if self._add_particles_library:
+      self._project.output.makefile.add_library( "ToolboxParticles$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
+
+    
     self._project.output.makefile.set_mode(self._build_mode)
 
     return self._project
