@@ -438,7 +438,7 @@ AC_ARG_ENABLE(exahype,
 AM_CONDITIONAL([UseExaHyPE],[test "x$exahype" = xtrue])
 if test "$exahype" != false; then
   AC_DEFINE([UseExaHyPE], [1], [UseExaHyPE])
-  if test "$loadbalancing_" == false; then
+  if test "$loadbalancing" == false; then
     AC_MSG_ERROR([ExaHyPE2 requires the load balancing ])
   fi
 fi
