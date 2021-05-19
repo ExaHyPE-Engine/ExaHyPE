@@ -411,12 +411,12 @@ int tarch::multicore::Task::getTaskId() const {
 }
 
 
-bool tarch::multicore::Task::split(std::vector<tarch::multicore::Task*>&) {
+bool tarch::multicore::Task::split(std::list<tarch::multicore::Task*>&) {
   return true;
 }
 
 
-bool canSplit() const {
+bool tarch::multicore::Task::canSplit() const {
   return false;
 }
 
