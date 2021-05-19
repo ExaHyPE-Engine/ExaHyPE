@@ -103,6 +103,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       originalPatch
     );
     
+   
+    {{POSTPROCESS_UPDATED_PATCH}}
+    
     double maxEigvenvalue = ::exahype2::fv::maxEigenvalue_AoS(
       [] (
         const double * __restrict__                  Q,
@@ -113,10 +116,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         int                                          normal
       ) -> double {
       
-      //s = u +- sqrt(g * h)
-      
+      //return max Eigenvalue
+      //approximation: s = u +- sqrt(g * h)
       return std::max(std::abs(Q[1+normal]) + std::sqrt(9.81*Q[0]), std::abs(Q[1+normal]) - std::sqrt(9.81*Q[0]));
-     //   return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
       },
       marker.x(),
       marker.h(),
@@ -127,8 +129,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       originalPatch
     );
-    
-    {{POSTPROCESS_UPDATED_PATCH}}
     
     repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigvenvalue );
   """ 
@@ -211,6 +211,10 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
     
       Instantiate a generic FV scheme with an overlap of 1.
       
+      It is important that the superclass constructor is invoked late. It triggers
+      the create_action_sets() routine which in return expect that a lot of the 
+      solver-specific fields are properly set beforehand.
+      
       
       Riemann_solver_implementation_files: list of strings
         These are the Fortran files the code should add to the compile.
@@ -220,9 +224,7 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
         I prefer ClawPack solvers which are written point-wisely. Alternatively, I 
         can misuse 1d solvers.  
       
-    """
-    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-        
+    """        
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
@@ -235,18 +237,24 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
     
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
+    
+    self._time_step_relaxation = time_step_relaxation
+    self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
+
+    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+
+    self.set_implementation()
+
+
+  def create_data_structures(self):
+    FV.create_data_structures(self)
 
     self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
     self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
 
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
-    
-    self._time_step_relaxation = time_step_relaxation
-    self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
 
-
-    self.set_implementation()
 
 
   def set_implementation(self,
@@ -274,13 +282,41 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
     if use_split_loop!=None:
       self._use_split_loop = use_split_loop
 
+      
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
-    self._action_set_update_cell = UpdateCell(self)
+    self.create_action_sets()
 
+
+  def create_action_sets(self):
+    FV.create_action_sets(self)
+    self._action_set_update_cell = UpdateCell(self)     
+
+  
+  def set_postprocess_updated_patch_kernel_point_wisely(self,kernel):
+    """
+  
+    This is a routine to implement some a posteriori constraints on 
+    the solution point-wisely. So you can make kernel holds a C++
+    string similar to
+        
+if (Q[1]>43.2) {
+ Q[2] = Q[4];
+}
+  
+    """
+    self.set_postprocess_updated_patch_kernel( """
+int postProcessingIndex = 0;
+dfor( volume, """ + str(self._patch_size) + """ ) {
+  double* Q = originalPatch + postProcessingIndex;
+  """ + kernel + """
+  postProcessingIndex += """ + str(self._unknowns) + """;
+  postProcessingIndex += """ + str(self._auxiliary_variables) + """;
+}
+""")
 
   
   def add_entries_to_text_replacement_dictionary(self,d):
@@ -298,8 +334,8 @@ class PointWiseClawPackAdaptiveTimeStepSize(  FV ):
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
     d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
-    d[ "DISCRIMINATE_NORMAL"] = self._discriminate_normal
-    d[ "TIME_STEP_RELAXATION" ] = self._time_step_relaxation
+    d[ "DISCRIMINATE_NORMAL"]                 = self._discriminate_normal
+    d[ "TIME_STEP_RELAXATION" ]               = self._time_step_relaxation
     d[ "EIGENVALUES_IMPLEMENTATION"]          = self._eigenvalues_implementation
 
   
