@@ -299,7 +299,9 @@ TwoPunctures::Run ()
                 (mm_adm_err > adm_tol) );
                 
       TP_INFO ( "Found bare masses.");
-    }
+    } else {
+			TP_INFO ( "Use input bare masses." );
+		}
 
     Newton (nvar, n1, n2, n3, v, Newton_tol, Newton_maxit);
  
