@@ -14,17 +14,17 @@ ToolboxParticles_SOURCES = \
   potentials/Springs.cpp
   
 
-libToolboxParticles2d_a_CXXFLAGS         = -DDimensions=2 -DPeanoDebug=0 
-libToolboxParticles2d_trace_a_CXXFLAGS   = -DDimensions=2 -DPeanoDebug=1 -g3 
-libToolboxParticles2d_asserts_a_CXXFLAGS = -DDimensions=2 -DPeanoDebug=2 -g3 
-libToolboxParticles2d_debug_a_CXXFLAGS   = -DDimensions=2 -DPeanoDebug=4 -g3 -O0 
-libToolboxParticles2d_stats_a_CXXFLAGS   = -DDimensions=2 -DPeanoDebug=0 -g3 -DTrackStatistics
+libToolboxParticles2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
+libToolboxParticles2d_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE) 
+libToolboxParticles2d_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_2D_ASSERTS) 
+libToolboxParticles2d_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_DEBUG) 
+libToolboxParticles2d_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_STATS)
 
-libToolboxParticles3d_a_CXXFLAGS         = -DDimensions=3 -DPeanoDebug=0 
-libToolboxParticles3d_trace_a_CXXFLAGS   = -DDimensions=3 -DPeanoDebug=1 -g3 
-libToolboxParticles3d_asserts_a_CXXFLAGS = -DDimensions=3 -DPeanoDebug=2 -g3 
-libToolboxParticles3d_debug_a_CXXFLAGS   = -DDimensions=3 -DPeanoDebug=4 -g3 -O0 
-libToolboxParticles3d_stats_a_CXXFLAGS   = -DDimensions=3 -DPeanoDebug=0 -g3 -DTrackStatistics
+libToolboxParticles3d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_3D_RELEASE) 
+libToolboxParticles3d_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_3D_TRACE) 
+libToolboxParticles3d_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_3D_ASSERTS) 
+libToolboxParticles3d_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_3D_DEBUG) 
+libToolboxParticles3d_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_3D_STATS)
 
 libToolboxParticles2d_a_SOURCES         = $(ToolboxParticles_SOURCES)
 libToolboxParticles2d_stats_a_SOURCES   = $(ToolboxParticles_SOURCES)

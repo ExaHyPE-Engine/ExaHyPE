@@ -12,10 +12,6 @@
 #include <functional>
 
 
-#ifdef UseSmartMPI
-#include "smartmpi/smartmpi.h"
-#endif
-
 
 namespace peano4 {
   namespace parallel {
