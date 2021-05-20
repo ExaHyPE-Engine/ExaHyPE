@@ -10,7 +10,7 @@ import dastgen2.attributes.Integer
 
 
 
-class InsertParticles(ActionSet):
+class InsertParticlesAlongCartesianMesh(ActionSet):
   def __init__(self,particle_set,h=-1,round_down = False, noise=True):
     """
 =

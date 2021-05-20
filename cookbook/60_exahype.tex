@@ -569,6 +569,130 @@ with \ExaHyPE.
 
 
 
+\section{Adding tracers}
+
+To add tracer support for \ExaHyPE, you first have to reconfigure our run and
+add the 
+\begin{code}
+./configure ... --with-particles
+\end{code}
+
+\noindent
+Let \texttt{thesolver} be your \ExaHyPE\ solver instance in the Python script.
+Not all solvers currently support tracers (efficiently), but we are continuously
+improving the tracer support.
+Adding tracers is fairly simple.
+Each tracer has to have a name, and you also have to inform the project how many
+attributes you plan to track per tracer:
+
+\begin{code}
+tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
+\end{code} 
+
+
+\noindent
+This prepares \ExaHyPE\ to handle your tracer, and it also dumps tracers already
+with each snapshot, but obviously you haven't inserted any tracers yet. 
+There are different inserters shipped with \ExaHyPE. 
+Alternatively, you might want to write your own, bespoke particle seed. 
+In the latter case, I recommend that you copy over an existing one and adopt it
+to your need.
+The snippet below inserts particles into your grid along a Cartesian topology
+and adds some random noise:
+
+
+\begin{code}
+project.add_action_set_to_initialisation( 
+ exahype2.tracer.InsertParticlesAlongCartesianMesh( 
+  particle_set=tracer_particles,
+  h=args.h/8.0, noise=True 
+))
+\end{code}
+
+
+
+\noindent
+With this additional seed, you can run your code and visualise the particles. 
+However, these particles do not move at all yet or track the actual data of
+interest.
+To facilitate this, you have to map your solution onto the particle first.
+After that, you can decide to move the particles---though this is optional,
+i.e.~the tracing API also allows you to have stationary trackers (probes).
+
+
+\begin{code}
+project.add_action_set_to_timestepping(
+ exahype2.tracer.FiniteVolumesTracing(tracer_particles,thesolver,[1,2],[0,4],1.1*patch_size
+))
+\end{code}
+
+
+\subsection{Dump tracer data into CSV database}
+
+The likely most important tool for many developers using only few particles is
+the fact that particles can dump their solution into a database:
+
+\begin{code}
+project.add_action_set_to_timestepping( 
+ exahype2.tracer.DumpTrajectoryIntoDatabase(
+  tracer_particles,thesolver,particle_spacing/10.0,"TracerDB"
+))
+\end{code}
+
+\noindent
+Dumping tracers into a (CSV) database is attractive, as these files are easier
+to parse/postprocess than mesh data files. 
+At the same time, you can dump particles more often than you plot data
+snapshots, and these dumps can even be adaptive, i.e.~you dump if and only if a
+particle actually moves.
+The \texttt{DumpTrajectoryIntoDatabase} documentation provides more detail.
+
+
+\subsection{Encourage particles to spread out evenly}
+
+You can make particles interact with eac other. 
+This allows you, for example, to
+realise some SPH on top of the code.
+One of the most convenient features is to encourage tracers to align in a
+quasi-uniform way, i.e.~they do follow the solution characteristics but at the
+same time try to space out evenly.
+This is allowed via a modified, inverted Lennard-Jones potential
+which is parameterised with a distance.
+If two particles are closer than that distance, they repulse each other. 
+If they are further away than that distance, they attract each other.
+
+\begin{code}
+project.add_action_set_to_timestepping( peano4.toolbox.particles.ParticleParticleInteraction(
+  particle_set = tracer_particles,
+  cell_compute_kernel = exahype2.tracer.perserveCartesianTracerLayout(thesolver,particle_spacing),
+  additional_includes = """
+#include "repositories/SolverRepository.h"
+#include "toolbox/particles/potentials/Springs.h"
+"""
+))
+\end{code}
+
+\noindent
+There are further particle-particle interaction scripts in the repository.
+
+
+\subsection{Changing the grid-to-particle interpolation and/or time stepping}
+
+Most tracing routines (like the \texttt{exahype2.tracer.FiniteVolumesTracing}
+above) rely on an interpolation kernel which takes the PDE solution and maps 
+some quantities from there onto the tracer and then performs the actual time
+stepping.
+While the mapping glue code is configured via Python, the actual interpolation
+and time stepping are realised via C++ in the particles toolbox.
+
+
+If you want to add another mapping and/or time stepping, I recommend that you 
+extend \texttt{src/toolbox/particles/Tracer.h}:
+Insert a new routine for the interpolation there which has exactly the same
+signature as \texttt{mapParticleOntoVoxel} and then pick this new routine
+through the Python API.
+
+
 \section{Finite Volumes with ClawPack (ExaClaw)}
 
 ExaClaw is an add-on to \ExaHyPE\ which makes

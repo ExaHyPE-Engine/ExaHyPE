@@ -222,7 +222,7 @@ class Project(object):
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
     
       
-  def add_tracer(self,name,attribute_count=0,h=-1,noise=False):
+  def add_tracer(self,name,attribute_count=0):
     """
     
     name: String
@@ -262,7 +262,6 @@ class Project(object):
     #
     # Initialisation
     #
-    self.init_grid.add_action_set( exahype2.tracer.InsertParticles( particles, h, noise ))    
     self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
     
     #
@@ -288,6 +287,10 @@ class Project(object):
 
   def add_action_set_to_timestepping(self, action_set):
     self.perform_time_step.add_action_set( action_set )
+
+
+  def add_action_set_to_initialisation(self, action_set):
+    self.init_grid.add_action_set( action_set )
 
         
   def generate_Peano4_project(self, verbose=False):
