@@ -11,7 +11,7 @@ import dastgen2.attributes.Integer
 
 
 class ParticleParticleInteraction(ActionSet):
-  def __init__(self,particle_set,cell_compute_kernel,touch_vertex_first_time_compute_kernel):
+  def __init__(self,particle_set,cell_compute_kernel,touch_vertex_first_time_compute_kernel="",additional_includes=""):
     """
 
     This code snippet creates a tree walker, i.e. an action set that runs
@@ -82,7 +82,8 @@ class ParticleParticleInteraction(ActionSet):
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "CELL_COMPUTE_KERNEL" ]      = cell_compute_kernel
     self.d[ "VERTEX_COMPUTE_KERNEL" ]    = touch_vertex_first_time_compute_kernel
-
+    self.d[ "ADDITIONAL_INCLUDES" ]      = additional_includes
+    
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   auto& localParticles = fineGridVertex{{PARTICLES_CONTAINER}};
@@ -153,6 +154,8 @@ class ParticleParticleInteraction(ActionSet):
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
+
+{{ADDITIONAL_INCLUDES}}
 
 #include <forward_list>
 """ )

@@ -21,6 +21,11 @@
 
 \Peano's particle code is lightweight and realised totally within the Python
 API as \texttt{toolbox.particles}.
+
+\begin{code}
+import peano4.toolbox.particles
+\end{code}
+
 No particular configuration of the compute kernel is required.
 To get something up and started, I recommend that you run the Jupyter notebook
 at \texttt{examples/particles}.
@@ -38,6 +43,54 @@ A particle in \Peano\ has at least two properties:
 \end{itemize}
 
 \noindent
+There are two ways to create particles: 
+We can go through Peano's Python-DaStGen interface, or we can model data
+directly via DaStGen 2.
+For speed reasons, the latter variant is the better one.
+
+\subsection{Python API}
+
+With the Python API, the generation of a particle is straightforward:
+
+\begin{code}
+import dastgen2
+
+
+particle = peano4.toolbox.particles.Particle("Particle")
+
+v_attr = peano4.dastgen2.Peano4DoubleArray("v","Dimensions")
+mass_attr = dastgen2.attributes.Double("mass")
+
+particle.data.add_attribute(v_attr)
+particle.data.add_attribute(mass_attr)
+
+particles = peano4.toolbox.particles.ParticleSet(particle)
+\end{code}
+
+
+
+\subsection{Adding the data model to \Peano}
+
+We next add the particles to the project and we notify the vertices that there 
+are particles which have to be administered. 
+I discuss why to use vertices below in the section about the dual tree.
+
+\begin{code}
+project.datamodel.add_global_object(particle)
+project.datamodel.add_vertex(particles)
+\end{code}
+
+\noindent
+Once you have added the particle and the particle container \texttt{particles}
+to your \Peano\ datamodel, you have to inform all solver steps that they have to
+administer the particles.
+
+\begin{code}
+create_grid.use_vertex(particles)
+\end{code}
+
+
+\noindent
 Particles are held on the heap, i.e.~you create them via \texttt{new} and then
 you hand them over to \Peano\ to administer them.
 Both properties can be changed dynamically by the user, i.e.~in each and every
@@ -45,6 +98,12 @@ time step.
 Particles are to be modelled with \DaStGen.
 You can think of them as plain C++ structs with a few routines to set their
 properties and to send them around via MPI.
+
+
+
+\subsection{DaStGen 2}
+
+
 
 
 \section{Dual trees}

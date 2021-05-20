@@ -118,29 +118,29 @@ class PlotParticlesInVTKFormat(ActionSet):
   int isFirstBarrierHitOnThisRank = ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{{FILENAME}}-init");
 
   std::ostringstream snapshotFileName;
-  snapshotFileName << "{FILENAME}" << "-" << counter;
+  snapshotFileName << "{{FILENAME}}" << "-" << counter;
 
   if ( counter==0 and isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::CreateNew
+    _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
+      Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew
     );    
   }
   else if ( isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
       Dimensions, snapshotFileName.str(), "{{FILENAME}}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet
     );
   }
   
   counter++;
 
-  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-write");
+  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{{FILENAME}}-write");
 
   if ( _writer==nullptr ) {
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
       Dimensions, snapshotFileName.str(), "{{FILENAME}}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
+      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData
     );
   }
   
