@@ -15,17 +15,17 @@ ToolboxFiniteElements_SOURCES = \
   tests/StencilFactoryTest.cpp
   
 
-libToolboxFiniteElements2d_a_CXXFLAGS         = -DDimensions=2 -DPeanoDebug=0 
-libToolboxFiniteElements2d_trace_a_CXXFLAGS   = -DDimensions=2 -DPeanoDebug=1 -g3 
-libToolboxFiniteElements2d_debug_a_CXXFLAGS   = -DDimensions=2 -DPeanoDebug=4 -g3 -O0 
-libToolboxFiniteElements2d_stats_a_CXXFLAGS   = -DDimensions=2 -DPeanoDebug=0 -g3 -DTrackStatistics
-libToolboxFiniteElements2d_asserts_a_CXXFLAGS = -DDimensions=2 -DPeanoDebug=2 -g3 
+libToolboxFiniteElements2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
+libToolboxFiniteElements2d_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE) 
+libToolboxFiniteElements2d_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_DEBUG) 
+libToolboxFiniteElements2d_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_STATS)
+libToolboxFiniteElements2d_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_2D_ASSERTS) 
 
-libToolboxFiniteElements3d_a_CXXFLAGS         = -DDimensions=3 -DPeanoDebug=0 
-libToolboxFiniteElements3d_trace_a_CXXFLAGS   = -DDimensions=3 -DPeanoDebug=1 -g3 
-libToolboxFiniteElements3d_debug_a_CXXFLAGS   = -DDimensions=3 -DPeanoDebug=4 -g3 -O0 
-libToolboxFiniteElements3d_asserts_a_CXXFLAGS = -DDimensions=3 -DPeanoDebug=2 -g3
-libToolboxFiniteElements3d_stats_a_CXXFLAGS   = -DDimensions=3 -DPeanoDebug=0 -g3 -DTrackStatistics
+libToolboxFiniteElements3d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_3D_RELEASE) 
+libToolboxFiniteElements3d_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_3D_TRACE) 
+libToolboxFiniteElements3d_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_3D_DEBUG) 
+libToolboxFiniteElements3d_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_3D_ASSERTS)
+libToolboxFiniteElements3d_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_3D_STATS)
 
 libToolboxFiniteElements2d_a_SOURCES         = $(ToolboxFiniteElements_SOURCES)
 libToolboxFiniteElements2d_trace_a_SOURCES   = $(ToolboxFiniteElements_SOURCES)

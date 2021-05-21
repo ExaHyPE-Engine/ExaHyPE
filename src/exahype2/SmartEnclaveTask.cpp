@@ -2,6 +2,11 @@
 #include "EnclaveTask.h"
 
 
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
+
+
 void exahype2::initSmartMPI() {
   #ifdef UseSmartMPI
   smartmpi::init( tarch::mpi::Rank::getInstance().getCommunicator() );
@@ -40,7 +45,7 @@ exahype2::SmartEnclaveTask::SmartEnclaveTask(
   _wrappedTask(nullptr) {
   logTraceIn( "SmartEnclaveTask(...)" );
 
-  _wrappedTask = new EnclaveTask( marker, inputValues, numberOfResultValues, functor );
+//  _wrappedTask = new EnclaveTask( marker, inputValues, numberOfResultValues, functor );
 
   logTraceOut( "SmartEnclaveTask(...)" );
 }
@@ -66,6 +71,7 @@ void exahype2::SmartEnclaveTask::runLocally() {
 }
 
 
+/*
 void exahype2::SmartEnclaveTask::sendTaskToRank(int rank, int tag, MPI_Comm communicator) {
 
 }
@@ -75,5 +81,6 @@ void exahype2::SmartEnclaveTask::runLocallyAndSendResultToRank(int rank, int tag
 
 }
 
+*/
 
 #endif

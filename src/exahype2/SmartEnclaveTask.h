@@ -22,7 +22,7 @@ namespace exahype2 {
 
 
 
-#include "smartmpi/smartmpi.h"
+#include "smartmpi.h"
 
 #include "tarch/logging/Log.h"
 
@@ -87,8 +87,8 @@ class exahype2::SmartEnclaveTask: public smartmpi::SmartMPITask {
     ~SmartEnclaveTask() = default;
 
     void runLocally() override;
-    void sendTaskToRank(int rank, int tag, MPI_Comm communicator) override;
-    void runLocallyAndSendResultToRank(int rank, int tag, MPI_Comm communicator) override;
+//    void sendTaskToRank(int rank, int tag, MPI_Comm communicator) override;
+//    void runLocallyAndSendResultToRank(int rank, int tag, MPI_Comm communicator) override;
 
     int getTaskId() const;
 };

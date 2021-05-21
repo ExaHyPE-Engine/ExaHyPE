@@ -25,23 +25,24 @@ lib_LIBRARIES = libTarch.a        libTarch_debug.a        libTarch_asserts.a    
                 libPeano4Core3d.a libPeano4Core3d_debug.a libPeano4Core3d_asserts.a libPeano4Core3d_trace.a libPeano4Core3d_stats.a
 
 
-libTarch_a_CXXFLAGS         = -DPeanoDebug=0 
-libTarch_trace_a_CXXFLAGS   = -DPeanoDebug=1 -g3
-libTarch_asserts_a_CXXFLAGS = -DPeanoDebug=2 -g3 -O0
-libTarch_debug_a_CXXFLAGS   = -DPeanoDebug=4 -g3 -O0
-libTarch_stats_a_CXXFLAGS   = -DPeanoDebug=0 -DTrackStatistics
+libTarch_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
+libTarch_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)
+libTarch_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_2D_ASSERTS)
+libTarch_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_DEBUG)
+libTarch_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_STATS)
 
 
-libPeano4Core2d_a_CXXFLAGS          = -DDimensions=2 -DPeanoDebug=0
-libPeano4Core2d_stats_a_CXXFLAGS    = -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics
-libPeano4Core2d_trace_a_CXXFLAGS    = -DDimensions=2 -DPeanoDebug=1 -g3
-libPeano4Core2d_asserts_a_CXXFLAGS  = -DDimensions=2 -DPeanoDebug=2 -g3 
-libPeano4Core2d_debug_a_CXXFLAGS    = -DDimensions=2 -DPeanoDebug=4 -g3 -O0
-libPeano4Core3d_a_CXXFLAGS          = -DDimensions=3 -DPeanoDebug=0
-libPeano4Core3d_trace_a_CXXFLAGS    = -DDimensions=3 -DPeanoDebug=1 -g3
-libPeano4Core3d_asserts_a_CXXFLAGS  = -DDimensions=3 -DPeanoDebug=2 -g3
-libPeano4Core3d_debug_a_CXXFLAGS    = -DDimensions=3 -DPeanoDebug=4 -g3 -O0
-libPeano4Core3d_stats_a_CXXFLAGS    = -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics
+libPeano4Core2d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_2D_RELEASE) 
+libPeano4Core2d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_STATS) 
+libPeano4Core2d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_TRACE)
+libPeano4Core2d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_ASSERTS) 
+libPeano4Core2d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_DEBUG)
+
+libPeano4Core3d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_3D_RELEASE) 
+libPeano4Core3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_STATS)
+libPeano4Core3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_TRACE)
+libPeano4Core3d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_ASSERTS)
+libPeano4Core3d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_DEBUG)
 
 #
 # All sources below
