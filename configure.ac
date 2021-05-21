@@ -33,6 +33,12 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 #
+# Default installation is current path
+#
+AC_PREFIX_DEFAULT( "libs" )
+
+
+#
 # This is just a sanity check whether the right files/directories do exist
 #
 AC_CONFIG_SRCDIR([src/peano4/peano.cpp])
@@ -99,6 +105,8 @@ LDADD_PEANO_3D_ASSERTS=" -lPeano4Core3d_asserts -lTarch_asserts"
 LDADD_PEANO_3D_TRACE="   -lPeano4Core3d_trace   -lTarch_trace"
 LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 
+
+srcdir_full_path=`cd $srcdir && pwd`
 
 
 #
@@ -413,23 +421,23 @@ AC_ARG_ENABLE(fem,
   [ AC_MSG_CHECKING(for fem); AC_MSG_RESULT(no); fem=false ])
 AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$fem" = xtrue])
 if test "$fem" != false; then
-  LDADD_PEANO_2D_RELEASE+=" -lToolboxFiniteElements2d "
-  LDADD_PEANO_2D_STATS+="   -lToolboxFiniteElements2d "
-  LDADD_PEANO_2D_ASSERTS+=" -lToolboxFiniteElements2d " 
-  LDADD_PEANO_2D_TRACE+="   -lToolboxFiniteElements2d "
-  LDADD_PEANO_2D_DEBUG+="   -lToolboxFiniteElements2d "
+  LDADD_PEANO_2D_RELEASE=" -lToolboxFiniteElements2d "
+  LDADD_PEANO_2D_STATS="   -lToolboxFiniteElements2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSETS " 
+  LDADD_PEANO_2D_TRACE="   -lToolboxFiniteElements2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxFiniteElements2d_debug   $LDADD_PEANO_2D_DEBUG "
 
-  LDADD_PEANO_3D_RELEASE+=" -lToolboxFiniteElements3d "
-  LDADD_PEANO_3D_STATS+="   -lToolboxFiniteElements3d "
-  LDADD_PEANO_3D_ASSERTS+=" -lToolboxFiniteElements3d " 
-  LDADD_PEANO_3D_TRACE+="   -lToolboxFiniteElements3d "
-  LDADD_PEANO_3D_DEBUG+="   -lToolboxFiniteElements3d "
+  LDADD_PEANO_3D_RELEASE=" -lToolboxFiniteElements3d "
+  LDADD_PEANO_3D_STATS="   -lToolboxFiniteElements3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxFiniteElements3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lToolboxFiniteElements3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxFiniteElements3d_debug   $LDADD_PEANO_3D_DEBUG "
 
-  LDFLAGS_PEANO_RELEASE+=" -L$(top_builddir)/src/toolbox/finiteelements"
-  LDFLAGS_PEANO_STATS+="   -L$(top_builddir)/src/toolbox/finiteelements"
-  LDFLAGS_PEANO_ASSERTS+=" -L$(top_builddir)/src/toolbox/finiteelements"
-  LDFLAGS_PEANO_TRACE+="   -L$(top_builddir)/src/toolbox/finiteelements"
-  LDFLAGS_PEANO_DEBUG+="   -L$(top_builddir)/src/toolbox/finiteelements"
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/finiteelements"
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/finiteelements"
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/finiteelements"
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/finiteelements"
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/finiteelements"
 fi
 
 
@@ -447,23 +455,23 @@ AC_ARG_ENABLE(multiprecision,
   [ AC_MSG_CHECKING(for multiprecision); AC_MSG_RESULT(no); multiprecision=false ])
 AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$multiprecision" = xtrue])
 if test "$multiprecision" != false; then
-  LDADD_PEANO_2D_RELEASE+=" -lToolboxMultiprecision "
-  LDADD_PEANO_2D_STATS+="   -lToolboxMultiprecision_stats "
-  LDADD_PEANO_2D_ASSERTS+=" -lToolboxMultiprecision_asserts " 
-  LDADD_PEANO_2D_TRACE+="   -lToolboxMultiprecision_trace "
-  LDADD_PEANO_2D_DEBUG+="   -lToolboxMultiprecision_debug "
+  LDADD_PEANO_2D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lToolboxMultiprecision_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxMultiprecision_debug   $LDADD_PEANO_2D_DEBUG "
 
-  LDADD_PEANO_3D_RELEASE+=" -lToolboxMultiprecision "
-  LDADD_PEANO_3D_STATS+="   -lToolboxMultiprecision_stats "
-  LDADD_PEANO_3D_ASSERTS+=" -lToolboxMultiprecision_asserts " 
-  LDADD_PEANO_3D_TRACE+="   -lToolboxMultiprecision_trace "
-  LDADD_PEANO_3D_DEBUG+="   -lToolboxMultiprecision_debug "
+  LDADD_PEANO_3D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lToolboxMultiprecision_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxMultiprecision_debug   $LDADD_PEANO_3D_DEBUG "
 
-  LDFLAGS_PEANO_RELEASE+=" -L$(top_builddir)/src/toolbox/multiprecision"
-  LDFLAGS_PEANO_STATS+="   -L$(top_builddir)/src/toolbox/multiprecision"
-  LDFLAGS_PEANO_ASSERTS+=" -L$(top_builddir)/src/toolbox/multiprecision"
-  LDFLAGS_PEANO_TRACE+="   -L$(top_builddir)/src/toolbox/multiprecision"
-  LDFLAGS_PEANO_DEBUG+="   -L$(top_builddir)/src/toolbox/multiprecision"
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/multiprecision"
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/multiprecision"
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/multiprecision"
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/multiprecision"
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/multiprecision"
 fi
 
 
@@ -480,23 +488,23 @@ AC_ARG_ENABLE(loadbalancing,
   [ AC_MSG_CHECKING(for loadbalancing); AC_MSG_RESULT(no); loadbalancing=false ])
 AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$loadbalancing" = xtrue])
 if test "$loadbalancing" != false; then
-  LDADD_PEANO_2D_RELEASE+=" -lToolboxLoadBalancing2d "
-  LDADD_PEANO_2D_STATS+="   -lToolboxLoadBalancing2d_stats "
-  LDADD_PEANO_2D_ASSERTS+=" -lToolboxLoadBalancing2d_asserts " 
-  LDADD_PEANO_2D_TRACE+="   -lToolboxLoadBalancing2d_trace "
-  LDADD_PEANO_2D_DEBUG+="   -lToolboxLoadBalancing2d_debug "
+  LDADD_PEANO_2D_RELEASE=" -lToolboxLoadBalancing2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lToolboxLoadBalancing2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxLoadBalancing2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lToolboxLoadBalancing2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxLoadBalancing2d_debug   $LDADD_PEANO_2D_DEBUG "
 
-  LDADD_PEANO_3D_RELEASE+=" -lToolboxLoadBalancing3d "
-  LDADD_PEANO_3D_STATS+="   -lToolboxLoadBalancing3d_stats "
-  LDADD_PEANO_3D_ASSERTS+=" -lToolboxLoadBalancing3d_asserts " 
-  LDADD_PEANO_3D_TRACE+="   -lToolboxLoadBalancing3d_trace "
-  LDADD_PEANO_3D_DEBUG+="   -lToolboxLoadBalancing3d_debug "
+  LDADD_PEANO_3D_RELEASE=" -lToolboxLoadBalancing3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lToolboxLoadBalancing3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxLoadBalancing3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lToolboxLoadBalancing3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxLoadBalancing3d_debug   $LDADD_PEANO_3D_DEBUG "
 
-  LDFLAGS_PEANO_RELEASE+=" -L$(top_builddir)/src/toolbox/loadbalancing"
-  LDFLAGS_PEANO_STATS+="   -L$(top_builddir)/src/toolbox/loadbalancing"
-  LDFLAGS_PEANO_ASSERTS+=" -L$(top_builddir)/src/toolbox/loadbalancing"
-  LDFLAGS_PEANO_TRACE+="   -L$(top_builddir)/src/toolbox/loadbalancing"
-  LDFLAGS_PEANO_DEBUG+="   -L$(top_builddir)/src/toolbox/loadbalancing"
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/loadbalancing"
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/loadbalancing"
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/loadbalancing"
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/loadbalancing"
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/loadbalancing"
 fi
 
 
@@ -513,23 +521,23 @@ AC_ARG_ENABLE(particles,
   [ AC_MSG_CHECKING(for particles); AC_MSG_RESULT(no); particles=false ])
 AM_CONDITIONAL([UseToolboxParticles],[test "x$particles" = xtrue])
 if test "$particles" != false; then
-  LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d "
-  LDADD_PEANO_2D_STATS+="   -lToolboxParticles2d_stats "
-  LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts " 
-  LDADD_PEANO_2D_TRACE+="   -lToolboxParticles2d_trace "
-  LDADD_PEANO_2D_DEBUG+="   -lToolboxParticles2d_debug "
+  LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d         $LDADD_PEANO_2D_RELEASE " 
+  LDADD_PEANO_2D_STATS+="   -lToolboxParticles2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE+="   -lToolboxParticles2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG+="   -lToolboxParticles2d_debug   $LDADD_PEANO_2D_DEBUG "
 
-  LDADD_PEANO_3D_RELEASE+=" -lToolboxParticles3d "
-  LDADD_PEANO_3D_STATS+="   -lToolboxParticles3d_stats "
-  LDADD_PEANO_3D_ASSERTS+=" -lToolboxParticles3d_asserts " 
-  LDADD_PEANO_3D_TRACE+="   -lToolboxParticles3d_trace "
-  LDADD_PEANO_3D_DEBUG+="   -lToolboxParticles3d_debug "
+  LDADD_PEANO_3D_RELEASE+=" -lToolboxParticles3d         $LDADD_PEANO_3D_RELEASE " 
+  LDADD_PEANO_3D_STATS+="   -lToolboxParticles3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS+=" -lToolboxParticles3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE+="   -lToolboxParticles3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG+="   -lToolboxParticles3d_debug   $LDADD_PEANO_3D_DEBUG "
 
-  LDFLAGS_PEANO_RELEASE+=" -L$(top_builddir)/src/toolbox/particles"
-  LDFLAGS_PEANO_STATS+="   -L$(top_builddir)/src/toolbox/particles"
-  LDFLAGS_PEANO_ASSERTS+=" -L$(top_builddir)/src/toolbox/particles"
-  LDFLAGS_PEANO_TRACE+="   -L$(top_builddir)/src/toolbox/particles"
-  LDFLAGS_PEANO_DEBUG+="   -L$(top_builddir)/src/toolbox/particles"
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/particles"
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/particles"
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/particles"
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/particles"
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/particles"
 fi
 
 
@@ -550,23 +558,23 @@ if test "$exahype" != false; then
   if test "$loadbalancing" == false; then
     AC_MSG_ERROR([ExaHyPE2 requires the load balancing ])
   fi
-  LDADD_PEANO_2D_RELEASE+=" -lToolboxExaHyPE2d "
-  LDADD_PEANO_2D_STATS+="   -lToolboxExaHyPE2d_stats "
-  LDADD_PEANO_2D_ASSERTS+=" -lToolboxExaHyPE2d_asserts " 
-  LDADD_PEANO_2D_TRACE+="   -lToolboxExaHyPE2d_trace "
-  LDADD_PEANO_2D_DEBUG+="   -lToolboxExaHyPE2d_debug "
+  LDADD_PEANO_2D_RELEASE=" -lExaHyPE2Core2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lExaHyPE2Core2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lExaHyPE2Core2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lExaHyPE2Core2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lExaHyPE2Core2d_debug   $LDADD_PEANO_2D_DEBUG "
 
-  LDADD_PEANO_3D_RELEASE+=" -lToolboxExaHyPE3d "
-  LDADD_PEANO_3D_STATS+="   -lToolboxExaHyPE3d_stats "
-  LDADD_PEANO_3D_ASSERTS+=" -lToolboxExaHyPE3d_asserts " 
-  LDADD_PEANO_3D_TRACE+="   -lToolboxExaHyPE3d_trace "
-  LDADD_PEANO_3D_DEBUG+="   -lToolboxExaHyPE3d_debug "
+  LDADD_PEANO_3D_RELEASE=" -lExaHyPE2Core3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lExaHyPE2Core3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lExaHyPE2Core3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lExaHyPE2Core3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lExaHyPE2Core3d_debug   $LDADD_PEANO_3D_DEBUG "
 
-  LDFLAGS_PEANO_RELEASE+=" -L$(top_builddir)/src/exahype"
-  LDFLAGS_PEANO_STATS+="   -L$(top_builddir)/src/exahype"
-  LDFLAGS_PEANO_ASSERTS+=" -L$(top_builddir)/src/exahype"
-  LDFLAGS_PEANO_TRACE+="   -L$(top_builddir)/src/exahype"
-  LDFLAGS_PEANO_DEBUG+="   -L$(top_builddir)/src/exahype"
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/exahype"
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/exahype"
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/exahype"
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/exahype"
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype"
 fi
 
 
