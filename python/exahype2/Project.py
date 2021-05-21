@@ -384,7 +384,7 @@ class Project(object):
     self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
 
     if self._add_particles_library:
-      self._project.output.makefile.add_library( "ToolboxParticles$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
+      self._project.output.makefile.add_library( "ToolboxParticles$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
 
     
     self._project.output.makefile.set_mode(self._build_mode)
