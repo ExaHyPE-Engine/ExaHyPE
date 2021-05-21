@@ -4,6 +4,8 @@ import argparse
 import peano4
 import exahype2
 
+import peano4.toolbox.particles
+import dastgen2
 
 modes = { 
   "release": peano4.output.CompileMode.Release,
@@ -495,23 +497,29 @@ if __name__ == "__main__":
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
-      #[-20, -20, -20],  [40.0, 40.0, 40.0],
+      [-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
-      [-40, -40, -40],  [80.0, 80.0, 80.0],
+      #[-40, -40, -40],  [80.0, 80.0, 80.0],
       #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
-      0.0, args.plot_step_size,   # snapshots
+      1110.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv4" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv4" )
     probe_point = [-5,-5,-5]
     project.add_plot_filter( probe_point,[10.0,10.0,10.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+
+    #add tracer
+    tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
+    project.add_action_set_to_timestepping( exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],1.1*args.patch_size) )
+    project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/8.0, noise=True ))
+
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 

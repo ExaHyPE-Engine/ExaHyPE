@@ -43,10 +43,10 @@ document.
 \paragraph*{First \ExaHyPE\ run}
 \begin{itemize}
   \item Configure \Peano\ with the flags \texttt{--enable-exahype}
-  \texttt{--enable-loadbalancing-toolbox}:
+  \texttt{--enable-loadbalancing}:
   \begin{code}
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-./configure --enable-exahype --enable-loadbalancing-toolbox
+./configure --enable-exahype --enable-loadbalancing
   \end{code}
    These are the two mandatory extensions. You might want to add further options.
   \item Recompile your \Peano\ code. This should give you a couple of
