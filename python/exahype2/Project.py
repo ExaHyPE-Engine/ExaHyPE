@@ -54,9 +54,7 @@ class Project(object):
     self.create_grid_and_converge_lb         = peano4.solversteps.Step( "CreateGridAndConvergeLoadBalancing", False )
     self.plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
     self.perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
-    
-    self._add_particles_library = False
-    
+        
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
     """
@@ -280,8 +278,6 @@ class Project(object):
     self.plot_solution.add_action_set( particle_plotter ) 
     self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
 
-    self._add_particles_library = True
-
     return particles
 
 
@@ -380,11 +376,11 @@ class Project(object):
 
     # maybe use ..
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
-    self._project.output.makefile.add_library( "ExaHyPE2Core$(DIMENSIONS)d$(LIBRARY_POSTFIX)",          self._Peano_src_directory + "/src/exahype2" )
-    self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
+    #self._project.output.makefile.add_library( "ExaHyPE2Core$(DIMENSIONS)d$(LIBRARY_POSTFIX)",          self._Peano_src_directory + "/src/exahype2" )
+    #self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
 
-    if self._add_particles_library:
-      self._project.output.makefile.add_library( "ToolboxParticles$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
+    #if self._add_particles_library:
+    #  self._project.output.makefile.add_library( "ToolboxParticles$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
 
     
     self._project.output.makefile.set_mode(self._build_mode)
