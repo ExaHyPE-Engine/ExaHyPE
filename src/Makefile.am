@@ -12,7 +12,6 @@ SUBDIRS = . \
   toolbox/multiprecision \
   toolbox/loadbalancing \
   exahype2 \
-  smartmpi \
   unittests convert
 
 #
