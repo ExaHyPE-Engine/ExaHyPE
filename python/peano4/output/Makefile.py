@@ -206,20 +206,24 @@ class Makefile(object):
           self.d["FC"] = compiler
         if re.search( "CXXFLAGS *=", line) and line.startswith( "CXXFLAGS" ):
           flags = line.split("=",1)[1].strip()
+          print( "add CXXFLAGS " + flags )
           for i in flags.split( " " ):
             self.add_CXX_flag(i)
         if re.search( "FCFLAGS *=", line) and line.startswith( "FCFLAGS" ):
           flags = line.split("=",1)[1].strip()
+          print( "add FCFLAGS " + flags )
           for i in flags.split( " " ):
             self.add_Fortran_flag(i)
         if re.search( "LDFLAGS *=", line) and line.startswith( "LDFLAGS" ):
           flags = line.split("=",1)[1].strip()
+          print( "add LDFLAGS " + flags )
           for i in flags.split( " " ):
             self.add_linker_flag(i)
-        if re.search( "LIBS *=", line) and line.startswith( "LIBS" ):
-          self.d["SYSTEM_LIBS"] += " "
-          self.d["SYSTEM_LIBS"] += flags
-          self.d["SYSTEM_LIBS"] += " "
+        #if re.search( "LIBS *=", line) and line.startswith( "LIBS" ):
+        #  print( "add LIBS " + flags )
+        #  self.d["SYSTEM_LIBS"] += " "
+        #  self.d["SYSTEM_LIBS"] += flags
+        #  self.d["SYSTEM_LIBS"] += " "
       self.d["CONFIGUREPATH"] = directory
 
       # A posteriori fix for openmp flag propagation

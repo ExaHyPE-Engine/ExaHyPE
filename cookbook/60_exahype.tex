@@ -594,9 +594,8 @@ tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
 This prepares \ExaHyPE\ to handle your tracer, and it also dumps tracers already
 with each snapshot, but obviously you haven't inserted any tracers yet. 
 There are different inserters shipped with \ExaHyPE. 
-Alternatively, you might want to write your own, bespoke particle seed. 
-In the latter case, I recommend that you copy over an existing one and adopt it
-to your need.
+Alternatively, you might want to write your own, bespoke particle seed (see
+below).
 The snippet below inserts particles into your grid along a Cartesian topology
 and adds some random noise:
 
@@ -646,6 +645,83 @@ At the same time, you can dump particles more often than you plot data
 snapshots, and these dumps can even be adaptive, i.e.~you dump if and only if a
 particle actually moves.
 The \texttt{DumpTrajectoryIntoDatabase} documentation provides more detail.
+
+
+\subsection{Write your own particle seed}
+
+If you want to write your own particle seed, I recommend that you copy over an
+existing one and adopt it to your need.
+Switch to \texttt{python/exahype2/tracer} and copy the class
+\texttt{InsertParticlesAlongCartesianMesh} over to modify it.
+The invocation within your Python application script then has to be altered,
+too:
+
+\begin{code}
+project.add_action_set_to_initialisation( MyFancySeed(. ..) ))
+\end{code}
+
+
+\noindent
+The core ingredients in the seed is the code snippet that decides what happens
+if you touch a vertex for the first time:
+\begin{code}
+  __Template_TouchVertexFirstTime = jinja2.Template("""
+  if ( not marker.isRefined() ) {
+    auto newParticles =
+    toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>...
+    for (auto& p: newParticles) {
+      p->setNumber(0,_spacetreeId);
+      p->setNumber(1,_particleNumberOnThisTree);
+      _particleNumberOnThisTree++;
+    }
+    fineGridVertex{{PARTICLES_CONTAINER}}.insert( 
+      fineGridVertex{{PARTICLES_CONTAINER}}.end(), newParticles.begin(),
+      newParticles.end() 
+    ); 
+  }
+""")
+\end{code}
+
+\noindent
+The routine only triggers some activities for unrefined vertices. 
+If a vertex is not refined further, it invokes the routine 
+\texttt{createEquallySpacedParticles} from the particle toolbox which
+returns a container over particles, and then takes these particles and 
+inserts them into the domain.
+While you can alter this mechanism obviously, a modified, simpler seed can look
+like this:
+
+\begin{code}
+  __Template_TouchVertexFirstTime = jinja2.Template("""
+  if ( 
+    not marker.isRefined() 
+    and
+    marker.x(0)==...      // check where the centre of this vertex is
+    and
+    marker.x(1)==...      // check where the centre of this vertex is
+    and
+    marker.x(1)==...      // check where the centre of this vertex is
+    and
+    marker.h(0)==...      // check how big the area around this vertex is
+    and
+    ...
+  ) {
+    globaldata::{{PARTICLE}}* p = new globaldata::{{PARTICLE}}( ... ); 
+    p->setNumber(0,_spacetreeId);
+    p->setNumber(1,_particleNumberOnThisTree);
+    p->setX(0, ... );     // x coordinate
+    p->setX(1, ... );     // y coordinate
+    p->setX(2, ... );     // z coordinate
+    p->setCutOffRadius(0.0); // you can force particles to certain resolution 
+                             // levels. Not used here.
+    _particleNumberOnThisTree++;
+    fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p ); 
+  }
+""")
+\end{code}
+
+
+
 
 
 \subsection{Encourage particles to spread out evenly}
