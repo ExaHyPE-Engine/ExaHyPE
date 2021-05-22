@@ -54,9 +54,7 @@ class Project(object):
     self.create_grid_and_converge_lb         = peano4.solversteps.Step( "CreateGridAndConvergeLoadBalancing", False )
     self.plot_solution                       = peano4.solversteps.Step( "PlotSolution", False )
     self.perform_time_step                   = peano4.solversteps.Step( "TimeStep",     False )
-    
-    self._add_particles_library = False
-    
+        
     
   def  set_load_balancing(self, load_balancer_name, load_balancer_arguments = ""):
     """
@@ -222,7 +220,7 @@ class Project(object):
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
     
       
-  def add_tracer(self,name,attribute_count=0,h=-1,noise=False):
+  def add_tracer(self,name,attribute_count=0):
     """
     
     name: String
@@ -262,7 +260,6 @@ class Project(object):
     #
     # Initialisation
     #
-    self.init_grid.add_action_set( exahype2.tracer.InsertParticles( particles, h, noise ))    
     self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
     
     #
@@ -281,13 +278,15 @@ class Project(object):
     self.plot_solution.add_action_set( particle_plotter ) 
     self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
 
-    self._add_particles_library = True
-
     return particles
 
 
   def add_action_set_to_timestepping(self, action_set):
     self.perform_time_step.add_action_set( action_set )
+
+
+  def add_action_set_to_initialisation(self, action_set):
+    self.init_grid.add_action_set( action_set )
 
         
   def generate_Peano4_project(self, verbose=False):
@@ -377,11 +376,11 @@ class Project(object):
 
     # maybe use ..
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
-    self._project.output.makefile.add_library( "ExaHyPE2Core$(DIMENSIONS)d$(LIBRARY_POSTFIX)",          self._Peano_src_directory + "/src/exahype2" )
-    self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
+    #self._project.output.makefile.add_library( "ExaHyPE2Core$(DIMENSIONS)d$(LIBRARY_POSTFIX)",          self._Peano_src_directory + "/src/exahype2" )
+    #self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
 
-    if self._add_particles_library:
-      self._project.output.makefile.add_library( "ToolboxParticles$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
+    #if self._add_particles_library:
+    #  self._project.output.makefile.add_library( "ToolboxParticles$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/particles" )
 
     
     self._project.output.makefile.set_mode(self._build_mode)

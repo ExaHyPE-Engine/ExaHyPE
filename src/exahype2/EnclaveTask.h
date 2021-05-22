@@ -14,12 +14,6 @@
 
 
 
-#ifdef UseSmartMPI
-#include "smartmpi/smartmpi.h"
-#endif
-
-
-
 namespace exahype2 {
   class EnclaveTask;
   class EnclaveBookkeeping;

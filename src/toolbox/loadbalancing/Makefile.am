@@ -14,11 +14,11 @@ ToolboxLoadBalancing_SOURCES = \
   RecursiveSubdivision.cpp
   
 
-libToolboxLoadBalancing2d_a_CXXFLAGS         = -DDimensions=2 -DPeanoDebug=0 
-libToolboxLoadBalancing2d_trace_a_CXXFLAGS   = -DDimensions=2 -DPeanoDebug=1 -g3  
-libToolboxLoadBalancing2d_asserts_a_CXXFLAGS = -DDimensions=2 -DPeanoDebug=2 -g3 
-libToolboxLoadBalancing2d_debug_a_CXXFLAGS   = -DDimensions=2 -DPeanoDebug=4 -g3 -O0 
-libToolboxLoadBalancing2d_stats_a_CXXFLAGS   = -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics
+libToolboxLoadBalancing2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
+libToolboxLoadBalancing2d_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_TRACE)  
+libToolboxLoadBalancing2d_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_2D_ASSERTS) 
+libToolboxLoadBalancing2d_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_DEBUG) 
+libToolboxLoadBalancing2d_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_2D_STATS)
 
 libToolboxLoadBalancing2d_a_SOURCES          = $(ToolboxLoadBalancing_SOURCES)
 libToolboxLoadBalancing2d_trace_a_SOURCES    = $(ToolboxLoadBalancing_SOURCES)
@@ -27,11 +27,11 @@ libToolboxLoadBalancing2d_debug_a_SOURCES    = $(ToolboxLoadBalancing_SOURCES)
 libToolboxLoadBalancing2d_stats_a_SOURCES    = $(ToolboxLoadBalancing_SOURCES)
 
 
-libToolboxLoadBalancing3d_a_CXXFLAGS         = -DDimensions=3 -DPeanoDebug=0 
-libToolboxLoadBalancing3d_trace_a_CXXFLAGS   = -DDimensions=3 -DPeanoDebug=1 -g3 
-libToolboxLoadBalancing3d_asserts_a_CXXFLAGS = -DDimensions=3 -DPeanoDebug=2 -g3 
-libToolboxLoadBalancing3d_debug_a_CXXFLAGS   = -DDimensions=3 -DPeanoDebug=4 -g3 -O0 
-libToolboxLoadBalancing3d_stats_a_CXXFLAGS   = -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics
+libToolboxLoadBalancing3d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_3D_RELEASE)
+libToolboxLoadBalancing3d_trace_a_CXXFLAGS   = $(CXXFLAGS_PEANO_3D_TRACE) 
+libToolboxLoadBalancing3d_asserts_a_CXXFLAGS = $(CXXFLAGS_PEANO_3D_ASSERTS) 
+libToolboxLoadBalancing3d_debug_a_CXXFLAGS   = $(CXXFLAGS_PEANO_3D_DEBUG) 
+libToolboxLoadBalancing3d_stats_a_CXXFLAGS   = $(CXXFLAGS_PEANO_3D_STATS)
 
 libToolboxLoadBalancing3d_a_SOURCES          = $(ToolboxLoadBalancing_SOURCES)
 libToolboxLoadBalancing3d_trace_a_SOURCES    = $(ToolboxLoadBalancing_SOURCES)

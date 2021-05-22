@@ -4,6 +4,8 @@ import argparse
 import peano4
 import exahype2
 
+import peano4.toolbox.particles
+import dastgen2
 
 modes = { 
   "release": peano4.output.CompileMode.Release,
@@ -18,7 +20,7 @@ floatparams = {
 	#"itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
         #"f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         #"sk":0.0, "bs":0.0#, \
-	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":0.5,
+	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
         "f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0#, \
 	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
@@ -109,7 +111,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.04
+            time_step_relaxation=0.05
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -263,14 +265,14 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_hoc.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_re4.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 
 		if (tarch::la::equals(t,0.0)){//initialization
 			fin.open((p1+att),std::ios::out|std::ios::trunc);
-			fin << "4 0.0 0.0 0.0" << std::endl;//4.461538
+			fin << "4.251 0.0 0.0 0.0" << std::endl;//4.461538
 			fin.close();
 			fin.open((p2+att),std::ios::out|std::ios::trunc);
-			fin << "-4 0.0 0.0 0.0" << std::endl;//-5.538462
+			fin << "-4.251 0.0 0.0 0.0" << std::endl;//-5.538462
 			fin.close();
 			fin.open((tem+att),std::ios::out|std::ios::trunc);
 			fin << "tem file" << std::endl;
@@ -496,21 +498,28 @@ if __name__ == "__main__":
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
       [-20, -20, -20],  [40.0, 40.0, 40.0],
+      #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
       #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
-      0.0, args.plot_step_size,   # snapshots
+      1110.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv1" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv4" )
     probe_point = [-5,-5,-5]
     project.add_plot_filter( probe_point,[10.0,10.0,10.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+
+    #add tracer
+    tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
+    project.add_action_set_to_timestepping( exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],1.1*args.patch_size) )
+    project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/8.0, noise=True ))
+
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 

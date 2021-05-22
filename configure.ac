@@ -33,6 +33,12 @@ AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 
 #
+# Default installation is current path
+#
+AC_PREFIX_DEFAULT( "libs" )
+
+
+#
 # This is just a sanity check whether the right files/directories do exist
 #
 AC_CONFIG_SRCDIR([src/peano4/peano.cpp])
@@ -67,6 +73,42 @@ AC_LANG(C++)
 AC_OPENMP()
 
 
+srcdir_full_path=`cd $srcdir && pwd`
+
+
+CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0"
+CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics"
+CXXFLAGS_PEANO_2D_ASSERTS=" -DDimensions=2 -DPeanoDebug=2 -g3 -O0"
+CXXFLAGS_PEANO_2D_TRACE="   -DDimensions=2 -DPeanoDebug=1 -g3"
+CXXFLAGS_PEANO_2D_DEBUG="   -DDimensions=2 -DPeanoDebug=4 -g3 -O0"
+
+CXXFLAGS_PEANO_3D_RELEASE=" -DDimensions=3 -DPeanoDebug=0"
+CXXFLAGS_PEANO_3D_STATS="   -DDimensions=3 -DPeanoDebug=0 -DTrackStatistics"
+CXXFLAGS_PEANO_3D_ASSERTS=" -DDimensions=3 -DPeanoDebug=2 -g3 -O0"
+CXXFLAGS_PEANO_3D_TRACE="   -DDimensions=3 -DPeanoDebug=1 -g3"
+CXXFLAGS_PEANO_3D_DEBUG="   -DDimensions=3 -DPeanoDebug=4 -g3 -O0"
+
+
+LDFLAGS_PEANO_RELEASE=" -L$srcdir_full_path/src "
+LDFLAGS_PEANO_STATS="   -L$srcdir_full_path/src "
+LDFLAGS_PEANO_ASSERTS=" -L$srcdir_full_path/src -g3"
+LDFLAGS_PEANO_TRACE="   -L$srcdir_full_path/src -g3"
+LDFLAGS_PEANO_DEBUG="   -L$srcdir_full_path/src -g3"
+
+
+LDADD_PEANO_2D_RELEASE=" -lPeano4Core2d         -lTarch"
+LDADD_PEANO_2D_STATS="   -lPeano4Core2d_stats   -lTarch_stats"
+LDADD_PEANO_2D_ASSERTS=" -lPeano4Core2d_asserts -lTarch_asserts" 
+LDADD_PEANO_2D_TRACE="   -lPeano4Core2d_trace   -lTarch_trace"
+LDADD_PEANO_2D_DEBUG="   -lPeano4Core2d_debug   -lTarch_debug"
+
+LDADD_PEANO_3D_RELEASE=" -lPeano4Core3d         -lTarch"
+LDADD_PEANO_3D_STATS="   -lPeano4Core3d_stats   -lTarch_stats"
+LDADD_PEANO_3D_ASSERTS=" -lPeano4Core3d_asserts -lTarch_asserts" 
+LDADD_PEANO_3D_TRACE="   -lPeano4Core3d_trace   -lTarch_trace"
+LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
+
+
 #
 # TBB Options
 #
@@ -80,7 +122,7 @@ AC_ARG_WITH(
     case "${withval}" in
       no)     AC_MSG_RESULT([no multithreading]);                    multithreading=false ;;
       cpp)    AC_MSG_RESULT([build with C++11 threading support]);                          multithreading=cpp ;;
-      tbb)    AC_MSG_RESULT([build with TBB (Intel Threading Building Blocks) support - please ensure that CXXFLAGS and LDFLAGS are properly set]); multithreading=tbb ;;
+      tbb)    AC_MSG_RESULT([build with TBB (Intel Threading Building Blocks) support]); multithreading=tbb ;;
       omp)    AC_MSG_RESULT([build with OpenMP]); multithreading=omp ;;
       *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or tbb to define target]);            multithreading=false ;;
     esac
@@ -106,10 +148,8 @@ if test "$multithreading" == omp; then
   AC_OPENMP()
   AC_CHECK_HEADERS([omp.h],[],[AC_MSG_WARN([header <omp.h> not found])])
   AC_DEFINE([SharedOMP], [1], [SharedOMP])
-
-  CXXFLAGS+=" $OPENMP_CXXFLAGS "
-  LDFLAGS+=" $OPENMP_LDFLAGS "
 fi
+
 
 #
 # MPI  Options
@@ -140,6 +180,7 @@ if test "$mpi" != false; then
 else
   MPICXX=false
 fi
+
 
 #
 # Compiler options. Allow icpc and gnu. Plus minimum version check.
@@ -247,8 +288,8 @@ AC_ARG_WITH(hdf5,
   AC_HELP_STRING([--with-hdf5], [enable HDF5 support [default=no]]),
   [ AC_MSG_CHECKING(for hdf5)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);                                hdf5=false ;;
-      *)     AC_MSG_RESULT(build with HDF5 support - please ensure that CXXFLAGS and LDFLAGS are properly set);  hdf5=true  ;;
+      no)    AC_MSG_RESULT(no);                       hdf5=false ;;
+      *)     AC_MSG_RESULT(build with HDF5 support);  hdf5=true  ;;
     esac ],
   [ AC_MSG_CHECKING(for hdf5); AC_MSG_RESULT(no); hdf5=false ])
  
@@ -274,9 +315,9 @@ AC_ARG_ENABLE(gpu,
   AC_HELP_STRING([--enable-gpu], [build with the GPU support  [default=no,amd,nvidia]]),
   [ AC_MSG_CHECKING(for gpu)
     case "${enableval}" in
-      no)        AC_MSG_RESULT(no);                                   gpu=false ;;
-      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support - please ensure that CXXFLAGS and LDFLAGS are properly set and that you configure with OpenMP multithreading);  gpu=nvidia ;;
-      amd)       AC_MSG_RESULT(build with AMD GPU support - please ensure that CXXFLAGS and LDFLAGS are properly set and that you configure with OpenMP multithreading);     gpu=amd ;;
+      no)        AC_MSG_RESULT(no);                             gpu=false ;;
+      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support);  gpu=nvidia ;;
+      amd)       AC_MSG_RESULT(build with AMD GPU support);     gpu=amd ;;
       *)         AC_MSG_FAILURE([default=no (no gpu)]); gpu=false ;;
     esac 
   ],
@@ -317,10 +358,10 @@ AC_ARG_WITH(toolchain,
   AC_HELP_STRING([--with-toolchain], [build with vendor-specific toolchain [default=no,intel,nvidia,scorep,chrome,gnu]]),
   [ AC_MSG_CHECKING(for toolchain)
     case "${withval}" in
-      no)        AC_MSG_RESULT(no);                                toolchain=false ;;
-      intel)     AC_MSG_RESULT(build with support for the Intel SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);   toolchain=intel  ;;
-      nvidia)    AC_MSG_RESULT(build with support for the NVIDIA SDK - please ensure that CXXFLAGS and LDFLAGS are properly set);  toolchain=nvidia ;;
-      scorep)    AC_MSG_RESULT(build with support for the Score-P - please ensure that CXXFLAGS and LDFLAGS are properly set);  toolchain=scorep ;;
+      no)        AC_MSG_RESULT(no);                                           toolchain=false ;;
+      intel)     AC_MSG_RESULT(build with support for the Intel SDK);         toolchain=intel  ;;
+      nvidia)    AC_MSG_RESULT(build with support for the NVIDIA SDK);        toolchain=nvidia ;;
+      scorep)    AC_MSG_RESULT(build with support for the Score-P);           toolchain=scorep ;;
       chrome)    AC_MSG_RESULT(build with logging support for Google Chrome); toolchain=chrome ;;
       gnu)       AC_MSG_RESULT(build with specialised GNU flags); toolchain=gnu ;;
       *)         AC_MSG_FAILURE([default=no (no bespoke toolchain)]); toolchain=false ;;
@@ -379,6 +420,25 @@ AC_ARG_ENABLE(fem,
     esac ],
   [ AC_MSG_CHECKING(for fem); AC_MSG_RESULT(no); fem=false ])
 AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$fem" = xtrue])
+if test "$fem" != false; then
+  LDADD_PEANO_2D_RELEASE=" -lToolboxFiniteElements2d "
+  LDADD_PEANO_2D_STATS="   -lToolboxFiniteElements2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSETS " 
+  LDADD_PEANO_2D_TRACE="   -lToolboxFiniteElements2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxFiniteElements2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lToolboxFiniteElements3d "
+  LDADD_PEANO_3D_STATS="   -lToolboxFiniteElements3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxFiniteElements3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lToolboxFiniteElements3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxFiniteElements3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/finiteelements "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/finiteelements "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/finiteelements "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/finiteelements "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/finiteelements "
+fi
 
 
 
@@ -394,6 +454,25 @@ AC_ARG_ENABLE(multiprecision,
     esac ],
   [ AC_MSG_CHECKING(for multiprecision); AC_MSG_RESULT(no); multiprecision=false ])
 AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$multiprecision" = xtrue])
+if test "$multiprecision" != false; then
+  LDADD_PEANO_2D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lToolboxMultiprecision_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxMultiprecision_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lToolboxMultiprecision_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxMultiprecision_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/multiprecision "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/multiprecision "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/multiprecision "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/multiprecision "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/multiprecision "
+fi
 
 
 #
@@ -408,6 +487,25 @@ AC_ARG_ENABLE(loadbalancing,
     esac ],
   [ AC_MSG_CHECKING(for loadbalancing); AC_MSG_RESULT(no); loadbalancing=false ])
 AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$loadbalancing" = xtrue])
+if test "$loadbalancing" != false; then
+  LDADD_PEANO_2D_RELEASE=" -lToolboxLoadBalancing2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lToolboxLoadBalancing2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxLoadBalancing2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lToolboxLoadBalancing2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxLoadBalancing2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lToolboxLoadBalancing3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lToolboxLoadBalancing3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxLoadBalancing3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lToolboxLoadBalancing3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxLoadBalancing3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/loadbalancing "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/loadbalancing "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/loadbalancing "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/loadbalancing "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/loadbalancing "
+fi
 
 
 #
@@ -422,6 +520,25 @@ AC_ARG_ENABLE(particles,
     esac ],
   [ AC_MSG_CHECKING(for particles); AC_MSG_RESULT(no); particles=false ])
 AM_CONDITIONAL([UseToolboxParticles],[test "x$particles" = xtrue])
+if test "$particles" != false; then
+  LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d         $LDADD_PEANO_2D_RELEASE " 
+  LDADD_PEANO_2D_STATS+="   -lToolboxParticles2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE+="   -lToolboxParticles2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG+="   -lToolboxParticles2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE+=" -lToolboxParticles3d         $LDADD_PEANO_3D_RELEASE " 
+  LDADD_PEANO_3D_STATS+="   -lToolboxParticles3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS+=" -lToolboxParticles3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE+="   -lToolboxParticles3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG+="   -lToolboxParticles3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/particles "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/particles "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/particles "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/particles "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/particles "
+fi
 
 
 #
@@ -441,6 +558,23 @@ if test "$exahype" != false; then
   if test "$loadbalancing" == false; then
     AC_MSG_ERROR([ExaHyPE2 requires the load balancing ])
   fi
+  LDADD_PEANO_2D_RELEASE=" -lExaHyPE2Core2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lExaHyPE2Core2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lExaHyPE2Core2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lExaHyPE2Core2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lExaHyPE2Core2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lExaHyPE2Core3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lExaHyPE2Core3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lExaHyPE2Core3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lExaHyPE2Core3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lExaHyPE2Core3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/exahype2 "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/exahype2 "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/exahype2 "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/exahype2 "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/exahype2 "
 fi
 
 
@@ -452,7 +586,7 @@ AC_ARG_WITH(smartmpi,
   [ AC_MSG_CHECKING(for smartmpi)
     case "${withval}" in
       no)    AC_MSG_RESULT(no);    smartmpi=false ;;
-      *)     AC_MSG_RESULT(yes - please ensure that CXXFLAGS and LDFLAGS are properly set);   smartmpi=true  ;;
+      *)     AC_MSG_RESULT(yes);   smartmpi=true  ;;
     esac ],
   [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
 AM_CONDITIONAL([UseSmartMPI],[test "x$smartmpi" = xtrue])
@@ -461,10 +595,18 @@ if test "$smartmpi" != false; then
   if test "$mpi" == false; then
     AC_MSG_ERROR([SmartMPI requires an MPI build of Peano])
   fi
+  LDADD_PEANO_2D_RELEASE+=" -lsmartmpi "
+  LDADD_PEANO_2D_STATS+="   -lsmartmpi "
+  LDADD_PEANO_2D_ASSERTS+=" -lsmartmpi_debug " 
+  LDADD_PEANO_2D_TRACE+="   -lsmartmpi "
+  LDADD_PEANO_2D_DEBUG+="   -lsmartmpi_debug "
+
+  LDADD_PEANO_3D_RELEASE+=" -lsmartmpi "
+  LDADD_PEANO_3D_STATS+="   -lsmartmpi "
+  LDADD_PEANO_3D_ASSERTS+=" -lsmartmpi_debug " 
+  LDADD_PEANO_3D_TRACE+="   -lsmartmpi "
+  LDADD_PEANO_3D_DEBUG+="   -lsmartmpi_debug "
 fi
-
-
-
 
 
 #
@@ -474,8 +616,8 @@ AC_ARG_WITH(delta,
   AC_HELP_STRING([--with-delta], [enable Delta [default=no]]),
   [ AC_MSG_CHECKING(for delta)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);                                 delta=false ;;
-      *)     AC_MSG_RESULT(yes - please ensure that CXXFLAGS and LDFLAGS are properly set);  delta=${withval}  ;;
+      no)    AC_MSG_RESULT(no);   delta=false ;;
+      *)     AC_MSG_RESULT(yes);  delta=${withval}  ;;
     esac ],
   [ AC_MSG_CHECKING(for delta); AC_MSG_RESULT(no); delta=false ])
 # This whole autotools thing is not very nice: If I wanna use an if ... endif (
@@ -486,8 +628,49 @@ AC_ARG_WITH(delta,
 AM_CONDITIONAL([UseDelta],[test "$delta" != false])
 if test "$delta" != false; then
   AC_DEFINE([UseDelta], [1], [UseDelta])
+  LDADD_PEANO_2D_RELEASE+=" -ldelta2d "
+  LDADD_PEANO_2D_STATS+="   -ldelta2d "
+  LDADD_PEANO_2D_ASSERTS+=" -ldelta2d " 
+  LDADD_PEANO_2D_TRACE+="   -ldelta2d "
+  LDADD_PEANO_2D_DEBUG+="   -ldelta2d "
+
+  LDADD_PEANO_3D_RELEASE+=" -ldelta3d "
+  LDADD_PEANO_3D_STATS+="   -ldelta3d "
+  LDADD_PEANO_3D_ASSERTS+=" -ldelta3d " 
+  LDADD_PEANO_3D_TRACE+="   -ldelta3d "
+  LDADD_PEANO_3D_DEBUG+="   -ldelta3d "
 fi
 
+
+AC_SUBST(CXXFLAGS_PEANO_2D_RELEASE)
+AC_SUBST(CXXFLAGS_PEANO_2D_STATS)
+AC_SUBST(CXXFLAGS_PEANO_2D_ASSERTS)
+AC_SUBST(CXXFLAGS_PEANO_2D_TRACE)
+AC_SUBST(CXXFLAGS_PEANO_2D_DEBUG)
+
+AC_SUBST(CXXFLAGS_PEANO_3D_RELEASE)
+AC_SUBST(CXXFLAGS_PEANO_3D_STATS)
+AC_SUBST(CXXFLAGS_PEANO_3D_ASSERTS)
+AC_SUBST(CXXFLAGS_PEANO_3D_TRACE)
+AC_SUBST(CXXFLAGS_PEANO_3D_DEBUG)
+
+AC_SUBST(LDFLAGS_PEANO_RELEASE)
+AC_SUBST(LDFLAGS_PEANO_STATS)
+AC_SUBST(LDFLAGS_PEANO_ASSERTS)
+AC_SUBST(LDFLAGS_PEANO_TRACE)
+AC_SUBST(LDFLAGS_PEANO_DEBUG)
+
+AC_SUBST(LDADD_PEANO_2D_RELEASE)
+AC_SUBST(LDADD_PEANO_2D_STATS)
+AC_SUBST(LDADD_PEANO_2D_ASSERTS)
+AC_SUBST(LDADD_PEANO_2D_TRACE)
+AC_SUBST(LDADD_PEANO_2D_DEBUG)
+
+AC_SUBST(LDADD_PEANO_3D_RELEASE)
+AC_SUBST(LDADD_PEANO_3D_STATS)
+AC_SUBST(LDADD_PEANO_3D_ASSERTS)
+AC_SUBST(LDADD_PEANO_3D_TRACE)
+AC_SUBST(LDADD_PEANO_3D_DEBUG)
 
 
 #
@@ -501,7 +684,6 @@ AC_OUTPUT(
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile
-  src/smartmpi/Makefile
   src/unittests/Makefile
 )
 

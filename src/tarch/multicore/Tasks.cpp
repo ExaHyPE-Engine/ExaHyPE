@@ -105,16 +105,21 @@ namespace {
     }
     lock.free();
 
-    int result = -1;
+    #ifdef UseSmartMPI
     if (myTask!=nullptr) {
-      result = myTask->getTaskId();
+      smartmpi::spawn( myTask );
+    }
+    #else
+    if (myTask!=nullptr) {
       bool requeue = myTask->run();
       if (requeue)
         spawnTask( myTask );
       else
         delete myTask;
+      return true;
     }
-    return result;
+    #endif
+    else return false;
   }
 
 
@@ -381,6 +386,34 @@ bool tarch::multicore::Task::canFuse() const {
 }
 
 
+#ifdef UseSmartMPI
+bool tarch::multicore::Task::canMigrate() const {
+  return false;
+}
+
+
+void tarch::multicore::Task::runLocally() {
+  while ( run() ) {}
+}
+
+
+void tarch::multicore::Task::sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) {
+}
+
+
+void tarch::multicore::Task::receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) {
+}
+
+
+void tarch::multicore::Task::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
+}
+
+
+void tarch::multicore::Task::receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) {
+}
+#endif
+
+
 int tarch::multicore::Task::getPriority() const {
   return _priority;
 }
@@ -471,7 +504,10 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
         break;
       case TaskProgressionStrategy::BufferInQueue:
         assertion(fifo or maxTasks==1);
-        if (fifo) {
+        if (fifo and maxTasks==1) {
+          handledTasks = processOnePendingTaskFIFO();
+        }
+        else if (fifo) {
           handledTasks = processPendingTasksFIFO(maxTasks);
         }
         else {

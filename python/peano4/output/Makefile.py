@@ -30,11 +30,9 @@ class Makefile(object):
     self.d["LDFLAGS"]          = ""
     self.d["GPUOBJS"]          = ""
     self.d["LIBS"]             = ""
-    self.d["SYSTEM_LIBS"]      = ""
     self.d["DIM"]              = "2"
     self.d["CONFIGUREPATH"]    = "."
     self.d["EXECUTABLENAME"]   = "peano4"
-    self.d["LIBRARY_POSTFIX"]  = ""
     self.d["FORTRAN_MODULES"]  = []
     self.set_mode( CompileMode.Debug )
     self.clear_files()
@@ -71,9 +69,6 @@ class Makefile(object):
     """
      Add the header search path to both the C++ and the Fortran
      call command.
-
-     See parse_configure_script_outcome() for a explanation how LIBS
-     and SYSTEM_LIBS differ.
     
     """
     self.d["CXXFLAGS"] += " -I" + path
@@ -102,9 +97,6 @@ class Makefile(object):
     A popular invocation including one of Peano's toolboxes is
 
     project.output.makefile.add_library( "ToolboxFiniteElements2d_trace", project.output.makefile.get_source_path() + "/toolbox/finiteelements" )
-
-    See parse_configure_script_outcome() for a explanation how LIBS
-    and SYSTEM_LIBS differ.
     
     """
     if library_path!="":
@@ -121,20 +113,15 @@ class Makefile(object):
       for example. Debug is the default.
     """
     if mode==CompileMode.Debug:
-      self.d["CXX_MODE_FLAGS"]  = "-g -O0 -DPeanoDebug=4"
-      self.d["LIBRARY_POSTFIX"] = "_debug"
+      self.d["MODE"]  = "DEBUG"
     elif mode==CompileMode.Asserts:
-      self.d["CXX_MODE_FLAGS"]  = "-g -DPeanoDebug=2"
-      self.d["LIBRARY_POSTFIX"] = "_asserts"
+      self.d["MODE"]  = "ASSERTS"
     elif mode==CompileMode.Stats:
-      self.d["CXX_MODE_FLAGS"]  = "-DPeanoDebug=0"
-      self.d["LIBRARY_POSTFIX"] = "_stats"
+      self.d["MODE"]  = "STATS"
     elif mode==CompileMode.Trace:
-      self.d["CXX_MODE_FLAGS"]  = "-g -DPeanoDebug=1"
-      self.d["LIBRARY_POSTFIX"] = "_trace"
+      self.d["MODE"]  = "TRACE"
     elif mode==CompileMode.Release:
-      self.d["CXX_MODE_FLAGS"]  = "-DPeanoDebug=0"
-      self.d["LIBRARY_POSTFIX"] = ""
+      self.d["MODE"]  = "RELEASE"
     else:
       assert(False)
 
@@ -184,43 +171,56 @@ class Makefile(object):
     It furthermore has to be invoked after configure has passed successfully.
     This script does not accept relative paths. I then search for the subdirector
     src and parse the Makefile there.
-
-    I store configure's libraries in SYSTEM_LIBS, as I use LIBS for user-defined
-    libraries. My assumption is that the system's libraries will not depend on 
-    any library of Peano. So we are safe by appending these as the last libs, 
-    while the user will want LIBS to reflect the order they are handed in.
     
     """
+    self.d[ "CONFIGUREPATH" ] = directory
+
     input_file = directory + "/src/Makefile"
     try:
       input = open( input_file, "r" )
       print( "parse configure outcome " + input_file + " to extract compile settings" )
+      
+      MakefileConstants = [
+        "CXXFLAGS_PEANO_2D_RELEASE",
+        "CXXFLAGS_PEANO_2D_STATS",
+        "CXXFLAGS_PEANO_2D_ASSERTS",
+        "CXXFLAGS_PEANO_2D_TRACE",
+        "CXXFLAGS_PEANO_2D_DEBUG",
+        "CXXFLAGS_PEANO_3D_RELEASE",
+        "CXXFLAGS_PEANO_3D_STATS",
+        "CXXFLAGS_PEANO_3D_ASSERTS",
+        "CXXFLAGS_PEANO_3D_TRACE",
+        "CXXFLAGS_PEANO_3D_DEBUG",
+        "LDFLAGS_PEANO_RELEASE",
+        "LDFLAGS_PEANO_STATS",
+        "LDFLAGS_PEANO_ASSERTS",
+        "LDFLAGS_PEANO_TRACE",
+        "LDFLAGS_PEANO_DEBUG",
+        "LDADD_PEANO_2D_RELEASE",
+        "LDADD_PEANO_2D_STATS",
+        "LDADD_PEANO_2D_ASSERTS", 
+        "LDADD_PEANO_2D_TRACE",
+        "LDADD_PEANO_2D_DEBUG",
+        "LDADD_PEANO_3D_RELEASE",
+        "LDADD_PEANO_3D_STATS",
+        "LDADD_PEANO_3D_ASSERTS", 
+        "LDADD_PEANO_3D_TRACE",
+        "LDADD_PEANO_3D_DEBUG",
+        "CXX",
+        "FC",
+        "CXXFLAGS",
+        "LDFLAGS"
+      ]
+      
       for line in input:
-        if re.match( "CXX *=", line) and line.startswith( "CXX" ):
-          compiler = line.split("=")[-1].strip()
-          print( "used C++ compiler is " + compiler )
-          self.d["CXX"] = compiler
-        if re.match( "FC *=", line) and line.startswith( "FC" ):
-          compiler = line.split("=")[-1].strip()
-          print( "used Fortran compiler is " + compiler )
-          self.d["FC"] = compiler
-        if re.search( "CXXFLAGS *=", line) and line.startswith( "CXXFLAGS" ):
-          flags = line.split("=",1)[1].strip()
-          for i in flags.split( " " ):
-            self.add_CXX_flag(i)
-        if re.search( "FCFLAGS *=", line) and line.startswith( "FCFLAGS" ):
-          flags = line.split("=",1)[1].strip()
-          for i in flags.split( " " ):
-            self.add_Fortran_flag(i)
-        if re.search( "LDFLAGS *=", line) and line.startswith( "LDFLAGS" ):
-          flags = line.split("=",1)[1].strip()
-          for i in flags.split( " " ):
-            self.add_linker_flag(i)
-        if re.search( "LIBS *=", line) and line.startswith( "LIBS" ):
-          self.d["SYSTEM_LIBS"] += " "
-          self.d["SYSTEM_LIBS"] += flags
-          self.d["SYSTEM_LIBS"] += " "
-      self.d["CONFIGUREPATH"] = directory
+        for constant in MakefileConstants: 
+          if re.search( constant + " *=", line) and line.startswith( constant ): 
+            try:
+              flags = line.split("=",1)[1].strip()
+              print( "add " + constant + "=" + flags )
+              self.d[constant] = flags
+            except:
+              print( "Error in " + line + " for token " + constant )
 
       # A posteriori fix for openmp flag propagation
       if "-fopenmp-targets" in self.d["CXXFLAGS"]:

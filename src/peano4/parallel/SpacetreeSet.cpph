@@ -9,7 +9,7 @@
 
 
 #ifdef UseSmartMPI
-#include "smartmpi/smartmpi.h"
+#include "smartmpi.h"
 #endif
 
 

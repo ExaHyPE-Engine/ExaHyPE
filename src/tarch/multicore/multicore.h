@@ -246,6 +246,16 @@ and
       #define  GPUCallableMethod 
       #undef   OpenMPGPUOffloading
      #endif
+
+     /**
+      * Switch on SmartMPI
+      *
+      * If you use SmartMPI, then the bookkeeping registers the the local scheduling.
+      * If you don't use SmartMPI, this operation becomes nop, i.e. you can always
+      * call it and configure will decide whether it does something useful.
+      */
+     void initSmartMPI();
+     void shutdownSmartMPI();
   }
 
   enum class MemoryLocation {
