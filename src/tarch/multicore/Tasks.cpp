@@ -108,6 +108,7 @@ namespace {
     #ifdef UseSmartMPI
     if (myTask!=nullptr) {
       smartmpi::spawn( myTask );
+      return true;
     }
     #else
     if (myTask!=nullptr) {
