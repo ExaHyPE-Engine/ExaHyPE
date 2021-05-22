@@ -60,7 +60,7 @@ namespace {
    * @see tarch::multicore::spawnAndWait()
    * @see tarch::multicore::processPendingTasks(int)
    */
-  TaskProgressionStrategy  taskProgressionStrategy = TaskProgressionStrategy::HoldTasksBackInLocalQueueMergeAndBackfill;
+  TaskProgressionStrategy  taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
 
   const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
   const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
