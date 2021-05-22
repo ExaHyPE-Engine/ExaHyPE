@@ -1,5 +1,5 @@
 #include "multicore.h"
-
+#include "tarch/mpi/Rank.h"
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
@@ -19,14 +19,14 @@ void tarch::freeMemory(double* data, MemoryLocation location) {
 #endif
 
 
-void exahype2::initSmartMPI() {
+void tarch::multicore::initSmartMPI() {
   #ifdef UseSmartMPI
   smartmpi::init( tarch::mpi::Rank::getInstance().getCommunicator() );
   #endif
 }
 
 
-void exahype2::shutdownSmartMPI() {
+void tarch::multicore::shutdownSmartMPI() {
   #ifdef UseSmartMPI
   smartmpi::shutdown();
   #endif

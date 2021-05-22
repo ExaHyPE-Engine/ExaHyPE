@@ -4,6 +4,13 @@
 #define _TARCH_MULTICORE_TASKS_H_
 
 
+#include "multicore.h"
+
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
+
+
 #include <functional>
 #include <vector>
 #include <list>
@@ -77,7 +84,11 @@ namespace tarch {
     /**
      * Abstract super class for a job.
      */
-    class Task {
+    class Task
+    #ifdef UseSmartMPI
+    : public smartmpi::Task
+    #endif
+    {
       protected:
         const int   _id;
         const int   _taskType;
@@ -143,6 +154,19 @@ namespace tarch {
          */
         virtual bool split(std::list<Task*>& producedTasks);
         virtual bool canSplit() const;
+
+        #ifdef UseSmartMPI
+        /**
+         * Default is false
+         */
+        virtual bool canMigrate() const;
+
+        void runLocally() override;
+        void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
+        void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
+        void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+        void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
+        #endif
     };
 
 
