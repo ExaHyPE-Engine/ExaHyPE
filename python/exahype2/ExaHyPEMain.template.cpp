@@ -367,7 +367,7 @@ int main(int argc, char** argv) {{
   
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
-  exahype2::initSmartMPI();
+  tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
  
   
@@ -442,7 +442,7 @@ int main(int argc, char** argv) {{
 
   peano4::shutdownSingletons();
   {FULL_NAMESPACE}::repositories::DataRepository::shutdownDatatypes();
-  exahype2::shutdownSmartMPI();
+  tarch::multicore::shutdownSmartMPI();
   exahype2::shutdownNonCritialAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 
