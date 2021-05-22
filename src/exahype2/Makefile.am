@@ -14,7 +14,6 @@ ExaHyPE2Sources = \
   PatchUtils.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
-  SmartEnclaveTask.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
   aderdg/CorrectorAoS.cpp \
