@@ -87,6 +87,19 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     virtual ~EnclaveTask() = default;
 
     bool run() override;
+
+    #ifdef UseSmartMPI
+    /**
+     * Default is false
+     */
+    bool canMigrate() const override;
+
+    void runLocally() override;
+    void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
+    void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
+    void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+    void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
+    #endif
 };
 
 
