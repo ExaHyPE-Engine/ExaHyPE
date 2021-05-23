@@ -463,12 +463,12 @@ void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
 void tarch::mpi::Rank::setCommunicator( MPI_Comm communicator, bool recomputeRankAndWorld ) {
   _communicator = communicator;
 
-  int result = MPI_Comm_size( MPI_COMM_WORLD, &_numberOfProcessors );
+  int result = MPI_Comm_size( _communicator, &_numberOfProcessors );
   if (result!=MPI_SUCCESS) {
     logError( "setCommunicator(...)", "initialisation failed: " + MPIReturnValueToString(result) );
   }
 
-  result = MPI_Comm_rank( MPI_COMM_WORLD, &_rank );
+  result = MPI_Comm_rank( _communicator, &_rank );
   if (result!=MPI_SUCCESS) {
     logError( "setCommunicator(...)", "initialisation failed: " + MPIReturnValueToString(result) );
   }
