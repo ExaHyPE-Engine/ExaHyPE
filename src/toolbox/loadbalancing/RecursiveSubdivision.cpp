@@ -17,7 +17,7 @@
 tarch::logging::Log  toolbox::loadbalancing::RecursiveSubdivision::_log( "toolbox::loadbalancing::RecursiveSubdivision" );
 
 
-toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double targetBalancingRatio):
+toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double targetBalancingRatio, bool makeSplitDependentOnMemory ):
   _TargetBalancingRatio( targetBalancingRatio ),
   _blacklist(),
   _hasSpreadOutOverAllRanks( false ),
@@ -29,8 +29,8 @@ toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double target
   _numberOfStateUpdatesWithoutAnySplit(0),
   _state( StrategyState::Standard ),
   _enabled(true),
-  _roundRobinToken(0)
-{
+  _roundRobinToken(0),
+  _makeSplitDependentOnMemory(makeSplitDependentOnMemory) {
   #ifdef Parallel
   _globalSumRequest            = nullptr;
   _globalLightestRankRequest   = nullptr;
@@ -351,6 +351,20 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     );
     return StrategyStep::SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning;
   }
+  else if (
+    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==1
+    and
+    not rankViolatesBalancingCondition
+    and
+    tarch::multicore::Core::getInstance().getNumberOfThreads()>1
+    and
+    _makeSplitDependentOnMemory
+  ) {
+    logWarning(
+      "getStrategyStep()",
+      "code has not split yet can assumes that it would exceed memory. You might want to disable this analysis type"
+    );
+  }
 
 
   // solely for info
@@ -435,8 +449,11 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString( StrategyStat
 bool toolbox::loadbalancing::RecursiveSubdivision::canSplitLocally() const {
   // This is a magic paramter with the 2. You might still run out of memory if you refine while you
   // rebalance.
-  int worstCaseEstimateForSizeOfSpacetree = 2 * tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
-  return tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) >= worstCaseEstimateForSizeOfSpacetree;
+  if (_makeSplitDependentOnMemory) {
+    int worstCaseEstimateForSizeOfSpacetree = 2 * tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
+    return tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) >= worstCaseEstimateForSizeOfSpacetree;
+  }
+  else return true;
 }
 
 
