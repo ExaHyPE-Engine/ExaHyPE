@@ -12,7 +12,7 @@
 #if defined(SharedOMP)
 
 namespace {
-  int nonblockingTasks                 = 0;
+  int nonblockingTasksCounter          = 0;
 
   const int StandardPriority           = 16;
   const int BackgroundConsumerPriority = 1;
@@ -76,7 +76,8 @@ namespace {
           and
           tarch::multicore::getRealisation()!=tarch::multicore::Realisation::HoldTasksBackInLocalQueue
         ) {
-          tarch::multicore::processPendingTasks( 1 );
+          const int threadsToGrab = tarch::multicore::getNumberOfPendingTasks() / (NumberOfThreads-busyThreads+1) / 2;
+          tarch::multicore::processPendingTasks( std::max(1,threadsToGrab) );
           #pragma omp taskyield
         }
       }
@@ -88,7 +89,7 @@ namespace {
 
 void tarch::multicore::native::spawnTask(Task*  job) {
   #pragma omp atomic
-  nonblockingTasks++;
+  nonblockingTasksCounter++;
 
   #pragma omp task priority(BackgroundConsumerPriority) untied
   {
@@ -97,7 +98,7 @@ void tarch::multicore::native::spawnTask(Task*  job) {
     }
     delete job;
     #pragma omp atomic
-    nonblockingTasks--;
+    nonblockingTasksCounter--;
   }
 }
 
@@ -137,7 +138,7 @@ void tarch::multicore::native::yield() {
 
 
 int tarch::multicore::native::getNumberOfPendingTasks() {
-  return nonblockingTasks;
+  return nonblockingTasksCounter;
 }
 
 
