@@ -385,6 +385,9 @@ bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
 
 
 tarch::multicore::Task::Task( int id, int taskType, int priority ):
+  #ifdef UseSmartMPI
+  smartmpi::Task( taskType ),
+  #endif
   _id(id),
   _taskType( taskType ),
   _priority( priority ) {

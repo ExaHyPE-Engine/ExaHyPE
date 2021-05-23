@@ -15,16 +15,17 @@ exahype2::EnclaveTask::EnclaveTask(
   double                                         t,
   double                                         dt,
   double*                                        inputValues,
+  int                                            numberOfInputValues,
   int                                            numberOfResultValues,
   Functor                                        functor
 ):
-    // @todo Also Typ gibt es wohl dann doch schon
   tarch::multicore::Task(tarch::multicore::reserveTaskNumber(),enclaveTaskTypeId,tarch::multicore::Task::DefaultPriority),
   _marker(marker),
   _t(t),
   _dt(dt),
   _inputValues(inputValues),
   _outputValues(nullptr),
+  _numberOfInputValues(numberOfInputValues),
   _numberOfResultValues(numberOfResultValues),
   _functor(functor) {
   logTraceIn( "EnclaveTask(...)" );

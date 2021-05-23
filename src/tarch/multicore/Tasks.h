@@ -99,7 +99,7 @@ namespace tarch {
         /**
          * @param id       Unique number of the task
          * @param taskType Unique task (type) number for this task. All tasks that do 
-         *        the same, i.e. are of hte same type, should have the same task type 
+         *        the same, i.e. are of the same type, should have the same task type
          *        integer marker. However, they all should have different ids.
          */
         Task( int id, int taskType, int priority );

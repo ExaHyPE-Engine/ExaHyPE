@@ -58,6 +58,7 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     double*                                      _outputValues;
     double                                       _t;
     double                                       _dt;
+    int                                          _numberOfInputValues;
     int                                          _numberOfResultValues;
     Functor                                      _functor;
 
@@ -77,6 +78,7 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
       double                                         t,
       double                                         dt,
       double*                                        inputValues,
+      int                                            numberOfInputValues,
       int                                            numberOfResultValues,
       Functor                                        functor
     );
