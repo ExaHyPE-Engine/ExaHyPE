@@ -32,6 +32,9 @@
 #include "exahype2/UserInterface.h"
 
 
+#if defined(UseSmartMPI)
+#endif
+
 
 using namespace {FULL_NAMESPACE};
 
@@ -416,7 +419,18 @@ int main(int argc, char** argv) {{
   #pragma omp master 
   {{
   #endif
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
+	  
+	  
+  #if defined(UseSmartMPI)
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  #else
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
+  #endif
+	  
+	  
+  if ( isGlobalMaster ) {{
     while ( selectNextAlgorithmicStep() ) {{
       step();
     }}
@@ -426,11 +440,17 @@ int main(int argc, char** argv) {{
     logInfo("main()", "plotting:                   " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
     logInfo("main()", "time stepping:              " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
   }}
-  else {{
+  else if (isPeanoComputeNode) {{
     while (peano4::parallel::Node::getInstance().continueToRun()) {{
       step();
     }}
   }}
+  #if defined(UseSmartMPI)
+  else {{
+    std::cout << std::endl << "I am a SmartMPI server rank" << std::endl << std::endl;
+  }}
+  #endif
+  
   #if defined(SharedOMP)
   }}
   }}
