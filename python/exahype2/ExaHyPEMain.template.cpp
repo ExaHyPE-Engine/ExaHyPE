@@ -447,7 +447,9 @@ int main(int argc, char** argv) {{
   }}
   #if defined(UseSmartMPI)
   else {{
-    while ( smartmpi::continueToRun() );
+    while ( smartmpi::continueToRun() ) {{
+      smartmpi::tick();
+    }}
   }}
   #endif
   
