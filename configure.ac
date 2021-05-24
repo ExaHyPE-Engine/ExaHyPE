@@ -582,16 +582,23 @@ fi
 # SmartMPI
 #
 AC_ARG_WITH(smartmpi,
-  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=false]]),
+  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no, options are no, Merged and OneToOne]]),
   [ AC_MSG_CHECKING(for smartmpi)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    smartmpi=false ;;
-      *)     AC_MSG_RESULT(yes);   smartmpi=true  ;;
+      no)        AC_MSG_RESULT(no);    smartmpi=false ;;
+      Merged)    AC_MSG_RESULT(yes; use topology Merged);     smartmpi=Merged ;;
+      OneToOne)  AC_MSG_RESULT(yes; use topology OneToOne);   smartmpi=OneToOne ;;
+      *)         AC_MSG_RESULT(failed);   AC_MSG_ERROR([invalid option for SmartMPI]) ;;
     esac ],
   [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
 AM_CONDITIONAL([UseSmartMPI],[test "x$smartmpi" = xtrue])
+if test "$smartmpi" == Merged; then
+  AC_DEFINE([UseSmartMPI], [Merged], [UseSmartMPI])
+fi
+if test "$smartmpi" == OneToOne; then
+  AC_DEFINE([UseSmartMPI], [OneToOne], [UseSmartMPI])
+fi
 if test "$smartmpi" != false; then
-  AC_DEFINE([UseSmartMPI], [1], [UseSmartMPI])
   if test "$mpi" == false; then
     AC_MSG_ERROR([SmartMPI requires an MPI build of Peano])
   fi
