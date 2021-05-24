@@ -447,7 +447,7 @@ int main(int argc, char** argv) {{
   }}
   #if defined(UseSmartMPI)
   else {{
-    std::cout << std::endl << "I am a SmartMPI server rank" << std::endl << std::endl;
+    while ( smartmpi::continueToRun() );
   }}
   #endif
   
