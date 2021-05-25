@@ -27,7 +27,7 @@ peano4::parallel::tests::PingPongTest::PingPongTest():
 
 
 void peano4::parallel::tests::PingPongTest::testBuiltInType() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   int out = 23;
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
     MPI_Send(&out,1,MPI_INT,1,0,MPI_COMM_WORLD);
@@ -56,7 +56,7 @@ namespace {
         _blockingMPI(blockingMPI) {}
    
       bool run() {
-        #ifdef Parallel
+        #if defined(Parallel) and not defined(UseSmartMPI)
         const int out = 23+_id;
         static tarch::logging::Log _log( "peano4::parallel::tests::PingPongSendTask" );
         if (_blockingMPI) {
@@ -87,7 +87,7 @@ namespace {
         _blockingMPI(blockingMPI) {}
 
       bool run() {
-        #ifdef Parallel
+        #if defined(Parallel) and not defined(UseSmartMPI)
         int in = -12;
         static tarch::logging::Log _log( "peano4::parallel::tests::PingPongSendTask" );
         logDebug( "PingPongReceiveTask()", "receive message from rank 1 with tag " << _id );
@@ -113,7 +113,7 @@ namespace {
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingReceives() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   int out;
   testErrors = 0;
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -136,7 +136,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingReceives() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   int out;
   testErrors = 0;
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -160,7 +160,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   int out = 23;
   testErrors = 0;
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -184,7 +184,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSends() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   int out = 23;
   testErrors = 0;
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -208,7 +208,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingSendsAndReceives() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   int out = 23;
   testErrors = 0;
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -232,7 +232,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSendsAndReceives() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   int out = 23;
   testErrors = 0;
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -256,7 +256,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
 
 
 void peano4::parallel::tests::PingPongTest::testDaStGenTypeStartTraversalMessage() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   StartTraversalMessage out;
   out.setStepIdentifier(23);
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -273,7 +273,7 @@ void peano4::parallel::tests::PingPongTest::testDaStGenTypeStartTraversalMessage
 
 
 void peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   tarch::mpi::IntegerMessage out;
   out.setValue(23);
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -303,7 +303,7 @@ void peano4::parallel::tests::PingPongTest::testDaStGenTypeIntegerMessage() {
 
 
 void peano4::parallel::tests::PingPongTest::testDaStGenArray() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   StartTraversalMessage out[10];
   out[0].setStepIdentifier(23);
   out[1].setStepIdentifier(24);
@@ -350,7 +350,7 @@ void peano4::parallel::tests::PingPongTest::testDaStGenArray() {
 
 
 void peano4::parallel::tests::PingPongTest::testDaStGenArrayTreeManagementMessage() {
-  #ifdef Parallel
+  #if defined(Parallel) and not defined(UseSmartMPI)
   peano4::parallel::TreeManagementMessage message;
   const int Tag = 14;
   if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {

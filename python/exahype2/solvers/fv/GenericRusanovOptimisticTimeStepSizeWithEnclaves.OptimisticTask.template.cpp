@@ -6,7 +6,6 @@
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "exahype2/SmartEnclaveTask.h"
 
 
 #include "peano4/utils/Loop.h"

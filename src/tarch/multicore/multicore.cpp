@@ -3,6 +3,7 @@
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
+#include "topology/topologies.h"
 #endif
 
 
@@ -21,7 +22,13 @@ void tarch::freeMemory(double* data, MemoryLocation location) {
 
 void tarch::multicore::initSmartMPI() {
   #ifdef UseSmartMPI
-  smartmpi::init( tarch::mpi::Rank::getInstance().getCommunicator() );
+  using namespace smartmpi::topology;
+  typedef UseSmartMPI MyTopology;
+  smartmpi::topology::Topology* smartMPITopology = new MyTopology(
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
+  smartmpi::init( smartMPITopology );
+  tarch::mpi::Rank::getInstance().setCommunicator( smartMPITopology->computeNodeOrSmartServerCommunicator );
   #endif
 }
 

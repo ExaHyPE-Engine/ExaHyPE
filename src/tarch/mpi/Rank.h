@@ -401,7 +401,7 @@ class tarch::mpi::Rank {
     /**
      * Set communicator to be used by Peano
      */
-    void setCommunicator( MPI_Comm communicator );
+    void setCommunicator( MPI_Comm communicator, bool recomputeRankAndWorld=true );
     #endif
 
     void suspendTimeouts( bool timeoutsDisabled );

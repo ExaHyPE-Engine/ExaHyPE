@@ -17,6 +17,9 @@
 
 #include "peano4/utils/Globals.h"
 
+#include "TopologyParser.h"
+
+#include "Constants.h"
 
 
 /**
@@ -30,7 +33,7 @@
  * By default, FORTRAN routines should have return value int. I don't check
  * error codes anyway, so it does not really make a difference.
  */
-extern "C" int rpn2_(int* ixy, int* num_eqn, int* num_aux, int* num_waves, double* q_l, double* q_r, double* aux_l, double* aux_r, double* wave, double* s, double* amdq, double* apdq);
+extern "C" int rpn2_(int* ixy, int* num_eqn, int* num_aux, int* num_waves, const double * __restrict__ q_l, const double * __restrict__ q_r, const double * __restrict__ aux_l, const double * __restrict__ aux_r, double wave[3][3], double* s, double* amdq, double* apdq);
 
 
 
@@ -54,11 +57,28 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
     static std::string toString(SolverState);
 
     AbstractSWE();
+    
 
-        double getMinTimeStamp() const final;
+    virtual void sourceTerm(
+      const double * __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double * __restrict__ S
+    )  final ;
+
+        /**
+     * Alias for periodic boundary conditions.
+     */
+    static std::bitset<Dimensions> PeriodicBC;
+
+    double getMinTimeStamp() const final;
     double getMaxTimeStamp() const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
+    
+    
 
 
     /**
@@ -73,7 +93,6 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
     )  final ;
 
 
-
     /**
      * Feel free to change the solution in the particular finite volume.
      * You can for example change the initial conditions by overwriting
@@ -81,11 +100,11 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
      * in.
      */
     virtual void adjustSolution(
-  double * __restrict__ Q,
-      const double * __restrict__ Q, // Q[3+1],
+      double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t
+      double                                       t,
+      double                                       dt
     )  final ;
 
 
@@ -172,21 +191,46 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
     void finishPlottingStep() override;
 
 
-    double getMaxMeshSize() const;
-    double getMinMeshSize() const;
+    double getMaxMeshSize() const override;
+    double getMinMeshSize() const override;
+    
+    /**
+     * Inform about maximum eigenvalue of a patch
+     *
+     * The routine automatically computes the admissible time step size 
+     * for the next time step. Is to be called per patch from the solver.
+     *
+     *
+     * This operation is thread-safe.
+     */
+    void setMaximumEigenvalue( double value );
 
     SolverState  getSolverState() const;
-  protected:
-    static tarch::logging::Log  _log;
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static constexpr int    NumberOfUnknowns           = 3;
+    static constexpr int    NumberOfAuxiliaryVariables = 1;
+    
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
 
-    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
+  protected:
+    static tarch::logging::Log                  _log;
+    static tarch::multicore::BooleanSemaphore   _sempahore;
+
+    const int     _NumberOfFiniteVolumesPerAxisPerPatch;
 
     double     _timeStamp;
+    double     _timeStepSize;
+    double     _admissibleTimeStepSize;
 
     SolverState  _solverState;
 
     double     _maxH;
     double     _minH;
+
 };
 
 

@@ -26,7 +26,7 @@ namespace {
   NonblockingTasks                     nonblockingTasks;
   tarch::multicore::BooleanSemaphore   nonblockingTasksSemaphore;
 
-  tarch::multicore::Realisation realisation = tarch::multicore::Realisation::MapOntoNativeTasks;
+  tarch::multicore::Realisation realisation = tarch::multicore::Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
 
   /**
    * Determines how to handle the tasks dumped into nonblockingTasks.
@@ -106,10 +106,12 @@ namespace {
     lock.free();
 
     #ifdef UseSmartMPI
-    if (myTask!=nullptr) {
+    if (myTask!=nullptr and myTask->canMigrate() ) {
       smartmpi::spawn( myTask );
+      return true;
     }
-    #else
+    else
+    #endif
     if (myTask!=nullptr) {
       bool requeue = myTask->run();
       if (requeue)
@@ -118,7 +120,6 @@ namespace {
         delete myTask;
       return true;
     }
-    #endif
     else return false;
   }
 
@@ -162,11 +163,20 @@ namespace {
     lock.free();
 
     for (auto& task: extractedTasks) {
-      bool requeue = task->run();
-      if (requeue)
-        spawnTask( task );
-      else
-        delete task;
+      #ifdef UseSmartMPI
+      if ( task->canMigrate() ) {
+        smartmpi::spawn( task );
+      }
+      else {
+      #endif
+        bool requeue = task->run();
+        if (requeue)
+          spawnTask( task );
+        else
+          delete task;
+      #ifdef UseSmartMPI
+      }
+      #endif
     }
 
     return extractedTasks.size();
@@ -375,6 +385,9 @@ bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
 
 
 tarch::multicore::Task::Task( int id, int taskType, int priority ):
+  #ifdef UseSmartMPI
+  smartmpi::Task( taskType ),
+  #endif
   _id(id),
   _taskType( taskType ),
   _priority( priority ) {

@@ -460,8 +460,18 @@ void tarch::mpi::Rank::setDeadlockTimeOut( int value ) {
 
 
 #ifdef Parallel
-void tarch::mpi::Rank::setCommunicator( MPI_Comm communicator ) {
+void tarch::mpi::Rank::setCommunicator( MPI_Comm communicator, bool recomputeRankAndWorld ) {
   _communicator = communicator;
+
+  int result = MPI_Comm_size( _communicator, &_numberOfProcessors );
+  if (result!=MPI_SUCCESS) {
+    logError( "setCommunicator(...)", "initialisation failed: " + MPIReturnValueToString(result) );
+  }
+
+  result = MPI_Comm_rank( _communicator, &_rank );
+  if (result!=MPI_SUCCESS) {
+    logError( "setCommunicator(...)", "initialisation failed: " + MPIReturnValueToString(result) );
+  }
 }
 #endif
 

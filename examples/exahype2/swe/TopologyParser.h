@@ -29,10 +29,22 @@ class examples::exahype2::swe::TopologyParser {
     double cellsize = 0.0;
     double nodatavalue = 0.0;   
     std::vector <double> zvalues;
+    
+    std::string dispfilepath;
+    std::vector <double> displacement;
+    int dispmx = -1;
+    int dispmy = -1;
+    int dispmt = -1;
+    double dispxlowerleft = 0.0;
+    double dispylowerleft = 0.0;
+    double dispt0 = 0.0;
+    double dispdx = 0.0;
+    double dispdy = 0.0;
+    double dispdt = 0.0;
 
   public:
   
-    TopologyParser(std::string filename);
+    TopologyParser(std::string filename, std::string dispfilename);
     ~TopologyParser();
   
     void parsetopofile();
@@ -46,6 +58,21 @@ class examples::exahype2::swe::TopologyParser {
     double getcellsize() {return this->cellsize;}
     double getnodatavalue() {return this->nodatavalue;}   
     std::vector <double> getzvalues() {return this->zvalues;}
+    
+    void parsedisplacementfile();
+    double sampledisplacement(double x, double y, double t);
+    
+    std::string getdispfilepath() {return this->dispfilepath;}
+    int getdispmx() {return this->dispmx;}
+    int getdispmy() {return this->dispmy;}
+    int getdispmt() {return this->dispmt;}
+    double getdispxlowerleft() {return dispxlowerleft;}
+    double getdispylowerleft() {return dispylowerleft;}
+    double getdispt0() {return this->dispt0;}
+    double getdispdx() {return this->dispdx;}
+    double getdispdy() {return this->dispdy;}
+    double getdispdt() {return this->dispdt;}
+    std::vector <double> getdisplacement() {return this->displacement;}
     
             
 };

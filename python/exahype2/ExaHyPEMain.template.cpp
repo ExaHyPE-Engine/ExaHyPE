@@ -30,8 +30,10 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
-#include "exahype2/SmartEnclaveTask.h"
 
+
+#if defined(UseSmartMPI)
+#endif
 
 
 using namespace {FULL_NAMESPACE};
@@ -368,7 +370,7 @@ int main(int argc, char** argv) {{
   
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
-  exahype2::initSmartMPI();
+  tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
  
   
@@ -417,7 +419,18 @@ int main(int argc, char** argv) {{
   #pragma omp master 
   {{
   #endif
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
+	  
+	  
+  #if defined(UseSmartMPI)
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  #else
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
+  #endif
+	  
+	  
+  if ( isGlobalMaster ) {{
     while ( selectNextAlgorithmicStep() ) {{
       step();
     }}
@@ -427,11 +440,19 @@ int main(int argc, char** argv) {{
     logInfo("main()", "plotting:                   " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
     logInfo("main()", "time stepping:              " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
   }}
-  else {{
+  else if (isPeanoComputeNode) {{
     while (peano4::parallel::Node::getInstance().continueToRun()) {{
       step();
     }}
   }}
+  #if defined(UseSmartMPI)
+  else {{
+    while ( smartmpi::continueToRun() ) {{
+      smartmpi::tick();
+    }}
+  }}
+  #endif
+  
   #if defined(SharedOMP)
   }}
   }}
@@ -443,7 +464,7 @@ int main(int argc, char** argv) {{
 
   peano4::shutdownSingletons();
   {FULL_NAMESPACE}::repositories::DataRepository::shutdownDatatypes();
-  exahype2::shutdownSmartMPI();
+  tarch::multicore::shutdownSmartMPI();
   exahype2::shutdownNonCritialAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 

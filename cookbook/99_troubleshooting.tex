@@ -300,6 +300,34 @@ tarch::logging::LogFilter::getInstance().printFilterListToCout();
 
 
 
+\section{OpenMP troubleshooting}
+\begin{itemize}
+  \item \textbf{My code hangs and/or uses only one core}. If you pass
+  \texttt{--with-multithreading=omp} to \texttt{configure}, ensure that you add
+  all flags that your compiler needs to \texttt{CXXFLAGS}. If you compile
+  requires you to pass \texttt{-openmp}, e.g., to make it understand OpenMP
+  pragmas, then you have to add \texttt{CXXFLAGS=-openmp} to your configure
+  invocation.
+  \item \textbf{My code hangs}. Check how many threads OpenMP tries to book. You
+  find this information at the startup where you typically obtain a message
+  similar to 
+  \begin{code}
+Peano 4 (C) www.peano-framework.org 
+build: 2d, no mpi, omp (8 threads), debug level=2
+  \end{code}
+  The number of threads should not be bigger than the physical threads and I
+  strongly recommend not to count hyperthreads as real threads. If you find that
+  you have to reduce the thread count (as your system by default uses SMT), pass
+  in \texttt{--threads X} to reduce the thread count to \texttt{X} manually.
+  Your initial notification will continue to report all SMT threads, but there
+  will be a message immediately after that clarifies that you manually reduce
+  the thread count. If you work in a SLURM/batch environment, changing the
+  thread/core count in the batch script might be more convenient.
+  \item To be continued \dots
+\end{itemize}
+
+
+
 \section{External tools}
 \begin{itemize}
   \item \textbf{The Intel tools yield invalid or messed up results}. Ensure 
