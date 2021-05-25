@@ -279,8 +279,10 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       {{TIME_STEP_SIZE}},
       reconstructedPatch,
       #if Dimensions==2
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}},
       {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
       #else
+      {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
       {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
       #endif
       perCellFunctor

@@ -117,7 +117,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      *   almost one means we do not accept any ill-balancing. The smaller the value,
      *   the more relaxed we are.
      */
-    RecursiveSubdivision(double targetBalancingRation=0.9);
+    RecursiveSubdivision(double targetBalancingRation=0.9, bool makeSplitDependentOnMemory=true );
     ~RecursiveSubdivision();
 
     /**
@@ -336,6 +336,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * @see updateState()
      */
     int _roundRobinToken;
+
+    bool _makeSplitDependentOnMemory;
 
     void waitForGlobalStatisticsExchange();
 };

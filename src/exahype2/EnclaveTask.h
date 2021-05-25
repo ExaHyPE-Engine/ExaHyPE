@@ -58,6 +58,7 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     double*                                      _outputValues;
     double                                       _t;
     double                                       _dt;
+    int                                          _numberOfInputValues;
     int                                          _numberOfResultValues;
     Functor                                      _functor;
 
@@ -77,6 +78,7 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
       double                                         t,
       double                                         dt,
       double*                                        inputValues,
+      int                                            numberOfInputValues,
       int                                            numberOfResultValues,
       Functor                                        functor
     );
@@ -87,6 +89,19 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     virtual ~EnclaveTask() = default;
 
     bool run() override;
+
+    #ifdef UseSmartMPI
+    /**
+     * Default is false
+     */
+    bool canMigrate() const override;
+
+    void runLocally() override;
+    void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
+    void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
+    void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+    void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
+    #endif
 };
 
 
