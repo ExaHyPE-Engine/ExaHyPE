@@ -111,7 +111,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.05
+            time_step_relaxation=0.1
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -265,7 +265,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_re4.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_re5.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 
 		if (tarch::la::equals(t,0.0)){//initialization
 			fin.open((p1+att),std::ios::out|std::ios::trunc);
@@ -509,7 +509,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv4" )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv5" )
     probe_point = [-5,-5,-5]
     project.add_plot_filter( probe_point,[10.0,10.0,10.0],1 )
 

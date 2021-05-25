@@ -38,12 +38,12 @@ namespace TP_bindding {
 			tp->par_b=4.251;
 			tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
 			tp->give_bare_mass=true;//use puncture mass instead of adm mass
-			tp->par_m_plus=0.49; tp->par_m_minus=0.49;
-			tp->target_M_plus=999;//adm mass
-			tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.109; tp->par_P_plus[2]=0.0;//linear momentum
+			tp->par_m_plus=0.494; tp->par_m_minus=0.494;
+			//tp->target_M_plus=999;//adm mass
+			tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.1091; tp->par_P_plus[2]=0.0;//linear momentum
 			tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
-			tp->target_M_minus=999;//adm mass
-			tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.109; tp->par_P_minus[2]=0.0;//linear momentum
+			//tp->target_M_minus=999;//adm mass
+			tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.1091; tp->par_P_minus[2]=0.0;//linear momentum
 			tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
 			tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
 			tp->TP_epsilon=1e-6;}
