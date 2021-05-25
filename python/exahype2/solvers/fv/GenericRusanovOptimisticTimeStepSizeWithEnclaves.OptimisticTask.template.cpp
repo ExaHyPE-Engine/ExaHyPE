@@ -45,8 +45,10 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
     predictedTimeStepSize,
     copyPatchData( patchData ),
     #if Dimensions==2
+    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}},
     {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_2D}},
     #else
+    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
     [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
