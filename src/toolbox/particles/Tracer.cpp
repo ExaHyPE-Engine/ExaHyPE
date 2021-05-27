@@ -85,16 +85,16 @@ tarch::la::Vector<Dimensions,double> toolbox::particles::LinearInterp(
 ) {
   tarch::la::Vector<Dimensions*2,int> voxel = toolbox::particles::mapParticleOntoVoxelwithFlags(marker,voxelsPerAxis,particleX);
   #if Dimensions==2
-  NumberofNeighbor=4;
+  int NumberofNeighbor=4;
   #else
-  NumberofNeighbor=8;
+  int NumberofNeighbor=8;
   #endif
   tarch::la::Vector<Dimensions,int> IndexForInterpolate[NumberofNeighbor];
   FindInterIndex(IndexForInterpolate,voxel,voxelsPerAxis);  
   double raw[NumberofNeighbor*Dimensions];
   for (int i=0;i<NumberofNeighbor;i++){
     int voxelIndex = peano4::utils::dLinearised(IndexForInterpolate[i],unknownsPerVoxel); 
-    for (int j=0;j<Dimensions;j++) {raw[i*Dimensions+j]=voxelField + voxelIndex * unknownsPerVoxel+velocityIndices(j);}
+    for (int j=0;j<Dimensions;j++) {raw[i*Dimensions+j]=voxelField[voxelIndex * unknownsPerVoxel+velocityIndices(j)];}
   }
 
   tarch::la::Vector<Dimensions,double> velocity;

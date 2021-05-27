@@ -54,7 +54,7 @@ namespace toolbox {
   }
 }
 
-double linearInter1D(double x1, double f1, double x2, double f2, double target){
+inline double linearInter1D(double x1, double f1, double x2, double f2, double target){
 	if ((x1-x2)<10e-8){
 		return (f1+f2)/2;
 	} else {
@@ -62,7 +62,7 @@ double linearInter1D(double x1, double f1, double x2, double f2, double target){
 	}
 }
 
-void FindInterIndex(
+inline void FindInterIndex(
 	tarch::la::Vector<Dimensions,int>* InterIndex, 
 	tarch::la::Vector<Dimensions*2,int> IndexOfCell,
 	int voxelsPerAxis
@@ -111,7 +111,7 @@ void FindInterIndex(
 	#endif
 }
 
-void Interpolation(
+inline void Interpolation(
   tarch::la::Vector<Dimensions,double> result,
   tarch::la::Vector<Dimensions,int>* IndexForInter,
   double* raw,
@@ -121,11 +121,11 @@ void Interpolation(
 ){
 
   tarch::la::Vector<Dimensions,double> Offset=marker.getOffset();
-  volumeH=marker.h()/patchSize;
+  double volumeH=marker.h()(0)/patchSize;
   #if Dimensions==2
-  NumberofNeighbor=4;
+  int NumberofNeighbor=4;
   #else
-  NumberofNeighbor=8;
+  int NumberofNeighbor=8;
   #endif
   
 	//calculate the actual coordinates
@@ -173,7 +173,7 @@ void Interpolation(
 		CoorsForInter3[n][2]=coor(2);
 		#endif
 		for (int m=0;m<Dimensions;m++){
-			raw3[n][m]=linearInter(CoorsForInter2[2*n][1],raw2[2*n][m],CoorsForInter2[2*n+1][1],raw2[2*n+1][m],coor(1));
+			raw3[n][m]=linearInter1D(CoorsForInter2[2*n][1],raw2[2*n][m],CoorsForInter2[2*n+1][1],raw2[2*n+1][m],coor(1));
 		} 
 	}
 	
@@ -187,7 +187,7 @@ void Interpolation(
 		CoorsForInter4[n][2]=coor(2);
 		#endif
 		for (int m=0;m<Dimensions;m++){
-			raw4[n][m]=linearInter(CoorsForInter3[n][0],raw3[n][m],CoorsForInter3[n+1][0],raw3[n+1][m],coor(0));
+			raw4[n][m]=linearInter1D(CoorsForInter3[n][0],raw3[n][m],CoorsForInter3[n+1][0],raw3[n+1][m],coor(0));
 		} 
 	}
 		
