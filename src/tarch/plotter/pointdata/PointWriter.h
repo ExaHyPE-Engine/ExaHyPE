@@ -10,7 +10,7 @@
 namespace tarch {
   namespace plotter {
     namespace pointdata {
-  	  class PointWriter;
+      class PointWriter;
     }
   }
 }
@@ -58,6 +58,7 @@ class tarch::plotter::pointdata::PointWriter {
          * @param value Value for the point.
          */
         virtual void plot( int index, double value ) = 0;
+        virtual void plot( int index, const tarch::la::Vector<1,double>& value ) = 0;
         virtual void plot( int index, const tarch::la::Vector<2,double>& value ) = 0;
         virtual void plot( int index, const tarch::la::Vector<3,double>& value ) = 0;
 
