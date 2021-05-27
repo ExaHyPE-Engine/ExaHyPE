@@ -763,8 +763,10 @@ In-situ preprocessing:  """
     d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
 
-    d[ "MAX_H"] = self._min_h
-    d[ "MIN_H"] = self._max_h
+    if (self._min_h > self._max_h ):
+      raise Exception( "min/max h are inconsistent" ) 
+    d[ "MAX_H"] = self._max_h
+    d[ "MIN_H"] = self._min_h
 
     d[ "INCLUDES"] = self.additional_includes
 
