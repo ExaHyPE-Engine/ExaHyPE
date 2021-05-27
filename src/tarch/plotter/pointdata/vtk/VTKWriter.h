@@ -129,6 +129,7 @@ class tarch::plotter::pointdata::vtk::VTKWriter: public tarch::plotter::pointdat
         void plot( int index, const tarch::la::Vector<1,double>& value ) override;
         void plot( int index, const tarch::la::Vector<2,double>& value ) override;
         void plot( int index, const tarch::la::Vector<3,double>& value ) override;
+        void plot( int index, double* values, int numberOfValues ) override;
 
         /**
          * If you close your writer, each point has to be assigned a

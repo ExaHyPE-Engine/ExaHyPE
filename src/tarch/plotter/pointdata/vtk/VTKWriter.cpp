@@ -106,6 +106,11 @@ void tarch::plotter::pointdata::vtk::VTKWriter::PointDataWriter::plot( int index
 }
 
 
+void tarch::plotter::pointdata::vtk::VTKWriter::PointDataWriter::plot( int index, double* values, int numberOfValues ) {
+  _particleDataWriter->plotVertex(index,values,numberOfValues);
+}
+
+
 void tarch::plotter::pointdata::vtk::VTKWriter::PointDataWriter::close() {
   if (_myWriter._vertexWriter!=nullptr) {
     _myWriter._vertexWriter->close();
