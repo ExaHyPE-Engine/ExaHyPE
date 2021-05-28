@@ -23,14 +23,11 @@ TwoPunctures::norm_inf (double const * TP_RESTRICT const F,
           int const ntotal)
 {
   double dmax = -1;
-#pragma omp parallel
   {
     double dmax1 = -1;
-#pragma omp for
     for (int j = 0; j < ntotal; j++)
       if (fabs (F[j]) > dmax1)
         dmax1 = fabs (F[j]);
-#pragma omp critical
     if (dmax1 > dmax)
       dmax = dmax1;
   }
@@ -46,7 +43,6 @@ TwoPunctures::resid (double * TP_RESTRICT const res,
        int const * TP_RESTRICT const * TP_RESTRICT const cols,
        double const * TP_RESTRICT const * TP_RESTRICT const JFD)
 {
-#pragma omp parallel for
   for (int i = 0; i < ntotal; i++)
   {
     double JFDdv_i = 0;
@@ -190,16 +186,16 @@ TwoPunctures::relax (double * TP_RESTRICT const dv,
   {
     for (n = 0; n < N_PlaneRelax; n++)
     {
-#pragma omp parallel for schedule(dynamic)
+
       for (i = 2; i < n1; i = i + 2)
 	LineRelax_be (dv, i, k, nvar, n1, n2, n3, rhs, ncols, cols, JFD);
-#pragma omp parallel for schedule(dynamic)
+
       for (i = 1; i < n1; i = i + 2)
 	LineRelax_be (dv, i, k, nvar, n1, n2, n3, rhs, ncols, cols, JFD);
-#pragma omp parallel for schedule(dynamic)
+
       for (j = 1; j < n2; j = j + 2)
 	LineRelax_al (dv, j, k, nvar, n1, n2, n3, rhs, ncols, cols, JFD);
-#pragma omp parallel for schedule(dynamic)
+
       for (j = 0; j < n2; j = j + 2)
 	LineRelax_al (dv, j, k, nvar, n1, n2, n3, rhs, ncols, cols, JFD);
     }
@@ -208,16 +204,16 @@ TwoPunctures::relax (double * TP_RESTRICT const dv,
   {
     for (n = 0; n < N_PlaneRelax; n++)
     {
-#pragma omp parallel for schedule(dynamic)
+
       for (i = 0; i < n1; i = i + 2)
 	LineRelax_be (dv, i, k, nvar, n1, n2, n3, rhs, ncols, cols, JFD);
-#pragma omp parallel for schedule(dynamic)
+
       for (i = 1; i < n1; i = i + 2)
 	LineRelax_be (dv, i, k, nvar, n1, n2, n3, rhs, ncols, cols, JFD);
-#pragma omp parallel for schedule(dynamic)
+
       for (j = 1; j < n2; j = j + 2)
 	LineRelax_al (dv, j, k, nvar, n1, n2, n3, rhs, ncols, cols, JFD);
-#pragma omp parallel for schedule(dynamic)
+
       for (j = 0; j < n2; j = j + 2)
 	LineRelax_al (dv, j, k, nvar, n1, n2, n3, rhs, ncols, cols, JFD);
     }
@@ -324,7 +320,6 @@ TwoPunctures::bicgstab (int const nvar, int const n1, int const n2, int const n3
 
   /* compute initial residual rt = r = F - J*dv */
   J_times_dv (nvar, n1, n2, n3, dv, r, u);
-#pragma omp parallel for
   for (int j = 0; j < ntotal; j++)
     rt[j] = r[j] = F[j] - r[j];
 
@@ -347,20 +342,20 @@ TwoPunctures::bicgstab (int const nvar, int const n1, int const n2, int const n3
     /* compute direction vector p */
     if (ii == 0)
     {
-#pragma omp parallel for
+
       for (int j = 0; j < ntotal; j++)
 	p[j] = r[j];
     }
     else
     {
       beta = (rho / rho1) * (alpha / omega);
-#pragma omp parallel for
+
       for (int j = 0; j < ntotal; j++)
 	p[j] = r[j] + beta * (p[j] - omega * vv[j]);
     }
 
     /* compute direction adjusting vector ph and scalar alpha */
-#pragma omp parallel for
+
     for (int j = 0; j < ntotal; j++)
       ph.d0[j] = 0;
     for (int j = 0; j < NRELAX; j++)	/* solves JFD*ph = p by relaxation*/
@@ -368,7 +363,7 @@ TwoPunctures::bicgstab (int const nvar, int const n1, int const n2, int const n3
 
     J_times_dv (nvar, n1, n2, n3, ph, vv, u);	/* vv=J*ph*/
     alpha = rho / scalarproduct (rt, vv, ntotal);
-#pragma omp parallel for
+
     for (int j = 0; j < ntotal; j++)
       s[j] = r[j] - alpha * vv[j];
 
@@ -376,7 +371,7 @@ TwoPunctures::bicgstab (int const nvar, int const n1, int const n2, int const n3
     *normres = norm2 (s, ntotal);
     if (*normres <= tol)
     {
-#pragma omp parallel for
+
       for (int j = 0; j < ntotal; j++)
 	dv.d0[j] += alpha * ph.d0[j];
       if (output == 1) {
@@ -388,7 +383,7 @@ TwoPunctures::bicgstab (int const nvar, int const n1, int const n2, int const n3
     }
 
     /* compute stabilizer vector sh and scalar omega */
-#pragma omp parallel for
+
     for (int j = 0; j < ntotal; j++)
       sh.d0[j] = 0;
     for (int j = 0; j < NRELAX; j++)	/* solves JFD*sh = s by relaxation*/
@@ -398,7 +393,7 @@ TwoPunctures::bicgstab (int const nvar, int const n1, int const n2, int const n3
     omega = scalarproduct (t, s, ntotal) / scalarproduct (t, t, ntotal);
 
     /* compute new solution approximation */
-#pragma omp parallel for
+
     for (int j = 0; j < ntotal; j++)
     {
       dv.d0[j] += alpha * ph.d0[j] + omega * sh.d0[j];
@@ -478,7 +473,7 @@ TwoPunctures::Newton (int const nvar, int const n1, int const n2, int const n3,
       F_of_v (nvar, n1, n2, n3, v, F, u);
       dmax = norm_inf (F, ntotal);
     }
-#pragma omp parallel for
+
     for (int j = 0; j < ntotal; j++)
       dv.d0[j] = 0;
 
@@ -490,7 +485,7 @@ TwoPunctures::Newton (int const nvar, int const n1, int const n2, int const n3,
     fflush(stdout);
     ii =
       bicgstab (nvar, n1, n2, n3, v, dv, verbose, 100, dmax * 1.e-3, &normres);
-#pragma omp parallel for
+
     for (int j = 0; j < ntotal; j++)
       v.d0[j] -= dv.d0[j];
     F_of_v (nvar, n1, n2, n3, v, F, u);
