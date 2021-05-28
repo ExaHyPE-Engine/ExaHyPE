@@ -265,7 +265,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_re10.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_re12.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 
 		if (tarch::la::equals(t,0.0)){//initialization
 			fin.open((p1+att),std::ios::out|std::ios::trunc);
@@ -498,9 +498,9 @@ if __name__ == "__main__":
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
       #[-20, -20, -20],  [40.0, 40.0, 40.0],
-      #[-30, -30, -30],  [60.0, 60.0, 60.0],
+      [-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       1110.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,

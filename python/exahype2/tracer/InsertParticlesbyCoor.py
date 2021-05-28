@@ -32,33 +32,33 @@ class InsertParticlesbyCoor(ActionSet):
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   if ( not marker.isRefined() and 
-  (marker.x()(0)-marker.h()(0)/2.0) < {{p1}}[0] and (marker.x()(0)+marker.h()(0)/2.0) > {{p1}}[0] and
-  (marker.x()(1)-marker.h()(1)/2.0) < {{p1}}[1] and (marker.x()(1)+marker.h()(1)/2.0) > {{p1}}[1] and
-  (marker.x()(2)-marker.h()(2)/2.0) < {{p1}}[2] and (marker.x()(2)+marker.h()(2)/2.0) > {{p1}}[2] 
+  (marker.x()(0)-marker.h()(0)/2.0) < {{P1[0]}} and (marker.x()(0)+marker.h()(0)/2.0) > {{P1[0]}} and
+  (marker.x()(1)-marker.h()(1)/2.0) < {{P1[1]}} and (marker.x()(1)+marker.h()(1)/2.0) > {{P1[1]}} and
+  (marker.x()(2)-marker.h()(2)/2.0) < {{P1[2]}} and (marker.x()(2)+marker.h()(2)/2.0) > {{P1[2]}} 
   )
   {
     globaldata::{{PARTICLE}}* p = new globaldata::{{PARTICLE}}();
     p->setNumber(0, _spacetreeId);
     p->setNumber(1, _particleNumberOnThisTree);
-    p->setX(0, {{P1}}[0] );		// x coordinate
-    p->setX(1, {{P1}}[0] );		// y coordinate
-    p->setX(2, {{P1}}[0] );		// z coordinate
+    p->setX(0, {{P1[0]}} );		// x coordinate
+    p->setX(1, {{P1[1]}} );		// y coordinate
+    p->setX(2, {{P1[2]}} );		// z coordinate
     p->setCutOffRadius(0.0); 
     _particleNumberOnThisTree++;
     fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p );
   }
   if ( not marker.isRefined() and 
-  (marker.x()(0)-marker.h()(0)/2.0) < {{P2}}[0] and (marker.x()(0)+marker.h()(0)/2.0) > {{P2}}[0] and
-  (marker.x()(1)-marker.h()(1)/2.0) < {{P2}}[1] and (marker.x()(1)+marker.h()(1)/2.0) > {{P2}}[1] and
-  (marker.x()(2)-marker.h()(2)/2.0) < {{P2}}[2] and (marker.x()(2)+marker.h()(2)/2.0) > {{P2}}[2] 
+  (marker.x()(0)-marker.h()(0)/2.0) < {{P2[0]}} and (marker.x()(0)+marker.h()(0)/2.0) > {{P2[0]}} and
+  (marker.x()(1)-marker.h()(1)/2.0) < {{P2[1]}} and (marker.x()(1)+marker.h()(1)/2.0) > {{P2[1]}} and
+  (marker.x()(2)-marker.h()(2)/2.0) < {{P2[2]}} and (marker.x()(2)+marker.h()(2)/2.0) > {{P2[2]}} 
   )
   {
     globaldata::{{PARTICLE}}* p2 = new globaldata::{{PARTICLE}}();
     p2->setNumber(0, _spacetreeId);
     p2->setNumber(1, _particleNumberOnThisTree);
-    p2->setX(0, {{P2}}[0] );		// x coordinate
-    p2->setX(1, {{P2}}[0] );		// y coordinate
-    p2->setX(2, {{P2}}[0] );		// z coordinate
+    p2->setX(0, {{P2[0]}} );		// x coordinate
+    p2->setX(1, {{P2[1]}} );		// y coordinate
+    p2->setX(2, {{P2[2]}} );		// z coordinate
     p2->setCutOffRadius(0.0); 
     _particleNumberOnThisTree++;
     fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p2 );
