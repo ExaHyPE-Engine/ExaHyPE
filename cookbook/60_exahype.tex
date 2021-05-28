@@ -382,6 +382,85 @@ systems.
 % This section is under construction.
 % \end{remark} 
 
+\section{Adding adaptive mesh refinement}
+
+By default, \ExaHyPE\ solvers operate on a regular grid.
+Dynamic adaptivity however is added via a one-liner:
+
+\begin{code}
+mysolver.set_implementation(
+ refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation 
+)
+\end{code}
+
+
+\noindent
+Once you did rerun your Python script, you have to add your solver a new
+routine:
+
+\begin{code}
+::exahype2::RefinementCommand refinementCriterion(
+  const double * __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t
+) override;
+\end{code}
+
+
+\noindent
+If this is the first time you create your solver, \ExaHyPE\ adds this routine
+into the solver blueprint.
+If you add AMR to an existing solver, you have to add the routine manually, as
+\ExaHyPE's code generator never overwrites a user solver.
+A simple default implementation of this routine resembles
+
+\begin{code}
+::exahype2::RefinementCommand MyClass::refinementCriterion(
+  const double * __restrict__ Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t
+) {
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+  return result;
+}
+\end{code}
+
+
+\noindent
+This version does not (yet) any adaptivity. 
+Your solver returns \texttt{Keep} all the time, so \Peano\ will create a mesh
+that just matches $h_{\text{max}}$ as specified via the solver and then keep
+this match.
+Once you return \texttt{Refine}, it will however refine.
+If your mesh however becomes finer than your solver's $h_{\text{min}}$, \Peano\
+will ignore the refinement request of your \ExaHyPE\ solver.
+
+
+\texttt{Keep} keeps the mesh as it is.
+That is, if you return \texttt{Keep} for an adaptive grid part, this part will
+not change.
+You have to invoke \texttt{Erase}\footnote{I chose erase deliberately and not
+coarsen, as coarsening has different semantics in multiscale/multigrid
+algoritms where coarsening does not remove mesh entities but ``changes the
+resolution view''.}.
+Both erase and keep are only recommendations to \Peano---\Peano\ will try to
+meet these requests, but will always make the mesh slightly finer or not refine
+if the minimum mesh size would be violated too harshly.
+That is, if some parts of the mesh ask for a refinement and direct neighbours
+want to coarsen, the refinement gets higher priority.
+Along the same lines, erase instructions will simply be ignored if the resulting
+mesh would be coarser than $h_{\text{max}}$.
+
+
+Finally, dynamic AMR in \ExaHyPE\ is simple to realise if you make your result
+depend on the input parameter \texttt{t}.
+It is however important to keep in mind that refinement requests are not
+immediately realised by \Peano. 
+Refinements are requested in one time step, and then realised in the subsequent
+one.
+
 
 \section{GPU support}
 
