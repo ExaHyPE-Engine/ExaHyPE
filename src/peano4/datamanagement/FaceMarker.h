@@ -51,9 +51,14 @@ struct peano4::datamanagement::FaceMarker {
      * Selects a face witin a cell, i.e. now the marker knows to which
      * face it corresponds. After that, the routine returns a this
      * reference.
+     *
+     * @param face Number from 0 to 2d-1
      */
     FaceMarker& select(int face);
 
+    /**
+     * @return Number from 0 to 2d-1
+     */
     int getSelectedFaceNumber() const;
 
     tarch::la::Vector<Dimensions,double> x(int i) const;

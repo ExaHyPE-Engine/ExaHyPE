@@ -15,8 +15,9 @@ from abc import abstractmethod
 
 from peano4.solversteps.ActionSet import ActionSet
 
-from peano4.toolbox.blockstructured.ProjectPatchOntoFaces import ProjectPatchOntoFaces
-from peano4.toolbox.blockstructured.BackupPatchOverlap    import BackupPatchOverlap
+from peano4.toolbox.blockstructured.ProjectPatchOntoFaces      import ProjectPatchOntoFaces
+from peano4.toolbox.blockstructured.BackupPatchOverlap         import BackupPatchOverlap
+from peano4.toolbox.blockstructured.ProjectFacesInAdaptiveMesh import ProjectFacesInAdaptiveMesh
 
 
 class AbstractFVActionSet( ActionSet ):
@@ -488,6 +489,8 @@ In-situ preprocessing:  """
     self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() )
     self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
     self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
+    self._action_set_project_faces_in_amr_new            = ProjectFacesInAdaptiveMesh( self._patch_overlap_new )
+    self._action_set_project_faces_in_amr                = ProjectFacesInAdaptiveMesh( self._patch_overlap )
     self._action_set_update_cell                         = None
 
 
@@ -609,6 +612,8 @@ In-situ preprocessing:  """
     step.add_action_set( self._action_set_adjust_cell ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
+    step.add_action_set( self._action_set_project_faces_in_amr_new )
+    step.add_action_set( self._action_set_project_faces_in_amr )
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -661,6 +666,8 @@ In-situ preprocessing:  """
 """
       ))
 
+    step.add_action_set( self._action_set_project_faces_in_amr_new )
+    step.add_action_set( self._action_set_project_faces_in_amr )
     pass
    
  
@@ -677,6 +684,8 @@ In-situ preprocessing:  """
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
     step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
+    step.add_action_set( self._action_set_project_faces_in_amr_new )
+    step.add_action_set( self._action_set_project_faces_in_amr )
 
 
   @abstractmethod
