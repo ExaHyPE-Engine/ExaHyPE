@@ -24,7 +24,7 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
     self.d[ "DOFS_PER_AXIS" ]             = str(patch_overlap.dim[1])
     self.d[ "OVERLAP" ]                   = str(int(patch_overlap.dim[0]/2))
     self.d[ "FINE_GRID_FACE_ACCESSOR" ]   = "fineGridFace"  + patch_overlap.name
-    self.d[ "COARSE_GRID_FACE_ACCESSOR" ] = "fineGridFace"  + patch_overlap.name
+    self.d[ "COARSE_GRID_FACE_ACCESSOR" ] = "coarseGridFaces"  + patch_overlap.name
     self.d[ "GUARD" ]                     = guard
     
     self.additional_includes = additional_includes
@@ -51,60 +51,55 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
 
 
   __Template_CreateHangingFace = """
-  auto serialisePatchIndex = [](tarch::la::Vector<Dimensions,int> overlapCell, int normal) {{
-    int base   = 1;
-    int result = 0;
-    for (int d=0; d<Dimensions; d++) {{
-      result += overlapCell(d) * base;
-      if (d==normal) {{
-        base *= {OVERLAP}*2;
-      }}
-      else {{
-        base *= {DOFS_PER_AXIS};
-      }}
-    }}
-    return result;
-  }};
-  
   if ( {GUARD} ) {{
     logTraceIn( "createHangingFace(...)" );
-  
-    const int normal = marker.getSelectedFaceNumber() % Dimensions;
-    const bool left  = marker.getSelectedFaceNumber() < Dimensions;
+
+    ::toolbox::blockstructured::clearHalfOfHaloLayerAoS(
+      marker,
+      {DOFS_PER_AXIS},
+      {OVERLAP},
+      {UNKNOWNS},
+      false,
+      {FINE_GRID_FACE_ACCESSOR}.value
+    );
+
+    ::toolbox::blockstructured::clearHalfOfHaloLayerAoS(
+      marker,
+      {DOFS_PER_AXIS},
+      {OVERLAP},
+      {UNKNOWNS},
+      true,
+      {COARSE_GRID_FACE_ACCESSOR}(marker.getSelectedFaceNumber()).value
+    );
+
+    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
+      marker,
+      {DOFS_PER_AXIS},
+      {OVERLAP},
+      {UNKNOWNS},
+      {FINE_GRID_FACE_ACCESSOR}.value,
+      {COARSE_GRID_FACE_ACCESSOR}(marker.getSelectedFaceNumber()).value
+    );
     
-    // clear fine grid data structure
-    dfore(k,{DOFS_PER_AXIS},normal,0) {{
-      for (int i=0; i<{OVERLAP}; i++) {{
-        tarch::la::Vector<Dimensions,int> targetCell = k;
-        targetCell(normal)  += left ? i : i + {OVERLAP};
-        int targetCellSerialised = serialisePatchIndex(targetCell,normal);
-        for (int j=0; j<{UNKNOWNS}; j++) {{
-          {FINE_GRID_FACE_ACCESSOR}.value[targetCellSerialised*{UNKNOWNS}+j] = 0.0;
-        }}
-      }}
-    }}
-    
-    // clear coarse grid data structure (if the fine grid has erased
-    // right, I have to erase left)
-    dfore(k,{DOFS_PER_AXIS},normal,0) {{
-      for (int i=0; i<{OVERLAP}; i++) {{
-        tarch::la::Vector<Dimensions,int> targetCell = k;
-        targetCell(normal)  += left ? i + {OVERLAP} : i;
-        int targetCellSerialised = serialisePatchIndex(targetCell,normal);
-        for (int j=0; j<{UNKNOWNS}; j++) {{
-          {COARSE_GRID_FACE_ACCESSOR}.value[targetCellSerialised*{UNKNOWNS}+j] = 0.0;
-        }}
-      }}
-    }}
     logTraceOut( "createHangingFace(...)" );
   }}
 """
 
-
-  ##          {FACES_ACCESSOR}(d+Dimensions).value[overlapCellSerialised*{UNKNOWNS}+j] = 
-  #            {CELL_ACCESSOR}.value[patchCellSerialised*{UNKNOWNS}+j];
-
   __Template_DestroyHangingFace = """
+  if ( {GUARD} ) {{
+    logTraceIn( "destroyHangingFace(...)" );
+
+    ::toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
+      marker,
+      {DOFS_PER_AXIS},
+      {OVERLAP},
+      {UNKNOWNS},
+      {FINE_GRID_FACE_ACCESSOR}.value,
+      {COARSE_GRID_FACE_ACCESSOR}(marker.getSelectedFaceNumber()).value
+    );
+
+    logTraceOut( "destroyHangingFace(...)" );
+  }}
 """
 
 
@@ -126,4 +121,5 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
   def get_includes(self):
     return """
 #include "peano4/utils/Loop.h"
+#include "toolbox/blockstructured/Interpolation.h"
 """ + self.additional_includes

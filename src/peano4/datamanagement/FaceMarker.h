@@ -67,6 +67,9 @@ struct peano4::datamanagement::FaceMarker {
      */
     int getSelectedFaceNumber() const;
 
+    /**
+     * Center of a particular face with respective reference cell.
+     */
     tarch::la::Vector<Dimensions,double> x(int i) const;
 
     /**
@@ -97,6 +100,9 @@ struct peano4::datamanagement::FaceMarker {
     tarch::la::Vector<Dimensions,double> outerNormal(int i) const;
     tarch::la::Vector<Dimensions,double> outerNormal() const;
 
+    /**
+     * Size of the underlying cell
+     */
     tarch::la::Vector<Dimensions,double>  h() const;
 
     std::string toString() const;
