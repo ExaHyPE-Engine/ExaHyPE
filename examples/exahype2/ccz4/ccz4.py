@@ -498,9 +498,9 @@ if __name__ == "__main__":
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
       #[-20, -20, -20],  [40.0, 40.0, 40.0],
-      [-30, -30, -30],  [60.0, 60.0, 60.0],
+      #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       1110.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -516,11 +516,13 @@ if __name__ == "__main__":
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
     #add tracer
-    #tracer_particles = project.add_tracer( name="MyTracer",attribute_count=1 )
-    #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
+    tracer_particles = project.add_tracer( name="MyTracer",attribute_count=1 )
+    project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
     #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::LinearInterp"))
     #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/8.0, noise=True ))
-    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.1,0,0],p2=[-0.1,0,0]))
+    project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.1,0,0],p2=[-0.1,0,0]))
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,1e-10,"znointer"))
+
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 

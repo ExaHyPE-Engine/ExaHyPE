@@ -63,12 +63,13 @@ tarch::la::Vector<Dimensions,double> toolbox::particles::explicitEulerWithoutInt
 ) {
   tarch::la::Vector<Dimensions,int> voxel = toolbox::particles::mapParticleOntoVoxel(marker,voxelsPerAxis,particleX);
 
-  int voxelIndex = peano4::utils::dLinearised(voxel,unknownsPerVoxel);
+  int voxelIndex = peano4::utils::dLinearised(voxel,voxelsPerAxis);
   double* Q      = voxelField + voxelIndex * unknownsPerVoxel;
 
   tarch::la::Vector<Dimensions,double> result = particleX;
   for (int d=0; d<Dimensions; d++) {
     result(d) += timeStepSize * Q[ velocityIndices(d) ];
+    //result(d) += timeStepSize * Q[ 17 ];
   }
 
   return result;
@@ -93,16 +94,18 @@ tarch::la::Vector<Dimensions,double> toolbox::particles::LinearInterp(
   FindInterIndex(IndexForInterpolate,voxel,voxelsPerAxis);  
   double raw[NumberofNeighbor*Dimensions];
   for (int i=0;i<NumberofNeighbor;i++){
-    int voxelIndex = peano4::utils::dLinearised(IndexForInterpolate[i],unknownsPerVoxel); 
+    int voxelIndex = peano4::utils::dLinearised(IndexForInterpolate[i],voxelsPerAxis); 
     for (int j=0;j<Dimensions;j++) {raw[i*Dimensions+j]=voxelField[voxelIndex * unknownsPerVoxel+velocityIndices(j)];}
   }
 
   tarch::la::Vector<Dimensions,double> velocity;
-  Interpolation(velocity,IndexForInterpolate, raw, particleX, marker, voxelsPerAxis);
+  velocity=Interpolation(IndexForInterpolate, raw, particleX, marker, voxelsPerAxis);
 
   tarch::la::Vector<Dimensions,double> result = particleX;
   for (int d=0; d<Dimensions; d++) {
+    //std::cout << velocity(d) << std::endl;
     result(d) += timeStepSize * velocity(d);
+    //result(d) += timeStepSize * 0.02;
   }
 
   return result;
