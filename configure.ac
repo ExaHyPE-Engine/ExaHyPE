@@ -582,13 +582,14 @@ fi
 # SmartMPI
 #
 AC_ARG_WITH(smartmpi,
-  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no, options are no, Merged, OneToOne, Alternating]]),
+  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no, options are no, Merged, OneToOne, Alternating and NToOneServerAlt]]),
   [ AC_MSG_CHECKING(for smartmpi)
     case "${withval}" in
-      no)           AC_MSG_RESULT(no);    smartmpi=false ;;
-      Merged)       AC_MSG_RESULT(yes; use topology Merged);        smartmpi=Merged ;;
-      OneToOne)     AC_MSG_RESULT(yes; use topology OneToOne);      smartmpi=OneToOne ;;
-      Alternating)  AC_MSG_RESULT(yes; use topology Alternating);   smartmpi=Alternating ;;
+      no)               AC_MSG_RESULT(no);    smartmpi=false ;;
+      Merged)           AC_MSG_RESULT(yes; use topology Merged);            smartmpi=Merged ;;
+      OneToOne)         AC_MSG_RESULT(yes; use topology OneToOne);          smartmpi=OneToOne ;;
+      Alternating)      AC_MSG_RESULT(yes; use topology Alternating);       smartmpi=Alternating ;;
+      NToOneServerAlt)  AC_MSG_RESULT(yes; use topology NToOneServerAlt);   smartmpi=NToOneServerAlt ;;
       *)         AC_MSG_RESULT(failed);   AC_MSG_ERROR([invalid option for SmartMPI]) ;;
     esac ],
   [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
@@ -601,6 +602,9 @@ if test "$smartmpi" == OneToOne; then
 fi
 if test "$smartmpi" == Alternating; then
   AC_DEFINE([UseSmartMPI], [Alternating], [UseSmartMPI])
+fi
+if test "$smartmpi" == NToOneServerAlt; then
+  AC_DEFINE([UseSmartMPI], [NToOneServerAlt], [UseSmartMPI])
 fi
 if test "$smartmpi" != false; then
   if test "$mpi" == false; then
