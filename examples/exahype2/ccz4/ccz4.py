@@ -111,7 +111,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.05
+            time_step_relaxation=0.1
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -258,6 +258,7 @@ if __name__ == "__main__":
         self.additional_includes += """
 	#include "../libtwopunctures/TP_PunctureTracker.h"
 	#include "../CCZ4Kernels.h"
+	#include <iomanip>
     """
 
         self.set_preprocess_reconstructed_patch_kernel( """
@@ -265,14 +266,14 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_re12.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_reA3.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 
 		if (tarch::la::equals(t,0.0)){//initialization
 			fin.open((p1+att),std::ios::out|std::ios::trunc);
-			fin << "4.251 0.0 0.0 0.0" << std::endl;//4.461538
+			fin << "4.251 0.0 0.0 0.0 0.0" << std::endl;//4.461538
 			fin.close();
 			fin.open((p2+att),std::ios::out|std::ios::trunc);
-			fin << "-4.251 0.0 0.0 0.0" << std::endl;//-5.538462
+			fin << "-4.251 0.0 0.0 0.0 0.0" << std::endl;//-5.538462
 			fin.close();
 			fin.open((tem+att),std::ios::out|std::ios::trunc);
 			fin << "tem file" << std::endl;
@@ -281,53 +282,58 @@ if __name__ == "__main__":
 			fin.open((p1+att),std::ios::in);
 			std::string pos=getLastLine(fin);
 			fin.close();
-			double coor1[4]={0};//read in previous coordinates
+			double coor1[5]={0};//read in previous coordinates
 			CoorReadIn(coor1,pos);
 			fin.open((p2+att),std::ios::in);
 			std::string pos2=getLastLine(fin);
 			fin.close();
-			double coor2[4]={0};
+			double coor2[5]={0};
 			CoorReadIn(coor2,pos2);
+			int inter_number=4;
 			if (marker.isContained(coor1)){
 				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor1,marker.getOffset(),volumeH,patchSize); //find where the puncture is
 				tarch::la::Vector<Dimensions,int> IndexForInterpolate[8];
 				FindInterIndex(IndexForInterpolate,IndexOfCell);//find the closest 8 cells
-				double raw[8*3];
+				double raw[8*inter_number];
 				for (int i=0;i<8;i++){
 					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
-					for (int j=0;j<Dimensions;j++) {raw[i*3+j]=reconstructedPatch[Lindex*(59+6)+17+j];} //read in corresponding beta
+					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=reconstructedPatch[Lindex*(59+6)+17+j];} //read in corresponding beta
+					raw[i*inter_number+3]=reconstructedPatch[Lindex*(59+6)+16];
 				}
-				double shift[3];
-				Interpolation(shift,IndexForInterpolate,raw,coor1,marker.getOffset(),volumeH,patchSize);
+				double result[inter_number];
+				Interpolation(result,IndexForInterpolate,raw,coor1,marker.getOffset(),volumeH,patchSize);
 				
-				coor1[0]-=dt*shift[0]; coor1[1]-=dt*shift[1]; coor1[2]-=dt*shift[2];//updates position
+				coor1[0]-=dt*result[0]; coor1[1]-=dt*result[1]; coor1[2]-=dt*result[2];//updates position
 				fin.open((p1+att),std::ios::app);//output
-				fin << coor1[0] << " " << coor1[1] << " " << coor1[2] << " " << t << std::endl;
+				fin << std::setprecision (17) << coor1[0] << " " << coor1[1];
+				fin << " " << coor1[2] << " " << t << " " << std::exp(result[3]) << std::endl;
 				fin.close();
 				fin.open((tem+att),std::ios::app);
 				fin << "for cellindex" << IndexOfCell(0) << " " << IndexOfCell(1) << " " << IndexOfCell(2) << " " << IndexOfCell(3) << " " << IndexOfCell(4) << " " << IndexOfCell(5) << std::endl;
 				for (int i=0;i<8;i++){
 				fin << IndexForInterpolate[i](0) << " " << IndexForInterpolate[i](1) << " " << IndexForInterpolate[i](2) << std::endl;
-				fin << raw[i*3+0] << " " << raw[i*3+1] << " " << raw[i*3+2] << std::endl;
+				fin << raw[i*inter_number+0] << " " << raw[i*inter_number+1] << " " << raw[i*inter_number+2] << std::endl;
 				}
-				fin << "after inter" << shift[0] << " " << shift[1] << " " << shift[2] << " " << t << std::endl;
+				fin << "after inter" << result[0] << " " << result[1] << " " << result[2] << " " << t << std::endl;
 				fin.close();
 			}
 			if (marker.isContained(coor2)){//do the same for the second puncutre
 				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor2,marker.getOffset(),volumeH,patchSize);
 				tarch::la::Vector<Dimensions,int> IndexForInterpolate[8];
 				FindInterIndex(IndexForInterpolate,IndexOfCell);
-				double raw[8*3];
+				double raw[8*inter_number];
 				for (int i=0;i<8;i++){
 					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
-					for (int j=0;j<Dimensions;j++) {raw[i*3+j]=reconstructedPatch[Lindex*(59+6)+17+j];}
+					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=reconstructedPatch[Lindex*(59+6)+17+j];}
+					raw[i*inter_number+3]=reconstructedPatch[Lindex*(59+6)+16];
 				}
-				double shift[3];
-				Interpolation(shift,IndexForInterpolate,raw,coor2,marker.getOffset(),volumeH,patchSize);
+				double result[inter_number];
+				Interpolation(result,IndexForInterpolate,raw,coor2,marker.getOffset(),volumeH,patchSize);
 				
-				coor2[0]-=dt*shift[0]; coor2[1]-=dt*shift[1]; coor2[2]-=dt*shift[2];
+				coor2[0]-=dt*result[0]; coor2[1]-=dt*result[1]; coor2[2]-=dt*result[2];
 				fin.open((p2+att),std::ios::app);
-				fin << coor2[0] << " " << coor2[1] << " " << coor2[2] << " " << t << std::endl;
+				fin << std::setprecision (17) << coor2[0] << " " << coor2[1];
+				fin << " " << coor2[2] << " " << t << " " << std::exp(result[3]) << std::endl;
 				fin.close();
 			}
 		}
@@ -497,12 +503,12 @@ if __name__ == "__main__":
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
-      #[-20, -20, -20],  [40.0, 40.0, 40.0],
-      [-30, -30, -30],  [60.0, 60.0, 60.0],
+      [-20, -20, -20],  [40.0, 40.0, 40.0],
+      #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
       #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
-      1110.0, args.plot_step_size,   # snapshots
+      0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
