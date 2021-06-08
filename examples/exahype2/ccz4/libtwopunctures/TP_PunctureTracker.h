@@ -40,7 +40,7 @@ double linearInter(double x1, double f1, double x2, double f2, double target){
 void CoorReadIn(double* coor, std::string line)
 {
 	int index=0;
-	std::string var[4]={"","","",""};
+	std::string var[5]={"","","","",""};
 	for (auto x : line){
 		if (x == ' '){
 			coor[index]=std::stod(var[index]);
@@ -156,55 +156,56 @@ void Interpolation(
   double volumeH,
   int patchSize
 ){
+	int inter_number=4;
 	//calculate the actual coordinates
-	double CoorsForInter1[8][3];
-	double raw1[8][3];
+	double CoorsForInter1[8][inter_number];
+	double raw1[8][inter_number];
 	for(int i=0;i<2;i++)
 	for(int j=0;j<2;j++)
 	for(int k=0;k<2;k++){
-		for (int m=0;m<3;m++){
+		for (int m=0;m<inter_number;m++){
 			CoorsForInter1[i*4+j*2+k][m]=Offset(m)+(IndexForInter[i*4+j*2+k](m)-0.5)*volumeH;
-			raw1[i*4+j*2+k][m]=raw[(i*4+j*2+k)*3+m];
+			raw1[i*4+j*2+k][m]=raw[(i*4+j*2+k)*inter_number+m];
 		}
 	}
 	
 	//first interpolate along x axis
-	double CoorsForInter2[4][3];
-	double raw2[4][3];
+	double CoorsForInter2[4][inter_number];
+	double raw2[4][inter_number];
 	for (int n=0;n<4;n++){
 		CoorsForInter2[n][0]=coor[0];
 		CoorsForInter2[n][1]=CoorsForInter1[n][1];
 		CoorsForInter2[n][2]=CoorsForInter1[n][2];
-		for (int m=0;m<3;m++){
+		for (int m=0;m<inter_number;m++){
 			raw2[n][m]=linearInter(CoorsForInter1[n][0],raw1[n][m],CoorsForInter1[n+4][0],raw1[n+4][m],coor[0]);
 		} 
 	}
 	
 	//second interpolate along y axis
-	double CoorsForInter3[2][3];
-	double raw3[2][3];
+	double CoorsForInter3[2][inter_number];
+	double raw3[2][inter_number];
 	for (int n=0;n<2;n++){
 		CoorsForInter3[n][0]=coor[0];
 		CoorsForInter3[n][1]=coor[1];
 		CoorsForInter3[n][2]=CoorsForInter1[n][2];
-		for (int m=0;m<3;m++){
+		for (int m=0;m<inter_number;m++){
 			raw3[n][m]=linearInter(CoorsForInter2[n][1],raw2[n][m],CoorsForInter2[n+2][1],raw2[n+2][m],coor[1]);
 		} 
 	}
 	
 	//finally interpolate along z axis
-	double CoorsForInter4[1][3];
-	double raw4[1][3];
+	double CoorsForInter4[1][inter_number];
+	double raw4[1][inter_number];
 	for (int n=0;n<1;n++){
 		CoorsForInter4[n][0]=coor[0];
 		CoorsForInter4[n][1]=coor[1];
 		CoorsForInter4[n][2]=coor[2];
-		for (int m=0;m<3;m++){
+		for (int m=0;m<inter_number;m++){
 			raw4[n][m]=linearInter(CoorsForInter3[n][2],raw3[n][m],CoorsForInter3[n+1][2],raw3[n+1][m],coor[2]);
 		} 
 	}	
 	
-	result[0]=raw4[0][0]; result[1]=raw4[0][1]; result[2]=raw4[0][2];
+	result[0]=raw4[0][0]; result[1]=raw4[0][1]; result[2]=raw4[0][2];result[3]=raw4[0][3];
 }
 
 
