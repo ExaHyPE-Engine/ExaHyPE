@@ -143,7 +143,7 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  logInfo( "interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)", marker.toString() );
+  logTraceInWith6Arguments( "interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues );
 
   const int  normal              = marker.getSelectedFaceNumber() % Dimensions;
 
@@ -172,7 +172,7 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise
           fineVolume,
           numberOfDoFsPerAxisInPatch, overlap, normal
           );
-        logInfo(
+        logDebug(
           "interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)",
           coarseVolume << "->" << fineVolume << " i.e. " << coarseVolumeLinearised << "->" << fineVolumeLinearised <<
           " (normal=" << normal << ",restrict=" << fineGridXIsWithinSupportOfCoarseVolume <<
@@ -189,6 +189,8 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise
     },
     false  // mapOuterCoarseGridHaloOntoInnerFineGridHalo
   );
+
+  logTraceOut( "interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)" );
 }
 
 
