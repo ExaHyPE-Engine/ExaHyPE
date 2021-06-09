@@ -146,8 +146,6 @@ bool tarch::logging::LogFilterFileReader::parsePlainTextFile( const std::string&
     LogFilter::getInstance().addFilterListEntry( ::tarch::logging::LogFilter::FilterListEntry( "debug", false ) );
   }
 
-  LogFilter::getInstance().printFilterListToCout();
-
   return result;
 }
 
