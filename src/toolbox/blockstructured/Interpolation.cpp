@@ -207,7 +207,7 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_co
   const int  normal          = marker.getSelectedFaceNumber() % Dimensions;
   double scaleFineGridVolume = std::pow(3.0,-static_cast<double>(Dimensions-1));
 
-  logInfo( "restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)", "fineGridValues=" << fineGridValues << ",coarseGridValues=" << coarseGridValues );
+  logDebug( "restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)", "fineGridValues=" << fineGridValues << ",coarseGridValues=" << coarseGridValues );
   projectHaloLayers_AoS(
     marker,
     numberOfDoFsPerAxisInPatch,
