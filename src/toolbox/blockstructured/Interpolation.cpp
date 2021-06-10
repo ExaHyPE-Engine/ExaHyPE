@@ -135,13 +135,27 @@ void toolbox::blockstructured::projectHaloLayers_AoS(
 }
 
 
-void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
+void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
   int                                       unknowns,
   double*                                   fineGridValues,
   double*                                   coarseGridValues
+) {
+  interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
+  interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
+}
+
+
+void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues,
+  bool                                      swapInsideOutside
 ) {
   logTraceInWith6Arguments( "interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues );
 
@@ -187,7 +201,7 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise
         }
       }
     },
-    false  // mapOuterCoarseGridHaloOntoInnerFineGridHalo
+	swapInsideOutside // mapOuterCoarseGridHaloOntoInnerFineGridHalo
   );
 
   logTraceOut( "interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)" );
@@ -200,7 +214,8 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_co
   int                                       overlap,
   int                                       unknowns,
   double*                                   fineGridValues,
-  double*                                   coarseGridValues
+  double*                                   coarseGridValues,
+  bool                                      swapInsideOutside
 ) {
   logTraceInWith6Arguments( "restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues );
 
@@ -249,10 +264,47 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_co
         );
       }
     },
-    true  // mapOuterCoarseGridHaloOntoInnerFineGridHalo
+    not swapInsideOutside // mapOuterCoarseGridHaloOntoInnerFineGridHalo
   );
 
   logTraceOut( "restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)" );
 }
 
 
+
+void toolbox::blockstructured::restrictHaloLayer_AoS_piecewise_constant(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+  restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_constant( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, false );
+  restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_constant( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, true );
+}
+
+
+
+void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+
+}
+
+
+void toolbox::blockstructured::restrictCell_AoS_piecewise_constant(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+
+}

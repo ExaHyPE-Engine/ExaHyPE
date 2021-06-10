@@ -4,6 +4,7 @@
 #define _PEANO4_TOOLBOX_BLOCKSTRUCTURED_INTERPOLATION_H_
 
 
+#include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 
 
@@ -89,6 +90,16 @@ namespace toolbox {
       int                                       overlap,
       int                                       unknowns,
       double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+	  bool                                      swapInsideOutside=false
+    );
+
+    void interpolateHaloLayer_AoS_piecewise_constant(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
       double*                                   coarseGridValues
     );
 
@@ -98,10 +109,22 @@ namespace toolbox {
       int                                       overlap,
       int                                       unknowns,
       double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+	  bool                                      swapInsideOutside=false
+    );
+
+    void restrictHaloLayer_AoS_piecewise_constant(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
       double*                                   coarseGridValues
     );
 
     /**
+     * Helper routine - usually not invoked by user code
+     *
      * Maps two halo layers onto each other, i.e. runs through both
      * layers through all NxMxM voxels, computes their centres, and
      * invokes the callback.
@@ -133,6 +156,27 @@ namespace toolbox {
         double fineVolumeH
       )> update,
       bool mapInnerHalfOfHalo
+    );
+
+
+
+
+    void interpolateCell_AoS_piecewise_constant(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+
+    void restrictCell_AoS_piecewise_constant(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
     );
   }
 }
