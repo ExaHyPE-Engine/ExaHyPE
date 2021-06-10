@@ -150,4 +150,9 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
 
+    # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
+    # this hack has to suffice
+    peanodir = templatefile_prefix.split("python/exahype2",1)[0]
+    output.makefile.d["PEANODIR"] = peanodir
+
     exahype2.gpu.add_exahype_objects(output.makefile)
