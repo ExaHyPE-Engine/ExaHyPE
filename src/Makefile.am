@@ -7,10 +7,11 @@ AUTOMAKE_OPTIONS = subdir-objects
 # within configure.ac as well as its very last line).
 #
 SUBDIRS = . \
-  toolbox/particles \
+  toolbox/blockstructured \
   toolbox/finiteelements \
-  toolbox/multiprecision \
   toolbox/loadbalancing \
+  toolbox/multiprecision \
+  toolbox/particles \
   exahype2 \
   unittests convert
 

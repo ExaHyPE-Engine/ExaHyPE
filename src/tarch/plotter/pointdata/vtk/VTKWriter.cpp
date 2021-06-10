@@ -91,6 +91,11 @@ void tarch::plotter::pointdata::vtk::VTKWriter::PointDataWriter::plot( int index
 }
 
 
+void tarch::plotter::pointdata::vtk::VTKWriter::PointDataWriter::plot( int index, const tarch::la::Vector<1,double>& value ) {
+  _particleDataWriter->plotVertex(index,value(0));
+}
+
+
 void tarch::plotter::pointdata::vtk::VTKWriter::PointDataWriter::plot( int index, const tarch::la::Vector<2,double>& value ) {
   _particleDataWriter->plotVertex(index,value);
 }
@@ -98,6 +103,11 @@ void tarch::plotter::pointdata::vtk::VTKWriter::PointDataWriter::plot( int index
 
 void tarch::plotter::pointdata::vtk::VTKWriter::PointDataWriter::plot( int index, const tarch::la::Vector<3,double>& value ) {
   _particleDataWriter->plotVertex(index,value);
+}
+
+
+void tarch::plotter::pointdata::vtk::VTKWriter::PointDataWriter::plot( int index, double* values, int numberOfValues ) {
+  _particleDataWriter->plotVertex(index,values,numberOfValues);
 }
 
 

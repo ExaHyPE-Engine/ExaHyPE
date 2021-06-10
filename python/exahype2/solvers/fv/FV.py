@@ -15,8 +15,9 @@ from abc import abstractmethod
 
 from peano4.solversteps.ActionSet import ActionSet
 
-from peano4.toolbox.blockstructured.ProjectPatchOntoFaces import ProjectPatchOntoFaces
-from peano4.toolbox.blockstructured.BackupPatchOverlap    import BackupPatchOverlap
+from peano4.toolbox.blockstructured.ProjectPatchOntoFaces      import ProjectPatchOntoFaces
+from peano4.toolbox.blockstructured.BackupPatchOverlap         import BackupPatchOverlap
+from peano4.toolbox.blockstructured.ProjectFacesInAdaptiveMesh import ProjectFacesInAdaptiveMesh
 
 
 class AbstractFVActionSet( ActionSet ):
@@ -201,11 +202,6 @@ class HandleBoundary(AbstractFVActionSet):
    
   """
   TemplateHandleBoundary = """
-    logDebug( 
-      "touchFaceFirstTime(...)", 
-      "label=" << fineGridFaceLabel.toString() << ", " << repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions] << 
-      ",marker=" << marker.toString()
-    );
     if (
       {{PREDICATE}}
       and
@@ -215,6 +211,7 @@ class HandleBoundary(AbstractFVActionSet):
       and 
       fineGridFaceLabel.getBoundary()
     ) {
+      logTraceInWith3Arguments( "touchFaceFirstTime(...)---HandleBoundary", fineGridFaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
       ::exahype2::fv::applyBoundaryConditions(
         [&](
           const double * __restrict__                  Qinside,
@@ -236,6 +233,7 @@ class HandleBoundary(AbstractFVActionSet):
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}.value
       );
+      logTraceOut( "touchFaceFirstTime(...)---HandleBoundary" );
     }
 """
   def __init__(self,solver,predicate):
@@ -488,6 +486,7 @@ In-situ preprocessing:  """
     self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() )
     self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
     self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
+    self._action_set_project_faces_in_amr                = ProjectFacesInAdaptiveMesh( self._patch_overlap, self._patch_overlap_new )
     self._action_set_update_cell                         = None
 
 
@@ -606,6 +605,17 @@ In-situ preprocessing:  """
 
   
   def add_actions_to_init_grid(self, step):
+    """
+    
+     The AMR stuff has to be the very first thing. Actually, the AMR routines' 
+     interpolation doesn't play any role here. But the restriction indeed is
+     very important, as we have to get the face data for BCs et al. The action 
+     set order is inverted while we ascend within the tree again. Therefore, we
+     add the AMR action set first which means it will be called last when we go
+     from fine to coarse levels within the tree.
+    
+    """
+    step.add_action_set( self._action_set_project_faces_in_amr )
     step.add_action_set( self._action_set_adjust_cell ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
@@ -660,17 +670,23 @@ In-situ preprocessing:  """
 #include "../repositories/SolverRepository.h"
 """
       ))
-
     pass
    
  
   def add_actions_to_perform_time_step(self, step):
+    """
+    
+    AMR
+    
+    It is important that we do the inter-grid transfer operators before we 
+    apply the boundary conditions.
+    
+    """
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
-    # @todo vertauschen
-
+    step.add_action_set( self._action_set_project_faces_in_amr )
     step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_adjust_cell )
     step.add_action_set( self._action_set_update_cell )
@@ -763,8 +779,10 @@ In-situ preprocessing:  """
     d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
 
-    d[ "MAX_H"] = self._min_h
-    d[ "MIN_H"] = self._max_h
+    if (self._min_h > self._max_h ):
+      raise Exception( "min/max h are inconsistent" ) 
+    d[ "MAX_H"] = self._max_h
+    d[ "MIN_H"] = self._min_h
 
     d[ "INCLUDES"] = self.additional_includes
 

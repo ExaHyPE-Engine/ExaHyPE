@@ -603,6 +603,6 @@ In-situ preprocessing:  """
     d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
     
-    d[ "MAX_H"] = self._min_h
-    d[ "MIN_H"] = self._max_h
+    d[ "MAX_H"] = self._max_h
+    d[ "MIN_H"] = self._min_h
  
