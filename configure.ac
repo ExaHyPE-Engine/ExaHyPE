@@ -755,8 +755,6 @@ fi
 
 
 #
-<<<<<<< HEAD
-=======
 # SmartMPI
 #
 AC_ARG_WITH(smartmpi,
@@ -803,7 +801,6 @@ fi
 
 
 #
->>>>>>> refs/remotes/origin/p4
 # Delta
 #
 if test "$toolbox_delta" != false; then
