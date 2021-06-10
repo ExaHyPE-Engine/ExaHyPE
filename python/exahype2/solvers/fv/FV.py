@@ -17,7 +17,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 from peano4.toolbox.blockstructured.ProjectPatchOntoFaces      import ProjectPatchOntoFaces
 from peano4.toolbox.blockstructured.BackupPatchOverlap         import BackupPatchOverlap
-from peano4.toolbox.blockstructured.ProjectFacesInAdaptiveMesh import ProjectFacesInAdaptiveMesh
+from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 
 
 class AbstractFVActionSet( ActionSet ):
@@ -480,14 +480,14 @@ In-situ preprocessing:  """
      action sets.
      
     """
-    self._action_set_adjust_cell                         = AdjustPatch(self, "not marker.isRefined()")
-    self._action_set_AMR                                 = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
-    self._action_set_AMR_commit_without_further_analysis = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
-    self._action_set_handle_boundary                     = HandleBoundary(self, self._store_face_data_default_predicate() )
-    self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
-    self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
-    self._action_set_project_faces_in_amr                = ProjectFacesInAdaptiveMesh( self._patch_overlap, self._patch_overlap_new )
-    self._action_set_update_cell                         = None
+    self._action_set_adjust_cell                                                      = AdjustPatch(self, "not marker.isRefined()")
+    self._action_set_AMR                                                              = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis                              = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_handle_boundary                                                  = HandleBoundary(self, self._store_face_data_default_predicate() )
+    self._action_set_project_patch_onto_faces                                         = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
+    self._action_set_copy_new_patch_overlap_into_overlap                              = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
+    self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( self._patch, self._patch_overlap, self._patch_overlap_new )
+    self._action_set_update_cell                                                      = None
 
 
   def _store_cell_data_default_predicate(self):
@@ -615,7 +615,7 @@ In-situ preprocessing:  """
      from fine to coarse levels within the tree.
     
     """
-    step.add_action_set( self._action_set_project_faces_in_amr )
+    step.add_action_set( self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_adjust_cell ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
@@ -645,6 +645,7 @@ In-situ preprocessing:  """
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     
+    step.add_action_set( self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
@@ -686,7 +687,7 @@ In-situ preprocessing:  """
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
-    step.add_action_set( self._action_set_project_faces_in_amr )
+    step.add_action_set( self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_adjust_cell )
     step.add_action_set( self._action_set_update_cell )
