@@ -310,12 +310,12 @@ if __name__ == "__main__":
 				fin.close();
 				fin.open((tem+att),std::ios::app);
 				fin << "for cellindex" << IndexOfCell(0) << " " << IndexOfCell(1) << " " << IndexOfCell(2) << " " << IndexOfCell(3) << " " << IndexOfCell(4) << " " << IndexOfCell(5) << std::endl;
-				/*for (int i=0;i<8;i++){
+				for (int i=0;i<8;i++){
 				fin << IndexForInterpolate[i](0) << " " << IndexForInterpolate[i](1) << " " << IndexForInterpolate[i](2) << std::endl;
 				fin << raw[i*inter_number+0] << " " << raw[i*inter_number+1] << " " << raw[i*inter_number+2] << std::endl;
 				}
 				fin << "after inter" << result[0] << " " << result[1] << " " << result[2] << " " << t << std::endl;
-				fin.close();*/
+				fin.close();
 			}
 			if (marker.isContained(coor2)){//do the same for the second puncutre
 				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor2,marker.getOffset(),volumeH,patchSize);
@@ -324,7 +324,7 @@ if __name__ == "__main__":
 				double raw[8*inter_number];
 				for (int i=0;i<8;i++){
 					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
-					for (int j=0;j<Dimensions;j++) {raw[i*3+j]=reconstructedPatch[Lindex*(59+6)+17+j];}
+					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=reconstructedPatch[Lindex*(59+6)+17+j];}
 					raw[i*inter_number+3]=reconstructedPatch[Lindex*(59+6)+16];
 				}
 				double result[inter_number];

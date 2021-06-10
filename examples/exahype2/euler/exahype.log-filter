@@ -7,6 +7,9 @@
 debug  tarch                               -1     black always-on
 debug  peano4                              -1     black always-on
 debug  examples                            -1     black always-on
+debug  examples                            -1     black plot-solution
+debug  examples                            -1     white time-step
+debug  examples::exahype2::euler::Euler    -1     black always-on
 debug  exahype2                            -1     black always-on
 
 info  tarch                                -1     white always-on
@@ -14,10 +17,15 @@ info  peano4                               -1     white always-on
 info  examples                             -1     white always-on
 info  exahype2                             -1     white always-on
 info  toolbox                              -1     white always-on
+
  
 trace  tarch                               -1     black always-on    
 trace  peano4                              -1     black always-on
+trace  examples                            -1     white plot-solution
+trace  examples                            -1     white init-grid
+trace  examples                            -1     white time-step
 trace  examples                            -1     black always-on
+trace  examples::exahype2::euler::Euler    -1     black always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on
 

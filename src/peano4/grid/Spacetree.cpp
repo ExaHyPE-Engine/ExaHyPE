@@ -529,7 +529,7 @@ peano4::grid::Spacetree::FaceType peano4::grid::Spacetree::getFaceType(
 
   const int normal = faceNumber % Dimensions;
   for (int i=0; i<TwoPowerD; i++) {
-	std::bitset<Dimensions> studiedVertex = i;
+    std::bitset<Dimensions> studiedVertex = i;
     studiedVertex.set(normal,faceNumber>=Dimensions);
     switch ( getVertexType( coarseGridVertices, positionOfCell + tarch::la::Vector<Dimensions,int>(studiedVertex) ) ) {
       case VertexType::Hanging:
@@ -848,6 +848,19 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
       vertex.setState( GridVertex::State::RefinementTriggered );
       logDebug( "updateVertexBeforeStore(...)", "have to post-refine vertex " << vertex.toString() );
     }
+
+/*
+    @todo Do we want to avoid hanging vertices along boundary? I think this would make sense
+
+    if (
+      vertex.getState()==GridVertex::State::Unrefined
+      and
+      vertex.
+    ) {
+      vertex.setState( GridVertex::State::RefinementTriggered );
+      logDebug( "updateVertexBeforeStore(...)", "have to post-refine vertex " << vertex.toString() );
+    }
+*/
 
     bool restrictIsAntecessorOfRefinedVertex = vertex.getIsAntecessorOfRefinedVertexInCurrentTreeSweep();
 

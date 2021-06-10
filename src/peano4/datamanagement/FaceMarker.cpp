@@ -15,7 +15,6 @@ peano4::datamanagement::FaceMarker::FaceMarker(
   _h(event.getH()),
   _cellIsLocal(event.getIsCellLocal()),
   _select(select) {
-
   for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {
     _isRefined[faceNumber] = false;
     _isLocal[faceNumber]   = event.getIsFaceLocal(faceNumber);
@@ -27,6 +26,7 @@ peano4::datamanagement::FaceMarker::FaceMarker(
       _isRefined.set( faceNumber, _isRefined[faceNumber] or event.getIsRefined(studiedVertex.to_ulong()) );
     }
   }
+  _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
 }
 
 
@@ -119,4 +119,16 @@ bool peano4::datamanagement::FaceMarker::isLocal() const {
   return isLocal(_select);
 }
 
+
+tarch::la::Vector<Dimensions,int>  peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherCell() const {
+  return getRelativePositionWithinFatherCell(_select);
+}
+
+
+tarch::la::Vector<Dimensions,int>  peano4::datamanagement::FaceMarker::getRelativePositionWithinFatherCell(int i) const {
+  tarch::la::Vector<Dimensions,int> result = _relativePositionOfCellWithinFatherCell;
+  const int normal = i % Dimensions;
+  result(normal) += i>=Dimensions ? 1 : 0;
+  return result;
+}
 
