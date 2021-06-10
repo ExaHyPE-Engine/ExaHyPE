@@ -4,7 +4,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 
-class ProjectFacesInAdaptiveMesh(ActionSet):
+class DynamicAMR(ActionSet):
   """
   This class assumes that you have an 2MxNxN patch on your faces. 
   
@@ -18,7 +18,7 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
   """
   
   
-  def __init__(self, patch_overlap_interpolation, patch_overlap_restriction, clear_overlap_in_touch_first_time=True, guard="true", additional_includes="" ):
+  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="piecewise_constant", restriction_scheme="piecewise_constant", clear_overlap_in_touch_first_time=True, guard="true", additional_includes="" ):
     self.d = {}
     if patch_overlap_interpolation.dim[0] % 2 != 0:
       raise Exception( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
@@ -28,10 +28,14 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
     self.d[ "UNKNOWNS" ]                  = str(patch_overlap_interpolation.no_of_unknowns)
     self.d[ "DOFS_PER_AXIS" ]             = str(patch_overlap_interpolation.dim[1])
     self.d[ "OVERLAP" ]                   = str(int(patch_overlap_interpolation.dim[0]/2))
+    self.d[ "FINE_GRID_CELL" ]            = "fineGridCell"  + patch.name
+    self.d[ "COARSE_GRID_CELL" ]          = "coarseGridCell"  + patch.name
     self.d[ "FINE_GRID_FACE_ACCESSOR_INTERPOLATION" ]   = "fineGridFace"  + patch_overlap_interpolation.name
     self.d[ "COARSE_GRID_FACE_ACCESSOR_INTERPOLATION" ] = "coarseGridFaces"  + patch_overlap_interpolation.name
     self.d[ "FINE_GRID_FACE_ACCESSOR_RESTRICTION" ]   = "fineGridFace"  + patch_overlap_restriction.name
     self.d[ "COARSE_GRID_FACE_ACCESSOR_RESTRICTION" ] = "coarseGridFaces"  + patch_overlap_restriction.name
+    self.d[ "INTERPOLATION_SCHEME" ]      = interpolation_scheme
+    self.d[ "RESTRICTION_SCHEME" ]        = restriction_scheme
     self.d[ "GUARD" ]                     = guard
     
     self._clear_overlap_in_touch_first_time = clear_overlap_in_touch_first_time    
@@ -60,7 +64,7 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
 
   __Template_TouchFaceFirstTime = """
   if ( {GUARD} ) {{
-    logTraceIn( "touchFaceFirstTime(...)---ProjectFacesInAdaptiveMesh" );
+    logTraceIn( "touchFaceFirstTime(...)---DynamicAMR" );
 
     ::toolbox::blockstructured::clearHaloLayerAoS(
       marker,
@@ -70,16 +74,16 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
       {FINE_GRID_FACE_ACCESSOR_RESTRICTION}.value
     );
 
-    logTraceOut( "touchFaceFirstTime(...)---ProjectFacesInAdaptiveMesh" );
+    logTraceOut( "touchFaceFirstTime(...)---DynamicAMR" );
   }}
 """
 
 
   __Template_CreateHangingFace = """
   if ( {GUARD} ) {{
-    logTraceIn( "createHangingFace(...)---ProjectFacesInAdaptiveMesh" );
+    logTraceIn( "createHangingFace(...)---DynamicAMR" );
 
-    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
+    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{INTERPOLATION_SCHEME}(
       marker,
       {DOFS_PER_AXIS},
       {OVERLAP},
@@ -88,15 +92,15 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
       {COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}(marker.getSelectedFaceNumber()).value
     );
     
-    logTraceOut( "createHangingFace(...)---ProjectFacesInAdaptiveMesh" );
+    logTraceOut( "createHangingFace(...)---DynamicAMR" );
   }}
 """
 
   __Template_DestroyHangingFace = """
   if ( {GUARD} ) {{
-    logTraceInWith3Arguments( "destroyHangingFace(...)---ProjectFacesInAdaptiveMesh", "{FINE_GRID_FACE_ACCESSOR_RESTRICTION}", "{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}", marker.getSelectedFaceNumber() );
+    logTraceInWith3Arguments( "destroyHangingFace(...)---DynamicAMR", "{FINE_GRID_FACE_ACCESSOR_RESTRICTION}", "{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}", marker.getSelectedFaceNumber() );
 
-    ::toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
+    ::toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_{RESTRICTION_SCHEME}(
       marker,
       {DOFS_PER_AXIS},
       {OVERLAP},
@@ -105,8 +109,67 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
       {COARSE_GRID_FACE_ACCESSOR_RESTRICTION}(marker.getSelectedFaceNumber()).value
     );
 
-    logTraceOut( "destroyHangingFace(...)---ProjectFacesInAdaptiveMesh" );
+    logTraceOut( "destroyHangingFace(...)---DynamicAMR" );
   }}
+"""
+
+  __Template_CreatePersistentFace = """
+  logTraceIn( "createPersistentFace(...)---DynamicAMR" );
+
+  ::toolbox::blockstructured::interpolateHaloLayer_AoS_{INTERPOLATION_SCHEME}(
+      marker,
+      {DOFS_PER_AXIS},
+      {OVERLAP},
+      {UNKNOWNS},
+      {FINE_GRID_FACE_ACCESSOR_INTERPOLATION}.value,
+      {COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}(marker.getSelectedFaceNumber()).value
+  );
+    
+  logTraceOut( "createPersistentFace(...)---DynamicAMR" );
+"""
+
+  __Template_DestroyPersistentFace = """
+  logTraceIn( "createPersistentFace(...)---DynamicAMR" );
+
+  ::toolbox::blockstructured::restrictHaloLayer_AoS_{RESTRICTION_SCHEME}(
+      marker,
+      {DOFS_PER_AXIS},
+      {OVERLAP},
+      {UNKNOWNS},
+      {FINE_GRID_FACE_ACCESSOR_INTERPOLATION}.value,
+      {COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}(marker.getSelectedFaceNumber()).value
+  );
+    
+  logTraceOut( "createPersistentFace(...)---DynamicAMR" );
+"""
+
+
+  __Template_CreateCell = """
+  logTraceIn( "createCell(...)---DynamicAMR" );
+
+  ::toolbox::blockstructured::interpolateCell_AoS_{INTERPOLATION_SCHEME}(
+      marker,
+      {DOFS_PER_AXIS},
+      {UNKNOWNS},
+      {FINE_GRID_CELL}.value,
+      {COARSE_GRID_CELL}.value
+  );
+    
+  logTraceOut( "createCell(...)---DynamicAMR" );
+"""
+
+  __Template_DestroyCell = """
+  logTraceIn( "destroyCell(...)---DynamicAMR" );
+
+  ::toolbox::blockstructured::restrictCell_AoS_{RESTRICTION_SCHEME}(
+      marker,
+      {DOFS_PER_AXIS},
+      {UNKNOWNS},
+      {FINE_GRID_CELL}.value,
+      {COARSE_GRID_CELL}.value
+  );
+    
+  logTraceOut( "destroyCell(...)---DynamicAMR" );
 """
 
 
@@ -115,8 +178,20 @@ class ProjectFacesInAdaptiveMesh(ActionSet):
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
       result = self.__Template_CreateHangingFace.format(**self.d)
       pass 
+    if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE:
+      result = self.__Template_CreatePersistentFace.format(**self.d)
+      pass 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
       result = self.__Template_DestroyHangingFace.format(**self.d)
+      pass 
+    if operation_name==ActionSet.OPERATION_DESTROY_PERSISTENT_FACE:
+      result = self.__Template_DestroyPersistentFace.format(**self.d)
+      pass 
+    if operation_name==ActionSet.OPERATION_CREATE_CELL:
+      result = self.__Template_CreateCell.format(**self.d)
+      pass 
+    if operation_name==ActionSet.OPERATION_DESTROY_CELL:
+      result = self.__Template_DestroyCell.format(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME and self._clear_overlap_in_touch_first_time:
       result = self.__Template_TouchFaceFirstTime.format(**self.d)

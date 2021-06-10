@@ -190,18 +190,17 @@ AC_ARG_WITH(mpi,
     esac ],
   [ AC_MSG_CHECKING(for mpi); AC_MSG_RESULT(no); mpi=false ])
  
-AC_DEFUN([AC_PROG_USERMPI], [AC_CHECK_PROG(USERMPI,"${mpi}",yes)])
+#AC_DEFUN([AC_PROG_USERMPI], [AC_CHECK_PROG(USERMPI,"${mpi}",yes)])
 
 
 if test "$mpi" != false; then
-  AC_PROG_USERMPI
-  if test x"${USERMPI}" != x"yes" ; then
-      AC_MSG_ERROR([The specified MPI compiler (${mpi}) was not found.])
-  fi
   CXX=$mpi
   AC_DEFINE([Parallel], [1], [Parallel])
-else
-  MPICXX=false
+  
+  AC_CHECK_PROG( USERMPI, $mpi, "yes" )
+  if test x"$USERMPI" != x"yes" ; then
+    AC_MSG_WARN([The specified MPI compiler (${mpi}) was not found in the path. If it is a global path, please ignore this message.])
+  fi
 fi
 
 
@@ -381,27 +380,27 @@ AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
 #
 # HDF5
 #
-AC_ARG_WITH(hdf5,
-  AC_HELP_STRING([--with-hdf5], [enable HDF5 support [default=no]]),
-  [ AC_MSG_CHECKING(for hdf5)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);                       hdf5=false ;;
-      *)     AC_MSG_RESULT(build with HDF5 support);  hdf5=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for hdf5); AC_MSG_RESULT(no); hdf5=false ])
- 
-if test "$with_hdf5" = "yes"; then
-  if test "$mpi" != false; then
-    AX_LIB_HDF5([parallel])
-  else
-    AX_LIB_HDF5([serial])
-  fi
-  if test "$with_hdf5" = "yes"; then
-    AC_DEFINE([UseHDF5], [1], [UseHDF5])
-  else
-    AC_MSG_ERROR([Unable to find HDF5, we need HDF5.])
-  fi
-fi 
+#AC_ARG_WITH(hdf5,
+#  AC_HELP_STRING([--with-hdf5], [enable HDF5 support [default=no]]),
+#  [ AC_MSG_CHECKING(for hdf5)
+#    case "${withval}" in
+#      no)    AC_MSG_RESULT(no);                       hdf5=false ;;
+#      *)     AC_MSG_RESULT(build with HDF5 support);  hdf5=true  ;;
+#    esac ],
+#  [ AC_MSG_CHECKING(for hdf5); AC_MSG_RESULT(no); hdf5=false ])
+# 
+#if test "$with_hdf5" = "yes"; then
+#  if test "$mpi" != false; then
+#    AX_LIB_HDF5([parallel])
+#  else
+#    AX_LIB_HDF5([serial])
+#  fi
+#  if test "$with_hdf5" = "yes"; then
+#    AC_DEFINE([UseHDF5], [1], [UseHDF5])
+#  else
+#    AC_MSG_ERROR([Unable to find HDF5, we need HDF5.])
+#  fi
+#fi 
 
 
 

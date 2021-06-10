@@ -39,7 +39,7 @@ if __name__ == "__main__":
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "adm", "PTadm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "PTadm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     """
 
 
-      def add_constraint_verification(self):
+      def add_constraint_RefinementFlag_verification(self):
         """
 
          Add the constraint verification code
@@ -150,7 +150,7 @@ if __name__ == "__main__":
          side.
 
         """
-        self._auxiliary_variables = 6
+        self._auxiliary_variables = 7
 
         self.additional_includes += """
     #include "../CCZ4Kernels.h"
@@ -160,7 +160,7 @@ if __name__ == "__main__":
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        const int n_a_v=6;
+        const int n_a_v=7;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
 
@@ -186,18 +186,25 @@ if __name__ == "__main__":
             }
           }
 
-          // We will use a Fortran routine to compute the constraints per
           // Finite Volume
-          double constraints[n_a_v]={ 0 };
+          double constraints[n_a_v-1]={ 0 };
 
           // Central cell
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
 
           admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
 
-          for(int i=0;i<n_a_v;i++){
+          for(int i=0;i<(n_a_v-1);i++){
             reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
           }
+          
+          //here we calculate the norm of conformal factor phi as the refinement condition
+          double Phi = std::exp(reconstructedPatch[cellSerialised*(59+n_a_v)+54]);
+          double P1  = reconstructedPatch[cellSerialised*(59+n_a_v)+55]*Phi;
+          double P2  = reconstructedPatch[cellSerialised*(59+n_a_v)+56]*Phi;
+          double P3  = reconstructedPatch[cellSerialised*(59+n_a_v)+57]*Phi;
+          
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+n_a_v-1]=pow((P1*P1+P2*P2+P3*P3),0.5);
         }
     """)
 
@@ -466,8 +473,8 @@ if __name__ == "__main__":
 
       if args.extension=="gradient":
         my_solver.add_derivative_calculation()
-      if args.extension=="adm":
-        my_solver.add_constraint_verification()
+      if args.extension=="AMRadm":
+        my_solver.add_constraint_RefinementFlag_verification()
       if args.extension=="PTadm":
         my_solver.add_PunctureTracker_Lconstraintwriter()
 
@@ -503,10 +510,10 @@ if __name__ == "__main__":
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
-      [-20, -20, -20],  [40.0, 40.0, 40.0],
+      #[-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,

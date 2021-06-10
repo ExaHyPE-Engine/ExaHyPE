@@ -271,6 +271,49 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_co
 }
 
 
+void toolbox::blockstructured::projectCells_AoS(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  std::function<void(
+    tarch::la::Vector<Dimensions,int> coarseVolume,
+    tarch::la::Vector<Dimensions,int> fineVolume,
+    tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+    tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+    double coarseVolumeH,
+    double fineVolumeH
+  )> update
+) {
+  logTraceInWith2Arguments( "projectCells_AoS(...)", marker.toString(), numberOfDoFsPerAxisInPatch );
+
+  const double volumeHCoarse = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch) * 3.0;
+  const double volumeHFine   = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch);
+
+  tarch::la::Vector<Dimensions,double> leftBottomOfFineCell   = marker.getOffset();
+  tarch::la::Vector<Dimensions,double> leftBottomOfCoarseCell = marker.getOffset() - tarch::la::multiplyComponents( marker.h(), tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()) );
+
+  dfor(kCoarse,numberOfDoFsPerAxisInPatch) {
+    dfor(kFine,numberOfDoFsPerAxisInPatch) {
+      tarch::la::Vector<Dimensions,double> volumeXCoarse = leftBottomOfCoarseCell
+          + volumeHCoarse * tarch::la::convertScalar<double>(kCoarse)
+          + 0.5 * tarch::la::Vector<Dimensions,double>(volumeHCoarse);
+      tarch::la::Vector<Dimensions,double> volumeXFine = leftBottomOfFineCell
+          + volumeHFine * tarch::la::convertScalar<double>(kFine)
+          + 0.5 * tarch::la::Vector<Dimensions,double>(volumeHFine);
+
+      update(
+        kCoarse,
+        kFine,
+        volumeXCoarse,
+        volumeXFine,
+        volumeHCoarse,
+        volumeHFine
+      );
+    }
+  }
+
+  logTraceOut( "projectCells_AoS(...)" );
+}
+
 
 void toolbox::blockstructured::restrictHaloLayer_AoS_piecewise_constant(
   const peano4::datamanagement::FaceMarker& marker,
@@ -289,22 +332,55 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_piecewise_constant(
 void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
-  int                                       overlap,
   int                                       unknowns,
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-
+  projectCells_AoS(
+    marker,
+    numberOfDoFsPerAxisInPatch,
+    [&](
+      tarch::la::Vector<Dimensions,int> coarseVolume,
+      tarch::la::Vector<Dimensions,int> fineVolume,
+      tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+      tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+      double coarseVolumeH,
+      double fineVolumeH
+    ) -> void {
+      int coarseVolumeLinearised = peano4::utils::dLinearised( coarseVolume, numberOfDoFsPerAxisInPatch );
+      int fineVolumeLinearised   = peano4::utils::dLinearised( fineVolume, numberOfDoFsPerAxisInPatch );
+      for (int j=0; j<unknowns; j++) {
+        fineGridValues[coarseVolumeLinearised*unknowns+j] = coarseGridValues[fineVolumeLinearised*unknowns+j];
+      }
+    }
+  );
 }
 
 
 void toolbox::blockstructured::restrictCell_AoS_piecewise_constant(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
-  int                                       overlap,
   int                                       unknowns,
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-
+  double scaleFineGridVolume = std::pow(3.0,-static_cast<double>(Dimensions-1));
+  projectCells_AoS(
+    marker,
+    numberOfDoFsPerAxisInPatch,
+    [&](
+      tarch::la::Vector<Dimensions,int> coarseVolume,
+      tarch::la::Vector<Dimensions,int> fineVolume,
+      tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+      tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+      double coarseVolumeH,
+      double fineVolumeH
+    ) -> void {
+      int coarseVolumeLinearised = peano4::utils::dLinearised( coarseVolume, numberOfDoFsPerAxisInPatch );
+      int fineVolumeLinearised   = peano4::utils::dLinearised( fineVolume, numberOfDoFsPerAxisInPatch );
+      for (int j=0; j<unknowns; j++) {
+        coarseGridValues[coarseVolumeLinearised*unknowns+j] += scaleFineGridVolume * fineGridValues[fineVolumeLinearised*unknowns+j];
+      }
+    }
+  );
 }

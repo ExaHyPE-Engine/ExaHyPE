@@ -159,12 +159,26 @@ namespace toolbox {
     );
 
 
+    /**
+     * Helper function
+     */
+    void projectCells_AoS(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      std::function<void(
+        tarch::la::Vector<Dimensions,int> coarseVolume,
+        tarch::la::Vector<Dimensions,int> fineVolume,
+        tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+        tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+        double coarseVolumeH,
+        double fineVolumeH
+      )> update
+    );
 
 
     void interpolateCell_AoS_piecewise_constant(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
       int                                       unknowns,
       double*                                   fineGridValues,
       double*                                   coarseGridValues
@@ -173,7 +187,6 @@ namespace toolbox {
     void restrictCell_AoS_piecewise_constant(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
       int                                       unknowns,
       double*                                   fineGridValues,
       double*                                   coarseGridValues
