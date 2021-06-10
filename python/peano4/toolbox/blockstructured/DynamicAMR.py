@@ -150,7 +150,6 @@ class DynamicAMR(ActionSet):
   ::toolbox::blockstructured::interpolateCell_AoS_{INTERPOLATION_SCHEME}(
       marker,
       {DOFS_PER_AXIS},
-      {OVERLAP},
       {UNKNOWNS},
       {FINE_GRID_CELL}.value,
       {COARSE_GRID_CELL}.value
@@ -165,7 +164,6 @@ class DynamicAMR(ActionSet):
   ::toolbox::blockstructured::restrictCell_AoS_{RESTRICTION_SCHEME}(
       marker,
       {DOFS_PER_AXIS},
-      {OVERLAP},
       {UNKNOWNS},
       {FINE_GRID_CELL}.value,
       {COARSE_GRID_CELL}.value
