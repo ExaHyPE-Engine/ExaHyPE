@@ -327,7 +327,6 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "exahype2/SmartEnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_includes() 
