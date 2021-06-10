@@ -12,16 +12,17 @@ build:
   #   - apt update && apt -y install make autoconf
   script:
     - bash ci/autotools.sh
-  artifacts:
-    paths:
-      - mybinary
+    - bash ci/configure_openmp.sh
+  #artifacts:
+    #paths:
+      #- mybinary
       # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
       # cache:
       #   paths:
       #     - "*.o"
 
 # run tests using the binary built before
-test:
-  stage: test
-  script:
-    - ./runmytests.sh
+#est:
+# stage: test
+# script:
+#   - ./runmytests.sh
