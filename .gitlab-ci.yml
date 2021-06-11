@@ -4,6 +4,20 @@
 # see https://hub.docker.com/_/gcc/
 image: gcc
 
+before_script:
+  - eval $(ssh-agent -s)
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - ssh-keyscan "$CIMACHINE" >> ~/.ssh/known_hosts
+  - chmod 644 ~/.ssh/known_hosts
+
+Test SSH:
+  script:
+  # try to connect to GitLab.com
+  - ssh "$CIUSER"@"$CIMACHINE"
+
+
 build:
   stage: build
   # instead of calling g++ directly you can also use some build toolkit like make
