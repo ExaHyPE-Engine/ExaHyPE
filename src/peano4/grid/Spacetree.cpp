@@ -137,28 +137,7 @@ bool peano4::grid::Spacetree::isSpacetreeNodeLocal(
   bool          splittingIsConsideredLocal,
   bool          joiningIsConsideredLocal
 ) const {
-  bool isLocal = true;
-  dfor2(k)
-    isLocal &= (
-      (vertices[kScalar].getState()==GridVertex::State::HangingVertex)
-      or
-      (
-        vertices[kScalar].getAdjacentRanks(TwoPowerD-kScalar-1)==_id
-      )
-      or
-      ( _splitTriggered.count(vertices[kScalar].getAdjacentRanks(TwoPowerD-kScalar-1)) > 0)
-      or
-      (
-        splittingIsConsideredLocal and _splitting.count(vertices[kScalar].getAdjacentRanks(TwoPowerD-kScalar-1))>0
-      )
-      or
-      (
-        joiningIsConsideredLocal and _joining.count(vertices[kScalar].getAdjacentRanks(TwoPowerD-kScalar-1))>0
-      )
-    );
-  enddforx
-
-  return isLocal;
+  return _gridTraversalEventGenerator.isSpacetreeNodeLocal(vertices,_splitTriggered,_splitting,_joinTriggered,_joining,splittingIsConsideredLocal,joiningIsConsideredLocal);
 }
 
 
@@ -323,47 +302,6 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
   logTraceOut( "traverse(TraversalObserver)" );
 }
 
-
-std::bitset<TwoPowerD> peano4::grid::Spacetree::areVerticesInsideDomain(GridVertex  vertices[TwoPowerD]) const {
-  std::bitset<TwoPowerD> bitset;
-  for (int i=0; i<TwoPowerD; i++) {
-    bitset.set(i,
-      tarch::la::equals( vertices[i].getBackupOfAdjacentRanks(), _id )
-    );
-  }
-  return bitset;
-}
-
-
-
-std::bitset<TwoTimesD> peano4::grid::Spacetree::areFacesLocal(GridVertex  vertices[TwoPowerD]) const {
-  std::bitset<TwoTimesD> result;
-  for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {
-    bool isLocal = false;
-
-    const int normal = faceNumber % Dimensions;
-    for (int i=0; i<TwoPowerD; i++) {
-      std::bitset<Dimensions> studiedVertex = i;
-      studiedVertex.set(normal,faceNumber>=Dimensions);
-      std::bitset<Dimensions> studiedEntry  = TwoPowerD - studiedVertex.to_ulong() - 1;
-
-      studiedEntry.set(normal,0);
-      int currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks( studiedEntry.to_ulong() );
-      isLocal |=  currentRank == _id;
-      isLocal |=  _splitTriggered.count(currentRank)>0;
-      isLocal |=  _splitting.count(currentRank)>0;
-
-      studiedEntry.set(normal,1);
-      currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks( studiedEntry.to_ulong() );
-      isLocal |= currentRank == _id;
-      isLocal |=  _splitTriggered.count(currentRank)>0;
-      isLocal |=  _splitting.count(currentRank)>0;
-    }
-
-    result[faceNumber] = isLocal;
-  }
-  return result;
-}
 
 
 void peano4::grid::Spacetree::refineState(const AutomatonState& coarseGrid, AutomatonState fineGridStates[ThreePowerD], tarch::la::Vector<Dimensions,int>  fineGridStatesPosition, int  axis ) {
@@ -1718,39 +1656,6 @@ void peano4::grid::Spacetree::descend(
 }
 
 
-peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createGenericCellTraversalEvent(
-  GridVertex              fineGridVertices[TwoPowerD],
-  const AutomatonState&   state,
-  const tarch::la::Vector<Dimensions,int>&  relativePositionToFather
-) const {
-  logTraceInWith3Arguments( "createGenericCellTraversalEvent(...)", state.toString(), relativePositionToFather, _id );
-  GridTraversalEvent  event;
-  event.setX( state.getX() + state.getH()*0.5 );
-  event.setH( state.getH() );
-
-  event.setIsRefined( areVerticesRefined(fineGridVertices) );
-  event.setRelativePositionToFather( relativePositionToFather );
-
-  event.setIsCellLocal(   isSpacetreeNodeLocal(fineGridVertices, true, true) );
-  event.setIsFaceLocal(   areFacesLocal(fineGridVertices) );
-  event.setIsVertexLocal( _gridTraversalEventGenerator.areVerticesLocal(fineGridVertices, _splitTriggered, _splitting, _joinTriggered, _joining) );
-
-  event.setIsVertexInsideDomain( areVerticesInsideDomain(fineGridVertices) );
-
-  event.setInvokingSpacetree( _id );
-  event.setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
-    _spacetreeState == SpacetreeState::Running and
-	_joinTriggered.empty() and
-	_joining.empty() and
-	_splitTriggered.empty() and
-	_splitting.empty()
-  );
-
-  logTraceOut( "createGenericCellTraversalEvent(...)" );
-  return event;
-}
-
-
 peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createEnterCellTraversalEvent(
   GridVertex                                   coarseGridVertices[TwoPowerD],
   GridVertex                                   fineGridVertices[TwoPowerD],
@@ -1758,7 +1663,7 @@ peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createEnterCellTravers
   const tarch::la::Vector<Dimensions,int>&     relativePositionToFather
 ) const {
   logTraceInWith7Arguments( "createEnterCellTraversalEvent(...)", state.toString(), _id, relativePositionToFather, coarseGridVertices[0].toString(), coarseGridVertices[1].toString(), coarseGridVertices[2].toString(), coarseGridVertices[3].toString() );
-  GridTraversalEvent  event = createGenericCellTraversalEvent(fineGridVertices, state, relativePositionToFather);
+  GridTraversalEvent  event = _gridTraversalEventGenerator.createGenericCellTraversalEvent(fineGridVertices, state, _splitTriggered, _splitting, _joinTriggered, _joining, relativePositionToFather, _spacetreeState == SpacetreeState::Running);
 
   const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
   for (int i=0; i<TwoPowerD; i++) {
@@ -2217,7 +2122,7 @@ peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createLeaveCellTravers
   const tarch::la::Vector<Dimensions,int>&  relativePositionToFather
 ) const {
   logTraceInWith3Arguments( "createLeaveCellTraversalEvent(...)", state.toString(), _id, relativePositionToFather );
-  GridTraversalEvent  event = createGenericCellTraversalEvent(fineGridVertices, state, relativePositionToFather);
+  GridTraversalEvent  event = _gridTraversalEventGenerator.createGenericCellTraversalEvent(fineGridVertices, state, _splitTriggered, _splitting, _joinTriggered, _joining, relativePositionToFather, _spacetreeState == SpacetreeState::Running);
 
   const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
   for (int i=0; i<TwoPowerD; i++) {

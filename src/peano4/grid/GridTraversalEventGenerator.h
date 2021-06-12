@@ -72,11 +72,79 @@ class peano4::grid::GridTraversalEventGenerator {
       bool        joiningIsConsideredLocal
     ) const;
 
-    //      const AutomatonState& fineGridState,
- //     const SplitSpecification&                 splitTriggered,
- //     const std::set<int>&                      splitting,
- //     const std::set< int >&                    joinTriggered,
-  //    const std::set< int >&                    joining,
+
+    /**
+     * A spacetree node as 2^d adjacent vertices. So there are 2^d integers
+     * stored within these vertices that overlap with the current node. They
+     * all have to be the same. If they identify the local _id, then the
+     * node is local. They are also local if the markers are set to
+     * RankOfCellWitchWillBeJoined. This magic constant identifies cells on a
+     * worker which might join into their master.
+     *
+     * Throughout the splitting process, an id might be already set to a
+     * remote rank, though it still is technically and logically local. So
+     * this routine interprets locality pretty technical and even marks those
+     * cells as non-local (anymore) which still are for another grid sweep or
+     * two.
+     */
+    bool isSpacetreeNodeLocal(
+      GridVertex    vertices[TwoPowerD],
+      const SplitSpecification&                 splitTriggered,
+      const std::set<int>&                      splitting,
+      const std::set< int >&                    joinTriggered,
+      const std::set< int >&                    joining,
+      bool          splittingIsConsideredLocal,
+      bool          joiningIsConsideredLocal
+    ) const;
+
+
+    /**
+     * Identifies for the @f$ 2 \cdot d @f$ faces whether they are local or not.
+     *
+     * <h2> Implementation </h2>
+     *
+     * - I loop over the 2d faces.
+     * - Per face, I loop over all @f$ 2^d @f$ vertices but alter the entry
+     *   along the normal manually. So I'm inefficient, but I don't care.
+     * - Per relevant vertex, I have to check two entries in the adjacency
+     *   list.
+     * - Splitting and split-triggered ranks are still considered to be
+     *   local.
+     */
+    std::bitset<TwoTimesD> areFacesLocal(
+      GridVertex  vertices[TwoPowerD],
+      const SplitSpecification&                 splitTriggered,
+      const std::set<int>&                      splitting,
+      const std::set< int >&                    joinTriggered,
+      const std::set< int >&                    joining
+    ) const;
+
+
+    std::bitset<TwoPowerD> areVerticesInsideDomain(GridVertex  vertices[TwoPowerD]) const;
+
+
+
+
+    /**
+     * <h2> Implementation details </h2>
+     *
+     * Don't use the result's toString() operation in the traceOut statement.
+     * The event is not yet totally populated (we don't know the data-specific
+     * properties and only befill the generic stuff). As a consequence any
+     * toString() will cause valgrind's memchecker to raise (falsely) an alarm.
+     *
+     * @param spacetreeStateIsRunning  spacetreeState == SpacetreeState::Running
+     */
+    GridTraversalEvent createGenericCellTraversalEvent(
+      GridVertex              fineGridVertices[TwoPowerD],
+      const AutomatonState&                        state,
+      const SplitSpecification&                 splitTriggered,
+      const std::set<int>&                      splitting,
+      const std::set< int >&                    joinTriggered,
+      const std::set< int >&                    joining,
+      const tarch::la::Vector<Dimensions,int>&  relativePositionToFather,
+      bool                                      spacetreeStateIsRunning
+    ) const;
 };
 
 
