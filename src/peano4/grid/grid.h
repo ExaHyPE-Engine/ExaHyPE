@@ -5,11 +5,15 @@
 
 
 #include <vector>
+#include <map>
+#include <set>
 
 #include "GridVertex.h"
 
 
 namespace peano4 {
+  typedef std::map< int, int >  SplitSpecification;
+
   /**
    * @namespace peano4::grid
    *
@@ -135,6 +139,28 @@ namespace peano4 {
      *   You can also use isSpacetreeNodeRefined() instead.
      */
     std::bitset<TwoPowerD> areVerticesRefined(GridVertex  vertices[TwoPowerD]);
+
+
+    /**
+     * A spacetree node as 2^d adjacent vertices. So there are 2^d integers
+     * stored within these vertices that overlap with the current node. They
+     * all have to be the same. If they identify the local _id, then the
+     * node is local. They are also local if the markers are set to
+     * RankOfCellWitchWillBeJoined. This magic constant identifies cells on a
+     * worker which might join into their master.
+     *
+     * Throughout the splitting process, an id might be already set to a
+     * remote rank, though it still is technically and logically local. So
+     * this routine interprets locality pretty technical and even marks those
+     * cells as non-local (anymore) which still are for another grid sweep or
+     * two.
+     */
+    bool isSpacetreeNodeLocal(
+      GridVertex    vertices[TwoPowerD],
+      bool          splittingIsConsideredLocal,
+      bool          joiningIsConsideredLocal,
+      int           id
+    );
   }
 }
 

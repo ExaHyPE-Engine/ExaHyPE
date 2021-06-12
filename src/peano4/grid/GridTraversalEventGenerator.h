@@ -7,9 +7,12 @@
 #include "tarch/logging/Log.h"
 
 
+#include "grid.h"
 #include "GridTraversalEvent.h"
 #include "AutomatonState.h"
 #include "GridVertex.h"
+
+
 
 
 
@@ -25,7 +28,18 @@ class peano4::grid::GridTraversalEventGenerator {
   private:
     static tarch::logging::Log  _log;
 
+    /**
+     * Number of underlying tree
+     */
+    const int _id;
   public:
+    GridTraversalEventGenerator(int id);
+
+//      const AutomatonState& fineGridState,
+ //     const SplitSpecification&                 splitTriggered,
+ //     const std::set<int>&                      splitting,
+ //     const std::set< int >&                    joinTriggered,
+  //    const std::set< int >&                    joining,
 };
 
 

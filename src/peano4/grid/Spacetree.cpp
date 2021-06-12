@@ -38,7 +38,8 @@ peano4::grid::Spacetree::Spacetree(
   _spacetreeState( SpacetreeState::NewRoot ),
   _root(),
   _masterId(-1),
-  _periodicBC(periodicBC) {
+  _periodicBC(periodicBC),
+  _gridTraversalEventGenerator(0) {
   _root.setLevel( 0 );
   _root.setX( offset );
   _root.setH( width );
@@ -70,7 +71,8 @@ peano4::grid::Spacetree::Spacetree(
   _masterId(masterId),
   _periodicBC(0),
   _splitTriggered(),
-  _splitting() {
+  _splitting(),
+  _gridTraversalEventGenerator(newId) {
   _root.setLevel( 0 );
   _root.setX( offset );
   _root.setH( width );
@@ -359,6 +361,7 @@ std::bitset<TwoPowerD> peano4::grid::Spacetree::areVerticesLocal(GridVertex  ver
   }
   return bitset;
 }
+
 
 
 std::bitset<TwoTimesD> peano4::grid::Spacetree::areFacesLocal(GridVertex  vertices[TwoPowerD]) const {
@@ -1741,7 +1744,6 @@ void peano4::grid::Spacetree::descend(
 
   logTraceOut( "descend(...)" );
 }
-
 
 
 peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createGenericCellTraversalEvent(

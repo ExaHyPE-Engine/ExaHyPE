@@ -9,6 +9,7 @@
 #include "GridVertex.h"
 #include "GridStatistics.h"
 #include "GridControlEvent.h"
+#include "GridTraversalEventGenerator.h"
 
 
 #include "tarch/logging/Log.h"
@@ -86,7 +87,6 @@ class peano4::grid::Spacetree {
      *   local.
      */
     std::bitset<TwoTimesD> areFacesLocal(GridVertex  vertices[TwoPowerD]) const;
-
 
 
   private:
@@ -271,10 +271,11 @@ class peano4::grid::Spacetree {
      * and then we roll over the requests in the subsequent iteration to be
      * actually performed.
      */
-    typedef std::map< int, int >  SplitSpecification;
     SplitSpecification   _splitTriggered;
 
     std::set<int>        _splitting;
+
+    GridTraversalEventGenerator _gridTraversalEventGenerator;
 
     /**
      * I need this post-mortem list to identify which tree structures have to be
@@ -399,6 +400,7 @@ class peano4::grid::Spacetree {
       bool          splittingIsConsideredLocal,
       bool          joiningIsConsideredLocal
     ) const;
+
 
     /**
      * We run over the @f$ 2^d @f$ adjacent vertices of the cell and look at
@@ -544,6 +546,7 @@ class peano4::grid::Spacetree {
       GridTraversalEvent&  event
     ) const;
 
+
     /**
      * <h2> Implementation details </h2>
      *
@@ -557,6 +560,7 @@ class peano4::grid::Spacetree {
       const AutomatonState&   state,
       const tarch::la::Vector<Dimensions,int>&  relativePositionToFather
     ) const;
+
 
     /**
      * Create description of an enter cell traversal.
