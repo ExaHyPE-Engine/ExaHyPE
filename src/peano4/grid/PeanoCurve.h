@@ -15,18 +15,23 @@ namespace peano4 {
 }
 
 
+/**
+ * Utility functions specific to the Peano SFC
+ *
+ * @see Namespace description in grid.h
+ */
 class peano4::grid::PeanoCurve {
   public:
-	  /**
-	   * We reserve one number for the callstack.
-	   */
-	 static constexpr int CallStack = 0;
+    /**
+     *
+     */
+    static constexpr int CallStack = 0;
 
-	  /**
-	   * By setting the value to something bigger than 2, we effectively reserve
-	   * NumberOfBaseStacks - 2 as callstack.
-	   */
-	  static constexpr int NumberOfBaseStacks = 3;
+    /**
+     * By setting the value to something bigger than 2, we effectively reserve
+     * NumberOfBaseStacks - 2 as callstack.
+     */
+    static constexpr int NumberOfBaseStacks = 3;
 
     /**
      * In principle, there are Dimensions axes along which we can have periodic

@@ -341,24 +341,6 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
 }
 
 
-bool peano4::grid::Spacetree::isVertexRefined(GridVertex  vertex) {
-  return vertex.getState() == GridVertex::State::Refining
-      or vertex.getState() == GridVertex::State::Refined
-      or vertex.getState() == GridVertex::State::EraseTriggered
-      or vertex.getState() == GridVertex::State::Erasing;
-}
-
-
-std::bitset<TwoPowerD> peano4::grid::Spacetree::areVerticesRefined(GridVertex  vertices[TwoPowerD]) const {
-  std::bitset<TwoPowerD> bitset;
-  for (int i=0; i<TwoPowerD; i++) {
-     assertion( not isVertexRefined(vertices[i]) or vertices[i].getState()!=GridVertex::State::HangingVertex );
-     bitset.set(i,isVertexRefined(vertices[i]));
-  }
-  return bitset;
-}
-
-
 std::bitset<TwoPowerD> peano4::grid::Spacetree::areVerticesInsideDomain(GridVertex  vertices[TwoPowerD]) const {
   std::bitset<TwoPowerD> bitset;
   for (int i=0; i<TwoPowerD; i++) {
@@ -405,15 +387,6 @@ std::bitset<TwoTimesD> peano4::grid::Spacetree::areFacesLocal(GridVertex  vertic
 
     result[faceNumber] = isLocal;
   }
-  return result;
-}
-
-
-bool peano4::grid::Spacetree::isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]) {
-  bool result = false;
-  dfor2(k)
-    result |= isVertexRefined( vertices[kScalar] );
-  enddforx
   return result;
 }
 

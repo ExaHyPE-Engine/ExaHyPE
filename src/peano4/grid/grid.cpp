@@ -3,6 +3,8 @@
 #include "GridControlEvent.h"
 #include "Spacetree.h"
 
+#include "peano4/utils/Loop.h"
+
 
 
 peano4::grid::GridVertex peano4::grid::createVertex(
@@ -27,7 +29,6 @@ peano4::grid::GridVertex peano4::grid::createVertex(
 
   return result;
 }
-
 
 
 std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< GridControlEvent>   events, const double Tolerance ) {
@@ -147,3 +148,29 @@ void peano4::grid::clear( GridStatistics& statistics, bool isGlobalMasterTree ) 
   statistics.setMinH( tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() ) );
 }
 
+
+bool peano4::grid::isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]) {
+  bool result = false;
+  dfor2(k)
+    result |= isVertexRefined( vertices[kScalar] );
+  enddforx
+  return result;
+}
+
+
+bool peano4::grid::isVertexRefined(GridVertex  vertex) {
+  return vertex.getState() == GridVertex::State::Refining
+      or vertex.getState() == GridVertex::State::Refined
+      or vertex.getState() == GridVertex::State::EraseTriggered
+      or vertex.getState() == GridVertex::State::Erasing;
+}
+
+
+std::bitset<TwoPowerD> peano4::grid::areVerticesRefined(GridVertex  vertices[TwoPowerD]) {
+  std::bitset<TwoPowerD> bitset;
+  for (int i=0; i<TwoPowerD; i++) {
+     assertion( not isVertexRefined(vertices[i]) or vertices[i].getState()!=GridVertex::State::HangingVertex );
+     bitset.set(i,isVertexRefined(vertices[i]));
+  }
+  return bitset;
+}

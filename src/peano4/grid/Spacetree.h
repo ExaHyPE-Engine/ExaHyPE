@@ -64,17 +64,6 @@ class peano4::grid::Spacetree {
     static const int RankOfPeriodicBoundaryCondition;
     static const int NumberOfStationarySweepsToWaitAtLeastTillJoin;
 
-    static bool isVertexRefined(GridVertex  vertex);
-
-    /**
-     * A vertex is unrefined if it is hanging.
-     *
-     * @return bitset of vertices for which isVertexRefined() holds. If you wanna
-     *   find out whether a cell is refined, you can compare the result to zero.
-     *   You can also use isSpacetreeNodeRefined() instead.
-     */
-    std::bitset<TwoPowerD> areVerticesRefined(GridVertex  vertices[TwoPowerD]) const;
-
     /**
      * Vertices are local. I consider splitting and joining vertices to be
      * local, too. It is therefore consistent with areFacesLocal().
@@ -98,20 +87,6 @@ class peano4::grid::Spacetree {
      */
     std::bitset<TwoTimesD> areFacesLocal(GridVertex  vertices[TwoPowerD]) const;
 
-    /**
-     * A spacetree node is refined if any of its adjacent vertices holds one of
-     * the following flags:
-     *
-     * - refining If all vertices are refining or hanging or triggered, but
-     *     none of them has one of the flags discussed below, then we run into
-     *     a brand new cell of the tree.
-     * - refinement-triggered
-     * - erase-triggered We want to erase this spacetree node, but the erase
-     *     process is not triggered yet.
-     * - erasing If none of the other vertices holds another flag of this list,
-     *     then this cell is to be removed.
-     */
-    static bool isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]);
 
 
   private:
