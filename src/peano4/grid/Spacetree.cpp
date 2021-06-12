@@ -95,26 +95,7 @@ bool peano4::grid::Spacetree::isVertexAdjacentToLocalSpacetree(
   bool        splittingIsConsideredLocal,
   bool        joiningIsConsideredLocal
 ) const {
-  if (vertex.getState()==GridVertex::State::HangingVertex) {
-    return false;
-  }
-  else {
-    logTraceInWith3Arguments( "isVertexAdjacentToLocalSpacetree(...)", vertex.toString(), splittingIsConsideredLocal, joiningIsConsideredLocal );
-    bool result = false;
-    for(int i=0; i<TwoPowerD; i++) {
-      assertion( _splitTriggered.count( vertex.getAdjacentRanks(i) )<=1 );
-      assertion( _splitting.count( vertex.getAdjacentRanks(i) )<=1 );
-
-      result |= vertex.getAdjacentRanks(i)==_id;
-
-      result |= _splitTriggered.count( vertex.getAdjacentRanks(i) )==1;
-      result |= (splittingIsConsideredLocal and _splitting.count( vertex.getAdjacentRanks(i) )==1);
-
-      result |= (joiningIsConsideredLocal and _joining.count( vertex.getAdjacentRanks(i) )==1);
-    }
-    logTraceOutWith1Argument( "isVertexAdjacentToLocalSpacetree(...)", result );
-    return result;
-  }
+  return _gridTraversalEventGenerator.isVertexAdjacentToLocalSpacetree( vertex, _splitTriggered, _splitting, _joinTriggered, _joining, splittingIsConsideredLocal, joiningIsConsideredLocal );
 }
 
 
@@ -349,15 +330,6 @@ std::bitset<TwoPowerD> peano4::grid::Spacetree::areVerticesInsideDomain(GridVert
     bitset.set(i,
       tarch::la::equals( vertices[i].getBackupOfAdjacentRanks(), _id )
     );
-  }
-  return bitset;
-}
-
-
-std::bitset<TwoPowerD> peano4::grid::Spacetree::areVerticesLocal(GridVertex  vertices[TwoPowerD]) const {
-  std::bitset<TwoPowerD> bitset;
-  for (int i=0; i<TwoPowerD; i++) {
-    bitset.set(i,isVertexAdjacentToLocalSpacetree(vertices[i], true, true));
   }
   return bitset;
 }
@@ -1761,7 +1733,7 @@ peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createGenericCellTrave
 
   event.setIsCellLocal(   isSpacetreeNodeLocal(fineGridVertices, true, true) );
   event.setIsFaceLocal(   areFacesLocal(fineGridVertices) );
-  event.setIsVertexLocal( areVerticesLocal(fineGridVertices) );
+  event.setIsVertexLocal( _gridTraversalEventGenerator.areVerticesLocal(fineGridVertices, _splitTriggered, _splitting, _joinTriggered, _joining) );
 
   event.setIsVertexInsideDomain( areVerticesInsideDomain(fineGridVertices) );
 
