@@ -28,7 +28,7 @@ site_configuration = {
     ],
     "environments": [
         {
-            "modules": ["intel/2019.5", "gcc/9.3.0", "intelmpi/intel/2019.6", "gsl/intel/2.4", "python/3.6.8"],
+            "modules": ["intel/2019.5", "intelmpi/intel/2019.6", "gsl/intel/2.4"],
             "name": "intel",
             "cc": "icc",
             "cxx": "icpc",
