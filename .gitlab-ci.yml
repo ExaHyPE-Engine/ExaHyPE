@@ -4,20 +4,20 @@
 # see https://hub.docker.com/_/gcc/
 image: gcc
 
-before_script:
-  - eval $(ssh-agent -s)
-  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-  - mkdir -p ~/.ssh
-  - chmod 700 ~/.ssh
-  - ssh-keyscan "$CIMACHINE" >> ~/.ssh/known_hosts
-  - chmod 644 ~/.ssh/known_hosts
+#before_script:
+#  - eval $(ssh-agent -s)
+#  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+#  - mkdir -p ~/.ssh
+#  - chmod 700 ~/.ssh
+#  - ssh-keyscan "$CIMACHINE" >> ~/.ssh/known_hosts
+#  - chmod 644 ~/.ssh/known_hosts
 
 Test SSH:
   script:
   - whoami
   - hostname
   # try to connect to GitLab.com
-  - ssh -vvv "$CIUSER"@"$CIMACHINE"
+  - ssh -vvv "$CIUSER"@"$CIMACHINE" ls
 
 
 #build:
