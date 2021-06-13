@@ -18,7 +18,7 @@ Test SSH:
     - whoami
     - hostname
   # try to connect to GitLab.com
-    - ssh -vvv "$CIUSER"@"$CIMACHINE" ls
+    - ssh "$CIUSER"@"$CIMACHINE" sleep 2d
 
 
 #build:
