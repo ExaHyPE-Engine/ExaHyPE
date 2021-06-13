@@ -22,11 +22,12 @@ class Euler_CI(rfm.RegressionTest):
         test_dir = 'Peano/examples/exahype2/euler'
         
         self.build_system.config_opts = [
+                '--enable-blockstructured',
                 '--enable-exahype',
                 '--enable-loadbalancing',
                 '--with-mpi=mpiicpc',
                 '--with-multithreading=omp',
-                'CXXFLAGS=-fopenmp',
+                'CXXFLAGS="-fopenmp -std=c++14"',
         ]
         
         self.prerun_cmds = [
