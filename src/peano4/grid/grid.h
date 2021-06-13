@@ -161,6 +161,34 @@ namespace peano4 {
       bool          joiningIsConsideredLocal,
       int           id
     );
+
+
+    enum class VertexType {
+      New,
+      Hanging,
+      Persistent,
+      Delete
+    };
+
+    enum class FaceType {
+      New,
+      Hanging,
+      Persistent,
+      Delete
+    };
+
+    enum class CellType {
+      New,
+      Persistent,
+      Delete
+    };
+
+
+    std::string toString( VertexType type );
+    std::string toString( FaceType type );
+    std::string toString( CellType type );
+
+    constexpr int InvalidRank(-1);
   }
 }
 

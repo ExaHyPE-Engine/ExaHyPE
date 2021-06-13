@@ -24,7 +24,7 @@ peano4::grid::GridVertex peano4::grid::createVertex(
   result.setLevel(level);
 
   // not required logically, but makes valgrind's memchecker happy
-  result.setBackupOfAdjacentRanks( tarch::la::Vector<TwoPowerD,int>(Spacetree::InvalidRank) );
+  result.setBackupOfAdjacentRanks( tarch::la::Vector<TwoPowerD,int>(InvalidRank) );
   result.setNumberOfAdjacentRefinedLocalCells(0);
 
   return result;
@@ -173,4 +173,47 @@ std::bitset<TwoPowerD> peano4::grid::areVerticesRefined(GridVertex  vertices[Two
      bitset.set(i,isVertexRefined(vertices[i]));
   }
   return bitset;
+}
+
+
+std::string peano4::grid::toString( VertexType type ) {
+  switch (type) {
+    case VertexType::New:
+      return "new";
+    case VertexType::Hanging:
+      return "hanging";
+    case VertexType::Persistent:
+      return "persistent";
+    case VertexType::Delete:
+      return "delete";
+  }
+  return "<undef>";
+}
+
+
+std::string peano4::grid::toString( FaceType type ) {
+  switch (type) {
+    case FaceType::New:
+      return "new";
+    case FaceType::Hanging:
+      return "hanging";
+    case FaceType::Persistent:
+      return "persistent";
+    case FaceType::Delete:
+      return "delete";
+  }
+  return "<undef>";
+}
+
+
+std::string peano4::grid::toString( CellType type ) {
+  switch (type) {
+    case CellType::New:
+      return "new";
+    case CellType::Persistent:
+      return "persistent";
+    case CellType::Delete:
+      return "delete";
+  }
+  return "<undef>";
 }
