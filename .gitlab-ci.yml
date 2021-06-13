@@ -19,7 +19,7 @@ Test SSH:
     - hostname
     - echo $CI_COMMIT_SHA
   # try to connect to machine
-  #  - ssh "$CIUSER"@"$CIMACHINE" sleep 2d
+    - ssh "$CIUSER"@"$CIMACHINE" bash ./print.sh $CI_COMMIT_SHA
 
 
 #build:
