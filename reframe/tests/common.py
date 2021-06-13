@@ -9,14 +9,15 @@ def setup(test, num_tasks, num_cpus_per_task=1):
     test.num_cpus_per_task = num_cpus_per_task
 
     test.sourcesdir = None
+    git_rev = os.environ['GIT_REVISION']
     test.prebuild_cmds = [
         'rm -rf Peano',
         'git clone git@gitlab.lrz.de:hpcsoftware/Peano.git',
         'pushd Peano',
-        f'git checkout {os.environ[GIT_REVISION]}',
+        f'git checkout {git_rev}',
         'git clean -x -f -d',
         'libtoolize; aclocal; autoconf; autoheader',
-        'cp src/config.h.in',
+        'cp src/config.h.in .',
         'automake --add-missing',
     ]
     test.build_system = 'Autotools'

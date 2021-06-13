@@ -13,19 +13,20 @@ GIT_REV = os.environ['GIT_REVISION']
 class Euler_CI(rfm.RegressionTest):
     def __init__(self, git_rev):
         
-        common.setup(num_tasks=4, num_cpus_per_task=6)
+        common.setup(self, num_tasks=4, num_cpus_per_task=6)
 
         self.time_limit = '2h'
         
         self.valid_systems = ['hamilton:multi_ranks_multi_node']
 
         test_dir = 'Peano/examples/exahype2/euler'
+        
         self.build_system.config_opts = [
                 '--enable-exahype',
                 '--enable-loadbalancing',
                 '--with-mpi=mpiicpc',
                 '--with-multithreading=omp',
-                'CXXFLAGS="-fopenmp',
+                'CXXFLAGS=-fopenmp',
         ]
         
         self.prerun_cmds = [
