@@ -139,15 +139,6 @@ class peano4::grid::Spacetree {
       GridVertex                         fineGridVertices[TwoPowerD]
     ) const;
 
-
-    /**
-     * Wrapper
-     */
-    static CellType getCellType(
-      GridVertex                         coarseGridVertices[TwoPowerD],
-      tarch::la::Vector<Dimensions,int>  positionOfCell
-    );
-
     int              _id;
 
     SpacetreeState   _spacetreeState;
@@ -621,6 +612,9 @@ class peano4::grid::Spacetree {
       const tarch::la::Vector<Dimensions,int>&  fineVertexPositionWithinPatch
     );
 
+    /**
+     * Determines whether to restrict a vertex to the coarser level or not.
+     */
     static bool restrictToCoarseGrid(
       const tarch::la::Vector<Dimensions,int>&  coarseVertexPosition,
       const tarch::la::Vector<Dimensions,int>&  fineVertexPosition

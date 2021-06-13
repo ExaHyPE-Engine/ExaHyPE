@@ -1681,8 +1681,6 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
 }
 
 
-
-
 bool peano4::grid::Spacetree::isCellSplitCandidate(
   GridVertex                         coarseGridVertices[TwoPowerD],
   GridVertex                         fineGridVertices[TwoPowerD]
@@ -1740,7 +1738,7 @@ void peano4::grid::Spacetree::splitOrJoinCell(
 
         // This 0 here is a fake, but it does not make a difference, as fine
         // grid cells within a 3x3 patch always have the same type
-        if ( getCellType( coarseGridVertices, 0 )!=CellType::New or newlyCreatedCells%ThreePowerD==ThreePowerD-1) {
+        if ( _gridTraversalEventGenerator.getCellType( coarseGridVertices, 0 )!=CellType::New or newlyCreatedCells%ThreePowerD==ThreePowerD-1) {
           updateSplittingCounter( targetSpacetreeId );
           newlyCreatedCells = 0;
         }
@@ -1748,7 +1746,7 @@ void peano4::grid::Spacetree::splitOrJoinCell(
         _splittedCells.push_back(targetSpacetreeId);
       }
       else {
-	    _splittedCells.push_back(-1);
+        _splittedCells.push_back(-1);
       }
     }
   }

@@ -19,13 +19,25 @@
 namespace peano4 {
   namespace grid {
     class GridTraversalEventGenerator;
+
+    namespace tests {
+      class GridTraversalEventGeneratorTest;
+    }
   }
 }
 
 
 
+/**
+ * Translate grid traversal automaton's transitions into user events
+ *
+ * The majority of these routines is all about identifying ownership. So we might also
+ * call the class something around ownership analysis.
+ */
 class peano4::grid::GridTraversalEventGenerator {
   private:
+    friend class peano4::grid::tests::GridTraversalEventGeneratorTest;
+
     static tarch::logging::Log  _log;
 
     /**
