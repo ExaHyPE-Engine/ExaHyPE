@@ -17,8 +17,9 @@ Test SSH:
     - ls
     - whoami
     - hostname
-  # try to connect to GitLab.com
-    - ssh "$CIUSER"@"$CIMACHINE" sleep 2d
+    - echo $CI_COMMIT_SHA
+  # try to connect to machine
+  #  - ssh "$CIUSER"@"$CIMACHINE" sleep 2d
 
 
 #build:
