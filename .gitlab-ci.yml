@@ -2,7 +2,7 @@
 # use the official gcc image, based on debian
 # can use verions as well, like gcc:5.2
 # see https://hub.docker.com/_/gcc/
-image: gcc
+#image: gcc
 
 #before_script:
 #  - eval $(ssh-agent -s)
@@ -14,10 +14,11 @@ image: gcc
 
 Test SSH:
   script:
-  - whoami
-  - hostname
+    - ls
+    - whoami
+    - hostname
   # try to connect to GitLab.com
-  - ssh -vvv "$CIUSER"@"$CIMACHINE" ls
+    - ssh -vvv "$CIUSER"@"$CIMACHINE" ls
 
 
 #build:
