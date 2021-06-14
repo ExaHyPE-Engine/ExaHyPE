@@ -13,7 +13,7 @@ GIT_REV = os.environ['GIT_REVISION']
 class Euler_CI(rfm.RegressionTest):
     def __init__(self, git_rev):
         
-        common.setup(self, num_tasks=4, num_cpus_per_task=6)
+        common.setup(self, num_tasks=1, num_cpus_per_task=4) # 4 ranks here means the domain decomposition fails
 
         self.time_limit = '2h'
         
@@ -30,11 +30,12 @@ class Euler_CI(rfm.RegressionTest):
                 'CXXFLAGS="-fopenmp -std=c++14"',
         ]
         
+        self.keep_files = [f'{test_dir}/*.peano-patch-file']
+
         self.prerun_cmds = [
-                'module load python/3.6.8',
                 f'pushd {test_dir}',
-                'python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t enclave-ats -et 0.0001 -m debug',
-                'make',
+                'python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001',
+                'make -j',
         ]
         
         self.executable = './peano4'
