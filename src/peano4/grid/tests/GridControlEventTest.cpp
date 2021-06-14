@@ -57,16 +57,6 @@ void peano4::grid::tests::GridControlEventTest::testMerge2() {
   events = peano4::grid::merge( events, 0.4 );
 
   validateEquals( events.size(), 1 );
-
-/*
-  validateWithParams2( tarch::la::equals( events[0].getOffset(), -0.0333333, 0.001 ), events[0].toString(), events[1].toString() );
-  validateWithParams2( tarch::la::equals( events[0].getWidth(),   1.06667,   0.001 ), events[0].toString(), events[1].toString() );
-  validateWithParams2( tarch::la::equals( events[0].getH(),       0.366667,  0.001 ), events[0].toString(), events[1].toString() );
-
-  validateWithParams2( tarch::la::equals( events[1].getOffset(), -0.0333333, 0.001 ), events[0].toString(), events[1].toString() );
-  validateWithParams2( tarch::la::equals( events[1].getWidth(),   1.06667,   0.001 ), events[0].toString(), events[1].toString() );
-  validateWithParams2( tarch::la::equals( events[1].getH(),       0.366667,  0.001 ), events[0].toString(), events[1].toString() );
-*/
   #endif
 }
 
