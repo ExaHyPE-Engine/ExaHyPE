@@ -111,7 +111,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.05
+            time_step_relaxation=0.1
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -265,7 +265,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_re12.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_re20.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 
 		if (tarch::la::equals(t,0.0)){//initialization
 			fin.open((p1+att),std::ios::out|std::ios::trunc);
@@ -274,9 +274,9 @@ if __name__ == "__main__":
 			fin.open((p2+att),std::ios::out|std::ios::trunc);
 			fin << "-4.251 0.0 0.0 0.0" << std::endl;//-5.538462
 			fin.close();
-			fin.open((tem+att),std::ios::out|std::ios::trunc);
-			fin << "tem file" << std::endl;
-			fin.close();		 
+			//fin.open((tem+att),std::ios::out|std::ios::trunc);
+			//fin << "tem file" << std::endl;
+			//fin.close();		 
 		} else {
 			fin.open((p1+att),std::ios::in);
 			std::string pos=getLastLine(fin);
@@ -304,14 +304,14 @@ if __name__ == "__main__":
 				fin.open((p1+att),std::ios::app);//output
 				fin << coor1[0] << " " << coor1[1] << " " << coor1[2] << " " << t << std::endl;
 				fin.close();
-				fin.open((tem+att),std::ios::app);
+				/*fin.open((tem+att),std::ios::app);
 				fin << "for cellindex" << IndexOfCell(0) << " " << IndexOfCell(1) << " " << IndexOfCell(2) << " " << IndexOfCell(3) << " " << IndexOfCell(4) << " " << IndexOfCell(5) << std::endl;
 				for (int i=0;i<8;i++){
 				fin << IndexForInterpolate[i](0) << " " << IndexForInterpolate[i](1) << " " << IndexForInterpolate[i](2) << std::endl;
 				fin << raw[i*3+0] << " " << raw[i*3+1] << " " << raw[i*3+2] << std::endl;
 				}
 				fin << "after inter" << shift[0] << " " << shift[1] << " " << shift[2] << " " << t << std::endl;
-				fin.close();
+				fin.close();*/
 			}
 			if (marker.isContained(coor2)){//do the same for the second puncutre
 				tarch::la::Vector<Dimensions*2,int> IndexOfCell=FindCellIndex(coor2,marker.getOffset(),volumeH,patchSize);
@@ -497,10 +497,12 @@ if __name__ == "__main__":
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
-      #[-20, -20, -20],  [40.0, 40.0, 40.0],
+      #[-10, -10, -10],  [20.0, 20.0, 20.0],
+      #[-15, -15, -15],  [30.0, 30.0, 30.0],
+      [-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       1110.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -509,19 +511,19 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv2" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv7" )
     probe_point = [-5,-5,-5]
     project.add_plot_filter( probe_point,[10.0,10.0,10.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
     #add tracer
-    tracer_particles = project.add_tracer( name="MyTracer",attribute_count=1 )
-    project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
+    #tracer_particles = project.add_tracer( name="MyTracer",attribute_count=1 )
+    #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
     #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::LinearInterp"))
     #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/8.0, noise=True ))
-    project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.1,0,0],p2=[-0.1,0,0]))
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,1e-10,"znointer"))
+    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[4.251,0,0],p2=[-4.251,0,0]))
+    #project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,1e-10,"zzp_re14"))
 
 
     peano4_project = project.generate_Peano4_project(verbose=True)
