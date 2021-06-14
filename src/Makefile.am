@@ -7,10 +7,11 @@ AUTOMAKE_OPTIONS = subdir-objects
 # within configure.ac as well as its very last line).
 #
 SUBDIRS = . \
-  toolbox/particles \
+  toolbox/blockstructured \
   toolbox/finiteelements \
-  toolbox/multiprecision \
   toolbox/loadbalancing \
+  toolbox/multiprecision \
+  toolbox/particles \
   exahype2 \
   unittests convert
 
@@ -60,12 +61,14 @@ Peano4Core_SOURCES = \
   peano4/grid/GridVertex.cpp \
   peano4/grid/GridStatistics.cpp \
   peano4/grid/GridTraversalEvent.cpp \
+  peano4/grid/GridTraversalEventGenerator.cpp \
   peano4/grid/PeanoCurve.cpp \
   peano4/grid/Spacetree.cpp \
   peano4/grid/TraversalObserver.cpp \
   peano4/grid/TraversalVTKPlotter.cpp \
   peano4/grid/tests/GridControlEventTest.cpp \
   peano4/grid/tests/SpacetreeTest.cpp \
+  peano4/grid/tests/GridTraversalEventGeneratorTest.cpp \
   peano4/parallel/Node.cpp \
   peano4/parallel/parallel.cpp \
   peano4/parallel/SpacetreeSet.cpp \

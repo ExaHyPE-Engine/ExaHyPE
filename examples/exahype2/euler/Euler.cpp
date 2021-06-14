@@ -83,7 +83,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   const double c   = std::sqrt(gamma * p * irho);
 
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
-  assertion5( result>=0.0, result, p, u_n, irho, c );
+  assertion10( result>=0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4] );
   return result;
 }
 

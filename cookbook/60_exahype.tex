@@ -385,7 +385,19 @@ systems.
 \section{Adding adaptive mesh refinement}
 
 By default, \ExaHyPE\ solvers operate on a regular grid.
-Dynamic adaptivity however is added via a one-liner:
+To facilitate an adaptive mesh, you have to ensure that your solver is aware that you operate 
+with different $h_{\text{max}}>h_{\text{min}}$. 
+So you have to alter these two flags of your solver instantiation.
+As \Peano\ operates with three-partitioning, you have to pick 
+$h_{\text{min}} \leq \frac{1}{3} h_{\text{max}}$ to switch on adaptivity.
+
+Once AMR is, in principle enabled, you still have to supplement a refinement and/or coarsening criterion:
+
+
+
+\subsection{Supplementing the refinement criterion}
+
+On the Python side, dynamic adaptivity is added via a one-liner:
 
 \begin{code}
 mysolver.set_implementation(
@@ -454,12 +466,40 @@ Along the same lines, erase instructions will simply be ignored if the resulting
 mesh would be coarser than $h_{\text{max}}$.
 
 
-Finally, dynamic AMR in \ExaHyPE\ is simple to realise if you make your result
-depend on the input parameter \texttt{t}.
-It is however important to keep in mind that refinement requests are not
+\begin{remark}
+It is important to keep in mind that refinement requests are not
 immediately realised by \Peano. 
 Refinements are requested in one time step, and then realised in the subsequent
 one.
+Also, \Peano\ will try to accommodate coarsening requests, but if there are any issues (with mesh partitioning or balancing, e.g.), then these
+considerations willl have higher priority and \Peano\ might decide to continue with a finer mesh than requested.
+\end{remark}
+
+
+
+\subsection{Interpolation/restriction schemes}
+
+All Finite Volume solvers by default employ a piece-wise constant interpolation/restriction in 
+\ExaHyPE.
+If you require a better inter-grid transfer scheme or if you want to introduce your own one, you have to do the following steps:
+
+\begin{itemize}
+  \item Create your own new subclass of the solver you want to use. See the CCZ4 example for a blueprint. Here, we already create our new solver subclass anyway.
+  \item Study the header/implementation file pair \texttt{toolbox/blockstructured/Interpolation}. Different interpolation/restriction variants differ in their suffix. The routines \texttt{piecewise\_constant} are those used by default.
+  \item Make your solver (in Python) use another scheme. I present a variant here where you want to use linear interpolation and a tailored conservative scheme for the restriction:
+  \begin{code}
+self.create_data_structures()
+self.create_action_sets()
+self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement =
+ DynamicAMR( 
+  patch=self._patch, # do not alter 
+  patch_overlap_interpolation=self._patch_overlap,   # do not alter 
+  patch_overlap_restriction=self._patch_overlap_new, # do not alter
+  interpolation_scheme="dlinear",  # by default set to "piecewise_constant"
+  restriction_scheme="myconservativescheme" "piecewise_constant" )
+  \end{code}
+  \item Implement the corresponding routines with the extensions \texttt{dlinear} or \texttt{myconservativescheme} in \texttt{Interpolation} if they are not there yet. You have to stick to their signature and the same naming convention. 
+\end{itemize}
 
 
 \section{GPU support}

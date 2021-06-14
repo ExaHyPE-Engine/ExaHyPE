@@ -42,16 +42,16 @@ bool tarch::logging::LogFilterFileReader::interpretTokens( const std::string& le
   }
 
   if (result) {
-    LogFilter::getInstance().addFilterListEntry(
-      ::tarch::logging::LogFilter::FilterListEntry(
-        levelToken, rank, classNameToken, isFilter,
-        phaseToken
-      )
+    auto newEntry = ::tarch::logging::LogFilter::FilterListEntry(
+      levelToken, rank, classNameToken, isFilter,
+      phaseToken
     );
+    LogFilter::getInstance().addFilterListEntry( newEntry );
   }
 
   return result;
 }
+
 
 bool tarch::logging::LogFilterFileReader::parseLine(std::ifstream& file, const std::string& filename, const std::string& line, int linenumber) {
   std::string lineWithNewline = line + '\n';

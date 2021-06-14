@@ -85,7 +85,7 @@ class ProjectPatchOntoFaces(ActionSet):
   }};
   
   if ( {GUARD} ) {{
-    logTraceIn( "touchCellLastTime(...)" );
+    logTraceIn( "touchCellLastTime(...)---ProjectPatchOntoFaces" );
   
     for(int d=0; d<Dimensions; d++) {{
       /**
@@ -131,7 +131,11 @@ class ProjectPatchOntoFaces(ActionSet):
         }}
       }}
     }}
-    logTraceOut( "touchCellLastTime(...)" );
+    logTraceOut( "touchCellLastTime(...)---ProjectPatchOntoFaces" );
+  }}
+  else {{
+    logTraceInWith1Argument( "touchCellLastTime(...)---ProjectPatchOntoFaces [skip]", marker.toString() );
+    logTraceOut( "touchCellLastTime(...)---ProjectPatchOntoFaces [skip]" );
   }}
 """
 

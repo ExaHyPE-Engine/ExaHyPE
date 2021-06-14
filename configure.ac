@@ -73,8 +73,24 @@ AC_LANG(C++)
 AC_OPENMP()
 
 
+#
+# Compiler options. Allow icpc and gnu. Plus minimum version check.
+#
+
+AX_COMPILER_VENDOR
+
+AX_CXX_COMPILE_STDCXX_11
+
+
+
 srcdir_full_path=`cd $srcdir && pwd`
 
+
+#
+# ===============================================================
+#   Define all the compiler and linker variables of Peano
+# ===============================================================
+#
 
 CXXFLAGS_PEANO_2D_RELEASE=" -DDimensions=2 -DPeanoDebug=0"
 CXXFLAGS_PEANO_2D_STATS="   -DDimensions=2 -DPeanoDebug=0 -DTrackStatistics"
@@ -110,9 +126,16 @@ LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 
 
 #
-# TBB Options
+# ===============================================================
+#   Parallelisation backends
 #
-# The result is stored in a variable multithreading
+# These configurations establish the multithreading, MPI and GPU
+# environment.
+# ===============================================================
+#
+
+#
+# Multithreading
 #
 AC_ARG_WITH(
   multithreading, 
@@ -167,33 +190,106 @@ AC_ARG_WITH(mpi,
     esac ],
   [ AC_MSG_CHECKING(for mpi); AC_MSG_RESULT(no); mpi=false ])
  
-AC_DEFUN([AC_PROG_USERMPI], [AC_CHECK_PROG(USERMPI,"${mpi}",yes)])
+#AC_DEFUN([AC_PROG_USERMPI], [AC_CHECK_PROG(USERMPI,"${mpi}",yes)])
 
 
 if test "$mpi" != false; then
-  AC_PROG_USERMPI
-  if test x"${USERMPI}" != x"yes" ; then
-      AC_MSG_ERROR([The specified MPI compiler (${mpi}) was not found.])
-  fi
   CXX=$mpi
   AC_DEFINE([Parallel], [1], [Parallel])
-else
-  MPICXX=false
+  
+  AC_CHECK_PROG( USERMPI, $mpi, "yes" )
+  if test x"$USERMPI" != x"yes" ; then
+    AC_MSG_WARN([The specified MPI compiler (${mpi}) was not found in the path. If it is a global path, please ignore this message.])
+  fi
 fi
 
 
 #
-# Compiler options. Allow icpc and gnu. Plus minimum version check.
+# GPU support
+#
+AC_ARG_ENABLE(gpu,
+  AC_HELP_STRING([--enable-gpu], [build with the GPU support  [default=no,amd,nvidia]]),
+  [ AC_MSG_CHECKING(for gpu)
+    case "${enableval}" in
+      no)        AC_MSG_RESULT(no);                             gpu=false ;;
+      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support);  gpu=nvidia ;;
+      amd)       AC_MSG_RESULT(build with AMD GPU support);     gpu=amd ;;
+      *)         AC_MSG_FAILURE([default=no (no gpu)]); gpu=false ;;
+    esac 
+  ],
+  [ AC_MSG_CHECKING(for gpu); AC_MSG_RESULT(no); gpu=false ]
+)
+
+if test "$gpu" == amd; then
+  #AC_DEFINE([UseAMD], [1], [UseAMD])
+  #AC_CHECK_HEADERS([hip/hip_runtime.h],[],[AC_MSG_ERROR([header <hip/hip_runtime.h> not found])])
+  if test "$multithreading" == omp; then
+    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
+  else
+    AC_MSG_FAILURE([AMD GPU support requires OpenMP; reconfigure with omp multithreading]);
+  fi
+fi
+
+if test "$gpu" == nvidia; then
+  #if test "$multithreading" == omp; then
+  if test "$multithreading" == omp-layered; then
+    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
+  elif test "$multithreading" == omp; then
+    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
+  else
+    AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
+  fi
+fi
+AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$gpu" = xnvidia ])
+
+
+#
+# SmartMPI
+#
+AC_ARG_WITH(smartmpi,
+  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no, options are no, Merged and OneToOne]]),
+  [ AC_MSG_CHECKING(for smartmpi)
+    case "${withval}" in
+      no)        AC_MSG_RESULT(no);    smartmpi=false ;;
+      Merged)    AC_MSG_RESULT(yes; use topology Merged);     smartmpi=Merged ;;
+      OneToOne)  AC_MSG_RESULT(yes; use topology OneToOne);   smartmpi=OneToOne ;;
+      *)         AC_MSG_RESULT(failed);   AC_MSG_ERROR([invalid option for SmartMPI]) ;;
+    esac ],
+  [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
+AM_CONDITIONAL([UseSmartMPI],[test "x$smartmpi" = xtrue])
+if test "$smartmpi" == Merged; then
+  AC_DEFINE([UseSmartMPI], [Merged], [UseSmartMPI])
+fi
+if test "$smartmpi" == OneToOne; then
+  AC_DEFINE([UseSmartMPI], [OneToOne], [UseSmartMPI])
+fi
+if test "$smartmpi" != false; then
+  if test "$mpi" == false; then
+    AC_MSG_ERROR([SmartMPI requires an MPI build of Peano])
+  fi
+  LDADD_PEANO_2D_RELEASE+=" -lsmartmpi "
+  LDADD_PEANO_2D_STATS+="   -lsmartmpi "
+  LDADD_PEANO_2D_ASSERTS+=" -lsmartmpi_debug " 
+  LDADD_PEANO_2D_TRACE+="   -lsmartmpi "
+  LDADD_PEANO_2D_DEBUG+="   -lsmartmpi_debug "
+
+  LDADD_PEANO_3D_RELEASE+=" -lsmartmpi "
+  LDADD_PEANO_3D_STATS+="   -lsmartmpi "
+  LDADD_PEANO_3D_ASSERTS+=" -lsmartmpi_debug " 
+  LDADD_PEANO_3D_TRACE+="   -lsmartmpi "
+  LDADD_PEANO_3D_DEBUG+="   -lsmartmpi_debug "
+fi
+
+
+#
+# ===============================================================
+#   Postprocessing and I/O
+# ===============================================================
 #
 
-AX_COMPILER_VENDOR
-
-AX_CXX_COMPILE_STDCXX_11
-
-
-##
-## VTK Options
-##
+#
+# VTK
+#
 AC_ARG_WITH(vtk,
   AC_HELP_STRING([--with-vtk], [enable VTK and thus build Peano's conversion tools [default=no, prefix]. prefix is where VTK include files are to be found, such as /usr/local/include/vtk-8.90]),
   [ AC_MSG_CHECKING(for vtk)
@@ -284,72 +380,45 @@ AM_CONDITIONAL([VTK_LIBRARY_VERSION_9],[test "$vtk_version" = "9"])
 #
 # HDF5
 #
-AC_ARG_WITH(hdf5,
-  AC_HELP_STRING([--with-hdf5], [enable HDF5 support [default=no]]),
-  [ AC_MSG_CHECKING(for hdf5)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);                       hdf5=false ;;
-      *)     AC_MSG_RESULT(build with HDF5 support);  hdf5=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for hdf5); AC_MSG_RESULT(no); hdf5=false ])
- 
-if test "$with_hdf5" = "yes"; then
-  if test "$mpi" != false; then
-    AX_LIB_HDF5([parallel])
-  else
-    AX_LIB_HDF5([serial])
-  fi
-  if test "$with_hdf5" = "yes"; then
-    AC_DEFINE([UseHDF5], [1], [UseHDF5])
-  else
-    AC_MSG_ERROR([Unable to find HDF5, we need HDF5.])
-  fi
-fi 
+#AC_ARG_WITH(hdf5,
+#  AC_HELP_STRING([--with-hdf5], [enable HDF5 support [default=no]]),
+#  [ AC_MSG_CHECKING(for hdf5)
+#    case "${withval}" in
+#      no)    AC_MSG_RESULT(no);                       hdf5=false ;;
+#      *)     AC_MSG_RESULT(build with HDF5 support);  hdf5=true  ;;
+#    esac ],
+#  [ AC_MSG_CHECKING(for hdf5); AC_MSG_RESULT(no); hdf5=false ])
+# 
+#if test "$with_hdf5" = "yes"; then
+#  if test "$mpi" != false; then
+#    AX_LIB_HDF5([parallel])
+#  else
+#    AX_LIB_HDF5([serial])
+#  fi
+#  if test "$with_hdf5" = "yes"; then
+#    AC_DEFINE([UseHDF5], [1], [UseHDF5])
+#  else
+#    AC_MSG_ERROR([Unable to find HDF5, we need HDF5.])
+#  fi
+#fi 
 
 
 
+
+
+
+
+
+#
+# ===============================================================
+#   Tailored toolchains
 #
-# GPU support
+# A toolchain in Peano in particular, bespoke compile and build 
+# settings that work well with particular (performance) analysis
+# tools or a suite of dev tools by a particular vendor, or some 
+# bespoke postprocessing tools.
+# ===============================================================
 #
-AC_ARG_ENABLE(gpu,
-  AC_HELP_STRING([--enable-gpu], [build with the GPU support  [default=no,amd,nvidia]]),
-  [ AC_MSG_CHECKING(for gpu)
-    case "${enableval}" in
-      no)        AC_MSG_RESULT(no);                             gpu=false ;;
-      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support);  gpu=nvidia ;;
-      amd)       AC_MSG_RESULT(build with AMD GPU support);     gpu=amd ;;
-      *)         AC_MSG_FAILURE([default=no (no gpu)]); gpu=false ;;
-    esac 
-  ],
-  [ AC_MSG_CHECKING(for gpu); AC_MSG_RESULT(no); gpu=false ]
-)
-
-if test "$gpu" == amd; then
-  #AC_DEFINE([UseAMD], [1], [UseAMD])
-  #AC_CHECK_HEADERS([hip/hip_runtime.h],[],[AC_MSG_ERROR([header <hip/hip_runtime.h> not found])])
-  if test "$multithreading" == omp; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-  else
-    AC_MSG_FAILURE([AMD GPU support requires OpenMP; reconfigure with omp multithreading]);
-  fi
-fi
-
-if test "$gpu" == nvidia; then
-  #if test "$multithreading" == omp; then
-  if test "$multithreading" == omp-layered; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-  elif test "$multithreading" == omp; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-  else
-    AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
-  fi
-fi
-AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$gpu" = xnvidia ])
-
-
-
-
-
 
 #
 # Vendor-specific toolchain (logging devices, memory allocation libraries, ...)
@@ -406,6 +475,16 @@ fi
 
 
 
+#
+# ===============================================================
+#   Toolbox - enable
+#
+# A toolbox is an optional extension of Peano (package). As there
+# are dependencies between the toolboxes, this part only analyses
+# whether a toolbox should be used or not. It does not react to 
+# this choice.
+# ===============================================================
+#
 
 
 #
@@ -415,12 +494,118 @@ AC_ARG_ENABLE(fem,
   AC_HELP_STRING([--enable-fem], [enable FEM  [default=false]]),
   [ AC_MSG_CHECKING(for fem)
     case "${withval}" in
-      no)    AC_MSG_RESULT(no);    fem=false ;;
-      *)     AC_MSG_RESULT(yes);   fem=true  ;;
+      no)    AC_MSG_RESULT(no);    toolbox_fem=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_fem=true  ;;
     esac ],
-  [ AC_MSG_CHECKING(for fem); AC_MSG_RESULT(no); fem=false ])
-AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$fem" = xtrue])
-if test "$fem" != false; then
+  [ AC_MSG_CHECKING(for fem); AC_MSG_RESULT(no); toolbox_fem=false ])
+AM_CONDITIONAL([UseToolboxFiniteElements],[test "x$toolbox_fem" = xtrue])
+
+
+#
+# Multiprecision 
+#
+AC_ARG_ENABLE(multiprecision,
+  AC_HELP_STRING([--enable-multiprecision], [enable multiprecision  [default=false]]),
+  [ AC_MSG_CHECKING(for multiprecision)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_multiprecision=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_multiprecision=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for multiprecision); AC_MSG_RESULT(no); toolbox_multiprecision=false ])
+AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$toolbox_multiprecision" = xtrue])
+ 
+ 
+#
+# Load balancing 
+#
+AC_ARG_ENABLE(loadbalancing,
+  AC_HELP_STRING([--enable-loadbalancing], [enable loadbalancing  [default=false]]),
+  [ AC_MSG_CHECKING(for loadbalancing)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_loadbalancing=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_loadbalancing=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for loadbalancing); AC_MSG_RESULT(no); toolbox_loadbalancing=false ])
+AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$toolbox_loadbalancing" = xtrue])
+
+
+#
+# Particles 
+#
+AC_ARG_ENABLE(particles,
+  AC_HELP_STRING([--enable-particles], [enable particles  [default=false]]),
+  [ AC_MSG_CHECKING(for particles)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_particles=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_particles=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for particles); AC_MSG_RESULT(no); toolbox_particles=false ])
+AM_CONDITIONAL([UseToolboxParticles],[test "x$toolbox_particles" = xtrue])
+
+
+#
+# ExaHyPE2
+#
+AC_ARG_ENABLE(exahype,
+  AC_HELP_STRING([--enable-exahype], [enable ExaHyPE2 [default=false]]),
+  [ AC_MSG_CHECKING(for exahype)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_exahype=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_exahype=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for exahype); AC_MSG_RESULT(no); toolbox_exahype=false ])
+AM_CONDITIONAL([UseExaHyPE],[test "x$toolbox_exahype" = xtrue])
+
+
+#
+# Blockstructured
+#
+AC_ARG_ENABLE(blockstructured,
+  AC_HELP_STRING([--enable-blockstructured], [enable blockstructured (SAMR) support [default=false]]),
+  [ AC_MSG_CHECKING(for blockstructured)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_blockstructured=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_blockstructured=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for blockstructured); AC_MSG_RESULT(no); toolbox_blockstructured=false ])
+AM_CONDITIONAL([UseToolboxBlockstructured],[test "x$toolbox_blockstructured" = xtrue])
+
+
+#
+# Delta
+#
+AC_ARG_WITH(delta,
+  AC_HELP_STRING([--with-delta], [enable Delta [default=no]]),
+  [ AC_MSG_CHECKING(for delta)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);   toolbox_delta=false ;;
+      *)     AC_MSG_RESULT(yes);  toolbox_delta=${withval}  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for delta); AC_MSG_RESULT(no); toolbox_delta=false ])
+# This whole autotools thing is not very nice: If I wanna use an if ... endif (
+# note the syntax which is different to the present file, then I have to declare
+# the variable as I do in the line below. Otherwise, the if thing is not 
+# "exported". Seems the autoconf and the makefile generator are completely 
+# separate with inconsistent syntax.
+AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
+
+
+#
+# ===============================================================
+#   Toolbox - setup
+#
+# Run through the set of toolboxes that are enabled, configure
+# them properly, i.e. augment the Peano compile and link flags,
+# and check for consistency, i.e. whether all dependencies are 
+# ok.
+# ===============================================================
+#
+
+
+#
+# FEM 
+#
+if test "$toolbox_fem" != false; then
   LDADD_PEANO_2D_RELEASE=" -lToolboxFiniteElements2d "
   LDADD_PEANO_2D_STATS="   -lToolboxFiniteElements2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxFiniteElements2d_asserts $LDADD_PEANO_2D_ASSETS " 
@@ -441,20 +626,10 @@ if test "$fem" != false; then
 fi
 
 
-
 #
 # Multiprecision 
 #
-AC_ARG_ENABLE(multiprecision,
-  AC_HELP_STRING([--enable-multiprecision], [enable multiprecision  [default=false]]),
-  [ AC_MSG_CHECKING(for multiprecision)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    multiprecision=false ;;
-      *)     AC_MSG_RESULT(yes);   multiprecision=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for multiprecision); AC_MSG_RESULT(no); multiprecision=false ])
-AM_CONDITIONAL([UseToolboxMultiprecision],[test "x$multiprecision" = xtrue])
-if test "$multiprecision" != false; then
+if test "$toolbox_multiprecision" != false; then
   LDADD_PEANO_2D_RELEASE=" -lToolboxMultiprecision         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxMultiprecision_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxMultiprecision_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -478,16 +653,7 @@ fi
 #
 # Load balancing 
 #
-AC_ARG_ENABLE(loadbalancing,
-  AC_HELP_STRING([--enable-loadbalancing], [enable loadbalancing  [default=false]]),
-  [ AC_MSG_CHECKING(for loadbalancing)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    loadbalancing=false ;;
-      *)     AC_MSG_RESULT(yes);   loadbalancing=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for loadbalancing); AC_MSG_RESULT(no); loadbalancing=false ])
-AM_CONDITIONAL([UseToolboxLoadBalancing],[test "x$loadbalancing" = xtrue])
-if test "$loadbalancing" != false; then
+if test "$toolbox_loadbalancing" != false; then
   LDADD_PEANO_2D_RELEASE=" -lToolboxLoadBalancing2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lToolboxLoadBalancing2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS=" -lToolboxLoadBalancing2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -509,18 +675,33 @@ fi
 
 
 #
+# Blockstructured
+#
+if test "$toolbox_blockstructured" != false; then
+  LDADD_PEANO_2D_RELEASE=" -lToolboxBlockstructured2d         $LDADD_PEANO_2D_RELEASE "
+  LDADD_PEANO_2D_STATS="   -lToolboxBlockstructured2d_stats   $LDADD_PEANO_2D_STATS "
+  LDADD_PEANO_2D_ASSERTS=" -lToolboxBlockstructured2d_asserts $LDADD_PEANO_2D_ASSERTS " 
+  LDADD_PEANO_2D_TRACE="   -lToolboxBlockstructured2d_trace   $LDADD_PEANO_2D_TRACE "
+  LDADD_PEANO_2D_DEBUG="   -lToolboxBlockstructured2d_debug   $LDADD_PEANO_2D_DEBUG "
+
+  LDADD_PEANO_3D_RELEASE=" -lToolboxBlockstructured3d         $LDADD_PEANO_3D_RELEASE "
+  LDADD_PEANO_3D_STATS="   -lToolboxBlockstructured3d_stats   $LDADD_PEANO_3D_STATS "
+  LDADD_PEANO_3D_ASSERTS=" -lToolboxBlockstructured3d_asserts $LDADD_PEANO_3D_ASSERTS " 
+  LDADD_PEANO_3D_TRACE="   -lToolboxBlockstructured3d_trace   $LDADD_PEANO_3D_TRACE "
+  LDADD_PEANO_3D_DEBUG="   -lToolboxBlockstructured3d_debug   $LDADD_PEANO_3D_DEBUG "
+
+  LDFLAGS_PEANO_RELEASE+=" -L$srcdir_full_path/src/toolbox/blockstructured "
+  LDFLAGS_PEANO_STATS+="   -L$srcdir_full_path/src/toolbox/blockstructured "
+  LDFLAGS_PEANO_ASSERTS+=" -L$srcdir_full_path/src/toolbox/blockstructured "
+  LDFLAGS_PEANO_TRACE+="   -L$srcdir_full_path/src/toolbox/blockstructured "
+  LDFLAGS_PEANO_DEBUG+="   -L$srcdir_full_path/src/toolbox/blockstructured "
+fi
+
+
+#
 # Particles 
 #
-AC_ARG_ENABLE(particles,
-  AC_HELP_STRING([--enable-particles], [enable particles  [default=false]]),
-  [ AC_MSG_CHECKING(for particles)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    particles=false ;;
-      *)     AC_MSG_RESULT(yes);   particles=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for particles); AC_MSG_RESULT(no); particles=false ])
-AM_CONDITIONAL([UseToolboxParticles],[test "x$particles" = xtrue])
-if test "$particles" != false; then
+if test "$toolbox_particles" != false; then
   LDADD_PEANO_2D_RELEASE+=" -lToolboxParticles2d         $LDADD_PEANO_2D_RELEASE " 
   LDADD_PEANO_2D_STATS+="   -lToolboxParticles2d_stats   $LDADD_PEANO_2D_STATS "
   LDADD_PEANO_2D_ASSERTS+=" -lToolboxParticles2d_asserts $LDADD_PEANO_2D_ASSERTS " 
@@ -544,19 +725,13 @@ fi
 #
 # ExaHyPE2
 #
-AC_ARG_ENABLE(exahype,
-  AC_HELP_STRING([--enable-exahype], [enable ExaHyPE2 [default=false]]),
-  [ AC_MSG_CHECKING(for exahype)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);    exahype=false ;;
-      *)     AC_MSG_RESULT(yes);   exahype=true  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for exahype); AC_MSG_RESULT(no); exahype=false ])
-AM_CONDITIONAL([UseExaHyPE],[test "x$exahype" = xtrue])
-if test "$exahype" != false; then
+if test "$toolbox_exahype" != false; then
   AC_DEFINE([UseExaHyPE], [1], [UseExaHyPE])
-  if test "$loadbalancing" == false; then
-    AC_MSG_ERROR([ExaHyPE2 requires the load balancing ])
+  if test "$toolbox_loadbalancing" == false; then
+    AC_MSG_ERROR([ExaHyPE2 requires the load balancing toolbox (run with --help to see the correct enable statement)])
+  fi
+  if test "$toolbox_blockstructured" == false; then
+    AC_MSG_ERROR([ExaHyPE2 requires the blockstructured toolbox (run with --help to see the correct enable statement)])
   fi
   LDADD_PEANO_2D_RELEASE=" -lExaHyPE2Core2d         $LDADD_PEANO_2D_RELEASE "
   LDADD_PEANO_2D_STATS="   -lExaHyPE2Core2d_stats   $LDADD_PEANO_2D_STATS "
@@ -582,12 +757,14 @@ fi
 # SmartMPI
 #
 AC_ARG_WITH(smartmpi,
-  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no, options are no, Merged and OneToOne]]),
+  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no, options are no, Merged, OneToOne, Alternating and NToOneServerAlt]]),
   [ AC_MSG_CHECKING(for smartmpi)
     case "${withval}" in
-      no)        AC_MSG_RESULT(no);    smartmpi=false ;;
-      Merged)    AC_MSG_RESULT(yes; use topology Merged);     smartmpi=Merged ;;
-      OneToOne)  AC_MSG_RESULT(yes; use topology OneToOne);   smartmpi=OneToOne ;;
+      no)               AC_MSG_RESULT(no);    smartmpi=false ;;
+      Merged)           AC_MSG_RESULT(yes; use topology Merged);            smartmpi=Merged ;;
+      OneToOne)         AC_MSG_RESULT(yes; use topology OneToOne);          smartmpi=OneToOne ;;
+      Alternating)      AC_MSG_RESULT(yes; use topology Alternating);       smartmpi=Alternating ;;
+      NToOneServerAlt)  AC_MSG_RESULT(yes; use topology NToOneServerAlt);   smartmpi=NToOneServerAlt ;;
       *)         AC_MSG_RESULT(failed);   AC_MSG_ERROR([invalid option for SmartMPI]) ;;
     esac ],
   [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
@@ -597,6 +774,12 @@ if test "$smartmpi" == Merged; then
 fi
 if test "$smartmpi" == OneToOne; then
   AC_DEFINE([UseSmartMPI], [OneToOne], [UseSmartMPI])
+fi
+if test "$smartmpi" == Alternating; then
+  AC_DEFINE([UseSmartMPI], [Alternating], [UseSmartMPI])
+fi
+if test "$smartmpi" == NToOneServerAlt; then
+  AC_DEFINE([UseSmartMPI], [NToOneServerAlt], [UseSmartMPI])
 fi
 if test "$smartmpi" != false; then
   if test "$mpi" == false; then
@@ -619,21 +802,7 @@ fi
 #
 # Delta
 #
-AC_ARG_WITH(delta,
-  AC_HELP_STRING([--with-delta], [enable Delta [default=no]]),
-  [ AC_MSG_CHECKING(for delta)
-    case "${withval}" in
-      no)    AC_MSG_RESULT(no);   delta=false ;;
-      *)     AC_MSG_RESULT(yes);  delta=${withval}  ;;
-    esac ],
-  [ AC_MSG_CHECKING(for delta); AC_MSG_RESULT(no); delta=false ])
-# This whole autotools thing is not very nice: If I wanna use an if ... endif (
-# note the syntax which is different to the present file, then I have to declare
-# the variable as I do in the line below. Otherwise, the if thing is not 
-# "exported". Seems the autoconf and the makefile generator are completely 
-# separate with inconsistent syntax.
-AM_CONDITIONAL([UseDelta],[test "$delta" != false])
-if test "$delta" != false; then
+if test "$toolbox_delta" != false; then
   AC_DEFINE([UseDelta], [1], [UseDelta])
   LDADD_PEANO_2D_RELEASE+=" -ldelta2d "
   LDADD_PEANO_2D_STATS+="   -ldelta2d "
@@ -649,6 +818,11 @@ if test "$delta" != false; then
 fi
 
 
+#
+# ===============================================================
+#   Export variables
+# ===============================================================
+#
 AC_SUBST(CXXFLAGS_PEANO_2D_RELEASE)
 AC_SUBST(CXXFLAGS_PEANO_2D_STATS)
 AC_SUBST(CXXFLAGS_PEANO_2D_ASSERTS)
@@ -687,7 +861,7 @@ AC_SUBST(LDADD_PEANO_3D_DEBUG)
 AC_OUTPUT(
   Makefile 
   src/Makefile 
-  src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
+  src/toolbox/blockstructured/Makefile src/toolbox/multiprecision/Makefile src/toolbox/finiteelements/Makefile src/toolbox/loadbalancing/Makefile src/toolbox/particles/Makefile
   examples/grid/Makefile examples/integerdiffusionthroughfaces/Makefile examples/delta/Makefile examples/regulargridupscaling/Makefile 
   src/convert/Makefile
   src/exahype2/Makefile

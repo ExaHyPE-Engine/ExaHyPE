@@ -8,6 +8,23 @@
 tarch::logging::Log   examples::exahype2::euler::EulerOnGPU::_log( "examples::exahype2::euler::EulerOnGPU" );
 
 
+
+::exahype2::RefinementCommand examples::exahype2::euler::EulerOnGPU::refinementCriterion(
+  const double * __restrict__ Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t
+) {
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+  if ( Q[4]>0.4 ) {
+    result = ::exahype2::RefinementCommand::Refine;
+  }
+  if ( Q[4]<0.2 ) {
+    result = ::exahype2::RefinementCommand::Coarsen;
+  }
+  return result;
+}
+
 void examples::exahype2::euler::EulerOnGPU::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
