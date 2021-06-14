@@ -937,7 +937,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
 
 
   TemplateLeaveCell_Epilogue = """
-  logTraceOut( "leaveCell(...)" );
+  logTraceOutWith1Argument( "leaveCell(...)", _spacetreeId );
 }}
 """
 
@@ -1162,7 +1162,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int inOutStack, int toStack, ::peano4:
     auto& data = repositories::DataRepository::_{logical_type_name}Stack.getForPop(
       _spacetreeId,inOutStack
     )->top(relativePositionOnInOutStack);
-    logDebug( "sendXXX(...)", "send out " << data.toString() << " to stack " << toStack << " (relativePositionOnInOutStack=" << relativePositionOnInOutStack << ")" );
+    logDebug( "sendXXX(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " (relativePositionOnInOutStack=" << relativePositionOnInOutStack << ")" );
 
     repositories::DataRepository::_{logical_type_name}Stack.getForPush(
       _spacetreeId, toStack

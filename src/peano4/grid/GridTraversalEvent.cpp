@@ -7,14 +7,15 @@
 
 
 
-peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __isRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexInsideDomain, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing):
+peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __isRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing):
     _x(__x)
   , _h(__h)
   , _isRefined(__isRefined)
   , _isVertexLocal(__isVertexLocal)
   , _isFaceLocal(__isFaceLocal)
   , _isCellLocal(__isCellLocal)
-  , _isVertexInsideDomain(__isVertexInsideDomain)
+  , _isVertexAdjacentToParallelDomainBoundary(__isVertexAdjacentToParallelDomainBoundary)
+  , _isFaceAdjacentToParallelDomainBoundary(__isFaceAdjacentToParallelDomainBoundary)
   , _vertexDataFrom(__vertexDataFrom)
   , _vertexDataTo(__vertexDataTo)
   , _faceDataFrom(__faceDataFrom)
@@ -42,7 +43,9 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << ","; 
   out << "isCellLocal=" << _isCellLocal;
   out << ","; 
-  out << "isVertexInsideDomain=" << _isVertexInsideDomain;
+  out << "isVertexAdjacentToParallelDomainBoundary=" << _isVertexAdjacentToParallelDomainBoundary;
+  out << ","; 
+  out << "isFaceAdjacentToParallelDomainBoundary=" << _isFaceAdjacentToParallelDomainBoundary;
   out << ","; 
   out << "vertexDataFrom=" << _vertexDataFrom;
   out << ","; 
@@ -189,28 +192,53 @@ void   peano4::grid::GridTraversalEvent::setIsCellLocal(bool value) {
 }
 
 
-std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getIsVertexInsideDomain() const {
-  return _isVertexInsideDomain;
+std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getIsVertexAdjacentToParallelDomainBoundary() const {
+  return _isVertexAdjacentToParallelDomainBoundary;
 }
 
 
-void   peano4::grid::GridTraversalEvent::setIsVertexInsideDomain(const std::bitset<TwoPowerD>&  value) {
-  _isVertexInsideDomain = value;
+void   peano4::grid::GridTraversalEvent::setIsVertexAdjacentToParallelDomainBoundary(const std::bitset<TwoPowerD>&  value) {
+  _isVertexAdjacentToParallelDomainBoundary = value;
 }
 
 
-bool   peano4::grid::GridTraversalEvent::getIsVertexInsideDomain(int index) const {
-  return _isVertexInsideDomain[index];
+bool   peano4::grid::GridTraversalEvent::getIsVertexAdjacentToParallelDomainBoundary(int index) const {
+  return _isVertexAdjacentToParallelDomainBoundary[index];
 }
 
 
-void   peano4::grid::GridTraversalEvent::setIsVertexInsideDomain(int index, bool value) {
-  _isVertexInsideDomain[index] = value;
+void   peano4::grid::GridTraversalEvent::setIsVertexAdjacentToParallelDomainBoundary(int index, bool value) {
+  _isVertexAdjacentToParallelDomainBoundary[index] = value;
 }
 
 
-void   peano4::grid::GridTraversalEvent::flipIsVertexInsideDomain(int index) {
-  _isVertexInsideDomain.flip(index);
+void   peano4::grid::GridTraversalEvent::flipIsVertexAdjacentToParallelDomainBoundary(int index) {
+  _isVertexAdjacentToParallelDomainBoundary.flip(index);
+}
+
+
+std::bitset<TwoTimesD>   peano4::grid::GridTraversalEvent::getIsFaceAdjacentToParallelDomainBoundary() const {
+  return _isFaceAdjacentToParallelDomainBoundary;
+}
+
+
+void   peano4::grid::GridTraversalEvent::setIsFaceAdjacentToParallelDomainBoundary(const std::bitset<TwoTimesD>&  value) {
+  _isFaceAdjacentToParallelDomainBoundary = value;
+}
+
+
+bool   peano4::grid::GridTraversalEvent::getIsFaceAdjacentToParallelDomainBoundary(int index) const {
+  return _isFaceAdjacentToParallelDomainBoundary[index];
+}
+
+
+void   peano4::grid::GridTraversalEvent::setIsFaceAdjacentToParallelDomainBoundary(int index, bool value) {
+  _isFaceAdjacentToParallelDomainBoundary[index] = value;
+}
+
+
+void   peano4::grid::GridTraversalEvent::flipIsFaceAdjacentToParallelDomainBoundary(int index) {
+  _isFaceAdjacentToParallelDomainBoundary.flip(index);
 }
 
 
@@ -417,11 +445,11 @@ int peano4::grid::GridTraversalEvent::getSenderRank() const {
 void peano4::grid::GridTraversalEvent::initDatatype() {
   peano4::grid::GridTraversalEvent  instances[2];
     
-  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_BYTE, MPI_UNSIGNED_LONG, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT };
+  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_BYTE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT };
     
-  int blocklen[] = { Dimensions, Dimensions, 1, 1, 1, 1, 1, TwoPowerD, TwoPowerD, TwoTimesD, TwoTimesD, 1, Dimensions, 1, 1 };
+  int blocklen[] = { Dimensions, Dimensions, 1, 1, 1, 1, 1, 1, TwoPowerD, TwoPowerD, TwoTimesD, TwoTimesD, 1, Dimensions, 1, 1 };
 
-  const int NumberOfAttributes = 15;
+  const int NumberOfAttributes = 16;
     
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
@@ -441,7 +469,9 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   currentAddress++;
   MPI_Get_address( &(instances[0]._isCellLocal), &disp[currentAddress] );
   currentAddress++;
-  MPI_Get_address( &(instances[0]._isVertexInsideDomain), &disp[currentAddress] );
+  MPI_Get_address( &(instances[0]._isVertexAdjacentToParallelDomainBoundary), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._isFaceAdjacentToParallelDomainBoundary), &disp[currentAddress] );
   currentAddress++;
   MPI_Get_address( &(instances[0]._vertexDataFrom.data()[0]), &disp[currentAddress] );
   currentAddress++;

@@ -1487,6 +1487,7 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
 
 
 void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, TraversalObserver&    observer, const GridTraversalEvent&  leaveCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]) {
+  logTraceInWith3Arguments( "sendUserData(...)", state.toString(), leaveCellTraversalEvent.toString(), _id );
   assertion4(
     _spacetreeState!=SpacetreeState::EmptyRun and
     _spacetreeState!=SpacetreeState::Joined,
@@ -1597,7 +1598,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
       if (leaveCellTraversalEvent.getIsFaceLocal(outFacePositionWithinCell)) {
         int neighbour = getNeighbourTrees(fineGridVertices,outFacePositionWithinCell, false);
         if (neighbour>=0) {
-          logDebug(
+          // @todo logDebug
+          logInfo(
             "sendUserData(...)",
             "send local face from stack " << outFaceStack << " of tree " << _id <<
             " to neighbour " << neighbour << ". Position within cell=" << outFacePositionWithinCell << ", total faces left on output stack=" << totalOutStackWrites
@@ -1678,6 +1680,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
       );
     }
   }
+  logTraceOutWith3Arguments( "sendUserData(...)", state.toString(), leaveCellTraversalEvent.toString(), _id );
 }
 
 

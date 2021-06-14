@@ -131,16 +131,31 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
 }
 
 
-std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesInsideDomain(GridVertex  vertices[TwoPowerD]) const {
+std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdjacentToParallelDomainBoundary(GridVertex  vertices[TwoPowerD]) const {
   std::bitset<TwoPowerD> bitset;
   for (int i=0; i<TwoPowerD; i++) {
     bitset.set(i,
-      tarch::la::equals( vertices[i].getBackupOfAdjacentRanks(), _id )
+      not tarch::la::equals( vertices[i].getBackupOfAdjacentRanks(), _id )
+      and
+      tarch::la::contains( vertices[i].getBackupOfAdjacentRanks(), _id )
     );
   }
   return bitset;
 }
 
+
+std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjacentToParallelDomainBoundary(GridVertex  vertices[TwoPowerD]) const {
+  std::bitset<TwoTimesD> result;
+  for (int i=0; i<TwoTimesD; i++) {
+    tarch::la::Vector< TwoPowerD, int > adjacency = getAdjacentRanksOfFace(vertices, i, true);
+    result.set(i,
+      not tarch::la::equals( adjacency, _id )
+      and
+      tarch::la::contains( adjacency, _id )
+    );
+  }
+  return result;
+}
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(
   GridVertex              fineGridVertices[TwoPowerD],
@@ -152,7 +167,11 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   const tarch::la::Vector<Dimensions,int>&  relativePositionToFather,
   bool                                      spacetreeStateIsRunning
 ) const {
+  #if Dimensions==2
+  logTraceInWith7Arguments( "createGenericCellTraversalEvent(...)", state.toString(), relativePositionToFather, fineGridVertices[0].toString(), fineGridVertices[1].toString(), fineGridVertices[2].toString(), fineGridVertices[3].toString(), _id );
+  #else
   logTraceInWith3Arguments( "createGenericCellTraversalEvent(...)", state.toString(), relativePositionToFather, _id );
+  #endif
   GridTraversalEvent  event;
   event.setX( state.getX() + state.getH()*0.5 );
   event.setH( state.getH() );
@@ -164,7 +183,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   event.setIsFaceLocal(   areFacesLocal(        fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
   event.setIsVertexLocal( areVerticesLocal(     fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
 
-  event.setIsVertexInsideDomain( areVerticesInsideDomain(fineGridVertices) );
+  event.setIsVertexAdjacentToParallelDomainBoundary( areVerticesAdjacentToParallelDomainBoundary(fineGridVertices) );
+  event.setIsFaceAdjacentToParallelDomainBoundary( areFacesAdjacentToParallelDomainBoundary(fineGridVertices));
 
   event.setInvokingSpacetree( _id );
   event.setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
@@ -175,7 +195,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
         splitting.empty()
   );
 
-  logTraceOut( "createGenericCellTraversalEvent(...)" );
+  logTraceOutWith2Arguments( "createGenericCellTraversalEvent(...)", event.toString(), _id );
   return event;
 }
 
