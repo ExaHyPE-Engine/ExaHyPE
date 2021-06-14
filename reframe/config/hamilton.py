@@ -19,7 +19,7 @@ site_configuration = {
                     "descr": "parallel jobs (Hamilton7) - single node",
                     "scheduler": "slurm",
                     "launcher": "mpirun",
-                    "access": ["-p par7.q"],
+                    "access": ["-p par6.q"],
                     "environs": ["intel"],
                     "max_jobs": 30,
                 },
@@ -28,7 +28,7 @@ site_configuration = {
     ],
     "environments": [
         {
-            "modules": ["intel/2019.5", "intelmpi/intel/2019.6", "gsl/intel/2.4"],
+            "modules": ["intel/2020.4", "intelmpi/intel/2019.6", "python/3.6.8"], # gsl/intel/2.4 breaks Euler on Hamilton; similarly intel/2019.5 is not a suitable replacement for intel/2020.4
             "name": "intel",
             "cc": "icc",
             "cxx": "icpc",
@@ -36,6 +36,7 @@ site_configuration = {
             "target_systems": ["hamilton"],
             "variables": [
                 ["PYTHONPATH", "../../../python"],
+                ["OMP_NUM_THREADS", "4"],
             ],
         }
     ],
