@@ -11,7 +11,6 @@ std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::CellM
 }
 
 
-
 peano4::datamanagement::CellMarker::CellMarker(
   const peano4::grid::GridTraversalEvent& event
 ):
@@ -28,6 +27,12 @@ peano4::datamanagement::CellMarker::CellMarker(
     _isOneVertexHanging |= event.getVertexDataTo(i)  ==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
     _isOneVertexHanging |= event.getVertexDataFrom(i)==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
   }
+  _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
+}
+
+
+tarch::la::Vector<Dimensions,int>  peano4::datamanagement::CellMarker::getRelativePositionWithinFatherCell() const {
+  return _relativePositionOfCellWithinFatherCell;
 }
 
 

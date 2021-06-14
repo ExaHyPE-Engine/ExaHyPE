@@ -64,7 +64,10 @@ std::string tarch::logging::LogFilter::FilterListEntry::toString() const {
 
 
 bool tarch::logging::LogFilter::FilterListEntry::operator<(const FilterListEntry& b) const {
-  return _rank < b._rank || _namespaceName < b._namespaceName || _targetName < b._targetName;
+  return _rank < b._rank
+      or _namespaceName < b._namespaceName
+      or _targetName < b._targetName
+      or _programPhase < b._programPhase;
 }
 
 
@@ -81,7 +84,8 @@ bool tarch::logging::LogFilter::FilterListEntry::operator!=(const FilterListEntr
 }
 
 
-tarch::logging::LogFilter::LogFilter() {
+tarch::logging::LogFilter::LogFilter():
+  _activeProgramPhase("undef") {
   addFilterListEntry( FilterListEntry( FilterListEntry::TargetAll, false )  );
 }
 
@@ -106,6 +110,9 @@ tarch::logging::LogFilter& tarch::logging::LogFilter::getInstance() {
 
 
 void tarch::logging::LogFilter::switchProgramPhase(const std::string& activeProgramPhase) {
+  #if PeanoDebug>=4
+  std::cout << "switch program phase to " << activeProgramPhase << " and, hence, activate potentially different filter set" << std::endl;
+  #endif
   _activeProgramPhase = activeProgramPhase;
 }
 
@@ -159,9 +166,9 @@ bool tarch::logging::LogFilter::filterOut(
       if (
         ( targetName == p->_targetName or p->_targetName==FilterListEntry::TargetAll )
         and
-        ( _activeProgramPhase == p->_programPhase or p->_programPhase==FilterListEntry::AlwaysOn )
+        ( _activeProgramPhase.find( p->_programPhase,0 )==0 or p->_programPhase==FilterListEntry::AlwaysOn )
         and
-        (className.find(p->_namespaceName,0)==0)
+        ( className.find(p->_namespaceName,0)==0 )
         #ifdef Parallel
         and
         (p->_rank == FilterListEntry::AnyRank || p->_rank == tarch::mpi::Rank::getInstance().getRank())

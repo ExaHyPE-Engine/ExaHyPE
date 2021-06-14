@@ -40,6 +40,12 @@ struct peano4::datamanagement::FaceMarker {
     bool                                  _cellIsLocal;
 
     int _select;
+
+
+    /**
+     * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
+     */
+    tarch::la::Vector<Dimensions,int>  _relativePositionOfCellWithinFatherCell;
   public:
     /**
      * The derivation of _isLocal and _isRefined is very similar to
@@ -51,11 +57,19 @@ struct peano4::datamanagement::FaceMarker {
      * Selects a face witin a cell, i.e. now the marker knows to which
      * face it corresponds. After that, the routine returns a this
      * reference.
+     *
+     * @param face Number from 0 to 2d-1
      */
     FaceMarker& select(int face);
 
+    /**
+     * @return Number from 0 to 2d-1
+     */
     int getSelectedFaceNumber() const;
 
+    /**
+     * Center of a particular face with respective reference cell.
+     */
     tarch::la::Vector<Dimensions,double> x(int i) const;
 
     /**
@@ -86,6 +100,9 @@ struct peano4::datamanagement::FaceMarker {
     tarch::la::Vector<Dimensions,double> outerNormal(int i) const;
     tarch::la::Vector<Dimensions,double> outerNormal() const;
 
+    /**
+     * Size of the underlying cell
+     */
     tarch::la::Vector<Dimensions,double>  h() const;
 
     std::string toString() const;
@@ -95,6 +112,14 @@ struct peano4::datamanagement::FaceMarker {
 
     bool isLocal() const;
     bool isLocal(int i) const;
+
+    /**
+     * Return relative position within father cell. The result is from
+     * (0,1,2,3) x (0,1,2) x (0,1,2) or (0,1,2) x (0,1,2,3) x (0,1,2) or
+     * (0,1,2) x (0,1,2) x (0,1,2,3).
+     */
+    tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
+    tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
 };
 
 

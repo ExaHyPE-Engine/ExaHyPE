@@ -141,7 +141,8 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   for(int i=0; i<(NumberOfUnknowns-1); i++){
     if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
   }
-  return flag? 2*tem: tem;
+  //return flag? 2*tem: tem;
+  return tem;
   //// we are only interested in the maximum eigenvalue
   //return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
 

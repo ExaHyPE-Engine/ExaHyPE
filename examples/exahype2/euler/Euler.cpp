@@ -6,6 +6,23 @@
 tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype2::euler::Euler" );
 
 
+::exahype2::RefinementCommand examples::exahype2::euler::Euler::refinementCriterion(
+  const double * __restrict__ Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t
+) {
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+  if ( Q[4]>0.4 ) {
+    result = ::exahype2::RefinementCommand::Refine;
+  }
+  if ( Q[4]<0.2 ) {
+    result = ::exahype2::RefinementCommand::Coarsen;
+  }
+  return result;
+}
+
+
 void examples::exahype2::euler::Euler::adjustSolution(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
@@ -66,7 +83,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   const double c   = std::sqrt(gamma * p * irho);
 
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
-  assertion5( result>=0.0, result, p, u_n, irho, c );
+  assertion10( result>=0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4] );
   return result;
 }
 

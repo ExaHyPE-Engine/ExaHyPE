@@ -6,7 +6,11 @@ from .Helper import writeFile
 import os
 import re
 
-import jinja2
+try:
+  import jinja2
+except:
+  print( "Warning: jinja2 not available, i.e. you will have very limited API support (such as visualisation only)")
+
 from copy import deepcopy
 
 

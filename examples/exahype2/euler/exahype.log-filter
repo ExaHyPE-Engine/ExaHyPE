@@ -4,22 +4,31 @@
 #
 # General debug settings
 #
-debug  tarch                               -1     black
-debug  peano4                              -1     black
-debug  examples                            -1     black
-debug  exahype2                            -1     black
+debug  tarch                               -1     black always-on
+debug  peano4                              -1     black always-on
+debug  examples                            -1     black always-on
+debug  examples                            -1     black plot-solution
+debug  examples                            -1     white init-grid
+debug  examples                            -1     white time-step
+debug  examples::exahype2::euler::Euler    -1     black always-on
+debug  exahype2                            -1     black always-on
 
-info  tarch                                -1     white
-info  peano4                               -1     white
-info  examples                             -1     white
-info  exahype2                             -1     white
-info  toolbox                              -1     white
+info  tarch                                -1     white always-on
+info  peano4                               -1     white always-on
+info  examples                             -1     white always-on
+info  exahype2                             -1     white always-on
+info  toolbox                              -1     white always-on
+
  
-trace  tarch                               -1     black    
-trace  peano4                              -1     black
-trace  examples                            -1     black
-trace  exahype2                            -1     black
-trace  toolbox                             -1     black
+trace  tarch                               -1     black always-on    
+trace  peano4                              -1     black always-on
+trace  examples                            -1     black plot-solution
+trace  examples                            -1     black init-grid
+trace  examples                            -1     black time-step
+trace  examples                            -1     black always-on
+trace  examples::exahype2::euler::Euler    -1     black always-on
+trace  exahype2                            -1     black always-on
+trace  toolbox                             -1     black always-on
 
 #info  toolbox::loadbalancing              -1  black time-step
 
