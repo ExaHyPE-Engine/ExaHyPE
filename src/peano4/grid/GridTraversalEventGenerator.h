@@ -56,8 +56,8 @@ class peano4::grid::GridTraversalEventGenerator {
      * @param spacetreeStateIsRunning  spacetreeState == SpacetreeState::Running
      */
     GridTraversalEvent createGenericCellTraversalEvent(
-      GridVertex              fineGridVertices[TwoPowerD],
-      const AutomatonState&                        state,
+      GridVertex                                fineGridVertices[TwoPowerD],
+      const AutomatonState&                     state,
       const SplitSpecification&                 splitTriggered,
       const std::set<int>&                      splitting,
       const std::set< int >&                    joinTriggered,
@@ -115,8 +115,23 @@ class peano4::grid::GridTraversalEventGenerator {
      * routine runs over all @f$ 2^d @f$ vertices and analyses their status
      * w.r.t. inside.
      */
-    std::bitset<TwoPowerD> areVerticesAdjacentToParallelDomainBoundary(GridVertex  vertices[TwoPowerD]) const;
-    std::bitset<TwoTimesD> areFacesAdjacentToParallelDomainBoundary(GridVertex  vertices[TwoPowerD]) const;
+    std::bitset<TwoPowerD> areVerticesAdjacentToParallelDomainBoundary(
+      GridVertex                                vertices[TwoPowerD],
+      const SplitSpecification&                 splitTriggered,
+      const std::set<int>&                      splitting,
+      const std::set< int >&                    joinTriggered,
+      const std::set< int >&                    joining,
+      bool calledByLeaveCell
+    ) const;
+
+    std::bitset<TwoTimesD> areFacesAdjacentToParallelDomainBoundary(
+        GridVertex                                vertices[TwoPowerD],
+        const SplitSpecification&                 splitTriggered,
+        const std::set<int>&                      splitting,
+        const std::set< int >&                    joinTriggered,
+        const std::set< int >&                    joining,
+        bool calledByLeaveCell
+      ) const;
 
     /**
      * Vertices are local. I consider splitting and joining vertices to be
@@ -325,11 +340,14 @@ class peano4::grid::GridTraversalEventGenerator {
 
     /**
      * @see getNeighbourTrees()
+     * @param useBackedUpAdjacencyInformation If this one is true, I use the backup of the
+     *  adjacency list and not the new data. In most cases, I could thus call
+     *  it calledByReceivingProcess.
      */
     tarch::la::Vector< TwoPowerD, int >  getAdjacentRanksOfFace(
       GridVertex vertex[TwoPowerD],
       int faceNumber,
-      bool calledByReceivingProcess
+      bool useBackedUpAdjacencyInformation
     ) const;
 
 };

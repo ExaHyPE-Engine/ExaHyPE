@@ -20,12 +20,48 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesLoc
   const std::set<int>&                      splitting,
   const std::set< int >&                    joinTriggered,
   const std::set< int >&                    joining
-  ) const {
+) const {
   std::bitset<TwoPowerD> bitset;
   for (int i=0; i<TwoPowerD; i++) {
     bitset.set(i,isVertexAdjacentToLocalSpacetree(vertices[i], splitTriggered, splitting, joinTriggered, joining, true, true));
   }
   return bitset;
+}
+
+
+std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
+  GridVertex  vertices[TwoPowerD],
+  const SplitSpecification&                 splitTriggered,
+  const std::set<int>&                      splitting,
+  const std::set< int >&                    joinTriggered,
+  const std::set< int >&                    joining
+) const {
+  std::bitset<TwoTimesD> result;
+  for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {
+    bool isLocal = false;
+
+    const int normal = faceNumber % Dimensions;
+    for (int i=0; i<TwoPowerD; i++) {
+      std::bitset<Dimensions> studiedVertex = i;
+      studiedVertex.set(normal,faceNumber>=Dimensions);
+      std::bitset<Dimensions> studiedEntry  = TwoPowerD - studiedVertex.to_ulong() - 1;
+
+      studiedEntry.set(normal,0);
+      int currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks( studiedEntry.to_ulong() );
+      isLocal |=  currentRank == _id;
+      isLocal |=  splitTriggered.count(currentRank)>0;
+      isLocal |=  splitting.count(currentRank)>0;
+
+      studiedEntry.set(normal,1);
+      currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks( studiedEntry.to_ulong() );
+      isLocal |= currentRank == _id;
+      isLocal |=  splitTriggered.count(currentRank)>0;
+      isLocal |=  splitting.count(currentRank)>0;
+    }
+
+    result[faceNumber] = isLocal;
+  }
+  return result;
 }
 
 
@@ -95,71 +131,85 @@ bool peano4::grid::GridTraversalEventGenerator::isSpacetreeNodeLocal(
 }
 
 
-std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
-  GridVertex  vertices[TwoPowerD],
+std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdjacentToParallelDomainBoundary(
+  GridVertex                                vertices[TwoPowerD],
   const SplitSpecification&                 splitTriggered,
   const std::set<int>&                      splitting,
   const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining
+  const std::set< int >&                    joining,
+  bool calledByLeaveCell
 ) const {
-  std::bitset<TwoTimesD> result;
-  for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {
-    bool isLocal = false;
-
-    const int normal = faceNumber % Dimensions;
-    for (int i=0; i<TwoPowerD; i++) {
-      std::bitset<Dimensions> studiedVertex = i;
-      studiedVertex.set(normal,faceNumber>=Dimensions);
-      std::bitset<Dimensions> studiedEntry  = TwoPowerD - studiedVertex.to_ulong() - 1;
-
-      studiedEntry.set(normal,0);
-      int currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks( studiedEntry.to_ulong() );
-      isLocal |=  currentRank == _id;
-      isLocal |=  splitTriggered.count(currentRank)>0;
-      isLocal |=  splitting.count(currentRank)>0;
-
-      studiedEntry.set(normal,1);
-      currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks( studiedEntry.to_ulong() );
-      isLocal |= currentRank == _id;
-      isLocal |=  splitTriggered.count(currentRank)>0;
-      isLocal |=  splitting.count(currentRank)>0;
+  std::bitset<TwoPowerD> result;
+  for (int i=0; i<TwoPowerD; i++) {
+    // @tood Nachdenken
+    tarch::la::Vector< TwoPowerD, int > adjacency = vertices[i].getBackupOfAdjacentRanks();
+    bool oneLocal  = false;
+    bool oneRemote = false;
+    for (int i=0; i<TwoPowerD; i++ ) {
+      bool valid = adjacency(i)>=0;
+      bool local = adjacency(i)==_id or splitting.count(adjacency(i))>0 or splitTriggered.count(adjacency(i))>0;
+      oneLocal  |= (valid and local);
+      oneRemote |= (valid and not local);
     }
-
-    result[faceNumber] = isLocal;
+    result.set(i,oneLocal and oneRemote);
   }
   return result;
 }
 
 
-std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdjacentToParallelDomainBoundary(GridVertex  vertices[TwoPowerD]) const {
-  std::bitset<TwoPowerD> bitset;
-  for (int i=0; i<TwoPowerD; i++) {
-    bitset.set(i,
-      not tarch::la::equals( vertices[i].getBackupOfAdjacentRanks(), _id )
-      and
-      tarch::la::contains( vertices[i].getBackupOfAdjacentRanks(), _id )
-    );
-  }
-  return bitset;
-}
-
-
-std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjacentToParallelDomainBoundary(GridVertex  vertices[TwoPowerD]) const {
+std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjacentToParallelDomainBoundary(
+  GridVertex                                vertices[TwoPowerD],
+  const SplitSpecification&                 splitTriggered,
+  const std::set<int>&                      splitting,
+  const std::set< int >&                    joinTriggered,
+  const std::set< int >&                    joining,
+  bool calledByLeaveCell
+) const {
   std::bitset<TwoTimesD> result;
   for (int i=0; i<TwoTimesD; i++) {
-    tarch::la::Vector< TwoPowerD, int > adjacency = getAdjacentRanksOfFace(vertices, i, true);
-    result.set(i,
-      not tarch::la::equals( adjacency, _id )
-      and
-      tarch::la::contains( adjacency, _id )
-    );
+    // @todo
+    tarch::la::Vector< TwoPowerD, int > adjacency = getAdjacentRanksOfFace(vertices, i, calledByLeaveCell);
+    //tarch::la::Vector< TwoPowerD, int > adjacency = getAdjacentRanksOfFace(vertices, i, false);
+    bool oneLocal  = false;
+    bool oneRemote = false;
+    for (int i=0; i<TwoPowerD; i++ ) {
+      // @todo noch rueber auf vertices
+      // So ganz stimmt es natuerlich net, weil das ist ja jetzt eins zu frueh
+      bool valid = adjacency(i)>=0;
+/*
+      bool local = adjacency(i)==_id
+                or (splitting.count(adjacency(i))>0 and calledByEnterCell)
+                or splitTriggered.count(adjacency(i))>0;
+      bool remote = adjacency(i)!=_id
+                and not splitTriggered.count(adjacency(i))>0
+                and (not splitting.count(adjacency(i))>0 or not calledByEnterCell);
+*/
+      bool local = adjacency(i)==_id
+                or splitTriggered.count(adjacency(i))>0
+//                or splitting.count(adjacency(i))>0;
+                or (splitting.count(adjacency(i))>0 and not calledByLeaveCell);
+      bool remote = adjacency(i)!=_id
+                and not (splitTriggered.count(adjacency(i))>0)
+                and (splitting.count(adjacency(i))==0 or calledByLeaveCell);
+//      and not (splitTriggered.count(adjacency(i))>0 and calledByLeaveCell);
+//      bool remote = not local;
+      oneLocal  |= (valid and local);
+      oneRemote |= (valid and remote);
+    }
+    result.set(i,oneLocal and oneRemote);
+/*
+    logInfo( "areFacesAdjacentToParallelDomainBoundary(...)", "face " << i << " is local=" << oneLocal << " and remote " << oneRemote <<
+      ", split-triggered=" << splitTriggered.size() << ")"
+     );
+*/
+    //logInfo( "areFacesAdjacentToParallelDomainBoundary(...)", (splitTriggered.count(adjacency(i))>0 and calledByEnterCell) );
   }
   return result;
 }
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(
-  GridVertex              fineGridVertices[TwoPowerD],
-  const AutomatonState&                        state,
+  GridVertex                                fineGridVertices[TwoPowerD],
+  const AutomatonState&                     state,
   const SplitSpecification&                 splitTriggered,
   const std::set<int>&                      splitting,
   const std::set< int >&                    joinTriggered,
@@ -183,9 +233,6 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   event.setIsFaceLocal(   areFacesLocal(        fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
   event.setIsVertexLocal( areVerticesLocal(     fineGridVertices, splitTriggered, splitting, joinTriggered, joining) );
 
-  event.setIsVertexAdjacentToParallelDomainBoundary( areVerticesAdjacentToParallelDomainBoundary(fineGridVertices) );
-  event.setIsFaceAdjacentToParallelDomainBoundary( areFacesAdjacentToParallelDomainBoundary(fineGridVertices));
-
   event.setInvokingSpacetree( _id );
   event.setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(
         spacetreeStateIsRunning and
@@ -201,9 +248,9 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createLeaveCellTraversalEvent(
-  GridVertex              coarseGridVertices[TwoPowerD],
-  GridVertex              fineGridVertices[TwoPowerD],
-  const AutomatonState&   state,
+  GridVertex                                coarseGridVertices[TwoPowerD],
+  GridVertex                                fineGridVertices[TwoPowerD],
+  const AutomatonState&                     state,
   const SplitSpecification&                 splitTriggered,
   const std::set<int>&                      splitting,
   const std::set< int >&                    joinTriggered,
@@ -214,6 +261,14 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 ) const {
   logTraceInWith3Arguments( "createLeaveCellTraversalEvent(...)", state.toString(), _id, relativePositionToFather );
   GridTraversalEvent  event = createGenericCellTraversalEvent(fineGridVertices, state, splitTriggered, splitting, joinTriggered, joining, relativePositionToFather, spacetreeStateIsRunning);
+
+  event.setIsVertexAdjacentToParallelDomainBoundary( areVerticesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true) );
+  event.setIsFaceAdjacentToParallelDomainBoundary( areFacesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true));
+
+  for (int i=0; i<TwoPowerD; i++)
+    assertion1( event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString() );
+  for (int i=0; i<TwoTimesD; i++)
+    assertion1( event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString() );
 
   const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
   for (int i=0; i<TwoPowerD; i++) {
@@ -315,25 +370,38 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     }
   }
 
+  for (int i=0; i<TwoPowerD; i++)
+    assertion1( event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString() );
+  for (int i=0; i<TwoTimesD; i++)
+    assertion1( event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString() );
+
   logTraceOutWith3Arguments( "createLeaveCellTraversalEvent(...)", state.toString(), event.toString(), _id );
   return event;
 }
 
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createEnterCellTraversalEvent(
-  GridVertex                                   coarseGridVertices[TwoPowerD],
-  GridVertex                                   fineGridVertices[TwoPowerD],
-  const AutomatonState&                        state,
+  GridVertex                                coarseGridVertices[TwoPowerD],
+  GridVertex                                fineGridVertices[TwoPowerD],
+  const AutomatonState&                     state,
   const SplitSpecification&                 splitTriggered,
   const std::set<int>&                      splitting,
   const std::set< int >&                    joinTriggered,
   const std::set< int >&                    joining,
   const std::set< int >&                    hasSplit,
-  const tarch::la::Vector<Dimensions,int>&     relativePositionToFather,
+  const tarch::la::Vector<Dimensions,int>&  relativePositionToFather,
   bool                                      spacetreeStateIsRunning
 ) const {
   logTraceInWith7Arguments( "createEnterCellTraversalEvent(...)", state.toString(), _id, relativePositionToFather, coarseGridVertices[0].toString(), coarseGridVertices[1].toString(), coarseGridVertices[2].toString(), coarseGridVertices[3].toString() );
   GridTraversalEvent  event = createGenericCellTraversalEvent(fineGridVertices, state, splitTriggered, splitting, joinTriggered, joining, relativePositionToFather, spacetreeStateIsRunning);
+
+  event.setIsVertexAdjacentToParallelDomainBoundary( areVerticesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, false) );
+  event.setIsFaceAdjacentToParallelDomainBoundary( areFacesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, false));
+
+  for (int i=0; i<TwoPowerD; i++)
+    assertion1( event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString() );
+  for (int i=0; i<TwoTimesD; i++)
+    assertion1( event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString() );
 
   const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
   for (int i=0; i<TwoPowerD; i++) {
@@ -451,6 +519,12 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   if (mayResetToNoData) {
     event.setCellData(TraversalObserver::NoData);
   }
+
+
+  for (int i=0; i<TwoPowerD; i++)
+    assertion1( event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString() );
+  for (int i=0; i<TwoTimesD; i++)
+    assertion1( event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString() );
 
   logTraceOutWith3Arguments( "createEnterCellTraversalEvent(...)", state.toString(), event.toString(), _id );
   return event;
