@@ -36,6 +36,7 @@ intparams = {"LapseType":0, "tp_grid_setup":0}
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
     parser.add_argument("-cs",   "--cell-size",       dest="max_h",           type=float, default=0.4,  help="Mesh size" )
+    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.1,  help="lower limit for refinement" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
@@ -122,7 +123,8 @@ if __name__ == "__main__":
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation#,
+          #refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
         )
 
       def get_user_includes(self):
@@ -463,13 +465,13 @@ if __name__ == "__main__":
       my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
           solver_name, order, unknowns, 0, #auxiliary_variables
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
-          args.max_h, args.max_h, time_step_size,
+          args.min_h, args.max_h, time_step_size,
           flux = None,
           ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = CCZ4Solver(solver_name, args.patch_size, args.max_h, args.max_h)
+      my_solver = CCZ4Solver(solver_name, args.patch_size, args.min_h, args.max_h)
 
       if args.extension=="gradient":
         my_solver.add_derivative_calculation()
@@ -490,7 +492,7 @@ if __name__ == "__main__":
     elif args.scenario=="two-punctures":
       my_solver.pick_two_puncture_scenario()
     else:
-      raise Exception( "Scenario " + args.scenario + " is now known")        
+      raise Exception( "Scenario " + args.scenario + " is now known")  
 
     project.add_solver(my_solver)
 
