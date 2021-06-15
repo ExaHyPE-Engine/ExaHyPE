@@ -101,6 +101,14 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
       const tarch::la::Vector<Dimensions,double>&  h
     ) override;
 
+    void loadCell(
+      const GridTraversalEvent&  event
+    ) override;
+
+    void storeCell(
+      const GridTraversalEvent&  event
+    ) override;
+
     void enterCell(
       const GridTraversalEvent&  event
     ) override;

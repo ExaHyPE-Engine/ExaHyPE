@@ -59,6 +59,10 @@ class peano4::grid::TraversalObserver {
      */
     static constexpr int CreateOrDestroyHangingGridEntity    = -3;
 
+    virtual void loadCell(
+      const GridTraversalEvent&  event
+    ) = 0;
+
     /**
      * Event is invoked per cell. It is however not called for the root cell,
      * i.e. for the cell with level 0 that does not have a parent.
@@ -69,6 +73,10 @@ class peano4::grid::TraversalObserver {
 
 
     virtual void leaveCell(
+      const GridTraversalEvent&  event
+    ) = 0;
+
+    virtual void storeCell(
       const GridTraversalEvent&  event
     ) = 0;
 
@@ -205,12 +213,13 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
     PeriodicBoundaryDataSwap
   };
 
-  virtual void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker) {};
-  virtual void sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {};
-  virtual void sendCell(int inOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::CellMarker& marker) {};
+  virtual void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker, const GridTraversalEvent&  event) {};
+  virtual void sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker, const GridTraversalEvent&  event) {};
+  virtual void sendCell(int inOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::CellMarker& marker, const GridTraversalEvent&  event) {};
 
   virtual void receiveAndMergeVertex(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker) {};
   virtual void receiveAndMergeFace(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {};
+  virtual void receiveAndMergeCell(const GridTraversalEvent&  event, int inOutStack, int fromStack, SendReceiveContext context, const peano4::datamanagement::CellMarker& marker) {};
 
   virtual void deleteAllStacks() {};
 };

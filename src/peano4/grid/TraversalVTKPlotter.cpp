@@ -131,6 +131,18 @@ std::string peano4::grid::TraversalVTKPlotter::getFilename( int spacetreeId ) co
 }
 
 
+void peano4::grid::TraversalVTKPlotter::loadCell(
+  const GridTraversalEvent&  event
+) {
+}
+
+
+void peano4::grid::TraversalVTKPlotter::storeCell(
+  const GridTraversalEvent&  event
+) {
+}
+
+
 void peano4::grid::TraversalVTKPlotter::enterCell(
   const GridTraversalEvent&  event
 ) {
