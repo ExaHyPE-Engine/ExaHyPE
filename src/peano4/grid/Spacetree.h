@@ -392,6 +392,11 @@ class peano4::grid::Spacetree {
     void receiveAndMergeUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
 
     /**
+     * Send user data
+     *
+     * Send out data along the MPI boundary (horizontal) and stream data to the splitting,
+     * new workers (vertical). This routine is called within descend() as epilogue, i.e.
+     * after all data have been stored savely away on the output streams.
      *
      * <h2> Data order on output stacks </h2>
      *
