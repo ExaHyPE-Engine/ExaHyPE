@@ -8,13 +8,13 @@ export GIT_REVISION="${1}"
 
 case $HOSTNAME in
     "hamilton1.hpc.dur.ac.uk" | "hamilton2.hpc.dur.ac.uk")
-        source ../environ/env_hamilton.sh
+        source ../../environ/env_hamilton.sh
         ;;
     "login8a.pri.cosma7.alces.network")
-        source ../environ/env_dine.sh
+        source ../../environ/env_dine.sh
         ;;
     "login2.bede.dur.ac.uk")
-        source ../environ/env_bede.sh
+        source ../../environ/env_bede.sh
         ;;
     (*)
         echo "Working on an unknown system"
