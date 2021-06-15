@@ -39,10 +39,18 @@ class peano4::grid::EmptyTraversalObserver: public peano4::grid::TraversalObserv
     ) override;
 
     void enterCell(
-	    const GridTraversalEvent&  event
+      const GridTraversalEvent&  event
     ) override;
 
     void leaveCell(
+      const GridTraversalEvent&  event
+    ) override;
+
+    void loadCell(
+      const GridTraversalEvent&  event
+    ) override;
+
+    void storeCell(
       const GridTraversalEvent&  event
     ) override;
 
