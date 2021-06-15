@@ -244,44 +244,6 @@ AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$gpu" = xnvidia ])
 
 
 #
-# SmartMPI
-#
-AC_ARG_WITH(smartmpi,
-  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no, options are no, Merged and OneToOne]]),
-  [ AC_MSG_CHECKING(for smartmpi)
-    case "${withval}" in
-      no)        AC_MSG_RESULT(no);    smartmpi=false ;;
-      Merged)    AC_MSG_RESULT(yes; use topology Merged);     smartmpi=Merged ;;
-      OneToOne)  AC_MSG_RESULT(yes; use topology OneToOne);   smartmpi=OneToOne ;;
-      *)         AC_MSG_RESULT(failed);   AC_MSG_ERROR([invalid option for SmartMPI]) ;;
-    esac ],
-  [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
-AM_CONDITIONAL([UseSmartMPI],[test "x$smartmpi" = xtrue])
-if test "$smartmpi" == Merged; then
-  AC_DEFINE([UseSmartMPI], [Merged], [UseSmartMPI])
-fi
-if test "$smartmpi" == OneToOne; then
-  AC_DEFINE([UseSmartMPI], [OneToOne], [UseSmartMPI])
-fi
-if test "$smartmpi" != false; then
-  if test "$mpi" == false; then
-    AC_MSG_ERROR([SmartMPI requires an MPI build of Peano])
-  fi
-  LDADD_PEANO_2D_RELEASE+=" -lsmartmpi "
-  LDADD_PEANO_2D_STATS+="   -lsmartmpi "
-  LDADD_PEANO_2D_ASSERTS+=" -lsmartmpi_debug " 
-  LDADD_PEANO_2D_TRACE+="   -lsmartmpi "
-  LDADD_PEANO_2D_DEBUG+="   -lsmartmpi_debug "
-
-  LDADD_PEANO_3D_RELEASE+=" -lsmartmpi "
-  LDADD_PEANO_3D_STATS+="   -lsmartmpi "
-  LDADD_PEANO_3D_ASSERTS+=" -lsmartmpi_debug " 
-  LDADD_PEANO_3D_TRACE+="   -lsmartmpi "
-  LDADD_PEANO_3D_DEBUG+="   -lsmartmpi_debug "
-fi
-
-
-#
 # ===============================================================
 #   Postprocessing and I/O
 # ===============================================================
