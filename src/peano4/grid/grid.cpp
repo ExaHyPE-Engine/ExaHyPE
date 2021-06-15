@@ -217,3 +217,24 @@ std::string peano4::grid::toString( CellType type ) {
   }
   return "<undef>";
 }
+
+
+std::string peano4::grid::toString( SpacetreeState state ) {
+  switch (state) {
+    case SpacetreeState::EmptyRun:
+      return "empty-run";
+    case SpacetreeState::NewRoot:
+      return "new-root";
+    case SpacetreeState::NewFromSplit:
+      return "new-from-split";
+    case SpacetreeState::Running:
+      return "running";
+    case SpacetreeState::JoinTriggered:
+      return "join-triggered";
+    case SpacetreeState::Joining:
+      return "joining";
+    case SpacetreeState::Joined:
+      return "joined";
+  }
+  return "<undef>";
+}

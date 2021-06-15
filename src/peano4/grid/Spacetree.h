@@ -49,31 +49,6 @@ namespace peano4 {
  */
 class peano4::grid::Spacetree {
   public:
-    enum class SpacetreeState {
-      /**
-       * Not yet a new root. Just got created, so we have to run through the
-       * cloned data once, just to get it into the right order, and then we
-       * can really mirror the master's traversal and send out stuff (in state
-       * NewRoot).
-       */
-      EmptyRun,
-      NewRoot,
-      /**
-       * Set if this tree results from a split and if this is the first
-       * grid sweep when the former owner actually is in the mode
-       * splitting.
-       */
-      NewFromSplit,
-      Running,
-      /**
-       * Join has been triggered for this tree. Nothing is happening yet. It is
-             * only the worker that updates all adjacency lists. These updates
-             * however are not yet given to the master.
-             */
-          JoinTriggered,
-      Joining,
-      Joined
-    };
 
     /**
      * Periodic boundary conditions are technically realised as domain
@@ -117,8 +92,6 @@ class peano4::grid::Spacetree {
 
     friend class peano4::parallel::SpacetreeSet;
     friend class peano4::grid::tests::SpacetreeTest;
-
-    static std::string toString( SpacetreeState state );
 
     /**
      * Can a cell be split (deployed to another rank)
