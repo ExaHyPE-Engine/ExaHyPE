@@ -254,7 +254,7 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
       case SpacetreeState::Joined:
         break;
     }
-    logDebug( "traverse(TraversalObserver)", "switched tree " << _id << " into " << toString(_spacetreeState) );
+    logDebug( "traverse(TraversalObserver)", "switched tree " << _id << " into " << peano4::grid::toString(_spacetreeState) );
   }
 
   logTraceOut( "traverse(TraversalObserver)" );
@@ -315,27 +315,6 @@ tarch::la::Vector<Dimensions,int> peano4::grid::Spacetree::convertToIntegerVecto
 	result[d] = in[d] ? 1 : 0;
   }
   return result;
-}
-
-
-std::string peano4::grid::Spacetree::toString( SpacetreeState state ) {
-  switch (state) {
-    case SpacetreeState::EmptyRun:
-      return "empty-run";
-    case SpacetreeState::NewRoot:
-      return "new-root";
-    case SpacetreeState::NewFromSplit:
-      return "new-from-split";
-    case SpacetreeState::Running:
-      return "running";
-    case SpacetreeState::JoinTriggered:
-      return "join-triggered";
-    case SpacetreeState::Joining:
-      return "joining";
-    case SpacetreeState::Joined:
-      return "joined";
-  }
-  return "<undef>";
 }
 
 
@@ -1035,7 +1014,7 @@ void peano4::grid::Spacetree::receiveAndMergeGridVertexAtHorizontalBoundary( Gri
 void peano4::grid::Spacetree::sendGridVertex( const GridVertex& vertex ) {
   logTraceInWith2Arguments( "sendGridVertex(GridVertex)", vertex.toString(), _id );
 
-  assertion2( _spacetreeState!=SpacetreeState::EmptyRun, _id, toString(_spacetreeState) );
+  assertion2( _spacetreeState!=SpacetreeState::EmptyRun, _id, peano4::grid::toString(_spacetreeState) );
 
   std::set<int> outRanks = getNeighbourTrees(vertex,false);
 
@@ -1288,8 +1267,8 @@ void peano4::grid::Spacetree::descend(
       receiveAndMergeUserData(fineGridStates[peano4::utils::dLinearised(k,3)], observer, enterCellTraversalEvent,fineGridVertices);
     }
 
+    observer.loadCell( createPrunedCellTraversalEvent(enterCellTraversalEvent) );
     observer.enterCell( createPrunedCellTraversalEvent(enterCellTraversalEvent) );
-
 
     _statistics.setMinH( tarch::la::min(_statistics.getMinH(),1.0/3.0 * state.getH()) );
 
@@ -1327,7 +1306,9 @@ void peano4::grid::Spacetree::descend(
       _splitTriggered, _splitting, _joinTriggered, _joining, _hasSplit,
       k, _spacetreeState == SpacetreeState::Running
     );
+
     observer.leaveCell( createPrunedCellTraversalEvent(leaveCellTraversalEvent) );
+    observer.storeCell( createPrunedCellTraversalEvent(leaveCellTraversalEvent) );
 
     if(
       _spacetreeState!=SpacetreeState::EmptyRun and
@@ -1365,7 +1346,7 @@ void peano4::grid::Spacetree::receiveAndMergeUserData(
     _spacetreeState!=SpacetreeState::EmptyRun and
 	_spacetreeState!=SpacetreeState::NewFromSplit and
 	_spacetreeState!=SpacetreeState::Joined,
-	state.toString(), toString(_spacetreeState), _id
+	state.toString(), peano4::grid::toString(_spacetreeState), _id
   );
 
   const int inOutStack = PeanoCurve::getInputStackNumber(state);
@@ -1491,7 +1472,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
   assertion4(
     _spacetreeState!=SpacetreeState::EmptyRun and
     _spacetreeState!=SpacetreeState::Joined,
-    toString(_spacetreeState),
+    peano4::grid::toString(_spacetreeState),
     state.toString(), leaveCellTraversalEvent.toString(), _id
   );
 
@@ -1529,7 +1510,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             (totalOutStackWrites-1),
             toStack,
             TraversalObserver::SendReceiveContext::BoundaryExchange,
-            peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell)
+            peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell),
+            leaveCellTraversalEvent
           );
         }
 
@@ -1549,7 +1531,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             (totalOutStackWrites-1),
             stackNo.first,
             TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap,
-            peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell)
+            peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell),
+            leaveCellTraversalEvent
           );
         }
       }
@@ -1570,7 +1553,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             (totalOutStackWrites-1),
             toStack,
             TraversalObserver::SendReceiveContext::Rebalancing,
-            peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell)
+            peano4::datamanagement::VertexMarker(leaveCellTraversalEvent,outVertexPositionWithinCell),
+            leaveCellTraversalEvent
           );
         }
       }
@@ -1599,7 +1583,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
         int neighbour = getNeighbourTrees(fineGridVertices,outFacePositionWithinCell, false);
         if (neighbour>=0) {
           // @todo logDebug
-          logInfo(
+          logDebug(
             "sendUserData(...)",
             "send local face from stack " << outFaceStack << " of tree " << _id <<
             " to neighbour " << neighbour << ". Position within cell=" << outFacePositionWithinCell << ", total faces left on output stack=" << totalOutStackWrites
@@ -1611,7 +1595,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             (totalOutStackWrites-1),
             toStack,
             TraversalObserver::SendReceiveContext::BoundaryExchange,
-            peano4::datamanagement::FaceMarker(leaveCellTraversalEvent,outFacePositionWithinCell)
+            peano4::datamanagement::FaceMarker(leaveCellTraversalEvent,outFacePositionWithinCell),
+            leaveCellTraversalEvent
           );
         }
 
@@ -1632,7 +1617,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             (totalOutStackWrites-1),
             toStack,
             TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap,
-            marker
+            marker,
+            leaveCellTraversalEvent
           );
         }
       }
@@ -1641,7 +1627,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
         if (
           tarch::la::contains( _gridTraversalEventGenerator.getAdjacentRanksOfFace(fineGridVertices, outFacePositionWithinCell, false), p )
         ) {
-          logDebug(
+          logInfo(
             "sendUserData(...)",
             "stream local face from stack " << outFaceStack << " of tree " << _id <<
             " to new worker " << p << ". Position within cell=" << outFacePositionWithinCell << ", total faces left on output stack=" << totalOutStackWrites
@@ -1653,7 +1639,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             (totalOutStackWrites-1),
             toStack,
             TraversalObserver::SendReceiveContext::Rebalancing,
-            peano4::datamanagement::FaceMarker(leaveCellTraversalEvent,outFacePositionWithinCell)
+            peano4::datamanagement::FaceMarker(leaveCellTraversalEvent,outFacePositionWithinCell),
+            leaveCellTraversalEvent
           );
         }
       }
@@ -1676,7 +1663,8 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
         outCellStack,
         toStack,
         TraversalObserver::SendReceiveContext::Rebalancing,
-        peano4::datamanagement::CellMarker(leaveCellTraversalEvent)
+        peano4::datamanagement::CellMarker(leaveCellTraversalEvent),
+        leaveCellTraversalEvent
       );
     }
   }
@@ -1895,7 +1883,7 @@ std::string peano4::grid::Spacetree::toString() const {
   std::ostringstream msg;
   msg << "(id=" << _id
       << ",master=" << _masterId
-      << ",state=" << toString(_spacetreeState)
+      << ",state=" << peano4::grid::toString(_spacetreeState)
       << ",statistics=" << _statistics.toString();
   if (_joinTriggered.empty()) {
     msg << ",no-join-triggered-with-any-tree";
