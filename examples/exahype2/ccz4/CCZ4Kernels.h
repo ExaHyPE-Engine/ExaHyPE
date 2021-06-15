@@ -54,6 +54,14 @@ namespace examples {
       #pragma omp end declare target
       #endif
 
+      #if defined(OpenMPGPUOffloading)
+      #pragma omp declare target
+      #endif
+      void Psi4Calc(double* Psi4, const double* const Q, const double* const gradQSerialised, double* coor);
+      #if defined(OpenMPGPUOffloading)
+      #pragma omp end declare target
+      #endif
+
       //#if defined(OpenMPGPUOffloading)
       //#pragma omp declare target
       //#endif
