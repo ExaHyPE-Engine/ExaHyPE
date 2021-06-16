@@ -11,16 +11,16 @@ site_configuration = {
                     'descr': 'login nodes',
                     'scheduler': 'local',
                     'launcher': 'local',
-                    'environs': ['intel'],
+                    'environs': ['amd'],
                     'max_jobs': 100,
                 },
                 {
-                    'name': 'cpu_single_node_multi_ranks',
-                    'descr': 'cpu nodes - single node, multi ranks',
+                    'name': 'multi_ranks_multi_node',
+                    'descr': 'parallel jobs',
                     'scheduler': 'slurm',
                     'launcher': 'mpirun',
                     'access': ['-p bluefield1', '-A durham'],
-                    'environs': ['intel'],
+                    'environs': ['amd'],
                     'max_jobs': 100,
                 },
             ]
@@ -28,14 +28,18 @@ site_configuration = {
     ],
     'environments': [
         {
-            'modules': ['gnu_comp/10.2.0',
-                        'python/3.6.5'],
-             'name': 'intel',
-             'cc': 'icc',
-             'cxx': 'icpc',
+            'modules': ['gnu_comp/9.3.0',
+                        'python/3.6.5',
+                        'openmpi/4.0.3'],
+             'name': 'amd',
+             'cc': '',
+             'cxx': 'g++',
              'ftn': '',
              'target_systems': ['dine'],
-             'variables': [['PYTHONPATH','../../../python']]
+             'variables': [
+                 ['PYTHONPATH','../../../python'],
+                 ['OMP_NUM_THREADS','4'],
+             ],
         },
     ],
     'logging': [

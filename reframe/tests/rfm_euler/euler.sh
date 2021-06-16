@@ -13,7 +13,7 @@ case $HOSTNAME in
     "login8a.pri.cosma7.alces.network")
         source ../../environ/env_dine.sh
         ;;
-    "login2.bede.dur.ac.uk")
+    "login2.bede.dur.ac.uk" | "b101.pri.cosma7.alces.network")
         source ../../environ/env_bede.sh
         ;;
     (*)

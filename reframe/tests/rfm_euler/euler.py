@@ -17,9 +17,10 @@ class Euler_CI(rfm.RegressionTest):
         
         common.setup(self, num_tasks=1, num_cpus_per_task=4) # 4 ranks here means the domain decomposition fails
 
-        self.time_limit = '2h'
+        self.time_limit = '5m'
         
-        self.valid_systems = ['hamilton:multi_ranks_multi_node']
+        self.valid_systems = ['hamilton:multi_ranks_multi_node',
+                              'dine:multi_ranks_multi_node']
 
         self.test_dir = 'Peano/examples/exahype2/euler'
         
@@ -27,16 +28,28 @@ class Euler_CI(rfm.RegressionTest):
                 '--enable-blockstructured',
                 '--enable-exahype',
                 '--enable-loadbalancing',
-                '--with-mpi=mpiicpc',
                 '--with-multithreading=omp',
-                'CXXFLAGS="-fopenmp -std=c++14"',
         ]
         
-        self.keep_files = [f'{self.test_dir}/*.peano-patch-file']
+        if self.current_system.name == 'dine':
+            self.build_system.config_opts += [
+                    'CXXFLAGS="-fopenmp -std=c++14 -DnoMPISupportsSingleSidedCommunication"', 
+                    '--with-mpi=mpicxx'
+            ]
+        elif self.current_system.name == 'hamilton':
+            self.build_system.config_opts += [
+                'CXXFLAGS="-fopenmp -std=c++14"',
+                '--with-mpi=mpiicpc',
+            ]
+
+        self.keep_files = [
+                f'{self.test_dir}/*.peano-patch-file',
+                f'{self.test_dir}/exahype.log-filter'
+        ]
 
         self.prerun_cmds = [
                 f'pushd {self.test_dir}',
-                'python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001',
+                'python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001 -m debug',
                 'make -j',
         ]
         

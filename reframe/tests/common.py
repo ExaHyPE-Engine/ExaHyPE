@@ -12,7 +12,7 @@ def setup(test, num_tasks, num_cpus_per_task=1):
     git_rev = os.environ['GIT_REVISION']
     test.prebuild_cmds = [
         'rm -rf Peano',
-        'git clone git@gitlab.lrz.de:hpcsoftware/Peano.git',
+        'git clone https://gitlab.lrz.de/hpcsoftware/Peano.git',
         'pushd Peano',
         f'git checkout {git_rev}',
         'git clean -x -f -d',
@@ -26,4 +26,4 @@ def setup(test, num_tasks, num_cpus_per_task=1):
 
     test.sanity_patterns = sn.assert_found(r'Peano 4 terminated successfully.', test.stdout)
 
-    test.valid_prog_environs = ['intel']
+    test.valid_prog_environs = ['intel', 'amd']
