@@ -8,6 +8,15 @@
 #      - cookbook/cookbook.pdf
 #    expire_in: 1 week
 
+reframedine:
+  stage: build
+  tags:
+    - done
+  script:
+    - hostname
+    - whoami
+    - pwd
+
 hellocosma7:
   stage:
     build
