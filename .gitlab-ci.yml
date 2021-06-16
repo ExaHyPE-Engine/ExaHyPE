@@ -11,7 +11,7 @@
 reframedine:
   stage: build
   tags:
-    - done
+    - dine
   script:
     - hostname
     - whoami
