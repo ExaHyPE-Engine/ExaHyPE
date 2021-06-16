@@ -49,7 +49,7 @@ class Euler_CI(rfm.RegressionTest):
 
         self.prerun_cmds = [
                 f'pushd {self.test_dir}',
-                'python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001 -m debug',
+                'python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001',
                 'make -j',
         ]
         

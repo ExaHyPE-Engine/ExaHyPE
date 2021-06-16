@@ -24,16 +24,19 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         
         common.setup(self, num_tasks=4, num_cpus_per_task=4) # 4 ranks here means the domain decomposition fails
 
-        self.time_limit = '2h'
+        self.time_limit = '10m'
         
-        self.valid_systems = ['hamilton:multi_ranks_multi_node']
+        self.valid_systems = [
+                'hamilton:multi_ranks_multi_node',
+                'dine:multi_ranks_multi_node',
+        ]
 
         self.test_dir = 'Peano/examples/exahype2/euler'
         
         # Add smartmpi to the prebuild commands:
         self.prebuild_cmds = [
                 'rm -rf smartmpi',
-                'git clone git@gitlab.lrz.de:hpcsoftware/smartmpi.git',
+                'git clone https://gitlab.lrz.de/hpcsoftware/smartmpi.git',
                 'pushd smartmpi',
                 'git checkout master; git pull',
                 'libtoolize; aclocal; autoconf; autoheader',
@@ -49,14 +52,26 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
                 '--enable-blockstructured',
                 '--enable-exahype',
                 '--enable-loadbalancing',
-                '--with-mpi=mpiicpc',
                 '--with-multithreading=omp',
                 f'--with-smartmpi={topology}',
-                'CXXFLAGS="-fopenmp -std=c++14 -I$PWD/../smartmpi/src"',
                 'LDFLAGS=-L$PWD/../smartmpi/src',
         ]
+
+        if self.current_system.name == 'dine':
+            self.build_system.config_opts += [
+                    'CXXFLAGS="-fopenmp -std=c++14 -DnoMPISupportsSingleSidedCommunication -I$PWD/../smartmpi/src"',
+                    '--with-mpi=mpicxx',
+            ]
+        elif self.current_system.name == 'hamilton':
+            self.build_system.config_opts += [
+                'CXXFLAGS="-fopenmp -std=c++14 -I$PWD/../smartmpi/src"',
+                '--with-mpi=mpiicpc',
+            ]
         
-        self.keep_files = [f'{self.test_dir}/*.peano-patch-file']
+        self.keep_files = [
+                f'{self.test_dir}/*.peano-patch-file',
+                f'{self.test_dir}/exahype.log-filter',
+        ]
 
         self.prerun_cmds = [
                 f'pushd {self.test_dir}',
