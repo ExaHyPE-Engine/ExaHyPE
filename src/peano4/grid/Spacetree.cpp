@@ -949,8 +949,7 @@ void peano4::grid::Spacetree::mergeGridVertexRefinementStateAtHorizontalDomainBo
 
   if (OnlyNeighbourHasTriggeredRefinement || OnlyLocalHasTriggeredRefinement) {
     vertex.setState( GridVertex::State::RefinementTriggered );
-    // @todo logDebug
-    logInfo( "mergeGridVertexRefinementStateAtHorizontalDomainBoundary( GridVertex )", "set state to " << vertex.toString() << " on tree " << _id << " due to merge with neighbour" );
+    logDebug( "mergeGridVertexRefinementStateAtHorizontalDomainBoundary( GridVertex )", "set state to " << vertex.toString() << " on tree " << _id << " due to merge with neighbour" );
   }
   else if (OnlyNeighbourHasTriggeredErase || OnlyLocalHasTriggeredErase) {
     vertex.setState( GridVertex::State::EraseTriggered );
@@ -1534,8 +1533,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
       if (leaveCellTraversalEvent.getIsFaceLocal(outFacePositionWithinCell)) {
         int neighbour = getNeighbourTrees(fineGridVertices,outFacePositionWithinCell, false);
         if (neighbour>=0) {
-          // @todo logDebug
-          logInfo(
+          logDebug(
             "sendUserData(...)",
             "send local face from stack " << outFaceStack << " of tree " << _id <<
             " to neighbour " << neighbour << ". Position within cell=" << outFacePositionWithinCell
@@ -1573,8 +1571,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
         if (
           tarch::la::contains( _gridTraversalEventGenerator.getAdjacentRanksOfFace(fineGridVertices, outFacePositionWithinCell, false), p )
         ) {
-          // @todo
-          logInfo(
+          logDebug(
             "sendUserData(...)",
             "stream local face from stack " << outFaceStack << " of tree " << _id <<
             " to new worker " << p << ". Position within cell=" << outFacePositionWithinCell
