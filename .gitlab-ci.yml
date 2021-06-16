@@ -16,6 +16,7 @@ reframedine:
     - hostname
     - whoami
     - pwd
+    - lscpu
 
 #hellocosma7:
 #  stage:
