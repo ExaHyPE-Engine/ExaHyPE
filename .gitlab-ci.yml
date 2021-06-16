@@ -17,13 +17,13 @@ reframedine:
     - whoami
     - pwd
 
-hellocosma7:
-  stage:
-    build
-  tags:
-    - cosma7
-  script:
-    - hostname
-    - whoami
-    - pwd
-    - ls
+#hellocosma7:
+#  stage:
+#    build
+#  tags:
+#    - cosma7
+#  script:
+#    - hostname
+#    - whoami
+#    - pwd
+#    - ls
