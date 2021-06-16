@@ -12,7 +12,7 @@ hellocosma7:
   stage:
     build
   tags:
-    - cosma7b
+    - cosma7
   script:
     - hostname
     - whoami
