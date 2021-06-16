@@ -7,3 +7,12 @@ build1:
     paths:
       - cookbook/cookbook.pdf
     expire_in: 1 week
+
+build2:
+  tags:
+    - cosma7
+  script:
+    - hostname
+    - whoami
+    - pwd
+    - ls
