@@ -1,14 +1,16 @@
-build1:
-  stage: build
-  script:
-    - cd cookbook && latexmk -shell-escape -view=pdf cookbook.tex
-  #  - scp cookbook/cookbook.pdf "$CIUSER"@"$CIMACHINE":"cookbook_$CI_COMMIT_SHA.pdf"
-  artifacts:
-    paths:
-      - cookbook/cookbook.pdf
-    expire_in: 1 week
+#build1:
+#  stage: build
+#  script:
+#    - cd cookbook && latexmk -shell-escape -view=pdf cookbook.tex
+#  #  - scp cookbook/cookbook.pdf "$CIUSER"@"$CIMACHINE":"cookbook_$CI_COMMIT_SHA.pdf"
+#  artifacts:
+#    paths:
+#      - cookbook/cookbook.pdf
+#    expire_in: 1 week
 
-build2:
+hellocosma7:
+  stage:
+    build
   tags:
     - cosma7
   script:
