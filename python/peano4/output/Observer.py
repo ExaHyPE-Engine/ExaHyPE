@@ -1178,8 +1178,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendVertex(int position, int toStack, ::peano4:
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
       )->top(TwoPowerD-1-position);
     
-      // @todo back to Debug
-      logInfo( "sendVertex(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
+      logDebug( "sendVertex(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
       repositories::DataRepository::_{logical_type_name}Stack.getForPush(
         _spacetreeId, toStack
@@ -1212,8 +1211,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendFace(int position, int toStack, ::peano4::g
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
       )->top(TwoTimesD-1-position);
     
-      // @todo back to Debug
-      logInfo( "sendFace(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
+      logDebug( "sendFace(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId << " for marker " << marker.toString() );
 
       repositories::DataRepository::_{logical_type_name}Stack.getForPush(
         _spacetreeId, toStack
@@ -1245,8 +1243,7 @@ void {FULL_QUALIFIED_CLASSNAME}::sendCell(int toStack, ::peano4::grid::Traversal
      ) {{
       {full_qualified_type} data = repositories::DataRepository::_{logical_type_name}Stack.getForPop( repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack))->top();
     
-      // @todo back to Debug
-      logInfo( "sendCell(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId );
+      logDebug( "sendCell(...)", "send out " << data.toString() << " to stack " << toStack << " on tree " << _spacetreeId );
 
       repositories::DataRepository::_{logical_type_name}Stack.getForPush(
         _spacetreeId, toStack
@@ -1315,8 +1312,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
       )->top(TwoPowerD-1-position);
 
-      // @todo Info
-      logInfo( "receiveAndMergeVertex(...)", "merge " << incomingData.toString() << " into " << data.toString() );
+      logDebug( "receiveAndMergeVertex(...)", "merge " << incomingData.toString() << " into " << data.toString() );
 
       if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
         assertion8(
@@ -1361,8 +1357,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
       )->top(TwoTimesD-1-position);
 
-      // @todo Info
-      logInfo( "receiveAndMergeFace(...)", "merge " << incomingData.toString() << " into " << data.toString() << " within marker " << marker.toString() );
+      logDebug( "receiveAndMergeFace(...)", "merge " << incomingData.toString() << " into " << data.toString() << " within marker " << marker.toString() );
 
       if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
         assertion8(
@@ -1406,8 +1401,7 @@ void {FULL_QUALIFIED_CLASSNAME}::receiveAndMergeFace(int position, int fromStack
         repositories::DataRepository::DataKey(_spacetreeId,peano4::grid::PeanoCurve::CallStack)
       )->top();
 
-      // @todo Info
-      logInfo( "receiveAndMergeCell(...)", "merge " << incomingData.toString() << " into " << data.toString() );
+      logDebug( "receiveAndMergeCell(...)", "merge " << incomingData.toString() << " into " << data.toString() );
 
       if (context==::peano4::grid::TraversalObserver::SendReceiveContext::PeriodicBoundaryDataSwap) {{
         assertion8(
