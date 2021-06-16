@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 
+
 #include "GridVertex.h"
 
 
@@ -44,6 +45,9 @@ namespace peano4 {
      * Forward declaration
      */
     class GridStatistics;
+    class GridControlEvent;
+
+    class AutomatonState;
     class GridControlEvent;
 
     /**
@@ -218,6 +222,9 @@ namespace peano4 {
     };
 
     std::string toString( SpacetreeState state );
+
+    bool overlaps( const tarch::la::Vector<Dimensions,double>& x, const GridControlEvent& event );
+    bool overlaps( const AutomatonState& x, const GridControlEvent& event );
   }
 }
 

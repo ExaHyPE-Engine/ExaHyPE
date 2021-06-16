@@ -576,6 +576,14 @@ class peano4::grid::Spacetree {
      * So we have to run for the middle way: We erase all adjacency data but
      * if ad only if a vertex is not adjacent to any kid.
      *
+     * <h2> A posteriori refinement </h2>
+     *
+     * If a vertex is surrounded by @f$ 2^d @f$ refined cells and is not a refined
+     * vertex, we have this weird situation that we have a hanging vertex right
+     * within a regularly refined subdomain. Topologically, this is allowed, but
+     * it makes no sense, introduces strange artefacts in the visualisation and
+     * is very difficult to explain. So I keep track of the refined adjacent cells
+     * and refine a posteriori if all adjacent cells are refined.
      *
      * @param fineVertexPositionWithinPatch Position of vertex within 3x3 or 3x3x3 patch respectively
      *

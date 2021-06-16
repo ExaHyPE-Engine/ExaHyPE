@@ -450,12 +450,14 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
     }
 
     if (
+      _spacetreeState==SpacetreeState::Running
+      and
       vertex.getNumberOfAdjacentRefinedLocalCells()==TwoPowerD
       and
       vertex.getState()==GridVertex::State::Unrefined
     ) {
       vertex.setState( GridVertex::State::RefinementTriggered );
-      logDebug( "updateVertexBeforeStore(...)", "have to post-refine vertex " << vertex.toString() );
+      logDebug( "updateVertexBeforeStore(...)", "have to post-refine vertex " << vertex.toString() << " as it surrounded by 2^d refined cells on tree " << _id << " x " << peano4::grid::toString(_spacetreeState) );
     }
 
 /*
@@ -490,12 +492,12 @@ void peano4::grid::Spacetree::updateVertexBeforeStore(
     sendGridVertex( vertex );
 
     if (restrictIsAntecessorOfRefinedVertex) {
-	    dfor2(k)
+      dfor2(k)
         if (restrictToCoarseGrid(k,fineVertexPositionWithinPatch)) {
           logDebug( "updateVertexBeforeStore(...)", "set antecessor flag (veto coarsenign) on vertex " << coarseGridVertices[kScalar].toString() << " due to vertex " << vertex.toString() );
           coarseGridVertices[kScalar].setIsAntecessorOfRefinedVertexInCurrentTreeSweep(true);
         }
-	    enddforx
+      enddforx
     }
 
     if (shouldEraseAdjacencyInformation(vertex, coarseGridVertices, fineVertexPositionWithinPatch)) {
@@ -947,7 +949,8 @@ void peano4::grid::Spacetree::mergeGridVertexRefinementStateAtHorizontalDomainBo
 
   if (OnlyNeighbourHasTriggeredRefinement || OnlyLocalHasTriggeredRefinement) {
     vertex.setState( GridVertex::State::RefinementTriggered );
-    logDebug( "mergeGridVertexRefinementStateAtHorizontalDomainBoundary( GridVertex )", "set state to " << vertex.toString() << " on tree " << _id << " due to merge with neighbour" );
+    // @todo logDebug
+    logInfo( "mergeGridVertexRefinementStateAtHorizontalDomainBoundary( GridVertex )", "set state to " << vertex.toString() << " on tree " << _id << " due to merge with neighbour" );
   }
   else if (OnlyNeighbourHasTriggeredErase || OnlyLocalHasTriggeredErase) {
     vertex.setState( GridVertex::State::EraseTriggered );
@@ -1061,6 +1064,7 @@ void peano4::grid::Spacetree::sendGridVertex( const GridVertex& vertex ) {
 void peano4::grid::Spacetree::incrementNumberOfAdjacentRefinedLocalCells(GridVertex  vertices[TwoPowerD]) {
   dfor2(k)
     vertices[kScalar].setNumberOfAdjacentRefinedLocalCells( vertices[kScalar].getNumberOfAdjacentRefinedLocalCells()+1 );
+    logDebug( "incrementNumberOfAdjacentRefinedLocalCells(...)", "incremented counter of " << vertices[kScalar].toString() );
   enddforx
 }
 
@@ -1107,9 +1111,7 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
     if (mayChangeGrid) {
       for (auto p: _gridControlEvents) {
         if (
-          tarch::la::allGreater( state.getX() + state.getH(), p.getOffset() )
-          and
-          tarch::la::allSmaller( state.getX(), p.getOffset()+p.getWidth() )
+          overlaps(state,p)
           and
           p.getRefinementControl()==GridControlEvent::RefinementControl::Refine
           and
@@ -1120,9 +1122,7 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
         }
 
         if (
-          tarch::la::allGreaterEquals( state.getX(), p.getOffset() )
-          and
-          tarch::la::allSmallerEquals( state.getX() + state.getH(), p.getOffset()+p.getWidth() )
+          overlaps(state,p)
           and
           p.getRefinementControl()==GridControlEvent::RefinementControl::Erase
           and
@@ -1141,22 +1141,34 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
 
     if (refine) {
       bool haveTriggeredRefinementForAtLeastOneVertex = false;
-      for (int i=0; i<TwoPowerD; i++) {
+      dfor2(i)
+        tarch::la::Vector<Dimensions,double> x = state.getX() + tarch::la::multiplyComponents( tarch::la::convertScalar<double>(i), state.getH() );
+
         if (
-          isVertexAdjacentToLocalSpacetree( fineGridVertices[i], true, true )
+          isVertexAdjacentToLocalSpacetree( fineGridVertices[iScalar], true, true )
           and
-          fineGridVertices[i].getState()==GridVertex::State::Unrefined
+          fineGridVertices[iScalar].getState()==GridVertex::State::Unrefined
         ) {
-          fineGridVertices[i].setState( GridVertex::State::RefinementTriggered );
-          haveTriggeredRefinementForAtLeastOneVertex = true;
+          for (auto p: _gridControlEvents) {
+            if (
+              overlaps(x,p)
+              and
+              p.getRefinementControl()==GridControlEvent::RefinementControl::Refine
+              and
+              tarch::la::allGreaterEquals( state.getH(), p.getH() )
+              and
+              fineGridVertices[iScalar].getState()==GridVertex::State::Unrefined
+            ) {
+              logInfo( "evaluateGridControlEvents(...)", "refine vertex " << fineGridVertices[iScalar].toString() << " at " << x << " as it overlaps " << p.toString() );
+              fineGridVertices[iScalar].setState( GridVertex::State::RefinementTriggered );
+              haveTriggeredRefinementForAtLeastOneVertex = true;
+            }
+          }
         }
-      }
-      if (not haveTriggeredRefinementForAtLeastOneVertex) {
-        logDebug( "evaluate...", "wanted to refine cell " << state.toString() << " but no vertex is refinable" );
-        for (int i=0; i<TwoPowerD; i++) {
-          logDebug( "evaluate...", "  - vertex " << fineGridVertices[i].toString() );
+        if (not haveTriggeredRefinementForAtLeastOneVertex) {
+          logDebug( "evaluate...", "wanted to refine cell " << state.toString() << " but no vertex is refinable" );
         }
-      }
+      enddforx
     }
     else if (erase) {
       for (int i=0; i<TwoPowerD; i++) {
