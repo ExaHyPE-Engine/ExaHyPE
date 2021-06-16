@@ -13,7 +13,7 @@ reframedine:
   tags:
     - dine
   script:
-    - hostname
+    - cd /cosma/home/durham/dc-turn5/Peano/reframe/tests/rfm_euler  &&  bash ./euler.sh $CI_COMMIT_SHA
     - whoami
     - pwd
     - lscpu
