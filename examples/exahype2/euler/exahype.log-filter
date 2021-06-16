@@ -23,11 +23,12 @@ info  toolbox                              -1     white always-on
  
 trace  tarch                               -1     black always-on    
 trace  peano4                              -1     black always-on
-trace  peano4::grid::Spacetree             -1     white init-grid
-trace  peano4::grid::GridTraversalEventGenerator  -1        white init-grid
-trace  peano4::grid::GridTraversalEventGenerator  -1        white plot-solution
+trace  peano4::parallel                    -1     black always-on
+trace  peano4::grid::Spacetree             -1     black init-grid
+trace  peano4::grid::GridTraversalEventGenerator  -1        black init-grid
+trace  peano4::grid::GridTraversalEventGenerator  -1        black plot-solution
 trace  examples                            -1     black plot-solution
-trace  examples                            -1     white init-grid
+trace  examples                            -1     black init-grid
 trace  examples                            -1     black time-step
 trace  examples                            -1     black always-on
 trace  examples::exahype2::euler::Euler    -1     black always-on
