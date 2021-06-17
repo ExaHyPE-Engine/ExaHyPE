@@ -155,6 +155,9 @@ grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexL
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceLocal",   "TwoTimesD" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isCellLocal"                ) )
 
+#
+# Also holds if a vertex is adjacent to a periodic boundary.
+#
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexAdjacentToParallelDomainBoundary", "TwoPowerD" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceAdjacentToParallelDomainBoundary", "TwoTimesD" ) )
 
