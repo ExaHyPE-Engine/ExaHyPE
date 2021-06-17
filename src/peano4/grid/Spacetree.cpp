@@ -1158,7 +1158,7 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
               and
               fineGridVertices[iScalar].getState()==GridVertex::State::Unrefined
             ) {
-              logInfo( "evaluateGridControlEvents(...)", "refine vertex " << fineGridVertices[iScalar].toString() << " at " << x << " as it overlaps " << p.toString() );
+              logDebug( "evaluateGridControlEvents(...)", "refine vertex " << fineGridVertices[iScalar].toString() << " at " << x << " as it overlaps " << p.toString() );
               fineGridVertices[iScalar].setState( GridVertex::State::RefinementTriggered );
               haveTriggeredRefinementForAtLeastOneVertex = true;
             }

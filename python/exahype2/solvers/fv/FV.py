@@ -486,7 +486,7 @@ In-situ preprocessing:  """
     self._action_set_handle_boundary                                                  = HandleBoundary(self, self._store_face_data_default_predicate() )
     self._action_set_project_patch_onto_faces                                         = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
     self._action_set_copy_new_patch_overlap_into_overlap                              = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
-    self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( self._patch, self._patch_overlap, self._patch_overlap_new )
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( self._patch, self._patch_overlap, self._patch_overlap_new )
     self._action_set_update_cell                                                      = None
 
 
@@ -615,7 +615,7 @@ In-situ preprocessing:  """
      from fine to coarse levels within the tree.
     
     """
-    step.add_action_set( self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_adjust_cell ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
@@ -645,7 +645,7 @@ In-situ preprocessing:  """
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
     
-    step.add_action_set( self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
@@ -687,7 +687,7 @@ In-situ preprocessing:  """
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
-    step.add_action_set( self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_adjust_cell )
     step.add_action_set( self._action_set_update_cell )

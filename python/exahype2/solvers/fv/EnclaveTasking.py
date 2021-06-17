@@ -179,6 +179,17 @@ class EnclaveTaskingFV( FV ):
 
     self._merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
     
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
+      patch                       = self._patch,
+      patch_overlap_interpolation = self._patch_overlap, 
+      patch_overlap_restriction   = self._patch_overlap_new,
+      #guard                       = "not marker.isRefined() and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate,
+      guard                       = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
+      additional_includes         = """
+#include "../repositories/SolverRepository.h"
+"""      
+    )
+    
     
   def set_implementation(self,
     flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
