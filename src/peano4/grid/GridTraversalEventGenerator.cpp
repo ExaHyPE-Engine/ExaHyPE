@@ -1,6 +1,7 @@
 #include "GridTraversalEventGenerator.h"
 #include "grid.h"
 #include "PeanoCurve.h"
+#include "Spacetree.h"
 #include "TraversalObserver.h"
 
 #include "peano4/utils/Loop.h"
@@ -141,12 +142,11 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdj
 ) const {
   std::bitset<TwoPowerD> result;
   for (int i=0; i<TwoPowerD; i++) {
-    // @tood Nachdenken
     tarch::la::Vector< TwoPowerD, int > adjacency = vertices[i].getBackupOfAdjacentRanks();
     bool oneLocal  = false;
     bool oneRemote = false;
     for (int i=0; i<TwoPowerD; i++ ) {
-      bool valid = adjacency(i)>=0;
+      bool valid = adjacency(i)>=0 or adjacency(i)==peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
       bool local = adjacency(i)==_id or splitting.count(adjacency(i))>0 or splitTriggered.count(adjacency(i))>0;
       oneLocal  |= (valid and local);
       oneRemote |= (valid and not local);
@@ -175,7 +175,7 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjace
     for (int i=0; i<TwoPowerD; i++ ) {
       // @todo noch rueber auf vertices
       // So ganz stimmt es natuerlich net, weil das ist ja jetzt eins zu frueh
-      bool valid = adjacency(i)>=0;
+      bool valid = adjacency(i)>=0 or adjacency(i)==peano4::grid::Spacetree::RankOfPeriodicBoundaryCondition;
 /*
       bool local = adjacency(i)==_id
                 or (splitting.count(adjacency(i))>0 and calledByEnterCell)
