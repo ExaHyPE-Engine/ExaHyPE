@@ -88,6 +88,13 @@ class EnclaveTaskingFV( FV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
+    self._primary_or_grid_construction_or_initialisation_sweep_predicate= "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
+      ")"
+
     self._secondary_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
       ")"
@@ -162,7 +169,8 @@ class EnclaveTaskingFV( FV ):
     # AMR and adjust cell have to be there always, i.e. also throughout 
     # the grid construction.
     #
-    self._action_set_adjust_cell.predicate                         = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate
+    self._action_set_adjust_cell.predicate                         = "not marker.isRefined() and " + self._primary_or_grid_construction_or_initialisation_sweep_predicate
+
     self._action_set_AMR.predicate                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
     self._action_set_AMR_commit_without_further_analysis.predicate = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
     self._action_set_handle_boundary.predicate                     = self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate
@@ -232,7 +240,6 @@ class EnclaveTaskingFV( FV ):
       raise Exception( "memory mode without immedidate (call stack) free chosen. This will lead into a segmentation fault" )
 
     self.create_action_sets()
-
     
 
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
@@ -253,6 +260,7 @@ class EnclaveTaskingFV( FV ):
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 """    
+
 
   def add_entries_to_text_replacement_dictionary(self,d):
     d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
