@@ -163,6 +163,20 @@ class EnclaveTaskingFV( FV ):
 
   
   def create_action_sets(self):
+    """
+    
+    Adaptive mesh handing
+    
+    Adaptive meshes require us to clear the patch overlaps and to restrict/interpolate. 
+    Obviously, there's no need to do this for a refined faces. So we can eliminate these
+    cases a priori. Furthermore, we clear faces only in the primary sweep. We know that
+    either the primary sweep (for skeleton) or the secondary sweep (for enclaves) will
+    write in proper data into anything that's cleared, and we know that restriction only
+    has to happen after the primary sweep, as all cells next to an adaptivity boundary
+    are skeleton cells. 
+    
+    
+    """
     FV.create_action_sets(self)
 
     #
@@ -191,8 +205,12 @@ class EnclaveTaskingFV( FV ):
       patch                       = self._patch,
       patch_overlap_interpolation = self._patch_overlap, 
       patch_overlap_restriction   = self._patch_overlap_new,
-      #guard                       = "not marker.isRefined() and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate,
-      guard                       = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
+      interpolate_guard           = self._primary_or_initialisation_sweep_predicate,
+      restrict_guard              = self._secondary_sweep_or_grid_initialisation_predicate,
+      clear_guard                 = self._primary_or_initialisation_sweep_predicate,
+      #interpolate_guard           = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
+      #restrict_guard              = "not marker.isRefined() and " + self._secondary_sweep_or_grid_initialisation_predicate,
+      #clear_guard                 = "not fineGridFaceLabel.getBoundary() and " + self._primary_or_initialisation_sweep_predicate,
       additional_includes         = """
 #include "../repositories/SolverRepository.h"
 """      
