@@ -13,7 +13,7 @@ reframehamilton:
   tags:
     - hamilton
   script:
-    - cd  /ddn/data/gcgt96/Peano/reframe/tests/rfm_euler&& module purge && module load python/3.6.8 && bash ./euler.sh $CI_COMMIT_SHA
+    - cd  /ddn/data/gcgt96/Peano/reframe/tests/rfm_euler&& module purge && module load python/3.6.8 && bash REFRAMEROOT=/ddn/data/gcgt96 ./euler.sh $CI_COMMIT_SHA
     - whoami
     - pwd
     - lscpu
