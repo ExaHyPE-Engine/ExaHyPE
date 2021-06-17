@@ -35,7 +35,7 @@ intparams = {"LapseType":0, "tp_grid_setup":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
-    parser.add_argument("-cs",   "--cell-size",       dest="max_h",           type=float, default=0.4,  help="Mesh size" )
+    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, default=0.4,  help="upper limit for refinement" )
     parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.4,  help="lower limit for refinement" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
@@ -288,7 +288,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_re20.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_re.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 		const int n_a_v=9;
 
 		if (tarch::la::equals(t,0.0)){//initialization
@@ -365,7 +365,7 @@ if __name__ == "__main__":
 		std::string l2="L2_constri"; std::string teml2="ztem_constri";
 		double cons[7]={0,0,0,0,0,0,0};
     dfor(cell,patchSize) {
-        	tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+      tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
 
 			double gradQ[3*59]={ 0 };
 
@@ -397,8 +397,12 @@ if __name__ == "__main__":
           
       reconstructedPatch[cellSerialised*(59+n_a_v)+59+6]=pow((P1*P1+P2*P2+P3*P3),0.5);
       
-      reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=1;
-		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=2;
+      double Psi4[2]={0,0};
+      double currentPosition[3]; 
+      for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
+      Psi4Calc(Psi4, reconstructedPatch+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+      reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
+		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		}
 		
 		
@@ -540,10 +544,10 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       #[-10, -10, -10],  [20.0, 20.0, 20.0],
       #[-15, -15, -15],  [30.0, 30.0, 30.0],
-      #[-20, -20, -20],  [40.0, 40.0, 40.0],
+      [-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
