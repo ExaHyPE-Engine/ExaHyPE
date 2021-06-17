@@ -12,16 +12,26 @@
 #  - ssh-keyscan "$CIMACHINE" >> ~/.ssh/known_hosts
 #  - chmod 644 ~/.ssh/known_hosts
 
-Test SSH:
+hellohamilton:
+  stage: build
+  tags:
+    - hamilton
   script:
+    - hostname
+    - whoami
     - pwd
     - ls
-    - whoami
-    - hostname
-    - echo $CI_COMMIT_SHA
-    - echo $CI_COMMIT_BRANCH
-  # try to connect to machine
-    - ssh "$CIUSER"@"$CIMACHINE" bash ./print.sh $CI_COMMIT_BRANCH
+
+#Test SSH:
+#  script:
+#    - pwd
+#    - ls
+#    - whoami
+#    - hostname
+#    - echo $CI_COMMIT_SHA
+#    - echo $CI_COMMIT_BRANCH
+#  # try to connect to machine
+#    - ssh "$CIUSER"@"$CIMACHINE" bash ./print.sh $CI_COMMIT_BRANCH
 
 
 #build:
