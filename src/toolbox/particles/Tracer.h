@@ -111,8 +111,7 @@ inline void FindInterIndex(
 	#endif
 }
 
-inline void Interpolation(
-  tarch::la::Vector<Dimensions,double> result,
+inline tarch::la::Vector<Dimensions,double> Interpolation(
   tarch::la::Vector<Dimensions,int>* IndexForInter,
   double* raw,
   const tarch::la::Vector<Dimensions,double>& coor,
@@ -190,10 +189,14 @@ inline void Interpolation(
 			raw4[n][m]=linearInter1D(CoorsForInter3[n][0],raw3[n][m],CoorsForInter3[n+1][0],raw3[n+1][m],coor(0));
 		} 
 	}
-		
+
+	tarch::la::Vector<Dimensions,double> result;
 	for (int m=0;m<Dimensions;m++){
 		result(m)=raw4[0][m];
+		//std::cout << result(m) << std::endl;
 	}
+
+	return result;
 }
 
 

@@ -53,7 +53,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
       not stackContainer.holdsStack( master, sourceStack )
     ) {
       logDebug(
-        "copyDataFromSplittingTreesToNewTrees()",
+        "streamDataFromSplittingTreeToNewTree()",
         "source stack for target stack " << destinationStack << " is empty, so skip copying"
       );
     }
@@ -61,13 +61,13 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
       not stackContainer.getForPush(worker,destinationStack)->empty()
     ) {
       logDebug(
-        "copyDataFromSplittingTreesToNewTrees()",
+        "streamDataFromSplittingTreeToNewTree()",
         "target stack " << destinationStack << " of tree " << worker << " contains already " << stackContainer.getForPush(worker,destinationStack)->size() << " entries, so skip copying"
       );
     }
     else {
       logDebug(
-        "copyDataFromSplittingTreesToNewTrees()",
+        "streamDataFromSplittingTreeToNewTree()",
         "copy stack " << sourceStack << " from tree " << master << " into stack " << destinationStack << " from tree " << worker <<
         " with a stack size of " << stackContainer.getForPush(master,sourceStack)->size() << ". Can be done directly as both stacks reside on same machine"
       );
@@ -76,6 +76,10 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
     }
 
     if ( stackContainer.holdsStack( master, sourceStack ) ) {
+      logDebug(
+        "streamDataFromSplittingTreeToNewTree()",
+        "clear stack " << sourceStack << " on tree " << master
+      );
       stackContainer.getForPush(master,sourceStack)->clear();
     }
   }
@@ -88,7 +92,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
       stackContainer.getForPop(master,sourceStack)->size() : 0;
 
     logDebug(
-      "copyDataFromSplittingTreesToNewTrees()",
+      "streamDataFromSplittingTreeToNewTree()",
       "send stack " << sourceStack << " from tree " << master << " on rank " << sourceRank << " through tag " << tag <<
       " to tree " << worker << " on rank " << destinationRank << ". size=" << messageSize
     );
@@ -112,7 +116,7 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
     tarch::mpi::IntegerMessage message;
     tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(message, sourceRank, tag);
     logDebug(
-      "copyDataFromSplittingTreesToNewTrees()",
+      "streamDataFromSplittingTreeToNewTree()",
       "receive " << message.getValue() << " entries from tree " << master << " on rank " << sourceRank << " (used tag " << tag << ")"
     );
     if (message.getValue()>0) {

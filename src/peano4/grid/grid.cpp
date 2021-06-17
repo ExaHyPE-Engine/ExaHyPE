@@ -2,9 +2,24 @@
 #include "GridStatistics.h"
 #include "GridControlEvent.h"
 #include "Spacetree.h"
+#include "AutomatonState.h"
 
 #include "peano4/utils/Loop.h"
 
+
+
+bool peano4::grid::overlaps( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event ) {
+  return tarch::la::allGreaterEquals( state.getX(), event.getOffset() )
+    and
+    tarch::la::allSmallerEquals( state.getX() + state.getH(), event.getOffset()+event.getWidth() );
+}
+
+
+bool peano4::grid::overlaps( const tarch::la::Vector<Dimensions,double>& x, const GridControlEvent& event ) {
+  return tarch::la::allGreaterEquals( x, event.getOffset() )
+    and
+    tarch::la::allSmallerEquals( x, event.getOffset()+event.getWidth() );
+}
 
 
 peano4::grid::GridVertex peano4::grid::createVertex(
@@ -214,6 +229,27 @@ std::string peano4::grid::toString( CellType type ) {
       return "persistent";
     case CellType::Delete:
       return "delete";
+  }
+  return "<undef>";
+}
+
+
+std::string peano4::grid::toString( SpacetreeState state ) {
+  switch (state) {
+    case SpacetreeState::EmptyRun:
+      return "empty-run";
+    case SpacetreeState::NewRoot:
+      return "new-root";
+    case SpacetreeState::NewFromSplit:
+      return "new-from-split";
+    case SpacetreeState::Running:
+      return "running";
+    case SpacetreeState::JoinTriggered:
+      return "join-triggered";
+    case SpacetreeState::Joining:
+      return "joining";
+    case SpacetreeState::Joined:
+      return "joined";
   }
   return "<undef>";
 }

@@ -20,7 +20,8 @@ peano4::datamanagement::CellMarker::CellMarker(
   _isLocal(event.getIsCellLocal()),
   _areAllVerticesRefined( event.getIsRefined().all() ),
   _isOneVertexHanging( false ),
-  _areAllVerticesInsideDomain( event.getIsVertexInsideDomain().all() ),
+  _areAllVerticesInsideDomain( event.getIsVertexAdjacentToParallelDomainBoundary().none() ),
+  //_areAllVerticesInsideDomain( event.getIsVertexInsideDomain().all() ),
   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() )
 {
   for (int i=0; i<TwoPowerD; i++) {

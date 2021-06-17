@@ -36,10 +36,11 @@ intparams = {"LapseType":0, "tp_grid_setup":0}
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
     parser.add_argument("-cs",   "--cell-size",       dest="max_h",           type=float, default=0.4,  help="Mesh size" )
+    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.4,  help="lower limit for refinement" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "PTadm"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
@@ -122,7 +123,8 @@ if __name__ == "__main__":
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation#,
+          #refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
         )
 
       def get_user_includes(self):
@@ -150,7 +152,7 @@ if __name__ == "__main__":
          side.
 
         """
-        self._auxiliary_variables = 7
+        self._auxiliary_variables = 9
 
         self.additional_includes += """
     #include "../CCZ4Kernels.h"
@@ -160,9 +162,13 @@ if __name__ == "__main__":
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        const int n_a_v=7;
+        const int n_a_v=9;
         dfor(cell,patchSize) {
+          //tarch::la::Vector<Dimensions,int> currentPosition=marker.getOffset()+(cell+0.5)*volumeH;
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+          double currentPosition[3];
+          
+          for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
 
           // This constraint routine will evaluate both the solution per voxel
           // plus the derivative. The latter is something that we don't have, i.e.
@@ -187,7 +193,7 @@ if __name__ == "__main__":
           }
 
           // Finite Volume
-          double constraints[n_a_v-1]={ 0 };
+          double constraints[6]={ 0 };
 
           // Central cell
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
@@ -204,7 +210,14 @@ if __name__ == "__main__":
           double P2  = reconstructedPatch[cellSerialised*(59+n_a_v)+56]*Phi;
           double P3  = reconstructedPatch[cellSerialised*(59+n_a_v)+57]*Phi;
           
-          reconstructedPatch[cellSerialised*(59+n_a_v)+59+n_a_v-1]=pow((P1*P1+P2*P2+P3*P3),0.5);
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+6]=pow((P1*P1+P2*P2+P3*P3),0.5);//gradient of phi
+          
+          double Psi4[2]={0,0};
+          Psi4Calc(Psi4, reconstructedPatch+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+          reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
+		      reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
+		      
+		      //std::cout<< Psi4[0] << std::endl;
         }
     """)
 
@@ -257,14 +270,16 @@ if __name__ == "__main__":
         self.create_data_structures()
         self.create_action_sets()
 
-      def add_PunctureTracker_Lconstraintwriter(self):
+      def add_PT_ConsW_Psi4W_AMRFlag(self):
         """
+				add puncutrestracker, constraints writer, psi4 writer, AMRflag(currently using gradient of phi)
         """
-        self._auxiliary_variables = 6
+        self._auxiliary_variables = 9
         
         self.additional_includes += """
 	#include "../libtwopunctures/TP_PunctureTracker.h"
 	#include "../CCZ4Kernels.h"
+	#include <fstream>
 	#include <iomanip>
     """
 
@@ -273,7 +288,8 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_reA3.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_re20.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		const int n_a_v=9;
 
 		if (tarch::la::equals(t,0.0)){//initialization
 			fin.open((p1+att),std::ios::out|std::ios::trunc);
@@ -282,9 +298,9 @@ if __name__ == "__main__":
 			fin.open((p2+att),std::ios::out|std::ios::trunc);
 			fin << "-4.251 0.0 0.0 0.0 0.0" << std::endl;//-5.538462
 			fin.close();
-			fin.open((tem+att),std::ios::out|std::ios::trunc);
-			fin << "tem file" << std::endl;
-			fin.close();		 
+			//fin.open((tem+att),std::ios::out|std::ios::trunc);
+			//fin << "tem file" << std::endl;
+			//fin.close();		 
 		} else {
 			fin.open((p1+att),std::ios::in);
 			std::string pos=getLastLine(fin);
@@ -304,8 +320,8 @@ if __name__ == "__main__":
 				double raw[8*inter_number];
 				for (int i=0;i<8;i++){
 					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
-					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=reconstructedPatch[Lindex*(59+6)+17+j];} //read in corresponding beta
-					raw[i*inter_number+3]=reconstructedPatch[Lindex*(59+6)+16];
+					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=reconstructedPatch[Lindex*(59+n_a_v)+17+j];} //read in corresponding beta
+					raw[i*inter_number+3]=reconstructedPatch[Lindex*(59+n_a_v)+16];
 				}
 				double result[inter_number];
 				Interpolation(result,IndexForInterpolate,raw,coor1,marker.getOffset(),volumeH,patchSize);
@@ -321,6 +337,7 @@ if __name__ == "__main__":
 				fin << IndexForInterpolate[i](0) << " " << IndexForInterpolate[i](1) << " " << IndexForInterpolate[i](2) << std::endl;
 				fin << raw[i*inter_number+0] << " " << raw[i*inter_number+1] << " " << raw[i*inter_number+2] << std::endl;
 				}
+
 				fin << "after inter" << result[0] << " " << result[1] << " " << result[2] << " " << t << std::endl;
 				fin.close();
 			}
@@ -331,8 +348,8 @@ if __name__ == "__main__":
 				double raw[8*inter_number];
 				for (int i=0;i<8;i++){
 					int Lindex=peano4::utils::dLinearised(IndexForInterpolate[i], patchSize + 2*1);
-					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=reconstructedPatch[Lindex*(59+6)+17+j];}
-					raw[i*inter_number+3]=reconstructedPatch[Lindex*(59+6)+16];
+					for (int j=0;j<Dimensions;j++) {raw[i*inter_number+j]=reconstructedPatch[Lindex*(59+n_a_v)+17+j];}
+					raw[i*inter_number+3]=reconstructedPatch[Lindex*(59+n_a_v)+16];
 				}
 				double result[inter_number];
 				Interpolation(result,IndexForInterpolate,raw,coor2,marker.getOffset(),volumeH,patchSize);
@@ -345,10 +362,9 @@ if __name__ == "__main__":
 			}
 		}
 		
-		const int n_a_v=6;
 		std::string l2="L2_constri"; std::string teml2="ztem_constri";
-		double cons[6]={0,0,0,0,0,0};
-        dfor(cell,patchSize) {
+		double cons[7]={0,0,0,0,0,0,0};
+    dfor(cell,patchSize) {
         	tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
 
 			double gradQ[3*59]={ 0 };
@@ -364,16 +380,28 @@ if __name__ == "__main__":
 					gradQ[d*59+i] = ( reconstructedPatch[rightCellSerialised*(59+n_a_v)+i] - reconstructedPatch[leftCellSerialised*(59+n_a_v)+i] ) / 2.0 / volumeH;
 				}
 			}
-			double constraints[n_a_v]={ 0 };
+			double constraints[n_a_v-1]={ 0 };
 			const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
 
 			admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
 
-			for(int i=0;i<n_a_v;i++){
+			for(int i=0;i<6;i++){
 				reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
 				cons[i]+=constraints[i]*constraints[i];
 			}
+      //here we calculate the norm of conformal factor phi as the refinement condition
+      double Phi = std::exp(reconstructedPatch[cellSerialised*(59+n_a_v)+54]);
+      double P1  = reconstructedPatch[cellSerialised*(59+n_a_v)+55]*Phi;
+      double P2  = reconstructedPatch[cellSerialised*(59+n_a_v)+56]*Phi;
+      double P3  = reconstructedPatch[cellSerialised*(59+n_a_v)+57]*Phi;
+          
+      reconstructedPatch[cellSerialised*(59+n_a_v)+59+6]=pow((P1*P1+P2*P2+P3*P3),0.5);
+      
+      reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=1;
+		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=2;
 		}
+		
+		
 		/*
 		for(int i=0;i<n_a_v;i++){cons[i]=cons[i]/(patchSize*patchSize*patchSize);}
 
@@ -463,20 +491,20 @@ if __name__ == "__main__":
       my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
           solver_name, order, unknowns, 0, #auxiliary_variables
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
-          args.max_h, args.max_h, time_step_size,
+          args.min_h, args.max_h, time_step_size,
           flux = None,
           ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = CCZ4Solver(solver_name, args.patch_size, args.max_h, args.max_h)
+      my_solver = CCZ4Solver(solver_name, args.patch_size, args.min_h, args.max_h)
 
       if args.extension=="gradient":
         my_solver.add_derivative_calculation()
       if args.extension=="AMRadm":
         my_solver.add_constraint_RefinementFlag_verification()
-      if args.extension=="PTadm":
-        my_solver.add_PunctureTracker_Lconstraintwriter()
+      if args.extension=="Full":
+        my_solver.add_PT_ConsW_Psi4W_AMRFlag()
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
@@ -490,7 +518,7 @@ if __name__ == "__main__":
     elif args.scenario=="two-punctures":
       my_solver.pick_two_puncture_scenario()
     else:
-      raise Exception( "Scenario " + args.scenario + " is now known")        
+      raise Exception( "Scenario " + args.scenario + " is now known")  
 
     project.add_solver(my_solver)
 
@@ -510,6 +538,8 @@ if __name__ == "__main__":
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
+      #[-10, -10, -10],  [20.0, 20.0, 20.0],
+      #[-15, -15, -15],  [30.0, 30.0, 30.0],
       #[-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
@@ -522,9 +552,9 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv2" )
-    probe_point = [-5,-5,-5]
-    project.add_plot_filter( probe_point,[10.0,10.0,10.0],1 )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1" )
+    probe_point = [-8,-8,-8]
+    project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -533,7 +563,9 @@ if __name__ == "__main__":
     #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
     #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::LinearInterp"))
     #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/8.0, noise=True ))
-    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.1,0,0],p2=[-0.1,0,0]))
+    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[4.251,0,0],p2=[-4.251,0,0]))
+    #project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,1e-10,"zzp_re14"))
+
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 
