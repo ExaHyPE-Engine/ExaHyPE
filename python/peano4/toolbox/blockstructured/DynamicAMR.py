@@ -18,7 +18,13 @@ class DynamicAMR(ActionSet):
   """
   
   
-  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="piecewise_constant", restriction_scheme="piecewise_constant", clear_overlap_in_touch_first_time=True, guard="true", additional_includes="" ):
+  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="piecewise_constant", restriction_scheme="piecewise_constant", clear_overlap_in_touch_first_time=True, clear_guard="true", restrict_guard="true", interpolate_guard="true", additional_includes="" ):
+    """
+    
+    restrict_guard: String
+      Predicate as C++ expression. It determines which faces are cleared. 
+    
+    """
     self.d = {}
     if patch_overlap_interpolation.dim[0] % 2 != 0:
       raise Exception( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
@@ -36,7 +42,9 @@ class DynamicAMR(ActionSet):
     self.d[ "COARSE_GRID_FACE_ACCESSOR_RESTRICTION" ] = "coarseGridFaces"  + patch_overlap_restriction.name
     self.d[ "INTERPOLATION_SCHEME" ]      = interpolation_scheme
     self.d[ "RESTRICTION_SCHEME" ]        = restriction_scheme
-    self.d[ "GUARD" ]                     = guard
+    self.d[ "CLEAR_GUARD" ]               = clear_guard
+    self.d[ "RESTRICT_GUARD" ]            = restrict_guard
+    self.d[ "INTERPOLATE_GUARD" ]         = interpolate_guard
     
     self._clear_overlap_in_touch_first_time = clear_overlap_in_touch_first_time    
     self.additional_includes                = additional_includes
@@ -63,7 +71,7 @@ class DynamicAMR(ActionSet):
 
 
   __Template_TouchFaceFirstTime = """
-  if ( {GUARD} ) {{
+  if ( {CLEAR_GUARD} ) {{
     logTraceIn( "touchFaceFirstTime(...)---DynamicAMR" );
 
     ::toolbox::blockstructured::clearHaloLayerAoS(
@@ -80,7 +88,7 @@ class DynamicAMR(ActionSet):
 
 
   __Template_CreateHangingFace = """
-  if ( {GUARD} ) {{
+  if ( {INTERPOLATE_GUARD} ) {{
     logTraceIn( "createHangingFace(...)---DynamicAMR" );
 
     ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{INTERPOLATION_SCHEME}(
@@ -97,7 +105,7 @@ class DynamicAMR(ActionSet):
 """
 
   __Template_DestroyHangingFace = """
-  if ( {GUARD} ) {{
+  if ( {RESTRICT_GUARD} ) {{
     logTraceInWith3Arguments( "destroyHangingFace(...)---DynamicAMR", "{FINE_GRID_FACE_ACCESSOR_RESTRICTION}", "{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}", marker.getSelectedFaceNumber() );
 
     ::toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_{RESTRICTION_SCHEME}(
