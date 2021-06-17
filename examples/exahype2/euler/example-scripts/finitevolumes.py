@@ -49,6 +49,7 @@ parser.add_argument("-t",   "--type",                  dest="type",             
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
+parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels",        type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)" )
 parser.add_argument("--no-compile",                    dest="compile",          action="store_false", default="True", help="Compile (on by default)" )
 args = parser.parse_args()
 
@@ -81,8 +82,10 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 #
 unknowns       = 5
 time_step_size = 0.000001
-min_h          = args.h
 max_h          = args.h
+
+min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels)
+
 
 admissible_time_step_size = min_h/args.patch_size*0.01
 
@@ -145,8 +148,12 @@ elif args.type=="default-ats":
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    time_step_relaxation = 0.01
   )
+
+
+thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
 
 
 project.add_solver( thesolver )

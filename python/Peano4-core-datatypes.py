@@ -155,7 +155,8 @@ grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexL
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceLocal",   "TwoTimesD" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isCellLocal"                ) )
 
-grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexInsideDomain", "TwoPowerD" ) )
+grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexAdjacentToParallelDomainBoundary", "TwoPowerD" ) )
+grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceAdjacentToParallelDomainBoundary", "TwoTimesD" ) )
 
 # @todo Should be char array likely with -4 to 9
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "vertexDataFrom", "TwoPowerD" ) )

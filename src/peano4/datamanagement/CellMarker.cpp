@@ -11,7 +11,6 @@ std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::CellM
 }
 
 
-
 peano4::datamanagement::CellMarker::CellMarker(
   const peano4::grid::GridTraversalEvent& event
 ):
@@ -21,13 +20,20 @@ peano4::datamanagement::CellMarker::CellMarker(
   _isLocal(event.getIsCellLocal()),
   _areAllVerticesRefined( event.getIsRefined().all() ),
   _isOneVertexHanging( false ),
-  _areAllVerticesInsideDomain( event.getIsVertexInsideDomain().all() ),
+  _areAllVerticesInsideDomain( event.getIsVertexAdjacentToParallelDomainBoundary().none() ),
+  //_areAllVerticesInsideDomain( event.getIsVertexInsideDomain().all() ),
   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() )
 {
   for (int i=0; i<TwoPowerD; i++) {
     _isOneVertexHanging |= event.getVertexDataTo(i)  ==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
     _isOneVertexHanging |= event.getVertexDataFrom(i)==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
   }
+  _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
+}
+
+
+tarch::la::Vector<Dimensions,int>  peano4::datamanagement::CellMarker::getRelativePositionWithinFatherCell() const {
+  return _relativePositionOfCellWithinFatherCell;
 }
 
 

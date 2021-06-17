@@ -83,7 +83,8 @@ bool selectNextAlgorithmicStep() {{
   static bool   addGridSweepWithoutGridRefinementNext       = false;
   static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
   static int    globalNumberOfTrees                         = 0;
-  bool          continueToSolve   = true;
+  static int    stationaryGridCreationSteps                 = 0;
+  bool          continueToSolve                             = true;
   
   if (exahype2::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {{
     peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -145,9 +146,22 @@ bool selectNextAlgorithmicStep() {{
       addGridSweepWithoutGridRefinementNext = true;
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }} 
+    else if (stationaryGridCreationSteps>5) {{
+      logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for quite some time. Terminate grid construction" );
+      addGridSweepWithoutGridRefinementNext = false;
+      gridConstructed = true;
+    }}
     else {{
       logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so study whether to refine mesh further in next sweep" );
       addGridSweepWithoutGridRefinementNext = false;
+
+      if ( repositories::loadBalancer.getGlobalNumberOfTrees()<=globalNumberOfTrees ) {{
+        stationaryGridCreationSteps++;
+      }}
+      else {{
+        stationaryGridCreationSteps=0;
+      }}
+
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }}
 

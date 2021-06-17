@@ -5,15 +5,39 @@
 
 
 #include <vector>
+#include <map>
+#include <set>
+
 
 #include "GridVertex.h"
 
 
 namespace peano4 {
+  typedef std::map< int, int >  SplitSpecification;
+
   /**
    * @namespace peano4::grid
    *
    * The grid namespace is Peano's core.
+   *
+   * There are a few key classes in this namespace which realise Peano's core:
+   *
+   * - GridVertex: Represents one vertex of the tree. These vertices are geometric
+   *     objects and do not carry any user data. They solely span the grid.
+   * - Spacetree: Represents one tree. A tree is totally defined via its vertices.
+   *     When we run through the mesh, we have a unique AutomatonState and the
+   *     vertices which give us all information we need for our DFS.
+   * - PeanoCurve: A collection of utility routines which are used to work with
+   *     the Peano SFC. The routines therein help us to identify which stacks are
+   *     to be accessed. This is main purpose of this routine collection/class.
+   * - GridTraversalEvent and TraversalObserver: The spacetree holds the grid data
+   *     and manages the grid traversal through its automaton. It does not invoke
+   *     any user routines, manage partitions or move around user data. It however
+   *     issues GridTraversalEvents and passes them over to a TraversalObserver.
+   *     That's where the user code plugs in.
+   * - GridTraversalEventGenerator Translates the transitions of the tree traversal
+   *     automaton into GridTraversalEvents. It is a collection of utility
+   *     routines.
    *
    */
   namespace grid {
@@ -21,6 +45,9 @@ namespace peano4 {
      * Forward declaration
      */
     class GridStatistics;
+    class GridControlEvent;
+
+    class AutomatonState;
     class GridControlEvent;
 
     /**
@@ -89,6 +116,115 @@ namespace peano4 {
       const tarch::la::Vector<TwoPowerD,int>&      adjacentRanks,
       bool                                         isNewFineGridVertex
     );
+
+
+    /**
+     * A spacetree node is refined if any of its adjacent vertices holds one of
+     * the following flags:
+     *
+     * - refining If all vertices are refining or hanging or triggered, but
+     *     none of them has one of the flags discussed below, then we run into
+     *     a brand new cell of the tree.
+     * - refinement-triggered
+     * - erase-triggered We want to erase this spacetree node, but the erase
+     *     process is not triggered yet.
+     * - erasing If none of the other vertices holds another flag of this list,
+     *     then this cell is to be removed.
+     */
+    bool isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]);
+
+    bool isVertexRefined(GridVertex  vertex);
+
+    /**
+     * A vertex is unrefined if it is hanging.
+     *
+     * @return bitset of vertices for which isVertexRefined() holds. If you wanna
+     *   find out whether a cell is refined, you can compare the result to zero.
+     *   You can also use isSpacetreeNodeRefined() instead.
+     */
+    std::bitset<TwoPowerD> areVerticesRefined(GridVertex  vertices[TwoPowerD]);
+
+
+    /**
+     * A spacetree node as 2^d adjacent vertices. So there are 2^d integers
+     * stored within these vertices that overlap with the current node. They
+     * all have to be the same. If they identify the local _id, then the
+     * node is local. They are also local if the markers are set to
+     * RankOfCellWitchWillBeJoined. This magic constant identifies cells on a
+     * worker which might join into their master.
+     *
+     * Throughout the splitting process, an id might be already set to a
+     * remote rank, though it still is technically and logically local. So
+     * this routine interprets locality pretty technical and even marks those
+     * cells as non-local (anymore) which still are for another grid sweep or
+     * two.
+     */
+    bool isSpacetreeNodeLocal(
+      GridVertex    vertices[TwoPowerD],
+      bool          splittingIsConsideredLocal,
+      bool          joiningIsConsideredLocal,
+      int           id
+    );
+
+
+    enum class VertexType {
+      New,
+      Hanging,
+      Persistent,
+      Delete
+    };
+
+    enum class FaceType {
+      New,
+      Hanging,
+      Persistent,
+      Delete
+    };
+
+    enum class CellType {
+      New,
+      Persistent,
+      Delete
+    };
+
+
+    std::string toString( VertexType type );
+    std::string toString( FaceType type );
+    std::string toString( CellType type );
+
+    constexpr int InvalidRank(-1);
+
+
+    enum class SpacetreeState {
+      /**
+       * Not yet a new root. Just got created, so we have to run through the
+       * cloned data once, just to get it into the right order, and then we
+       * can really mirror the master's traversal and send out stuff (in state
+       * NewRoot).
+       */
+      EmptyRun,
+      NewRoot,
+      /**
+       * Set if this tree results from a split and if this is the first
+       * grid sweep when the former owner actually is in the mode
+       * splitting.
+       */
+      NewFromSplit,
+      Running,
+      /**
+       * Join has been triggered for this tree. Nothing is happening yet. It is
+       * only the worker that updates all adjacency lists. These updates
+       * however are not yet given to the master.
+       */
+      JoinTriggered,
+      Joining,
+      Joined
+    };
+
+    std::string toString( SpacetreeState state );
+
+    bool overlaps( const tarch::la::Vector<Dimensions,double>& x, const GridControlEvent& event );
+    bool overlaps( const AutomatonState& x, const GridControlEvent& event );
   }
 }
 

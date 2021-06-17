@@ -63,6 +63,15 @@ class examples::exahype2::euler::Euler: public AbstractEuler {
       int                                          normal,
       double                                       F[5]
     ) override;
+
+
+    ::exahype2::RefinementCommand refinementCriterion(
+      const double * __restrict__ Q, // Q[5+0],
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t
+    ) override;
+
 };
 
 

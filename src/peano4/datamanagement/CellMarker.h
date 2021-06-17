@@ -32,8 +32,17 @@ struct peano4::datamanagement::CellMarker {
     bool _isLocal;
     bool _areAllVerticesRefined;
     bool _isOneVertexHanging;
+
+    /**
+     * This flag is used to identify enclave cells.
+     */
     bool _areAllVerticesInsideDomain;
     bool _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
+
+    /**
+     * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
+     */
+    tarch::la::Vector<Dimensions,int>  _relativePositionOfCellWithinFatherCell;
   public:
     CellMarker(const peano4::grid::GridTraversalEvent& event);
 
@@ -97,6 +106,8 @@ struct peano4::datamanagement::CellMarker {
      * A skeleton cell is a not-enclave cell
      */
     bool isSkeletonCell() const;
+
+    tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
 };
 
 

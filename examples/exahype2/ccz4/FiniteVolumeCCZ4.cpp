@@ -141,7 +141,8 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   for(int i=0; i<(NumberOfUnknowns-1); i++){
     if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
   }
-  return flag? 2*tem: tem;
+  //return flag? 2*tem: tem;
+  return tem;
   //// we are only interested in the maximum eigenvalue
   //return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
 
@@ -205,3 +206,17 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   logTraceOut( "nonconservativeProduct(...)" );
 #endif
 }
+/*
+::exahype2::RefinementCommand examples::exahype2::ccz4::FiniteVolumeCCZ4::refinementCriterion(
+  const double * __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>& volumeCentre,
+  const tarch::la::Vector<Dimensions,double>& volumeH,
+  double t
+) {
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+  if (volumeCentre(0)>0.4) {result=::exahype2::RefinementCommand::Refine;}
+  return result;
+}
+*/
+
+
