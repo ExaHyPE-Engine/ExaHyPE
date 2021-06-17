@@ -22,7 +22,7 @@ case $HOSTNAME in
         ;;
 esac
 
-~/reframe/bin/reframe \
+"${REFRAME_ROOT:='~'}"/reframe/bin/reframe \
     --max-retries=0 \
     --exec-policy async \
     --stage $STAGE_DIR \
