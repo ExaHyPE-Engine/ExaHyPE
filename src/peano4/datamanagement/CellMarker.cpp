@@ -21,7 +21,6 @@ peano4::datamanagement::CellMarker::CellMarker(
   _areAllVerticesRefined( event.getIsRefined().all() ),
   _isOneVertexHanging( false ),
   _areAllVerticesInsideDomain( event.getIsVertexAdjacentToParallelDomainBoundary().none() ),
-  //_areAllVerticesInsideDomain( event.getIsVertexInsideDomain().all() ),
   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() )
 {
   for (int i=0; i<TwoPowerD; i++) {
@@ -110,7 +109,8 @@ bool peano4::datamanagement::CellMarker::isAdjacentToDomainBoundary() const {
 
 
 bool peano4::datamanagement::CellMarker::isEnclaveCell() const {
-  return not isSkeletonCell();
+  bool result = not isSkeletonCell();
+  return result;
 }
 
 
