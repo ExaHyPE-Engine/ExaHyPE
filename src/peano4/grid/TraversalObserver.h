@@ -59,6 +59,10 @@ class peano4::grid::TraversalObserver {
      */
     static constexpr int CreateOrDestroyHangingGridEntity    = -3;
 
+    virtual void loadCell(
+      const GridTraversalEvent&  event
+    ) = 0;
+
     /**
      * Event is invoked per cell. It is however not called for the root cell,
      * i.e. for the cell with level 0 that does not have a parent.
@@ -69,6 +73,10 @@ class peano4::grid::TraversalObserver {
 
 
     virtual void leaveCell(
+      const GridTraversalEvent&  event
+    ) = 0;
+
+    virtual void storeCell(
       const GridTraversalEvent&  event
     ) = 0;
 
@@ -89,26 +97,26 @@ class peano4::grid::TraversalObserver {
     ...
   }
 	   </pre>
-	   *
-	   * then you can be sure that the branch body is executed only once globally
-  	 * per grid sweep.
-	   *
-	   *
-	   * The counterpart of the clone operation is the destructor.
-	   */
-	  virtual TraversalObserver* clone(int spacetreeId) = 0;
+     *
+     * then you can be sure that the branch body is executed only once globally
+     * per grid sweep.
+     *
+     *
+     * The counterpart of the clone operation is the destructor.
+     */
+    virtual TraversalObserver* clone(int spacetreeId) = 0;
 
-  	/**
-	   * The tree traversal invokes this operation before beginIteration.
-	   *
-	   * \section  Content
-	   *
-	   * Dynamic AMR is controlled via a sequence of grid control events. Each
-	   * event spans a certain region and prescribes an h resolution over this
-	   * region. Depending on the type of the event (erase or refine), the grid
-	   * adopts. A simple snippet just creating a refined area in a square is
-	   *
-	   * <pre>
+    /**
+     * The tree traversal invokes this operation before beginIteration.
+     *
+     * \section Content
+  *
+   * Dynamic AMR is controlled via a sequence of grid control events. Each
+   * event spans a certain region and prescribes an h resolution over this
+   * region. Depending on the type of the event (erase or refine), the grid
+   * adopts. A simple snippet just creating a refined area in a square is
+   *
+   * <pre>
 std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::getGridControlEvents() {
   std::vector< peano4::grid::GridControlEvent >  controlEvents;
   peano4::grid::GridControlEvent newEvent;
@@ -120,61 +128,61 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
   return controlEvents;
 }
 	 </pre>
-	   *
-	   * The entries are logically ordered. The later the entry, the more
-	   * important it is. So entry 2 overrules entry 1.
-	   */
-  	virtual std::vector< GridControlEvent > getGridControlEvents() const = 0;
+     *
+     * The entries are logically ordered. The later the entry, the more
+     * important it is. So entry 2 overrules entry 1.
+     */
+    virtual std::vector< GridControlEvent > getGridControlEvents() const = 0;
 
-  /**
-   * We do not really need stack numbers et al here, as everything will
-   * reside on the call stack anyway. If the routine is called on tree
-   * no 0, this operation has to establish the master of the global root
-   * tree (which usually is ill-defined, but the data should be there
-   * anyway).
-   */
-  virtual void beginTraversal(
-    const tarch::la::Vector<Dimensions,double>&  x,
-    const tarch::la::Vector<Dimensions,double>&  h
-  ) = 0;
+    /**
+     * We do not really need stack numbers et al here, as everything will
+     * reside on the call stack anyway. If the routine is called on tree
+     * no 0, this operation has to establish the master of the global root
+     * tree (which usually is ill-defined, but the data should be there
+     * anyway).
+     */
+    virtual void beginTraversal(
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h
+    ) = 0;
 
-  virtual void endTraversal(
-    const tarch::la::Vector<Dimensions,double>&  x,
-    const tarch::la::Vector<Dimensions,double>&  h
-  ) = 0;
+    virtual void endTraversal(
+      const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h
+    ) = 0;
 
-  /**
-   * Send local data from top level of local mesh to master and receive its
-   * top-down information in return.
-   *
-   * The SpacetreeSet class provides some generic routines for this that you
-   * can use. Simply invoke them for every data container that you use. If
-   * you trigger non-blocking MPI, you don't have to wait until they are
-   * finished. You can expect the calling routine that it calls
-   * finishAllOutstandingSendsAndReceives() later on.
-   */
-  virtual void exchangeAllVerticalDataExchangeStacks( int masterId ) {};
+    /**
+     * Send local data from top level of local mesh to master and receive its
+     * top-down information in return.
+     *
+     * The SpacetreeSet class provides some generic routines for this that you
+     * can use. Simply invoke them for every data container that you use. If
+     * you trigger non-blocking MPI, you don't have to wait until they are
+     * finished. You can expect the calling routine that it calls
+     * finishAllOutstandingSendsAndReceives() later on.
+     */
+    virtual void exchangeAllVerticalDataExchangeStacks( int masterId ) {};
 
-  /**
-   * Exchange all the data along the domain boundaries. If the bool is set,
-   * we do send out exactly as many elements per face or vertex as we
-   * expect to receive. Therefore, the boundary exchange can optimise the
-   * data exchange.
-   *
-   * The SpacetreeSet class provides some generic routines for this that you
-   * can use. Simply invoke them for every data container that you use. If
-   * you trigger non-blocking MPI, you don't have to wait until they are
-   * finished. You can expect the calling routine that it calls
-   * finishAllOutstandingSendsAndReceives() later on.
-   */
-  virtual void exchangeAllHorizontalDataExchangeStacks( bool symmetricDataCardinality ) {};
+    /**
+     * Exchange all the data along the domain boundaries. If the bool is set,
+     * we do send out exactly as many elements per face or vertex as we
+     * expect to receive. Therefore, the boundary exchange can optimise the
+     * data exchange.
+     *
+     * The SpacetreeSet class provides some generic routines for this that you
+     * can use. Simply invoke them for every data container that you use. If
+     * you trigger non-blocking MPI, you don't have to wait until they are
+     * finished. You can expect the calling routine that it calls
+     * finishAllOutstandingSendsAndReceives() later on.
+     */
+   virtual void exchangeAllHorizontalDataExchangeStacks( bool symmetricDataCardinality ) {};
 
-  /**
-   * Exchange all periodic boundary data. Periodic boundary values are always
-   * handled by tree 0, i.e. there's no need to distinguish ranks here. On
-   * all trees that are not rank 0, this operation should immediately return.
-   */
-  virtual void exchangeAllPeriodicBoundaryDataStacks() {};
+    /**
+     * Exchange all periodic boundary data. Periodic boundary values are always
+     * handled by tree 0, i.e. there's no need to distinguish ranks here. On
+     * all trees that are not rank 0, this operation should immediately return.
+     */
+    virtual void exchangeAllPeriodicBoundaryDataStacks() {};
 
   /**
    * Stream data from current tree on which this routine is called to
@@ -182,37 +190,38 @@ std::vector< peano4::grid::GridControlEvent > applications4::grid::MyObserver::g
    *
    * @todo Not clear how this works on the worker side.
    *
-   * The SpacetreeSet class provides some generic routines for this that you
-   * can use. Simply invoke them for every data container that you use. If
-   * you trigger non-blocking MPI, you don't have to wait until they are
-   * finished. You can expect the calling routine that it calls
-   * finishAllOutstandingSendsAndReceives() later on.
-   */
-  virtual void streamDataFromSplittingTreeToNewTree( int newWorker ) {};
-  virtual void streamDataFromJoiningTreeToMasterTree( int masterId ) {};
+     * The SpacetreeSet class provides some generic routines for this that you
+    * can use. Simply invoke them for every data container that you use. If
+     * you trigger non-blocking MPI, you don't have to wait until they are
+     * finished. You can expect the calling routine that it calls
+     * finishAllOutstandingSendsAndReceives() later on.
+     */
+    virtual void streamDataFromSplittingTreeToNewTree( int newWorker ) {};
+    virtual void streamDataFromJoiningTreeToMasterTree( int masterId ) {};
 
-  /**
-   * Wrap up all sends and receives, i.e. invoke wait() on the MPI requests.
-   * The SpacetreeSet provides a generic routine for this that you can call
-   * per data container in use.
-   */
-  virtual void finishAllOutstandingSendsAndReceives() {};
+    /**
+     * Wrap up all sends and receives, i.e. invoke wait() on the MPI requests.
+     * The SpacetreeSet provides a generic routine for this that you can call
+     * per data container in use.
+     */
+    virtual void finishAllOutstandingSendsAndReceives() {};
 
-  enum class SendReceiveContext {
-    BoundaryExchange,
-    MultiscaleExchange,
-    Rebalancing,
-    PeriodicBoundaryDataSwap
-  };
+    enum class SendReceiveContext {
+      BoundaryExchange,
+      MultiscaleExchange,
+      Rebalancing,
+      PeriodicBoundaryDataSwap
+    };
 
-  virtual void sendVertex(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker) {};
-  virtual void sendFace(int inOutStack, int relativePositionOnInOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {};
-  virtual void sendCell(int inOutStack, int toStack, SendReceiveContext context, const peano4::datamanagement::CellMarker& marker) {};
+    virtual void sendVertex(int position, int toStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
+    virtual void sendFace(  int position, int toStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
+    virtual void sendCell(  int toStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
 
-  virtual void receiveAndMergeVertex(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context, const peano4::datamanagement::VertexMarker& marker) {};
-  virtual void receiveAndMergeFace(const GridTraversalEvent&  event, int positionWithinCell, int inOutStack, int relativePositionOnInOutStack, int fromStack, SendReceiveContext context, const peano4::datamanagement::FaceMarker& marker) {};
+    virtual void receiveAndMergeVertex( int position, int fromStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
+    virtual void receiveAndMergeFace(   int position, int fromStack, SendReceiveContext context, const GridTraversalEvent&  event) {};
+    virtual void receiveAndMergeCell(   int fromStack, SendReceiveContext context, const GridTraversalEvent& event) {};
 
-  virtual void deleteAllStacks() {};
+    virtual void deleteAllStacks() {};
 };
 
 #endif

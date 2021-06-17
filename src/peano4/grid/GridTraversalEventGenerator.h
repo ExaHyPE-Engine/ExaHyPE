@@ -56,8 +56,8 @@ class peano4::grid::GridTraversalEventGenerator {
      * @param spacetreeStateIsRunning  spacetreeState == SpacetreeState::Running
      */
     GridTraversalEvent createGenericCellTraversalEvent(
-      GridVertex              fineGridVertices[TwoPowerD],
-      const AutomatonState&                        state,
+      GridVertex                                fineGridVertices[TwoPowerD],
+      const AutomatonState&                     state,
       const SplitSpecification&                 splitTriggered,
       const std::set<int>&                      splitting,
       const std::set< int >&                    joinTriggered,
@@ -108,8 +108,30 @@ class peano4::grid::GridTraversalEventGenerator {
       tarch::la::Vector<Dimensions,int>  positionOfCell,
       int                                faceNumber
     );
-  public:
-    GridTraversalEventGenerator(int id);
+
+    /**
+     * A vertex is inside the domain, if all of its ids equal _id. We use the
+     * backup of the ids here, as we study the current (committed) state. The
+     * routine runs over all @f$ 2^d @f$ vertices and analyses their status
+     * w.r.t. inside.
+     */
+    std::bitset<TwoPowerD> areVerticesAdjacentToParallelDomainBoundary(
+      GridVertex                                vertices[TwoPowerD],
+      const SplitSpecification&                 splitTriggered,
+      const std::set<int>&                      splitting,
+      const std::set< int >&                    joinTriggered,
+      const std::set< int >&                    joining,
+      bool calledByLeaveCell
+    ) const;
+
+    std::bitset<TwoTimesD> areFacesAdjacentToParallelDomainBoundary(
+        GridVertex                                vertices[TwoPowerD],
+        const SplitSpecification&                 splitTriggered,
+        const std::set<int>&                      splitting,
+        const std::set< int >&                    joinTriggered,
+        const std::set< int >&                    joining,
+        bool calledByLeaveCell
+      ) const;
 
     /**
      * Vertices are local. I consider splitting and joining vertices to be
@@ -122,6 +144,29 @@ class peano4::grid::GridTraversalEventGenerator {
       const std::set< int >&      joinTriggered,
       const std::set< int >&      joining
     ) const;
+
+    /**
+     * Identifies for the @f$ 2 \cdot d @f$ faces whether they are local or not.
+     *
+     * <h2> Implementation </h2>
+     *
+     * - I loop over the 2d faces.
+     * - Per face, I loop over all @f$ 2^d @f$ vertices but alter the entry
+     *   along the normal manually. So I'm inefficient, but I don't care.
+     * - Per relevant vertex, I have to check two entries in the adjacency
+     *   list.
+     * - Splitting and split-triggered ranks are still considered to be
+     *   local.
+     */
+    std::bitset<TwoTimesD> areFacesLocal(
+      GridVertex  vertices[TwoPowerD],
+      const SplitSpecification&                 splitTriggered,
+      const std::set<int>&                      splitting,
+      const std::set< int >&                    joinTriggered,
+      const std::set< int >&                    joining
+    ) const;
+  public:
+    GridTraversalEventGenerator(int id);
 
 
     /**
@@ -172,31 +217,6 @@ class peano4::grid::GridTraversalEventGenerator {
       bool          splittingIsConsideredLocal,
       bool          joiningIsConsideredLocal
     ) const;
-
-
-    /**
-     * Identifies for the @f$ 2 \cdot d @f$ faces whether they are local or not.
-     *
-     * <h2> Implementation </h2>
-     *
-     * - I loop over the 2d faces.
-     * - Per face, I loop over all @f$ 2^d @f$ vertices but alter the entry
-     *   along the normal manually. So I'm inefficient, but I don't care.
-     * - Per relevant vertex, I have to check two entries in the adjacency
-     *   list.
-     * - Splitting and split-triggered ranks are still considered to be
-     *   local.
-     */
-    std::bitset<TwoTimesD> areFacesLocal(
-      GridVertex  vertices[TwoPowerD],
-      const SplitSpecification&                 splitTriggered,
-      const std::set<int>&                      splitting,
-      const std::set< int >&                    joinTriggered,
-      const std::set< int >&                    joining
-    ) const;
-
-
-    std::bitset<TwoPowerD> areVerticesInsideDomain(GridVertex  vertices[TwoPowerD]) const;
 
 
     /**
@@ -320,11 +340,14 @@ class peano4::grid::GridTraversalEventGenerator {
 
     /**
      * @see getNeighbourTrees()
+     * @param useBackedUpAdjacencyInformation If this one is true, I use the backup of the
+     *  adjacency list and not the new data. In most cases, I could thus call
+     *  it calledByReceivingProcess.
      */
     tarch::la::Vector< TwoPowerD, int >  getAdjacentRanksOfFace(
       GridVertex vertex[TwoPowerD],
       int faceNumber,
-      bool calledByReceivingProcess
+      bool useBackedUpAdjacencyInformation
     ) const;
 
 };

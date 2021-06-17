@@ -28,6 +28,7 @@ namespace peano4 {
     class Spacetree;
     struct GridStatistics;
     class TraversalObserver;
+    class AutomatonState;
   }
 
   namespace parallel {
@@ -330,14 +331,17 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * When we split a tree, we realise this split in two grid sweeps where the second
      * sweep breaks up the traversal into three logical substeps. In the first sweep, the
      * splitting master tells everybody around that it will split. No split is done though.
-     * In the second sweep, the master still takes all data that's meant to be for the new
-     * worker, and it sends out boundary data where it shares a boundary with the worker.
-     *
-     * After that, it copies its tree data over to the new worker. This is what
-     * this routine is for. Copying means that it is there in the right order, but it
-     * also means that the new worker hasn't had time to send out its boundary data in
-     * return for the stuff it will receive in the next iteration. Therefore, the new
-     * worker will do two additional grid traversal after this copying has terminated.
+     * After this first sweep, the grid data structure is replicated on the new worker.
+     * Please note that we only replicate the grid, i.e. there's no user information
+     * associated with it yet.
+     * 
+     * In the second sweep, the master still "owns" all data, i.e. it receives all
+     * boundary data and merges it in. However, it does not send out boundary data anymore.
+     * Instead, it takes all data that should go over to the new worker and dumps it in the
+     * vertical data exchange stack. That's part one of the second sweep. Part two means
+     * that the new worker runs through its mesh for the first time and incorporates all
+     * the streamed user data. After that, we have to run through the grid one more time
+     * on the worker (without any action) to get all the data into the right order.
      *
      * <h2> Vertex grid data </h2>
      *
@@ -354,7 +358,21 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * second invocation degenerates to nop automatically. See streamDataFromSplittingTreeToNewTree()
      * which implements a simple emptyness check.
      *
+     * <h2> User data </h2>
+     *
+     * It is only the vertex grid data that is copied over in one rush prior to the splitting
+     * state. User data is streamed within the splitting state. See Spacetree::sendUserData().
+     * The latter routine dumps data in the vertical data exchange stacks, and these stacks
+     * subsequently are then transferred over by the present routine, too.
+     *
+     * <h2> Stack types </h2>
+     *
+     * All the routines copy over the stream stack data, i.e. the stacks for the vertical
+     * data exchange. It is hence important to recognise that the normal stacks are not
+     * transferred.
+     *
      * @see streamDataFromSplittingTreeToNewTree()
+     * @see peano4::grid::Spacetree::sendUserData()
      */
     void streamDataFromSplittingTreesToNewTrees(peano4::grid::TraversalObserver&  observer);
 

@@ -49,31 +49,6 @@ namespace peano4 {
  */
 class peano4::grid::Spacetree {
   public:
-    enum class SpacetreeState {
-      /**
-       * Not yet a new root. Just got created, so we have to run through the
-       * cloned data once, just to get it into the right order, and then we
-       * can really mirror the master's traversal and send out stuff (in state
-       * NewRoot).
-       */
-      EmptyRun,
-      NewRoot,
-      /**
-       * Set if this tree results from a split and if this is the first
-       * grid sweep when the former owner actually is in the mode
-       * splitting.
-       */
-      NewFromSplit,
-      Running,
-      /**
-       * Join has been triggered for this tree. Nothing is happening yet. It is
-             * only the worker that updates all adjacency lists. These updates
-             * however are not yet given to the master.
-             */
-          JoinTriggered,
-      Joining,
-      Joined
-    };
 
     /**
      * Periodic boundary conditions are technically realised as domain
@@ -117,8 +92,6 @@ class peano4::grid::Spacetree {
 
     friend class peano4::parallel::SpacetreeSet;
     friend class peano4::grid::tests::SpacetreeTest;
-
-    static std::string toString( SpacetreeState state );
 
     /**
      * Can a cell be split (deployed to another rank)
@@ -419,6 +392,11 @@ class peano4::grid::Spacetree {
     void receiveAndMergeUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
 
     /**
+     * Send user data
+     *
+     * Send out data along the MPI boundary (horizontal) and stream data to the splitting,
+     * new workers (vertical). This routine is called within descend() as epilogue, i.e.
+     * after all data have been stored savely away on the output streams.
      *
      * <h2> Data order on output stacks </h2>
      *
@@ -598,6 +576,14 @@ class peano4::grid::Spacetree {
      * So we have to run for the middle way: We erase all adjacency data but
      * if ad only if a vertex is not adjacent to any kid.
      *
+     * <h2> A posteriori refinement </h2>
+     *
+     * If a vertex is surrounded by @f$ 2^d @f$ refined cells and is not a refined
+     * vertex, we have this weird situation that we have a hanging vertex right
+     * within a regularly refined subdomain. Topologically, this is allowed, but
+     * it makes no sense, introduces strange artefacts in the visualisation and
+     * is very difficult to explain. So I keep track of the refined adjacent cells
+     * and refine a posteriori if all adjacent cells are refined.
      *
      * @param fineVertexPositionWithinPatch Position of vertex within 3x3 or 3x3x3 patch respectively
      *

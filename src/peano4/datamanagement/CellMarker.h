@@ -32,6 +32,10 @@ struct peano4::datamanagement::CellMarker {
     bool _isLocal;
     bool _areAllVerticesRefined;
     bool _isOneVertexHanging;
+
+    /**
+     * This flag is used to identify enclave cells.
+     */
     bool _areAllVerticesInsideDomain;
     bool _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
 

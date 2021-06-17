@@ -22,6 +22,14 @@ void peano4::grid::EmptyTraversalObserver::endTraversal(
 }
 
 
+void peano4::grid::EmptyTraversalObserver::loadCell(
+  const GridTraversalEvent&  event
+) {
+  logTraceInWith1Argument( "loadCell(...)", event.toString() );
+  logTraceOut( "loadCell(...)" );
+}
+
+
 void peano4::grid::EmptyTraversalObserver::enterCell(
   const GridTraversalEvent&  event
 ) {
@@ -30,12 +38,19 @@ void peano4::grid::EmptyTraversalObserver::enterCell(
 }
 
 
-
 void peano4::grid::EmptyTraversalObserver::leaveCell(
   const GridTraversalEvent&  event
 ) {
   logTraceInWith1Argument( "leaveCell(...)", event.toString() );
   logTraceOut( "leaveCell(...)" );
+}
+
+
+void peano4::grid::EmptyTraversalObserver::storeCell(
+  const GridTraversalEvent&  event
+) {
+  logTraceInWith1Argument( "storeCell(...)", event.toString() );
+  logTraceOut( "storeCell(...)" );
 }
 
 

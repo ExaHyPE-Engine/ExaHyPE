@@ -1,9 +1,40 @@
-build1:
+#build1:
+#  stage: build
+#  script:
+#    - cd cookbook && latexmk -shell-escape -view=pdf cookbook.tex
+#  #  - scp cookbook/cookbook.pdf "$CIUSER"@"$CIMACHINE":"cookbook_$CI_COMMIT_SHA.pdf"
+#  artifacts:
+#    paths:
+#      - cookbook/cookbook.pdf
+#    expire_in: 1 week
+
+reframehamilton:
   stage: build
+  tags:
+    - hamilton
   script:
-    - cd cookbook && latexmk -shell-escape -view=pdf cookbook.tex
-  #  - scp cookbook/cookbook.pdf "$CIUSER"@"$CIMACHINE":"cookbook_$CI_COMMIT_SHA.pdf"
-  artifacts:
-    paths:
-      - cookbook/cookbook.pdf
-    expire_in: 1 week
+    - cd  /ddn/data/gcgt96/Peano/reframe/tests/rfm_euler&& module purge && module load python/3.6.8 &&  REFRAMEROOT=/ddn/data/gcgt96 bash ./euler.sh $CI_COMMIT_SHA
+    - whoami
+    - pwd
+    - lscpu
+
+reframedine:
+  stage: build
+  tags:
+    - dine
+  script:
+    - cd /cosma/home/durham/hschulz/Peano/reframe/tests/rfm_euler  && module purge && module load python/3.6.5 && bash ./euler.sh $CI_COMMIT_SHA
+    - whoami
+    - pwd
+    - lscpu
+
+#hellocosma7:
+#  stage:
+#    build
+#  tags:
+#    - cosma7
+#  script:
+#    - hostname
+#    - whoami
+#    - pwd
+#    - ls
