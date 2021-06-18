@@ -30,8 +30,10 @@
 
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
-#include "exahype2/SmartEnclaveTask.h"
 
+
+#if defined(UseSmartMPI)
+#endif
 
 
 using namespace examples::exahype2::swe;
@@ -81,7 +83,8 @@ bool selectNextAlgorithmicStep() {
   static bool   addGridSweepWithoutGridRefinementNext       = false;
   static tarch::la::Vector<Dimensions,double> minH          = tarch::la::Vector<Dimensions,double>( std::numeric_limits<double>::max() );
   static int    globalNumberOfTrees                         = 0;
-  bool          continueToSolve   = true;
+  static int    stationaryGridCreationSteps                 = 0;
+  bool          continueToSolve                             = true;
   
   if (exahype2::hasNonCriticalAssertionBeenViolated() and not haveReceivedNoncriticialAssertion) {
     peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -143,9 +146,22 @@ bool selectNextAlgorithmicStep() {
       addGridSweepWithoutGridRefinementNext = true;
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     } 
+    else if (stationaryGridCreationSteps>5) {
+      logInfo( "selectNextAlgorithmicStep()", "grid has been stationary for quite some time. Terminate grid construction" );
+      addGridSweepWithoutGridRefinementNext = false;
+      gridConstructed = true;
+    }
     else {
       logInfo( "selectNextAlgorithmicStep()", "mesh rebalancing seems to be kind of stationary, so study whether to refine mesh further in next sweep" );
       addGridSweepWithoutGridRefinementNext = false;
+
+      if ( repositories::loadBalancer.getGlobalNumberOfTrees()<=globalNumberOfTrees ) {
+        stationaryGridCreationSteps++;
+      }
+      else {
+        stationaryGridCreationSteps=0;
+      }
+
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
     }
 
@@ -368,7 +384,7 @@ int main(int argc, char** argv) {
   
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
-  exahype2::initSmartMPI();
+  tarch::multicore::initSmartMPI();
   peano4::fillLookupTables();
  
   
@@ -417,7 +433,18 @@ int main(int argc, char** argv) {
   #pragma omp master 
   {
   #endif
-  if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
+	  
+	  
+  #if defined(UseSmartMPI)
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster() and smartmpi::isComputeRank();
+  #else
+  const bool isGlobalMaster     =     tarch::mpi::Rank::getInstance().isGlobalMaster();
+  const bool isPeanoComputeNode = not tarch::mpi::Rank::getInstance().isGlobalMaster();
+  #endif
+	  
+	  
+  if ( isGlobalMaster ) {
     while ( selectNextAlgorithmicStep() ) {
       step();
     }
@@ -427,11 +454,19 @@ int main(int argc, char** argv) {
     logInfo("main()", "plotting:                   " << plotMeasurement.getAccumulatedValue() << "s\t" << plotMeasurement.toString() );
     logInfo("main()", "time stepping:              " << timeStepMeasurement.getAccumulatedValue() << "s\t" << timeStepMeasurement.toString() );
   }
-  else {
+  else if (isPeanoComputeNode) {
     while (peano4::parallel::Node::getInstance().continueToRun()) {
       step();
     }
   }
+  #if defined(UseSmartMPI)
+  else {
+    while ( smartmpi::continueToRun() ) {
+      smartmpi::tick();
+    }
+  }
+  #endif
+  
   #if defined(SharedOMP)
   }
   }
@@ -443,7 +478,7 @@ int main(int argc, char** argv) {
 
   peano4::shutdownSingletons();
   examples::exahype2::swe::repositories::DataRepository::shutdownDatatypes();
-  exahype2::shutdownSmartMPI();
+  tarch::multicore::shutdownSmartMPI();
   exahype2::shutdownNonCritialAssertionEnvironment();
   peano4::shutdownParallelEnvironment();
 
