@@ -167,7 +167,7 @@ void examples::exahype2::swe::TopologyParser::parsedisplacementfile(){
 
 double mapCoordinate(double c_in, double dc_in, double clower_in, double dc_out, double clower_out){
 
-  double c_out = (clower_out - clower_in) + c_in*(dc_in/dc_out) - 1;
+  double c_out = c_in - (clower_out - clower_in)*(dc_out/dc_in);
   
   return c_out;
 
