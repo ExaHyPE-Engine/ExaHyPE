@@ -10,7 +10,7 @@ case $HOSTNAME in
     "hamilton1.hpc.dur.ac.uk" | "hamilton2.hpc.dur.ac.uk")
         source ../../environ/env_hamilton.sh
         ;;
-    "login8a.pri.cosma7.alces.network" | "b101.pri.cosma7.alces.network")
+    "bluefield101.pri.cosma7.alces.network" | "login8a.pri.cosma7.alces.network" | "b101.pri.cosma7.alces.network")
         source ../../environ/env_dine.sh
         ;;
     "login2.bede.dur.ac.uk")

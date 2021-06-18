@@ -12,7 +12,7 @@ GIT_REV = os.environ['GIT_REVISION']
 @rfm.parameterized_test(*([git_rev, topology]
     for git_rev in [GIT_REV]
     for topology in [
-                '', # first value is empty for no SmartMPI.
+                'no', # first value is empty for no SmartMPI.
                 'Merged',
                 'OneToOne',
                 'Alternating',
@@ -33,6 +33,11 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
 
         self.test_dir = 'Peano/examples/exahype2/euler'
         
+        if self.current_system.name == 'dine':
+            mpi_comp = 'mpicxx'
+        elif self.current_system.name == 'hamilton':
+            mpi_comp = 'mpiicpc'
+
         # Add smartmpi to the prebuild commands:
         self.prebuild_cmds = [
                 'rm -rf smartmpi',
@@ -42,7 +47,7 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
                 'libtoolize; aclocal; autoconf; autoheader',
                 'cp src/config.h.in .',
                 'automake --add-missing',
-                './configure --with-mpi=mpiicpc CXXFLAGS="-std=c++17"', # CXX=mpicxx 
+                f'./configure --with-mpi={mpi_comp} CXXFLAGS="-std=c++17"',
                 'make -j',
                 'popd',
         ] + self.prebuild_cmds
@@ -55,17 +60,16 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
                 '--with-multithreading=omp',
                 f'--with-smartmpi={topology}',
                 'LDFLAGS=-L$PWD/../smartmpi/src',
+                f'--with-mpi={mpi_comp}'
         ]
 
         if self.current_system.name == 'dine':
             self.build_system.config_opts += [
                     'CXXFLAGS="-fopenmp -std=c++14 -DnoMPISupportsSingleSidedCommunication -I$PWD/../smartmpi/src"',
-                    '--with-mpi=mpicxx',
             ]
         elif self.current_system.name == 'hamilton':
             self.build_system.config_opts += [
                 'CXXFLAGS="-fopenmp -std=c++14 -I$PWD/../smartmpi/src"',
-                '--with-mpi=mpiicpc',
             ]
         
         self.keep_files = [
