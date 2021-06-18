@@ -719,7 +719,7 @@ fi
 # SmartMPI
 #
 AC_ARG_WITH(smartmpi,
-  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no, options are no, Merged, OneToOne, Alternating and NToOneServerAlt]]),
+  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no,Merged,OneToOne,Alternating,NToOneServerAlt]]),
   [ AC_MSG_CHECKING(for smartmpi)
     case "${withval}" in
       no)               AC_MSG_RESULT(no);    smartmpi=false ;;
