@@ -175,7 +175,12 @@ class EnclaveTaskingFV( FV ):
     has to happen after the primary sweep, as all cells next to an adaptivity boundary
     are skeleton cells. 
     
-    
+    As pointed out, both interpolation and restriction are to be active for the first
+    sweep only. We interpolate into hanging faces, and we have to restrict immediately
+    again as they are non-persistent. The projection onto the (hanging) faces is also 
+    happening directly in the primary sweep, as the cells adjacent to the hanging 
+    face are skeleton cells.
+        
     """
     FV.create_action_sets(self)
 
@@ -206,11 +211,12 @@ class EnclaveTaskingFV( FV ):
       patch_overlap_interpolation = self._patch_overlap, 
       patch_overlap_restriction   = self._patch_overlap_new,
       interpolate_guard           = self._primary_or_initialisation_sweep_predicate,
-      restrict_guard              = self._secondary_sweep_or_grid_initialisation_predicate,
-      clear_guard                 = self._primary_or_initialisation_sweep_predicate,
+      restrict_guard              = self._primary_or_initialisation_sweep_predicate,
+      #clear_guard                 = self._primary_or_initialisation_sweep_predicate,
       #interpolate_guard           = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
       #restrict_guard              = "not marker.isRefined() and " + self._secondary_sweep_or_grid_initialisation_predicate,
       #clear_guard                 = "not fineGridFaceLabel.getBoundary() and " + self._primary_or_initialisation_sweep_predicate,
+      clear_guard                 = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
       additional_includes         = """
 #include "../repositories/SolverRepository.h"
 """      
