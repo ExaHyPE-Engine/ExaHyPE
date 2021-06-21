@@ -123,8 +123,8 @@ if __name__ == "__main__":
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation#,
-          #refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
+          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
         )
 
       def get_user_includes(self):
@@ -288,7 +288,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_re.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_re24.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 		const int n_a_v=9;
 
 		if (tarch::la::equals(t,0.0)){//initialization
@@ -544,10 +544,10 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       #[-10, -10, -10],  [20.0, 20.0, 20.0],
       #[-15, -15, -15],  [30.0, 30.0, 30.0],
-      [-20, -20, -20],  [40.0, 40.0, 40.0],
+      #[-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -556,7 +556,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv4" )
     probe_point = [-8,-8,-8]
     project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 
