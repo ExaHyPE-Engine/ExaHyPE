@@ -112,17 +112,21 @@ class Euler_CI(rfm.RegressionTest):
                         # Set var that triggers follow up with profiler
                         os.environ["PERF_DROP"] = "True"
                         # Fail the test:
-                        sn.assert_lt(
-                            time_prev_commit,
-                            (0.9 * time_this_commit),
-                            "Performance degredation has been detected",
+                        sn.evaluate(
+                            sn.assert_lt(
+                                time_prev_commit,
+                                (0.9 * time_this_commit),
+                                "Performance degredation has been detected",
+                            )
                         )
 
                     # if performance increases suspiciously we fail the test:
-                    sn.assert_gt(
-                        time_prev_commit,
-                        (1.1 * time_this_commit),
-                        "Performance increase is cause for suspicion",
+                    sn.evaluate(
+                        sn.assert_gt(
+                            time_prev_commit,
+                            (1.1 * time_this_commit),
+                            "Performance increase is cause for suspicion",
+                        )
                     )
 
                     return
