@@ -505,7 +505,7 @@ if __name__ == "__main__":
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = CCZ4Solver(solver_name, args.patch_size, args.min_h, args.max_h)
+      my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h)
 
       if args.extension=="gradient":
         my_solver.add_derivative_calculation()
@@ -526,7 +526,7 @@ if __name__ == "__main__":
     elif args.scenario=="two-punctures":
       my_solver.pick_two_puncture_scenario()
     else:
-      raise Exception( "Scenario " + args.scenario + " is now known")  
+      raise Exception( "Scenario " + args.scenario + " is now unknown")  
 
     project.add_solver(my_solver)
 
@@ -551,8 +551,8 @@ if __name__ == "__main__":
       #[-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      [-1.5, -1.5, -1.5],  [3.0, 3.0, 3.0],
-      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      #[-1.5, -1.5, -1.5],  [3.0, 3.0, 3.0],
+      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -568,12 +568,21 @@ if __name__ == "__main__":
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
     #add tracer
-    #tracer_particles = project.add_tracer( name="MyTracer",attribute_count=1 )
+    tracer_particles = project.add_tracer( name="MyTracer",attribute_count=3 )
     #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
-    #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::LinearInterp"))
+    project.add_action_set_to_timestepping(
+      exahype2.tracer.FiniteVolumesTracing(
+        tracer_particles,my_solver,
+        [17,18,19],[14,15,16],-1,
+        #time_stepping_kernel="toolbox::particles::LinearInterp",
+        time_stepping_kernel="toolbox::particles::StaticPosition",
+        observer_kernel="toolbox::particles::ObLinearInterp"
+      )
+    )
     #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/8.0, noise=True ))
-    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[4.251,0,0],p2=[-4.251,0,0]))
-    #project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,1e-10,"zzp_re14"))
+    project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
+
+    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zzp_re14"))
 
 
     peano4_project = project.generate_Peano4_project(verbose=True)
@@ -600,7 +609,7 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/Newton.cpp" )
       peano4_project.output.makefile.add_CXX_flag( "-DIncludeTwoPunctures" )
     else:
-      raise Exception( "Scenario " + args.scenario + " is now known")        
+      raise Exception( "Scenario " + args.scenario + " is now unknown")        
 
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
     peano4_project.output.makefile.add_cpp_file( "InitialValues.cpp" )
