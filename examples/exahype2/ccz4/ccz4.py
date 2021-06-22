@@ -35,8 +35,8 @@ intparams = {"LapseType":0, "tp_grid_setup":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
-    parser.add_argument("-cs",   "--cell-size",       dest="max_h",           type=float, default=0.4,  help="Mesh size" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.4,  help="lower limit for refinement" )
+    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, default=0.4,  help="upper limit for refinement" )
+    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.4,  help="lower limit for refinement (set to 0 to make it equal to max_h - default)" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
@@ -123,8 +123,8 @@ if __name__ == "__main__":
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation#,
-          #refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
+          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
         )
 
       def get_user_includes(self):
@@ -288,7 +288,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_re20.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_re24.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 		const int n_a_v=9;
 
 		if (tarch::la::equals(t,0.0)){//initialization
@@ -365,7 +365,7 @@ if __name__ == "__main__":
 		std::string l2="L2_constri"; std::string teml2="ztem_constri";
 		double cons[7]={0,0,0,0,0,0,0};
     dfor(cell,patchSize) {
-        	tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+      tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
 
 			double gradQ[3*59]={ 0 };
 
@@ -397,8 +397,12 @@ if __name__ == "__main__":
           
       reconstructedPatch[cellSerialised*(59+n_a_v)+59+6]=pow((P1*P1+P2*P2+P3*P3),0.5);
       
-      reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=1;
-		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=2;
+      double Psi4[2]={0,0};
+      double currentPosition[3]; 
+      for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
+      Psi4Calc(Psi4, reconstructedPatch+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+      reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
+		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
 		}
 		
 		
@@ -487,11 +491,15 @@ if __name__ == "__main__":
     if SuperClass == exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator:
       solver_name += "OnGPU"
 
+    min_h = args.min_h
+    if min_h <=0.0:
+      min_h = args.max_h
+
     if is_aderdg:
       my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
           solver_name, order, unknowns, 0, #auxiliary_variables
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
-          args.min_h, args.max_h, time_step_size,
+          min_h, args.max_h, time_step_size,
           flux = None,
           ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
@@ -543,7 +551,8 @@ if __name__ == "__main__":
       #[-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      [-1.5, -1.5, -1.5],  [3.0, 3.0, 3.0],
+      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -553,8 +562,8 @@ if __name__ == "__main__":
     project.set_Peano4_installation("../../..", build_mode)
 
     #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1" )
-    probe_point = [-8,-8,-8]
-    project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
+    #probe_point = [-8,-8,-8]
+    #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 

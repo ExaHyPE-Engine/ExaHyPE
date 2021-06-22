@@ -96,13 +96,13 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[59]
     ) override;
-    /*
+    
     ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>& volumeCentre,
       const tarch::la::Vector<Dimensions,double>& volumeH,
       double t
-    ) override;*/
+    ) override;
 };
 
 

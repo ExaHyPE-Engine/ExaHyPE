@@ -88,6 +88,13 @@ class EnclaveTaskingFV( FV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
+    self._primary_or_grid_construction_or_initialisation_sweep_predicate= "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
+      ")"
+
     self._secondary_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
       ")"
@@ -156,13 +163,33 @@ class EnclaveTaskingFV( FV ):
 
   
   def create_action_sets(self):
+    """
+    
+    Adaptive mesh handing
+    
+    Adaptive meshes require us to clear the patch overlaps and to restrict/interpolate. 
+    Obviously, there's no need to do this for a refined faces. So we can eliminate these
+    cases a priori. Furthermore, we clear faces only in the primary sweep. We know that
+    either the primary sweep (for skeleton) or the secondary sweep (for enclaves) will
+    write in proper data into anything that's cleared, and we know that restriction only
+    has to happen after the primary sweep, as all cells next to an adaptivity boundary
+    are skeleton cells. 
+    
+    As pointed out, both interpolation and restriction are to be active for the first
+    sweep only. We interpolate into hanging faces, and we have to restrict immediately
+    again as they are non-persistent. The projection onto the (hanging) faces is also 
+    happening directly in the primary sweep, as the cells adjacent to the hanging 
+    face are skeleton cells.
+        
+    """
     FV.create_action_sets(self)
 
     #
     # AMR and adjust cell have to be there always, i.e. also throughout 
     # the grid construction.
     #
-    self._action_set_adjust_cell.predicate                         = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate
+    self._action_set_adjust_cell.predicate                         = "not marker.isRefined() and " + self._primary_or_grid_construction_or_initialisation_sweep_predicate
+
     self._action_set_AMR.predicate                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
     self._action_set_AMR_commit_without_further_analysis.predicate = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
     self._action_set_handle_boundary.predicate                     = self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate
@@ -183,8 +210,13 @@ class EnclaveTaskingFV( FV ):
       patch                       = self._patch,
       patch_overlap_interpolation = self._patch_overlap, 
       patch_overlap_restriction   = self._patch_overlap_new,
-      #guard                       = "not marker.isRefined() and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate,
-      guard                       = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
+      interpolate_guard           = self._primary_or_initialisation_sweep_predicate,
+      restrict_guard              = self._primary_or_initialisation_sweep_predicate,
+      #clear_guard                 = self._primary_or_initialisation_sweep_predicate,
+      #interpolate_guard           = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
+      #restrict_guard              = "not marker.isRefined() and " + self._secondary_sweep_or_grid_initialisation_predicate,
+      #clear_guard                 = "not fineGridFaceLabel.getBoundary() and " + self._primary_or_initialisation_sweep_predicate,
+      clear_guard                 = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
       additional_includes         = """
 #include "../repositories/SolverRepository.h"
 """      
@@ -232,7 +264,6 @@ class EnclaveTaskingFV( FV ):
       raise Exception( "memory mode without immedidate (call stack) free chosen. This will lead into a segmentation fault" )
 
     self.create_action_sets()
-
     
 
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
@@ -253,6 +284,7 @@ class EnclaveTaskingFV( FV ):
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
 """    
+
 
   def add_entries_to_text_replacement_dictionary(self,d):
     d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation

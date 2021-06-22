@@ -50,6 +50,7 @@ parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_inter
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
 parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels",        type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)" )
+parser.add_argument("-pbc", "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true", help="Use periodic boundary conditions" )
 parser.add_argument("--no-compile",                    dest="compile",          action="store_false", default="True", help="Compile (on by default)" )
 args = parser.parse_args()
 
@@ -163,15 +164,25 @@ dimensions = args.dim
 build_mode = modes[args.mode]
 
 
+if args.periodic_boundary_conditions:
+  periodic_BC = [True, True, True]
+else:
+  periodic_BC = [False, False, False]
+
 
 #
 # Lets configure some global parameters
 #
 project.set_global_simulation_parameters(
-  dimensions, [0.0,0.0,0.0], [1.0,1.0,1.0],
-  args.end_time, 
-  0.0, args.plot_snapshot_interval      # snapshots
+  dimensions = dimensions, 
+  offset = [0.0,0.0,0.0], 
+  size = [1.0,1.0,1.0],
+  end_time = args.end_time, 
+  first_plot_time_stamp = 0.0, 
+  time_in_between_plots = args.plot_snapshot_interval,      # snapshots
+  periodic_BC = periodic_BC
 )
+
 
 
 #
