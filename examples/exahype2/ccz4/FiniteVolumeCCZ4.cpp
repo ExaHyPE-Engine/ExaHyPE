@@ -206,7 +206,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   logTraceOut( "nonconservativeProduct(...)" );
 #endif
 }
-/*
+
 ::exahype2::RefinementCommand examples::exahype2::ccz4::FiniteVolumeCCZ4::refinementCriterion(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>& volumeCentre,
@@ -214,9 +214,12 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   double t
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-  if (volumeCentre(0)>0.4) {result=::exahype2::RefinementCommand::Refine;}
+  //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
+  double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
+  radius=pow(radius,0.5);
+  if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
   return result;
 }
-*/
+
 
 

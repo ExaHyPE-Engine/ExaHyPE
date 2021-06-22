@@ -58,6 +58,19 @@ class AMROnPatch(AbstractFVActionSet):
   have to include this action set - though with a context-specific choice 
   of boolean flags.
   
+  There are different phases in ExaHyPE: grid generation (either with 
+  refinement or without), initialisation, plotting and time stepping. It 
+  depends on your solver in which time stepping to use AMR, but the there
+  are some things to take into account:
+  
+  - The grid creation does already create all volumetric data as we have to
+    evaluate the refinement criteria. There is however no need to manage all
+    face data et al in this step, as we have a dedicated init sweep after 
+    the grid generation has terminated.
+  - The plotting usually has to implement AMR as we have a multi-stage 
+    adaptive refinement. It might not re-evalutae the AMR again, as the 
+    solution is not changed.
+  
   """
   
   
