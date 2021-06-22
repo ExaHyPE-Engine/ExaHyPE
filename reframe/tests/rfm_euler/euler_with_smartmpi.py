@@ -41,7 +41,7 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         # Add smartmpi to the prebuild commands:
         self.prebuild_cmds = [
                 'rm -rf smartmpi',
-                'git clone https://gitlab.lrz.de/hpcsoftware/smartmpi.git',
+                'git clone git@gitlab.lrz.de:hpcsoftware/smartmpi.git',
                 'pushd smartmpi',
                 'git checkout master; git pull',
                 'libtoolize; aclocal; autoconf; autoheader',
