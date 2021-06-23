@@ -103,15 +103,20 @@ if ( not marker.isRefined() ) {
 """
       data_counter = 0
       for i in data_indices:
-        cell_compute_kernel += """
-      data(""" + str(data_counter) + """) = {{OBSERVER_KERNEL}}(
-        marker,
-        {{PATCH_SIZE}},
-        {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        """ + str(i) + """,
-        fineGridCell{{SOLVER_NAME}}Q.value,
-        p->getX()
-      );        
+        if observer_kernel=="toolbox::particles::ObLinearInterp":
+          cell_compute_kernel += """
+        data(""" + str(data_counter) + """) = {{OBSERVER_KERNEL}}(
+          marker,
+          {{PATCH_SIZE}},
+          {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}},
+          """ + str(i) + """,
+          fineGridCell{{SOLVER_NAME}}Q.value,
+          p->getX()
+        );        
+"""
+        else:
+          cell_compute_kernel += """
+        data(""" + str(data_counter) + """) = Q["""+ str(i) +"""];     
 """
         data_counter += 1
     

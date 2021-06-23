@@ -7,6 +7,8 @@ import exahype2
 import peano4.toolbox.particles
 import dastgen2
 
+import numpy as np
+
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
@@ -568,19 +570,20 @@ if __name__ == "__main__":
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
     #add tracer
-    tracer_particles = project.add_tracer( name="MyTracer",attribute_count=3 )
+    tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
     #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
     project.add_action_set_to_timestepping(
       exahype2.tracer.FiniteVolumesTracing(
         tracer_particles,my_solver,
-        [17,18,19],[14,15,16],-1,
+        [17,18,19],[0,16],-1,
         #time_stepping_kernel="toolbox::particles::LinearInterp",
         time_stepping_kernel="toolbox::particles::StaticPosition",
         observer_kernel="toolbox::particles::ObLinearInterp"
       )
     )
-    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/8.0, noise=True ))
-    project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
+    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/3.0, noise=True ))
+    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
+    project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesOnSphere( particle_set=tracer_particles,r=0.4,theta_s=30,phi_s=30))
 
     project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zzp_re14"))
 
