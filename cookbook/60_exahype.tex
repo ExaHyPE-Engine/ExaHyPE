@@ -43,7 +43,7 @@ document.
 \paragraph*{First \ExaHyPE\ run}
 \begin{itemize}
   \item Configure \Peano\ with the flags \texttt{--enable-exahype}
-  \texttt{--enable-loadbalancing}:
+  \texttt{--enable-loadbalancing} \texttt{--enable-loadbalancing}:
   \begin{code}
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
 ./configure --enable-exahype --enable-loadbalancing
@@ -1162,6 +1162,35 @@ maybe better to skip that additional level of abstraction.
 %   kernel implementations, refinement criteria or data initialisation.
 % \end{enumerate}
 
+
+\section{Algorithmic tuning}
+
+\subsection{Grid construction and load balancing time vs.~initialisation}
+
+Both the grid construction/load balancing and the initialisation intensively call
+\texttt{adjustSolution}.
+Both pass in the time $t=0$ when they invoke the routine.
+The grid construction requires properly initialised volumetric data to guide the adaptivity criterion, while the initialisation sets the initial condition.
+
+
+We found it appropriate to distinguish a grid initialisation feeding into the adaptivity from the initialisation if \texttt{adjustSolution} is very expensive.
+Obviously, the initial condition should inform the adaptivity, but it is sometimes sufficient to work with a rough approximation of the initial condition for the AMR.
+To realise such a behaviour, we rely on a context switch:
+We introduce a global variable which controls the accuracy of the initial condition.
+Initially, this accuracy is set to ``very low''.
+By the time we hit the grid initialisation, we toggle it to ``accurate''.
+
+
+\ExaHyPE\ implements a SPMD paradigm, i.e.~all ranks run through the same program phases.
+Hence, we can open the main file in the project directory (the main file is not overwritten if you rerun the Python toolkit), 
+and study the routine \texttt{step()}.
+Within \texttt{step()}, there's one large switch/case-statement which tells \ExaHyPE\ what to do for the individual program phases.
+Ensure that the accuracy is set low within the
+\texttt{repositories::StepRepository::Steps::CreateGrid} branches (there are several nuances of this creational phase).
+Ensure that the accuracy is increased to maximum within \texttt{repositories::StepRepository::Steps::InitGrid}.
+Don't alter it for the plotting of the actual time stepping.
+
+ 
 
 
 \section*{Links and further reading}
