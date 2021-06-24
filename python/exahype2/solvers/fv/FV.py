@@ -594,27 +594,60 @@ In-situ preprocessing:  """
   
   
   @abstractmethod
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+  def set_preprocess_reconstructed_patch_kernel(self,kernel, append_to_existing_kernel=True):
     """
   
     Most subclasses will redefine/overwrite this operation as they have
     to incorporate the kernel into their generated stuff
   
     """
-    self._preprocess_reconstructed_patch = kernel
+    if append_to_existing_kernel:
+      self._preprocess_reconstructed_patch += kernel
+    else:
+      self._preprocess_reconstructed_patch = kernel
     self.create_data_structures()
     self.create_action_sets()
 
 
   @abstractmethod
-  def set_postprocess_updated_patch_kernel(self,kernel):
+  def set_postprocess_updated_patch_kernel(self,kernel, append_to_existing_kernel=True):
     """
   
-    Most subclasses will redefine/overwrite this operation as they have
-    to incorporate the kernel into their generated stuff
-  
+    Define a postprocessing routine over the data
+    
+    The postprocessing kernel often looks similar to the following code:
+    
+  {    
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      enforceCCZ4constraints( originalPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  } 
+
+    
+    Within this kernel, you have at least the following variables available:
+    
+    - originalPatch This is a pointer to the whole data structure (one large
+        array). It is called originalPatch, but it already has been updated.
+        The patch is not supplemented by a halo layer.
+    - reconstructedPatch This is a pointer to the data snapshot before the 
+        actual update. This data is combined with the halo layer, i.e. if you
+        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
+        patch.
+    - marker
+    
+    Furthermore, you can use all the symbols (via Jinja2 syntax) from 
+    _init_dictionary_with_default_parameters().
+    
+    kernel: String
+      C++ code that holds the postprocessing kernel
+      
     """
-    self._postprocess_updated_patch = kernel
+    if append_to_existing_kernel:
+      self._postprocess_updated_patch += kernel
+    else:
+      self._postprocess_updated_patch = kernel
     self.create_data_structures()
     self.create_action_sets()
 
@@ -770,6 +803,11 @@ In-situ preprocessing:  """
 
       This one is called by all algorithmic steps before I invoke
       add_entries_to_text_replacement_dictionary().
+      
+      See the remarks on set_postprocess_updated_patch_kernel to understand why
+      we have to apply the (partially befilled) dictionary to create a new entry
+      for this very dictionary.
+      
 
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
@@ -780,9 +818,6 @@ In-situ preprocessing:  """
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     d["SOLVER_NUMBER"]                  = 22
-
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]  = self._preprocess_reconstructed_patch
-    d[ "POSTPROCESS_UPDATED_PATCH" ]       = self._postprocess_updated_patch
 
     if self._patch_overlap.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
@@ -802,3 +837,6 @@ In-situ preprocessing:  """
     d[ "INCLUDES"] = self.additional_includes
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
+
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]  = jinja2.Template(self._preprocess_reconstructed_patch).render( **d )
+    d[ "POSTPROCESS_UPDATED_PATCH" ]       = jinja2.Template(self._postprocess_updated_patch).render( **d )
