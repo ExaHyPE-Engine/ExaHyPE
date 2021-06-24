@@ -188,8 +188,6 @@ class EnclaveTaskingFV( FV ):
     # AMR and adjust cell have to be there always, i.e. also throughout 
     # the grid construction.
     #
-    self._action_set_adjust_cell.predicate                         = "not marker.isRefined() and " + self._primary_or_grid_construction_or_initialisation_sweep_predicate
-
     self._action_set_AMR.predicate                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
     self._action_set_AMR_commit_without_further_analysis.predicate = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
     self._action_set_handle_boundary.predicate                     = self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate

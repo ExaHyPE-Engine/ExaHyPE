@@ -79,16 +79,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setMaximumEigenvalue( double val
 
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt
+  bool                                         gridIsConstructred
 ) {
-  if (tarch::la::equals(t,0.0) ) {
-    {{INITIAL_CONDITIONS_IMPLEMENTATION}}
-  }
+  {{INITIAL_CONDITIONS_IMPLEMENTATION}}
 }
 {% endif %}
 

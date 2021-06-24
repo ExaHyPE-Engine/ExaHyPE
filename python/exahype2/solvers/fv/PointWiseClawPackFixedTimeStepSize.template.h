@@ -42,13 +42,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
 
 
     {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-    void adjustSolution(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+    void initialCondition(
+      double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt
-    )  override;
+      bool                                         gridIsConstructred
+    ) override;
     {% endif %}
 
 

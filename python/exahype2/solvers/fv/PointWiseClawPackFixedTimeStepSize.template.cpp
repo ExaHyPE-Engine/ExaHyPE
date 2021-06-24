@@ -26,21 +26,17 @@ tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLA
 
 
 {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::adjustSolution(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt
+  bool                                         gridIsConstructred
 ) {
-  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
-  if (tarch::la::equals(t,0.0) ) {
-    // initial conditions
-  }
-  else {
-    // other stuff
-  }
-  logTraceOut( "adjustSolution(...)" );
+  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
+
+  // @todo Implement your stuff here
+
+  logTraceOut( "initialCondition(...)" );
 }
 {% endif %}
 

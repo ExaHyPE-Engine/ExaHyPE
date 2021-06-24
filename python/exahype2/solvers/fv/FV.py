@@ -174,26 +174,26 @@ class AMROnPatch(AbstractFVActionSet):
 """
 
 
-class AdjustPatch(AbstractFVActionSet):
-  TemplateAdjustCell = """
+class InitialCondition(AbstractFVActionSet):
+  TemplateInitialCondition = """
   if ({{PREDICATE}}) { 
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      repositories::{{SOLVER_INSTANCE}}.adjustSolution(
+      repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
         ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
         ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize()
+        {{GRID_IS_CONSTRUCTED}}
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   } 
 """
   
-  def __init__(self,solver,predicate):
+  def __init__(self,solver,predicate,grid_is_constructed):
     AbstractFVActionSet.__init__(self,solver)
-    self.predicate = predicate
+    self.predicate           = predicate
+    self.grid_is_constructed = grid_is_constructed
 
 
   def get_body_of_operation(self,operation_name):
@@ -202,8 +202,9 @@ class AdjustPatch(AbstractFVActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ] = self.predicate      
-      result = jinja2.Template(self.TemplateAdjustCell).render(**d)
+      d[ "PREDICATE" ]           = self.predicate      
+      d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed      
+      result = jinja2.Template(self.TemplateInitialCondition).render(**d)
       pass 
     return result
 
@@ -493,7 +494,8 @@ In-situ preprocessing:  """
      action sets.
      
     """
-    self._action_set_adjust_cell                                                      = AdjustPatch(self, "not marker.isRefined()")
+    self._action_set_initial_conditions                                               = InitialCondition(self, "not marker.isRefined()", "true" )
+    self._action_set_initial_conditions_for_grid_construction                         = InitialCondition(self, "not marker.isRefined()", "false")
     self._action_set_AMR                                                              = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis                              = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
     self._action_set_handle_boundary                                                  = HandleBoundary(self, self._store_face_data_default_predicate() )
@@ -629,13 +631,13 @@ In-situ preprocessing:  """
     
     """
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-    step.add_action_set( self._action_set_adjust_cell ) 
+    step.add_action_set( self._action_set_initial_conditions ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
-    step.add_action_set( self._action_set_adjust_cell )
+    step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
     if evaluate_refinement_criterion:
       step.add_action_set( self._action_set_AMR )
     else:
@@ -702,7 +704,6 @@ In-situ preprocessing:  """
 
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_handle_boundary )
-    step.add_action_set( self._action_set_adjust_cell )
     step.add_action_set( self._action_set_update_cell )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
