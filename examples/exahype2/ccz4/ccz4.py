@@ -47,6 +47,7 @@ if __name__ == "__main__":
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("--add-tracer",               dest="add_tracer",      action="store_true", help="Add tracers" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -119,8 +120,6 @@ if __name__ == "__main__":
 
         self._solver_template_file_class_name = SuperClass.__name__
 
-        #pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
-
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
@@ -128,6 +127,16 @@ if __name__ == "__main__":
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
         )
+        
+        self.set_postprocess_updated_patch_kernel( """
+  {    
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      enforceCCZ4constraints( originalPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  } 
+""" )       
 
       def get_user_includes(self):
         """
@@ -569,24 +578,23 @@ if __name__ == "__main__":
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
-    #add tracer
-    tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
-    #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
-    project.add_action_set_to_timestepping(
-      exahype2.tracer.FiniteVolumesTracing(
-        tracer_particles,my_solver,
-        [17,18,19],[0,16],-1,
-        #time_stepping_kernel="toolbox::particles::LinearInterp",
-        time_stepping_kernel="toolbox::particles::StaticPosition",
-        observer_kernel="toolbox::particles::ObLinearInterp"
+    if args.add_tracer:
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
+       #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
+      project.add_action_set_to_timestepping(
+        exahype2.tracer.FiniteVolumesTracing(
+          tracer_particles,my_solver,
+          [17,18,19],[0,16],-1,
+          #time_stepping_kernel="toolbox::particles::LinearInterp",
+          time_stepping_kernel="toolbox::particles::StaticPosition",
+          observer_kernel="toolbox::particles::ObLinearInterp"
+        )
       )
-    )
-    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
-    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
-    project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesOnSphere( particle_set=tracer_particles,r=0.4,theta_s=30,phi_s=30, margin=0.1))
+      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
+      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
+      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesOnSphere( particle_set=tracer_particles,r=0.4,theta_s=30,phi_s=30, margin=0.1))
 
-    project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz_01"))
-
+      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz_01"))
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 

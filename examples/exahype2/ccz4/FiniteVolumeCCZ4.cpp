@@ -37,42 +37,44 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
 }
 
 
-void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
+void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt
+  bool                                         gridIsConstructred
 ) {
-  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
-  if (tarch::la::equals(t,0.0) ) {
-    if ( Scenario==0 ) {
-      examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
-    }
-    else if ( Scenario==1 ) {
-      examples::exahype2::ccz4::linearWave(Q, volumeX, t);
-    }
-    #ifdef IncludeTwoPunctures
-    else if ( Scenario==2 ) {
-      examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, t, _tp); //we interpolate for real IC here.
-    }
-    #endif
-    else {
-      logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
-    }
+  logTraceInWith3Arguments( "boundaryCondition(...)", volumeX, volumeH, gridIsConstructred );
 
-    for (int i=0; i<NumberOfUnknowns; i++) {
-      assertion3( std::isfinite(Q[i]), volumeX, t, i );
-    }
-
-    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-      Q[i] = 0.0;
-    }
+  if ( Scenario==0 ) {
+    examples::exahype2::ccz4::gaugeWave(Q, volumeX, 0);
   }
+  else if ( Scenario==1 ) {
+    examples::exahype2::ccz4::linearWave(Q, volumeX, 0);
+  }
+  #ifdef IncludeTwoPunctures
+  else if ( Scenario==2 ) {
+    examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp); //we interpolate for real IC here.
+  }
+  #endif
+  else {
+    logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
+  }
+
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    assertion3( std::isfinite(Q[i]), volumeX, t, i );
+  }
+
+  for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+
+
+/*
   else {
     enforceCCZ4constraints(Q);
   }
-  logTraceOut( "adjustSolution(...)" );
+*/
+  logTraceOut( "boundaryCondition(...)" );
 }
 
 

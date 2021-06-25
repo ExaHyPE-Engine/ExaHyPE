@@ -284,14 +284,14 @@ class GenericRusanovAdaptiveTimeStepSize( FV ):
     self.create_action_sets()
 
 
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
-    self._preprocess_reconstructed_patch = kernel
-    self.create_action_sets()
+  #def set_preprocess_reconstructed_patch_kernel(self,kernel):
+  #  self._preprocess_reconstructed_patch = kernel
+  #  self.create_action_sets()
 
 
-  def set_postprocess_updated_patch_kernel(self,kernel):
-    self._postprocess_updated_patch = kernel
-    self.create_action_sets()     
+  #def set_postprocess_updated_patch_kernel(self,kernel):
+  #  self._postprocess_updated_patch = kernel
+  # self.create_action_sets()     
     
       
   def get_user_includes(self):

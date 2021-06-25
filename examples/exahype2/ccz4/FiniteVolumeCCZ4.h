@@ -36,20 +36,12 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
   public:
     FiniteVolumeCCZ4();   
 
-    
-    //#if defined(OpenMPGPUOffloading)
-    //#pragma omp declare target
-    //#endif
-    void adjustSolution(
+    void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt
+      bool                                         gridIsConstructred
     )  override;
-    //#if defined(OpenMPGPUOffloading)
-    //#pragma omp end declare target
-    //#endif
     
     
     //#if defined(OpenMPGPUOffloading)

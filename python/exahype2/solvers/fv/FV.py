@@ -174,26 +174,26 @@ class AMROnPatch(AbstractFVActionSet):
 """
 
 
-class AdjustPatch(AbstractFVActionSet):
-  TemplateAdjustCell = """
+class InitialCondition(AbstractFVActionSet):
+  TemplateInitialCondition = """
   if ({{PREDICATE}}) { 
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      repositories::{{SOLVER_INSTANCE}}.adjustSolution(
+      repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
         ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
         ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize()
+        {{GRID_IS_CONSTRUCTED}}
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   } 
 """
   
-  def __init__(self,solver,predicate):
+  def __init__(self,solver,predicate,grid_is_constructed):
     AbstractFVActionSet.__init__(self,solver)
-    self.predicate = predicate
+    self.predicate           = predicate
+    self.grid_is_constructed = grid_is_constructed
 
 
   def get_body_of_operation(self,operation_name):
@@ -202,8 +202,9 @@ class AdjustPatch(AbstractFVActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ] = self.predicate      
-      result = jinja2.Template(self.TemplateAdjustCell).render(**d)
+      d[ "PREDICATE" ]           = self.predicate      
+      d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed      
+      result = jinja2.Template(self.TemplateInitialCondition).render(**d)
       pass 
     return result
 
@@ -493,7 +494,8 @@ In-situ preprocessing:  """
      action sets.
      
     """
-    self._action_set_adjust_cell                                                      = AdjustPatch(self, "not marker.isRefined()")
+    self._action_set_initial_conditions                                               = InitialCondition(self, "not marker.isRefined()", "true" )
+    self._action_set_initial_conditions_for_grid_construction                         = InitialCondition(self, "not marker.isRefined()", "false")
     self._action_set_AMR                                                              = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis                              = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
     self._action_set_handle_boundary                                                  = HandleBoundary(self, self._store_face_data_default_predicate() )
@@ -592,27 +594,60 @@ In-situ preprocessing:  """
   
   
   @abstractmethod
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+  def set_preprocess_reconstructed_patch_kernel(self,kernel, append_to_existing_kernel=True):
     """
   
     Most subclasses will redefine/overwrite this operation as they have
     to incorporate the kernel into their generated stuff
   
     """
-    self._preprocess_reconstructed_patch = kernel
+    if append_to_existing_kernel:
+      self._preprocess_reconstructed_patch += kernel
+    else:
+      self._preprocess_reconstructed_patch = kernel
     self.create_data_structures()
     self.create_action_sets()
 
 
   @abstractmethod
-  def set_postprocess_updated_patch_kernel(self,kernel):
+  def set_postprocess_updated_patch_kernel(self,kernel, append_to_existing_kernel=True):
     """
   
-    Most subclasses will redefine/overwrite this operation as they have
-    to incorporate the kernel into their generated stuff
-  
+    Define a postprocessing routine over the data
+    
+    The postprocessing kernel often looks similar to the following code:
+    
+  {    
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      enforceCCZ4constraints( originalPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  } 
+
+    
+    Within this kernel, you have at least the following variables available:
+    
+    - originalPatch This is a pointer to the whole data structure (one large
+        array). It is called originalPatch, but it already has been updated.
+        The patch is not supplemented by a halo layer.
+    - reconstructedPatch This is a pointer to the data snapshot before the 
+        actual update. This data is combined with the halo layer, i.e. if you
+        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
+        patch.
+    - marker
+    
+    Furthermore, you can use all the symbols (via Jinja2 syntax) from 
+    _init_dictionary_with_default_parameters().
+    
+    kernel: String
+      C++ code that holds the postprocessing kernel
+      
     """
-    self._postprocess_updated_patch = kernel
+    if append_to_existing_kernel:
+      self._postprocess_updated_patch += kernel
+    else:
+      self._postprocess_updated_patch = kernel
     self.create_data_structures()
     self.create_action_sets()
 
@@ -629,13 +664,13 @@ In-situ preprocessing:  """
     
     """
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-    step.add_action_set( self._action_set_adjust_cell ) 
+    step.add_action_set( self._action_set_initial_conditions ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
-    step.add_action_set( self._action_set_adjust_cell )
+    step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
     if evaluate_refinement_criterion:
       step.add_action_set( self._action_set_AMR )
     else:
@@ -702,7 +737,6 @@ In-situ preprocessing:  """
 
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_handle_boundary )
-    step.add_action_set( self._action_set_adjust_cell )
     step.add_action_set( self._action_set_update_cell )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
@@ -769,6 +803,11 @@ In-situ preprocessing:  """
 
       This one is called by all algorithmic steps before I invoke
       add_entries_to_text_replacement_dictionary().
+      
+      See the remarks on set_postprocess_updated_patch_kernel to understand why
+      we have to apply the (partially befilled) dictionary to create a new entry
+      for this very dictionary.
+      
 
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
@@ -779,9 +818,6 @@ In-situ preprocessing:  """
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     d["SOLVER_NUMBER"]                  = 22
-
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]  = self._preprocess_reconstructed_patch
-    d[ "POSTPROCESS_UPDATED_PATCH" ]       = self._postprocess_updated_patch
 
     if self._patch_overlap.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
@@ -801,3 +837,6 @@ In-situ preprocessing:  """
     d[ "INCLUDES"] = self.additional_includes
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
+
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]  = jinja2.Template(self._preprocess_reconstructed_patch).render( **d )
+    d[ "POSTPROCESS_UPDATED_PATCH" ]       = jinja2.Template(self._postprocess_updated_patch).render( **d )
