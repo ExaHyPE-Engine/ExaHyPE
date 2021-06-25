@@ -19,7 +19,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
-      originalPatch,
+      targetPatch,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -128,7 +128,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       reconstructedPatch,
-      originalPatch
+      targetPatch
     );
     
     {{POSTPROCESS_UPDATED_PATCH}}

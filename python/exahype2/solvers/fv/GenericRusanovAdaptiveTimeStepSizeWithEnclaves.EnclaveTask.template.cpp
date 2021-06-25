@@ -1,5 +1,6 @@
 #include "{{CLASSNAME}}.h"
 
+// user includes
 {{INCLUDES}}
 
 #include "exahype2/fv/Generic.h"
@@ -187,12 +188,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
-    [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
+    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
           {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
-            originalPatch,
+            targetPatch,
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
             {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -301,7 +302,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
             reconstructedPatch,
-            originalPatch
+            targetPatch
           );
 
           {{POSTPROCESS_UPDATED_PATCH}}
@@ -324,7 +325,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
             {{NUMBER_OF_VOLUMES_PER_AXIS}},
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            originalPatch
+            targetPatch
           );
 
           repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
