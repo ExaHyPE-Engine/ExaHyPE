@@ -153,7 +153,7 @@ void examples::exahype2::swe::TopologyParser::parsedisplacementfile(){
           }
       }           
       else{
-        std::cout << "Warning: Undefined entry in topology file!"; 
+        std::cout << "Warning: Undefined entry in displacement file!"; 
       } 
     }
 
@@ -177,7 +177,7 @@ double mapCoordinate(double c_in, double dc_in, double clower_in, double dc_out,
 double examples::exahype2::swe::TopologyParser::sampledisplacement(double x, double y, double t){
 
   double disp_x = mapCoordinate(x, this->cellsize, this->xlowerleft, this->dispdx, this->dispxlowerleft);
-  double disp_y = mapCoordinate(y, this->cellsize, this->ylowerleft, this->dispdy, this->dispylowerleft);
+  double disp_y = mapCoordinate(1-y, this->cellsize, this->ylowerleft, this->dispdy, this->dispylowerleft);
 
   if(disp_x < this->dispxlowerleft || disp_y < this->dispylowerleft || 
      disp_x > this->dispxlowerleft + this->dispmx*this->dispdx ||
@@ -185,7 +185,7 @@ double examples::exahype2::swe::TopologyParser::sampledisplacement(double x, dou
     return 0.0;
   } 
 
-  int index =  floor((t - 1)*this->dispmx*this->dispmy) + floor((1.0-disp_y)*this->dispmx)*this->dispmy + floor(disp_x*this->dispmy);
+  int index =  floor((t - 1)*this->dispmx*this->dispmy) + floor(disp_y*this->dispmx)*this->dispmy + floor(disp_x*this->dispmy);
 	
   float z = this->displacement.at(index);
 
