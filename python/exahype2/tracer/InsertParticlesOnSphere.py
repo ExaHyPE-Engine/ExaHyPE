@@ -11,7 +11,7 @@ import dastgen2.attributes.Integer
 import numpy as np
 
 class InsertParticlesOnSphere(ActionSet):
-  def __init__(self, particle_set, r=20, theta_s = 3, phi_s = 3 ):
+  def __init__(self, particle_set, r=20, theta_s = 3, phi_s = 3, margin=0.1 ):
     """
 =
 
@@ -23,6 +23,9 @@ class InsertParticlesOnSphere(ActionSet):
     theta_s, phi_s
      number of sample points along angular coordinates on the sphere
 
+    margin
+     the angular distance between the northest/southest sample point and the pole
+
     """
 
     self.d = {}
@@ -31,14 +34,15 @@ class InsertParticlesOnSphere(ActionSet):
     self.d[ "R" ]                        = r
     self.d[ "THETAS" ]                   = theta_s
     self.d[ "PHIS" ]                     = phi_s
+    self.d[ "MARGIN" ]                   = margin
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   int indice={{THETAS}}*{{PHIS}};
   double Pi=3.14159265358979;
-  double thata_interval=(Pi-0.2)/({{THETAS}}-1);
+  double thata_interval=(Pi-2*{{MARGIN}})/({{THETAS}}-1);
   double phi_interval=(2*Pi)/{{PHIS}};
   double theta_s[{{THETAS}}], phi_s[{{PHIS}}];
-  for (int i=0;i<{{THETAS}};i++) {theta_s[i] =0.1+i*thata_interval;}
+  for (int i=0;i<{{THETAS}};i++) {theta_s[i] ={{MARGIN}}+i*thata_interval;}
   for (int i=0;i<{{PHIS}};i++)   {phi_s[i]   =i*phi_interval;}
   
   double coor_s[indice][3];
@@ -65,7 +69,6 @@ class InsertParticlesOnSphere(ActionSet):
 	    p->setCutOffRadius(0.0); 
 	    _particleNumberOnThisTree++;
 	    fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p );
-	    coor_s[i][0]= 99999; coor_s[i][1]= 99999; coor_s[i][2]= 99999;
 	  }
 	}
 """)

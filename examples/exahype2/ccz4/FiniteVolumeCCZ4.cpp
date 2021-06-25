@@ -219,7 +219,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
   double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
   radius=pow(radius,0.5);
-  if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
+  if (radius<5) {result=::exahype2::RefinementCommand::Refine;}
   return result;
 }
 
