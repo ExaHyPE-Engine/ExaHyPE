@@ -385,8 +385,6 @@ class FV(object):
     self._preprocess_reconstructed_patch      = ""
     self._postprocess_updated_patch           = ""
     
-    self.additional_includes   = ""
- 
     self._patch_size           = patch_size  
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
@@ -620,7 +618,7 @@ In-situ preprocessing:  """
   {    
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      enforceCCZ4constraints( originalPatch+index );
+      enforceCCZ4constraints( targetPatch+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   } 
@@ -628,8 +626,8 @@ In-situ preprocessing:  """
     
     Within this kernel, you have at least the following variables available:
     
-    - originalPatch This is a pointer to the whole data structure (one large
-        array). It is called originalPatch, but it already has been updated.
+    - targetPatch This is a pointer to the whole data structure (one large
+        array). 
         The patch is not supplemented by a halo layer.
     - reconstructedPatch This is a pointer to the data snapshot before the 
         actual update. This data is combined with the halo layer, i.e. if you
@@ -834,7 +832,7 @@ In-situ preprocessing:  """
     d[ "MAX_H"] = self._max_h
     d[ "MIN_H"] = self._min_h
 
-    d[ "INCLUDES"] = self.additional_includes
+    d[ "INCLUDES"] = self.get_user_includes()
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
 

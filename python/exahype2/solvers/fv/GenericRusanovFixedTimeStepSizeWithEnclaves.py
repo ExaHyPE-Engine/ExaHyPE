@@ -36,7 +36,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
-      originalPatch,
+      targetPatch,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -145,19 +145,19 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       reconstructedPatch,
-      originalPatch
+      targetPatch
     );
     
     {{FREE_SKELETON_MEMORY}}
     {{POSTPROCESS_UPDATED_PATCH}}
   }
   else { // is an enclave cell
-    auto perCellFunctor = [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
+    auto perCellFunctor = [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
       {{PREPROCESS_RECONSTRUCTED_PATCH}}
       
       ::exahype2::fv::copyPatch(
         reconstructedPatch,
-        originalPatch,
+        targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -266,7 +266,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         reconstructedPatch,
-        originalPatch
+        targetPatch
       );
       {{POSTPROCESS_UPDATED_PATCH}}
     };

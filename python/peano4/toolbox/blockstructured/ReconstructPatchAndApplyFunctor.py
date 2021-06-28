@@ -66,7 +66,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   - The following C++ variables are defined:
   
     reconstructedPatch 
-    originalPatch
+    targetPatch
     
     Both are plain double pointers.
   
@@ -265,7 +265,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       logTraceOut( "touchCellFirstTime(...)::loopOverFace" );
     }}
 
-    double* originalPatch = {CELL_ACCESSOR}.value;
+    double* targetPatch = {CELL_ACCESSOR}.value;
     {CELL_FUNCTOR_IMPLEMENTATION}
     
     {DESTROY_RECONSTRUCTED_PATCH}

@@ -46,7 +46,7 @@ class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       reconstructedPatch,
-      originalPatch
+      targetPatch
     );
   }
   else if ( 
@@ -107,7 +107,7 @@ class UpdateCellInPrimarySweep(ReconstructPatchAndApplyFunctor):
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       reconstructedPatch,
-      originalPatch
+      targetPatch
     );
     
     tarch::freeMemory( reconstructedPatch, tarch::MemoryLocation::Heap );

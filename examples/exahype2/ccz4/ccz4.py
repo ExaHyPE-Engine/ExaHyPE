@@ -97,6 +97,11 @@ if __name__ == "__main__":
 
         number_of_unknowns = sum(unknowns.values())
 
+        self._my_user_includes = """
+#include "../CCZ4Kernels.h"
+#include "exahype2/PatchUtils.h"
+"""
+
         if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
            SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator or \
            SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
@@ -132,20 +137,18 @@ if __name__ == "__main__":
   {    
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      enforceCCZ4constraints( originalPatch+index );
+      examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
   } 
-""" )       
+""" )   
+        
 
       def get_user_includes(self):
         """
          We take this routine to add a few additional include statements.
         """
-        return SuperClass.get_user_includes(self) + """
-    #include "../CCZ4Kernels.h"
-    #include "exahype2/PatchUtils.h"
-    """
+        return SuperClass.get_user_includes(self) + self._my_user_includes
 
 
       def add_constraint_RefinementFlag_verification(self):
@@ -164,11 +167,6 @@ if __name__ == "__main__":
 
         """
         self._auxiliary_variables = 9
-
-        self.additional_includes += """
-    #include "../CCZ4Kernels.h"
-    """
-
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
@@ -287,7 +285,7 @@ if __name__ == "__main__":
         """
         self._auxiliary_variables = 9
         
-        self.additional_includes += """
+        self._my_user_includes += """
 	#include "../libtwopunctures/TP_PunctureTracker.h"
 	#include "../CCZ4Kernels.h"
 	#include <fstream>

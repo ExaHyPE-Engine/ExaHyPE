@@ -219,7 +219,7 @@ class EnclaveTaskingFV( FV ):
 #include "../repositories/SolverRepository.h"
 """      
     )
-    
+
     
   def set_implementation(self,
     flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
@@ -281,6 +281,7 @@ class EnclaveTaskingFV( FV ):
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
+#include "../repositories/SolverRepository.h"
 """    
 
 
