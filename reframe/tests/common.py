@@ -3,18 +3,18 @@ import os
 import reframe.utility.sanity as sn
 import reframe as rfm
 
-def setup(test, num_tasks, num_cpus_per_task=1):
+def setup(test, git_rev, num_tasks, num_cpus_per_task=1):
     test.time_limit = '2d'
     test.num_tasks = num_tasks
     test.num_cpus_per_task = num_cpus_per_task
 
     test.sourcesdir = None
-    git_rev = os.environ['GIT_REVISION']
+    test.git_rev = git_rev
     test.prebuild_cmds = [
         'rm -rf Peano',
         'git clone https://gitlab.lrz.de/hpcsoftware/Peano.git',
         'pushd Peano',
-        f'git checkout {git_rev}',
+        f'git checkout {test.git_rev}',
         'git clean -x -f -d',
         'libtoolize; aclocal; autoconf; autoheader',
         'cp src/config.h.in .',

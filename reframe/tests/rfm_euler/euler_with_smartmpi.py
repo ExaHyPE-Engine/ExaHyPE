@@ -41,7 +41,7 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         # Add smartmpi to the prebuild commands:
         self.prebuild_cmds = [
                 'rm -rf smartmpi',
-                'git clone https://gitlab.lrz.de/hpcsoftware/smartmpi.git',
+                'git clone git@gitlab.lrz.de:hpcsoftware/smartmpi.git',
                 'pushd smartmpi',
                 'git checkout master; git pull',
                 'libtoolize; aclocal; autoconf; autoheader',
@@ -84,6 +84,12 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         ]
         
         self.executable = './peano4'
+
+
+    @run_before("run")
+    def set_p1p2_on_DINE(self):
+        if self.current_system.name == "dine":
+            self.job.launcher.options = ['--mca btl_tcp_if_include p1p2 -x UCX_NET_DEVICES=mlx5_1:1']
 
 
     @run_after('run')
