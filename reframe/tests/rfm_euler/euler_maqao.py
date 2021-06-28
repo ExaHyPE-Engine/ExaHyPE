@@ -59,10 +59,15 @@ class Euler_maqao(rfm.RegressionTest):
         ]
         
         self.executable = "maqao"
+        
+        interface = ""
+        if self.current_system.name == "dine":
+            interface = "--mca btl_tcp_if_include p1p2 -x UCX_NET_DEVICES=mlx5_1:1"
+        
         self.executable_opts = [
             'oneview',
             '--create-report=one',
-            f'--mpi-command="mpirun -np {self.num_tasks} --mca btl_tcp_if_include p1p2 -x UCX_NET_DEVICES=mlx5_1:1"',
+            f'--mpi-command="mpirun -np {self.num_tasks} {interface}"',
             f'--omp-num-threads={self.num_cpus_per_task}',
             '-- ./peano4',
         ]

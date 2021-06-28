@@ -86,6 +86,12 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         self.executable = './peano4'
 
 
+    @run_before("run")
+    def set_p1p2_on_DINE(self):
+        if self.current_system.name == "dine":
+            self.job.launcher.options = ['--mca btl_tcp_if_include p1p2 -x UCX_NET_DEVICES=mlx5_1:1']
+
+
     @run_after('run')
     def check_patch_files(self):
         for f in os.listdir(os.path.join(self.stagedir, self.test_dir)):

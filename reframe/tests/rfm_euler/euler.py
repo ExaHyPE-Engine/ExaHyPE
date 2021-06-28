@@ -60,6 +60,11 @@ class Euler_CI(rfm.RegressionTest):
         ]
 
         self.executable = "./peano4"
+    
+    @run_before("run")
+    def set_p1p2_on_DINE(self):
+        if self.current_system.name == "dine":
+            self.job.launcher.options = ['--mca btl_tcp_if_include p1p2 -x UCX_NET_DEVICES=mlx5_1:1']
 
     """
     Simple sanity check for NaNs in patch files
