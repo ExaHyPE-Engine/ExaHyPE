@@ -38,3 +38,30 @@ ${REFRAME_ROOT:=~}/reframe/bin/reframe \
     --output $OUTPUT_DIR \
     --report-file=euler.log
 
+
+# If one of our examples takes significantly longer to run than
+# previously. ReFrame will make a 'doprofilejob_euler' file in this
+# file's directory. If it exists we will immediately delete it 
+# (so the check works for future runs of this example) and rerun an
+# Euler test with profiler.
+
+FILE=doprofilejob_euler
+if test -f "$FILE"; then
+    rm "$FILE"
+    echo "Following up with profiler for Euler"
+    ${REFRAME_ROOT:=~}/reframe/bin/reframe \
+        --skip-sanity-check \
+        --max-retries=0 \
+        --exec-policy async \
+        --stage $STAGE_DIR \
+        --purge-env \
+        -C $config \
+        -c euler_maqao.py \
+        -r \
+        -v \
+        --performance-report \
+        -n \
+        'Euler' \
+        --output $OUTPUT_DIR \
+        --report-file=euler_maqao.log
+fi

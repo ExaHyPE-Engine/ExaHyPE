@@ -23,6 +23,15 @@ site_configuration = {
                     'environs': ['amd'],
                     'max_jobs': 100,
                 },
+                {
+                    'name': 'local_launcher_profiler_jobs',
+                    'descr': 'local launcher for maqao jobs',
+                    'scheduler': 'slurm',
+                    'launcher': 'local',
+                    'access': ['-p bluefield1', '-A durham'],
+                    'environs': ['amd'],
+                    'max_jobs': 100,
+                },
             ]
         }
     ],
@@ -30,7 +39,8 @@ site_configuration = {
         {
             'modules': ['gnu_comp/9.3.0',
                         'python/3.6.5',
-                        'openmpi/4.0.3'],
+                        'openmpi/4.0.3',
+                        'maqao/2.14.1'],
              'name': 'amd',
              'cc': '',
              'cxx': 'g++',

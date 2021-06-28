@@ -1,5 +1,6 @@
 import os
 from git import Repo
+import touch
 
 import reframe as rfm
 import reframe.core.launchers.mpi
@@ -85,10 +86,10 @@ class Euler_CI(rfm.RegressionTest):
     @run_after("run")
     def compare_with_previous_performance(self):
         repo = Repo(search_parent_directories=True)
-
         for commit in list(repo.iter_commits(max_count=100)):
             hexsha = commit.hexsha
-
+            
+            # We must not compare with this same commit:
             if hexsha == self.git_rev:
                 continue
 
@@ -97,37 +98,30 @@ class Euler_CI(rfm.RegressionTest):
                     str(self.outputdir),
                     "..",
                     dir_name,
-                    "rfm_Euler_CI_{self.git_rev}_job.out",
+                    f"rfm_Euler_CI_{hexsha}_job.out",
                 )
+                
                 if hexsha in dir_name and os.path.exists(target_file):
                     print(f"Comparing run times of {self.git_rev} and {hexsha}")
 
-                    time_prev_commit = getTimeStepping(target_file)
+                    time_prev_commit = float(getTimeStepping(target_file))
+                    print("Time stepping for previous commit: ", time_prev_commit)
 
-                    time_this_commit = getTimeStepping(
+                    time_this_commit = float(getTimeStepping(
                         os.path.join(str(self.stagedir), str(self.stdout))
-                    )
-
-                    if time_prev_commit < (0.9 * time_this_commit):
-                        # Set var that triggers follow up with profiler
-                        os.environ["PERF_DROP"] = "True"
+                    ))
+                    print("Time stepping for this commit: ", time_this_commit)
+                    
+                    if (time_prev_commit * 1.1) < time_this_commit:
+                        # Create file that triggers follow up with profiler
+                        # An env variable was tried here, however, cannot be
+                        # read from parent process
+                        touch.touch("doprofilejob_euler")
                         # Fail the test:
-                        sn.evaluate(
-                            sn.assert_lt(
-                                time_prev_commit,
-                                (0.9 * time_this_commit),
-                                "Performance degredation has been detected",
-                            )
-                        )
-
-                    # if performance increases suspiciously we fail the test:
-                    sn.evaluate(
-                        sn.assert_gt(
-                            time_prev_commit,
-                            (1.1 * time_this_commit),
-                            "Performance increase is cause for suspicion",
-                        )
-                    )
+                        sn.evaluate(assert_true(False, "Performance degredation has been detected"))
+                    
+                    if (time_prev_commit * 0.9) > time_this_commit:
+                        sn.evaluate(assert_true(False, "Performance increase is cause for suspicion"))
 
                     return
 
