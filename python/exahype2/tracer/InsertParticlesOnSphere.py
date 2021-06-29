@@ -37,7 +37,7 @@ class InsertParticlesOnSphere(ActionSet):
     self.d[ "MARGIN" ]                   = margin
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
-  int indice={{THETAS}}*{{PHIS}};
+  /*int indice={{THETAS}}*{{PHIS}};
   double Pi=3.14159265358979;
   double thata_interval=(Pi-2*{{MARGIN}})/({{THETAS}}-1);
   double phi_interval=(2*Pi)/{{PHIS}};
@@ -51,8 +51,29 @@ class InsertParticlesOnSphere(ActionSet):
     coor_s[i*{{PHIS}}+j][0]={{R}}*cos(phi_s[j])*sin(theta_s[i]);
     coor_s[i*{{PHIS}}+j][1]={{R}}*sin(phi_s[j])*sin(theta_s[i]);
     coor_s[i*{{PHIS}}+j][2]={{R}}*cos(theta_s[i]);
+  }*/
+
+  std::fstream fin;
+  //fin.open("t-design.dat",std::ios::in);
+  fin.open("Gauss_Legendre_quadrature.dat",std::ios::in);
+  std::string line;
+  int indice=0;
+  double coor[3];    
+  std::vector<std::vector<double>> coor_s;
+  double r={{R}};
+  while ( std::getline(fin,line) ){
+    line.erase(0,1);
+    CoorReadIn(coor, line);
+    std::vector<double> coo={r*coor[0],r*coor[1],r*coor[2]};
+    coor_s.push_back(coo);
+    //std::cout << coor[0]+1<<"    " <<coor[1]<<coor[2] <<std::endl;
+    indice++;
   }
-      
+  //std::cout<<coor_s[30][0]<< " " << coor_s[890][0] <<std::endl;
+  fin.close();
+ 
+  //std::exit(0);
+
   for (int i=0;i<indice;i++){
 	  if ( not marker.isRefined() and 
 	  (marker.x()(0)-marker.h()(0)/2.0) < coor_s[i][0] and (marker.x()(0)+marker.h()(0)/2.0) > coor_s[i][0] and
@@ -98,6 +119,10 @@ class InsertParticlesOnSphere(ActionSet):
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/ParticleFactory.h"
+#include <fstream>
+#include <string>
+#include <vector>
+#include "../libtwopunctures/TP_PunctureTracker.h"
 """ )
     return result.render(**self.d)
 
