@@ -10,9 +10,15 @@
 
 #include "peano4/utils/Loop.h"
 
+#include "tarch/multicore/SmartScheduler.h"
+
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskId(
+  tarch::multicore::registerSmartMPITask<{{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+    peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
+  )
+);
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
@@ -331,5 +337,61 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
           repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
         }
   )
+  #ifdef UseSmartMPI
+  , smartmpi::Task(_enclaveTaskId)
+  #endif
 {}
 
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
+  #ifdef UseSmartMPI
+  return true;
+  #else
+  return false;
+  #endif
+}
+
+
+#ifdef UseSmartMPI
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
+  run();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) {
+  assertionMsg("have to implement this", false);
+//  int numberOfInputValues =
+/*
+  _numberOfResultValues(numberOfResultValues),
+  MPI_Send( _inputValues )
+
+
+  int MPI_Send(const void *buf, int count, MPI_Datatype datatype, int dest, int tag,
+               MPI_Comm comm)
+  _inputValues,_outputValues,_marker,_t,_dt
+*/
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) {
+  assertionMsg("have to implement this", false);
+
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
+  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+
+  _functor(_inputValues,_outputValues,_marker,_t,_dt);
+  tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
+
+  assertionMsg("have to implement this", false);
+
+}
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) {
+  assertionMsg("some lines here are not implemented", false);
+
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues);
+
+}
+#endif

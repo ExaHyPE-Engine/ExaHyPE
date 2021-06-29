@@ -25,6 +25,11 @@
 #include <vector>
 
 
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -42,7 +47,11 @@
  *
  * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
  */
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
+#ifdef UseSmartMPI
+, public smartmpi::Task
+#endif
+{
   private:
     static tarch::logging::Log  _log;
     static int                  _enclaveTaskId;
@@ -62,6 +71,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
       double                                      dt,
       double* __restrict__                        reconstructedPatch
     );
+
+    bool isSmartMPITask() const override;
+#ifdef UseSmartMPI
+/**
+ * Default is false
+ */
+
+void runLocally() override;
+void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
+void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
+void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
+#endif
 };
 
 

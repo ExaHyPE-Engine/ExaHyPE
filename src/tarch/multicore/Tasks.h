@@ -6,10 +6,6 @@
 
 #include "multicore.h"
 
-#ifdef UseSmartMPI
-#include "smartmpi.h"
-#endif
-
 
 #include <functional>
 #include <vector>
@@ -84,11 +80,7 @@ namespace tarch {
     /**
      * Abstract super class for a job.
      */
-    class Task
-    #ifdef UseSmartMPI
-    : public smartmpi::Task
-    #endif
-    {
+    class Task {
       protected:
         const int   _id;
         const int   _taskType;
@@ -155,18 +147,11 @@ namespace tarch {
         virtual bool split(std::list<Task*>& producedTasks);
         virtual bool canSplit() const;
 
-        #ifdef UseSmartMPI
         /**
-         * Default is false
+         * If this attributes holds (default is false), then it is safe for
+         * the scheduler to cast the task object into a SmartMPI task.
          */
-        virtual bool canMigrate() const;
-
-        void runLocally() override;
-        void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
-        void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
-        void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
-        void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
-        #endif
+        virtual bool isSmartMPITask() const;
     };
 
 
@@ -239,12 +224,28 @@ namespace tarch {
     //bool processTask(int number);
 
     /**
-     * Kick out a new job. The job's type has to be set properly: It
-     * has to be clear whether the job is a job or even a task, i.e. a
-     * special type of job. See JobType.
+     * Spawns a single task in a non-blocking fashion
      *
      * Ownership goes over to Peano's job namespace, i.e. you don't have
      * to delete the pointer.
+     *
+     * <h2> Behaviour </h2>
+     *
+     * There are two different types of behaviour, depending on your runtime's state:
+     * If the taskProgressionStrategy is equal to TaskProgressionStrategy::MapOntoNativeTask,
+     * the thin layer forwards the task straightaway to the language-specific back-end. The
+     * task thus is mapped 1:1 to OpenMP, e.g. Otherwise, the routine does take the task and
+     * enqueues is the local queue nonblockingTasks.
+     *
+     *
+     * <h2> SmartMPI </h2>
+     *
+     * If you compile with SmartMPI, this is the one and only point where the control flow
+     * diverges: If a task is smart, the routine takes the task and forwards it to SmartMPI.
+     *
+     *
+     * @see tarch::multicore::spawnAndWait()
+     * @see processPendingTasks(int)
      */
     void spawnTask(Task*  job);
 
