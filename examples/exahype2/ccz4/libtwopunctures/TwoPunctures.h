@@ -56,6 +56,7 @@ public:
 	int nvar, n1, n2, n3;
 	derivs u, v, cf_v;
 	int antisymmetric_lapse, averaged_lapse, pmn_lapse, brownsville_lapse;
+        double * _d0contig __attribute__ ((aligned (32)));
 	bool runned; ///< an internal check
 	
 	/* Consructor */
@@ -98,6 +99,8 @@ public:
 		double y, double z);
 	void SpecCoef (int n1, int n2, int n3, int ivar, double *v, double *cf);
 	double PunctEvalAtArbitPositionFast (double *v, int ivar, double A, double B, double phi,
+		int nvar, int n1, int n2, int n3);
+	double PunctEvalAtArbitPositionFaster (double A, double B, double phi,
 		int nvar, int n1, int n2, int n3);
 	double PunctIntPolAtArbitPositionFast (int ivar, int nvar, int n1,
 		int n2, int n3, derivs v, double x,
