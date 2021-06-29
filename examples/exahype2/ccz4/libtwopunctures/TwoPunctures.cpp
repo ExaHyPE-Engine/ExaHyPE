@@ -309,6 +309,14 @@ TwoPunctures::Run ()
 
     SpecCoef(n1, n2, n3, 0, v.d0, cf_v.d0);
 
+    // TODO destructor
+    // HS copy d0 for contiguous access --- note this is valied for nvar=1
+    _d0contig = Utilities::dvector(0,n1*n2*n3);
+    int ctr(0);
+    for (int i = 0; i < n1; i++)
+    for (int j = 0; j < n2; j++)
+    for (int k = 0; k < n3; k++) _d0contig[ctr++] =  cf_v.d0[i + n1 * (j + n2 * k)];
+
     TP_INFO (
 		  "The two puncture masses are mp=%.17g and mm=%.17g",
                 (double) mp, (double) mm);
