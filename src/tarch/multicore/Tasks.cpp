@@ -452,19 +452,6 @@ bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
 }
 
 
-
-/**
-* Process a few tasks from my backlog of tasks
-*
-* This routine loops through the pending tasks until either maxTasks have been
-* processed (we decrement this counter by one per loop iteration) or no tasks
-* are left anymore. In the latter case, we set maxTasks to 0 and thus terminate
-* the loop.
-*
-* Both the way we pick tasks from the queue and extract them from there and the
-* way we process the tasks depends on the current state of our task processing
-* strategy. This is encoded via the enum taskProgressionStrategy.
-*/
 bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
   assertion(maxTasks>=0);
 
@@ -475,7 +462,6 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
     int handledTasks = 0;
     switch (taskProgressionStrategy) {
       case TaskProgressionStrategy::MapOntoNativeTask:
-        assertion(fifo);
         handledTasks = mapPendingTasksOntoNativeTasks(maxTasks);
         break;
       case TaskProgressionStrategy::BufferInQueue:

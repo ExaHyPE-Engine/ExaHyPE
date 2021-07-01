@@ -73,17 +73,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     );
 
     bool isSmartMPITask() const override;
-#ifdef UseSmartMPI
-/**
- * Default is false
- */
 
-void runLocally() override;
-void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
-void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
-void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
-void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
-#endif
+    #ifdef UseSmartMPI
+    void runLocally() override;
+    void moveTask(int rank, int tag, MPI_Comm communicator) override;
+    void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+    #endif
 };
 
 

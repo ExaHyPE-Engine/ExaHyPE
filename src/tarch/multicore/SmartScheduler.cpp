@@ -26,4 +26,12 @@ void tarch::multicore::SmartScheduler::update( const smartmpi::GlobalStatistics&
 }
 
 
+int tarch::multicore::registerSmartMPITask(int taskTypeNumber, smartmpi::Receiver functor) {
+  smartmpi::registerReceiver(
+    taskTypeNumber,
+    functor
+  );
+  return taskTypeNumber;
+}
+
 #endif
