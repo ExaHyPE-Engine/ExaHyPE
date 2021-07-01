@@ -6,6 +6,8 @@
 #include "topology/topologies.h"
 #endif
 
+#include "SmartScheduler.h"
+
 
 #ifndef SharedMemoryParallelisation
 
@@ -27,7 +29,8 @@ void tarch::multicore::initSmartMPI() {
   smartmpi::topology::Topology* smartMPITopology = new MyTopology(
     tarch::mpi::Rank::getInstance().getCommunicator()
   );
-  smartmpi::init( smartMPITopology );
+  smartmpi::init( smartMPITopology, "ForwardTasksToOneRank" );
+  smartmpi::appendScheduler( new SmartScheduler() );
   tarch::mpi::Rank::getInstance().setCommunicator( smartMPITopology->computeNodeOrSmartServerCommunicator );
   #endif
 }
