@@ -13,6 +13,10 @@
 
 #include "exahype2/fv/Generic.h"
 
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
+
 
 tarch::logging::Log
 exahype2::EnclaveBookkeeping::_log( "exahype2::EnclaveBookkeeping" );
@@ -65,6 +69,10 @@ std::pair<int, double*>  exahype2::EnclaveBookkeeping::waitForTaskToTerminateAnd
     ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
 
     bool processedTask = ::tarch::multicore::processPendingTasks(1,false);
+
+    #ifdef UseSmartMPI
+    smartmpi::tock();
+    #endif
 
     if (not processedTask) {
       tarch::multicore::yield();
