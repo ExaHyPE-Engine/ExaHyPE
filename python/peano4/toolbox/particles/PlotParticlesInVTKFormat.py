@@ -6,10 +6,9 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
-
-
-
 class PlotParticlesInVTKFormat(ActionSet):
+  NoMetaFile = "no-meta-file"
+  
   """
 
    By default, I plot the point particles (obviously) and drop their
@@ -24,7 +23,7 @@ class PlotParticlesInVTKFormat(ActionSet):
    scale by magnitude.
 
   """
-  def __init__(self,filename,particle_set,time_stamp_evaluation):
+  def __init__(self,filename,particle_set,time_stamp_evaluation=NoMetaFile):
     """
       Plot only the grid structure
 
@@ -36,6 +35,10 @@ class PlotParticlesInVTKFormat(ActionSet):
       particle: ParticleSet
          I take this as particle set and I assume that it yields a C++
          container which I can traverse.
+         
+      time_stamp_evaluation: String yielding a C++ double
+         Pass in something negative if want to disable the met file feature
+         where multiple particle snapshots are organised as one video/collection.
 
     """
     self.d = {}
@@ -115,7 +118,7 @@ class PlotParticlesInVTKFormat(ActionSet):
   counter++;
 
   std::ostringstream snapshotFileName;
-  snapshotFileName << "{FILENAME}-" << counter;
+  snapshotFileName << "{{FILENAME}}-" << counter;
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
@@ -123,10 +126,15 @@ class PlotParticlesInVTKFormat(ActionSet):
   
   tarch::mpi::Lock lock( _semaphore );
 
-  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{FILENAME}",
-    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
-    {TIMESTAMP}
+  _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
+    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
+    tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile,
+    0.0
+    {% else %}
+    tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
+    {{TIMESTAMP}}
+    {% endif %}
   );    
       
   _positionWriter    = _writer->createPointDataWriter( "x", 3 );
@@ -164,6 +172,7 @@ class PlotParticlesInVTKFormat(ActionSet):
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = self.__Template_TouchVertexFirstTime.render(**self.d)
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
+      print( self.d )
       result = self.__Template_BeginTraversal.render(**self.d)
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = self.__Template_EndTraversal.render(**self.d)

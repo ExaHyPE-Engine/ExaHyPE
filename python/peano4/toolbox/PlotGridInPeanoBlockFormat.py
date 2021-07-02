@@ -3,9 +3,13 @@
 from peano4.solversteps.ActionSet import ActionSet
 
 
+import jinja2
+
 
 class PlotGridInPeanoBlockFormat(ActionSet):
-  def __init__(self, filename, cell_unknown, time_stamp_evaluation, guard_predicate="true", additional_includes=""):
+  NoMetaFile = "no-meta-file"
+  
+  def __init__(self, filename, cell_unknown, time_stamp_evaluation=NoMetaFile, guard_predicate="true", additional_includes=""):
     """
       Plot only the grid structure
       
@@ -49,7 +53,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     return self.__Template_Constructor.format(**self.d)
 
 
-  __Template_EndTraversal = """
+  __Template_EndTraversal = jinja2.Template("""
   assertion1(_dataWriter!=nullptr,_treeNumber);
 
   _dataWriter->close();
@@ -60,7 +64,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
   _dataWriter = nullptr;
   _writer     = nullptr;
-"""
+""")
 
     
   def get_destructor_body(self):
@@ -79,8 +83,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     return False
 
 
-  __Template_TouchCellFirstTime = """ 
-  if ( {GUARD_PREDICATE} ) {{
+  __Template_TouchCellFirstTime = jinja2.Template(""" 
+  if ( {{GUARD_PREDICATE}} ) {
   int vertexIndices[TwoPowerD];
 
   int indices = _writer->plotPatch(
@@ -90,47 +94,52 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
   assertion( _dataWriter!=nullptr );
   
-  double markerData[] = {{
+  double markerData[] = {
     marker.isRefined() ? 1.0 : 0.0,
     marker.isLocal() ? 1.0 : 0.0,
     marker.isEnclaveCell() ? 1.0 : 0.0
-  }};
+  };
  _dataWriter->plotCell(indices,markerData);
- }}
-"""
+ }
+""")
 
 
-  __Template_BeginTraversal = """
+  __Template_BeginTraversal = jinja2.Template("""
   static int counter = -1;
   counter++;
 
   std::ostringstream snapshotFileName;
-  snapshotFileName << "{FILENAME}-" << counter;
+  snapshotFileName << "{{FILENAME}}-" << counter;
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {{
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
-  }}
+  }
 
   tarch::mpi::Lock lock( _semaphore );
 
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{FILENAME}",
+    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::NoIndexFile,
+    0.0
+    {% else %}
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
-    {TIMESTAMP}
+    {{TIMESTAMP}}
+    {% endif %}
   );    
       
   _dataWriter = _writer->createCellDataWriter( "cell-marker", 1, 3, "refined,local,enclave" );
-"""
+""")
 
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = self.__Template_TouchCellFirstTime.format(**self.d) 
+      result = self.__Template_TouchCellFirstTime.render(**self.d) 
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = self.__Template_BeginTraversal.format(**self.d)             
+      result = self.__Template_BeginTraversal.render(**self.d)             
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
-      result = self.__Template_EndTraversal.format(**self.d)             
+      result = self.__Template_EndTraversal.render(**self.d)             
     return result
 
 
