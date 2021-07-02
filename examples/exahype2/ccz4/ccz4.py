@@ -371,7 +371,7 @@ if __name__ == "__main__":
 			}
 		}
 		
-		std::string l2="L2_constri"; std::string teml2="ztem_constri";
+		//std::string l2="L2_constri"; std::string teml2="ztem_constri";
 		double cons[7]={0,0,0,0,0,0,0};
     dfor(cell,patchSize) {
       tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
@@ -412,52 +412,7 @@ if __name__ == "__main__":
       Psi4Calc(Psi4, reconstructedPatch+cellSerialised*(59+n_a_v), gradQ, currentPosition);
       reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
 		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
-		}
-		
-		
-		/*
-		for(int i=0;i<n_a_v;i++){cons[i]=cons[i]/(patchSize*patchSize*patchSize);}
-
-		//if (marker.isContained({0,0,0})){	
-			if (tarch::la::equals(t,0.0)){
-				fin.open((teml2+att),std::ios::out|std::ios::trunc);
-				fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
-				fin.close();
-				fin.open((l2+att),std::ios::out|std::ios::trunc);
-				fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
-				fin.close();
-			} else {
-				fin.open((teml2+att),std::ios::in);
-				std::string checkingline=getLastLine(fin);
-				fin.close();
-				double checkingcons[7]={0};
-				ConsReadIn(checkingcons,checkingline);
-				if (std::abs(t-checkingcons[0])<(dt/100.0)){ //if they are stil in the same timestep
-					fin.open((teml2+att),std::ios::app);
-					fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
-					fin.close();
-				} else {
-					//std::cout << "current t " << t << " file t " << checkingcons[0] << std::endl;
-					fin.open((teml2+att),std::ios::in);
-					int count=0; std::string line; double consOutput[6]={0,0,0,0,0,0};
-					while (std::getline(fin,line)){
-						count++;
-						double constem[7]={0};
-						ConsReadIn(constem,line);
-						for(int i=1;i<(n_a_v+1);i++){consOutput[i-1]+=constem[i];}
-					}
-					for(int i=0;i<n_a_v;i++){consOutput[i]/=count;}
-					fin.close();
-					fin.open((l2+att),std::ios::app);
-					fin << t << " " <<consOutput[0] << " " <<consOutput[1] << " " <<consOutput[2] << " " <<consOutput[3] << " " <<consOutput[4] << " " <<consOutput[5] << std::endl;
-					fin.close();
-					fin.open((teml2+att),std::ios::out|std::ios::trunc);
-					fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
-					fin.close();
-				}
-			}
-		//}
-		*/				
+		}		
     """)
 
         self.create_data_structures()
@@ -557,11 +512,11 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       #[-10, -10, -10],  [20.0, 20.0, 20.0],
       #[-15, -15, -15],  [30.0, 30.0, 30.0],
-      #[-20, -20, -20],  [40.0, 40.0, 40.0],
+      [-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
       #[-1.5, -1.5, -1.5],  [3.0, 3.0, 3.0],
-      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -588,11 +543,11 @@ if __name__ == "__main__":
           observer_kernel="toolbox::particles::ObLinearInterp"
         )
       )
-      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
+      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
-      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesOnSphere( particle_set=tracer_particles,r=0.4,theta_s=10,phi_s=10, margin=0.1))
+      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesOnSphere( particle_set=tracer_particles,r=0.4,table="Gauss_Legendre_quadrature"))
 
-      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz_01car"))
+      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz_01"))
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 
