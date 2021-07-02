@@ -130,7 +130,7 @@ class EnclaveTaskingFV( FV ):
     
     """
     FV.create_data_structures(self)
-    self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
+    self._cell_semaphore_label = exahype2.grid.create_enclave_cell_label( self._name )
 
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
       self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
@@ -159,7 +159,7 @@ class EnclaveTaskingFV( FV ):
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     FV.add_to_Peano4_datamodel(self,datamodel, verbose)
-    datamodel.add_cell(self._cell_sempahore_label)
+    datamodel.add_cell(self._cell_semaphore_label)
 
   
   def create_action_sets(self):
@@ -188,8 +188,6 @@ class EnclaveTaskingFV( FV ):
     # AMR and adjust cell have to be there always, i.e. also throughout 
     # the grid construction.
     #
-    self._action_set_adjust_cell.predicate                         = "not marker.isRefined() and " + self._primary_or_grid_construction_or_initialisation_sweep_predicate
-
     self._action_set_AMR.predicate                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
     self._action_set_AMR_commit_without_further_analysis.predicate = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
     self._action_set_handle_boundary.predicate                     = self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate
@@ -221,7 +219,7 @@ class EnclaveTaskingFV( FV ):
 #include "../repositories/SolverRepository.h"
 """      
     )
-    
+
     
   def set_implementation(self,
     flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
@@ -266,14 +264,14 @@ class EnclaveTaskingFV( FV ):
     self.create_action_sets()
     
 
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
-    self._preprocess_reconstructed_patch = kernel
-    self.create_action_sets()
+  #def set_preprocess_reconstructed_patch_kernel(self,kernel):
+  #  self._preprocess_reconstructed_patch = kernel
+  #  self.create_action_sets()
 
 
-  def set_postprocess_updated_patch_kernel(self,kernel):
-    self._postprocess_updated_patch = kernel
-    self.create_action_sets()
+  #def set_postprocess_updated_patch_kernel(self,kernel):
+  #  self._postprocess_updated_patch = kernel
+  #  self.create_action_sets()
 
   
   def get_user_includes(self):
@@ -283,6 +281,7 @@ class EnclaveTaskingFV( FV ):
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
+#include "../repositories/SolverRepository.h"
 """    
 
 
@@ -348,4 +347,4 @@ class EnclaveTaskingFV( FV ):
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     FV.add_use_data_statements_to_Peano4_solver_step(self,step)
-    step.use_cell(self._cell_sempahore_label)
+    step.use_cell(self._cell_semaphore_label)

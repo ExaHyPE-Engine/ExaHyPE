@@ -13,7 +13,6 @@
 #include <functional>
 
 
-
 namespace exahype2 {
   class EnclaveTask;
   class EnclaveBookkeeping;
@@ -42,13 +41,16 @@ namespace exahype2 {
  *
  * <h2> SmartMPI </h2>
  * 
- * If you enable SmartMPI, then all enclave tasks are SmartMPI tasks, too. I 
- * realise this through multiple inheritance. Peano's task interface automatically
+ * If you enable SmartMPI, then all enclave tasks are SmartMPI tasks, too. I could
+ * realise this through multiple inheritance, but I have to know excactly how big
+ * the memory footprint behind an enclave task is, so I decided against this.
+ * Instead, subclasses of the enclave task do specialise w.r.t. SmartMPI.
  */
 class exahype2::EnclaveTask: public tarch::multicore::Task {
   public:
     typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) >  Functor;
-  private:
+
+  protected:
     friend class EnclaveBookkeeping;
 
     static tarch::logging::Log                   _log;
@@ -61,7 +63,6 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     int                                          _numberOfInputValues;
     int                                          _numberOfResultValues;
     Functor                                      _functor;
-
   public:
     /**
      * Create plain enclave task.
@@ -89,19 +90,6 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     virtual ~EnclaveTask() = default;
 
     bool run() override;
-
-    #ifdef UseSmartMPI
-    /**
-     * Default is false
-     */
-    bool canMigrate() const override;
-
-    void runLocally() override;
-    void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
-    void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
-    void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
-    void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
-    #endif
 };
 
 

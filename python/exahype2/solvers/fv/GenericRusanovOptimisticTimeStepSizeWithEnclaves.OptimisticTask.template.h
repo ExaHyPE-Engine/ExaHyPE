@@ -22,6 +22,10 @@
 #include "repositories/SolverRepository.h"
 
 
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
+
 #include <vector>
 
 
@@ -43,6 +47,9 @@
  * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
  */
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask {
+#ifdef UseSmartMPI
+, public smartmpi::Task
+#endif
   private:
     static tarch::logging::Log  _log;
     static int                  _optimisticTaskId;
@@ -77,6 +84,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
       double* __restrict__                        reconstructedPatch,
       double* __restrict__                        patchData
     );
+
+    bool isSmartMPITask() const override;
+#ifdef UseSmartMPI
+/**
+ * Default is false
+ */
+
+void runLocally() override;
+void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
+void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
+void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
+#endif
 };
 
 

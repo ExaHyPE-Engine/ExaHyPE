@@ -4,7 +4,7 @@ UnitTestsSources = main.cpp
 
 UnitTests2d_SOURCES   = $(UnitTestsSources)
 UnitTests2d_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_DEBUG)
-UnitTests2d_LDFLAGS   = $(LDFLAGS_PEANO_DEBUG)
+UnitTests2d_LDFLAGS   = $(LDFLAGS_PEANO_DEBUG) $(LDFLAGS)
 UnitTests2d_LDADD     = $(LDADD_PEANO_2D_DEBUG)
 
 if OpenMPGPUOffloading
@@ -17,7 +17,7 @@ endif
 
 UnitTests3d_SOURCES   = $(UnitTestsSources)
 UnitTests3d_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_DEBUG)
-UnitTests3d_LDFLAGS   = $(LDFLAGS_PEANO_DEBUG)
+UnitTests3d_LDFLAGS   = $(LDFLAGS_PEANO_DEBUG) $(LDFLAGS)
 UnitTests3d_LDADD     = $(LDADD_PEANO_3D_DEBUG)
 
 if OpenMPGPUOffloading

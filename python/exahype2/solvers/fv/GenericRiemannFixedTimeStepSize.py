@@ -19,7 +19,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
-      originalPatch,
+      targetPatch,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -79,7 +79,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       reconstructedPatch,
-      originalPatch
+      targetPatch
     );
     
         {{POSTPROCESS_UPDATED_PATCH}}
@@ -187,15 +187,25 @@ class GenericRiemannFixedTimeStepSize( FV ):
     self._action_set_update_cell = UpdateCell(self)
     
     
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
-    self._preprocess_reconstructed_patch = kernel
-    self._action_set_update_cell = UpdateCell(self)
+  #def set_preprocess_reconstructed_patch_kernel(self,kernel):
+  #  self._preprocess_reconstructed_patch = kernel
+  #  self._action_set_update_cell = UpdateCell(self)
 
 
-  def set_postprocess_updated_patch_kernel(self,kernel):
-    self._postprocess_updated_patch = kernel
-    self._action_set_update_cell = UpdateCell(self)
+  #def set_postprocess_updated_patch_kernel(self,kernel):
+  #  self._postprocess_updated_patch = kernel
+  #  self._action_set_update_cell = UpdateCell(self)
   
+
+  def create_action_sets(self):
+    """
+    
+      Call superclass routine and then reconfigure the update cell call
+      
+    """
+    FV.create_action_sets(self)
+    self._action_set_update_cell = UpdateCell(self)
+
   
   def get_user_includes(self):
     return """

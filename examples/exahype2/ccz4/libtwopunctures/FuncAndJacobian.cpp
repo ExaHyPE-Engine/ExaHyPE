@@ -891,6 +891,79 @@ TwoPunctures::PunctEvalAtArbitPositionFast (double *v, int ivar, double A, doubl
 }
 
 
+// Chebychev recurrence, x is expected to be scaled to be within [-1,1]
+void inline recurrence(double x, int m, double * recvec)
+{
+  recvec[0] = 1;
+  recvec[1] = x;
+  for (int i=2;i<m;i++)
+  {
+    recvec[i] = 2*x*recvec[i-1] - recvec[i-2];
+  }
+}
+
+inline double chebev_wrec(double recvec[], double coeff[], int m)
+{
+  double result = -0.5*coeff[0];
+
+#pragma omp simd reduction(+:result)
+  for (int i=0;i<m;i++)
+  {
+    result += recvec[i]*coeff[i];
+  }
+  return result;
+}
+
+
+// Tweaked version NOTE A and B are expected to be in [-1,1] --- seems to be fulfilled
+double
+TwoPunctures::PunctEvalAtArbitPositionFaster (double A, double B, double phi, int nvar, int n1, int n2, int n3)
+{
+  assert(nvar == 1);
+
+  // TODO is it threadsafe to make them members?
+  double *  p = dvector (0, n2);
+  double *  values1 = dvector (0, n3);
+  double ** values2 = dmatrix (0, n2, 0, n3);
+  double *  _recvec = dvector (0, n1);
+
+  // Eval and cache recurrence for point A
+  recurrence(A, n1, _recvec);
+
+  // scalar coeff
+  int myglob(0);
+  for (int j = 0; j < n2; j++)
+  for (int k = 0; k < n3; k++)  values2[j][k] = -0.5* _d0contig[myglob++];
+
+  // rest of the chebychev evaluation
+  myglob=0;
+  for (int i = 0; i < n1; i++)
+  for (int j = 0; j < n2; j++)
+#pragma omp simd safelen(4)
+  for (int k = 0; k < n3; k++) values2[j][k] += _recvec[i]*_d0contig[myglob++];
+
+  // Eval and cache recurrence for point B
+  recurrence(B, n1, _recvec);
+
+  // Another chebychev evaluation
+  for (int k = 0; k < n3; k++)
+  {
+    for (int j = 0; j < n2; j++) p[j] = values2[j][k];
+    values1[k]=chebev_wrec(_recvec, p, n2);
+  }
+
+  double result = fourev (values1, n3, phi);
+
+  free_dvector (_recvec, 0, n1);
+  free_dvector (p, 0, n2);
+  free_dvector (values1, 0, n3);
+  free_dmatrix (values2, 0, n2, 0, n3);
+
+  return result;
+  //  */
+  //  return 0.;
+}
+
 // --------------------------------------------------------------------------*/
 // Calculates the value of v at an arbitrary position (x,y,z) if the spectral coefficients are known //
 /* --------------------------------------------------------------------------*/
@@ -921,7 +994,8 @@ TwoPunctures::PunctIntPolAtArbitPositionFast (int ivar, int nvar, int n1,
   A = 2 * tanh (0.5 * X) - 1;
   B = tan (0.5 * R - Piq);
 
-  result = PunctEvalAtArbitPositionFast (v.d0, ivar, A, B, phi, nvar, n1, n2, n3);
+  //result = PunctEvalAtArbitPositionFast (v.d0, ivar, A, B, phi, nvar, n1, n2, n3);
+  result = PunctEvalAtArbitPositionFaster (A, B, phi, nvar, n1, n2, n3);
 
   Ui = (A - 1) * result;
 

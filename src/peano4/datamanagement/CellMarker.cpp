@@ -117,3 +117,163 @@ bool peano4::datamanagement::CellMarker::isEnclaveCell() const {
 bool peano4::datamanagement::CellMarker::isSkeletonCell() const {
   return not _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing or not _areAllVerticesInsideDomain or _isOneVertexHanging or not (_areAllVerticesRefined or not _isRefined);
 }
+
+
+
+#ifdef Parallel
+MPI_Datatype peano4::datamanagement::CellMarker::Datatype;
+
+
+void peano4::datamanagement::CellMarker::sendAndPollDanglingMessages(const peano4::datamanagement::CellMarker& message, int destination, int tag, MPI_Comm communicator  ) {
+  peano4::datamanagement::CellMarker::send(
+    message, destination, tag,
+    [&]() {
+      auto  timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+      bool triggeredTimeoutWarning = false;
+      if (
+        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
+        (!triggeredTimeoutWarning)
+      ) {
+        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::datamanagement::CellMarker", "sendAndPollDanglingMessages()",destination, tag );
+        triggeredTimeoutWarning = true;
+      }
+      if (
+        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
+        (std::chrono::system_clock::now()>timeOutShutdown)
+      ) {
+        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::datamanagement::CellMarker", "sendAndPollDanglingMessages()", destination, tag );
+      }
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+void peano4::datamanagement::CellMarker::receiveAndPollDanglingMessages(peano4::datamanagement::CellMarker& message, int source, int tag, MPI_Comm communicator ) {
+  peano4::datamanagement::CellMarker::receive(
+    message, source, tag,
+    [&]() {
+      auto timeOutWarning   = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+      auto timeOutShutdown  = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+      bool triggeredTimeoutWarning = false;
+      if (
+        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
+        (!triggeredTimeoutWarning)
+      ) {
+        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "peano4::datamanagement::CellMarker", "receiveAndPollDanglingMessages()", source, tag );
+        triggeredTimeoutWarning = true;
+      }
+      if (
+        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
+        (std::chrono::system_clock::now()>timeOutShutdown)
+      ) {
+        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "peano4::datamanagement::CellMarker", "receiveAndPollDanglingMessages()", source, tag );
+      }
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+    },
+    communicator
+  );
+}
+
+
+
+void peano4::datamanagement::CellMarker::initDatatype() {
+  peano4::grid::GridTraversalEvent dummyEvent;
+
+  peano4::datamanagement::CellMarker  instances[] = { peano4::datamanagement::CellMarker(dummyEvent), peano4::datamanagement::CellMarker(dummyEvent) };
+
+  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_INT };
+
+  int blocklen[] = { Dimensions, Dimensions, 1, 1, 1, 1, 1, 1, Dimensions };
+
+  const int NumberOfAttributes = 9;
+
+  MPI_Aint  baseFirstInstance;
+  MPI_Aint  baseSecondInstance;
+  MPI_Get_address( &instances[0], &baseFirstInstance );
+  MPI_Get_address( &instances[1], &baseSecondInstance );
+  MPI_Aint  disp[ NumberOfAttributes ];
+  int       currentAddress = 0;
+  MPI_Get_address( &(instances[0]._centre), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._h), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._isRefined), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._isLocal), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._areAllVerticesRefined), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._isOneVertexHanging), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._areAllVerticesInsideDomain), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._relativePositionOfCellWithinFatherCell), &disp[currentAddress] );
+  currentAddress++;
+
+
+  MPI_Aint offset = disp[0] - baseFirstInstance;
+  MPI_Aint extent = baseSecondInstance - baseFirstInstance - offset;
+  for (int i=NumberOfAttributes-1; i>=0; i--) {
+    disp[i] = disp[i] - disp[0];
+  }
+
+  int errorCode = 0;
+  MPI_Datatype tmpType;
+  errorCode += MPI_Type_create_struct( NumberOfAttributes, blocklen, disp, subtypes, &tmpType );
+  errorCode += MPI_Type_create_resized( tmpType, offset, extent, &Datatype );
+  errorCode += MPI_Type_commit( &Datatype );
+  errorCode += MPI_Type_free( &tmpType );
+  if (errorCode) std::cerr << "error constructing MPI datatype in " << __FILE__ << ":" << __LINE__ << std::endl;
+}
+
+
+void peano4::datamanagement::CellMarker::shutdownDatatype() {
+  MPI_Type_free( &Datatype );
+}
+
+
+void peano4::datamanagement::CellMarker::send(const peano4::datamanagement::CellMarker& buffer, int destination, int tag, MPI_Comm communicator ) {
+  MPI_Send( &buffer, 1, Datatype, destination, tag, communicator);
+}
+
+
+void peano4::datamanagement::CellMarker::receive(peano4::datamanagement::CellMarker& buffer, int source, int tag, MPI_Comm communicator ) {
+  MPI_Status status;
+  MPI_Recv( &buffer, 1, Datatype, source, tag, communicator, &status);
+  //buffer._senderDestinationRank = status.MPI_SOURCE;
+}
+
+
+void peano4::datamanagement::CellMarker::send(const peano4::datamanagement::CellMarker& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
+  MPI_Request sendRequestHandle;
+  int         flag = 0;
+  MPI_Isend( &buffer, 1, Datatype, destination, tag, communicator, &sendRequestHandle );
+  MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+  while (!flag) {
+    waitFunctor();
+    MPI_Test( &sendRequestHandle, &flag, MPI_STATUS_IGNORE );
+  }
+}
+
+
+void peano4::datamanagement::CellMarker::receive(peano4::datamanagement::CellMarker& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator ) {
+  MPI_Status  status;
+  MPI_Request receiveRequestHandle;
+  int         flag = 0;
+  MPI_Irecv( &buffer, 1, Datatype, source, tag, communicator, &receiveRequestHandle );
+  MPI_Test( &receiveRequestHandle, &flag, &status );
+  while (!flag) {
+    waitFunctor();
+    MPI_Test( &receiveRequestHandle, &flag, &status );
+  }
+  //buffer._senderDestinationRank = status.MPI_SOURCE;
+}
+
+#endif

@@ -20,7 +20,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   """
   
   
-  def __init__(self,filename,patch,dataset_name, description, plot_cell_data=True, metadata = "", mapping = [], guard_predicate="true", additional_includes="", precision=3):
+  def __init__(self,filename,patch,dataset_name, description, time_stamp_evaluation, plot_cell_data=True, metadata = "", mapping = [], guard_predicate="true", additional_includes="", precision=3):
     """
     
       plot_cell_data: Boolean
@@ -88,6 +88,7 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
         print( "Error: patch plotter requires patch to have same dimension along all coordinate axes")
 
     self.d[ "PRECISION" ]        = precision
+    self.d[ "TIMESTAMP" ]        = time_stamp_evaluation
 
 
   __Template_Constructor = """
@@ -187,40 +188,24 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   __Template_BeginTraversal_Generic = """
-  static int counter = 0;
-
-  static tarch::multicore::BooleanSemaphore localSemaphore;
-  tarch::multicore::Lock  localLock( localSemaphore );
-
-  int isFirstBarrierHitOnThisRank = ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-init");
-
-  std::ostringstream snapshotFileName;
-  snapshotFileName << "{FILENAME}" << "-" << counter;
-
-  if ( counter==0 and isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::CreateNew
-    );    
-  }}
-  else if ( isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet
-    );
-  }}
-  
+  static int counter = -1;
   counter++;
 
-  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-write");
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "{FILENAME}-" << counter;
 
-  if ( _writer==nullptr ) {{
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
-    );
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {{
+    snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }}
-  
+
+  tarch::mpi::Lock lock( _semaphore );
+
+  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    Dimensions, snapshotFileName.str(), "{FILENAME}",
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+    {TIMESTAMP}
+  );    
+      
   #if Dimensions==2
   {MAPPING_2D}
   #else
@@ -260,6 +245,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   def get_attributes(self):
     if self._plot_cell_data:
       return """
+    static tarch::mpi::BooleanSemaphore                                              _semaphore;
+      
     int                _treeNumber;
 
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                  _writer;
@@ -267,6 +254,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 """
     else:
       return """
+    static tarch::mpi::BooleanSemaphore                                              _semaphore;
+    
     int                _treeNumber;
 
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                    _writer;
@@ -280,6 +269,14 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/mpi/Lock.h"
+#include "tarch/mpi/BooleanSemaphore.h"
 #include "peano4/utils/Loop.h"
 #include "peano4/parallel/SpacetreeSet.h"
 """ + self.additional_includes
+
+
+  def get_static_initialisations(self,full_qualified_classname):
+    return """
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+"""
+    

@@ -14,7 +14,7 @@ const std::string tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWrit
 "BINARY\n ";
 
 
-tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode, const int precision):
+tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode, double timeStamp, const int precision):
   _writtenToFile(false),
   _precision(precision),
   _doubleOrFloat(setDoubleOrFloatString(precision)),
@@ -31,13 +31,10 @@ tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileW
 
   switch (mode) {
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew:
-      tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile(indexFileName, fileName + ".vtu");
-      break;
-    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet:
-      tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet(indexFileName, fileName + ".vtk");
+      tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile(indexFileName, fileName + ".vtu", timeStamp);
       break;
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData:
-      tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtk");
+      tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtk", timeStamp);
       break;
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile:
       break;

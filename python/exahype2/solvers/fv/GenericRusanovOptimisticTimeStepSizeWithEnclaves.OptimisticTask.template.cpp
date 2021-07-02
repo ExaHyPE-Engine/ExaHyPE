@@ -1,5 +1,6 @@
 #include "{{CLASSNAME}}.h"
 
+// user includes
 {{INCLUDES}}
 
 #include "exahype2/fv/Generic.h"
@@ -7,15 +8,19 @@
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
-
 #include "peano4/utils/Loop.h"
 
+#include "tarch/multicore/SmartScheduler.h"
 
 #include <algorithm>
 
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_optimisticTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_optimisticTaskId(
+  tarch::multicore::registerSmartMPITask<{{NAMESPACE | join("::")}}::{{CLASSNAME}}>(
+    peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
+  )
+);
 
 
 double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __restrict__ patchData) {
@@ -51,12 +56,12 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
-    [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
+    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
           {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
-            originalPatch,
+            targetPatch,
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
             {{NUMBER_OF_VOLUMES_PER_AXIS}}-2,
@@ -165,7 +170,7 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
             reconstructedPatch,
-            originalPatch
+            targetPatch
           );
 
           {{POSTPROCESS_UPDATED_PATCH}}
@@ -188,12 +193,15 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
             {{NUMBER_OF_VOLUMES_PER_AXIS}}-2,
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            originalPatch
+            targetPatch
           );
 
           repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
         }
   )
+  #ifdef UseSmartMPI
+  , smartmpi::Task(_optimisticTaskId)
+  #endif
 {
   logDebug( "{{CLASSNAME}}(...)", "spawn optimistic task for " << marker.toString() << " with t=" << (t+dt) << ", dt=" << predictedTimeStepSize );
 }
@@ -223,7 +231,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeTaskOutcomeIntoPatch(
 
   tarch::freeMemory( optimisticTaskOutcome.second, tarch::MemoryLocation::Heap );
 }
-
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCellBoundary(
@@ -375,3 +382,23 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCellBoundary(
   assertionMsg(false, "optimistic time stepping does not support pre- and postprocessing" );
   {% endif %}
 }
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
+  #ifdef UseSmartMPI
+  return true;
+  #else
+  return false;
+  #endif
+}
+#ifdef UseSmartMPI
+/**
+* Default is false
+*/
+
+void runLocally() override;
+void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
+void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
+void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
+#endif
