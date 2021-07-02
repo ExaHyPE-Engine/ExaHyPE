@@ -10,6 +10,7 @@
 #include "tarch/compiler/CompilerSpecificSettings.h"
 #include "tarch/multicore/multicore.h"
 
+#include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 #include "tarch/mpi/StringMessage.h"
 #include "tarch/mpi/BooleanSemaphore.h"
@@ -408,6 +409,7 @@ bool tarch::mpi::Rank::init(int* argc, char*** argv) {
     return false;
   }
 
+  DoubleMessage::initDatatype();
   IntegerMessage::initDatatype();
   #endif
 

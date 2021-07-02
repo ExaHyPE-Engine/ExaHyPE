@@ -298,8 +298,9 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   }
   """      
   
-  
+    
   def __init__(self,solver,use_split_loop=False):
+    raise Exception( "Das Zeugs sollte in eigenen Task Type raus, sonst kann ich es niet fixen")
     d = {}
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)

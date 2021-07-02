@@ -3,25 +3,10 @@
 #include "config.h"
 
 
-#if !defined(_TARCH_MULTICORE_SMART_SCHEDULER_H_) and !defined(UseSmartMPI)
-#define _TARCH_MULTICORE_SMART_SCHEDULER_H_
-
-namespace tarch {
-  namespace multicore {
-    /**
-     * See below
-     */
-    template <class T>
-    int registerSmartMPITask(int taskTypeNumber) {
-      return taskTypeNumber;
-    }
-  }
-}
-#endif
-
-
 #if !defined(_TARCH_MULTICORE_SMART_SCHEDULER_H_) and defined(UseSmartMPI)
 #define _TARCH_MULTICORE_SMART_SCHEDULER_H_
+
+#include "smartmpi.h"
 
 
 namespace tarch {
@@ -48,8 +33,7 @@ namespace tarch {
      * @return task number (unmodified). This allows us to use the routine within static
      *   initialisers.
      */
-    template <class T>
-    int registerSmartMPITask(int taskTypeNumber);
+    int registerSmartMPITask(int taskTypeNumber, smartmpi::Receiver functor);
   }
 }
 
@@ -83,12 +67,5 @@ class tarch::multicore::SmartScheduler: public smartmpi::scheduler::Scheduler {
      */
     void update( const smartmpi::GlobalStatistics& statistics ) override;
 };
-
-
-
-template <class T>
-int tarch::multicore::registerSmartMPITask(int taskTypeNumber) {
-  return taskTypeNumber;
-}
 
 #endif

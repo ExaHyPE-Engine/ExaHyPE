@@ -203,13 +203,22 @@ namespace tarch {
     int getNumberOfPendingTasks();
 
     /**
-     * @param maxTasks You may pass 0 if you want to tell the task system that you
-     *   don't want to use your main thread to process any tasks but you would like
-     *   the task system to occupy some other threads with task processing. This is
-     *   a routine we typically invoke just before we enter a (quasi-)serial program
-     *   phase such as the data exchange.
+     * Process a few tasks from my backlog of tasks
      *
-     * @param maxTasks Maximum number of tasks to process
+     * This routine tries to complete maxTasks. The behaviour of the routine
+     * depends on the value of taskProgressionStrategy. We use different
+     * strategies at different points in time.
+     *
+     *
+     * @param maxTasks Specify how many tasks to process at most. By constraining
+     *  this number, you can realise some polling where you check for a condition.
+     *  If the condition is not met, you ask the task system to complete a few
+     *  tasks, but you don't want the task system to complete all tasks, as you
+     *  don't want to wait for ages before you check again.
+     *
+     * @param fifo shall the system try to complete the tasks in FIFO order? This
+     *  is a recommendation. Not all task processing strategies do support such a
+     *  clue mechanism.
      *
      * @return There have been tasks
      */

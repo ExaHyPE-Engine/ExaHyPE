@@ -61,7 +61,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   }
 
   for (int i=0; i<NumberOfUnknowns; i++) {
-    assertion3( std::isfinite(Q[i]), volumeX, t, i );
+    assertion2( std::isfinite(Q[i]), volumeX, i );
   }
 
   for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {

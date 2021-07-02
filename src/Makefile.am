@@ -148,6 +148,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/mpi/Lock.cpp \
  tarch/mpi/Rank.cpp \
  tarch/mpi/mpi.cpp \
+ tarch/mpi/DoubleMessage.cpp \
  tarch/mpi/IntegerMessage.cpp \
  tarch/mpi/StringMessage.cpp \
  tarch/mpi/tests/StringTest.cpp \
