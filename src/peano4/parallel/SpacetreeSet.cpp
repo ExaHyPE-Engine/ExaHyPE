@@ -479,8 +479,6 @@ void peano4::parallel::SpacetreeSet::deleteClonedObservers() {
 void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& observer) {
   logTraceIn( "traverse(TraversalObserver&)" );
 
-  _hasPassedOrderedBarrier.clear();
-
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     peano4::parallel::Node::getInstance().continueToRun();
   }
@@ -804,37 +802,5 @@ const peano4::grid::Spacetree&  peano4::parallel::SpacetreeSet::getSpacetree(int
   }
   assertion3( false, "no spacetree found", id, tarch::mpi::Rank::getInstance().getRank() );
   return *_spacetrees.begin(); // just here to avoid warning
-}
-
-
-bool peano4::parallel::SpacetreeSet::synchroniseFirstThreadPerRank(const std::string& identifier) {
-  logTraceIn( "synchroniseFirstThreadPerRank()" );
-
-  static tarch::multicore::BooleanSemaphore  semaphore;
-
-  bool isFirstBarrierHitOnThisRank = false;
-
-  {
-    tarch::multicore::Lock lock(semaphore);
-    if ( _hasPassedOrderedBarrier.count( identifier) == 0 ) {
-      _hasPassedOrderedBarrier.insert( std::pair<std::string,bool>(identifier,false) );
-    }
-  }
-
-  {
-    tarch::multicore::Lock lock(semaphore);
-    if ( not _hasPassedOrderedBarrier.at( identifier) ) {
-      tarch::mpi::Rank::getInstance().barrier(
-        [&]() -> void {
-          tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-        }
-      );
-      _hasPassedOrderedBarrier[ identifier ] = true;
-      isFirstBarrierHitOnThisRank            = true;
-    }
-  }
-
-  logTraceOutWith1Argument( "synchroniseFirstThreadPerRank()", isFirstBarrierHitOnThisRank );
-  return isFirstBarrierHitOnThisRank;
 }
 

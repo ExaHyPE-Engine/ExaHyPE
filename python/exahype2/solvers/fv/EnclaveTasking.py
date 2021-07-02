@@ -130,7 +130,7 @@ class EnclaveTaskingFV( FV ):
     
     """
     FV.create_data_structures(self)
-    self._cell_sempahore_label = exahype2.grid.create_enclave_cell_label( self._name )
+    self._cell_semaphore_label = exahype2.grid.create_enclave_cell_label( self._name )
 
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
       self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
@@ -159,7 +159,7 @@ class EnclaveTaskingFV( FV ):
 
   def add_to_Peano4_datamodel( self, datamodel, verbose ):
     FV.add_to_Peano4_datamodel(self,datamodel, verbose)
-    datamodel.add_cell(self._cell_sempahore_label)
+    datamodel.add_cell(self._cell_semaphore_label)
 
   
   def create_action_sets(self):
@@ -347,4 +347,4 @@ class EnclaveTaskingFV( FV ):
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     FV.add_use_data_statements_to_Peano4_solver_step(self,step)
-    step.use_cell(self._cell_sempahore_label)
+    step.use_cell(self._cell_semaphore_label)

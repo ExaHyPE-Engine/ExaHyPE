@@ -9,6 +9,7 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/mpi/BooleanSemaphore.h"
 
 
 #include "tarch/plotter/griddata/unstructured/vtk/VTUTextFileWriter.h"
@@ -45,13 +46,6 @@ namespace peano4 {
  * which is static, is incremented through endTraversalOnRank() which I expect
  * the user to call once after each traversal.
  *
- * Whenever we clone a spacetree, it adds its this filename to the _clonedSpacetreeIds
- * of the observer prototype. This happens in updateMetaFile(). As a consequence
- * _clonedSpacetreeIds of the global observer (which logically belongs to spacetree
- * -1, i.e. no real spacetree) holds a list of files written on each rank.
- * When the user now calls endTraversalOnRank() we have two options:
- *
- *
  * <h2> Known bugs </h2>
  *
  * As the MPI domain decomposition creates fake observers for the master of
@@ -64,8 +58,6 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
 
     const std::string                                                                _filename;
     const int                                                                        _spacetreeId;
-
-    static int                                                                       _counter;
 
     /**
      * Does the actual plotting, i.e. all checks/decision making is already done before
@@ -80,7 +72,7 @@ class peano4::grid::TraversalVTKPlotter: public peano4::grid::TraversalObserver 
     tarch::plotter::griddata::unstructured::UnstructuredGridWriter::CellDataWriter*  _spacetreeIdWriter;
     tarch::plotter::griddata::unstructured::UnstructuredGridWriter::CellDataWriter*  _coreWriter;
 
-    std::string getFilename( int spacetreeId ) const;
+    static tarch::mpi::BooleanSemaphore                                              _sempahore;
   public:
     /**
      * You have to invoke startNewSnapshot() if you wanna have a pvd file

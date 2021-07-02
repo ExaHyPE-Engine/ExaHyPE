@@ -52,19 +52,18 @@ class tarch::plotter::PVDTimeSeriesWriter {
   public:
     enum class IndexFileMode {
       /**
-       * Create new meta file.
+       * Create new meta file. If a meta data file exists already, we overwrite
+       * it.
        */
       CreateNew,
-      /**
-       * Create a new data set within an existing index file. This is usually
-       * used to add a new snapshot (for a new time step for example).
-       */
-      AppendNewDataSet,
       /**
        * Add new data. This usually adds a new file to the current snapshot
        * (time step).
        */
       AppendNewData,
+      /**
+       * Don't use a meta data file.
+       */
       NoIndexFile
     };
 
@@ -74,9 +73,8 @@ class tarch::plotter::PVDTimeSeriesWriter {
      *
      * @see IndexFileMode
      */
-    static void createEmptyNewFile( const std::string& snapshotFileName, const std::string& dataFile );
-    static void appendNewDataSet( const std::string& snapshotFileName, const std::string& dataFile );
-    static void appendNewData(const std::string& snapshotFileName, const std::string& dataFile);
+    static void createEmptyNewFile( const std::string& snapshotFileName, const std::string& dataFile, double timeStamp );
+    static void appendNewData(const std::string& snapshotFileName, const std::string& dataFile, double timeStamp);
 };
 
 

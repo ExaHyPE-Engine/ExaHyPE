@@ -5,7 +5,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 class PlotGridInPeanoBlockFormat(ActionSet):
-  def __init__(self, filename, cell_unknown, guard_predicate="true", additional_includes=""):
+  def __init__(self, filename, cell_unknown, time_stamp_evaluation, guard_predicate="true", additional_includes=""):
     """
       Plot only the grid structure
       
@@ -19,6 +19,9 @@ class PlotGridInPeanoBlockFormat(ActionSet):
          any semantic information about unknowns, it does not matter which 
          one you choose. If you don't have cell unknowns at all, pass in 
          None.
+         
+      time_stamp_evaluation String
+                       C++ expression returning a double                       
           
     """
     self.d = {}
@@ -28,6 +31,7 @@ class PlotGridInPeanoBlockFormat(ActionSet):
       self.d[ "CELL_WRAPPER" ] += cell_unknown.name
     self.d[ "GUARD_PREDICATE" ]    = guard_predicate
     self.additional_includes       = additional_includes
+    self.d[ "TIMESTAMP" ]          = time_stamp_evaluation
     
 
   __Template_Constructor = """
@@ -97,40 +101,24 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
 
   __Template_BeginTraversal = """
-  static int counter = 0;
-
-  static tarch::multicore::BooleanSemaphore localSemaphore;
-  tarch::multicore::Lock  localLock( localSemaphore );
-
-  int isFirstBarrierHitOnThisRank = ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-init");
-
-  std::ostringstream snapshotFileName;
-  snapshotFileName << "{FILENAME}" << "-" << counter;
-
-  if ( counter==0 and isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::CreateNew
-    );    
-  }}
-  else if ( isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet
-    );
-  }}
-  
+  static int counter = -1;
   counter++;
 
-  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-write");
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "{FILENAME}-" << counter;
 
-  if ( _writer==nullptr ) {{
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
-    );
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {{
+    snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }}
-  
+
+  tarch::mpi::Lock lock( _semaphore );
+
+  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    Dimensions, snapshotFileName.str(), "{FILENAME}",
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+    {TIMESTAMP}
+  );    
+      
   _dataWriter = _writer->createCellDataWriter( "cell-marker", 1, 3, "refined,local,enclave" );
 """
 
@@ -148,6 +136,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 
   def get_attributes(self):
     return """
+    static tarch::mpi::BooleanSemaphore                                              _semaphore;
+    
     int                _treeNumber;
 
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                  _writer;
@@ -161,6 +151,15 @@ class PlotGridInPeanoBlockFormat(ActionSet):
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/mpi/Lock.h"
+#include "tarch/mpi/BooleanSemaphore.h"
 #include "peano4/parallel/SpacetreeSet.h"
 """ + self.additional_includes
+
+
+  def get_static_initialisations(self,full_qualified_classname):
+    return """
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+"""
+    
+
 

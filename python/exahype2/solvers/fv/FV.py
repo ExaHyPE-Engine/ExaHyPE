@@ -704,7 +704,8 @@ In-situ preprocessing:  """
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """,
-      precision="PlotterPrecision"
+      precision="PlotterPrecision",
+      time_stamp_evaluation="repositories::getMinTimeStamp()"
     ))
 
     if self._plot_grid_properties:    

@@ -43,7 +43,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructred
 ) {
-  logTraceInWith3Arguments( "boundaryCondition(...)", volumeX, volumeH, gridIsConstructred );
+  logTraceInWith3Arguments( "initialCondition(...)", volumeX, volumeH, gridIsConstructred );
 
   if ( Scenario==0 ) {
     examples::exahype2::ccz4::gaugeWave(Q, volumeX, 0);
@@ -57,7 +57,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   }
   #endif
   else {
-    logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
+    logError( "initialCondition(...)", "initial scenario " << Scenario << " is not supported" );
   }
 
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -74,7 +74,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
     enforceCCZ4constraints(Q);
   }
 */
-  logTraceOut( "boundaryCondition(...)" );
+  logTraceOut( "initialCondition(...)" );
 }
 
 
