@@ -36,7 +36,8 @@ namespace examples {
         double * __restrict__ Q, // Q[64+0],
         const tarch::la::Vector<Dimensions,double>&  X,
         double t,
-	TP::TwoPunctures* tp
+	TP::TwoPunctures* tp,
+        bool low_res
       );
       #endif
     }

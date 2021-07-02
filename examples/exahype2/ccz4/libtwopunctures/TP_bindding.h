@@ -100,21 +100,23 @@ namespace TP_bindding {
 	}
 
 	//use this to calculate the gradient
-	inline void GradientCal(const double* X, double* __restrict__ Q, double* LgradQ, int nVars, TP::TwoPunctures* tp){
+	inline void GradientCal(const double* X, double* __restrict__ Q, double* LgradQ, int nVars, TP::TwoPunctures* tp, bool low_res=false)
+        {
 		constexpr double epsilon = 1e-4;
 		double Qp1[nVars],Qm1[nVars],Qp2[nVars],Qm2[nVars];
 		
-		for (int d=0;d<3;d++){
+		for (int d=0;d<3;d++)
+                {
 			double xp1[3]={X[0],X[1],X[2]}; double xp2[3]={X[0],X[1],X[2]};
 			double xm1[3]={X[0],X[1],X[2]}; double xm2[3]={X[0],X[1],X[2]};
 			xp1[d]+=epsilon; xp2[d]+=2*epsilon; xm1[d]-=epsilon; xm2[d]-=2*epsilon;
 			
-			tp->Interpolate(xp1,Qp1); SOCCZ4Cal(Qp1);
-			tp->Interpolate(xp2,Qp2); SOCCZ4Cal(Qp2);
-			tp->Interpolate(xm1,Qm1); SOCCZ4Cal(Qm1);
-			tp->Interpolate(xm2,Qm2); SOCCZ4Cal(Qm2);
+			tp->Interpolate(xp1,Qp1, low_res); SOCCZ4Cal(Qp1);
+			tp->Interpolate(xp2,Qp2, low_res); SOCCZ4Cal(Qp2);
+			tp->Interpolate(xm1,Qm1, low_res); SOCCZ4Cal(Qm1);
+			tp->Interpolate(xm2,Qm2, low_res); SOCCZ4Cal(Qm2);
 			
-			for(int i=0; i<nVars; i++) {
+			for (int i=0; i<nVars; i++) {
 				LgradQ[d*nVars+i] = ( 8.0*Qp1[i] - 8.0*Qm1[i]  + Qm2[i]   - Qp2[i]  )/(12.0*epsilon);
 			}
 		}

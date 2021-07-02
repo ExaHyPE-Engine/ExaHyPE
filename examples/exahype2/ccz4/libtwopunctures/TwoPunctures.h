@@ -54,9 +54,11 @@ public:
 	// shared variables between TP Setup and TP Interpolation
 	GRID_SETUP_METHOD gsm;
 	int nvar, n1, n2, n3;
+	int _n1_low, _n2_low, _n3_low;
 	derivs u, v, cf_v;
 	int antisymmetric_lapse, averaged_lapse, pmn_lapse, brownsville_lapse;
-        double * _d0contig __attribute__ ((aligned (32)));
+        double * _d0contig     __attribute__ ((aligned (32)));
+        double * _d0contig_low __attribute__ ((aligned (32)));
 	bool runned; ///< an internal check
 	
 	/* Consructor */
@@ -71,7 +73,7 @@ public:
 	double TestSolution (double A, double B, double X, double R, double phi);
 	void TestVector_w (double *par, int nvar, int n1, int n2, int n3, double *w);
 	void Run ();
-	void Interpolate (const double* const pos, double *Q);
+	void Interpolate (const double* const pos, double *Q, bool low_res=false);
 
 	/* Routines in  "FuncAndJacobian.c"*/
 	int Index (int ivar, int i, int j, int k, int nvar, int n1, int n2, int n3);
@@ -102,9 +104,10 @@ public:
 		int nvar, int n1, int n2, int n3);
 	double PunctEvalAtArbitPositionFaster (double A, double B, double phi,
 		int nvar, int n1, int n2, int n3);
+	double PunctEvalAtArbitPositionFasterLowRes (double A, double B, double phi);
 	double PunctIntPolAtArbitPositionFast (int ivar, int nvar, int n1,
 		int n2, int n3, derivs v, double x,
-		double y, double z);
+		double y, double z, bool low_res=false);
 
 	/* Routines in  "CoordTransf.c"*/
 	void AB_To_XR (int nvar, double A, double B, double *X,
