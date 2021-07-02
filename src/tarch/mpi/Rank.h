@@ -173,7 +173,7 @@ class tarch::mpi::Rank {
      *
      * Please note that this barrier remains an MPI barrier. It does not act
      * as barrier between multiple threads. In particular: if you use this
-     * barrer in a multithreaded code, then each thread will launch a barrier
+     * barrier in a multithreaded code, then each thread will launch a barrier
      * on its own. If the number of threads/tasks per rank differs, deadlocks
      * might arise. Anyway, it is not a good idea to use this within a
      * multithreaded part of your code.
