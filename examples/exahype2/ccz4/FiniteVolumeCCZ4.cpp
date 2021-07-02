@@ -53,7 +53,9 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   }
   #ifdef IncludeTwoPunctures
   else if ( Scenario==2 ) {
-    examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp); //we interpolate for real IC here.
+
+   // We use the bool to trigger the hgh res interpolation once the grid is constructed
+    examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp, not gridIsConstructred); //we interpolate for real IC here.
   }
   #endif
   else {

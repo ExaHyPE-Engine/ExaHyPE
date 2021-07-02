@@ -10,6 +10,7 @@
 #include "libtwopunctures/TwoPunctures.h"
 #include "libtwopunctures/TP_Parameters.h"
 
+
 namespace TP {
 using namespace Utilities;
 
@@ -940,7 +941,13 @@ TwoPunctures::PunctEvalAtArbitPositionFaster (double A, double B, double phi, in
   for (int i = 0; i < n1; i++)
   for (int j = 0; j < n2; j++)
 #pragma omp simd safelen(4)
-  for (int k = 0; k < n3; k++) values2[j][k] += _recvec[i]*_d0contig[myglob++];
+  for (int k = 0; k < n3; k++)
+  {
+     const int index = k + j*n3 + i*n3*n2;
+     //assert(index== myglob++);
+     values2[j][k] += _recvec[i]*_d0contig[index];
+  }
+  //for (int k = 0; k < n3; k++) values2[j][k] += _recvec[i]*_d0contig[myglob++];
 
   // Eval and cache recurrence for point B
   recurrence(B, n1, _recvec);
@@ -964,13 +971,67 @@ TwoPunctures::PunctEvalAtArbitPositionFaster (double A, double B, double phi, in
   //  return 0.;
 }
 
+   double
+TwoPunctures::PunctEvalAtArbitPositionFasterLowRes (double A, double B, double phi)
+{
+
+  // TODO is it threadsafe to make them members?
+  double *  p = dvector (0, _n2_low);
+  double *  values1 = dvector (0, _n3_low);
+  double ** values2 = dmatrix (0, _n2_low, 0, _n3_low);
+  double *  _recvec = dvector (0, _n1_low);
+
+  // Eval and cache recurrence for point A
+  recurrence(A, _n1_low, _recvec);
+
+  // scalar coeff
+  int myglob(0);
+  for (int j = 0; j < _n2_low; j++)
+  for (int k = 0; k < _n3_low; k++)  values2[j][k] = -0.5* _d0contig_low[myglob++];
+
+  // rest of the chebychev evaluation
+  myglob=0;
+  for (int i = 0; i < _n1_low; i++)
+  for (int j = 0; j < _n2_low; j++)
+#pragma omp simd safelen(4)
+  for (int k = 0; k < _n3_low; k++)
+  {
+
+     const int index = k + j*n3 + i*n3*n2;
+     //assert(index== myglob++);
+     values2[j][k] += _recvec[i]*_d0contig[index];
+     //values2[j][k] += _recvec[i]*_d0contig_low[myglob++];
+  }
+
+  // Eval and cache recurrence for point B
+  recurrence(B, _n1_low, _recvec);
+
+  // Another chebychev evaluation
+  for (int k = 0; k < _n3_low; k++)
+  {
+    for (int j = 0; j < _n2_low; j++) p[j] = values2[j][k];
+    values1[k]=chebev_wrec(_recvec, p, _n2_low);
+  }
+
+  double result = fourev (values1, _n3_low, phi);
+
+  free_dvector (_recvec, 0, _n1_low);
+  free_dvector (p, 0, _n2_low);
+  free_dvector (values1, 0, _n3_low);
+  free_dmatrix (values2, 0, _n2_low, 0, _n3_low);
+
+  return result;
+  //  */
+  //  return 0.;
+}
+
 // --------------------------------------------------------------------------*/
 // Calculates the value of v at an arbitrary position (x,y,z) if the spectral coefficients are known //
 /* --------------------------------------------------------------------------*/
 double
 TwoPunctures::PunctIntPolAtArbitPositionFast (int ivar, int nvar, int n1,
 			    int n2, int n3, derivs v, double x, double y,
-			    double z)
+			    double z, bool low_res)
 {
   
   double xs, ys, zs, rs2, phi, X, R, A, B, aux1, aux2, result, Ui;
@@ -995,7 +1056,8 @@ TwoPunctures::PunctIntPolAtArbitPositionFast (int ivar, int nvar, int n1,
   B = tan (0.5 * R - Piq);
 
   //result = PunctEvalAtArbitPositionFast (v.d0, ivar, A, B, phi, nvar, n1, n2, n3);
-  result = PunctEvalAtArbitPositionFaster (A, B, phi, nvar, n1, n2, n3);
+  if (low_res) result = PunctEvalAtArbitPositionFasterLowRes (A, B, phi);
+  else         result = PunctEvalAtArbitPositionFaster (A, B, phi, nvar, n1, n2, n3);
 
   Ui = (A - 1) * result;
 

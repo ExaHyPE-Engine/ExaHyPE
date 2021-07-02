@@ -12,6 +12,9 @@ Parameters::Parameters() {
 	npoints_A = 30;
 	npoints_B = 30;
 	npoints_phi = 16; // has to be multiples of 4
+	npoints_A_low = 3;
+	npoints_B_low = 3;
+	npoints_phi_low = 4; // has to be multiples of 4
 	Newton_tol = 1e-10;
 	Newton_maxit = 5;
 	TP_epsilon = 0;
