@@ -512,11 +512,11 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       #[-10, -10, -10],  [20.0, 20.0, 20.0],
       #[-15, -15, -15],  [30.0, 30.0, 30.0],
-      #[-20, -20, -20],  [40.0, 40.0, 40.0],
+      [-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
       #[-1.5, -1.5, -1.5],  [3.0, 3.0, 3.0],
-      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -525,7 +525,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv4" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1" )
     #probe_point = [-8,-8,-8]
     #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 
@@ -545,7 +545,7 @@ if __name__ == "__main__":
       )
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
-      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesOnSphere( particle_set=tracer_particles,r=0.4,theta_s=10,phi_s=10, margin=0.1))
+      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesOnSphere( particle_set=tracer_particles,r=0.4,table="Gauss_Legendre_quadrature"))
 
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz_01"))
 

@@ -11,7 +11,7 @@ import dastgen2.attributes.Integer
 import numpy as np
 
 class InsertParticlesOnSphere(ActionSet):
-  def __init__(self, particle_set, r=20, theta_s = 3, phi_s = 3, margin=0.1 ):
+  def __init__(self, particle_set, r=20, table="t-design" ):
     """
 =
 
@@ -20,11 +20,8 @@ class InsertParticlesOnSphere(ActionSet):
     r: Float
      radius coordinates for the sampled sphere
 
-    theta_s, phi_s
-     number of sample points along angular coordinates on the sphere
-
-    margin
-     the angular distance between the northest/southest sample point and the pole
+    table
+      name of the sample point table, currently we have: t-design (948 points), Gauss_Legendre_quadrature (800 points)
 
     """
 
@@ -32,9 +29,7 @@ class InsertParticlesOnSphere(ActionSet):
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "R" ]                        = r
-    self.d[ "THETAS" ]                   = theta_s
-    self.d[ "PHIS" ]                     = phi_s
-    self.d[ "MARGIN" ]                   = margin
+    self.d[ "TABLE" ]                    = table
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   /*int indice={{THETAS}}*{{PHIS}};
@@ -54,7 +49,7 @@ class InsertParticlesOnSphere(ActionSet):
   }*/
 
   std::fstream fin;
-  //fin.open("t-design.dat",std::ios::in);
+  //fin.open("{{TABLE}}.dat",std::ios::in);
   fin.open("Gauss_Legendre_quadrature.dat",std::ios::in);
   std::string line;
   int indice=0;
