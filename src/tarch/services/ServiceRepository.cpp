@@ -4,6 +4,10 @@
 #include "tarch/multicore/RecursiveLock.h"
 
 
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
+
 #include <sstream>
 
 
@@ -70,6 +74,10 @@ bool tarch::services::ServiceRepository::hasService( Service* service ) const {
 
 
 void tarch::services::ServiceRepository::receiveDanglingMessages() {
+  #ifdef UseSmartMPI
+  smartmpi::tock();
+  #endif
+
   tarch::multicore::RecursiveLock  lock(_receiveDanglingMessagesSemaphore,false);
   if ( lock.tryLock() ) {
     for (
