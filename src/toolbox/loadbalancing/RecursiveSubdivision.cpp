@@ -20,6 +20,7 @@ tarch::logging::Log  toolbox::loadbalancing::RecursiveSubdivision::_log( "toolbo
 toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double targetBalancingRatio, bool makeSplitDependentOnMemory ):
   _TargetBalancingRatio( targetBalancingRatio ),
   _blacklist(),
+  _initialBlacklistWeight(),
   _hasSpreadOutOverAllRanks( false ),
   _localNumberOfInnerUnrefinedCell( 0 ),
   _globalNumberOfInnerUnrefinedCells( 0 ),
@@ -66,7 +67,9 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
   else {
     msg << ",blacklist={";
     for (auto p: _blacklist) {
-      msg << "(#" << p.first << ":" << p.second << ")";
+      msg << "(#" << p.first << ":" << p.second
+          << "/" << _initialBlacklistWeight.at(p.first)
+          << ")";
     }
     msg << "}";
   }
@@ -325,7 +328,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     or
     _state==StrategyState::Stagnation
   ) {
-    logInfo( "getStrategyStep()", "postponed due to lack of cells or stagnation" );
     return StrategyStep::Wait;
   }
 
@@ -430,9 +432,40 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     return StrategyStep::SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning;
   }
 
-  logDebug( "getStrategyStep()", "no if becomes valid: " << rankViolatesBalancingCondition << " X " << canSplitLocally() << " X " << toString() );
+
+  if (
+    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 0
+    and
+    isLocalBalancingBad()
+    and
+    canSplitLocally()
+  ) {
+    logInfo(
+      "getStrategyStep()",
+      "rank-local balancing seems to be inappropriate"
+    );
+    return StrategyStep::SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning;
+  }
+
+  logDebug(
+    "getStrategyStep()",
+    "no rule applies, so wait (can split=" << canSplitLocally() << ", local balancing is bad=" << isLocalBalancingBad() << ")"
+  );
 
   return StrategyStep::Wait;
+}
+
+
+bool toolbox::loadbalancing::RecursiveSubdivision::isLocalBalancingBad() const {
+  int maxCells = 0;
+  int minCells = std::numeric_limits<int>::max();
+
+  for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
+    maxCells = std::max( maxCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
+    minCells = std::min( minCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
+  }
+
+  return maxCells>2*minCells;
 }
 
 
@@ -618,6 +651,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateBlacklist() {
   for (std::map<int,int>::iterator p = _blacklist.begin(); p!=_blacklist.end(); ) {
     if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p->first).getRemovedEmptySubtree() ) {
       logInfo( "updateBlacklist()", "tree " << p->first << " has already been on local blacklist with weight " << p->second << ". Keep it longer on blacklist as it has degenerated child" );
+      _initialBlacklistWeight[p->first] += tarch::mpi::Rank::getInstance().getNumberOfRanks();
       p->second++;
       p++;
     }
@@ -626,6 +660,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateBlacklist() {
       p++;
     }
     else {
+      logInfo( "updateBlacklist()", "remove tree " << p->first << " from blacklist" );
       p = _blacklist.erase(p);
     }
   }
@@ -641,8 +676,14 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
   }
 
   if ( _blacklist.count(sourceTree)==0 ) {
-	// first term is an offset, second term takes into account that we have round robin tokens
-    const int InitialBlacklistWeight = 3 + tarch::mpi::Rank::getInstance().getNumberOfRanks();
+    if (_initialBlacklistWeight.count(sourceTree)==0) {
+      _initialBlacklistWeight.insert( std::pair<int,int>(sourceTree,0) );
+    }
+    else {
+      _initialBlacklistWeight[sourceTree]++;
+    }
+    
+    const int InitialBlacklistWeight = _initialBlacklistWeight[sourceTree];
     _blacklist.insert( std::pair<int,int>(sourceTree,InitialBlacklistWeight) );
   }
   else {

@@ -117,7 +117,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      *   almost one means we do not accept any ill-balancing. The smaller the value,
      *   the more relaxed we are.
      */
-    RecursiveSubdivision(double targetBalancingRation=0.9, bool makeSplitDependentOnMemory=true );
+    RecursiveSubdivision(double targetBalancingRation=0.9, bool makeSplitDependentOnMemory=false );
     ~RecursiveSubdivision();
 
     /**
@@ -195,7 +195,16 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     const double _TargetBalancingRatio;
 
+    /**
+     * Each rank that is on this list may not be split. We hold an integer per rank
+     * and decrement this value after each iteration. If the counter equals zero, we
+     * remove the rank entry and therefore make this rank a candidate for further
+     * splits again. The initial weight of an entry entering the blacklist is
+     * determined by _initialBlacklistWeight.
+     */
     std::map< int, int>    _blacklist;
+    std::map< int, int>    _initialBlacklistWeight;
+
 
     bool _hasSpreadOutOverAllRanks;
 
@@ -294,6 +303,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * further, but we have run into a stagnation.
      */
     void updateState();
+
+    bool isLocalBalancingBad() const;
 
     /**
      * This is part of the action SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning.
