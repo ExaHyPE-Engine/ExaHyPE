@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <fstream>
 #include <iomanip>
+#include <filesystem>
 
 tarch::logging::Log tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::_log( "tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter" );
 
@@ -28,11 +29,23 @@ tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter::VTKTextFileWrite
     logWarning( "writeToFile()", "index filename should not end with .pvd as routine adds extension automatically. Chosen filename prefix=" << indexFileName );
   }
 
+  double DefaultTimeStampPrecision = 1e-5;
+
   switch (mode) {
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew:
-      tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile(indexFileName, fileName + ".vtu", timeStamp);
+      tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
+      tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtk", timeStamp);
       break;
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData:
+      if (not std::filesystem::exists(indexFileName + ".pvd")) {
+        logInfo( "PeanoTextPatchFileWriter(...)", "no index file " << indexFileName << " found. Create new one" );
+        tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
+      }
+      else if ( tarch::la::greater( tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName), timeStamp, DefaultTimeStampPrecision ) ) {
+        logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << indexFileName << " with data for time stamp " << tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName) << ". Will be overwritten" );
+        tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
+      }
+
       tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtk", timeStamp);
       break;
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile:
