@@ -380,6 +380,59 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 }
 
 
+peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createPrunedEnterCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const {
+  GridTraversalEvent result = event;
+
+  if(
+    spacetreeState==SpacetreeState::EmptyRun or
+    spacetreeState==SpacetreeState::NewFromSplit or
+    spacetreeState==SpacetreeState::Joining
+  ) {
+    result.setIsCellLocal(false);
+    result.setIsFaceLocal(0);
+    result.setIsVertexLocal(0);
+  }
+
+  if(
+    spacetreeState==SpacetreeState::EmptyRun or
+    spacetreeState==SpacetreeState::NewFromSplit
+  ) {
+    result.setVertexDataFrom(TraversalObserver::NoData);
+    result.setFaceDataFrom(TraversalObserver::NoData);
+    result.setCellData(TraversalObserver::NoData);
+  }
+
+  return result;
+}
+
+
+peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createPrunedLeaveCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const {
+  GridTraversalEvent result = event;
+
+  if(
+    spacetreeState==SpacetreeState::EmptyRun or
+    spacetreeState==SpacetreeState::NewFromSplit or
+    spacetreeState==SpacetreeState::Joining
+  ) {
+    result.setIsCellLocal(false);
+    result.setIsFaceLocal(0);
+    result.setIsVertexLocal(0);
+  }
+
+  if(
+    spacetreeState==SpacetreeState::EmptyRun or
+//    spacetreeState==SpacetreeState::NewFromSplit or
+    spacetreeState==SpacetreeState::Joining
+  ) {
+    result.setVertexDataTo(TraversalObserver::NoData);
+    result.setFaceDataTo(TraversalObserver::NoData);
+    result.setCellData(TraversalObserver::NoData);
+  }
+
+  return result;
+}
+
+
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createEnterCellTraversalEvent(
   GridVertex                                coarseGridVertices[TwoPowerD],
   GridVertex                                fineGridVertices[TwoPowerD],
@@ -411,7 +464,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 
     switch ( fineGridVertices[vertexPosition].getState() ) {
       case GridVertex::State::HangingVertex:
-            event.setVertexDataFrom(i,TraversalObserver::CreateOrDestroyHangingGridEntity);
+        event.setVertexDataFrom(i,TraversalObserver::CreateOrDestroyHangingGridEntity);
         break;
       case GridVertex::State::New:
         {

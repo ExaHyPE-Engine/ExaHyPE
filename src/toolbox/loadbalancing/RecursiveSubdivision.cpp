@@ -312,7 +312,11 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 2*tarch::multicore::Core::getInstance().getNumberOfThreads()
   ) {
-    logDebug( "getStrategyStep()", "afraid to use too many trees and hence to overbook system" );
+    static bool wroteWarning = false;
+    if (not wroteWarning) {
+      logInfo( "getStrategyStep()", "afraid to use too many trees and hence to overbook system" );
+      wroteWarning = true;
+    }
     return StrategyStep::Wait;
   }
 
@@ -321,6 +325,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     or
     _state==StrategyState::Stagnation
   ) {
+    logInfo( "getStrategyStep()", "postponed due to lack of cells or stagnation" );
     return StrategyStep::Wait;
   }
 
@@ -612,8 +617,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 void toolbox::loadbalancing::RecursiveSubdivision::updateBlacklist() {
   for (std::map<int,int>::iterator p = _blacklist.begin(); p!=_blacklist.end(); ) {
     if ( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p->first).getRemovedEmptySubtree() ) {
+      logInfo( "updateBlacklist()", "tree " << p->first << " has already been on local blacklist with weight " << p->second << ". Keep it longer on blacklist as it has degenerated child" );
       p->second++;
-      logInfo( "updateBlacklist()", "tree " << p->first << " has already been on local blacklist and had degenerated child. Keep it longer on blacklist" );
       p++;
     }
     else if (p->second>0) {
