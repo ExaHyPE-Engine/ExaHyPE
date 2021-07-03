@@ -10,84 +10,40 @@ import dastgen2.attributes.Integer
 
 import numpy as np
 
-class InsertParticlesOnSphere(ActionSet):
-  def __init__(self, particle_set, r=20, table="t-design" ):
+class InsertParticlesFromFile(ActionSet):
+  def __init__(self, particle_set, filename ):
     """
-=
 
     particle_set: ParticleSet
  
-    r: Float
-     radius coordinates for the sampled sphere
-
-    table
-      name of the sample point table, currently we have: t-design (948 points), Gauss_Legendre_quadrature (800 points)
+    filename: String
+      Name of the sample point table, currently we have: t-design (948 points), Gauss_Legendre_quadrature (800 points)
 
     """
 
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
-    self.d[ "R" ]                        = r
-    self.d[ "TABLE" ]                    = table
+    self._filename                       = filename
+
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
-  /*int indice={{THETAS}}*{{PHIS}};
-  double Pi=3.14159265358979;
-  double thata_interval=(Pi-2*{{MARGIN}})/({{THETAS}}-1);
-  double phi_interval=(2*Pi)/{{PHIS}};
-  double theta_s[{{THETAS}}], phi_s[{{PHIS}}];
-  for (int i=0;i<{{THETAS}};i++) {theta_s[i] ={{MARGIN}}+i*thata_interval;}
-  for (int i=0;i<{{PHIS}};i++)   {phi_s[i]   =i*phi_interval;}
+  if (not marker.isRefined()) {
+    tarch::multicore::Lock lock( _semaphore );
   
-  double coor_s[indice][3];
-  for (int i=0;i<{{THETAS}};i++)
-  for (int j=0;j<{{PHIS}};j++){
-    coor_s[i*{{PHIS}}+j][0]={{R}}*cos(phi_s[j])*sin(theta_s[i]);
-    coor_s[i*{{PHIS}}+j][1]={{R}}*sin(phi_s[j])*sin(theta_s[i]);
-    coor_s[i*{{PHIS}}+j][2]={{R}}*cos(theta_s[i]);
-  }*/
-
-  std::fstream fin;
-  //fin.open("{{TABLE}}.dat",std::ios::in);
-  fin.open("Gauss_Legendre_quadrature.dat",std::ios::in);
-  std::string line;
-  int indice=0;
-  double coor[3];    
-  std::vector<std::vector<double>> coor_s;
-  double r={{R}};
-  while ( std::getline(fin,line) ){
-    line.erase(0,1);
-    CoorReadIn(coor, line);
-    std::vector<double> coo={r*coor[0],r*coor[1],r*coor[2]};
-    coor_s.push_back(coo);
-    //std::cout << coor[0]+1<<"    " <<coor[1]<<coor[2] <<std::endl;
-    indice++;
+    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h());  
+    for (auto& p: coords) {
+      globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
+      newParticle->setNumber(0, _spacetreeId);
+      newParticle->setNumber(1, _particleNumberOnThisTree);
+      newParticle->setX(p);                 // position
+      newParticle->setCutOffRadius(0.0);    // not used with tracers, but we have to set it. Otherwise the vis (Paraview) will crash
+      _particleNumberOnThisTree++;
+      fineGridVertex{{PARTICLES_CONTAINER}}.push_back( newParticle );
+    }
   }
-  //std::cout<<coor_s[30][0]<< " " << coor_s[890][0] <<std::endl;
-  fin.close();
- 
-  //std::exit(0);
-
-  for (int i=0;i<indice;i++){
-	  if ( not marker.isRefined() and 
-	  (marker.x()(0)-marker.h()(0)/2.0) < coor_s[i][0] and (marker.x()(0)+marker.h()(0)/2.0) > coor_s[i][0] and
-	  (marker.x()(1)-marker.h()(1)/2.0) < coor_s[i][1] and (marker.x()(1)+marker.h()(1)/2.0) > coor_s[i][1] and
-	  (marker.x()(2)-marker.h()(2)/2.0) < coor_s[i][2] and (marker.x()(2)+marker.h()(2)/2.0) > coor_s[i][2]
-	  )
-	  {
-	    globaldata::{{PARTICLE}}* p = new globaldata::{{PARTICLE}}();
-	    p->setNumber(0, _spacetreeId);
-	    p->setNumber(1, _particleNumberOnThisTree);
-	    p->setX(0, coor_s[i][0] );		// x coordinate
-	    p->setX(1, coor_s[i][1] );		// y coordinate
-	    p->setX(2, coor_s[i][2] );		// z coordinate
-	    p->setCutOffRadius(0.0); 
-	    _particleNumberOnThisTree++;
-	    fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p );
-	  }
-	}
 """)
+
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
@@ -113,28 +69,40 @@ class InsertParticlesOnSphere(ActionSet):
 #include "tarch/multicore/Lock.h"
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
-#include "toolbox/particles/ParticleFactory.h"
+#include "toolbox/particles/FileReader.h"
 #include <fstream>
 #include <string>
 #include <vector>
-#include "../libtwopunctures/TP_PunctureTracker.h"
 """ )
     return result.render(**self.d)
+
+
+  def get_static_initialisations(self,full_qualified_classname):
+    return """
+tarch::multicore::BooleanSemaphore """ + full_qualified_classname + """::_semaphore;
+"""
 
 
   def get_constructor_body(self):
     return """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
+  _fileReader.readDatFile( \"""" + self._filename + """\" );
+"""
+
+
+  def get_destructor_body(self):
+    return """
+  _fileReader.clear();
 """
 
 
   def get_attributes(self):
      return """
-  int _particleNumberOnThisTree;
-  int _spacetreeId;
+  static tarch::multicore::BooleanSemaphore _semaphore;
+     
+  int                            _particleNumberOnThisTree;
+  int                            _spacetreeId;
+  toolbox::particles::FileReader _fileReader;
 """
-#    result = jinja2.Template( """
-#  std::forward_list< globaldata::{{PARTICLE}}* >  _activeParticles;
-#""")
-#    return result.render(**self.d)
+

@@ -2,6 +2,7 @@
 
 #include "PVDTimeSeriesWriter.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/la/ScalarOperations.h"
 #include "tarch/Assertions.h"
 
 
@@ -9,10 +10,24 @@ namespace {
   tarch::logging::Log _log( "tarch::plotter::PVDTimeSeriesWriter" );
 
   const std::string Tail = "</Collection>\n</VTKFile>\n\n";
+
+  double TimeStampPrecision = 1e-5;
 }
 
 
-void tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile( const std::string& snapshotFileName, const std::string& dataFile, double timeStamp ) {
+double tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile( std::string  dataFile ) {
+  if ( dataFile.find( ".pvd" )==std::string::npos ) {
+    dataFile += ".pvd";
+  }
+
+  std::tuple< double, int, std::vector<std::string> > fileData = parseFile( dataFile );
+  double result = std::get<0>(fileData);
+  logDebug( "getLatestTimeStepInIndexFile(string)", "latest timestamp is " << result );
+  return result;
+}
+
+
+void tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile( const std::string& snapshotFileName ) {
   const std::string filename = snapshotFileName + ".pvd";
 
   std::vector<std::string> lines;
@@ -20,10 +35,6 @@ void tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile( const std::string&
   lines.push_back( "<?xml version=\"1.0\"?>" );
   lines.push_back( "<VTKFile type=\"Collection\" version=\"0.1\" byte_order=\"LittleEndian\">" );
   lines.push_back( "<Collection>" );
-
-  if (not dataFile.empty()) {
-    lines.push_back( createFileEntry(dataFile, 0, 0) );
-  }
 
   addFileTail(lines);
 
@@ -47,28 +58,39 @@ void tarch::plotter::PVDTimeSeriesWriter::removeFileTail( std::vector<std::strin
 }
 
 
-std::tuple< int, int, std::vector<std::string> > tarch::plotter::PVDTimeSeriesWriter::parseFile( const std::string& filename) {
+std::tuple< double, int, std::vector<std::string> > tarch::plotter::PVDTimeSeriesWriter::parseFile( const std::string& filename) {
   std::ifstream in( filename );
 
   std::vector< std::string >  fileLines;
-  int                         snapshot = 0;
-  int                         part     = 1;
+  double                      timestamp = 0;
+  int                         part      = -1;
 
   std::string line;
   while (std::getline(in, line)) {
     fileLines.push_back(line);
-    if (line.find("timestep=\"" + std::to_string(snapshot))!=std::string::npos) {
-      snapshot++;
-      part = 1;
-    }
-    if (line.find("timestep=\"" + std::to_string(snapshot-1))!=std::string::npos) {
-      part++;
+    if ( line.find("<DataSet")!=std::string::npos ) {
+      std::size_t startTimeStep = line.find( "timestep=\"" ) + std::string("timestep=\"").size();
+      std::size_t endTimeStep   = line.find( "\"", startTimeStep+1 );
+      std::string tokenTimeStep = line.substr(startTimeStep, endTimeStep-startTimeStep );
+
+      std::size_t startPart = line.find( "part=\"" ) + std::string("part=\"").size();
+      std::size_t endPart   = line.find( "\"", startPart+1 );
+      std::string tokenPart = line.substr(startPart, endPart-startPart );
+
+      double currentTimeStep = std::atof( tokenTimeStep.c_str() );
+      int    currentPart     = std::atoi( tokenPart.c_str() );
+
+      if (tarch::la::smaller(timestamp,currentTimeStep,TimeStampPrecision)) {
+        timestamp = currentTimeStep;
+        part      = currentPart;
+      }
+      else if (tarch::la::equals(timestamp,currentTimeStep,TimeStampPrecision)) {
+        part = std::max(part, currentPart);
+      }
     }
   }
-  snapshot--;
-  part--;
 
-  return std::tuple< int, int, std::vector<std::string> >(snapshot, part, fileLines);
+  return std::tuple< double, int, std::vector<std::string> >(timestamp, part, fileLines);
 }
 
 
@@ -86,54 +108,30 @@ void tarch::plotter::PVDTimeSeriesWriter::writeFile( const std::string& filename
 }
 
 
-std::string tarch::plotter::PVDTimeSeriesWriter::createFileEntry( const std::string& snapshotFileName, int snapshotCounter, int partCounter ) {
-  return "<DataSet timestep=\"" + std::to_string(snapshotCounter) + "\" group=\"\" part=\"" + std::to_string(partCounter) + "\" file=\"" + snapshotFileName + "\" />";
+std::string tarch::plotter::PVDTimeSeriesWriter::createFileEntry( const std::string& snapshotFileName, double timestamp, int partCounter ) {
+  std::string newEntry = "<DataSet timestep=\"" + std::to_string(timestamp) + "\" group=\"\" part=\"" + std::to_string(partCounter) + "\" file=\"" + snapshotFileName + "\" />";
+  logDebug( "createFileEntry(...)", "added " << newEntry );
+  return newEntry;
 }
-
-
-void tarch::plotter::PVDTimeSeriesWriter::validateFile( const std::string& filename ) {
-  if (
-    filename.find( ".vtu" )==std::string::npos
-  ) {
-    logWarning( "validateFile(std::string)", "expect file within time series to be an XML-based VTK file. Legacy VTK (ending with .vtk) is not supported by most Paraview installations" );
-  }
-}
-
-
-/*
-void tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet( const std::string& snapshotFileName, const std::string& dataFile ) {
-  validateFile(dataFile);
-  const std::string filename = snapshotFileName + ".pvd";
-
-  auto file = parseFile( filename );
-
-  int                        snapshotCounter = std::get<0>(file);
-  //int                      part            = std::get<1>(file);
-  std::vector< std::string > lines           = std::get<2>(file);
-
-  removeFileTail(lines);
-  lines.push_back( createFileEntry(dataFile, snapshotCounter+1, 0) );
-
-  logDebug( "appendNewDataSet(...)", "no of lines=" << lines.size() );
-
-  addFileTail(lines);
-  writeFile( filename, lines );
-}
-*/
 
 
 void tarch::plotter::PVDTimeSeriesWriter::appendNewData(const std::string& snapshotFileName, const std::string& dataFile, double timeStamp) {
-  validateFile(dataFile);
   const std::string filename = snapshotFileName + ".pvd";
 
   auto file = parseFile( filename );
 
-  int                        snapshotCounter = std::get<0>(file);
+  double                     latestTimeStep  = std::get<0>(file);
   int                        part            = std::get<1>(file);
   std::vector< std::string > lines           = std::get<2>(file);
 
   removeFileTail(lines);
-  lines.push_back( createFileEntry(dataFile, snapshotCounter, part+1) );
+
+  if ( tarch::la::equals(latestTimeStep,timeStamp,TimeStampPrecision) ) {
+    lines.push_back( createFileEntry(dataFile, timeStamp, part+1) );
+  }
+  else {
+    lines.push_back( createFileEntry(dataFile, timeStamp, 0) );
+  }
 
   logDebug( "appendNewDataSet(...)", "no of lines=" << lines.size() );
 

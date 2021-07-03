@@ -23,7 +23,7 @@ class PlotParticlesInVTKFormat(ActionSet):
    scale by magnitude.
 
   """
-  def __init__(self,filename,particle_set,time_stamp_evaluation=NoMetaFile):
+  def __init__(self,filename,particle_set,time_stamp_evaluation=NoMetaFile,additional_includes=""):
     """
       Plot only the grid structure
 
@@ -52,7 +52,11 @@ class PlotParticlesInVTKFormat(ActionSet):
     self.d[ "ATTRIBUTE_WRITER_INITIALISERS" ]      = ""
     self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        = ""
     self.d[ "TIMESTAMP" ]                          = time_stamp_evaluation
+    
     self._attributes_to_plot = []
+    
+    self.additional_includes                       = additional_includes
+    
 
   __Template_Constructor = jinja2.Template("""
   _writer             = nullptr;
@@ -127,7 +131,7 @@ class PlotParticlesInVTKFormat(ActionSet):
   tarch::mpi::Lock lock( _semaphore );
 
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
-    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    false, snapshotFileName.str(), "{{FILENAME}}",
     {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile,
     0.0
@@ -210,7 +214,7 @@ class PlotParticlesInVTKFormat(ActionSet):
 #include "peano4/parallel/SpacetreeSet.h"
 #include "../vertexdata/""" + self.d["PARTICLES_CONTAINER"] + """.h"
 #include "../globaldata/""" + self.d["PARTICLE"] + """.h"
-"""
+""" + self.additional_includes
 
 
 
