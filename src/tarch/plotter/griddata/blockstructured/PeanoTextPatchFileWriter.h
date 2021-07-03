@@ -5,7 +5,6 @@
 
 
 #include "tarch/logging/Log.h"
-#include "tarch/mpi/BooleanSemaphore.h"
 #include "PatchWriter.h"
 
 
@@ -29,15 +28,8 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     static tarch::logging::Log _log;
     static const std::string HEADER;
 
-    /**
-     * This is a global (mpi) semaphore that I use to update/modify the
-     * index file over all files. The individual data writes are totally
-     * concurrent.
-     */
-    static tarch::mpi::BooleanSemaphore _sempahore;
-
-    const std::string  _fileName;
-    const std::string  _indexFile;
+    std::string  _fileName;
+    std::string  _indexFile;
 
     bool _writtenToFile;
 
@@ -52,8 +44,9 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
     void writeMapping(int totalEntries, double* values);
 
     void createEmptyIndexFile();
-    void addNewDatasetToIndexFile();
+    void addNewDatasetToIndexFile(double timestamp);
     void addNewFileToCurrentDataSetInIndexFile( const std::string&  filename );
+    double getLatestTimeStepInIndexFile() const;
 
   public:
     class CellDataWriter: public tarch::plotter::griddata::blockstructured::PatchWriter::CellDataWriter {
@@ -159,7 +152,6 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
 
     enum class IndexFileMode {
       CreateNew,
-      AppendNewDataSet,
       AppendNewData,
       NoIndexFile
     };
@@ -170,7 +162,7 @@ class tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter: publi
      * @param indexFileName Name of the index file. Can we empty if you select
      *                      NoIndexFile.
      */
-    PeanoTextPatchFileWriter(int dimension, const std::string&  fileName, const std::string&  indexFileName, IndexFileMode appendToIndexFile);
+    PeanoTextPatchFileWriter(int dimension, const std::string&  fileName, const std::string&  indexFileName, IndexFileMode appendToIndexFile, double timeStamp);
     virtual ~PeanoTextPatchFileWriter();
 
     /**

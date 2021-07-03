@@ -101,7 +101,7 @@ class tarch::plotter::griddata::unstructured::vtk::VTKTextFileWriter:
     }
 
   public:
-    VTKTextFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode modeFile, const int precision=6);
+    VTKTextFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode modeFile, double timeStamp, const int precision=6);
     virtual ~VTKTextFileWriter();
 
     bool isOpen() override;

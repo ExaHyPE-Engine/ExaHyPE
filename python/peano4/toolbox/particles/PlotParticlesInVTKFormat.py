@@ -6,10 +6,9 @@ from peano4.solversteps.ActionSet import ActionSet
 import jinja2
 
 
-
-
-
 class PlotParticlesInVTKFormat(ActionSet):
+  NoMetaFile = "no-meta-file"
+  
   """
 
    By default, I plot the point particles (obviously) and drop their
@@ -24,7 +23,7 @@ class PlotParticlesInVTKFormat(ActionSet):
    scale by magnitude.
 
   """
-  def __init__(self,filename,particle_set):
+  def __init__(self,filename,particle_set,time_stamp_evaluation=NoMetaFile):
     """
       Plot only the grid structure
 
@@ -36,6 +35,10 @@ class PlotParticlesInVTKFormat(ActionSet):
       particle: ParticleSet
          I take this as particle set and I assume that it yields a C++
          container which I can traverse.
+         
+      time_stamp_evaluation: String yielding a C++ double
+         Pass in something negative if want to disable the met file feature
+         where multiple particle snapshots are organised as one video/collection.
 
     """
     self.d = {}
@@ -48,6 +51,7 @@ class PlotParticlesInVTKFormat(ActionSet):
     self.d[ "ATTRIBUTE_WRITER_DELETES" ]           = ""
     self.d[ "ATTRIBUTE_WRITER_INITIALISERS" ]      = ""
     self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        = ""
+    self.d[ "TIMESTAMP" ]                          = time_stamp_evaluation
     self._attributes_to_plot = []
 
   __Template_Constructor = jinja2.Template("""
@@ -110,40 +114,29 @@ class PlotParticlesInVTKFormat(ActionSet):
 
 
   __Template_BeginTraversal = jinja2.Template("""
-  static int counter = 0;
-
-  static tarch::multicore::BooleanSemaphore localSemaphore;
-  tarch::multicore::Lock  localLock( localSemaphore );
-
-  int isFirstBarrierHitOnThisRank = ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{{FILENAME}}-init");
-
-  std::ostringstream snapshotFileName;
-  snapshotFileName << "{{FILENAME}}" << "-" << counter;
-
-  if ( counter==0 and isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
-      Dimensions, snapshotFileName.str(), "{{FILENAME}}",
-      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew
-    );    
-  }
-  else if ( isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
-      Dimensions, snapshotFileName.str(), "{{FILENAME}}",
-      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet
-    );
-  }
-  
+  static int counter = -1;
   counter++;
 
-  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{{FILENAME}}-write");
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "{{FILENAME}}-" << counter;
 
-  if ( _writer==nullptr ) {
-    _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
-      Dimensions, snapshotFileName.str(), "{{FILENAME}}",
-      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData
-    );
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
+    snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
   
+  tarch::mpi::Lock lock( _semaphore );
+
+  _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
+    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
+    tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile,
+    0.0
+    {% else %}
+    tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
+    {{TIMESTAMP}}
+    {% endif %}
+  );    
+      
   _positionWriter    = _writer->createPointDataWriter( "x", 3 );
   _cutOffWriter      = _writer->createPointDataWriter( "cut-off-radius", 1 );
   _associationWriter = _writer->createPointDataWriter( "association", 3 );
@@ -179,6 +172,7 @@ class PlotParticlesInVTKFormat(ActionSet):
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = self.__Template_TouchVertexFirstTime.render(**self.d)
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
+      print( self.d )
       result = self.__Template_BeginTraversal.render(**self.d)
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = self.__Template_EndTraversal.render(**self.d)
@@ -194,6 +188,8 @@ class PlotParticlesInVTKFormat(ActionSet):
 
   def get_attributes(self):
     return f"""
+    static tarch::mpi::BooleanSemaphore                                              _semaphore;
+    
     int                _treeNumber;
 
     tarch::plotter::pointdata::vtk::VTKWriter*                _writer;
@@ -210,7 +206,16 @@ class PlotParticlesInVTKFormat(ActionSet):
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/mpi/Lock.h"
+#include "tarch/mpi/BooleanSemaphore.h"
 #include "peano4/parallel/SpacetreeSet.h"
 #include "../vertexdata/""" + self.d["PARTICLES_CONTAINER"] + """.h"
 #include "../globaldata/""" + self.d["PARTICLE"] + """.h"
 """
+
+
+
+  def get_static_initialisations(self,full_qualified_classname):
+    return """
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+"""
+    

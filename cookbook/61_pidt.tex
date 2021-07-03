@@ -2,19 +2,52 @@
 \label{section:pidt}
 
 
-\begin{figure}[htb]
+% \begin{figure}[htb]
  \begin{center}
   \includegraphics[width=0.2\textwidth]{61_pidt/ExCALIBUR.png}
  \end{center}
- \caption{
-   \Peano's particle handling is a follow-up to the 2015 paper ``Two
-   Particle-in-Grid Realisations on Spacetrees''
-   (\url{https://arxiv.org/abs/1508.02435}).
-   Its full integration into \Peano\ has been made possible by the EPSRC grant 
-   EP/V001523/1 (Massively Parallel Particle Hydrodynamics for Engineering and
-   Astrophysics).
-  }
-\end{figure}
+
+
+\noindent
+\Peano's particle handling is a follow-up to the 2015 paper ``Two
+Particle-in-Grid Realisations on Spacetrees''
+(\url{https://arxiv.org/abs/1508.02435}).
+ Its full integration into \Peano\ has been made possible by the EPSRC grant 
+ EP/V001523/1 (Massively Parallel Particle Hydrodynamics for Engineering and
+ Astrophysics).
+
+
+
+
+
+\begin{framed}
+\paragraph*{A first \ExaHyPE\ pidt run}
+\begin{itemize}
+  \item Configure \Peano\ with the flags \texttt{--enable-particles}:
+  \begin{code}
+libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
+./configure --enable-particles
+  \end{code}
+   These are the two mandatory extensions. You might want to add further options.
+  \item Recompile your \Peano\ code. This should give you a couple of
+  \texttt{ToolboxParticles} libraries in the \texttt{src/toolbox/particles}
+  subdirectory.
+  \item Ensure that \texttt{python} subdirectory is in your Python search path
+  and
+  \item run the Jupyter notebook in \texttt{examples/particles/sph}: 
+  \begin{code}
+export PYTHONPATH=../../../python/
+jupyter-notebook peano-sph.ipynb
+  \end{code}
+%   \noindent
+%   or---if you don't like Jupyter notebooks---type in
+%   \begin{code}
+% export PYTHONPATH=../../../python/
+% ipython3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --h 0.1
+% ./peano4
+%   \end{code}
+\end{itemize}
+\end{framed}
 
 
 \subsection*{Preparing \Peano\ to run a particle code}

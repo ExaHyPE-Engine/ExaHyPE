@@ -2,6 +2,7 @@
 
 #include "PVDTimeSeriesWriter.h"
 #include "tarch/mpi/Rank.h"
+#include "tarch/Assertions.h"
 
 
 namespace {
@@ -11,7 +12,7 @@ namespace {
 }
 
 
-void tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile( const std::string& snapshotFileName, const std::string& dataFile ) {
+void tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile( const std::string& snapshotFileName, const std::string& dataFile, double timeStamp ) {
   const std::string filename = snapshotFileName + ".pvd";
 
   std::vector<std::string> lines;
@@ -99,6 +100,7 @@ void tarch::plotter::PVDTimeSeriesWriter::validateFile( const std::string& filen
 }
 
 
+/*
 void tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet( const std::string& snapshotFileName, const std::string& dataFile ) {
   validateFile(dataFile);
   const std::string filename = snapshotFileName + ".pvd";
@@ -117,9 +119,10 @@ void tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet( const std::string& s
   addFileTail(lines);
   writeFile( filename, lines );
 }
+*/
 
 
-void tarch::plotter::PVDTimeSeriesWriter::appendNewData(const std::string& snapshotFileName, const std::string& dataFile) {
+void tarch::plotter::PVDTimeSeriesWriter::appendNewData(const std::string& snapshotFileName, const std::string& dataFile, double timeStamp) {
   validateFile(dataFile);
   const std::string filename = snapshotFileName + ".pvd";
 

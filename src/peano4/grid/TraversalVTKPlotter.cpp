@@ -7,6 +7,7 @@
 #include "peano4/parallel/SpacetreeSet.h"
 
 #include "tarch/mpi/Rank.h"
+#include "tarch/mpi/Lock.h"
 #include "tarch/mpi/StringMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 
@@ -17,10 +18,8 @@
 
 
 
-tarch::logging::Log  peano4::grid::TraversalVTKPlotter::_log( "peano4::grid::TraversalVTKPlotter" );
-
-
-int peano4::grid::TraversalVTKPlotter::_counter(0);
+tarch::logging::Log           peano4::grid::TraversalVTKPlotter::_log( "peano4::grid::TraversalVTKPlotter" );
+tarch::mpi::BooleanSemaphore  peano4::grid::TraversalVTKPlotter::_sempahore( "peano4::grid::TraversalVTKPlotter" );
 
 
 peano4::grid::TraversalVTKPlotter::TraversalVTKPlotter( const std::string& filename, int treeId ):
@@ -42,42 +41,24 @@ void peano4::grid::TraversalVTKPlotter::beginTraversal(
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h
 ) {
-  static int counter = 0;
-
-  static tarch::multicore::BooleanSemaphore localSemaphore;
-  tarch::multicore::Lock  localLock( localSemaphore );
-
-  int isFirstBarrierHitOnThisRank = ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank(_filename + "-init");
+  static int counter = -1;
+  counter++;
 
   std::ostringstream snapshotFileName;
   snapshotFileName << _filename << "-" << counter;
 
-  if ( counter==0 and isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
-        snapshotFileName.str(),
-      _filename,
-      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew
-    );
-  }
-  else if ( isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-    _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
-        snapshotFileName.str(),
-      _filename,
-      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet
-    );
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
+    snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
 
-  counter++;
+  tarch::mpi::Lock lock( _sempahore );
 
-  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank(_filename + "-write");
-
-  if ( _writer==nullptr ) {
-    _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
-        snapshotFileName.str(),
-      _filename,
-      tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData
-    );
-  }
+  _writer = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(
+    snapshotFileName.str(),
+    _filename,
+    tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile,
+    0.0
+  );
 
   _vertexWriter      = _writer->createVertexWriter();
   _cellWriter        = _writer->createCellWriter();
@@ -113,21 +94,6 @@ void peano4::grid::TraversalVTKPlotter::endTraversal(
   _spacetreeIdWriter = nullptr;
   _coreWriter        = nullptr;
 
-}
-
-
-std::string peano4::grid::TraversalVTKPlotter::getFilename( int spacetreeId ) const {
-  std::string currentFile = _filename;
-
-  // we run serially
-  if (spacetreeId==-1) {
-    currentFile += "-" + std::to_string( _counter );
-  }
-  else {
-    currentFile += "-" + std::to_string(spacetreeId) + "-" + std::to_string( _counter );
-  }
-
-  return currentFile;
 }
 
 

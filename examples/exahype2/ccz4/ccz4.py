@@ -7,6 +7,8 @@ import exahype2
 import peano4.toolbox.particles
 import dastgen2
 
+import numpy as np
+
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
@@ -35,8 +37,8 @@ intparams = {"LapseType":0, "tp_grid_setup":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
-    parser.add_argument("-cs",   "--cell-size",       dest="max_h",           type=float, default=0.4,  help="Mesh size" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.4,  help="lower limit for refinement" )
+    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, default=0.4,  help="upper limit for refinement" )
+    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.4,  help="lower limit for refinement (set to 0 to make it equal to max_h - default)" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
@@ -45,6 +47,7 @@ if __name__ == "__main__":
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("--add-tracer",               dest="add_tracer",      action="store_true", help="Add tracers" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -94,6 +97,11 @@ if __name__ == "__main__":
 
         number_of_unknowns = sum(unknowns.values())
 
+        self._my_user_includes = """
+#include "../CCZ4Kernels.h"
+#include "exahype2/PatchUtils.h"
+"""
+
         if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
            SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator or \
            SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
@@ -117,24 +125,30 @@ if __name__ == "__main__":
 
         self._solver_template_file_class_name = SuperClass.__name__
 
-        #pde = exahype2.sympy.PDE(unknowns=self._unknowns,auxiliary_variables=self._auxiliary_variables,dimensions=3)
-
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation#,
-          #refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
+          source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
         )
+        
+        self.set_postprocess_updated_patch_kernel( """
+  {    
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  } 
+""" )   
+        
 
       def get_user_includes(self):
         """
          We take this routine to add a few additional include statements.
         """
-        return SuperClass.get_user_includes(self) + """
-    #include "../CCZ4Kernels.h"
-    #include "exahype2/PatchUtils.h"
-    """
+        return SuperClass.get_user_includes(self) + self._my_user_includes
 
 
       def add_constraint_RefinementFlag_verification(self):
@@ -153,11 +167,6 @@ if __name__ == "__main__":
 
         """
         self._auxiliary_variables = 9
-
-        self.additional_includes += """
-    #include "../CCZ4Kernels.h"
-    """
-
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
@@ -276,7 +285,7 @@ if __name__ == "__main__":
         """
         self._auxiliary_variables = 9
         
-        self.additional_includes += """
+        self._my_user_includes += """
 	#include "../libtwopunctures/TP_PunctureTracker.h"
 	#include "../CCZ4Kernels.h"
 	#include <fstream>
@@ -288,7 +297,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         
 		std::fstream fin;
-		std::string att="_re20.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_re24.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 		const int n_a_v=9;
 
 		if (tarch::la::equals(t,0.0)){//initialization
@@ -362,10 +371,10 @@ if __name__ == "__main__":
 			}
 		}
 		
-		std::string l2="L2_constri"; std::string teml2="ztem_constri";
+		//std::string l2="L2_constri"; std::string teml2="ztem_constri";
 		double cons[7]={0,0,0,0,0,0,0};
     dfor(cell,patchSize) {
-        	tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+      tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
 
 			double gradQ[3*59]={ 0 };
 
@@ -397,54 +406,13 @@ if __name__ == "__main__":
           
       reconstructedPatch[cellSerialised*(59+n_a_v)+59+6]=pow((P1*P1+P2*P2+P3*P3),0.5);
       
-      reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=1;
-		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=2;
-		}
-		
-		
-		/*
-		for(int i=0;i<n_a_v;i++){cons[i]=cons[i]/(patchSize*patchSize*patchSize);}
-
-		//if (marker.isContained({0,0,0})){	
-			if (tarch::la::equals(t,0.0)){
-				fin.open((teml2+att),std::ios::out|std::ios::trunc);
-				fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
-				fin.close();
-				fin.open((l2+att),std::ios::out|std::ios::trunc);
-				fin << "0 0.0 0.0 0.0 0.0 0.0 0.0" << std::endl;//time, 6 constrinats L2
-				fin.close();
-			} else {
-				fin.open((teml2+att),std::ios::in);
-				std::string checkingline=getLastLine(fin);
-				fin.close();
-				double checkingcons[7]={0};
-				ConsReadIn(checkingcons,checkingline);
-				if (std::abs(t-checkingcons[0])<(dt/100.0)){ //if they are stil in the same timestep
-					fin.open((teml2+att),std::ios::app);
-					fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
-					fin.close();
-				} else {
-					//std::cout << "current t " << t << " file t " << checkingcons[0] << std::endl;
-					fin.open((teml2+att),std::ios::in);
-					int count=0; std::string line; double consOutput[6]={0,0,0,0,0,0};
-					while (std::getline(fin,line)){
-						count++;
-						double constem[7]={0};
-						ConsReadIn(constem,line);
-						for(int i=1;i<(n_a_v+1);i++){consOutput[i-1]+=constem[i];}
-					}
-					for(int i=0;i<n_a_v;i++){consOutput[i]/=count;}
-					fin.close();
-					fin.open((l2+att),std::ios::app);
-					fin << t << " " <<consOutput[0] << " " <<consOutput[1] << " " <<consOutput[2] << " " <<consOutput[3] << " " <<consOutput[4] << " " <<consOutput[5] << std::endl;
-					fin.close();
-					fin.open((teml2+att),std::ios::out|std::ios::trunc);
-					fin << t << " " <<cons[0] << " " <<cons[1] << " " <<cons[2] << " " <<cons[3] << " " <<cons[4] << " " <<cons[5] << std::endl;
-					fin.close();
-				}
-			}
-		//}
-		*/				
+      double Psi4[2]={0,0};
+      double currentPosition[3]; 
+      for (int d=0; d<3; d++) currentPosition[d]=marker.getOffset()(d)+(cell(d)+0.5)*volumeH;
+      Psi4Calc(Psi4, reconstructedPatch+cellSerialised*(59+n_a_v), gradQ, currentPosition);
+      reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
+		  reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
+		}		
     """)
 
         self.create_data_structures()
@@ -487,17 +455,21 @@ if __name__ == "__main__":
     if SuperClass == exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator:
       solver_name += "OnGPU"
 
+    min_h = args.min_h
+    if min_h <=0.0:
+      min_h = args.max_h
+
     if is_aderdg:
       my_solver = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize(
           solver_name, order, unknowns, 0, #auxiliary_variables
           exahype2.solvers.aderdg.Polynomials.Gauss_Legendre,
-          args.min_h, args.max_h, time_step_size,
+          min_h, args.max_h, time_step_size,
           flux = None,
           ncp  = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation,
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = CCZ4Solver(solver_name, args.patch_size, args.min_h, args.max_h)
+      my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h)
 
       if args.extension=="gradient":
         my_solver.add_derivative_calculation()
@@ -518,7 +490,7 @@ if __name__ == "__main__":
     elif args.scenario=="two-punctures":
       my_solver.pick_two_puncture_scenario()
     else:
-      raise Exception( "Scenario " + args.scenario + " is now known")  
+      raise Exception( "Scenario " + args.scenario + " is now unknown")  
 
     project.add_solver(my_solver)
 
@@ -540,10 +512,11 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       #[-10, -10, -10],  [20.0, 20.0, 20.0],
       #[-15, -15, -15],  [30.0, 30.0, 30.0],
-      #[-20, -20, -20],  [40.0, 40.0, 40.0],
+      [-20, -20, -20],  [40.0, 40.0, 40.0],
       #[-30, -30, -30],  [60.0, 60.0, 60.0],
       #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      [-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      #[-1.5, -1.5, -1.5],  [3.0, 3.0, 3.0],
+      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -553,19 +526,28 @@ if __name__ == "__main__":
     project.set_Peano4_installation("../../..", build_mode)
 
     #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1" )
-    probe_point = [-8,-8,-8]
-    project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
+    #probe_point = [-8,-8,-8]
+    #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
-    #add tracer
-    #tracer_particles = project.add_tracer( name="MyTracer",attribute_count=1 )
-    #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
-    #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::LinearInterp"))
-    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/8.0, noise=True ))
-    #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[4.251,0,0],p2=[-4.251,0,0]))
-    #project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,1e-10,"zzp_re14"))
+    if args.add_tracer:
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
+       #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
+      project.add_action_set_to_timestepping(
+        exahype2.tracer.FiniteVolumesTracing(
+          tracer_particles,my_solver,
+          [17,18,19],[0,16],-1,
+          #time_stepping_kernel="toolbox::particles::LinearInterp",
+          time_stepping_kernel="toolbox::particles::StaticPosition",
+          observer_kernel="toolbox::particles::ObLinearInterp"
+        )
+      )
+      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
+      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
+      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesOnSphere( particle_set=tracer_particles,r=0.4,table="Gauss_Legendre_quadrature"))
 
+      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz_01"))
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 
@@ -591,7 +573,7 @@ if __name__ == "__main__":
       peano4_project.output.makefile.add_cpp_file( "libtwopunctures/Newton.cpp" )
       peano4_project.output.makefile.add_CXX_flag( "-DIncludeTwoPunctures" )
     else:
-      raise Exception( "Scenario " + args.scenario + " is now known")        
+      raise Exception( "Scenario " + args.scenario + " is now unknown")        
 
     peano4_project.output.makefile.add_CXX_flag( "-DCCZ4EINSTEIN" )
     peano4_project.output.makefile.add_cpp_file( "InitialValues.cpp" )

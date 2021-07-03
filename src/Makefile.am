@@ -100,6 +100,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/Lock.cpp \
  tarch/multicore/RecursiveLock.cpp \
  tarch/multicore/RecursiveSemaphore.cpp \
+ tarch/multicore/SmartScheduler.cpp \
  tarch/multicore/Tasks.cpp \
  tarch/multicore/cpp/multicore.cpp \
  tarch/multicore/cpp/BooleanSemaphore.cpp \
@@ -147,6 +148,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/mpi/Lock.cpp \
  tarch/mpi/Rank.cpp \
  tarch/mpi/mpi.cpp \
+ tarch/mpi/DoubleMessage.cpp \
  tarch/mpi/IntegerMessage.cpp \
  tarch/mpi/StringMessage.cpp \
  tarch/mpi/tests/StringTest.cpp \

@@ -5,7 +5,7 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
-  def __init__(self,filename,vertex_unknown,getter,description):
+  def __init__(self,filename,vertex_unknown,getter,description,time_stamp_evaluation):
     """
       Plot only the grid structure
       
@@ -14,12 +14,15 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
       getter           Getter acting on the vertex. Could be something alike getU() for example.
                        If there's no getter but you want to directly access the data, remove 
                        any brackets from the passed string.
+      time_stamp_evaluation String
+                       C++ expression returning a double                       
     """
     self.d = {}
     self.d[ "FILENAME" ]            = filename
     self.d[ "VERTEX_UNKNOWN_NAME" ] = vertex_unknown.name
     self.d[ "GETTER" ]              = getter
     self.d[ "DESCRIPTION" ]         = description
+    self.d[ "TIMESTAMP" ]           = time_stamp_evaluation
         
 
   __Template_Constructor = """
@@ -87,39 +90,23 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
 
 
   __Template_BeginTraversal = """
-  static int counter = 0;
-
-  static tarch::multicore::BooleanSemaphore localSemaphore;
-  tarch::multicore::Lock  localLock( localSemaphore );
-
-  int isFirstBarrierHitOnThisRank = ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-init");
-
-  std::ostringstream snapshotFileName;
-  snapshotFileName << "{FILENAME}" << "-" << counter;
-
-  if ( counter==0 and isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::CreateNew
-    );    
-  }}
-  else if ( isFirstBarrierHitOnThisRank and tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewDataSet
-    );
-  }}
-  
+  static int counter = -1;
   counter++;
 
-  ::peano4::parallel::SpacetreeSet::getInstance().synchroniseFirstThreadPerRank("{FILENAME}-write");
+  std::ostringstream snapshotFileName;
+  snapshotFileName << "{FILENAME}-" << counter;
 
-  if ( _writer==nullptr ) {{
-    _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-      Dimensions, snapshotFileName.str(), "{FILENAME}",
-      tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData
-    );
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {{
+    snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }}
+
+  tarch::mpi::Lock lock( _semaphore );
+
+  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    Dimensions, snapshotFileName.str(), "{FILENAME}",
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+    {TIMESTAMP}
+  );    
     
   _dataWriter = _writer->createVertexDataWriter( "{VERTEX_UNKNOWN_NAME}", 2, 1, "{DESCRIPTION}" );
 """
@@ -138,6 +125,8 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
 
   def get_attributes(self):
     return """
+    static tarch::mpi::BooleanSemaphore                                              _semaphore;
+    
     int                _treeNumber;
 
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter*                    _writer;
@@ -149,8 +138,16 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
     return """
 #include "tarch/plotter/griddata/blockstructured/PeanoTextPatchFileWriter.h"
 #include "tarch/mpi/Lock.h"
+#include "tarch/mpi/BooleanSemaphore.h"
 #include "tarch/multicore/Lock.h"
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "peano4/utils/Loop.h"
 #include "peano4/parallel/SpacetreeSet.h"
 """
+
+
+  def get_static_initialisations(self,full_qualified_classname):
+    return """
+tarch::mpi::BooleanSemaphore  """ + full_qualified_classname + "::_semaphore(\"""" + full_qualified_classname + """\");
+"""
+    

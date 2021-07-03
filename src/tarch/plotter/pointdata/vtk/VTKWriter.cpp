@@ -7,13 +7,13 @@
 tarch::mpi::BooleanSemaphore  tarch::plotter::pointdata::vtk::VTKWriter::_sempahore( "tarch::plotter::pointdata::vtk::VTKTextFileWriter" );
 
 
-tarch::plotter::pointdata::vtk::VTKWriter::VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode) {
+tarch::plotter::pointdata::vtk::VTKWriter::VTKWriter(bool binaryFile, const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode, double timeStamp) {
   if (binaryFile) {
-    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter(fileName, indexFileName, mode);
+    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter(fileName, indexFileName, mode, timeStamp);
     //assertionMsg(mode==tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile, "time series files are not supported with legacy vtk formats");
   }
   else {
-    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(fileName, indexFileName, mode);
+    _vtkWriter = new tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter(fileName, indexFileName, mode, timeStamp);
   }
 
   _vertexWriter = _vtkWriter->createVertexWriter();

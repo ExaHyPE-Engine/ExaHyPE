@@ -21,18 +21,11 @@
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 
-    /**
-     * Feel free to change the solution in the particular finite volume.
-     * You can for example change the initial conditions by overwriting
-     * the solution for t=0. You may change Q. All other parameters are
-     * in.
-     */
-    virtual void adjustSolution(
+    virtual void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt
+      bool                                         gridIsConstructred
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 

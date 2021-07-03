@@ -22,7 +22,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
-      originalPatch,
+      targetPatch,
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
@@ -131,7 +131,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       reconstructedPatch,
-      originalPatch
+      targetPatch
     );
 
     {{POSTPROCESS_UPDATED_PATCH}}
@@ -154,7 +154,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      originalPatch
+      targetPatch
     );
     
     repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
@@ -284,14 +284,14 @@ class GenericRusanovAdaptiveTimeStepSize( FV ):
     self.create_action_sets()
 
 
-  def set_preprocess_reconstructed_patch_kernel(self,kernel):
-    self._preprocess_reconstructed_patch = kernel
-    self.create_action_sets()
+  #def set_preprocess_reconstructed_patch_kernel(self,kernel):
+  #  self._preprocess_reconstructed_patch = kernel
+  #  self.create_action_sets()
 
 
-  def set_postprocess_updated_patch_kernel(self,kernel):
-    self._postprocess_updated_patch = kernel
-    self.create_action_sets()     
+  #def set_postprocess_updated_patch_kernel(self,kernel):
+  #  self._postprocess_updated_patch = kernel
+  # self.create_action_sets()     
     
       
   def get_user_includes(self):

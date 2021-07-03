@@ -21,6 +21,18 @@ integer_message.write_header_file("../src/tarch/mpi/IntegerMessage.h")
 integer_message.write_implementation_file("../src/tarch/mpi/IntegerMessage.cpp")
 
 
+#
+# tarch::mpi::DoubleMessage
+#
+double_message = dastgen2.DataModel( "tarch::mpi::DoubleMessage" )
+double_message.add_attribute( dastgen2.attributes.Double( "value" ) )
+
+double_message.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
+double_message.add_aspect( dastgen2.aspects.MPI() )
+
+double_message.write_header_file("../src/tarch/mpi/DoubleMessage.h")
+double_message.write_implementation_file("../src/tarch/mpi/DoubleMessage.cpp")
+
 
 #
 # peano4::parallel::TreeManagementMessage
@@ -155,6 +167,9 @@ grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexL
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceLocal",   "TwoTimesD" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isCellLocal"                ) )
 
+#
+# Also holds if a vertex is adjacent to a periodic boundary.
+#
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexAdjacentToParallelDomainBoundary", "TwoPowerD" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceAdjacentToParallelDomainBoundary", "TwoTimesD" ) )
 

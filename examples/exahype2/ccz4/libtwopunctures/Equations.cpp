@@ -87,24 +87,27 @@ TwoPunctures::BY_Aijofxyz (double x, double y, double z, double Aij[3][3])
   double r_plus, r2_plus, r3_plus, r_minus, r2_minus, r3_minus, np_Pp, nm_Pm,
     n_plus[3], n_minus[3], np_Sp[3], nm_Sm[3];
 
-  r2_plus = (x - par_b) * (x - par_b) + y * y + z * z;
+  const double TP4 = TP_epsilon*TP_epsilon*TP_epsilon*TP_epsilon;
+  r2_plus  = (x - par_b) * (x - par_b) + y * y + z * z;
   r2_minus = (x + par_b) * (x + par_b) + y * y + z * z;
-  r2_plus = sqrt (pow (r2_plus, 2) + pow (TP_epsilon, 4));
-  r2_minus = sqrt (pow (r2_minus, 2) + pow (TP_epsilon, 4));
-  if (r2_plus < pow(TP_Tiny,2))
-    r2_plus = pow(TP_Tiny,2);
-  if (r2_minus < pow(TP_Tiny,2))
-    r2_minus = pow(TP_Tiny,2);
-  r_plus = sqrt (r2_plus);
-  r_minus = sqrt (r2_minus);
-  r3_plus = r_plus * r2_plus;
+  r2_plus  = sqrt (r2_plus*r2_plus   + TP4);
+  r2_minus = sqrt (r2_minus*r2_minus + TP4);
+
+  const double TPT2 = TP_Tiny*TP_Tiny;
+  if (r2_plus < TPT2)
+    r2_plus = TPT2;
+  if (r2_minus < TPT2)
+    r2_minus = TPT2;
+  r_plus   = sqrt (r2_plus);
+  r_minus  = sqrt (r2_minus);
+  r3_plus  = r_plus * r2_plus;
   r3_minus = r_minus * r2_minus;
 
-  n_plus[0] = (x - par_b) / r_plus;
+  n_plus[0]  = (x - par_b) / r_plus;
   n_minus[0] = (x + par_b) / r_minus;
-  n_plus[1] = y / r_plus;
+  n_plus[1]  = y / r_plus;
   n_minus[1] = y / r_minus;
-  n_plus[2] = z / r_plus;
+  n_plus[2]  = z / r_plus;
   n_minus[2] = z / r_minus;
 
   /* dot product: np_Pp = (n_+).(P_+); nm_Pm = (n_-).(P_-) */
@@ -133,10 +136,14 @@ TwoPunctures::BY_Aijofxyz (double x, double y, double z, double Aij[3][3])
 		 + nm_Pm * n_minus[i] * n_minus[j]) / r2_minus
 	- 3.0 * (np_Sp[i] * n_plus[j] + np_Sp[j] * n_plus[i]) / r3_plus
 	- 3.0 * (nm_Sm[i] * n_minus[j] + nm_Sm[j] * n_minus[i]) / r3_minus;
-      if (i == j)
-	Aij[i][j] -= +1.5 * (np_Pp / r2_plus + nm_Pm / r2_minus);
     }
   }
+
+  Aij[0][0] -= +1.5 * (np_Pp / r2_plus + nm_Pm / r2_minus);
+  Aij[1][1] -= +1.5 * (np_Pp / r2_plus + nm_Pm / r2_minus);
+  Aij[2][2] -= +1.5 * (np_Pp / r2_plus + nm_Pm / r2_minus);
+
+
 }
 
 /*-----------------------------------------------------------*/

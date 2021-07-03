@@ -26,6 +26,9 @@ struct Parameters : public LoggingAdapter {
 	int		npoints_A;
 	int		npoints_B;
 	int		npoints_phi;
+	int		npoints_A_low;
+	int		npoints_B_low;
+	int		npoints_phi_low;
 	double		Newton_tol;
 	int		Newton_maxit;
 	double		TP_epsilon;

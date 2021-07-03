@@ -50,10 +50,6 @@ void toolbox::particles::TrajectoryDatabase::clear() {
 void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
   std::string filename = _fileName;
 
-  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
-    filename += "-rank-" + std::to_string( tarch::mpi::Rank::getInstance().getRank() );
-  }
-
   filename += ".csv";
 
   if (not _data.empty()) {

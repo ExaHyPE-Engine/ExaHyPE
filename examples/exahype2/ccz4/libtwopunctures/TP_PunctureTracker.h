@@ -6,13 +6,17 @@
 
 #include "tarch/la/Vector.h"
 
-std::istream& ignoreline(std::fstream& in, std::ifstream::pos_type& pos)
+#ifndef __TP_PT__
+#define __TP_PT__
+
+
+inline std::istream& ignoreline(std::fstream& in, std::ifstream::pos_type& pos)
 {
     pos = in.tellg();
     return in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 }
 
-std::string getLastLine(std::fstream& in)
+inline std::string getLastLine(std::fstream& in)
 {
     std::ifstream::pos_type pos = in.tellg();
 
@@ -28,7 +32,7 @@ std::string getLastLine(std::fstream& in)
     return line;
 }
 
-double linearInter(double x1, double f1, double x2, double f2, double target){
+inline double linearInter(double x1, double f1, double x2, double f2, double target){
 	if ((x1-x2)<10e-8){
 		return (f1+f2)/2;
 	} else {
@@ -37,7 +41,7 @@ double linearInter(double x1, double f1, double x2, double f2, double target){
 }
 
 
-void CoorReadIn(double* coor, std::string line)
+inline void CoorReadIn(double* coor, std::string line)
 {
 	int index=0;
 	std::string var[5]={"","","","",""};
@@ -52,7 +56,7 @@ void CoorReadIn(double* coor, std::string line)
 	coor[index]=std::stod(var[index]);
 }
 
-void ConsReadIn(double* cons, std::string line)
+inline void ConsReadIn(double* cons, std::string line)
 {
 	int index=0;
 	std::string var[7]={"","","","","","",""};
@@ -68,7 +72,7 @@ void ConsReadIn(double* cons, std::string line)
 }
 
 
-tarch::la::Vector<Dimensions*2,int> FindCellIndex(
+inline tarch::la::Vector<Dimensions*2,int> FindCellIndex(
   const double* coor,
   tarch::la::Vector<Dimensions,double> Offset,
   double volumeH,
@@ -112,7 +116,7 @@ tarch::la::Vector<Dimensions*2,int> FindCellIndex(
 }
 
 //output index for 8 nearest cells
-void FindInterIndex(tarch::la::Vector<Dimensions,int>* InterIndex, tarch::la::Vector<Dimensions*2,int> IndexOfCell)
+inline void FindInterIndex(tarch::la::Vector<Dimensions,int>* InterIndex, tarch::la::Vector<Dimensions*2,int> IndexOfCell)
 {	
 	int x[2],y[2],z[2];
 	
@@ -147,7 +151,7 @@ void FindInterIndex(tarch::la::Vector<Dimensions,int>* InterIndex, tarch::la::Ve
 
 
 //do the real interpolation
-void Interpolation(
+inline void Interpolation(
   double* result,
   tarch::la::Vector<Dimensions,int>* IndexForInter,
   double* raw,
@@ -208,7 +212,7 @@ void Interpolation(
 	result[0]=raw4[0][0]; result[1]=raw4[0][1]; result[2]=raw4[0][2];result[3]=raw4[0][3];
 }
 
-
+#endif
 
 
 

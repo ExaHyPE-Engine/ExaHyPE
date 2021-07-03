@@ -9,6 +9,13 @@
 #include "peano4/grid/GridTraversalEvent.h"
 
 
+#ifdef Parallel
+  #include <mpi.h>
+  #include <functional>
+#endif
+
+
+
 namespace peano4 {
   namespace datamanagement {
     struct CellMarker;
@@ -108,6 +115,40 @@ struct peano4::datamanagement::CellMarker {
     bool isSkeletonCell() const;
 
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
+
+    #ifdef Parallel
+    /**
+     * To be called prior to any MPI usage of this class.
+     */
+    static void initDatatype();
+    static void shutdownDatatype();
+
+    /**
+     * In DaStGen (the first version), I had a non-static version of the send
+     * as well as the receive. However, this did not work with newer C++11
+     * versions, as a member function using this as pointer usually doesn't
+     * see the vtable while the init sees the object from outside, i.e.
+     * including a vtable. So this routine now is basically an alias for a
+     * blocking MPI_Send.
+     */
+    static void send(const CellMarker& buffer, int destination, int tag, MPI_Comm communicator );
+    static void receive(CellMarker& buffer, int source, int tag, MPI_Comm communicator );
+
+    /**
+     * Alternative to the other send() where I trigger a non-blocking send an
+     * then invoke the functor until the corresponding MPI_Test tells me that
+     * the message went through. In systems with heavy MPI usage, this can
+     * help to avoid deadlocks.
+     */
+    static void send(const CellMarker& buffer, int destination, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+    static void receive(CellMarker& buffer, int source, int tag, std::function<void()> waitFunctor, MPI_Comm communicator );
+
+    static void sendAndPollDanglingMessages(const CellMarker& message, int destination, int tag, MPI_Comm communicator  );
+    static void receiveAndPollDanglingMessages(CellMarker& message, int source, int tag, MPI_Comm communicator  );
+
+
+    static MPI_Datatype  Datatype;
+    #endif
 };
 
 

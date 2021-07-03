@@ -190,6 +190,7 @@ TwoPunctures::Run ()
 {
 
   nvar = 1; n1 = npoints_A; n2 = npoints_B; n3 = npoints_phi;
+  _n1_low = npoints_A_low; _n2_low = npoints_B_low; _n3_low = npoints_phi_low;
 
   mp = par_m_plus;
   mm = par_m_minus;
@@ -309,6 +310,22 @@ TwoPunctures::Run ()
 
     SpecCoef(n1, n2, n3, 0, v.d0, cf_v.d0);
 
+    // TODO destructor
+    // HS copy d0 for contiguous access --- note this is valied for nvar=1
+    _d0contig = Utilities::dvector(0,n1*n2*n3);
+    int ctr(0);
+    for (int i = 0; i < n1; i++)
+    for (int j = 0; j < n2; j++)
+    for (int k = 0; k < n3; k++) _d0contig[ctr++] =  cf_v.d0[i + n1 * (j + n2 * k)];
+    
+    // And the low res version --- note how we truncate coefficients here
+    // --- the loops use the truncated indices while the access uses the full info n1 and n2
+    _d0contig_low = Utilities::dvector(0,_n1_low*_n2_low*_n3_low);
+    ctr = 0;
+    for (int i = 0; i < _n1_low; i++)
+    for (int j = 0; j < _n2_low; j++)
+    for (int k = 0; k < _n3_low; k++) _d0contig_low[ctr++] =  cf_v.d0[i + n1 * (j + n2 * k)];
+
     TP_INFO (
 		  "The two puncture masses are mp=%.17g and mm=%.17g",
                 (double) mp, (double) mm);
@@ -401,7 +418,7 @@ TwoPunctures::Run ()
  * Interpolation function for an external caller.
  **/
 void
-TwoPunctures::Interpolate (const double* const pos, double *Q) {
+TwoPunctures::Interpolate (const double* const pos, double *Q, bool low_res) {
 	if(!runned) {
 		TP_ERROR ("You must call Run() before interpolating.");
 		std::abort();
@@ -424,10 +441,12 @@ TwoPunctures::Interpolate (const double* const pos, double *Q) {
           SWAP (xx, zz);
         }
 
+        const double TP4 = TP_epsilon*TP_epsilon*TP_epsilon*TP_epsilon;
+
         double r_plus
-          = sqrt(pow(xx - par_b, 2) + pow(yy, 2) + pow(zz, 2));
+          = sqrt((xx - par_b)*(xx - par_b) + yy*yy + zz*zz);
         double r_minus
-          = sqrt(pow(xx + par_b, 2) + pow(yy, 2) + pow(zz, 2));
+          = sqrt((xx + par_b)*(xx + par_b) + yy*yy + zz*zz);
 
         double U;
         switch (gsm)
@@ -437,13 +456,13 @@ TwoPunctures::Interpolate (const double* const pos, double *Q) {
             (0, nvar, n1, n2, n3, v, xx, yy, zz);
           break;
         case GSM_evaluation:
-          U = PunctIntPolAtArbitPositionFast(0, nvar, n1, n2, n3, cf_v, xx, yy, zz);
+          U = PunctIntPolAtArbitPositionFast(0, nvar, n1, n2, n3, cf_v, xx, yy, zz, low_res);
           break;
         default:
           assert (0);
         }
-        r_plus = pow (pow (r_plus, 4) + pow (TP_epsilon, 4), 0.25);
-        r_minus = pow (pow (r_minus, 4) + pow (TP_epsilon, 4), 0.25);
+        r_plus  = pow (pow (r_plus,  4) + TP4, 0.25);
+        r_minus = pow (pow (r_minus, 4) + TP4, 0.25);
         if (r_plus < TP_Tiny)
             r_plus = TP_Tiny;
         if (r_minus < TP_Tiny)
@@ -490,7 +509,7 @@ TwoPunctures::Interpolate (const double* const pos, double *Q) {
           yp = yy;
           zp = zz;
           rp = sqrt (xp*xp + yp*yp + zp*zp);
-          rp = pow (pow (rp, 4) + pow (TP_epsilon, 4), 0.25);
+          rp = pow (pow (rp, 4) + TP4, 0.25);
           if (rp < TP_Tiny)
               rp = TP_Tiny;
           ir = 1.0/rp;
@@ -521,7 +540,7 @@ TwoPunctures::Interpolate (const double* const pos, double *Q) {
           yp = yy;
           zp = zz;
           rp = sqrt (xp*xp + yp*yp + zp*zp);
-          rp = pow (pow (rp, 4) + pow (TP_epsilon, 4), 0.25);
+          rp = pow (pow (rp, 4) + TP4, 0.25);
           if (rp < TP_Tiny)
               rp = TP_Tiny;
           ir = 1.0/rp;
@@ -588,12 +607,13 @@ TwoPunctures::Interpolate (const double* const pos, double *Q) {
         Q[g23]= 0;
         Q[g33] = pow (psi1 / static_psi, 4);
 
-        Q[K11] = Aij[0][0] / pow(psi1, 2);
-        Q[K12] = Aij[0][1] / pow(psi1, 2);
-        Q[K13] = Aij[0][2] / pow(psi1, 2);
-        Q[K22] = Aij[1][1] / pow(psi1, 2);
-        Q[K23] = Aij[1][2] / pow(psi1, 2);
-        Q[K33] = Aij[2][2] / pow(psi1, 2);
+        const double oneoverpsisq = 1./(psi1*psi1);
+        Q[K11] = Aij[0][0] * oneoverpsisq;// / pow(psi1, 2);
+        Q[K12] = Aij[0][1] * oneoverpsisq;// / pow(psi1, 2);
+        Q[K13] = Aij[0][2] * oneoverpsisq;// / pow(psi1, 2);
+        Q[K22] = Aij[1][1] * oneoverpsisq;// / pow(psi1, 2);
+        Q[K23] = Aij[1][2] * oneoverpsisq;// / pow(psi1, 2);
+        Q[K33] = Aij[2][2] * oneoverpsisq;// / pow(psi1, 2);
         //here provide the "physical" metric and ex curvature (i.e. without any bar), the real decomposition of CCZ4 is done in ADM class.
         if (antisymmetric_lapse || averaged_lapse) {
           Q[lapse] =
