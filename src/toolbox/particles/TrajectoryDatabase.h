@@ -11,7 +11,7 @@
 
 #include <string>
 #include <map>
-#include <forward_list>
+#include <list>
 
 
 namespace toolbox {
@@ -29,6 +29,9 @@ class toolbox::particles::TrajectoryDatabase {
     double      _delta;
     int         _numberOfDataPointsPerParticle;
 
+    const int   _deltaBetweenTwoDatabaseFlushes;
+    int         _thresholdForNextDatabaseFlush;
+
     struct Entry {
       tarch::la::Vector<Dimensions,double>  x;
       double                                timestamp;
@@ -37,7 +40,7 @@ class toolbox::particles::TrajectoryDatabase {
       Entry( const TrajectoryDatabase& database, const tarch::la::Vector<Dimensions,double>&  x_, double  timestamp_ );
     };
 
-    std::map<int, std::forward_list<Entry> >  _data;
+    std::map<int, std::list<Entry> >  _data;
 
     tarch::multicore::BooleanSemaphore        _semaphore;
 
@@ -46,9 +49,9 @@ class toolbox::particles::TrajectoryDatabase {
       const tarch::la::Vector<Dimensions,double>& x
     );
 
-
+    bool dumpDatabaseSnapshot() const;
   public:
-    TrajectoryDatabase();
+    TrajectoryDatabase( int   deltaBetweenTwoDatabaseFlushes );
     ~TrajectoryDatabase();
 
     void clear();

@@ -21,10 +21,12 @@ toolbox::particles::TrajectoryDatabase::Entry::Entry( const TrajectoryDatabase& 
 }
 
 
-toolbox::particles::TrajectoryDatabase::TrajectoryDatabase():
+toolbox::particles::TrajectoryDatabase::TrajectoryDatabase(int  deltaBetweenTwoDatabaseFlushes):
   _fileName(""),
   _delta(0.0),
-  _numberOfDataPointsPerParticle(0) {
+  _numberOfDataPointsPerParticle(0),
+  _deltaBetweenTwoDatabaseFlushes(deltaBetweenTwoDatabaseFlushes),
+  _thresholdForNextDatabaseFlush(deltaBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : deltaBetweenTwoDatabaseFlushes) {
 }
 
 
@@ -113,13 +115,22 @@ bool toolbox::particles::TrajectoryDatabase::addSnapshot(
   tarch::multicore::Lock lock(_semaphore);
 
   if (_data.count(number)==0) {
-    _data.insert( std::pair<int, std::forward_list<Entry> >(number,std::forward_list<Entry>() ) );
+    _data.insert( std::pair<int, std::list<Entry> >(number,std::list<Entry>() ) );
     return true;
   }
   else {
     tarch::la::Vector<Dimensions,double> oldX = _data.at(number).front().x;
     return tarch::la::norm2(oldX-x)>=_delta;
   }
+}
+
+
+bool toolbox::particles::TrajectoryDatabase::dumpDatabaseSnapshot() const {
+  int totalSize = 0;
+  for (auto p: _data) {
+    totalSize += p.second.size();
+  }
+  return totalSize >= _thresholdForNextDatabaseFlush;
 }
 
 
@@ -132,6 +143,12 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
     _data.at(number).push_front( Entry(*this,x,timestamp) );
     for (int i=0; i<_numberOfDataPointsPerParticle; i++) {
       _data.at(number).front().data[i] = 0.0;
+    }
+
+    if (dumpDatabaseSnapshot()) {
+      dumpCSVFile();
+      logInfo( "addSnapshot(...)", "flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
+      _thresholdForNextDatabaseFlush += _deltaBetweenTwoDatabaseFlushes;
     }
   }
 }
@@ -155,6 +172,12 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
     }
     for (int i=numberOfDataEntries; i<_numberOfDataPointsPerParticle; i++) {
       _data.at(number).front().data[i] = 0.0;
+    }
+
+    if (dumpDatabaseSnapshot()) {
+      dumpCSVFile();
+      logInfo( "addSnapshot(...)", "flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
+      _thresholdForNextDatabaseFlush += _deltaBetweenTwoDatabaseFlushes;
     }
   }
 }
