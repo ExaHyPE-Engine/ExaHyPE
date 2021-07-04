@@ -141,8 +141,8 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdj
   bool calledByLeaveCell
 ) const {
   std::bitset<TwoPowerD> result;
-  for (int i=0; i<TwoPowerD; i++) {
-    tarch::la::Vector< TwoPowerD, int > adjacency = vertices[i].getBackupOfAdjacentRanks();
+  for (int j=0; j<TwoPowerD; j++) {
+    tarch::la::Vector< TwoPowerD, int > adjacency = vertices[j].getBackupOfAdjacentRanks();
     bool oneLocal  = false;
     bool oneRemote = false;
     for (int i=0; i<TwoPowerD; i++ ) {
@@ -151,7 +151,7 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesAdj
       oneLocal  |= (valid and local);
       oneRemote |= (valid and not local);
     }
-    result.set(i,oneLocal and oneRemote);
+    result.set(j,oneLocal and oneRemote);
   }
   return result;
 }
@@ -166,9 +166,9 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjace
   bool calledByLeaveCell
 ) const {
   std::bitset<TwoTimesD> result;
-  for (int i=0; i<TwoTimesD; i++) {
+  for (int j=0; j<TwoTimesD; j++) {
     // @todo
-    tarch::la::Vector< TwoPowerD, int > adjacency = getAdjacentRanksOfFace(vertices, i, calledByLeaveCell);
+    tarch::la::Vector< TwoPowerD, int > adjacency = getAdjacentRanksOfFace(vertices, j, calledByLeaveCell);
     //tarch::la::Vector< TwoPowerD, int > adjacency = getAdjacentRanksOfFace(vertices, i, false);
     bool oneLocal  = false;
     bool oneRemote = false;
@@ -196,13 +196,7 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjace
       oneLocal  |= (valid and local);
       oneRemote |= (valid and remote);
     }
-    result.set(i,oneLocal and oneRemote);
-/*
-    logInfo( "areFacesAdjacentToParallelDomainBoundary(...)", "face " << i << " is local=" << oneLocal << " and remote " << oneRemote <<
-      ", split-triggered=" << splitTriggered.size() << ")"
-     );
-*/
-    //logInfo( "areFacesAdjacentToParallelDomainBoundary(...)", (splitTriggered.count(adjacency(i))>0 and calledByEnterCell) );
+    result.set(j,oneLocal and oneRemote);
   }
   return result;
 }
