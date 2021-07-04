@@ -38,8 +38,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       reconstructedPatch,
       targetPatch
-    );
-  
+    );  
   }
   else {
     assertion( marker.isEnclaveCell() );
