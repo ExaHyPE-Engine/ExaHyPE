@@ -9,7 +9,7 @@
 tarch::logging::Log  toolbox::particles::FileReader::_log( "toolbox::particles::FileReader" );
 
 
-void toolbox::particles::FileReader::readDatFile( const std::string& filename ) {
+void toolbox::particles::FileReader::readDatFile( const std::string& filename, const double scale ) {
   std::fstream fin;
 
   fin.open( filename, std::ios::in );
@@ -27,7 +27,7 @@ void toolbox::particles::FileReader::readDatFile( const std::string& filename ) 
     std::string token;
     while ( std::getline(currentLine, token, ' ') and entry<Dimensions ) {
       if (token!="") {
-        newEntry(entry) = std::atof( token.c_str() );
+        newEntry(entry) = scale*std::atof( token.c_str() );
         entry++;
       }
     }

@@ -11,7 +11,7 @@ import dastgen2.attributes.Integer
 import numpy as np
 
 class InsertParticlesFromFile(ActionSet):
-  def __init__(self, particle_set, filename ):
+  def __init__(self, particle_set, filename, scale_factor=1.0):
     """
 
     particle_set: ParticleSet
@@ -19,12 +19,17 @@ class InsertParticlesFromFile(ActionSet):
     filename: String
       Name of the sample point table, currently we have: t-design (948 points), Gauss_Legendre_quadrature (800 points)
 
+    scale_factor
+      scale factor for all coordinates, used for scale up/down the sample table from unit sphere to certain radius. 
+      set to 1 if your table is exact.
+
     """
 
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self._filename                       = filename
+    self._scale                          = scale_factor
 
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
@@ -87,7 +92,7 @@ tarch::multicore::BooleanSemaphore """ + full_qualified_classname + """::_semaph
     return """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
-  _fileReader.readDatFile( \"""" + self._filename + """\" );
+  _fileReader.readDatFile( \"""" + self._filename + """\", """ + str(self._scale) + """);
 """
 
 
