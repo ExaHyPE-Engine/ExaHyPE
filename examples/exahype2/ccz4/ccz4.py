@@ -37,8 +37,8 @@ intparams = {"LapseType":0, "tp_grid_setup":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
-    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, default=0.4,  help="upper limit for refinement" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.4,  help="lower limit for refinement (set to 0 to make it equal to max_h - default)" )
+    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement" )
+    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default)" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
@@ -457,6 +457,7 @@ if __name__ == "__main__":
 
     min_h = args.min_h
     if min_h <=0.0:
+      print( "No minimal mesh size chosen. Set it to max mesh size (regular grid)" )
       min_h = args.max_h
 
     if is_aderdg:
@@ -545,9 +546,9 @@ if __name__ == "__main__":
       )
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
-      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesOnSphere( particle_set=tracer_particles,r=0.4,table="Gauss_Legendre_quadrature"))
+      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="Gauss_Legendre_quadrature.dat"))
 
-      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz_01"))
+      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz_01",1000))
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 

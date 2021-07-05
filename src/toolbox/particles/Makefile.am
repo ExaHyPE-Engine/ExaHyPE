@@ -8,6 +8,7 @@ endif
 
 
 ToolboxParticles_SOURCES = \
+  FileReader.cpp \
   Tracer.cpp \
   TrajectoryDatabase.cpp \
   particles.cpp \

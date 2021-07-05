@@ -302,12 +302,19 @@ tarch::logging::LogFilter::getInstance().printFilterListToCout();
 
 \section{OpenMP troubleshooting}
 \begin{itemize}
-  \item \textbf{My code hangs and/or uses only one core}. If you pass
+  \item \textbf{My linker fails, as OpenMP or pthreads are not found}. We see
+  this frequently with GNU compilers. Ensure that your \texttt{LDFLAGS} holds
+  \texttt{-fopenmp} when you run \texttt{configure}.
+  \item \textbf{My code uses only one core}. If you pass
   \texttt{--with-multithreading=omp} to \texttt{configure}, ensure that you add
-  all flags that your compiler needs to \texttt{CXXFLAGS}. If you compile
+  all flags that your compiler needs to \texttt{CXXFLAGS}, too. If you compile
   requires you to pass \texttt{-openmp}, e.g., to make it understand OpenMP
   pragmas, then you have to add \texttt{CXXFLAGS=-openmp} to your configure
-  invocation.
+  invocation. We've seen multiple times with GNU that the GNU compiler
+  translates your codd if you use \texttt{--with-multithreading=omp}, but
+  effectively ignores the OpenMP pragmas as you forgot to specify
+  \texttt{CXXFLAGS=-openmp}. You end up with core libraries which do not support
+  multithreading or even deadlock.
   \item \textbf{My code hangs}. Check how many threads OpenMP tries to book. You
   find this information at the startup where you typically obtain a message
   similar to 

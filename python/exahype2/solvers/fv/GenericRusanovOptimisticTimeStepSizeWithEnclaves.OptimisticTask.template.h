@@ -22,11 +22,12 @@
 #include "repositories/SolverRepository.h"
 
 
+#include <vector>
+
+
 #ifdef UseSmartMPI
 #include "smartmpi.h"
 #endif
-
-#include <vector>
 
 
 {% for item in NAMESPACE -%}
@@ -52,6 +53,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
 #endif
   private:
     static tarch::logging::Log  _log;
+    /**
+     * This is a class attribute holding a unique integer per enclave task type.
+     */
     static int                  _optimisticTaskId;
     
     /**
@@ -60,6 +64,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
      */
     static double* copyPatchData( double* __restrict__ patchData);
     
+    #ifdef UseSmartMPI
+    int          _remoteTaskId;
+    #endif
   public:
     /**
      * @param patchData This is the real patch data, i.e. NxNxN. No outer halo or so.
@@ -86,17 +93,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
     );
 
     bool isSmartMPITask() const override;
-#ifdef UseSmartMPI
-/**
- * Default is false
- */
 
-void runLocally() override;
-void sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) override;
-void receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) override;
-void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
-void receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) override;
-#endif
+    #ifdef UseSmartMPI
+    void runLocally() override;
+    void moveTask(int rank, int tag, MPI_Comm communicator) override;
+    void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+
+    static smartmpi::Task* receiveTask(int rank, int tag, MPI_Comm communicator);
+    static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator);
+    #endif
 };
 
 

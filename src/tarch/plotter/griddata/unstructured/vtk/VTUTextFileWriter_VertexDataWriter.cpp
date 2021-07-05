@@ -86,6 +86,10 @@ void tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::VertexDataW
     plotVertex(_lastWriteCommandVertexNumber+1,0.0);
   }
 
+  if (value<1e-8) {
+    value = 0.0;
+  }
+
   _lastWriteCommandVertexNumber = index;
   _out << value << " ";
   for (int i=1; i<_recordsPerVertex; i++) {

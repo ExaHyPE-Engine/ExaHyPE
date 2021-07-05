@@ -1,7 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _TOOLBOX_PARTICLE_TRACER_
-#define _TOOLBOX_PARTICLE_TRACER_
+#ifndef _TOOLBOX_PARTICLES_TRACER_
+#define _TOOLBOX_PARTICLES_TRACER_
 
 
 #include "peano4/utils/Globals.h"
