@@ -85,6 +85,7 @@ class InsertParticlesFromFile(ActionSet):
   def get_static_initialisations(self,full_qualified_classname):
     return """
 tarch::multicore::BooleanSemaphore """ + full_qualified_classname + """::_semaphore;
+toolbox::particles::FileReader     """ + full_qualified_classname + """::_fileReader;
 """
 
 
@@ -92,22 +93,25 @@ tarch::multicore::BooleanSemaphore """ + full_qualified_classname + """::_semaph
     return """
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
-  _fileReader.readDatFile( \"""" + self._filename + """\", """ + str(self._scale) + """);
+  
+  tarch::multicore::Lock lock( _semaphore );
+
+  if ( _fileReader.empty() ) 
+    _fileReader.readDatFile( \"""" + self._filename + """\", """ + str(self._scale) + """);
 """
 
 
-  def get_destructor_body(self):
-    return """
-  _fileReader.clear();
-"""
+  #def get_destructor_body(self):
+  #  return """
+  #"""
 
 
   def get_attributes(self):
      return """
   static tarch::multicore::BooleanSemaphore _semaphore;
      
-  int                            _particleNumberOnThisTree;
-  int                            _spacetreeId;
-  toolbox::particles::FileReader _fileReader;
+  int                                    _particleNumberOnThisTree;
+  int                                    _spacetreeId;
+  static toolbox::particles::FileReader  _fileReader;
 """
 

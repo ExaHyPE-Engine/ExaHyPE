@@ -43,6 +43,10 @@ class toolbox::particles::FileReader {
     );
 
     void clear();
+
+    bool empty() const;
+
+    bool getNumberOfCoordinates() const;
 };
 
 #endif

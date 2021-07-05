@@ -12,7 +12,7 @@ info  tarch                                -1     white
 info  peano4                               -1     white
 info  examples                             -1     white
 info  exahype2                             -1     white
-info  toolbox                              -1     black
+info  toolbox                              -1     white
  
 trace  tarch                               -1     black
 trace  peano4                              -1     black
