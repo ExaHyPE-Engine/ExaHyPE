@@ -53,9 +53,8 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         ] + self.prebuild_cmds
         
         # build on bfd101 (send build to background, then 'wait')
-        build_cmd = '. spack/share/spack/setup-env.sh; spack load gcc@9.3.0; rm -rf smartmpi_bfd; git clone git@gitlab.lrz.de:hpcsoftware/smartmpi.git smartmpi_bfd; pushd smartmpi_bfd; git checkout master; git pull; libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; ./configure --with-mpi={mpi_comp} CXXFLAGS="-std=c++17 -DnoMPISupportsSingleSidedCommunication"; make -j; popd; rm -rf Peano_bfd; git clone https://gitlab.lrz.de/hpcsoftware/Peano.git Peano_bfd; pushd Peano_bfd; git checkout {test.git_rev}; git clean -x -f -d; libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; ./configure CXX="g++" --enable-blockstructured --enable-exahype --enable-loadbalancing --with-multithreading=omp CXXFLAGS="-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication -I$PWD/../smartmpi/src" --with-mpi={mpi_comp} --with-smartmpi={topology} LDFLAGS=-L$PWD/../smartmpi_bfd/src; make -j10; popd'
         self.prebuild_cmds = [
-                f"ssh bfd101 '{build_cmd}' &"
+                f"ssh bfd101 './Peano/reframe/tests/bfd_builder.sh' &"
         ] + self.prebuild_cmds + ['wait']
 
         # config options for Peano with SmartMPI
@@ -84,7 +83,7 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         ]
 
         self.prerun_cmds = [
-                'ssh bfd101 'pushd Peano_bfd/examples/exahype2/euler; python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001 -m debug; make -j; popd' &',
+                "ssh bfd101 'pushd Peano_bfd/examples/exahype2/euler; python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001 -m debug; make -j; popd' &",
                 f'pushd {self.test_dir}',
                 'python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001 -m debug',
                 'make -j',
