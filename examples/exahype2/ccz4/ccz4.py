@@ -37,8 +37,8 @@ intparams = {"LapseType":0, "tp_grid_setup":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
-    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, default=0.4,  help="upper limit for refinement" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0.4,  help="lower limit for refinement (set to 0 to make it equal to max_h - default)" )
+    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement" )
+    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default)" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
@@ -457,6 +457,7 @@ if __name__ == "__main__":
 
     min_h = args.min_h
     if min_h <=0.0:
+      print( "No minimal mesh size chosen. Set it to max mesh size (regular grid)" )
       min_h = args.max_h
 
     if is_aderdg:
