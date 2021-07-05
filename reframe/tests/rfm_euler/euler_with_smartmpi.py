@@ -22,7 +22,7 @@ GIT_REV = os.environ['GIT_REVISION']
 class Euler_with_smartmpi_CI(rfm.RegressionTest):
     def __init__(self, git_rev, topology):
         
-        common.setup(self, num_tasks=4, num_cpus_per_task=4) # 4 ranks here means the domain decomposition fails
+        common.setup(self, git_rev, num_tasks=4, num_cpus_per_task=4) # 4 ranks here means the domain decomposition fails
 
         self.time_limit = '10m'
         
@@ -53,18 +53,9 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         ] + self.prebuild_cmds
         
         # build on bfd101 (send build to background, then 'wait')
+        build_cmd = '. spack/share/spack/setup-env.sh; spack load gcc@9.3.0; rm -rf smartmpi_bfd; git clone git@gitlab.lrz.de:hpcsoftware/smartmpi.git smartmpi_bfd; pushd smartmpi_bfd; git checkout master; git pull; libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; ./configure --with-mpi={mpi_comp} CXXFLAGS="-std=c++17 -DnoMPISupportsSingleSidedCommunication"; make -j; popd; rm -rf Peano_bfd; git clone https://gitlab.lrz.de/hpcsoftware/Peano.git Peano_bfd; pushd Peano_bfd; git checkout {test.git_rev}; git clean -x -f -d; libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing; ./configure CXX="g++" --enable-blockstructured --enable-exahype --enable-loadbalancing --with-multithreading=omp CXXFLAGS="-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication -I$PWD/../smartmpi/src" --with-mpi={mpi_comp} --with-smartmpi={topology} LDFLAGS=-L$PWD/../smartmpi_bfd/src; make -j10; popd'
         self.prebuild_cmds = [
-                f'ssh bfd101 '. spack/share/spack/setup-env.sh; spack load gcc@9.3.0; rm -rf smartmpi_bfd; 
-                             git clone git@gitlab.lrz.de:hpcsoftware/smartmpi.git smartmpi_bfd; pushd smartmpi_bfd; 
-                             git checkout master; git pull; libtoolize; aclocal; autoconf; autoheader;
-                             cp src/config.h.in .; automake --add-missing; 
-                             ./configure --with-mpi={mpi_comp} CXXFLAGS="-std=c++17 -DnoMPISupportsSingleSidedCommunication"; 
-                             make -j; popd;
-                             rm -rf Peano_bfd; git clone https://gitlab.lrz.de/hpcsoftware/Peano.git Peano_bfd; 
-                             pushd Peano_bfd; git checkout {test.git_rev}; git clean -x -f -d; 
-                             libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing;
-                             ./configure CXX="g++" --enable-blockstructured --enable-exahype --enable-loadbalancing --with-multithreading=omp CXXFLAGS="-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication -I$PWD/../smartmpi/src" --with-mpi={mpi_comp} --with-smartmpi={topology} LDFLAGS=-L$PWD/../smartmpi_bfd/src;
-                             make -j10; popd' &'
+                f"ssh bfd101 '{build_cmd}' &"
         ] + self.prebuild_cmds + ['wait']
 
         # config options for Peano with SmartMPI
