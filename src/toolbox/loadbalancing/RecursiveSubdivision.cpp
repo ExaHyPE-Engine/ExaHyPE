@@ -440,10 +440,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     and
     canSplitLocally()
   ) {
-    logInfo(
-      "getStrategyStep()",
-      "rank-local balancing seems to be inappropriate"
-    );
     return StrategyStep::SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning;
   }
 
@@ -462,10 +458,24 @@ bool toolbox::loadbalancing::RecursiveSubdivision::isLocalBalancingBad() const {
 
   for (auto p: peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees() ) {
     maxCells = std::max( maxCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
-    minCells = std::min( minCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
+    if ( 
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells()
+      >
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteUnrefinedCells() 
+      +
+      peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfRemoteRefinedCells()
+    ) {
+      minCells = std::min( minCells, peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells() );
+    }
   }
 
-  return maxCells>2*minCells;
+  bool result = minCells < maxCells and maxCells>2*minCells;
+
+  if (result) {
+    logInfo( "isLoadBalancingBad()", "local load balancing is not good, as max weight is " << maxCells << " vs " << minCells );
+  }
+
+  return result;
 }
 
 
