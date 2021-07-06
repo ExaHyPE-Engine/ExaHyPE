@@ -118,6 +118,8 @@ class PlotParticlesInVTKFormat(ActionSet):
 
 
   __Template_BeginTraversal = jinja2.Template("""
+  tarch::mpi::Lock lock( _semaphore );
+  
   static int counter = -1;
   counter++;
 
@@ -128,8 +130,6 @@ class PlotParticlesInVTKFormat(ActionSet):
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
   
-  tarch::mpi::Lock lock( _semaphore );
-
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
     false, snapshotFileName.str(), "{{FILENAME}}",
     {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}

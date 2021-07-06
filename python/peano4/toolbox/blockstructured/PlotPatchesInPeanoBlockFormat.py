@@ -188,6 +188,8 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
 
 
   __Template_BeginTraversal_Generic = """
+  tarch::mpi::Lock lock( _semaphore );
+  
   static int counter = -1;
   counter++;
 
@@ -197,8 +199,6 @@ class PlotPatchesInPeanoBlockFormat(ActionSet):
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {{
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }}
-
-  tarch::mpi::Lock lock( _semaphore );
 
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
     Dimensions, snapshotFileName.str(), "{FILENAME}",
