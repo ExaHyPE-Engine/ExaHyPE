@@ -9,7 +9,7 @@ import jinja2
 
 
 class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
-  def __init__(self,particle_set,solver,delta_between_two_snapsots,filename,number_of_entries_between_two_db_flushes):
+  def __init__(self,particle_set,solver,filename,number_of_entries_between_two_db_flushes=65536,data_delta_between_two_snapsots=1e-8,position_delta_between_two_snapsots=1e-8):
     """
      
     delta_between_two_snapshots: Float
@@ -25,7 +25,8 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
-    self.d[ "DELTA" ]                    = delta_between_two_snapsots
+    self.d[ "DATA_DELTA" ]               = data_delta_between_two_snapsots
+    self.d[ "POSITION_DELTA" ]           = position_delta_between_two_snapsots
     self.d[ "FILENAME" ]                 = filename
     self.d[ "SOLVER_NAME" ]              = solver._name
     self.d[ "SOLVER_INSTANCE" ]          = solver.get_name_of_global_instance()
@@ -37,7 +38,8 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
   
   for (auto& p: localParticles) {
     _database.addParticleSnapshot( 
-      p->getNumber(1) * peano4::parallel::Node::MaxSpacetreesPerRank + p->getNumber(0),
+      p->getNumber(0), 
+      p->getNumber(1),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       p->getX(),
       p->getData().size(),
@@ -65,7 +67,8 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
   def get_constructor_body(self):
     template = jinja2.Template("""
   _database.setOutputFileName( "{{FILENAME}}" );
-  _database.setDeltaBetweenTwoSnapsots( {{DELTA}} );
+  _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}} );
+  _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}} );
 """)
     return template.render(**self.d)
 
