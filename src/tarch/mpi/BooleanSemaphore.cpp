@@ -98,7 +98,6 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::serveLockRequests() 
 }
 
 
-
 void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::receiveDanglingMessages() {
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     #ifdef Parallel
@@ -161,6 +160,8 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
       addMapEntryLazily(number);
     }
 
+    logDebug( "acquireLock()", "wait for lock " << number << " for global master");
+
     bool gotLock = false;
     while (not gotLock) {
       {
@@ -173,7 +174,9 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
       // only check if not successful, so someone else has the chance to release
       // a lock
       if (not gotLock) {
-        receiveDanglingMessages();
+        tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+        // See documentation on receiveDanglingMessages
+        // receiveDanglingMessages();
       }
     }
     logDebug( "acquireLock()", "successfully acquired lock " << number << " for global master");
@@ -208,7 +211,10 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::acquireLock( int num
         tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::", "acquireLock(int)", tarch::mpi::Rank::getGlobalMasterRank(), _semaphoreTag );
       }
 
-      receiveDanglingMessages();
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+
+      // See documentation on dangling messages
+      //receiveDanglingMessages();
       MPI_Test(&request, &flag, MPI_STATUS_IGNORE);
     }
     #else
@@ -225,7 +231,7 @@ void tarch::mpi::BooleanSemaphore::BooleanSemaphoreService::releaseLock( int num
       assertion( _map.count(number)==1 );
       assertion( _map[number]==true );
       _map[number]=false;
-      logDebug( "acquireLock()", "successfully released lock " << number << ". state=" << toString() );
+      logDebug( "releaseLock()", "successfully released lock " << number << ". state=" << toString() );
     }
 
     // It is important to unlock the semaphore, as the serve process itself will reaquire it.

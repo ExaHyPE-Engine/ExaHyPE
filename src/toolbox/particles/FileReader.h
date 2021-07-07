@@ -35,7 +35,7 @@ class toolbox::particles::FileReader {
      * A dat file is a simple text file where we have one particle description per line. Each
      * line holds exactly Dimensions double values.
      */
-    void readDatFile( const std::string& filename );
+    void readDatFile( const std::string& filename, const double scale );
 
     std::list< tarch::la::Vector<Dimensions,double> > getParticlesWithinVoxel(
       const tarch::la::Vector<Dimensions,double>&  x,
@@ -43,6 +43,10 @@ class toolbox::particles::FileReader {
     );
 
     void clear();
+
+    bool empty() const;
+
+    bool getNumberOfCoordinates() const;
 };
 
 #endif

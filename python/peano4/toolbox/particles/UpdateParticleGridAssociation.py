@@ -36,7 +36,7 @@ class UpdateParticleGridAssociation(ActionSet):
     "#reassignments/lifts/drops=" << 
     _numberOfParticleReassignmentsOnCurrentLevel << "/" <<
     _numberOfLifts << "/" <<
-    _numberOfDrops 
+    _numberOfDrops << " on tree " <<  _treeNumber
   );
 """ )
 
@@ -47,26 +47,30 @@ class UpdateParticleGridAssociation(ActionSet):
   vertexdata::{{PARTICLES_CONTAINER}} liftParticles[TwoPowerD];
 
   for (int i=0; i<TwoPowerD; i++) {
-    std::bitset<Dimensions> currentAssociation = i;
+    std::bitset<Dimensions> currentAssociation;
     std::bitset<Dimensions> destAssociation;
-    bool                    remainsOnSameLevel = true;
+    bool                    remainsOnSameLevel;
     
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
+      std::bitset<Dimensions>  currentAssociation = i;
+      bool                     remainsOnSameLevel = true;
       for (int d=0; d<Dimensions; d++) {
-        destAssociation[d]  = (*p)->getX(d) >= marker.x()(d);
-        remainsOnSameLevel &= std::abs((*p)->getX(d) - marker.x()(d)) <= marker.h()(d);
+        destAssociation[d]  = tarch::la::greaterEquals( (*p)->getX(d), marker.x()(d) );
+        remainsOnSameLevel &= tarch::la::smallerEquals( std::abs((*p)->getX(d) - marker.x()(d)), marker.h()(d));
       }
       
       if (remainsOnSameLevel and currentAssociation==destAssociation) {
         p++;
       }
       else if (remainsOnSameLevel) {
+        logDebug( "touchCellLastTime(...)", "reassign particle " << (*p)->toString() << " in tree " << _treeNumber << " within cell " << marker.toString() << " which had been associated with vertex " << i << " but belongs to " << destAssociation );
         particlesThatMoveOnSameLevel[ destAssociation.to_ulong() ].push_back(*p);
         p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfParticleReassignmentsOnCurrentLevel++;
       }
       else {
+        logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
         liftParticles[ destAssociation.to_ulong() ].push_back(*p);
         p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfLifts++;
@@ -113,6 +117,12 @@ class UpdateParticleGridAssociation(ActionSet):
 """)  
 
 
+  def get_constructor_body(self):
+    return """
+  _treeNumber  = treeNumber;
+"""
+    
+
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
@@ -155,6 +165,7 @@ class UpdateParticleGridAssociation(ActionSet):
 
   def get_attributes(self):
     return """
+  int  _treeNumber;
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
   int  _numberOfDrops;

@@ -18,7 +18,7 @@ trace  tarch                               -1     black
 trace  peano4                              -1     black
 trace  examples                            -1     black
 trace  exahype2                            -1     black
-trace  toolbox                             -1     black always-on
+trace  toolbox                             -1     black
 
 
 

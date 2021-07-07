@@ -499,25 +499,37 @@ if __name__ == "__main__":
     build_mode = modes[args.mode]
     
     dimensions = 3
-
-    if args.periodic_bc:
+    if args.scenario=="two-punctures":
+      msg = "WARNING: Periodic BC deactivated because you pick TP scenario"
+      print(msg)
+      periodic_boundary_conditions = [False,False,False]
+      userwarnings.append((msg,None))
+    elif args.periodic_bc:
       print( "Periodic BC set")
       periodic_boundary_conditions = [True,True,True]          # Periodic BC
     else:
-      msg = "WARNING: Periodic BC deactivated"
+      msg = "WARNING: Periodic BC deactivated by hand"
       print(msg)
       periodic_boundary_conditions = [False,False,False]
       userwarnings.append((msg,None))
 
+    if args.scenario=="gauge":
+      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      #offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
+      msg = "Gauge wave, domain set as "+str(offset)+" and "+str(domain_size)
+      print(msg)
+      userwarnings.append((msg,None))
+    if args.scenario=="two-punctures":
+      offset=[-20, -20, -20]; domain_size=[40.0, 40.0, 40.0]
+      #offset=[-30, -30, -30]; domain_size=[60.0, 60.0, 60.0]
+      #offset=[-40, -40, -40]; domain_size=[80.0, 80.0, 80.0]
+      msg = "Two-punctures, domain set as "+str(offset)+" and "+str(domain_size)
+      print(msg)
+      userwarnings.append((msg,None))
+
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
-      #[-10, -10, -10],  [20.0, 20.0, 20.0],
-      #[-15, -15, -15],  [30.0, 30.0, 30.0],
-      [-20, -20, -20],  [40.0, 40.0, 40.0],
-      #[-30, -30, -30],  [60.0, 60.0, 60.0],
-      #[-40, -40, -40],  [80.0, 80.0, 80.0],
-      #[-1.5, -1.5, -1.5],  [3.0, 3.0, 3.0],
-      #[-0.5, -0.5, -0.5],  [1.0, 1.0, 1.0],
+      offset,  domain_size,
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
@@ -526,7 +538,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv2" )
     #probe_point = [-8,-8,-8]
     #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 
@@ -546,9 +558,9 @@ if __name__ == "__main__":
       )
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
-      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="Gauss_Legendre_quadrature.dat"))
+      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="t-design.dat", scale_factor=0.4))#"Gauss_Legendre_quadrature.dat"
 
-      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz_01",1000))
+      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz",1000))
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 
