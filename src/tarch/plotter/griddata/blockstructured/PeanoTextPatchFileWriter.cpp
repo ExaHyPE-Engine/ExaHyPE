@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <filesystem>
+#include <iomanip>
 
 
 #include "tarch/Assertions.h"
@@ -53,6 +54,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
   std::ofstream     indexFileOut;
   indexFileOut.open( _indexFile, std::ios::app );
   indexFileOut << std::endl << Token_BeginDataSet << std::endl;
+  indexFileOut << std::setprecision(10);
   indexFileOut << "  " << Token_TimeStamp << "  " << timestamp << std::endl;
   indexFileOut << std::endl << Token_EndDataSet << std::endl;
 }
@@ -133,7 +135,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
 
   clear();
 
-  double DefaultTimeStampPrecision = 1e-5;
+  const double DefaultTimeStampPrecision = tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 
   switch (appendToIndexFile) {
     case IndexFileMode::CreateNew:
@@ -147,8 +149,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
         logInfo( "PeanoTextPatchFileWriter(...)", "no index file " << _indexFile << " found. Create new one" );
         createEmptyIndexFile();
       }
-      else if ( tarch::la::greater( getLatestTimeStepInIndexFile(), timeStamp, DefaultTimeStampPrecision ) ) {
-        logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << _indexFile << " with data for time stamp " << getLatestTimeStepInIndexFile() << ". Will be overwritten" );
+      else if ( tarch::la::smaller( timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision ) ) {
+        logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << _indexFile << " with data for time stamp " << getLatestTimeStepInIndexFile() << ". Will be overwritten as we dump data for time " << timeStamp );
         createEmptyIndexFile();
       }
 

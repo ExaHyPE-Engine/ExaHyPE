@@ -108,11 +108,15 @@ class PlotParticlesInVTKFormat(ActionSet):
   __Template_TouchVertexFirstTime = jinja2.Template("""
   assertion( _positionWriter!=nullptr );
   for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}}) {
-    int particleNumber = _writer->plotPoint(p->getX());
-    _positionWriter->plot(particleNumber,p->getX());
-    _cutOffWriter->plot(particleNumber,p->getCutOffRadius());
-    _associationWriter->plot(particleNumber,marker.x()-p->getX());
-    {{ATTRIBUTE_WRITER_PLOT_CALLS}}
+    if (
+      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+    ) {
+      int particleNumber = _writer->plotPoint(p->getX());
+      _positionWriter->plot(particleNumber,p->getX());
+      _cutOffWriter->plot(particleNumber,p->getCutOffRadius());
+      _associationWriter->plot(particleNumber,marker.x()-p->getX());
+      {{ATTRIBUTE_WRITER_PLOT_CALLS}}
+    }
   }
 """)
 

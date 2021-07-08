@@ -10,6 +10,27 @@ namespace {
 }
 
 
+
+template <class T>
+void toolbox::particles::init(
+  T&                                          particle,
+  const tarch::la::Vector<Dimensions,double>& x,
+  double                                      cutOffRadius
+) {
+  #if PeanoDebug>0
+  particle.setDebugX( marker.x() );
+  particle.setDebugH( marker.h() );
+  #endif
+
+  particle.setX(x);
+  particle.setCutOffRadius( cutOffRadius );
+  particle.setMoveState( T::MoveState::New );
+
+  particle.setParallelState(T::ParallelState::Halo);
+  particle.setNewParallelState(T::NewParallelState::Halo);
+}
+
+
 template <class T>
 std::vector<T*> toolbox::particles::createEquallySpacedParticles(double h, const peano4::datamanagement::VertexMarker& marker, bool roundDown, bool addNoise) {
   std::vector<T*> result;
@@ -32,18 +53,14 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(double h, const
     dfor(k, particlesPerAxis) {
       tarch::la::Vector<Dimensions,double> x = offset + particleSpacing * tarch::la::convertScalar<double>(k);
       T* newParticle = new T();
-      #if PeanoDebug>0
-      newParticle->setDebugX( marker.x() );
-      newParticle->setDebugH( marker.h() );
-      #endif
+
       if (addNoise) {
         for (int d=0; d<Dimensions; d++) {
           x(d) += (randomDist(e2) - 0.5) * particleSpacing;
         }
       }
-      newParticle->setX(x);
-      newParticle->setCutOffRadius( 0.9*tarch::la::min(marker.h()) );
-      newParticle->setMoveState( T::MoveState::New );
+
+      init(*newParticle,x,0.9*tarch::la::min(marker.h()));
       result.push_back(newParticle);
     }
   }

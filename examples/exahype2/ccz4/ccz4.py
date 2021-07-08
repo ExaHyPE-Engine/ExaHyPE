@@ -558,9 +558,16 @@ if __name__ == "__main__":
       )
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
-      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="t-design.dat", scale_factor=0.4))#"Gauss_Legendre_quadrature.dat"
+      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="t-design.dat", scale_factor=0.4))#"Gauss_Legendre_quadrature.dat" #"t-design.dat"
 
-      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,my_solver,-1,"zz",1000))
+      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+        particle_set=tracer_particles,
+        solver=my_solver,
+        filename="zz",
+        number_of_entries_between_two_db_flushes=1000
+      ))
+      #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
+      #,,-1,"zz",1000))
 
     peano4_project = project.generate_Peano4_project(verbose=True)
 

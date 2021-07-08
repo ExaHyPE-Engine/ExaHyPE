@@ -30,7 +30,8 @@ tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileW
     logWarning( "writeToFile()", "index filename should not end with .pvd as routine adds extension automatically. Chosen filename prefix=" << indexFileName );
   }
 
-  double DefaultTimeStampPrecision = 1e-5;
+  // VTK does not support more precise values
+  const double DefaultTimeStampPrecision = 1e-5;
 
   switch (mode) {
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew:
@@ -42,8 +43,8 @@ tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileW
         logInfo( "PeanoTextPatchFileWriter(...)", "no index file " << indexFileName << " found. Create new one" );
         tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
       }
-      else if ( tarch::la::greater( tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName), timeStamp, DefaultTimeStampPrecision ) ) {
-        logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << indexFileName << " with data for time stamp " << tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName) << ". Will be overwritten" );
+      else if ( tarch::la::smaller( timeStamp, tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName), DefaultTimeStampPrecision ) ) {
+        logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << indexFileName << " with data for time stamp " << tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName) << ". Will be overwritten as we dump data for time " << timeStamp );
         tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
       }
 

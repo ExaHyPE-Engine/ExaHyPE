@@ -8,7 +8,7 @@ namespace TP_bindding {
 	//pre-process, solve the puncture equations
 	inline void prepare(TP::TwoPunctures* tp){
 	    //first we set the parameter. TODO:find a way to read parameter from python script
-	    int swi=2;//0--single black hole, 1--BBH hoc, 2--BBH rotation, 3--GW150914
+	    int swi=0;//0--single black hole, 1--BBH hoc, 2--BBH rotation, 3--GW150914
 	    
 		if (swi==0){
 			tp->par_b=1.0;
