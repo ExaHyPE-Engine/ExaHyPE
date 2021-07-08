@@ -14,10 +14,9 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   _cellCentre(event.getX()),
   _h(event.getH()),
   _select(select) {
-  for (int i=0; i<TwoPowerD; i++) {
-    _isRefined[i]  = event.getIsRefined(i);
-    _isLocal[i]    = event.getIsVertexLocal(i);
-  }
+  _isRefined                              = event.getIsRefined();
+  _isLocal                                = event.getIsVertexLocal();
+  _isAdjacentToParallelDomainBoundary     = event.getIsRefined();
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
 }
 
@@ -97,4 +96,13 @@ bool peano4::datamanagement::VertexMarker::isLocal(int i) const {
   return _isLocal[i];
 }
 
+
+bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary() const {
+  return isAdjacentToParallelDomainBoundary(_select);
+}
+
+
+bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary(int i) const {
+  return _isAdjacentToParallelDomainBoundary[i];
+}
 
