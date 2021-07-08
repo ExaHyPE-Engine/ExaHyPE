@@ -538,7 +538,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv2" )
+    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv2" )
     #probe_point = [-8,-8,-8]
     #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 
@@ -558,7 +558,7 @@ if __name__ == "__main__":
       )
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
-      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="Gauss_Legendre_quadrature.dat", scale_factor=0.4))#"Gauss_Legendre_quadrature.dat" #"t-design.dat"
+      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="t-design.dat", scale_factor=0.4))#"Gauss_Legendre_quadrature.dat" #"t-design.dat"
 
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,

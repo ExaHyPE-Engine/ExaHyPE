@@ -73,8 +73,8 @@ def file_len(fname):
 
 #########################################################################################################################
 #main code
-scheme="Gauss_Legendre"
-#scheme="t-design"
+#scheme="Gauss_Legendre"
+scheme="t-design"
 
 
 if scheme=="Gauss_Legendre":
@@ -120,7 +120,7 @@ print("valid tracers: "+str(len(coors)))
 #create the real data set
 data_set=np.zeros((N_tracer,tstep,7))
 
-ID1=0; ID2=0
+ID1=0; ID2=1
 t_count=0 #counting the tsteps
 N_count=0 #counting the tracer
 for line in dat:
