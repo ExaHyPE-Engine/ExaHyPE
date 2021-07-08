@@ -36,24 +36,33 @@ class InsertParticlesFromFile(ActionSet):
   if (not marker.isRefined()) {
     tarch::multicore::Lock lock( _semaphore );
   
-    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h());  
+    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), marker.isAdjacentToParallelDomainBoundary());  
     for (auto& p: coords) {
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
       newParticle->setNumber(0, _spacetreeId);
       newParticle->setNumber(1, _particleNumberOnThisTree);
-      newParticle->setX(p);                 // position
-      newParticle->setCutOffRadius(0.0);    // not used with tracers, but we have to set it. Otherwise the vis (Paraview) will crash
+      toolbox::particles::init(*newParticle,p,0.0);
       _particleNumberOnThisTree++;
       fineGridVertex{{PARTICLES_CONTAINER}}.push_back( newParticle );
     }
+    
+    logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " << marker.toString() << " on tree " << _spacetreeId << ": " << marker.isAdjacentToParallelDomainBoundary() );
   }
 """)
+
+
+  __Template_EndTraversal = jinja2.Template("""
+  logInfo( "endIteration()", "inserted " << _particleNumberOnThisTree << " particle(s) on tree " << _spacetreeId << " (boundary vertices might host redundant particle data)" );
+""")
+
 
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = self.__Template_TouchVertexFirstTime.render(**self.d)
+    if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
+      result = self.__Template_EndTraversal.render(**self.d)
     return result
 
 
@@ -75,6 +84,7 @@ class InsertParticlesFromFile(ActionSet):
 #include "vertexdata/{{PARTICLES_CONTAINER}}.h"
 #include "globaldata/{{PARTICLE}}.h"
 #include "toolbox/particles/FileReader.h"
+#include "toolbox/particles/ParticleFactory.h"
 #include <fstream>
 #include <string>
 #include <vector>

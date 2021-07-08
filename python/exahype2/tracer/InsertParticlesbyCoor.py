@@ -56,10 +56,9 @@ class InsertParticlesbyCoor(ActionSet):
     globaldata::{{PARTICLE}}* p2 = new globaldata::{{PARTICLE}}();
     p2->setNumber(0, _spacetreeId);
     p2->setNumber(1, _particleNumberOnThisTree);
-    p2->setX(0, {{P2[0]}} );		// x coordinate
-    p2->setX(1, {{P2[1]}} );		// y coordinate
-    p2->setX(2, {{P2[2]}} );		// z coordinate
-    p2->setCutOffRadius(0.0); 
+
+    toolbox::particles::init(*newParticle, { {{P2[0]}},{{P2[1]}},{{P2[2]}} },0.0);
+
     _particleNumberOnThisTree++;
     fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p2 );
   }
