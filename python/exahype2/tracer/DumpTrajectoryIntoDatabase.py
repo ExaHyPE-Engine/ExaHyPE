@@ -37,14 +37,18 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
   auto& localParticles = fineGridVertex{{PARTICLES_CONTAINER}};
   
   for (auto& p: localParticles) {
-    _database.addParticleSnapshot( 
-      p->getNumber(0), 
-      p->getNumber(1),
-      repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-      p->getX(),
-      p->getData().size(),
-      p->getData().data()
-    );
+    if (
+      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+    ) {
+      _database.addParticleSnapshot( 
+        p->getNumber(0), 
+        p->getNumber(1),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+        p->getX(),
+        p->getData().size(),
+        p->getData().data()
+      );
+    }
   };
 """)
   
@@ -93,3 +97,4 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
     return """
 toolbox::particles::TrajectoryDatabase  """ + full_qualified_classname + """::_database( """ + str(self.number_of_entries_between_two_db_flushes) + """);
 """
+
