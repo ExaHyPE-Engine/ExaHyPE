@@ -14,6 +14,11 @@
 #include "multicore.h"
 
 
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
+
+
 namespace {
   tarch::multicore::BooleanSemaphore  activeTasksSemaphore;
   std::set<int>                       activeTaskNumbers;
@@ -105,13 +110,6 @@ namespace {
     }
     lock.free();
 
-    #ifdef UseSmartMPI
-    if (myTask!=nullptr and myTask->canMigrate() ) {
-      smartmpi::spawn( myTask );
-      return true;
-    }
-    else
-    #endif
     if (myTask!=nullptr) {
       bool requeue = myTask->run();
       if (requeue)
@@ -163,20 +161,11 @@ namespace {
     lock.free();
 
     for (auto& task: extractedTasks) {
-      #ifdef UseSmartMPI
-      if ( task->canMigrate() ) {
-        smartmpi::spawn( task );
-      }
-      else {
-      #endif
-        bool requeue = task->run();
-        if (requeue)
-          spawnTask( task );
-        else
-          delete task;
-      #ifdef UseSmartMPI
-      }
-      #endif
+      bool requeue = task->run();
+      if (requeue)
+        spawnTask( task );
+      else
+        delete task;
     }
 
     return extractedTasks.size();
@@ -385,9 +374,6 @@ bool tarch::multicore::TaskComparison::operator() (Task* lhs, Task* rhs) const {
 
 
 tarch::multicore::Task::Task( int id, int taskType, int priority ):
-  #ifdef UseSmartMPI
-  smartmpi::Task( taskType ),
-  #endif
   _id(id),
   _taskType( taskType ),
   _priority( priority ) {
@@ -399,32 +385,9 @@ bool tarch::multicore::Task::canFuse() const {
 }
 
 
-#ifdef UseSmartMPI
-bool tarch::multicore::Task::canMigrate() const {
+bool tarch::multicore::Task::isSmartMPITask() const {
   return false;
 }
-
-
-void tarch::multicore::Task::runLocally() {
-  while ( run() ) {}
-}
-
-
-void tarch::multicore::Task::sendTaskInputToRank(int rank, int tag, MPI_Comm communicator) {
-}
-
-
-void tarch::multicore::Task::receiveTaskInputFromRank(int rank, int tag, MPI_Comm communicator) {
-}
-
-
-void tarch::multicore::Task::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
-}
-
-
-void tarch::multicore::Task::receiveTaskOutputFromRank(int rank, int tag, MPI_Comm communicator) {
-}
-#endif
 
 
 int tarch::multicore::Task::getPriority() const {
@@ -489,30 +452,20 @@ bool tarch::multicore::TaskWithoutCopyOfFunctor::run() {
 }
 
 
-
-/**
-* Process a few tasks from my backlog of tasks
-*
-* This routine loops through the pending tasks until either maxTasks have been
-* processed (we decrement this counter by one per loop iteration) or no tasks
-* are left anymore. In the latter case, we set maxTasks to 0 and thus terminate
-* the loop.
-*
-* Both the way we pick tasks from the queue and extract them from there and the
-* way we process the tasks depends on the current state of our task processing
-* strategy. This is encoded via the enum taskProgressionStrategy.
-*/
 bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
   assertion(maxTasks>=0);
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
+
+  #ifdef UseSmartMPI
+  smartmpi::tock();
+  #endif
 
   bool  result        = false;
   while (maxTasks>0) {
     int handledTasks = 0;
     switch (taskProgressionStrategy) {
       case TaskProgressionStrategy::MapOntoNativeTask:
-        assertion(fifo);
         handledTasks = mapPendingTasksOntoNativeTasks(maxTasks);
         break;
       case TaskProgressionStrategy::BufferInQueue:
@@ -558,13 +511,15 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
 }
 
 
-/**
-* Spawns a single task in a non-blocking fashion
-*
-* @see tarch::multicore::spawnAndWait()
-* @see processPendingTasks(int)
-*/
 void tarch::multicore::spawnTask(Task*  task) {
+  assertion( task!=nullptr );
+  #ifdef UseSmartMPI
+  if ( task->isSmartMPITask() ) {
+    smartmpi::spawn( dynamic_cast<smartmpi::Task*>(task) );
+    return;
+  }
+  #endif
+
   switch (taskProgressionStrategy) {
     case TaskProgressionStrategy::MapOntoNativeTask:
       native::spawnTask(task);

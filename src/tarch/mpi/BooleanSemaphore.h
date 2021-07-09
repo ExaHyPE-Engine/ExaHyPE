@@ -25,7 +25,7 @@ namespace tarch {
 
 
 /**
- * Boolean semaphore accross MPI ranks
+ * Boolean semaphore across MPI ranks
  *
  * This means that only one thread on one rank gets access to a certain code region. 
  * Different to shared memory semaphores, the MPI+X sempahores require a dedicated
@@ -108,8 +108,21 @@ class tarch::mpi::BooleanSemaphore {
         ~BooleanSemaphoreService();
 
         /**
+         * Receive any lock-related dangling messages
+         *
+         * This routine polls and if there's a release or request message, it
+         * tries to answer it.
+         *
+         * <h2> Usage within multithreaded environment </h2>
+         *
          * We rely on the fact that no multiple threads can access the
-         * receiveDangling thing at the same time.
+         * receiveDangling thing at the same time if you go through the services.
+         * The other way round, please do never invoke this routine directly: If 
+         * two threads jump into receiveDangingMessages, they might issue the Iprobe
+         * one after another and get a "yes" - even though there is only one message
+         * in the queue. Consequently, both threads bump into the receive operation.
+         * Now, only one message is there and, consequently, the second thread 
+         * deadlocks.
          */
         void receiveDanglingMessages() override;
 

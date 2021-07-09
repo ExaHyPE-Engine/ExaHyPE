@@ -25,6 +25,11 @@
 #include <vector>
 
 
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -42,10 +47,22 @@
  *
  * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
  */
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask {
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
+#ifdef UseSmartMPI
+, public smartmpi::Task
+#endif
+{
   private:
     static tarch::logging::Log  _log;
-    static int                  _enclaveTaskId;
+    /**
+     * This is a class attribute holding a unique integer per enclave task type.
+     */
+    static int                  _enclaveTaskTypeId;
+
+
+    #ifdef UseSmartMPI
+    int          _remoteTaskId;
+    #endif
   public:
     static void applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 
@@ -62,6 +79,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
       double                                      dt,
       double* __restrict__                        reconstructedPatch
     );
+
+    bool isSmartMPITask() const override;
+
+    #ifdef UseSmartMPI
+    void runLocally() override;
+    void moveTask(int rank, int tag, MPI_Comm communicator) override;
+    void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+
+    static smartmpi::Task* receiveTask(int rank, int tag, MPI_Comm communicator);
+    static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator);
+    #endif
 };
 
 

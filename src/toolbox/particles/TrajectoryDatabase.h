@@ -11,7 +11,7 @@
 
 #include <string>
 #include <map>
-#include <forward_list>
+#include <list>
 
 
 namespace toolbox {
@@ -26,8 +26,12 @@ class toolbox::particles::TrajectoryDatabase {
     static tarch::logging::Log _log;
 
     std::string _fileName;
-    double      _delta;
+    double      _dataDelta;
+    double      _positionDelta;
     int         _numberOfDataPointsPerParticle;
+
+    const int   _deltaBetweenTwoDatabaseFlushes;
+    int         _thresholdForNextDatabaseFlush;
 
     struct Entry {
       tarch::la::Vector<Dimensions,double>  x;
@@ -37,38 +41,85 @@ class toolbox::particles::TrajectoryDatabase {
       Entry( const TrajectoryDatabase& database, const tarch::la::Vector<Dimensions,double>&  x_, double  timestamp_ );
     };
 
-    std::map<int, std::forward_list<Entry> >  _data;
+    std::map< std::pair<int,int>, std::list<Entry> >  _data;
 
     tarch::multicore::BooleanSemaphore        _semaphore;
 
-    bool addSnapshot(
-      int number,
-      const tarch::la::Vector<Dimensions,double>& x
+    enum class AddSnapshotAction {
+      Ignore,
+      Append,
+      Replace
+    };
+
+    /**
+     * Can't be const as it locks the semaphore.
+     */
+    AddSnapshotAction getAction(
+      const std::pair<int, int>&                  number,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      timestamp
     );
 
+    AddSnapshotAction getAction(
+      const std::pair<int, int>&                   number,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       timestamp,
+      int                                          numberOfDataEntries,
+      double*                                      data
+    );
 
+    bool dumpDatabaseSnapshot() const;
   public:
-    TrajectoryDatabase();
+    /**
+     * Trajectory database
+     *
+     * The database dumps/stores data if and only if the delta of two particles is
+     * bigger than a threshold. We always work with the max norm. There's two different
+     * thresholds: one for the position, one for the data.
+     */
+    TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8 );
     ~TrajectoryDatabase();
 
     void clear();
     void dumpCSVFile();
 
     void setOutputFileName( const std::string& filename );
-    void setDeltaBetweenTwoSnapsots( double value );
+    void setDataDeltaBetweenTwoSnapshots( double value );
+    void setPositionDeltaBetweenTwoSnapshots( double value );
 
+    /**
+     * A particle is always uniquely identified by two integers (an
+     * integer pair). This way, we can initialise (hand out) particle
+     * numbers without any semaphore.
+     */
     void addParticleSnapshot(
-      int number,
-      double timestamp,
-      const tarch::la::Vector<Dimensions,double>& x
+      const std::pair<int, int>&                   number,
+      double                                       timestamp,
+      const tarch::la::Vector<Dimensions,double>&  x
     );
 
     void addParticleSnapshot(
-      int     number,
-      double  timestamp,
-      const tarch::la::Vector<Dimensions,double>& x,
-      int     numberOfDataEntries,
-      double* data
+      int                                          number0,
+      int                                          number1,
+      double                                       timestamp,
+      const tarch::la::Vector<Dimensions,double>&  x
+    );
+
+    void addParticleSnapshot(
+      const std::pair<int, int>&                   number,
+      double                                       timestamp,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      int                                          numberOfDataEntries,
+      double*                                      data
+    );
+
+    void addParticleSnapshot(
+      int                                          number0,
+      int                                          number1,
+      double                                       timestamp,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      int                                          numberOfDataEntries,
+      double*                                      data
     );
 };
 

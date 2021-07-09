@@ -52,11 +52,6 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
     std::vector<peano4::parallel::TreeManagementMessage>   _unansweredMessages;
 
     /**
-     * @see orderedBarrier()
-     */
-    std::map< std::string, bool >                          _hasPassedOrderedBarrier;
-
-    /**
      * Each task triggers the traversal of one specific spacetree. After
      * that, we might directly trigger the data exchanges. Yet, this is not a
      * good idea as other tasks might linger in the background not have sent
@@ -723,39 +718,6 @@ class peano4::parallel::SpacetreeSet: public tarch::services::Service {
      * @return Set of ids of local spacetrees
      */
     std::set<int> getLocalSpacetrees() const;
-
-    /**
-     * Synchronise first thread per rank 
-     *
-     * This routine synchronises the ranks weakly. It waits until one (arbitrary)
-     * thread per rank hits a barrier. After that, all following threads are just
-     * piped through and they do not have wait wait anymore. In the next grid
-     * iteration, we again synchronise the first thread.
-     *
-     * <h2> Usage </h2>
-     *
-     * The class behaves similar to any other barrier, i.e. you have to call it on
-     * all ranks. You may call it on all threads per rank, too, but you don't have
-     * to. The first thread
-     * that encounters the barrier will synchronise with all the other ranks. The
-     * other threads will not sync anymore, i.e. you can have different thread counts
-     * per rank, but they will not continue concurrently.
-     *
-     * You can use a barrier with an identifier only once per iteration.
-     *
-     * <h2> Implementation </h2>
-     *
-     * I use the rank-local map _hasPassedOrderedBarrier to memorise whether a barrier
-     * had been hit by a particular rank. This one is protected by a semaphore. If a
-     * rank has not yet passed the barrier, the semaphore locks the other guys out and
-     * we enter a barrier.
-     *
-     * The barrier map is cleared once per iteration.
-     *
-     * @param identifier Unique string identifier of this particular barrier
-     */
-    bool synchroniseFirstThreadPerRank( const std::string& identifier );
-    
 };
 
 

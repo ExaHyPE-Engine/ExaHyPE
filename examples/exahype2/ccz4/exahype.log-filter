@@ -13,18 +13,15 @@ info  peano4                               -1     white
 info  examples                             -1     white
 info  exahype2                             -1     white
 info  toolbox                              -1     black
+
+info  ::step                               -1     black
+info  ::step                                0     white
  
 trace  tarch                               -1     black
 trace  peano4                              -1     black
 trace  examples                            -1     black
 trace  exahype2                            -1     black
 trace  toolbox                             -1     black
-
-
-info  peano4::grid                  	   -1     black
-trace exahype2::RefinementControl          -1     black
-
-info peano4::grid                          -1     white
 
 
 

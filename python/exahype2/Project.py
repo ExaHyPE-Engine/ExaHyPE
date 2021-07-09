@@ -270,7 +270,13 @@ class Project(object):
     #
     # Plotter
     #
-    particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( name, particles )
+    particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( 
+      filename=name, 
+      particle_set=particles,
+      time_stamp_evaluation="repositories::getMinTimeStamp()",
+      additional_includes="""  
+#include "repositories/SolverRepository.h" 
+""")
     if attribute_count>0:
       particle_plotter.add_attribute_to_plot(particle_attr,attribute_count)
     particle_plotter.add_attribute_to_plot(particle_number,2)

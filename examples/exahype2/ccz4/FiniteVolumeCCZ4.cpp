@@ -37,42 +37,46 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
 }
 
 
-void examples::exahype2::ccz4::FiniteVolumeCCZ4::adjustSolution(
+void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt
+  bool                                         gridIsConstructred
 ) {
-  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
-  if (tarch::la::equals(t,0.0) ) {
-    if ( Scenario==0 ) {
-      examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
-    }
-    else if ( Scenario==1 ) {
-      examples::exahype2::ccz4::linearWave(Q, volumeX, t);
-    }
-    #ifdef IncludeTwoPunctures
-    else if ( Scenario==2 ) {
-      examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, t, _tp); //we interpolate for real IC here.
-    }
-    #endif
-    else {
-      logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
-    }
+  logTraceInWith3Arguments( "initialCondition(...)", volumeX, volumeH, gridIsConstructred );
 
-    for (int i=0; i<NumberOfUnknowns; i++) {
-      assertion3( std::isfinite(Q[i]), volumeX, t, i );
-    }
-
-    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-      Q[i] = 0.0;
-    }
+  if ( Scenario==0 ) {
+    examples::exahype2::ccz4::gaugeWave(Q, volumeX, 0);
   }
+  else if ( Scenario==1 ) {
+    examples::exahype2::ccz4::linearWave(Q, volumeX, 0);
+  }
+  #ifdef IncludeTwoPunctures
+  else if ( Scenario==2 ) {
+
+   // We use the bool to trigger the hgh res interpolation once the grid is constructed
+    examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp, not gridIsConstructred); //we interpolate for real IC here.
+  }
+  #endif
+  else {
+    logError( "initialCondition(...)", "initial scenario " << Scenario << " is not supported" );
+  }
+
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    assertion2( std::isfinite(Q[i]), volumeX, i );
+  }
+
+  for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+
+
+/*
   else {
     enforceCCZ4constraints(Q);
   }
-  logTraceOut( "adjustSolution(...)" );
+*/
+  logTraceOut( "initialCondition(...)" );
 }
 
 
@@ -217,7 +221,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
   double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
   radius=pow(radius,0.5);
-  if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
+  if (radius<5) {result=::exahype2::RefinementCommand::Refine;}
   return result;
 }
 

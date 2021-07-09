@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <iomanip>
 #include <fstream>
+#include <filesystem>
 
 
 tarch::logging::Log tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::_log( "tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter" );
@@ -14,7 +15,7 @@ const std::string tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWrit
 "BINARY\n ";
 
 
-tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode, const int precision):
+tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileWriter(const std::string&  fileName, const std::string&  indexFileName, tarch::plotter::PVDTimeSeriesWriter::IndexFileMode mode, double timeStamp, const int precision):
   _writtenToFile(false),
   _precision(precision),
   _doubleOrFloat(setDoubleOrFloatString(precision)),
@@ -29,15 +30,25 @@ tarch::plotter::griddata::unstructured::vtk::VTKBinaryFileWriter::VTKBinaryFileW
     logWarning( "writeToFile()", "index filename should not end with .pvd as routine adds extension automatically. Chosen filename prefix=" << indexFileName );
   }
 
+  // VTK does not support more precise values
+  const double DefaultTimeStampPrecision = 1e-5;
+
   switch (mode) {
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::CreateNew:
-      tarch::plotter::PVDTimeSeriesWriter::createEmptyNewFile(indexFileName, fileName + ".vtu");
-      break;
-    case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewDataSet:
-      tarch::plotter::PVDTimeSeriesWriter::appendNewDataSet(indexFileName, fileName + ".vtk");
+      tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
+      tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtk", timeStamp);
       break;
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData:
-      tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtk");
+      if (not std::filesystem::exists(indexFileName + ".pvd")) {
+        logInfo( "PeanoTextPatchFileWriter(...)", "no index file " << indexFileName << " found. Create new one" );
+        tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
+      }
+      else if ( tarch::la::smaller( timeStamp, tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName), DefaultTimeStampPrecision ) ) {
+        logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << indexFileName << " with data for time stamp " << tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName) << ". Will be overwritten as we dump data for time " << timeStamp );
+        tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
+      }
+
+      tarch::plotter::PVDTimeSeriesWriter::appendNewData(indexFileName, fileName + ".vtk", timeStamp);
       break;
     case tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile:
       break;

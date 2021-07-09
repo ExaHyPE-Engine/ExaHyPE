@@ -7,6 +7,8 @@
 #include "peano4/grid/PeanoCurve.h"
 #include "peano4/grid/AutomatonState.h"
 
+#include "peano4/datamanagement/CellMarker.h"
+
 #include <thread>         // std::this_thread::sleep_for
 #include <chrono>         // std::chrono::seconds
 
@@ -27,6 +29,8 @@ void peano4::parallel::Node::initMPIDatatypes() {
   StartTraversalMessage::initDatatype();
   TreeManagementMessage::initDatatype();
 
+  peano4::datamanagement::CellMarker::initDatatype();
+
   peano4::grid::AutomatonState::initDatatype();
   peano4::grid::GridVertex::initDatatype();
   peano4::grid::GridStatistics::initDatatype();
@@ -40,6 +44,8 @@ void peano4::parallel::Node::shutdownMPIDatatypes() {
   logTraceIn( "shutdownMPIDatatypes()" );
   StartTraversalMessage::shutdownDatatype();
   TreeManagementMessage::shutdownDatatype();
+
+  peano4::datamanagement::CellMarker::shutdownDatatype();
 
   peano4::grid::AutomatonState::shutdownDatatype();
   peano4::grid::GridVertex::shutdownDatatype();

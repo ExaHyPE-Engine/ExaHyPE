@@ -1186,23 +1186,6 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
 }
 
 
-peano4::grid::GridTraversalEvent peano4::grid::Spacetree::createPrunedCellTraversalEvent( const GridTraversalEvent& event ) const {
-  GridTraversalEvent result = event;
-
-  if(
-    _spacetreeState==SpacetreeState::EmptyRun or
-    _spacetreeState==SpacetreeState::NewFromSplit or
-    _spacetreeState==SpacetreeState::Joining
-  ) {
-    result.setIsCellLocal(false);
-    result.setIsFaceLocal(0);
-    result.setIsVertexLocal(0);
-  }
-
-  return result;
-}
-
-
 void peano4::grid::Spacetree::descend(
   const AutomatonState& state,
   GridVertex            vertices[TwoPowerD],
@@ -1270,7 +1253,8 @@ void peano4::grid::Spacetree::descend(
       k, _spacetreeState == SpacetreeState::Running
     );
 
-    observer.loadCell( createPrunedCellTraversalEvent(enterCellTraversalEvent) );
+
+    observer.loadCell( _gridTraversalEventGenerator.createPrunedEnterCellTraversalEvent(_spacetreeState, enterCellTraversalEvent) );
 
     if(
       _spacetreeState!=SpacetreeState::EmptyRun and
@@ -1280,7 +1264,7 @@ void peano4::grid::Spacetree::descend(
       receiveAndMergeUserData(fineGridStates[peano4::utils::dLinearised(k,3)], observer, enterCellTraversalEvent,fineGridVertices);
     }
 
-    observer.enterCell( createPrunedCellTraversalEvent(enterCellTraversalEvent) );
+    observer.enterCell( _gridTraversalEventGenerator.createPrunedEnterCellTraversalEvent(_spacetreeState, enterCellTraversalEvent) );
 
     _statistics.setMinH( tarch::la::min(_statistics.getMinH(),1.0/3.0 * state.getH()) );
 
@@ -1319,7 +1303,7 @@ void peano4::grid::Spacetree::descend(
       k, _spacetreeState == SpacetreeState::Running
     );
 
-    observer.leaveCell( createPrunedCellTraversalEvent(leaveCellTraversalEvent) );
+    observer.leaveCell( _gridTraversalEventGenerator.createPrunedLeaveCellTraversalEvent(_spacetreeState, leaveCellTraversalEvent) );
 
     if(
       _spacetreeState!=SpacetreeState::EmptyRun and
@@ -1328,7 +1312,7 @@ void peano4::grid::Spacetree::descend(
       sendUserData(fineGridStates[peano4::utils::dLinearised(k,3)], observer, leaveCellTraversalEvent,fineGridVertices);
     }
 
-    observer.storeCell( createPrunedCellTraversalEvent(leaveCellTraversalEvent) );
+    observer.storeCell( _gridTraversalEventGenerator.createPrunedLeaveCellTraversalEvent(_spacetreeState, leaveCellTraversalEvent) );
 
     splitOrJoinCell(
       vertices,

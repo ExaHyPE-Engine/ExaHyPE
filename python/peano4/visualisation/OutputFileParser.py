@@ -47,6 +47,7 @@ class OutputFileParser(object):
     self.parsed           = False    
     self.file_contains_patches = False
     
+
   def _initialise_default_mapping_if_no_mapping_specified(self):
     vertices_per_axis = self.dof
     if self.is_data_associated_to_cell:
@@ -95,7 +96,8 @@ class OutputFileParser(object):
     """  
     print("Reading "+ self.file_path + " as subdomain " + str(self.subdomain_number) )
     
-    with open(self.file_path, 'r') as data_file:
+    try:
+     with open(self.file_path, 'r') as data_file:
       for this_line in data_file:
         this_line = this_line.strip()
           
@@ -157,6 +159,10 @@ class OutputFileParser(object):
           self.cell_data.append(Patch(offset, size, values, self.subdomain_number))   
       self._initialise_default_mapping_if_no_mapping_specified()
       self.parsed = True
+    except Exception as e:
+      print( "Error: was not able to read " + self.file_path + ": " + str(e) )
+      self.parsed = False
+      
 
   def get_smallest_patch_size(self):
     smallest = -1
@@ -164,7 +170,8 @@ class OutputFileParser(object):
       if smallest == -1 or smallest > patch.size[0]:
         smallest = patch.size[0]
     return smallest
-
+ 
+ 
   def get_patch_boundaries(self, patch_size):
     patch_boundaries_x = []
     patch_boundaries_y = []
@@ -181,6 +188,7 @@ class OutputFileParser(object):
             patch_boundaries_z.append(offset[2])
     return sorted(patch_boundaries_x), sorted(patch_boundaries_y), sorted(patch_boundaries_z)
 
+
   def neighbour_if_gap(self, patch_boundaries, coordinate, patch_size): 
     for i in range(len(patch_boundaries) - 1):
       if (patch_boundaries[i] + patch_size) < coordinate < patch_boundaries[i+1]:
@@ -189,6 +197,7 @@ class OutputFileParser(object):
         else:
           return patch_boundaries[i+1]
     return coordinate
+
 
   def box_num_within_patch(self, offset, patch_size, x_axis, y_axis, z_axis):
     patch_interval = patch_size / self.dof
@@ -219,6 +228,7 @@ class OutputFileParser(object):
           box_number += self.dof * self.dof
 
     return box_number
+
 
   def probe(self, x_axis, y_axis, z_axis=0):
     """

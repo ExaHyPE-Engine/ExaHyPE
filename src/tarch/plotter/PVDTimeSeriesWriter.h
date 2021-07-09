@@ -29,10 +29,11 @@ namespace tarch {
 class tarch::plotter::PVDTimeSeriesWriter {
   private:
     /**
-     * @return Tuple of snapshot counter (time step), groups, and lines within the file. The lines
-     *         do not comprise the two closing tags.
+     * @return double Latest timestamp
+     * @return int    Counter of partitions in last snapshot
+     * @return lines  Set of lines
      */
-    static std::tuple< int, int, std::vector<std::string> > parseFile( const std::string& filename );
+    static std::tuple< double, int, std::vector<std::string> > parseFile( const std::string& filename );
 
     /**
      * @param lines content without the tail of the format, i.e. the closing brackets
@@ -42,29 +43,22 @@ class tarch::plotter::PVDTimeSeriesWriter {
     static void addFileTail( std::vector<std::string>& lines );
     static void removeFileTail( std::vector<std::string>& lines );
 
-    static std::string createFileEntry( const std::string& snapshotFileName, int snapshotCounter, int partCounter );
-
-    /**
-     * Ensure the file we want to add to the pvd file is a fit to Paraview. If
-     * not, this routine writes a warning.
-     */
-    static void validateFile( const std::string& filename );
+    static std::string createFileEntry( const std::string& snapshotFileName, double timestamp, int partCounter );
   public:
     enum class IndexFileMode {
       /**
-       * Create new meta file.
+       * Create new meta file. If a meta data file exists already, we overwrite
+       * it.
        */
       CreateNew,
-      /**
-       * Create a new data set within an existing index file. This is usually
-       * used to add a new snapshot (for a new time step for example).
-       */
-      AppendNewDataSet,
       /**
        * Add new data. This usually adds a new file to the current snapshot
        * (time step).
        */
       AppendNewData,
+      /**
+       * Don't use a meta data file.
+       */
       NoIndexFile
     };
 
@@ -74,9 +68,10 @@ class tarch::plotter::PVDTimeSeriesWriter {
      *
      * @see IndexFileMode
      */
-    static void createEmptyNewFile( const std::string& snapshotFileName, const std::string& dataFile );
-    static void appendNewDataSet( const std::string& snapshotFileName, const std::string& dataFile );
-    static void appendNewData(const std::string& snapshotFileName, const std::string& dataFile);
+    static void createEmptyIndexFile( const std::string& dataFile );
+    static void appendNewData(const std::string& snapshotFileName, const std::string& dataFile, double timeStamp);
+
+    static double getLatestTimeStepInIndexFile( std::string dataFile );
 };
 
 

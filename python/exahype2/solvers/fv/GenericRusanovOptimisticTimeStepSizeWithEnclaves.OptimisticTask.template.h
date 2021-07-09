@@ -25,6 +25,11 @@
 #include <vector>
 
 
+#ifdef UseSmartMPI
+#include "smartmpi.h"
+#endif
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -43,8 +48,14 @@
  * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
  */
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask {
+#ifdef UseSmartMPI
+, public smartmpi::Task
+#endif
   private:
     static tarch::logging::Log  _log;
+    /**
+     * This is a class attribute holding a unique integer per enclave task type.
+     */
     static int                  _optimisticTaskId;
     
     /**
@@ -53,6 +64,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
      */
     static double* copyPatchData( double* __restrict__ patchData);
     
+    #ifdef UseSmartMPI
+    int          _remoteTaskId;
+    #endif
   public:
     /**
      * @param patchData This is the real patch data, i.e. NxNxN. No outer halo or so.
@@ -77,6 +91,17 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask 
       double* __restrict__                        reconstructedPatch,
       double* __restrict__                        patchData
     );
+
+    bool isSmartMPITask() const override;
+
+    #ifdef UseSmartMPI
+    void runLocally() override;
+    void moveTask(int rank, int tag, MPI_Comm communicator) override;
+    void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+
+    static smartmpi::Task* receiveTask(int rank, int tag, MPI_Comm communicator);
+    static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator);
+    #endif
 };
 
 

@@ -76,6 +76,19 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * something meaningful meanwhile. This can be to check for further messages
      * (unexpected message arrival). But it can also be something else such as
      * the handling of left-ofter tasks.
+     *
+     * <h2> Receive dangling message in multithreaded environment </h2>
+     *
+     * It is important that you never ever call receiveDanglingMessages() of a
+     * service directly. Instead, you always should go to the repository. The
+     * reasons reads as follows: Most services do not protect their receiveDanglingMessages()
+     * with an additional semaphore. So two threads might hit it and both thus
+     * issue an Iprobe. Let there be one MPI message in the queue. Both probes
+     * return a true and, hence, both threads issue a receive. Unfortunately,
+     * only one of them succeeds. We could have solved that with new MPI features,
+     * but we also solve it in the old-fashioned way if you only issue receives
+     * through the repository, as the repository invokes the services, but it
+     * first blocks all other threads through a semaphore.
      */
     void receiveDanglingMessages() override;
 

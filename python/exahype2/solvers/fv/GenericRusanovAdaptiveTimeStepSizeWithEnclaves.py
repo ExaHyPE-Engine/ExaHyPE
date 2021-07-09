@@ -37,9 +37,8 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
       reconstructedPatch,
-      originalPatch
-    );
-  
+      targetPatch
+    );  
   }
   else {
     assertion( marker.isEnclaveCell() );
@@ -107,14 +106,7 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
     !! Adding your own includes and source code 
     
     To add further includes to the generated task, add them to your
-    solver via a statement similar to 
-    <pre>
-    
-self.additional_includes += " ""
- #include "../CCZ4Kernels.h"
-" ""
-    
-    </pre>
+    solver by overloading get_user_includes().
     
     The actual task will be dumped into a subdirectory task, so the .. 
     ensures that the relative path starts at the project's root.

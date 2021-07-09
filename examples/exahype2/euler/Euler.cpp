@@ -23,40 +23,33 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 }
 
 
-void examples::exahype2::euler::Euler::adjustSolution(
+void examples::exahype2::euler::Euler::initialCondition(
   double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  x,
-  const tarch::la::Vector<Dimensions,double>&  h,
-  double                                       t,
-  double                                       dt
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  bool                                         gridIsConstructred
 ) {
-  if (tarch::la::equals(t,0.0) ) {
-    logDebug( "adjustSolution(...)", "init volume at " << x << "x" << h << "x" << t );
+  logDebug( "initialCondition(...)", "init volume at " << volumeCentre << "x" << volumeH << " (grid constructed=" << gridIsConstructred << ")" );
 
-    // Manual offset to make the wave originate slightly to the left of the center --- helps
-    // to detect if wave is moving to the left or right
-    #if Dimensions==2
+  // Manual offset to make the wave originate slightly to the left of the center --- helps
+  // to detect if wave is moving to the left or right
+  #if Dimensions==2
 //    tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3};
-    tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-    #else
-    tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
-    #endif
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+  #else
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
+  #endif
 
-    // initial conditions
-    bool isInTheCentre = ( tarch::la::norm2( x-circleCentre ) < 0.05 );
-    //bool isInTheCentre = x(0)<=0.5;
-    //bool isInTheCentre = x(1)<=0.5;
-    Q[0] = 0.1;  // rho
-    Q[1] = 0;    // velocities
-    Q[2] = 0;
-    Q[3] = 0;
-    Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
-  }
-  else {
-    // other stuff
-  }
+  // initial conditions
+  bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
+  //bool isInTheCentre = x(0)<=0.5;
+  //bool isInTheCentre = x(1)<=0.5;
+  Q[0] = 0.1;  // rho
+  Q[1] = 0;    // velocities
+  Q[2] = 0;
+  Q[3] = 0;
+  Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
 }
-
 
 
 double examples::exahype2::euler::Euler::maxEigenvalue(

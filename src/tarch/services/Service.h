@@ -91,6 +91,20 @@ class tarch::services::Service {
 
     virtual ~Service() {};
 
+    /**
+     * Receive the dangling messages from the MPI subsystem
+     *
+     * This, sometimes, is an absolutely necessary operation to ensure that some
+     * MPI queues are freed again and MPI can continue to process. If you have too
+     * full buffers - in particular full of unexpected messages - you run into a
+     * situation where no eager or unexpected receiving can be done at all.
+     *
+     * If you invoke this routine, it is absolutely essential that you always do it
+     * via the services. The reasons are discussed in
+     * ServiceRepository::receiveDanglingMessages().
+     *
+     * @see ServiceRepository::receiveDanglingMessages()
+     */
     virtual void receiveDanglingMessages() = 0;
 
   protected:
@@ -112,9 +126,9 @@ class tarch::services::Service {
      * from time to time. Therefore, I decided to make this semaphore a pointer.
      * It is initialised lazily tarch::services::ServiceRepository::receiveDanglingMessages().
      */
-	  tarch::multicore::RecursiveSemaphore  _receiveDanglingMessagesSemaphore;
+    tarch::multicore::RecursiveSemaphore  _receiveDanglingMessagesSemaphore;
 
-	  virtual void shutdown() = 0;
+    virtual void shutdown() = 0;
 };
 
 #endif

@@ -1,5 +1,6 @@
 #include "{{CLASSNAME}}.h"
 
+// user includes
 {{INCLUDES}}
 
 #include "exahype2/fv/Generic.h"
@@ -7,15 +8,35 @@
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
-
 #include "peano4/utils/Loop.h"
 
+#include "tarch/multicore/SmartScheduler.h"
+#include "tarch/mpi/DoubleMessage.h"
+#include "tarch/mpi/IntegerMessage.h"
 
 #include <algorithm>
 
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_optimisticTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
+#if defined(UseSmartMPI)
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_optimisticTaskId(
+  tarch::multicore::registerSmartMPITask(
+    peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"),
+    [](smartmpi::ReceiverCallType type, int rank, int tag, MPI_Comm communicator) -> smartmpi::Task* {
+      if (type==smartmpi::ReceiverCallType::ReceiveTask) {
+        return receiveTask( rank, tag, communicator );
+      }
+      else {
+        return receiveOutcome( rank, tag, communicator );
+      }
+    }
+  )
+);
+#else
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_optimisticTaskId(
+  peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
+);
+#endif
 
 
 double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __restrict__ patchData) {
@@ -51,12 +72,12 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     {{NUMBER_OF_INNER_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
-    [&](double* reconstructedPatch, double* originalPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
+    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
           {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
-            originalPatch,
+            targetPatch,
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
             {{NUMBER_OF_VOLUMES_PER_AXIS}}-2,
@@ -165,7 +186,7 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
             reconstructedPatch,
-            originalPatch
+            targetPatch
           );
 
           {{POSTPROCESS_UPDATED_PATCH}}
@@ -188,12 +209,15 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
             {{NUMBER_OF_VOLUMES_PER_AXIS}}-2,
             {{NUMBER_OF_UNKNOWNS}},
             {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            originalPatch
+            targetPatch
           );
 
           repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
         }
   )
+  #ifdef UseSmartMPI
+  , smartmpi::Task(_optimisticTaskId)
+  #endif
 {
   logDebug( "{{CLASSNAME}}(...)", "spawn optimistic task for " << marker.toString() << " with t=" << (t+dt) << ", dt=" << predictedTimeStepSize );
 }
@@ -223,7 +247,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mergeTaskOutcomeIntoPatch(
 
   tarch::freeMemory( optimisticTaskOutcome.second, tarch::MemoryLocation::Heap );
 }
-
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCellBoundary(
@@ -375,3 +398,158 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCellBoundary(
   assertionMsg(false, "optimistic time stepping does not support pre- and postprocessing" );
   {% endif %}
 }
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
+  #ifdef UseSmartMPI
+  return true;
+  #else
+  return false;
+  #endif
+}
+
+
+#ifdef UseSmartMPI
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
+  run();
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_Comm communicator) {
+  ::tarch::mpi::DoubleMessage  tMessage(_t);
+  ::tarch::mpi::DoubleMessage  dtMessage(_dt);
+  ::tarch::mpi::IntegerMessage taskIdMessage(getTaskId());
+
+  ::peano4::datamanagement::CellMarker::send( _marker, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::send( tMessage, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::send( dtMessage, rank, tag, communicator );
+  ::tarch::mpi::IntegerMessage::send( taskIdMessage, rank, tag, communicator );
+
+  MPI_Send( _inputValues, _numberOfInputValues, MPI_DOUBLE, rank, tag, communicator );
+
+  logInfo(
+    "moveTask(...)",
+    "sent (" << _marker.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << _numberOfInputValues <<
+    "," << taskIdMessage.toString() << ") to rank " << rank <<
+    " via tag " << tag
+  );
+}
+
+
+smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank, int tag, MPI_Comm communicator) {
+  peano4::grid::GridTraversalEvent dummyEvent;
+  const int NumberOfInputValues =
+    #if Dimensions==2
+    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D}};
+    #else
+    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}};
+    #endif
+
+  ::tarch::mpi::DoubleMessage tMessage;
+  ::tarch::mpi::DoubleMessage dtMessage;
+  ::tarch::mpi::IntegerMessage taskIdMessage;
+  ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
+  double* inputValues = tarch::allocateMemory( NumberOfInputValues, tarch::MemoryLocation::Heap );
+
+  ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::receive( dtMessage, rank, tag, communicator );
+  ::tarch::mpi::IntegerMessage::receive( taskIdMessage, rank, tag, communicator );
+
+  logInfo(
+    "receiveTask(...)",
+    "received (" << markerMessage.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << taskIdMessage.toString() << ") from rank " << rank <<
+    " via tag " << tag << " and will now receive " << NumberOfInputValues << " doubles"
+  );
+
+  MPI_Recv( inputValues, NumberOfInputValues, MPI_DOUBLE, rank, tag, communicator,
+    MPI_STATUS_IGNORE
+  );
+
+
+
+  {{CLASSNAME}}* result = new {{CLASSNAME}}(
+    markerMessage,
+    tMessage.getValue(),
+    dtMessage.getValue(),
+    inputValues
+  );
+  result->_remoteTaskId = taskIdMessage.getValue();
+  return result;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
+  _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+
+  _functor(_inputValues,_outputValues,_marker,_t,_dt);
+  tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
+
+  logInfo(
+    "receiveTask(...)",
+    "executed remote task on this rank. Will start to send result back"
+  );
+
+  ::tarch::mpi::DoubleMessage  tMessage(_t);
+  ::tarch::mpi::DoubleMessage  dtMessage(_dt);
+  ::tarch::mpi::IntegerMessage taskIdMessage(_remoteTaskId);
+
+  ::peano4::datamanagement::CellMarker::send( _marker, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::send( tMessage, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::send( dtMessage, rank, tag, communicator );
+  ::tarch::mpi::IntegerMessage::send( taskIdMessage, rank, tag, communicator );
+
+  MPI_Send( _outputValues, _numberOfResultValues, MPI_DOUBLE, rank, tag, communicator );
+
+  logInfo(
+    "moveTask(...)",
+    "sent (" << _marker.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << _numberOfResultValues <<
+    "," << taskIdMessage.toString() << ") to rank " << rank <<
+    " via tag " << tag
+  );
+
+  tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
+}
+
+
+smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator) {
+  logInfo( "receiveOutcome(...)", "rank=" << rank << ", tag=" << tag );
+  peano4::grid::GridTraversalEvent dummyEvent;
+  const int NumberOfResultValues =
+    #if Dimensions==2
+    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D}};
+    #else
+    {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}};
+    #endif
+
+  ::tarch::mpi::DoubleMessage tMessage;
+  ::tarch::mpi::DoubleMessage dtMessage;
+  ::tarch::mpi::IntegerMessage taskIdMessage;
+  ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
+  double* outputValues = tarch::allocateMemory( NumberOfResultValues, tarch::MemoryLocation::Heap );
+
+  ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::receive( dtMessage, rank, tag, communicator );
+  ::tarch::mpi::IntegerMessage::receive( taskIdMessage, rank, tag, communicator );
+
+  logInfo(
+    "receiveOutcome(...)",
+    "received (" << markerMessage.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << taskIdMessage.toString() << ") from rank " << rank <<
+    " via tag " << tag << " and will now receive " << NumberOfResultValues << " doubles"
+  );
+
+  MPI_Recv( outputValues, NumberOfResultValues, MPI_DOUBLE, rank, tag, communicator,
+    MPI_STATUS_IGNORE
+  );
+
+  logInfo(
+    "receiveOutcome(...)",
+    "bookmark outcome of task " << taskIdMessage.getValue()
+  );
+
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues);
+
+  return nullptr;
+}
+#endif

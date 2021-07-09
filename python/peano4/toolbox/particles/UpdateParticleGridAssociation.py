@@ -15,28 +15,43 @@ class UpdateParticleGridAssociation(ActionSet):
    Should be the very first action set that you use if you have 
    particles. 
    
+   
+   eliminate_spatial_duplicates: String
+     A C++ boolen expression
+   
   """
-  def __init__(self,particle_set):
+  def __init__(self,particle_set,eliminate_spatial_duplicates="true"):
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
+    self.d[ "ELIMINATE_SPATIAL_DUPLICATES" ]     = eliminate_spatial_duplicates
 
 
   __Template_BeginTraversal = jinja2.Template("""
   _numberOfParticleReassignmentsOnCurrentLevel = 0;
   _numberOfLifts = 0;
   _numberOfDrops = 0;
+  _numberOfParticleAccesses = 0;
+  _numberOfLocal = 0;
+  _numberOfHalo = 0;
+  _numberOfEliminations = 0;
+  _numberOfLeavingParticles = 0;
 """ )
 
 
   __Template_EndTraversal = jinja2.Template("""
   logInfo( 
     "endTraversal()", 
-    "#reassignments/lifts/drops=" << 
+    "#reassignments/lifts/drops/accesses/local/halo/leaving/eliminated-duplicates=" << 
     _numberOfParticleReassignmentsOnCurrentLevel << "/" <<
     _numberOfLifts << "/" <<
-    _numberOfDrops 
+    _numberOfDrops << "/" <<
+    _numberOfParticleAccesses << "/" <<
+    _numberOfLocal << "/" <<
+    _numberOfHalo << "/" <<
+    _numberOfLeavingParticles << "/" <<
+    _numberOfEliminations << " on tree " <<  _treeNumber
   );
 """ )
 
@@ -47,26 +62,36 @@ class UpdateParticleGridAssociation(ActionSet):
   vertexdata::{{PARTICLES_CONTAINER}} liftParticles[TwoPowerD];
 
   for (int i=0; i<TwoPowerD; i++) {
-    std::bitset<Dimensions> currentAssociation = i;
+    std::bitset<Dimensions> currentAssociation;
     std::bitset<Dimensions> destAssociation;
-    bool                    remainsOnSameLevel = true;
+    bool                    remainsOnSameLevel;
     
     vertexdata::{{PARTICLES_CONTAINER}}::iterator p = fineGridVertices{{PARTICLES_CONTAINER}}(i).begin(); 
     while ( p!=fineGridVertices{{PARTICLES_CONTAINER}}(i).end() ) {
+      _numberOfParticleAccesses++;
+      
+      if ( marker.isContained((*p)->getX()) ) {
+        (*p)->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Local );
+      }
+      
+      std::bitset<Dimensions>  currentAssociation = i;
+      bool                     remainsOnSameLevel = true;
       for (int d=0; d<Dimensions; d++) {
-        destAssociation[d]  = (*p)->getX(d) >= marker.x()(d);
-        remainsOnSameLevel &= std::abs((*p)->getX(d) - marker.x()(d)) <= marker.h()(d);
+        destAssociation[d]  = tarch::la::greaterEquals( (*p)->getX(d), marker.x()(d) );
+        remainsOnSameLevel &= tarch::la::smallerEquals( std::abs((*p)->getX(d) - marker.x()(d)), marker.h()(d));
       }
       
       if (remainsOnSameLevel and currentAssociation==destAssociation) {
         p++;
       }
       else if (remainsOnSameLevel) {
+        logDebug( "touchCellLastTime(...)", "reassign particle " << (*p)->toString() << " in tree " << _treeNumber << " within cell " << marker.toString() << " which had been associated with vertex " << i << " but belongs to " << destAssociation );
         particlesThatMoveOnSameLevel[ destAssociation.to_ulong() ].push_back(*p);
         p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfParticleReassignmentsOnCurrentLevel++;
       }
       else {
+        logDebug( "touchCellLastTime(...)", "lift particle " << (*p)->toString() << " in tree " << _treeNumber << " from cell " << marker.toString() << " as difference is " << ((*p)->getX() - marker.x()) );
         liftParticles[ destAssociation.to_ulong() ].push_back(*p);
         p = fineGridVertices{{PARTICLES_CONTAINER}}(i).erase(p);
         _numberOfLifts++;
@@ -80,6 +105,77 @@ class UpdateParticleGridAssociation(ActionSet):
   }
 """)
 
+
+
+  __Template_ClearParallelStatus = jinja2.Template("""
+  for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
+    p->setNewParallelState( globaldata::{{PARTICLE}}::NewParallelState::Halo );
+  }
+""")
+
+
+  __Template_CommmitParallelStatus = jinja2.Template("""
+  if ( {{ELIMINATE_SPATIAL_DUPLICATES}} ) {
+    auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
+    while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
+      auto pp = p;
+      pp++;
+      bool foundDuplicate = false;
+      while (
+        pp!=fineGridVertex{{PARTICLES_CONTAINER}}.end()
+        and 
+        not foundDuplicate
+      ) {
+        foundDuplicate |= tarch::la::equals( (*p)->getX(), (*pp)->getX() );
+        pp++;
+      }
+      
+      if (foundDuplicate) {
+        p = fineGridVertex{{PARTICLES_CONTAINER}}.erase(p);
+        _numberOfEliminations++;
+      }
+      else {
+        p++;
+      }
+    }
+  }
+  
+  for (auto& p: fineGridVertex{{PARTICLES_CONTAINER}} ) {
+    if (
+      p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Halo
+      and 
+      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Halo
+    ) {
+      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Halo );
+      _numberOfHalo++;
+    }
+    else if (
+      p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Halo
+      and 
+      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+    ) {
+      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Halo );
+      _numberOfHalo++;
+      _numberOfLeavingParticles++;
+    }
+    else if (
+      p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
+      and 
+      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Halo
+    ) {
+      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
+      _numberOfLocal++;
+    }
+    else if (
+      p->getNewParallelState()==globaldata::{{PARTICLE}}::NewParallelState::Local
+      and 
+      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+    ) {
+      p->setParallelState( globaldata::{{PARTICLE}}::ParallelState::Local );
+      _numberOfLocal++;
+    }
+  }
+""")
 
 
   __Template_Drop = jinja2.Template("""
@@ -113,6 +209,12 @@ class UpdateParticleGridAssociation(ActionSet):
 """)  
 
 
+  def get_constructor_body(self):
+    return """
+  _treeNumber  = treeNumber;
+"""
+    
+
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
@@ -120,7 +222,9 @@ class UpdateParticleGridAssociation(ActionSet):
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_VERTEX:
       result = self.__Template_Drop.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_Drop.render(**self.d) 
+      result = self.__Template_ClearParallelStatus.render(**self.d) + self.__Template_Drop.render(**self.d) 
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME:
+      result = self.__Template_CommmitParallelStatus.render(**self.d) + self.__Template_Drop.render(**self.d) 
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d) 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_VERTEX:
@@ -155,9 +259,15 @@ class UpdateParticleGridAssociation(ActionSet):
 
   def get_attributes(self):
     return """
+  int  _treeNumber;
   int  _numberOfParticleReassignmentsOnCurrentLevel;
   int  _numberOfLifts;
   int  _numberOfDrops;
+  int  _numberOfParticleAccesses;
+  int  _numberOfEliminations;
+  int  _numberOfLocal;
+  int  _numberOfHalo;
+  int  _numberOfLeavingParticles;
 """
 
 

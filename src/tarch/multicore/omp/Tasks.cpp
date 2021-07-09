@@ -20,6 +20,13 @@ namespace {
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
 
 
+  /**
+   * Native mapping of a task loop onto a task loop
+   *
+   * I found that quite a lot of OpenMP implementations realise the taskwait at the 
+   * end as busy wait. This is totally annoying as it might lead to deadlocks whenever
+   * a task has a taskyield internally and/or there are more tasks than threads.
+   */
   void spawnAndWaitAsTaskLoop(
     const std::vector< tarch::multicore::Task* >&  tasks
   ) {
@@ -32,6 +39,7 @@ namespace {
       while (tasks[i]->run()) {}
       delete tasks[i];
       ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+      #pragma omp taskyield
     }
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
