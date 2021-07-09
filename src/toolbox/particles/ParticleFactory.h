@@ -5,10 +5,36 @@
 
 
 #include <vector>
+#include "peano4/utils/Globals.h"
 
 
 namespace toolbox {
   namespace particles {
+
+    /**
+     * Init particle
+     *
+     * This is the most generic, minimalist initialisation of a particle that one can think of.
+     * The minimal data we need per particle is
+     *
+     * - a position x which defines where the particle is located,
+     * - a cut-off radius which defines on which resolution level to hold the particle.
+     *
+     * The further attribute that are set are
+     *
+     * - the move state which is set to New.
+     * - the state is set to halo. That means, by default the particle is set to remote. But
+     *   it will/should be set to local in the first sweep.
+     *
+     */
+    template <class T>
+    void init(
+      T&                                          particle,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      cutOffRadius
+    );
+
+
     /**
      * Typical usage of this factor method:
 <pre>

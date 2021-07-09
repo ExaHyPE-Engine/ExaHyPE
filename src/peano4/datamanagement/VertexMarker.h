@@ -21,20 +21,21 @@ std::ostream& operator<<( std::ostream& out, const peano4::datamanagement::Verte
 
 struct peano4::datamanagement::VertexMarker {
   private:
-	/**
-	 * Centre of the underlying cell
-	 */
+    /**
+     * Centre of the underlying cell
+     */
     tarch::la::Vector<Dimensions,double>  _cellCentre;
 
-	/**
-	 * Size of the underlying cell
-	 */
+    /**
+     * Size of the underlying cell
+     */
     tarch::la::Vector<Dimensions,double>  _h;
 
     int _select;
 
     std::bitset<TwoPowerD>  _isRefined;
     std::bitset<TwoPowerD>  _isLocal;
+    std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
 
     /**
      * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
@@ -71,12 +72,18 @@ struct peano4::datamanagement::VertexMarker {
     bool isRefined() const;
     bool isRefined(int i) const;
 
+    /**
+     * @see isLocal(int) for currently selected/represented vertex
+     */
     bool isLocal() const;
+
+    /**
+     * Is a vertex local, i.e. not adjacent to any boundary or remote
+     */
     bool isLocal(int i) const;
 
-    // @todo
-    // Dann darf ich nicht verfeinern. Bruach ich in ExaHyPE z.B.
-    // isAdjacentToEnclaveCell
+    bool isAdjacentToParallelDomainBoundary() const;
+    bool isAdjacentToParallelDomainBoundary(int i) const;
 
     /**
      * Return relative position within father cell. The result is from

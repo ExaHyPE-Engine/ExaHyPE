@@ -61,8 +61,6 @@ if ( not marker.isRefined() ) {
   for (auto& p: localParticles) {
     if ( 
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet
-      and
-      marker.isContained( p->getX() )
     ) {
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::Moved;
 """      
