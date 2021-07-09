@@ -22,7 +22,7 @@ GIT_REV = os.environ['GIT_REVISION']
 class Euler_with_smartmpi_CI(rfm.RegressionTest):
     def __init__(self, git_rev, topology):
         
-        common.setup(self, num_tasks=4, num_cpus_per_task=4) # 4 ranks here means the domain decomposition fails
+        common.setup(self, git_rev, num_tasks=4, num_cpus_per_task=4) # 4 ranks here means the domain decomposition fails
 
         self.time_limit = '10m'
         
@@ -34,7 +34,7 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         self.test_dir = 'Peano/examples/exahype2/euler'
         
         if self.current_system.name == 'dine':
-            mpi_comp = 'mpicxx'
+            mpi_comp = '/usr/mpi/gcc/openmpi-4.0.3rc4/bin/mpicxx'
         elif self.current_system.name == 'hamilton':
             mpi_comp = 'mpiicpc'
 
@@ -52,7 +52,12 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
                 'popd',
         ] + self.prebuild_cmds
         
-        # config options for Peano with Smartmpi and OneToOne topology
+        # build on bfd101 (send build to background, then 'wait')
+        self.prebuild_cmds = [
+                f"ssh bfd101 './Peano/reframe/tests/bfd_builder.sh' &"
+        ] + self.prebuild_cmds + ['wait']
+
+        # config options for Peano with SmartMPI
         self.build_system.config_opts = [
                 '--enable-blockstructured',
                 '--enable-exahype',
@@ -78,18 +83,19 @@ class Euler_with_smartmpi_CI(rfm.RegressionTest):
         ]
 
         self.prerun_cmds = [
+                "ssh bfd101 'pushd Peano_bfd/examples/exahype2/euler; python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001 -m debug; make -j; popd' &",
                 f'pushd {self.test_dir}',
                 'python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001 -m debug',
                 'make -j',
+                'wait', 'popd'
         ]
         
-        self.executable = './peano4'
-
+        self.executable = '-n 2 ./Peano/examples/exahype2/euler/peano4: -n 2 ./Peano_bfd/examples/exahype2/euler/Peano4'
 
     @run_before("run")
     def set_p1p2_on_DINE(self):
         if self.current_system.name == "dine":
-            self.job.launcher.options = ['--mca btl_tcp_if_include p1p2 -x UCX_NET_DEVICES=mlx5_1:1']
+            self.job.launcher.options = ['-host 192.168.101.1,192.168.101.3,192.168.101.2,192.168.101.4']
 
 
     @run_after('run')

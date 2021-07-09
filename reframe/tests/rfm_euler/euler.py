@@ -39,12 +39,12 @@ class Euler_CI(rfm.RegressionTest):
 
         if self.current_system.name == "dine":
             self.build_system.config_opts += [
-                'CXXFLAGS="-fopenmp -std=c++14 -DnoMPISupportsSingleSidedCommunication"',
+                'CXXFLAGS="-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication"',
                 "--with-mpi=mpicxx",
             ]
         elif self.current_system.name == "hamilton":
             self.build_system.config_opts += [
-                'CXXFLAGS="-fopenmp -std=c++14"',
+                'CXXFLAGS="-fopenmp -std=c++17"',
                 "--with-mpi=mpiicpc",
             ]
 
@@ -118,10 +118,6 @@ class Euler_CI(rfm.RegressionTest):
                     print("Time stepping for this commit: ", time_this_commit)
                     
                     if (time_prev_commit * 1.1) < time_this_commit:
-                        # Create file that triggers follow up with profiler
-                        # An env variable was tried here, however, cannot be
-                        # read from parent process
-                        touch.touch("doprofilejob_euler")
                         # Fail the test:
                         sn.evaluate(assert_true(False, "Performance degredation has been detected"))
                     
@@ -130,4 +126,4 @@ class Euler_CI(rfm.RegressionTest):
 
                     return
 
-        print(f"Nothing found to compare with this test")
+        print("Nothing found to compare with this test")
