@@ -57,35 +57,16 @@ void examples::exahype2::swe::AbstractSWE::setMaximumEigenvalue( double value ) 
 
 
 
-::exahype2::RefinementCommand examples::exahype2::swe::AbstractSWE::refinementCriterion(
-  const double * __restrict__ Q, // Q[3+1],
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t
-) {
-  
-  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
-
-  return result;
-  
-}
 
 
 
-
-void examples::exahype2::swe::AbstractSWE::adjustSolution(
+void examples::exahype2::swe::AbstractSWE::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt
+  bool                                         gridIsConstructred
 ) {
-  if (tarch::la::equals(t,0.0) ) {
-    
+  
     static TopologyParser parser("topology/etopo10min120W60W60S0S.asc", "topology/dtopo_usgs100227.tt3");
     float z;
     float d;
@@ -93,8 +74,10 @@ void examples::exahype2::swe::AbstractSWE::adjustSolution(
     z = parser.sampletopology(volumeCentre(0), volumeCentre(1));
     d = parser.sampledisplacement(volumeCentre(0), volumeCentre(1), 1.0);
   
+  //if(z < -200){z = -200;}
+  
    if(z < 0){
-      Q[0] = -z - d;
+      Q[0] = -z + d;
      //Q[0] = volumeCentre(0) > 0.3 && volumeCentre(0) < 0.4 ? 20-z : -z;
      //Q[0] = (volumeCentre(0)-0.5)*(volumeCentre(0)-0.5) + (volumeCentre(1)-0.5)*(volumeCentre(1)-0.5) < 0.1*0.1 ? 10-z : -z;
    }else{
@@ -104,7 +87,6 @@ void examples::exahype2::swe::AbstractSWE::adjustSolution(
    Q[2] = 0.0;
    Q[3] = z; // bathymetry
   
-  }
 }
 
 
@@ -135,7 +117,7 @@ examples::exahype2::swe::AbstractSWE::AbstractSWE():
   _admissibleTimeStepSize(std::numeric_limits<double>::max()),
   _solverState(SolverState::GridConstruction),
   _maxH(0.1111111111111111),
-  _minH(0.1111111111111111)
+  _minH(0.037037037037037035)
   {
 }
 
