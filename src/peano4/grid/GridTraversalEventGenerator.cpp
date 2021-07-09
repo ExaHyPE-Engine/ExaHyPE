@@ -391,9 +391,11 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     spacetreeState==SpacetreeState::EmptyRun or
     spacetreeState==SpacetreeState::NewFromSplit
   ) {
+/*
     result.setVertexDataFrom(TraversalObserver::NoData);
     result.setFaceDataFrom(TraversalObserver::NoData);
     result.setCellData(TraversalObserver::NoData);
+*/
   }
 
   return result;
@@ -418,9 +420,11 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
 //    spacetreeState==SpacetreeState::NewFromSplit or
     spacetreeState==SpacetreeState::Joining
   ) {
+/*
     result.setVertexDataTo(TraversalObserver::NoData);
     result.setFaceDataTo(TraversalObserver::NoData);
     result.setCellData(TraversalObserver::NoData);
+*/
   }
 
   return result;
