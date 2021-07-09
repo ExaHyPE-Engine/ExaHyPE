@@ -133,7 +133,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
 
   clear();
 
-  double DefaultTimeStampPrecision = 1e-5;
+  double DefaultTimeStampPrecision = 1e-9;
 
   switch (appendToIndexFile) {
     case IndexFileMode::CreateNew:
