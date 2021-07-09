@@ -41,7 +41,7 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
   for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {
     bool isLocal = false;
 
-    const int normal = faceNumber % Dimensions;
+    const int   normal = faceNumber % Dimensions;
     for (int i=0; i<TwoPowerD; i++) {
       std::bitset<Dimensions> studiedVertex = i;
       studiedVertex.set(normal,faceNumber>=Dimensions);
@@ -49,15 +49,27 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
 
       studiedEntry.set(normal,0);
       int currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks( studiedEntry.to_ulong() );
-      isLocal |=  currentRank == _id;
-      isLocal |=  splitTriggered.count(currentRank)>0;
-      isLocal |=  splitting.count(currentRank)>0;
+      if (
+        vertices[studiedVertex.to_ulong()].getState()!=GridVertex::State::HangingVertex
+        or
+        faceNumber>=Dimensions
+      ) {
+        isLocal |=  currentRank == _id;
+        isLocal |=  splitTriggered.count(currentRank)>0;
+        isLocal |=  splitting.count(currentRank)>0;
+      }
 
       studiedEntry.set(normal,1);
-      currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks( studiedEntry.to_ulong() );
-      isLocal |= currentRank == _id;
-      isLocal |=  splitTriggered.count(currentRank)>0;
-      isLocal |=  splitting.count(currentRank)>0;
+      if (
+        vertices[studiedVertex.to_ulong()].getState()!=GridVertex::State::HangingVertex
+        or
+        faceNumber<Dimensions
+      ) {
+        currentRank = vertices[studiedVertex.to_ulong()].getAdjacentRanks( studiedEntry.to_ulong() );
+        isLocal |= currentRank == _id;
+        isLocal |=  splitTriggered.count(currentRank)>0;
+        isLocal |=  splitting.count(currentRank)>0;
+      }
     }
 
     result[faceNumber] = isLocal;
