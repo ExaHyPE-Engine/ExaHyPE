@@ -38,12 +38,12 @@ class Euler_maqao(rfm.RegressionTest):
 
         if self.current_system.name == "dine":
             self.build_system.config_opts += [
-                'CXXFLAGS="-fopenmp -std=c++14 -DnoMPISupportsSingleSidedCommunication"',
+                'CXXFLAGS="-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication"',
                 "--with-mpi=mpicxx",
             ]
         elif self.current_system.name == "hamilton":
             self.build_system.config_opts += [
-                'CXXFLAGS="-fopenmp -std=c++14"',
+                'CXXFLAGS="-fopenmp -std=c++17"',
                 "--with-mpi=mpiicpc",
             ]
 
