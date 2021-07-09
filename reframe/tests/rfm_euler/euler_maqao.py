@@ -2,7 +2,6 @@ import os
 
 import reframe as rfm
 import reframe.core.launchers.mpi
-import reframe.utility.sanity as sn
 from reframe.core.backends import getlauncher
 
 import common

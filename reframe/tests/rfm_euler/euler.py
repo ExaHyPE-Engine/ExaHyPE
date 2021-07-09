@@ -130,4 +130,4 @@ class Euler_CI(rfm.RegressionTest):
 
                     return
 
-        print(f"Nothing found to compare with this test")
+        print("Nothing found to compare with this test")
