@@ -18,8 +18,8 @@ void toolbox::particles::init(
   double                                      cutOffRadius
 ) {
   #if PeanoDebug>0
-  particle.setDebugX( marker.x() );
-  particle.setDebugH( marker.h() );
+  particle.setDebugX( x );
+  particle.setDebugH( 0.0 );
   #endif
 
   particle.setX(x);
