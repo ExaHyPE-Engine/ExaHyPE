@@ -137,6 +137,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
 
   const double DefaultTimeStampPrecision = tarch::la::NUMERICAL_ZERO_DIFFERENCE;
 
+
   switch (appendToIndexFile) {
     case IndexFileMode::CreateNew:
       createEmptyIndexFile();

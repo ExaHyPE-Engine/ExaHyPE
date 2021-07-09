@@ -90,7 +90,7 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t
-    )  final ;
+    ) = 0;
 
 
     /**
@@ -98,13 +98,18 @@ class examples::exahype2::swe::AbstractSWE: public ::exahype2::Solver {
      * You can for example change the initial conditions by overwriting
      * the solution for t=0. You may change Q. All other parameters are
      * in.
+     *
+     * @param gridIsConstructred The initial condition is used while we
+     *   create the grid to identify regions where the adaptivity
+     *   criterion kicks in. One the grid is however fully constructed
+     *   and does not change anymore, the initial condition is once more
+     *   set with this parameter being true.
      */
-    virtual void adjustSolution(
+    virtual void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt
+      bool                                         gridIsConstructred
     )  final ;
 
 

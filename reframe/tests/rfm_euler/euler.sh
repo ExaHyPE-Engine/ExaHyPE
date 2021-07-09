@@ -30,6 +30,7 @@ ${REFRAME_ROOT:=~}/reframe/bin/reframe \
     --purge-env \
     -C $config \
     -c euler.py \
+    -c euler_maqao.py \
     -r \
     -v \
     --performance-report \

@@ -153,7 +153,7 @@ void examples::exahype2::swe::TopologyParser::parsedisplacementfile(){
           }
       }           
       else{
-        std::cout << "Warning: Undefined entry in topology file!"; 
+        std::cout << "Warning: Undefined entry in displacement file!"; 
       } 
     }
 
@@ -165,9 +165,9 @@ void examples::exahype2::swe::TopologyParser::parsedisplacementfile(){
   }
 }
 
-double mapCoordinate(double c_in, double dc_in, double clower_in, double dc_out, double clower_out){
+double mapCoordinate(double c_in, double dc_in, double clower_in, double n_in, double dc_out, double clower_out, double n_out){
 
-  double c_out = c_in - (clower_out - clower_in)*(dc_out/dc_in);
+  double c_out = c_in*n_in - (clower_out - clower_in)/dc_in;
   
   return c_out;
 
@@ -176,18 +176,19 @@ double mapCoordinate(double c_in, double dc_in, double clower_in, double dc_out,
 
 double examples::exahype2::swe::TopologyParser::sampledisplacement(double x, double y, double t){
 
-  double disp_x = mapCoordinate(x, this->cellsize, this->xlowerleft, this->dispdx, this->dispxlowerleft);
-  double disp_y = mapCoordinate(y, this->cellsize, this->ylowerleft, this->dispdy, this->dispylowerleft);
+  double disp_x = mapCoordinate(x, this->cellsize, this->xlowerleft, this->ncols, this->dispdx, this->dispxlowerleft, this->dispmx);
+  double disp_y = mapCoordinate(y, this->cellsize, this->ylowerleft, this->nrows, this->dispdy, this->dispylowerleft, this->dispmy);
 
-  if(disp_x < this->dispxlowerleft || disp_y < this->dispylowerleft || 
-     disp_x > this->dispxlowerleft + this->dispmx*this->dispdx ||
-     disp_y > this->dispylowerleft + this->dispmy*this->dispdy){
+  if(disp_x < 0 || disp_y < 0 || disp_x >= dispmx || disp_y >= dispmy){
     return 0.0;
   } 
 
-  int index =  floor((t - 1)*this->dispmx*this->dispmy) + floor((1.0-disp_y)*this->dispmx)*this->dispmy + floor(disp_x*this->dispmy);
+  int index = floor(disp_y)*this->dispmx + floor(disp_x);
+		
 	
-  float z = this->displacement.at(index);
+  float z =0.0;
+  
+  z = this->displacement.at(index);
 
   return z;
 

@@ -31,11 +31,11 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesLoc
 
 
 std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesLocal(
-  GridVertex  vertices[TwoPowerD],
-  const SplitSpecification&                 splitTriggered,
-  const std::set<int>&                      splitting,
-  const std::set< int >&                    joinTriggered,
-  const std::set< int >&                    joining
+  GridVertex                  vertices[TwoPowerD],
+  const SplitSpecification&   splitTriggered,
+  const std::set<int>&        splitting,
+  const std::set< int >&      joinTriggered,
+  const std::set< int >&      joining
 ) const {
   std::bitset<TwoTimesD> result;
   for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {

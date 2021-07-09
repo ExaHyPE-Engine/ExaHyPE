@@ -27,12 +27,21 @@ class examples::exahype2::swe::SWE: public AbstractSWE {
 
   public:
     
- 
+    ::exahype2::RefinementCommand refinementCriterion(
+      const double * __restrict__ Q, // Q[3+1],
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t
+    ) override;
+    
 
 
     
 
 
+    
+
+    
     
 };
 

@@ -499,7 +499,24 @@ In-situ preprocessing:  """
     self._action_set_handle_boundary                                                  = HandleBoundary(self, self._store_face_data_default_predicate() )
     self._action_set_project_patch_onto_faces                                         = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
     self._action_set_copy_new_patch_overlap_into_overlap                              = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( self._patch, self._patch_overlap, self._patch_overlap_new )
+    
+    #
+    # Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
+    # boundary data has not been received yet and your face data thus is not initialised 
+    # at all.
+    #
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
+      patch = self._patch,
+      patch_overlap_interpolation = self._patch_overlap, 
+      patch_overlap_restriction   = self._patch_overlap_new,
+      interpolate_guard           = """
+  repositories::""" + self.get_name_of_global_instance() + """.getSolverState()!=""" + self._name + """::SolverState::GridInitialisation
+""",
+      additional_includes         = """
+#include "../repositories/SolverRepository.h"
+"""      
+    )
+        
     self._action_set_update_cell                                                      = None
 
 

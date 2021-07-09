@@ -20,7 +20,59 @@ peano4::grid::tests::GridTraversalEventGeneratorTest::GridTraversalEventGenerato
 }
 
 
-void peano4::grid::tests::GridTraversalEventGeneratorTest::testAreFacesLocal() {
+
+void peano4::grid::tests::GridTraversalEventGeneratorTest::testAreFacesLocal2() {
+  #if Dimensions==2
+  GridTraversalEventGenerator generator0(0);
+
+  GridVertex  vertices[TwoPowerD];
+
+  vertices[0].setState( GridVertex::State::HangingVertex );
+  vertices[0].setAdjacentRanks( { 0, 1, 0, 1 } );
+  vertices[0].setBackupOfAdjacentRanks( { 0, 1, 0, 1 } );
+
+  vertices[1].setState( GridVertex::State::Unrefined );
+  vertices[1].setAdjacentRanks( { 1, 1, 1, 1 } );
+  vertices[1].setBackupOfAdjacentRanks( { 1, 1, 1, 1 } );
+
+  vertices[0].setState( GridVertex::State::HangingVertex );
+  vertices[0].setAdjacentRanks( { 0, 1, 0, 1 } );
+  vertices[0].setBackupOfAdjacentRanks( { 0, 1, 0, 1 } );
+
+  vertices[0].setState( GridVertex::State::Unrefined );
+  vertices[0].setAdjacentRanks( { 1, 1, 1, 1 } );
+  vertices[0].setBackupOfAdjacentRanks( { 1, 1, 1, 1 } );
+
+  std::bitset<TwoTimesD> result0 = generator0.areFacesLocal(
+    vertices,
+    SplitSpecification(),
+    std::set<int>(),
+    std::set<int>(),
+    std::set<int>()
+  );
+
+  validateWithParams1(     result0[0], result );
+  validateWithParams1( not result0[1], result );
+  validateWithParams1( not result0[2], result );
+  validateWithParams1( not result0[3], result );
+
+  std::bitset<TwoTimesD> result1 = generator1.areFacesLocal(
+    vertices,
+    SplitSpecification(),
+    std::set<int>(),
+    std::set<int>(),
+    std::set<int>()
+  );
+
+  validateWithParams1( not result1[0], result );
+  validateWithParams1(     result1[1], result );
+  validateWithParams1(     result1[2], result );
+  validateWithParams1(     result1[3], result );
+  #endif
+}
+
+
+void peano4::grid::tests::GridTraversalEventGeneratorTest::testAreFacesLocal1() {
   #if Dimensions==2
   GridTraversalEventGenerator generator(1);
 
@@ -274,7 +326,8 @@ void peano4::grid::tests::GridTraversalEventGeneratorTest::testCreateEnterCellTr
 
 
 void peano4::grid::tests::GridTraversalEventGeneratorTest::run() {
-  testMethod( testAreFacesLocal );
+  testMethod( testAreFacesLocal1 );
+  testMethod( testAreFacesLocal2 );
   testMethod( testGetFaceType );
   testMethod( testCreateEnterCellTraversalEvent1 );
   testMethod( testCreateEnterCellTraversalEvent2 );
