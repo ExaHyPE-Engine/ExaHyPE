@@ -15,7 +15,7 @@ tarch::logging::Log   {% for item in NAMESPACE -%}{{ item }}::{%- endfor %}{{CLA
   logTraceInWith3Arguments( "refinementCriterion(...)", volumeX, volumeH, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
+  if (...) {
     result = ::exahype2::RefinementCommand::Refine;
   }
 
