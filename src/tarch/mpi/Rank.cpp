@@ -144,14 +144,22 @@ void tarch::mpi::Rank::writeTimeOutWarning(
   if (_deadlockTimeOut>std::chrono::seconds(0)) {
     logWarning(
       "writeTimeOutWarning(...)",
-  	  "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
-	  );
+      "application will terminate after " << std::to_string(_deadlockTimeOut.count()) << " seconds because of a deadlock"
+    );
   }
   else {
     logWarning(
       "writeTimeOutWarning(...)",
       "no deadlock treshold set, i.e. application will not terminate because of any deadlock"
     );
+  }
+  if (_timeOutWarning<_deadlockTimeOut/2) {
+    std::chrono::seconds newTimeOutWarning = _timeOutWarning*2;
+    logWarning(
+      "writeTimeOutWarning(...)",
+      "increase time out warning threshold from " << std::to_string(_timeOutWarning.count()) << " seconds to " << std::to_string(newTimeOutWarning.count()) << " seconds to avoid flood of warning messages"
+    );
+    _timeOutWarning = newTimeOutWarning;
   }
 }
 

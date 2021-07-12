@@ -223,6 +223,10 @@ void step() {{
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 
   static tarch::logging::Log _log("");
+  #if PeanoDebug>0
+  #else
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster())
+  #endif
   logInfo( "step()", "run " << repositories::StepRepository::toString(stepName) );
 
   tarch::timing::Watch  watch( "::", "step()", false );
