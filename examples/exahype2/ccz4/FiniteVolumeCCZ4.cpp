@@ -36,6 +36,7 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   }
 }
 
+#ifdef IncludeTwoPunctures
 //pre-process, solve the puncture equations
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
     //first we set the parameter. TODO:find a way to read parameter from python script
@@ -98,6 +99,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
 		//then solve the equation
 	tp->Run();
 }
+#endif
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   double * __restrict__ Q,
