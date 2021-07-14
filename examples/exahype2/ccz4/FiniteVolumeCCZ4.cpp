@@ -281,18 +281,34 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
   //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
-  int swi=0;
-  double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
-  radius=pow(radius,0.5);
-  if (swi==1){
+  double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+  if (CCZ4ReSwi==1){ //radius based
     if (radius<5) {result=::exahype2::RefinementCommand::Refine;}
   }
-  if (swi==2){
-    if ((Q[65]>0.1) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
-    else if (Q[65]>0.2) { result=::exahype2::RefinementCommand::Refine; }
-    else {result = ::exahype2::RefinementCommand::Keep;}
+  if (CCZ4ReSwi==2){ //single black hole
+    if (t==0.0){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      if ((radius<5) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (radius<2.5) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    } else {
+      if ((Q[65]>0.1) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (Q[65]>0.2) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    }
   }
-
+  if (CCZ4ReSwi==3){ //binary black holes
+  double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+  double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+    if (t==0.0){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      if ( ((radius1<5) or (radius2<5)) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if ((radius1<2.5) or (radius2<2.5)) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    } else {
+      if ((Q[65]>0.1) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (Q[65]>0.2) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    }
+  }
   return result;
 }
 

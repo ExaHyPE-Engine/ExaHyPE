@@ -33,7 +33,7 @@ floatparams = {
 	#"tp_epsilon":1e-6
 }
 
-intparams = {"LapseType":0, "tp_grid_setup":0, "swi":99}
+intparams = {"LapseType":0, "tp_grid_setup":0, "swi":99, "ReSwi":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -566,7 +566,7 @@ if __name__ == "__main__":
 ########################################################################################
 #output dir and proble
 ########################################################################################
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv4" )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv1" )
     #probe_point = [-8,-8,-8]
     #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 
@@ -669,6 +669,7 @@ if __name__ == "__main__":
     peano4_project.build( make_clean_first = True )
 
     # Remind the user of warnings!
+    userwarnings.append(("the executable file name: "+exe, None))
     if len(userwarnings) >0:
         print("Please note that these warning occured before the build:")
         for msg, exception in userwarnings:
