@@ -69,7 +69,7 @@ A generic script to create speedup plots.
   parser.add_argument("--log-x",              dest="log_x",           help="plot with logarithmic axes", action="store_true" )
   parser.add_argument("--log-y",              dest="log_y",           help="plot with logarithmic axes", action="store_true" )
   parser.add_argument("--plot-efficiency",    dest="plot_efficiency", help="Don't plot raw times but efficiency", action="store_true" )
-  parser.add_argument("--labels",             dest="labels",          help="Plot labels", default="" )
+  parser.add_argument("--labels",             dest="labels",          help="Plot labels. You can use $...$ to use the math mode, but you will have to escape the dollars with a \\", default="" )
   parser.add_argument("--output",             dest="output",          help="output file prefix (file name extension is added automatically)", default="" )
   args = parser.parse_args()
 
@@ -139,7 +139,7 @@ A generic script to create speedup plots.
   if args.plot_efficiency:
     plt.ylabel( "Efficiency" )
   else:
-    plt.ylabel( "Normalised time [t]=s" )
+    plt.ylabel( "Time per time step [t]=s" )
   if args.log_x:
     plt.xscale( "log", base=2 )
   if args.log_y:
