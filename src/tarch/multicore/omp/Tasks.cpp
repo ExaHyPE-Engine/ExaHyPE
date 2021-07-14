@@ -49,6 +49,10 @@ namespace {
   }
 
 
+  /**
+   * This implementation variant follows the patterns described in the 2021
+   * IWOMP paper by H. Schulz et al.
+   */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks
   ) {
