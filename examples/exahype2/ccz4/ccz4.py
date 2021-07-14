@@ -54,7 +54,7 @@ if __name__ == "__main__":
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():   
       if k=="ReSwi":
-        parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s, choose refinement criterion, 0-no refinement, 1-radius based, 2-SBH phi gradient based, 3-BBH phi gradient based")
+        parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s, choose refinement criterion, 0-no refinement, 1-radius based, 2-SBH phi gradient based, 3-BBH phi gradient based. Notice: 2 and 3 only work with -ext Full")
       else: parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s")
 
     args = parser.parse_args()
@@ -569,7 +569,9 @@ if __name__ == "__main__":
 ########################################################################################
 #output dir and proble
 ########################################################################################
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv1" )
+    path="./"
+    #path="/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv3"
+    project.set_output_path(path)
     #probe_point = [-8,-8,-8]
     #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 
@@ -673,6 +675,7 @@ if __name__ == "__main__":
 
     # Remind the user of warnings!
     userwarnings.append(("the executable file name: "+exe, None))
+    userwarnings.append(("output directory: "+path, None))
     if len(userwarnings) >0:
         print("Please note that these warning occured before the build:")
         for msg, exception in userwarnings:
