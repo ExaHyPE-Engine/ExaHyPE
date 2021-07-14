@@ -209,6 +209,10 @@ class MergeInEnclaveTaskOutcomeInSecondarySweep(AbstractFVActionSet):
       fineGridCell{{UNKNOWN_IDENTIFIER}}.value
     );
 
+    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+
+    {{POSTPROCESS_UPDATED_PATCH}}
+
     fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
       
     ::exahype2::fv::validatePatch(
