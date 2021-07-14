@@ -33,7 +33,7 @@ floatparams = {
 	#"tp_epsilon":1e-6
 }
 
-intparams = {"LapseType":0, "tp_grid_setup":0}
+intparams = {"LapseType":0, "tp_grid_setup":0, "swi":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -538,7 +538,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv2" )
+    project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv4" )
     #probe_point = [-8,-8,-8]
     #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
 

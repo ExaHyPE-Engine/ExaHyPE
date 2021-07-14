@@ -95,6 +95,8 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       const tarch::la::Vector<Dimensions,double>& volumeH,
       double t
     ) override;
+
+    void prepare(TP::TwoPunctures* tp); 
 };
 
 
