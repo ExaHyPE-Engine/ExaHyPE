@@ -443,7 +443,7 @@ if __name__ == "__main__":
       exe += "_"
       exe += args.exe_name
     if not args.tra_name=="de":
-      exe += "_tracer_" + args.tra_name
+      exe += "_" + args.tra_name
     project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4", executable=exe)
 
 ########################################################################################
@@ -522,6 +522,8 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       userwarnings.append((msg,None))
 
+    intparams.update({"ReSwi":args.CCZ4ReSwi})
+
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), v)
@@ -574,7 +576,8 @@ if __name__ == "__main__":
 #output dir and proble
 ########################################################################################
     path="./"
-    #path="/cosma6/data/dp004/dc-zhan3/exahype2/bbh-fv3"
+    #path="/cosma5/data/durham/dc-zhan3/"
+    #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv4"
     project.set_output_path(path)
     #probe_point = [-8,-8,-8]
     #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
