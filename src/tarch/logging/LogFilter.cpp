@@ -9,6 +9,11 @@
 #include "LogFilter.h"
 
 
+#if defined(UseLikwid)
+#include <likwid-marker.h>
+#endif
+
+
 const int tarch::logging::LogFilter::FilterListEntry::AnyRank = -1;
 
 const std::string tarch::logging::LogFilter::FilterListEntry::TargetAll   = "all";
@@ -87,6 +92,19 @@ bool tarch::logging::LogFilter::FilterListEntry::operator!=(const FilterListEntr
 tarch::logging::LogFilter::LogFilter():
   _activeProgramPhase("undef") {
   addFilterListEntry( FilterListEntry( FilterListEntry::TargetAll, false )  );
+  #if defined(UseLikwid)
+  likwid_markerInit();
+
+  likwid_markerStartRegion( _activeProgramPhase.c_str() );
+  #endif
+}
+
+
+tarch::logging::LogFilter::~LogFilter() {
+  #if defined(UseLikwid)
+  likwid_markerStopRegion( _activeProgramPhase.c_str() );
+  likwid_markerClose();
+  #endif
 }
 
 
@@ -114,6 +132,10 @@ void tarch::logging::LogFilter::switchProgramPhase(const std::string& activeProg
   std::cout << "switch program phase to " << activeProgramPhase << " and, hence, activate potentially different filter set" << std::endl;
   #endif
   _activeProgramPhase = activeProgramPhase;
+  #if defined(UseLikwid)
+  likwid_markerStopRegion( _activeProgramPhase.c_str() );
+  likwid_markerStartRegion( _activeProgramPhase.c_str() );
+  #endif
 }
 
 

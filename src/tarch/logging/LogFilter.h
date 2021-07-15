@@ -117,6 +117,8 @@ class tarch::logging::LogFilter {
   public:
     static LogFilter& getInstance();
 
+    ~LogFilter();
+
     /**
      * Add one filter list entry
      *
