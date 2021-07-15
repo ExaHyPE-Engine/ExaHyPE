@@ -10,7 +10,7 @@
 
 
 #if defined(UseLikwid)
-#include <likwid-marker.h>
+#include <likwid.h>
 #endif
 
 
