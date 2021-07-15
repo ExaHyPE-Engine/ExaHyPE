@@ -437,9 +437,13 @@ if __name__ == "__main__":
 #main starts here
 ########################################################################################
     userwarnings = []
-    exe="peano4_"+args.exe_name
+    exe="peano4"
+    
+    if args.exe_name!="":
+      exe += "_"
+      exe += args.exe_name
     if not args.tra_name=="de":
-      exe="peano4_"+args.tra_name
+      exe += "_tracer_" + args.tra_name
     project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4", executable=exe)
 
 ########################################################################################
