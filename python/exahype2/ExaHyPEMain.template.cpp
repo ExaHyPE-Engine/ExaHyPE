@@ -476,6 +476,8 @@ int main(int argc, char** argv) {{
   #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
+  peano4::addBuildAndRunInformation( "\n\nThe present executable has been created by \n\n     " + BuildInformation + "\n\n" );
+  peano4::addBuildAndRunInformation( "\n\nThe underlying Peano 4 configuration is\n\n     " + ConfigureInformation + "\n\n" );
 
   repositories::finishSimulation();
 

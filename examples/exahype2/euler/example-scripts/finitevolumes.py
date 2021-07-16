@@ -192,7 +192,7 @@ project.set_global_simulation_parameters(
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.load_balancing_quality) + ",false)" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project(args.verbose)
-peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )
+#peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )
 if args.compile:
   peano4_project.build(make_clean_first=True, number_of_parallel_builds=args.j)
 else:

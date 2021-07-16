@@ -25,6 +25,7 @@ class Makefile(object):
 
 
   def clear(self):
+    self.configure_call = ""
     self.d = {}
     self.d["CXX"]              = ""
     self.d["CXXFLAGS"]         = ""
@@ -177,6 +178,23 @@ class Makefile(object):
     
     """
     self.d[ "CONFIGUREPATH" ] = directory
+
+    input_file = directory + "/config.log"
+    try:
+      input = open( input_file, "r" )
+      self.configure_call = ""
+      print( "parse configure outcome " + input_file + " to extract configure settings" )
+      for line in input:
+        if "./configure" in line and self.configure_call == "":
+          print( "found the configure call info " + line )
+          self.configure_call = line.strip()
+    except IOError:
+      print( """
+Error: if you call parse_configure_script_outcome(), please hand over directory where
+./configure had been called. You passed """ + directory + """ and the script therefore
+did search for a file """ + input_file )
+
+
 
     input_file = directory + "/src/Makefile"
     try:
