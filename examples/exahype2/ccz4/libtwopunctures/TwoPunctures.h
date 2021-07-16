@@ -102,12 +102,9 @@ public:
 	void SpecCoef (int n1, int n2, int n3, int ivar, double *v, double *cf);
 	double PunctEvalAtArbitPositionFast (double *v, int ivar, double A, double B, double phi,
 		int nvar, int n1, int n2, int n3);
-	double PunctEvalAtArbitPositionFaster (double A, double B, double phi,
-		int nvar, int n1, int n2, int n3);
+	double PunctEvalAtArbitPositionFaster (double A, double B, double phi);
 	double PunctEvalAtArbitPositionFasterLowRes (double A, double B, double phi);
-	double PunctIntPolAtArbitPositionFast (int ivar, int nvar, int n1,
-		int n2, int n3, derivs v, double x,
-		double y, double z, bool low_res=false);
+	double PunctIntPolAtArbitPositionFast (derivs v, double x, double y, double z, bool low_res=false);
 
 	/* Routines in  "CoordTransf.c"*/
 	void AB_To_XR (int nvar, double A, double B, double *X,

@@ -82,7 +82,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       targetPatch
     );
     
-        {{POSTPROCESS_UPDATED_PATCH}}
+    {{POSTPROCESS_UPDATED_PATCH}}
   """ 
 
 

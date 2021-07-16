@@ -27,7 +27,7 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   }
   #ifdef IncludeTwoPunctures
   if ( Scenario==2 ) {
-    TP_bindding::prepare(_tp);//we solve the puncture equation here.
+    prepare(_tp);//we solve the puncture equation here.
     //exit(0);
   }
   #endif
@@ -36,6 +36,70 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   }
 }
 
+#ifdef IncludeTwoPunctures
+//pre-process, solve the puncture equations
+void examples::exahype2::ccz4::FiniteVolumeCCZ4::prepare(TP::TwoPunctures* tp){
+    //first we set the parameter. TODO:find a way to read parameter from python script
+    //int swi=0;//0--single black hole, 1--BBH hoc, 2--BBH rotation, 3--GW150914
+    
+	if (CCZ4swi==0){
+		tp->par_b=1.0;
+		tp->center_offset[0]=-1.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
+		tp->target_M_plus=1.0;//adm mass
+		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.0; tp->par_P_plus[2]=0.0;//linear momentum
+		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
+		tp->target_M_minus=0.0;//adm mass
+		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=0.0; tp->par_P_minus[2]=0.0;//linear momentum
+		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
+		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
+		tp->TP_epsilon=1e-6;}
+		
+	if (CCZ4swi==1){
+		tp->par_b=4.0;
+		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
+		tp->target_M_plus=1.0;//adm mass
+		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.0; tp->par_P_plus[2]=0.0;//linear momentum
+		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
+		tp->target_M_minus=1.0;//adm mass
+		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=0.0; tp->par_P_minus[2]=0.0;//linear momentum
+		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
+		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
+		tp->TP_epsilon=1e-6;}
+	
+	if (CCZ4swi==2){
+		tp->par_b=4.251;
+		tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
+		tp->give_bare_mass=true;//use puncture mass instead of adm mass
+		tp->par_m_plus=0.494; tp->par_m_minus=0.494;
+		//tp->target_M_plus=999;//adm mass
+		tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.1091; tp->par_P_plus[2]=0.0;//linear momentum
+		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
+		//tp->target_M_minus=999;//adm mass
+		tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.1091; tp->par_P_minus[2]=0.0;//linear momentum
+		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
+		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
+		tp->TP_epsilon=1e-6;}
+
+	if (CCZ4swi==3){
+		double D=10.0, q=36.0/29.0, chip=0.31, chim=-0.46, M=1.0;
+		double Pr=-0.00084541526517121, Pphi=0.09530152296974252;
+		double mp=M*q/(1+q), mm=M*1/(1+q);
+		tp->par_b=5.0;
+		tp->center_offset[0]=D*mm-D/2; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
+		tp->target_M_plus=mp;//adm mass
+		tp->par_P_plus[0]=Pr; tp->par_P_plus[1]=Pphi; tp->par_P_plus[2]=0.0;//linear momentum
+		tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=chip*mp*mp;//spin
+		tp->target_M_minus=1/(1+q);//adm mass
+		tp->par_P_minus[0]=-Pr; tp->par_P_minus[1]=-Pphi; tp->par_P_minus[2]=0.0;//linear momentum
+		tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=chim*mm*mm; //spin		
+		tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
+		tp->TP_epsilon=1e-6;}
+		tp->PrintParameters();
+		
+		//then solve the equation
+	tp->Run();
+}
+#endif
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::initialCondition(
   double * __restrict__ Q,
@@ -219,9 +283,34 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
   //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
-  double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2);
-  radius=pow(radius,0.5);
-  if (radius<5) {result=::exahype2::RefinementCommand::Refine;}
+  double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+  if (CCZ4ReSwi==1){ //radius based
+    if (radius<5) {result=::exahype2::RefinementCommand::Refine;}
+  }
+  if (CCZ4ReSwi==2){ //single black hole
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      if ((radius<5) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (radius<2.5) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    } /*else {
+      if ((Q[65]>0.1) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (Q[65]>0.2) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    }*/
+  }
+  if (CCZ4ReSwi==3){ //binary black holes
+  double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+  double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      if ( ((radius1<5) or (radius2<5)) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if ((radius1<2.5) or (radius2<2.5)) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    } else {
+      if ((Q[65]>0.1) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (Q[65]>0.2) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    }
+  }
   return result;
 }
 

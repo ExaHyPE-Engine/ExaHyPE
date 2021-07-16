@@ -23,12 +23,14 @@ struct Parameters : public LoggingAdapter {
 	double		adm_tol;
 	std::string	grid_setup_method;
 	std::string	initial_lapse;
-	int		npoints_A;
-	int		npoints_B;
-	int		npoints_phi;
-	int		npoints_A_low;
-	int		npoints_B_low;
-	int		npoints_phi_low;
+
+	static constexpr int npoints_A = 30;
+	static constexpr int npoints_B = 30;
+	static constexpr int npoints_phi = 16; // has to be multiples of 4
+	static constexpr int npoints_A_low = 3;
+	static constexpr int npoints_B_low = 3;
+	static constexpr int npoints_phi_low = 4; // has to be multiples of 4
+
 	double		Newton_tol;
 	int		Newton_maxit;
 	double		TP_epsilon;
