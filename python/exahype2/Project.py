@@ -5,6 +5,8 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 
 import os
+import sys
+
 
 import exahype2.grid
 import exahype2.solvers
@@ -140,6 +142,14 @@ class Project(object):
     
 
   def __export_constants(self):
+    """
+    
+    We export ExaHyPE's constants. Besides the constants from ExaHyPE,
+    I also export some parameters from Peano onto the ExaHyPE constants
+    file. Therefore, it is important that you parse the configure output
+    before we export the constants.
+    
+    """
     self._project.constants.clear()
     offset_string = "{" + str(self._domain_offset[0])
     size_string   = "{" + str(self._domain_size[0])
@@ -158,7 +168,14 @@ class Project(object):
     self._project.constants.export( "TimeInBetweenPlots", str(self._time_in_between_plots) )
     self._project.constants.export( "PlotterPrecision", str(self._plotter_precision) )
     self._project.constants.export_boolean_sequence( "PeriodicBC", self._periodic_BC )
-    
+
+    build_string = "python3 "
+    for i in sys.argv:
+      build_string += " "
+      build_string += i
+    self._project.constants.export_string( "BuildInformation",     build_string )
+    self._project.constants.export_string( "ConfigureInformation", self._project.output.makefile.configure_call )
+   
 
   def __configure_makefile(self):
     self._project.output.makefile.set_dimension(self._dimensions)
@@ -321,9 +338,6 @@ class Project(object):
      
     """
     #self._project.cleanup()
-
-    self.__export_constants()
-    self.__configure_makefile()
             
     self._project.solversteps.add_step(self.create_grid)
     self._project.solversteps.add_step(self.init_grid)
@@ -381,7 +395,10 @@ class Project(object):
     self._project.main = exahype2.ExaHyPEMain(self._project,self._periodic_BC,self._dimensions)
 
     # maybe use ..
+    self.__configure_makefile()
     self._project.output.makefile.parse_configure_script_outcome( self._Peano_src_directory )
+    self.__export_constants()
+
     #self._project.output.makefile.add_library( "ExaHyPE2Core$(DIMENSIONS)d$(LIBRARY_POSTFIX)",          self._Peano_src_directory + "/src/exahype2" )
     #self._project.output.makefile.add_library( "ToolboxLoadBalancing$(DIMENSIONS)d$(LIBRARY_POSTFIX)",  self._Peano_src_directory + "/src/toolbox/loadbalancing" )
 

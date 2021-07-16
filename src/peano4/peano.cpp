@@ -29,6 +29,7 @@
 
 namespace {
   std::set< std::string > bibTeXEntries;
+  std::string             buildAndRunInformation;
 
   void addDefaultBibTeXEntries() {
     peano4::addBibTeXEntry(
@@ -259,6 +260,13 @@ void peano4::writeBibTeXMessage() {
 "                                                                            \n"
 "and cite the appropriate papers from below. \n\n\n";
 
+    if (buildAndRunInformation!="") {
+      file << std::endl << "## Build and run information as provided by Peano 4 application code ## "
+           << std::endl << std::endl
+           << buildAndRunInformation
+           << std::endl << std::endl;
+    }
+
     for (auto& p: bibTeXEntries) {
       file << p << std::endl << std::endl;
     }
@@ -266,6 +274,11 @@ void peano4::writeBibTeXMessage() {
     std::cout << "Peano 4 terminated successfully. See " << filename.str() << " for run summary" << std::endl;
   }
   wrote = true;
+}
+
+
+void peano4::addBuildAndRunInformation( const std::string& newEntry ) {
+  buildAndRunInformation += newEntry;
 }
 
 
