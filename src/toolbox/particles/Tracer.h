@@ -66,7 +66,7 @@ namespace toolbox {
       const peano4::datamanagement::CellMarker&   marker,
       int                                         voxelsPerAxis,
       int                                         unknownsPerVoxel,
-      const int					  				  ObIndex,
+      const int					  ObIndex,
       double*                                     voxelField,
       const tarch::la::Vector<Dimensions,double>& particleX
     );

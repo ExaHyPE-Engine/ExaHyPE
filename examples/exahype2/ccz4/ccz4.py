@@ -576,7 +576,7 @@ if __name__ == "__main__":
 #output dir and proble
 ########################################################################################
     path="./"
-    #path="/cosma5/data/durham/dc-zhan3/"
+    #path="/cosma5/data/durham/dc-zhan3/sbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv4"
     project.set_output_path(path)
     #probe_point = [-8,-8,-8]
@@ -588,15 +588,15 @@ if __name__ == "__main__":
 #Tracer setting 
 ########################################################################################
     if args.add_tracer:
-      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=5 )
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
       project.add_action_set_to_timestepping(
         exahype2.tracer.FiniteVolumesTracing(
           tracer_particles,my_solver,
-          [17,18,19],[0,16],-1,
+          [17,18,19],[0,16,17,3,5],-1,
           #time_stepping_kernel="toolbox::particles::LinearInterp",
-          time_stepping_kernel="toolbox::particles::StaticPosition",
-          observer_kernel="toolbox::particles::ObLinearInterp"
+          time_stepping_kernel="toolbox::particles::StaticPosition"#,
+          #observer_kernel="toolbox::particles::ObLinearInterp"
         )
       )
       #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))

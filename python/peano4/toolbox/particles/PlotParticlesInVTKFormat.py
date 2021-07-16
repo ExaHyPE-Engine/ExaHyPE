@@ -83,8 +83,10 @@ class PlotParticlesInVTKFormat(ActionSet):
       self.d[ "ATTRIBUTE_WRITER_CLOSES" ]            += f"{delim}{writer_name}->close();"
       self.d[ "ATTRIBUTE_WRITER_DELETES" ]           += f"{delim}delete {writer_name};"
       self.d[ "ATTRIBUTE_WRITER_INITIALISERS" ]      += f"{delim}{writer_name} = _writer->createPointDataWriter( \"{name_no_underscore}\", {cardinality} );"
-      self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        += f"{delim}  {writer_name}->plot(particleNumber,p->get{accessor_name}());"
-
+      if writer_name=="_dataWriter":
+        self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        += f"{delim}  _dataWriter->plot(particleNumber,p->getData().data(),{cardinality});" 
+      else:
+        self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        += f"{delim}  {writer_name}->plot(particleNumber,p->get{accessor_name}());"
 
   def get_constructor_body(self):
     return self.__Template_Constructor.render(**self.d)
