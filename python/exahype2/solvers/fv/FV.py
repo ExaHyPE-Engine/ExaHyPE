@@ -625,39 +625,39 @@ In-situ preprocessing:  """
 
 
   @abstractmethod
-  def set_postprocess_updated_patch_kernel(self,kernel, append_to_existing_kernel=True):
+  def set_postprocess_updated_patch_kernel(self, kernel, append_to_existing_kernel=True):
     """
-  
+
     Define a postprocessing routine over the data
-    
+
     The postprocessing kernel often looks similar to the following code:
-    
-  {    
+
+  {
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       enforceCCZ4constraints( targetPatch+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-  } 
+  }
 
-    
+
     Within this kernel, you have at least the following variables available:
-    
+
     - targetPatch This is a pointer to the whole data structure (one large
-        array). 
+        array).
         The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the 
+    - reconstructedPatch This is a pointer to the data snapshot before the
         actual update. This data is combined with the halo layer, i.e. if you
         work with 7x7 patches and a halo of 2, the pointer points to a 11x11
         patch.
     - marker
-    
-    Furthermore, you can use all the symbols (via Jinja2 syntax) from 
+
+    Furthermore, you can use all the symbols (via Jinja2 syntax) from
     _init_dictionary_with_default_parameters().
-    
+
     kernel: String
       C++ code that holds the postprocessing kernel
-      
+
     """
     if append_to_existing_kernel:
       self._postprocess_updated_patch += kernel
@@ -666,7 +666,7 @@ In-situ preprocessing:  """
     self.create_data_structures()
     self.create_action_sets()
 
-  
+
   def add_actions_to_init_grid(self, step):
     """
     
@@ -819,11 +819,11 @@ In-situ preprocessing:  """
 
       This one is called by all algorithmic steps before I invoke
       add_entries_to_text_replacement_dictionary().
-      
+
       See the remarks on set_postprocess_updated_patch_kernel to understand why
       we have to apply the (partially befilled) dictionary to create a new entry
       for this very dictionary.
-      
+
 
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
@@ -846,7 +846,7 @@ In-situ preprocessing:  """
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
 
     if (self._min_h > self._max_h ):
-      raise Exception( "min/max h are inconsistent" ) 
+      raise Exception( "min/max h are inconsistent" )
     d[ "MAX_H"] = self._max_h
     d[ "MIN_H"] = self._min_h
 
