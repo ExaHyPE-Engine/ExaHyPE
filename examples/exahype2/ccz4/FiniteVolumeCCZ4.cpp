@@ -290,7 +290,8 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   if (CCZ4ReSwi==2){ //single black hole
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
       if ((radius<5) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
-      else if (radius<2.5) { result=::exahype2::RefinementCommand::Refine; }
+      else if ((radius<2.5) and (volumeH(0)>0.3)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (radius<1.25) { result=::exahype2::RefinementCommand::Refine; }
       else {result = ::exahype2::RefinementCommand::Keep;}
     } /*else {
       if ((Q[65]>0.1) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
