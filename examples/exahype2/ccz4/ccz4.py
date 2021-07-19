@@ -52,7 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
-    for k, v in intparams.items():   
+    for k, v in intparams.items():
       if k=="ReSwi":
         parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s, choose refinement criterion, 0-no refinement, 1-radius based, 2-SBH phi gradient based, 3-BBH phi gradient based. Notice: 2 and 3 only work with -ext Full")
       else: parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s")
@@ -60,7 +60,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     SuperClass = None
-    
+
     if args.implementation=="fv-fixed":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
     if args.implementation=="fv-fixed-enclave":
@@ -134,19 +134,31 @@ if __name__ == "__main__":
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
+          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
-        
+
         self.set_postprocess_updated_patch_kernel( """
-  {    
+
+  {
+    #if Dimensions==2
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    #if Dimensions==3
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
     int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+    for (int i=0;i<itmax;i++)
+    {
+
+    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-  } 
-""" )   
-        
+  }
+""" )
+
 
       def get_user_includes(self):
         """
@@ -288,7 +300,7 @@ if __name__ == "__main__":
 				add puncutrestracker, constraints writer, psi4 writer, AMRflag(currently using gradient of phi)
         """
         self._auxiliary_variables = 9
-        
+
         self._my_user_includes += """
 	#include "../libtwopunctures/TP_PunctureTracker.h"
 	#include "../CCZ4Kernels.h"
@@ -299,7 +311,7 @@ if __name__ == "__main__":
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        
+
 		std::fstream fin;
 		std::string att="_"""+args.tra_name+""".txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 		const int n_a_v=9;
@@ -313,7 +325,7 @@ if __name__ == "__main__":
 			fin.close();
 			//fin.open((tem+att),std::ios::out|std::ios::trunc);
 			//fin << "tem file" << std::endl;
-			//fin.close();		 
+			//fin.close();
 		} else {
 			fin.open((p1+att),std::ios::in);
 			std::string pos=getLastLine(fin);
