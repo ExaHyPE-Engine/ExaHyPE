@@ -42,7 +42,8 @@ class TemplatedHeaderImplementationFilePair(object):
 
   def generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and writeFile(overwrite,self.default_overwrite,full_qualified_filename):
-      print( "write " + full_qualified_filename )
+      import inspect, os
+      print( "{} written by {}".format(full_qualified_filename, os.path.basename(inspect.getfile(self.__class__))))
       with open( os.path.realpath(template_file), "r" ) as input:
         template = input.read()
       with open( full_qualified_filename, "w" ) as output:
