@@ -1,4 +1,4 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .FV                       import *
 from .PDETerms import PDETerms
@@ -25,12 +25,12 @@ class UpdateCellWithEnclavesOnAccelerator(ReconstructPatchAndApplyFunctor):
   ); // previous time step has to be valid
 
   if (marker.isSkeletonCell()) {
-    tasks::{{GPU_ENCLAVE_TASK_NAME}}::applyKernelToCell( 
-      marker, 
+    tasks::{{GPU_ENCLAVE_TASK_NAME}}::applyKernelToCell(
+      marker,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-      reconstructedPatch, 
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value 
+      reconstructedPatch,
+      fineGridCell{{UNKNOWN_IDENTIFIER}}.value
     );
   }
   else { // is an enclave cell
@@ -110,7 +110,7 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
 
 
   def _GPU_enclave_task_name(self):
-    return self._name + "GPUEnclaveTask"
+    return self._name + "EnclaveTask"
 
 
   def add_implementation_files_to_project(self,namespace,output):
@@ -120,6 +120,10 @@ class GenericRusanovFixedTimeStepSizeWithAccelerator( GenericRusanovFixedTimeSte
 
     """
     GenericRusanovFixedTimeStepSizeWithEnclaves.add_implementation_files_to_project(self,namespace,output)
+    print("Note: I am overwriting some files generated from the base class:")
+    import inspect
+    for bc in inspect.getmro(self.__class__):
+        print("\t{}".format(bc))
 
     # TODO this is not working if we have inheritance
     # templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
