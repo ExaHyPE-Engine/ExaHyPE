@@ -342,8 +342,8 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       else if (
         peano4::grid::PeanoCurve::isInOutStack(inVertexStack)
       ) {{
-        assertionVectorNumericalEquals5( data.getDebugX(), marker.x(outVertexStackPosition), event.toString(), data.getDebugX(), marker.toString(), outVertexStackPosition, _spacetreeId );
-        assertionVectorNumericalEquals4( data.getDebugH(), marker.h(),                       event.toString(), data.getDebugX(), marker.toString(), _spacetreeId );
+        assertionVectorNumericalEquals7( data.getDebugX(), marker.x(outVertexStackPosition), event.toString(), data.getDebugX(), marker.toString(), inVertexStack, i, outVertexStackPosition, _spacetreeId );
+        assertionVectorNumericalEquals6( data.getDebugH(), marker.h(),                       event.toString(), data.getDebugX(), marker.toString(), inVertexStack, i, _spacetreeId );
       }}
       #endif
 
