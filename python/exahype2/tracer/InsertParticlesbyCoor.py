@@ -11,56 +11,41 @@ import dastgen2.attributes.Integer
 
 
 class InsertParticlesbyCoor(ActionSet):
-  def __init__(self,particle_set,p1=[0,0,0],p2=[0,0,0]):
+  def __init__(self,particle_set,N=2,coor_s=[[0,0,0],[0,0,0]]):
     """
 =
 
     particle_set: ParticleSet
  
-    p1,p2: Float
-     coordinates for the particle 
+    N: number of particles
+
+    coor_s: coordinates for the particle 
 
     """
-    #self._particle_set = particle_set
-    #self._h            = h
+
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
-    self.d[ "P1" ]                       = p1
-    self.d[ "P2" ]                       = p2
-
+    self.d[ "N" ]                        = N
+    self._coor_s			 = coor_s
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
-  if ( not marker.isRefined() and 
-  (marker.x()(0)-marker.h()(0)/2.0) < {{P1[0]}} and (marker.x()(0)+marker.h()(0)/2.0) > {{P1[0]}} and
-  (marker.x()(1)-marker.h()(1)/2.0) < {{P1[1]}} and (marker.x()(1)+marker.h()(1)/2.0) > {{P1[1]}} and
-  (marker.x()(2)-marker.h()(2)/2.0) < {{P1[2]}} and (marker.x()(2)+marker.h()(2)/2.0) > {{P1[2]}} 
-  )
-  {
-    globaldata::{{PARTICLE}}* p = new globaldata::{{PARTICLE}}();
-    p->setNumber(0, _spacetreeId);
-    p->setNumber(1, _particleNumberOnThisTree);
-    p->setX(0, {{P1[0]}} );		// x coordinate
-    p->setX(1, {{P1[1]}} );		// y coordinate
-    p->setX(2, {{P1[2]}} );		// z coordinate
-    p->setCutOffRadius(0.0); 
-    _particleNumberOnThisTree++;
-    fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p );
-  }
-  if ( not marker.isRefined() and 
-  (marker.x()(0)-marker.h()(0)/2.0) < {{P2[0]}} and (marker.x()(0)+marker.h()(0)/2.0) > {{P2[0]}} and
-  (marker.x()(1)-marker.h()(1)/2.0) < {{P2[1]}} and (marker.x()(1)+marker.h()(1)/2.0) > {{P2[1]}} and
-  (marker.x()(2)-marker.h()(2)/2.0) < {{P2[2]}} and (marker.x()(2)+marker.h()(2)/2.0) > {{P2[2]}} 
-  )
-  {
-    globaldata::{{PARTICLE}}* p2 = new globaldata::{{PARTICLE}}();
-    p2->setNumber(0, _spacetreeId);
-    p2->setNumber(1, _particleNumberOnThisTree);
-
-    toolbox::particles::init(*newParticle, { {{P2[0]}},{{P2[1]}},{{P2[2]}} },0.0);
-
-    _particleNumberOnThisTree++;
-    fineGridVertex{{PARTICLES_CONTAINER}}.push_back( p2 );
+  for(int i=0;i<{{N}};i++){
+    if ( not marker.isRefined() and 
+    (marker.x()(0)-marker.h()(0)/2.0) < coor_s[i][0] and (marker.x()(0)+marker.h()(0)/2.0) > coor_s[i][0] and
+    (marker.x()(1)-marker.h()(1)/2.0) < coor_s[i][1] and (marker.x()(1)+marker.h()(1)/2.0) > coor_s[i][1] and
+    (marker.x()(2)-marker.h()(2)/2.0) < coor_s[i][2] and (marker.x()(2)+marker.h()(2)/2.0) > coor_s[i][2] 
+    )
+    {
+      globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
+      newParticle->setNumber(0, _spacetreeId);
+      newParticle->setNumber(1, _particleNumberOnThisTree);
+      //std::cout<<_particleNumberOnThisTree<<std::endl;
+      toolbox::particles::init(*newParticle,{coor_s[i][0],coor_s[i][1],coor_s[i][2]},0.0);
+      _particleNumberOnThisTree++;
+      fineGridVertex{{PARTICLES_CONTAINER}}.push_back( newParticle );
+      //std::cout<<coor_s[i][0]<<std::endl;
+    }
   }
 """)
 
@@ -92,18 +77,28 @@ class InsertParticlesbyCoor(ActionSet):
 """ )
     return result.render(**self.d)
 
+  def Read_In_Coor(self):
+    result=""
+    for i in range(self.d["N"]):
+      result+= "  coor_s["+str(i)+"][0]="+str(self._coor_s[i][0])+";"
+      result+= " coor_s["+str(i)+"][1]="+str(self._coor_s[i][1])+";"
+      result+= " coor_s["+str(i)+"][2]="+str(self._coor_s[i][2])+";"
+      result+= "\n"
+    return result
 
   def get_constructor_body(self):
-    return """
+    return f"""
   _particleNumberOnThisTree = 0;
   _spacetreeId              = treeNumber;
+{self.Read_In_Coor()}
 """
 
 
   def get_attributes(self):
-     return """
+     return f"""
   int _particleNumberOnThisTree;
   int _spacetreeId;
+  double coor_s["""+str(self.d["N"])+"""][3];
 """
 #    result = jinja2.Template( """
 #  std::forward_list< globaldata::{{PARTICLE}}* >  _activeParticles;

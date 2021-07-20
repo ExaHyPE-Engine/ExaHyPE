@@ -8,6 +8,7 @@ import peano4.toolbox.particles
 import dastgen2
 
 import numpy as np
+from Probe_file_gene import tracer_seeds_generate
 
 modes = { 
   "release": peano4.output.CompileMode.Release,
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
-    parser.add_argument("--add-tracer",               dest="add_tracer",      action="store_true", help="Add tracers" )
+    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
 
@@ -576,32 +577,39 @@ if __name__ == "__main__":
 #output dir and proble
 ########################################################################################
     path="./"
-    #path="/cosma5/data/durham/dc-zhan3/sbh-c5-1"
-    #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv4"
+    #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
+    #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv2"
     project.set_output_path(path)
-    #probe_point = [-8,-8,-8]
-    #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
+    probe_point = [-6,-6,-6]
+    project.add_plot_filter( probe_point,[12.0,12.0,12.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
 ########################################################################################
 #Tracer setting 
 ########################################################################################
-    if args.add_tracer:
-      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=5 )
+    if not args.add_tracer==0:
+      tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=4 )
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
       project.add_action_set_to_timestepping(
         exahype2.tracer.FiniteVolumesTracing(
           tracer_particles,my_solver,
-          [17,18,19],[0,16,17,3,5],-1,
+          [17,18,19],range(4),-1,
           #time_stepping_kernel="toolbox::particles::LinearInterp",
           time_stepping_kernel="toolbox::particles::StaticPosition"#,
           #observer_kernel="toolbox::particles::ObLinearInterp"
         )
       )
-      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
-      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
-      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="Gauss_Legendre_quadrature.dat", scale_factor=0.4))#"Gauss_Legendre_quadrature.dat" #"t-design.dat"
+      if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
+        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(domain_size[0]+offset[0]),N_x=30,N_y=30,N_z=2)
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=0.99)) #"Line.dat" #slide.dat #volume.dat
+      if args.add_tracer==4:  
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
+      if args.add_tracer==5:
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
+      if args.add_tracer==6 or args.add_tracer==7:
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
 
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
