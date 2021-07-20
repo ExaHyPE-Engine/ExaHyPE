@@ -26,6 +26,7 @@ std::bitset<TwoPowerD> peano4::grid::GridTraversalEventGenerator::areVerticesLoc
   for (int i=0; i<TwoPowerD; i++) {
     bitset.set(i,isVertexAdjacentToLocalSpacetree(vertices[i], splitTriggered, splitting, joinTriggered, joining, true, true));
   }
+  logDebug( "areVerticesLocal(...)", bitset );
   return bitset;
 }
 
@@ -312,6 +313,11 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
       and
       not event.getIsVertexLocal(vertexIndex.to_ulong())
     ) {
+      logDebug(
+        "createLeaveCellTraversalEvent(...)",
+        "reset event entry " << i << " to no-data as we have " << event.toString()
+        << ". vertex=" << fineGridVertices[vertexIndex.to_ulong()].toString()
+      );
       event.setVertexDataTo(i,TraversalObserver::NoData);
     }
   }
@@ -510,6 +516,21 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     if (mayResetToNoData) {
       event.setVertexDataFrom(i,TraversalObserver::NoData);
     }
+
+    logDebug(
+      "createEnterCellTraversalEvent(...)",
+      "vertex " << i << " on on tree " << _id << ": " <<
+      event.toString() << ", mayResetToNoData=" << mayResetToNoData <<
+      ", is-local=" << event.getIsVertexLocal(vertexPosition) << ", is in-out=" << PeanoCurve::isInOutStack(event.getVertexDataFrom(i))
+      << ", vertex[0]=" << fineGridVertices[0].toString()
+      << ", vertex[1]=" << fineGridVertices[1].toString()
+      << ", vertex[2]=" << fineGridVertices[2].toString()
+      << ", vertex[3]=" << fineGridVertices[3].toString()
+      << ", vertex[4]=" << fineGridVertices[4].toString()
+      << ", vertex[5]=" << fineGridVertices[5].toString()
+      << ", vertex[6]=" << fineGridVertices[6].toString()
+      << ", vertex[7]=" << fineGridVertices[7].toString()
+    );
   }
 
 
@@ -530,7 +551,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
         }
         break;
       case FaceType::Hanging:
-            event.setFaceDataFrom(i,TraversalObserver::CreateOrDestroyHangingGridEntity);
+        event.setFaceDataFrom(i,TraversalObserver::CreateOrDestroyHangingGridEntity);
         break;
       case FaceType::Persistent:
       case FaceType::Delete:

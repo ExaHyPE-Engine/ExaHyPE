@@ -358,7 +358,7 @@ void peano4::grid::Spacetree::updateVertexAfterLoad(
 
     if ( vertex.getState()==GridVertex::State::RefinementTriggered ) {
       if ( isVertexAdjacentToLocalSpacetree(vertex,true,true) ) {
-    	logDebug( "updateVertexAfterLoad()", "switch vertex to refining: " << vertex.toString() );
+    	logDebug( "updateVertexAfterLoad()", "switch vertex to refining on tree " << _id << ": " << vertex.toString() );
         vertex.setState( GridVertex::State::Refining );
         _statistics.setStationarySweeps( 0 );
       }
@@ -1493,7 +1493,7 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
           logDebug(
             "sendUserData(...)",
             "stream local vertex data of " << fineGridVertices[outVertexPositionWithinCell].toString() << " from stack " << outVertexStack << " on tree " <<
-            _id << " to upcoming worker " << p << ". Position within cell=" << outVertexPositionWithinCell
+            _id << " to upcoming worker " << p << ". Position within cell=" << outVertexPositionWithinCell << ". event=" << leaveCellTraversalEvent.toString()
           );
           const int toStack   = peano4::parallel::Node::getOutputStackNumberForVerticalDataExchange( p );
           observer.sendVertex(
@@ -1501,6 +1501,12 @@ void peano4::grid::Spacetree::sendUserData(const AutomatonState& state, Traversa
             toStack,
             TraversalObserver::SendReceiveContext::Rebalancing,
             leaveCellTraversalEvent
+          );
+        }
+        else {
+          logDebug(
+            "sendUserData(...)",
+            "skip vertex data of " << fineGridVertices[outVertexPositionWithinCell].toString() << " on tree " << _id
           );
         }
       }

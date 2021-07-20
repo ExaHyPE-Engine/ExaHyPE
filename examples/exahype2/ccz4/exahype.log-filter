@@ -8,11 +8,11 @@ debug  peano4                              -1     black
 debug  examples                            -1     black
 debug  exahype2                            -1     black
 
-info  tarch                                -1     white
-info  peano4                               -1     white
-info  examples                             -1     white
-info  exahype2                             -1     white
-info  toolbox                              -1     black
+info  tarch                                -1     white always-on
+info  peano4                               -1     white always-on
+info  examples                             -1     white always-on
+info  exahype2                             -1     white always-on
+info  toolbox                              -1     white always-on
 
 info  ::step                               -1     black
 info  ::step                                0     white
