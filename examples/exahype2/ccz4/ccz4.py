@@ -578,10 +578,10 @@ if __name__ == "__main__":
 ########################################################################################
     path="./"
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
-    #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv4"
+    #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv2"
     project.set_output_path(path)
-    #probe_point = [-8,-8,-8]
-    #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
+    probe_point = [-6,-6,-6]
+    project.add_plot_filter( probe_point,[12.0,12.0,12.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -590,12 +590,12 @@ if __name__ == "__main__":
 ########################################################################################
     if not args.add_tracer==0:
       tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
-      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=4 )
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
       project.add_action_set_to_timestepping(
         exahype2.tracer.FiniteVolumesTracing(
           tracer_particles,my_solver,
-          [17,18,19],range(2),-1,
+          [17,18,19],range(4),-1,
           #time_stepping_kernel="toolbox::particles::LinearInterp",
           time_stepping_kernel="toolbox::particles::StaticPosition"#,
           #observer_kernel="toolbox::particles::ObLinearInterp"
