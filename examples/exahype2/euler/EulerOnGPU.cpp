@@ -25,32 +25,26 @@ tarch::logging::Log   examples::exahype2::euler::EulerOnGPU::_log( "examples::ex
   return result;
 }
 
-void examples::exahype2::euler::EulerOnGPU::adjustSolution(
+void examples::exahype2::euler::EulerOnGPU::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt
+  bool                                         gridIsConstructed
 ) {
-  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
-  if (tarch::la::equals(t,0.0) ) {
-    // initial conditions
-    bool isInTheCentre = ( tarch::la::norm2( volumeX-tarch::la::Vector<Dimensions,double>(0.5) ) < 0.05 ); // TODO should 0.05 not depend on size of stuff??
-    //bool isInTheCentre = x(0)<=0.5;
-    //bool isInTheCentre = x(1)<=0.5;
-    Q[0] = 0.1;  // rho
-    Q[1] = 0;    // velocities
-    Q[2] = 0;
-    Q[3] = 0;
-    Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
-  }
-  else {
-    // Earthquakes might like to add stuff here or binary neutron star
-  }
-  logTraceOut( "adjustSolution(...)" );
+  #if Dimensions==2
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+  #else
+  tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
+  #endif
+
+  // initial conditions
+  bool isInTheCentre = ( tarch::la::norm2( volumeX-circleCentre ) < 0.05 );
+  Q[0] = 0.1;  // rho
+  Q[1] = 0;    // velocities
+  Q[2] = 0;
+  Q[3] = 0;
+  Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
 }
-
-
 
 
 #if defined(OpenMPGPUOffloading)
@@ -77,43 +71,12 @@ double examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
   const double u_n = Q[normal + 1] * irho;
   const double c   = std::sqrt(gamma * p * irho);
 
+   //printf("THIS IS HAPPENING %f %f\n",std::max( std::abs(u_n - c), std::abs(u_n + c) ), Q[0]);
   return std::max( std::abs(u_n - c), std::abs(u_n + c) );
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
-
-
-
-
-void examples::exahype2::euler::EulerOnGPU::boundaryConditions(
-  const double * __restrict__                  Qinside,    // Qinside[5+0]
-  double * __restrict__                        Qoutside,   // Qoutside[5+0]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal
-)
-{
-
-  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
-  nonCriticalAssertion4( Qinside[0]==Qinside[0], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion4( Qinside[1]==Qinside[1], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion4( Qinside[2]==Qinside[2], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion4( Qinside[3]==Qinside[3], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
-
-  nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
-
-
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = Qinside[1];
-  Qoutside[2] = Qinside[2];
-  Qoutside[3] = Qinside[3];
-  Qoutside[4] = Qinside[4];
-
-  logTraceOut( "boundaryConditions(...)" );
-}
 
 
 
@@ -150,3 +113,34 @@ void examples::exahype2::euler::EulerOnGPU::flux(
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
+
+
+void examples::exahype2::euler::EulerOnGPU::boundaryConditions(
+  const double * __restrict__                  Qinside,    // Qinside[5+0]
+  double * __restrict__                        Qoutside,   // Qoutside[5+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+)
+{
+
+  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Qinside[0]==Qinside[0], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Qinside[1]==Qinside[1], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Qinside[2]==Qinside[2], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Qinside[3]==Qinside[3], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
+
+  //nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
+  nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
+
+
+  Qoutside[0] = Qinside[0];
+  Qoutside[1] = Qinside[1];
+  Qoutside[2] = Qinside[2];
+  Qoutside[3] = Qinside[3];
+  Qoutside[4] = Qinside[4];
+
+  logTraceOut( "boundaryConditions(...)" );
+}

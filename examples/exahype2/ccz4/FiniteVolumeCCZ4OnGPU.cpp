@@ -16,6 +16,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef IncludeTwoPunctures
+//TP::TwoPunctures* _tp = new TP::TwoPunctures();
+#endif
 
 tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::_log( "examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU" );
 
@@ -32,41 +35,47 @@ examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::FiniteVolumeCCZ4OnGPU() {
 }
 
 
-void examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::adjustSolution(
+void examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeX,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt
+  bool                                         gridIsConstructred
 ) {
-  logTraceInWith4Arguments( "adjustSolution(...)", volumeX, volumeH, t, dt );
-  if (tarch::la::equals(t,0.0) ) {
-    if ( Scenario==0 ) {
-      examples::exahype2::ccz4::gaugeWave(Q, volumeX, t);
-    }
-    else if ( Scenario==1 ) {
-      examples::exahype2::ccz4::linearWave(Q, volumeX, t);
-    }
-    else {
-      logError( "adjustSolution(...)", "initial scenario " << Scenario << " is not supported" );
-    }
+  logTraceInWith3Arguments( "initialCondition(...)", volumeX, volumeH, gridIsConstructred );
 
-    for (int i=0; i<NumberOfUnknowns; i++) {
-      assertion3( std::isfinite(Q[i]), x, t, i );
-    }
-
-    for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
-      Q[i] = 0.0;
-    }
+  if ( Scenario==0 ) {
+    examples::exahype2::ccz4::gaugeWave(Q, volumeX, 0);
   }
+  else if ( Scenario==1 ) {
+    examples::exahype2::ccz4::linearWave(Q, volumeX, 0);
+  }
+  #ifdef IncludeTwoPunctures
+  else if ( Scenario==2 ) {
+
+   // We use the bool to trigger the hgh res interpolation once the grid is constructed
+    //examples::exahype2::ccz4::ApplyTwoPunctures(Q, volumeX, 0, _tp, not gridIsConstructred); //we interpolate for real IC here.
+  }
+  #endif
+  else {
+    logError( "initialCondition(...)", "initial scenario " << Scenario << " is not supported" );
+  }
+
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    assertion2( std::isfinite(Q[i]), volumeX, i );
+  }
+
+  for (int i=NumberOfUnknowns; i<NumberOfUnknowns+NumberOfAuxiliaryVariables; i++) {
+    Q[i] = 0.0;
+  }
+
+
+/*
   else {
     enforceCCZ4constraints(Q);
   }
-  logTraceOut( "adjustSolution(...)" );
+*/
+  logTraceOut( "initialCondition(...)" );
 }
-
-
-
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -218,3 +227,43 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::nonconservativeProduct(
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
+
+
+::exahype2::RefinementCommand examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU::refinementCriterion(
+  const double * __restrict__ Q,
+  const tarch::la::Vector<Dimensions,double>& volumeCentre,
+  const tarch::la::Vector<Dimensions,double>& volumeH,
+  double t
+) {
+  ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+  //if (volumeCentre(0)>1.2) {result=::exahype2::RefinementCommand::Refine;}
+  double radius=volumeCentre(0)*volumeCentre(0)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+  if (CCZ4ReSwi==1){ //radius based
+    if (radius<5) {result=::exahype2::RefinementCommand::Refine;}
+  }
+  if (CCZ4ReSwi==2){ //single black hole
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      if ((radius<5) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (radius<2.5) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    } /*else {
+      if ((Q[65]>0.1) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (Q[65]>0.2) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    }*/
+  }
+  if (CCZ4ReSwi==3){ //binary black holes
+  double radius1=(volumeCentre(0)-4.251)*(volumeCentre(0)-4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+  double radius2=(volumeCentre(0)+4.251)*(volumeCentre(0)+4.251)+volumeCentre(1)*volumeCentre(1)+volumeCentre(2)*volumeCentre(2); radius=pow(radius,0.5);
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      if ( ((radius1<5) or (radius2<5)) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if ((radius1<2.5) or (radius2<2.5)) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    } else {
+      if ((Q[65]>0.1) and (volumeH(0)>1.0)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (Q[65]>0.2) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    }
+  }
+  return result;
+}
