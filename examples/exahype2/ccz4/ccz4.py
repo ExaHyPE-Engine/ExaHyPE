@@ -8,6 +8,7 @@ import peano4.toolbox.particles
 import dastgen2
 
 import numpy as np
+from Probe_file_gene import tracer_seeds_generate
 
 modes = { 
   "release": peano4.output.CompileMode.Release,
@@ -47,7 +48,7 @@ if __name__ == "__main__":
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
-    parser.add_argument("--add-tracer",               dest="add_tracer",      action="store_true", help="Add tracers" )
+    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
 
@@ -587,7 +588,8 @@ if __name__ == "__main__":
 ########################################################################################
 #Tracer setting 
 ########################################################################################
-    if args.add_tracer:
+    if not args.add_tracer==0:
+      tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
       tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
       project.add_action_set_to_timestepping(
@@ -599,9 +601,15 @@ if __name__ == "__main__":
           #observer_kernel="toolbox::particles::ObLinearInterp"
         )
       )
-      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
-      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor ( particle_set=tracer_particles, N=2, coor_s=[[0.4251,0,0],[-0.4251,0,0]]))
-      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="slide.dat", scale_factor=1))#"Gauss_Legendre_quadrature.dat" #"t-design.dat" #"Line.dat" #slide.dat
+      if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
+        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(domain_size[0]+offset[0]),N_x=30,N_y=30,N_z=2)
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=0.99)) #"Line.dat" #slide.dat #volume.dat
+      if args.add_tracer==4:  
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
+      if args.add_tracer==5:
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
+      if args.add_tracer==6 or args.add_tracer==7:
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
 
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
