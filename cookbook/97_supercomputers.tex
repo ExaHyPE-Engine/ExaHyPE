@@ -179,20 +179,29 @@ module itac/2020.2
 % setenv LDFLAGS "-L/ddn/apps/Cluster-Apps/intel/2019.5/tbb/lib/intel64/gcc4.7 -ltbb"
 
 
-\subsection{COSMA/DINE (Durham Intelligent NIC Environment)}
+\subsection{DINE (Durham Intelligent NIC Environment)}
 
 
 Log into the first DINE node as by documentation (\texttt{ssh -X b101}) and run
 
 \begin{code}
-module load gnu_comp/10.2.0
-module unload python/2.7.15
-module load python/3.6.5
-./configure CXXFLAGS="-I/usr/mpi/gcc/openmpi-4.0.3rc4/include" LDFLAGS="-L/usr/mpi/gcc/openmpi-4.0.3rc4/lib64/" --enable-exahype --with-multithreading=omp --with-mpi=/usr/mpi/gcc/openmpi-4.0.3rc4/bin/mpicxx
+module purge
+module load python/3.6.5 gnu_comp/10.2.0 openmpi/4.0.5
+
+./configure --enable-exahype --enable-loadbalancing --enable-blockstructured \
+  --with-multithreading=omp --with-mpi=mpicxx \
+  CXXFLAGS="--std=c++17 -fopenmp -march=native -O3" \
+  LDFLAGS="-fopenmp"
 \end{code}
 
-/usr/mpi/gcc/openmpi-4.0.3rc4/bin/mpirun 
 
+-DnoMPISupportsSingleSidedCommunication
+
+\noindent
+For some applications (such as CCZ4), you will need additional packages (\texttt{module load gsl/2.5} for example).
+
+
+\subsection{Cosma}
 
 On COSMA 7, I have successfully worked with the following toolchain:
 
