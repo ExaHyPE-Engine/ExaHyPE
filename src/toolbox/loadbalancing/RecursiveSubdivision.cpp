@@ -77,6 +77,9 @@ std::string toolbox::loadbalancing::RecursiveSubdivision::toString() const {
   msg << ",heaviest-local-tree=" << getIdOfHeaviestLocalSpacetree() << " (analysed)"
       << ",heaviest-local-weight=" << getWeightOfHeaviestLocalSpacetree() << " (analysed)"
       << ",enabled=" <<  _enabled
+      << ",#local-trees=" << peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() 
+      << ",is-local-balancing-bad=" << isLocalBalancingBad()
+      << ",can-split-locally=" << canSplitLocally()
       << ")";
 
   return msg.str();
@@ -150,8 +153,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
     if ( _globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCell ) {
       logInfo(
         "updateGlobalView()",
-        "global number of cells lags behind local one. Use local number of cells (" << _localNumberOfInnerUnrefinedCell <<
-        ") instead of global count of " << _globalNumberOfInnerUnrefinedCells << " to guide partitioning"
+        "local number of cells (" << _localNumberOfInnerUnrefinedCell << ") is bigger than global cell count (" << _globalNumberOfInnerUnrefinedCells << 
+        ") . Use local cell count to guide partitioning as local data seems to lag behind"
       );
       _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCell;
       _lightestRank._rank                = tarch::mpi::Rank::getInstance().getRank();
@@ -581,7 +584,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 
           logInfo(
             "finishStep()",
-            "so split " << cellsPerCore << " cells " << numberOfSplits <<
+            "split " << cellsPerCore << " cells " << numberOfSplits <<
             " times from tree " << heaviestSpacetree << " on local rank (hosts " << numberOfLocalUnrefinedCellsOfHeaviestSpacetree <<
             " unrefined cells with " << tarch::multicore::Core::getInstance().getNumberOfThreads() << " threads per rank)" );
 
@@ -594,7 +597,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
           }
         }
         else {
-          logInfo( "finishStep()", "local tree is not yet available" );
+          logInfo( "finishStep()", "local tree is not yet available for further splits (heaviest-spacetree=" << heaviestSpacetree << ", is-on-blacklist=" << _blacklist.count(heaviestSpacetree) << ")" );
         } 
       }
       break;
@@ -687,7 +690,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
 
   if ( _blacklist.count(sourceTree)==0 ) {
     if (_initialBlacklistWeight.count(sourceTree)==0) {
-      _initialBlacklistWeight.insert( std::pair<int,int>(sourceTree,0) );
+      _initialBlacklistWeight.insert( std::pair<int,int>(sourceTree,3) );
     }
     else {
       _initialBlacklistWeight[sourceTree]++;
@@ -697,8 +700,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
     _blacklist.insert( std::pair<int,int>(sourceTree,InitialBlacklistWeight) );
   }
   else {
-    _blacklist[sourceTree]++;
-    logInfo(
+    assertion( _initialBlacklistWeight.count(sourceTree)>0 );
+    //_blacklist[sourceTree]++;
+    _initialBlacklistWeight[sourceTree]++;
+    logDebug(
       "triggerSplit()",
       "split local rank " << sourceTree << " though it had been on the blacklist"
     );
@@ -719,7 +724,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::enable( bool value ) {
 
 
 bool toolbox::loadbalancing::RecursiveSubdivision::isEnabled(bool globally) const {
-  logInfo( "isEnabled(bool)", toString() );
+  logDebug( "isEnabled(bool)", toString() );
   return globally ? (_globalNumberOfRanksWithEnabledLoadBalancing>0) : _enabled;
 }
 
