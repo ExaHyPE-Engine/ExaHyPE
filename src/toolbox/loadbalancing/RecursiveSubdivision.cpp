@@ -153,8 +153,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
     if ( _globalNumberOfInnerUnrefinedCells < _localNumberOfInnerUnrefinedCell ) {
       logInfo(
         "updateGlobalView()",
-        "global number of cells lags behind local one. Use local number of cells (" << _localNumberOfInnerUnrefinedCell <<
-        ") instead of global count of " << _globalNumberOfInnerUnrefinedCells << " to guide partitioning"
+        "local number of cells (" << _localNumberOfInnerUnrefinedCell << ") is bigger than global cell count (" << _globalNumberOfInnerUnrefinedCells << 
+        ") . Use local cell count to guide partitioning as local data seems to lag behind"
       );
       _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCell;
       _lightestRank._rank                = tarch::mpi::Rank::getInstance().getRank();
@@ -584,7 +584,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 
           logInfo(
             "finishStep()",
-            "so split " << cellsPerCore << " cells " << numberOfSplits <<
+            "split " << cellsPerCore << " cells " << numberOfSplits <<
             " times from tree " << heaviestSpacetree << " on local rank (hosts " << numberOfLocalUnrefinedCellsOfHeaviestSpacetree <<
             " unrefined cells with " << tarch::multicore::Core::getInstance().getNumberOfThreads() << " threads per rank)" );
 
@@ -690,7 +690,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::triggerSplit( int sourceTree,
 
   if ( _blacklist.count(sourceTree)==0 ) {
     if (_initialBlacklistWeight.count(sourceTree)==0) {
-      _initialBlacklistWeight.insert( std::pair<int,int>(sourceTree,1) );
+      _initialBlacklistWeight.insert( std::pair<int,int>(sourceTree,3) );
     }
     else {
       _initialBlacklistWeight[sourceTree]++;
