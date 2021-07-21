@@ -590,7 +590,7 @@ if __name__ == "__main__":
 ########################################################################################
     path="./"
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
-    #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv2"
+    path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1"
     project.set_output_path(path)
     probe_point = [-6,-6,-6]
     project.add_plot_filter( probe_point,[12.0,12.0,12.0],1 )
@@ -614,7 +614,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(domain_size[0]+offset[0]),N_x=30,N_y=30,N_z=2)
+        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(domain_size[0]+offset[0]),N_x=50,N_y=50,N_z=2)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=0.99)) #"Line.dat" #slide.dat #volume.dat
       if args.add_tracer==4:  
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
@@ -626,7 +626,7 @@ if __name__ == "__main__":
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=my_solver,
-        filename="zz",
+        filename="zz"+args.tra_name,
         number_of_entries_between_two_db_flushes=1000
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          

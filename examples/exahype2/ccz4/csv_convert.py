@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from scipy import io
 import os
 import time
-import glob
+import argparse
 
 pi=np.pi
 def file_len(fname):
@@ -12,13 +12,26 @@ def file_len(fname):
             pass
     return i + 1
 
-#########################################################################################################################
-#main code
+lis=os.listdir("./")
+for item in lis:
+	if item.endswith(".pvd") or item.endswith(".vtp"): os.remove(os.path.join("./",item))
 
-file_name="zz.csv"
-	
+parser = argparse.ArgumentParser(description='Tracer_conversion')
+parser.add_argument("-if",   "--input-file",  dest="file_name", required="True", type=str, help="input csv file name" )
+parser.add_argument("-dt",   "--delta-time",  dest="dt", default=-1, type=float, help="time interval between two snapshot, default is to print every timestep" )
+parser.add_argument("-of",   "--output-file",  dest="output_name", default="TracerData", type=str, help="output file name, extension and number will be add automatically" )
+args = parser.parse_args()
+
+
+dt=args.dt;
+file_name=args.file_name
+output_name=args.output_name
+
+
+#########################################################################################################################
+#main code	
 f=open(file_name)
-print("datafile: "+file_name)
+print("Read in datafile: "+file_name)
 
 #skip the description line
 dat=f.readlines()[1:]
@@ -38,7 +51,7 @@ for line in dat:
 number_of_data=len(tem)-6
 
 print("number of data entries: "+str(number_of_data))
-print("timesteps: "+str(tstep))
+print("total timesteps: "+str(tstep))
 
 #second, find out how many tracer recorded here.
 N_tracer=0
@@ -82,8 +95,18 @@ for line in dat:
 f.close()
 #print(data_set[0,:,:])
 
-for t_id in range(tstep):
-	f=open("TracerData-"+str(tstep-1-t_id)+".vtp","w")
+print("----------------------------------------------------------------")
+
+snapshot_count=0
+snapshot_ids=[]
+t_old=-1e10; t_new=0
+for t_id in range(tstep-1,-1,-1):
+	t_new=data_set[0][t_id][0]
+	if (t_new-t_old)<dt:
+		continue
+	t_old=t_new
+	print("writing vtp file "+output_name+"-"+str(snapshot_count)+".vtp"+", t= "+str(t_new))
+	f=open(output_name+"-"+str(snapshot_count)+".vtp","w")
 	f.write("<!-- Generated from CSV file of Tracer, Peano4 ExaHyPE 2-->\n\n")
 	f.write("<VTKFile type=\"PolyData\">\n")
 	f.write("<PolyData>\n")
@@ -104,85 +127,21 @@ for t_id in range(tstep):
 	
 	f.write("</Piece>\n</PolyData>\n</VTKFile>")
 	f.close()
+	snapshot_ids.append(t_id)
+	snapshot_count+=1
 	
-f=open("TracerData.pvd","w")
+		
+f=open(output_name+".pvd","w")
 f.write("<VTKFile type=\"Collection\">\n")
 f.write("<Collection>\n")
-for t_id in range(tstep):
-	f.write("<DataSet timestep=\""+str(data_set[0][tstep-1-t_id][0])+"\" file=\"TracerData-"+str(t_id)+".vtp\" />\n")
+count=0
+for t_id in snapshot_ids:
+	f.write("<DataSet timestep=\""+str(data_set[0][t_id][0])+"\" file=\""+output_name+"-"+str(count)+".vtp\" />\n")
+	count+=1
 f.write("</Collection>\n")
 f.write("</VTKFile>")
 f.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-	
-##############################################################################################			
-#ready for mode decomposition
-#remember to add sin(theta) for GL scheme
-l_mode=2; m_mode=2;
-for t in range(tstep):
-	for n in range(N_tracer):
-		x=data_set[n][t][1]; y=data_set[n][t][2]; z=data_set[n][t][3];
-		p4re=data_set[n][t][4]; p4im=data_set[n][t][5]
-		#we calculate the triangle function directly to reduce numerical error
-		sintheta=(x**2+y**2)**0.5/(x**2+y**2+z**2)**0.5; costheta=z/(x**2+y**2+z**2)**0.5;
-		if x**2+y**2==0: x+=1e-6;
-		sinphi=y/(x**2+y**2)**0.5; cosphi=x/(x**2+y**2)**0.5
-		cos2phi=2*cosphi**2-1; sin2phi=2*sinphi*cosphi
-		#mode 22
-		if l_mode==2 and m_mode==2:
-			data_set[n][t][4]=(p4re*cos2phi-p4im*sin2phi)*(1+costheta)**2*(5/64/np.pi)**0.5
-			data_set[n][t][5]=(p4re*sin2phi-p4im*cos2phi)*(1+costheta)**2*(5/64/np.pi)**0.5
-			#data_set[n][t][4]=p4re*4*sintheta
-		if scheme=="Gauss_Legendre":
-			data_set[n][t][4]*=sintheta;
-			data_set[n][t][5]*=sintheta;
-
-##############################################################################################
-#start real surface integral here
-ModeRe=np.zeros(tstep)
-ModeIm=np.zeros(tstep)
-if scheme=="Gauss_Legendre":
-	for t in range(tstep):
-		for n in range(N_tracer):
-			w=(1.0/40)*(2*np.pi)*data_set[n][t][6]*(np.pi/2.0)
-			x=data_set[n][t][1]; y=data_set[n][t][2]; z=data_set[n][t][3];
-			ModeRe[t]+=w*data_set[n][t][4]#notice we do not need to do this when we add things above
-			#if t==0 :
-				#print(data_set[n][t][4])
-			ModeIm[t]+=w*data_set[n][t][5]			
-elif scheme=="t-design":
-	for t in range(tstep):
-		for n in range(N_tracer):
-			w=(1.0/N_tracer)*(4*np.pi)
-			ModeRe[t]+=w*data_set[n][t][4] #notice we do not need to do this when we add things above
-			#if t==0 :
-				#print(data_set[n][t][4])
-			ModeIm[t]+=w*data_set[n][t][5]
-
-#plt.plot(data_set[0,:,0],ModeRe[:]/4/np.pi)
-#plt.show()
-print(ModeRe/4/np.pi)
-print(ModeIm/4/np.pi)
-
-"""
-
-
-
-
+print("pvd file "+output_name+".pvd created. Total snapshot: "+str(snapshot_count))
 
 
 
