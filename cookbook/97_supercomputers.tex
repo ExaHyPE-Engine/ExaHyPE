@@ -195,11 +195,12 @@ module load python/3.6.5 gnu_comp/10.2.0 openmpi/4.0.5
 \end{code}
 
 
--DnoMPISupportsSingleSidedCommunication
-
 \noindent
 For some applications (such as CCZ4), you will need additional packages (\texttt{module load gsl/2.5} for example).
-
+Old MPI implementations seem to struggle with single sided communication.
+In this case, you have to add \texttt{-DnoMPISupportsSingleSidedCommunication} to the \texttt{CXXFLAGS}.
+With the modules above, this seems not to be necessary anymore.
+ 
 
 \subsection{Cosma}
 
