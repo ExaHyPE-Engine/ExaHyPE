@@ -385,6 +385,9 @@ class peano4::grid::Spacetree {
      * have to pick the Nth entry from the output stream. With our modified top(), we can
      * access these elements directly. We just have to be careful that top() equals actually
      * a top(0), so picking the Nth element requires us to call top(N-1).
+     *
+     *
+     * @todo Was passiert bei dynamic AMR?
      */
     void sendUserData(const AutomatonState& state, TraversalObserver&  observer, const GridTraversalEvent&  enterCellTraversalEvent, GridVertex  fineGridVertices[TwoPowerD]);
 
@@ -601,6 +604,9 @@ class peano4::grid::Spacetree {
 	  int         newId
     );
 
+    /**
+     * @todo
+     */
     tarch::la::Vector<TwoPowerD,int> getAdjacentRanksForNewVertex(
       GridVertex                                   coarseGridVertices[TwoPowerD],
       const tarch::la::Vector<Dimensions,int>&     vertexPositionWithin3x3Patch
@@ -649,6 +655,13 @@ class peano4::grid::Spacetree {
      *
      * The operation returns the empty set if a vertex is not local.
      * It also returns the empty set if a vertex is hanging.
+     *
+     * @param calledByReceivingProcess The operation relies on
+     *   GridTraversalEventGenerator::getAdjacentRanksOfFace() to find the
+     *   adjacent faces. This routine in turn uses getBackupOfAdjacentRanks()
+     *   if you invoke it on the receiving side and the new adjacent ranks
+     *   otherwise.
+     *
      */
     std::set<int>  getNeighbourTrees( const GridVertex& vertex, bool calledByReceivingProcess ) const;
 

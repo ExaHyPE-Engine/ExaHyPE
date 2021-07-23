@@ -227,10 +227,10 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
 
   for (int i=0;i<static_cast<int>(patchkeeper.size());i++) {
     const int taskid = std::get<1>(patchkeeper[i]);
-    double* outpatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-    std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, outpatch);
+    double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
+    std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, targetPatch);
     {{POSTPROCESS_UPDATED_PATCH}}
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, outpatch);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
     ::tarch::freeMemory(std::get<0>(patchkeeper[i]), ::tarch::MemoryLocation::Heap);
   }
   ::tarch::freeMemory(destinationPatchOnCPU, ::tarch::MemoryLocation::Heap);

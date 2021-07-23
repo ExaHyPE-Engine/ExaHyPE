@@ -28,15 +28,20 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU: public AbstractFiniteVolu
   public:
     FiniteVolumeCCZ4OnGPU();
 
-
-    
-    void adjustSolution(
-      double * __restrict__ Q, // Q[59+0],
+    ::exahype2::RefinementCommand refinementCriterion(
+      const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt
-    )  override;
+      double                                       t
+    ) override;
+
+    
+    void initialCondition(
+      double * __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      bool                                         gridIsConstructred
+    ) override;
     
 
 
@@ -86,8 +91,6 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4OnGPU: public AbstractFiniteVolu
     )  override;
     
 
-
-    
 
     
     #if defined(OpenMPGPUOffloading)

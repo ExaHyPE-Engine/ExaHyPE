@@ -40,7 +40,8 @@ class TemplatedHeaderFile(object):
 
   def generate_file(self,overwrite,full_qualified_filename,template_file):
     if template_file!=None and writeFile(overwrite,self.default_overwrite,full_qualified_filename):
-      print( "write " + full_qualified_filename )
+      import inspect
+      print( "[{}] writes {}".format(inspect.getfile(self.__class__), full_qualified_filename ))
       with open( os.path.realpath(template_file), "r" ) as input:
         template = input.read()
       with open( full_qualified_filename, "w" ) as output:
