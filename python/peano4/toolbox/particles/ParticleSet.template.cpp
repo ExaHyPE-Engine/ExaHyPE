@@ -62,10 +62,12 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 
 #ifdef Parallel
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
+  Particle::initDatatype();
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {
+  Particle::shutdownDatatype();
 }
 
 

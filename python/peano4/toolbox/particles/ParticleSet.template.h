@@ -52,6 +52,8 @@
       tarch::la::Vector<Dimensions,double> getDebugX() const;
       tarch::la::Vector<Dimensions,double> getDebugH() const;
     #endif
+    private:
+      typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  Particle;
 
     public:
       void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);

@@ -17,12 +17,12 @@ class ParticleSetGenerator(object):
 
 
   def get_stack_container(self):
-    return "peano4::stacks::STDVectorStack< " + self._data.get_full_qualified_type() + " >";
+    return "peano4::stacks::STDVectorOverVectorOfPointersStack< " + self._data.get_full_qualified_type() + " >";
 
     
   def get_header_file_include(self):
     return """
-#include "peano4/stacks/STDVectorStack.h"
+#include "peano4/stacks/STDVectorOverVectorOfPointersStack.h"
 #include "../globaldata/""" + self._data.particle_model.name + """.h"
 #include \"""" + self._data.namespace[-1] + """/""" + self._data.name + """.h"
 """

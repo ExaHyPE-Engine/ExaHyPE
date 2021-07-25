@@ -78,6 +78,7 @@ Peano4Core_SOURCES = \
   peano4/parallel/TreeManagementMessage.cpp \
   peano4/parallel/tests/PingPongTest.cpp \
   peano4/parallel/tests/NodeTest.cpp \
+  peano4/stacks/stacks.cpp \
   peano4/stacks/STDVectorStack.cpp \
   peano4/utils/Loop.cpp
 
