@@ -43,80 +43,43 @@ namespace peano4 {
  * vectors, we require some serious deep copying.
  *
  * While you can pipe in any vector, I require the vector to have a type
- * DoFType which identifies the type where the pointers point to and is
- * generated via DaStGen, and a couple of additional fields:
- *
- * - tarch::la::Vector<Dimensions,double> _debugX to hold debug info.
- * - tarch::la::Vector<Dimensions,double> _debugH to hold debug info.
- * - static MPI_Datatype   Datatype;
- *
- * The first two entries are required if and only if PeanoDebug holds a value
- * greater or equal to 1. The latter two fields are required if you compile
- * with Parallel.
- *
- * Besides these fields, I expect the following routines for the management of
- * all MPI data:
+ * DoFType which identifies the type where the pointers point to and this target
+ * data type has to be generated via DaStGen. At least I need a valid Datatype.
+ * Furthermore, I expect the following routines to be available in debug mode:
  *
  * - void setDebugX( const tarch::la::Vector<Dimensions,double>& data );
  * - void setDebugH( const tarch::la::Vector<Dimensions,double>& data );
  * - tarch::la::Vector<Dimensions,double> getDebugX() const;
  * - tarch::la::Vector<Dimensions,double> getDebugH() const;
+ *
+ * These two operations should be available, too, if I work with MPI, and
+ * they typically just forward the call to the underlying datatype DoFType:
+ *
  * - static void initDatatype();
  * - static void shutdownDatatype();
- *
- * - int explicitlyStoreSize(); Rolls over the size() into an explicit
- *   attribute, which also is covered by the MPI data type. After it
- *   has copied the data, it returns this copy as result.
- * - int getExplicitlyStoredSize() const; Return value of the explicitly
- *   stored integer.
- *
  *
  * @see ParticleSet.template.h for an example of the required signature.
  *
  *
  * <h2> MPI </h2>
  *
- * To realise the MPI data exchange, I have to add two further fields to the stack.
- * One is an additional request (pointer) called _metaDataMPIRequest, the other one
- * is a pointer to an array of type T::value_type. It is called _deepCopyBuffer.
- * I assume that there is a static Datatype field for the administered vectors.
- * If we use this one, it does not exchange actual data, but "only" meta data (if
- * in debug mode) and the integer that stores the size explicitly.
+ * To realise the MPI data exchange, I did originally plan to require the
+ * handed in vector datatype to provide some proper MPI datatypes. This did
+ * not work: If we have inheritance, the byte alignment easily becomes messed
+ * up and I never really managed to make everything work. Therefore, I do
+ * work now with three different, explicit buffers:
  *
- * The send is a simple send of two nonblocking operations: First, I send out the
- * actual container. This is, I send out one array (vector) which encodes the debug
- * info and the number of entries per stack entry. This send does not encode the
- * pointers, as we cannot send out pointers directly. The request handle of this
- * non-blocking send is stored in _metaDataMPIRequest.
+ * - There's a size meta data buffer which is a sequence of integers. Each
+ *   entry stores how big the underlying vector is.
+ * - There's a debug meta data buffer which I befill if and only if we work
+ *   with meta data. It is a long sequence of doubles. Per stack entry, I
+ *   hold 2*Dimensions data points: Dimensions entries encode the x value of
+ *   the debug data, and a further Dimensions entries encode the h value.
+ * - The actual data has to be flattened (serialised) too, as I cannot
+ *   transfer any pointers. This serialised data is held in yet another
+ *   buffer and has to be copied forth and back. Obviously, there's no need
+ *   to use this buffer if no data travels in-between MPI boundaries.
  *
- * To find the actual information of relevance, I run over the all stack entries
- * and call explicitlyStoreSize(). This ensures that each stack entry holds an
- * explicit integer will all information of interest. I also accumulate all of
- * the results of explicitlyStoreSize().
- *
- * If there is data on the stack, i.e. if the accumulated results of
- * explicitlyStoreSize() is bigger than zero, I create a new buffer of DoFType,
- * run once more through all stack entries and copy the data manually over. The
- * result array is stored in _deepCopyBuffer. This second send is not always
- * necessary - we issue it if and only if there's data to exchange. If it is
- * necessary, I dump the result in _ioMPIRequest.
- *
- * The receive also consists of two receives, but they are not of the same type.
- * First, I trigger a blocking receive on the actual stack. In line with the
- * discussion above, this receive sets all debug data, as well as the explicit
- * integer encoding the length per stack entry. I exploit the symmetry of Peano's
- * mesh, i.e. I exploit the fact that I know how many entries (stacks) I'll hold
- * on my stack. This operation is blocking, as I need this meta data to continue.
- * To MPI handle is involved therefore.
- *
- * Next, I run over all stack entres and invoke getExplicitlyStoredSize(). Having
- * the target size explicitly allows me to issue a resize(), and I can also, once
- * again, accumulate all of these results. If the accumulated result is bigger
- * than zero, i.e. if actual data is to be exchanged, I next allocate
- * _deepCopyBuffer and issue a receive. This receive now can be non-blocking.
- *
- * See the documentation of tryToFinishSendOrReceive() for a clean-up and details
- * how the nonblocking receives are mapped onto actual stack content.
  */
 template <class T>
 class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks::STDVectorStack<T> {
@@ -129,13 +92,100 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
     typedef peano4::stacks::STDVectorStack<T>   Base;
 
     #ifdef Parallel
-    MPI_Request*           _metaDataMPIRequest;
-    typename T::DoFType*   _deepCopyBuffer;
+    MPI_Request*           _metaDataSizeMPIRequest;
+    MPI_Request*           _metaDataDebugMPIRequest;
+
+    typename T::DoFType*   _deepCopyDataBuffer;
+    int*                   _metaDataSizeBuffer;
+    double*                _metaDataDebugBuffer;
+
+    void workInReceivedMetaData() {
+      assertion( _metaDataSizeBuffer!=nullptr );
+      #if PeanoDebug>=1
+      assertion( _metaDataDebugBuffer!=nullptr );
+      #endif
+      for (int i=0; i<Base::_currentElement; i++) {
+        const int entries = _metaDataSizeBuffer[i];
+        Base::_data[i].resize(entries);
+        #if PeanoDebug>=1 and Dimensions==2
+        tarch::la::Vector<Dimensions,double> x = {_metaDataDebugBuffer[i*2*2+0], _metaDataDebugBuffer[i*2*2+1]};
+        tarch::la::Vector<Dimensions,double> h = {_metaDataDebugBuffer[i*2*2+2], _metaDataDebugBuffer[i*2*2+3]};
+        Base::_data[i].setDebugX( x );
+        Base::_data[i].setDebugH( h );
+        #endif
+        #if PeanoDebug>=1 and Dimensions==3
+        tarch::la::Vector<Dimensions,double> x = {_metaDataDebugBuffer[i*2*3+0], _metaDataDebugBuffer[i*2*3+1], _metaDataDebugBuffer[i*2*3+2]};
+        tarch::la::Vector<Dimensions,double> h = {_metaDataDebugBuffer[i*2*3+3], _metaDataDebugBuffer[i*2*3+4], _metaDataDebugBuffer[i*2*3+5]};
+        Base::_data[i].setDebugX( x );
+        Base::_data[i].setDebugH( h );
+        #endif
+        logDebug( "workInReceivedMetaData()", "initialised entry " << i << ": " << Base::_data[i].toString() );
+      }
+    }
+
+
+    void workInReceivedData() {
+      int entry = 0;
+      for (int i=0; i<Base::_currentElement; i++) {
+        for (int j=0; j<Base::_data[i].size(); j++) {
+          *(Base::_data[i].data()[j]) = _deepCopyDataBuffer[entry];
+          entry++;
+        }
+      }
+    }
+
+
+    void prepareDataToSendOut() {
+      int entry = 0;
+      for (int i=0; i<Base::_currentElement; i++) {
+        for (int j=0; j<Base::_data[i].size(); j++) {
+          _deepCopyDataBuffer[entry] = *(Base::_data[i].data()[j]);
+          entry++;
+        }
+      }
+    }
+
+    /**
+     * @return Total size of all entres
+     */
+    int prepareMetaDataToSendOut() {
+      int flattenedDataSize = 0;
+      for (int i=0; i<Base::_currentElement; i++) {
+        int sizeOfThisStackEntry          = Base::_data[i].size();
+        flattenedDataSize                += sizeOfThisStackEntry;
+        _metaDataSizeBuffer[i]            = sizeOfThisStackEntry;
+        #if PeanoDebug>=1 and Dimensions==2
+        _metaDataDebugBuffer[i*2*2+0]       = Base::_data[i].getDebugX()[0];
+        _metaDataDebugBuffer[i*2*2+1]       = Base::_data[i].getDebugX()[1];
+        _metaDataDebugBuffer[i*2*2+2]       = Base::_data[i].getDebugH()[0];
+        _metaDataDebugBuffer[i*2*2+3]       = Base::_data[i].getDebugH()[1];
+        #endif
+        #if PeanoDebug>=1 and Dimensions==3
+        _metaDataDebugBuffer[i*2*3+0]       = Base::_data[i].getDebugX()[0];
+        _metaDataDebugBuffer[i*2*3+1]       = Base::_data[i].getDebugX()[1];
+        _metaDataDebugBuffer[i*2*3+2]       = Base::_data[i].getDebugX()[2];
+        _metaDataDebugBuffer[i*2*3+3]       = Base::_data[i].getDebugH()[0];
+        _metaDataDebugBuffer[i*2*3+4]       = Base::_data[i].getDebugH()[1];
+        _metaDataDebugBuffer[i*2*3+5]       = Base::_data[i].getDebugH()[2];
+        #endif
+        logDebug( "prepareMetaDataToSendOut()", "prepare entry " << i << ": " << Base::_data[i].toString() );
+      }
+      return flattenedDataSize;
+    }
+
     #endif
 
   public:
-    STDVectorOverVectorOfPointersStack():
-      _deepCopyBuffer(nullptr) {
+    STDVectorOverVectorOfPointersStack() {
+      #ifdef Parallel
+      _metaDataSizeMPIRequest  = nullptr;
+      _metaDataDebugMPIRequest = nullptr;
+      Base::_ioMPIRequest      = nullptr;
+
+      _deepCopyDataBuffer  = nullptr;
+      _metaDataSizeBuffer  = nullptr;
+      _metaDataDebugBuffer = nullptr;
+      #endif
     }
 
 
@@ -145,58 +195,50 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
     void startSend(int rank, int tag) {
       #ifdef Parallel
       assertion( Base::_ioMode==IOMode::None );
-      assertion( Base::_ioMPIRequest==nullptr );
+
       Base::_ioMode = IOMode::MPISend;
       Base::_ioTag  = tag;
       Base::_ioRank = rank;
 
+      assertion( _metaDataSizeMPIRequest  == nullptr );
+      assertion( _metaDataDebugMPIRequest == nullptr );
+      assertion( Base::_ioMPIRequest      == nullptr );
+
+      assertion( _deepCopyDataBuffer  == nullptr );
+      assertion( _metaDataSizeBuffer  == nullptr );
+      assertion( _metaDataDebugBuffer == nullptr );
+
       logDebug( "startSend(int,int)", toString());
 
-      int flattenedDataSize = 0;
-      for (int i=0; i<Base::_currentElement; i++) {
-        int sizeOfThisStackEntry          = Base::_data[i].explicitlyStoreSize();
-        flattenedDataSize                += sizeOfThisStackEntry;
+      _metaDataSizeBuffer  = new int[Base::_currentElement];
+      #if PeanoDebug>=1
+      _metaDataDebugBuffer = new double[Base::_currentElement * 2 * Dimensions];
+      #endif
 
-        logInfo(
-          "startSend(int,int)",
-          "data of entry " << i << ": " << Base::_data.at(i).toString() <<
-          " - " << &(Base::_data.at(i)) << "/" << ((long)&(Base::_data.at(i)) - (long)Base::_data.data())
-        );
-      }
-      logInfo( "startSend(int,int)", "assembled meta data encoding entries per stack entry. Total number of entries is " << flattenedDataSize );
+      int flattenedDataSize = prepareMetaDataToSendOut();
+      logDebug( "startSend(int,int)", "assembled and flattened meta data encoding entries per stack entry. Total number of entries is " << flattenedDataSize );
 
-      int result = 0;
-      _metaDataMPIRequest = new MPI_Request;
-      result = MPI_Isend( Base::_data.data(), Base::_currentElement, T::Datatype, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), _metaDataMPIRequest);
-      if  (result!=MPI_SUCCESS) {
-        logError( "startSend(int,int)", "was not able to send to node " << rank << " on tag " << tag
-         << ": " << tarch::mpi::MPIReturnValueToString(result)
-        );
-      }
-      logInfo( "startSend(int,int)", "sent out meta data of size " << Base::_currentElement );
+      _metaDataSizeMPIRequest = new MPI_Request;
+      MPI_Isend( _metaDataSizeBuffer, Base::_currentElement, MPI_INT, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), _metaDataSizeMPIRequest);
+      logDebug( "startSend(int,int)", "sent out size meta data of size " << Base::_currentElement );
+
+      #if PeanoDebug>=1
+      _metaDataDebugMPIRequest = new MPI_Request;
+      MPI_Isend( _metaDataDebugBuffer, Base::_currentElement*2*Dimensions, MPI_DOUBLE, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), _metaDataDebugMPIRequest);
+      logDebug( "startSend(int,int)", "sent out debug meta data of size " << Base::_currentElement*2*Dimensions );
+      #endif
 
       if (flattenedDataSize>0) {
-        _deepCopyBuffer = new typename T::DoFType[ flattenedDataSize ];
-        int entry = 0;
-        for (int i=0; i<Base::_currentElement; i++) {
-          for (int j=0; j<Base::_data[i].size(); j++) {
-            _deepCopyBuffer[entry] = *(Base::_data[i].data()[j]);
-            entry++;
-          }
-        }
-        logInfo( "startSend(int,int)", "created deep copy of all " << entry << " entries in the vector of pointers" );
+        _deepCopyDataBuffer = new typename T::DoFType[ flattenedDataSize ];
+        prepareDataToSendOut();
+        logDebug( "startSend(int,int)", "created deep copy of all " << entry << " entries in the vector of pointers" );
         assertionEquals( flattenedDataSize, entry );
 
         Base::_ioMPIRequest = new MPI_Request;
-        result = MPI_Isend( _deepCopyBuffer, flattenedDataSize, T::DoFType::Datatype, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), Base::_ioMPIRequest);
-        if  (result!=MPI_SUCCESS) {
-          logError( "startSend(int,int)", "was not able to send to node " << rank << " on tag " << tag
-           << ": " << tarch::mpi::MPIReturnValueToString(result)
-          );
-        }
+        MPI_Isend( _deepCopyDataBuffer, flattenedDataSize, T::DoFType::Datatype, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), Base::_ioMPIRequest);
       }
       else {
-        Base::_ioMPIRequest = nullptr;
+        logDebug( "startSend(int,int)", "there's no actual user data to send out" );
       }
       #endif
     }
@@ -214,63 +256,46 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
       Base::_ioTag  = tag;
       Base::_ioRank = rank;
 
-      int result = 0;
+      assertion( _metaDataSizeMPIRequest  == nullptr );
+      assertion( _metaDataDebugMPIRequest == nullptr );
+      assertion( Base::_ioMPIRequest      == nullptr );
+
+      assertion( _deepCopyDataBuffer  == nullptr );
+      assertion( _metaDataSizeBuffer  == nullptr );
+      assertion( _metaDataDebugBuffer == nullptr );
 
       Base::_data.resize(numberOfElements);
       Base::_currentElement = numberOfElements;
       assertionEquals( Base::_data.size(), numberOfElements );
 
-      // @todo Wieder raus?
-/*
-      for (int i=0; i<numberOfElements; i++) {
-        Base::_data[i].clear();
-        logInfo(
-          "startReceive(int,int,int)",
-          "dummy entry " << i << ": " << Base::_data.at(i).toString()
-        );
-      }
-*/
+      _metaDataSizeBuffer  = new int[Base::_currentElement];
+      #if PeanoDebug>=1
+      _metaDataDebugBuffer = new double[Base::_currentElement * 2 * Dimensions];
+      #endif
 
-      result = MPI_Recv( &(Base::_data.data()[0]), numberOfElements, T::Datatype, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
-      if  (result!=MPI_SUCCESS) {
-        logError( "startReceive(int,int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
-           << ": " << tarch::mpi::MPIReturnValueToString(result)
-        );
-      }
-      // @todo Debug
-      logInfo( "startReceive(int,int,int)", "received all meta data from rank " << rank << " on tag " << tag << " with " << numberOfElements << " entries");
+      MPI_Recv( _metaDataSizeBuffer, numberOfElements, MPI_INT, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
+      logDebug( "startReceive(int,int,int)", "received all meta data from rank " << rank << " on tag " << tag << " with " << numberOfElements << " entries");
+
+      #if PeanoDebug>=1
+      _metaDataDebugMPIRequest = new MPI_Request;
+      MPI_Irecv( _metaDataDebugBuffer, numberOfElements*2*Dimensions, MPI_DOUBLE, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), _metaDataDebugMPIRequest);
+      logDebug( "startReceive(int,int,int)", "trigger receive of debug data with cardinality " << numberOfElements*2*Dimensions );
+      #endif
 
       int flattenedDataSize = 0;
       assertionEquals( Base::_data.size(), numberOfElements );
       for (int i=0; i<numberOfElements; i++) {
-        Base::_data[i]. xxx.resize(sizeOfThisStackEntry);
-        logInfo(
-          "startReceive(int,int,int)",
-          "data of entry " << i << ": " << Base::_data.at(i).toString() <<
-          " - " << &(Base::_data.at(i)) << "/" << ((long)&(Base::_data.at(i)) - (long)Base::_data.data())
-        );
-
-        int sizeOfThisStackEntry  = Base::_data.at(i).getExplicitlyStoredSize();
-        flattenedDataSize        += sizeOfThisStackEntry;
-        Base::_data[i].resize(sizeOfThisStackEntry);
+        flattenedDataSize        += _metaDataSizeBuffer[i];
       }
-      // @todo Debug
-      logInfo( "startReceive(int,int,int)", "start to receive " << flattenedDataSize << " in total. Have cleared receive data" );
-
-      assertion( Base::_ioMPIRequest == nullptr );
 
       if (flattenedDataSize>0) {
         Base::_ioMPIRequest = new MPI_Request;
-        _deepCopyBuffer = new typename T::DoFType[ flattenedDataSize ];
-        int result = MPI_Irecv( _deepCopyBuffer, flattenedDataSize, T::DoFType::Datatype, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), Base::_ioMPIRequest);
-        if  (result!=MPI_SUCCESS) {
-          logError( "startReceive(int,int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
-             << ": " << tarch::mpi::MPIReturnValueToString(result)
-          );
-        }
+        _deepCopyDataBuffer = new typename T::DoFType[ flattenedDataSize ];
+        MPI_Irecv( _deepCopyDataBuffer, flattenedDataSize, T::DoFType::Datatype, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), Base::_ioMPIRequest);
+        logDebug( "startReceive(int,int,int)", "trigger receive of " << flattenedDataSize << " entries of user data in total" );
       }
       else {
-        Base::_ioMPIRequest = nullptr;
+        logDebug( "startReceive(int,int,int)", "there's no actual user data to received" );
       }
       #endif
     }
@@ -282,79 +307,84 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
 
       bool result = true;
 
-      // The receive always consists of a blocking receive and then, maybe, a
-      // nonblocking one on _ioMPIRequest.
-      if ( Base::_ioMode==IOMode::MPIReceive and Base::_ioMPIRequest!=nullptr ) {
-        int          flag = 0;
-        MPI_Test( Base::_ioMPIRequest, &flag, MPI_STATUS_IGNORE );
-        if (flag) {
-          result = true;
-          // @todo Debug
-          logInfo( "tryToFinishSendOrReceive()", "receive complete, free MPI request on actual data: " << Base::toString() );
-          delete Base::_ioMPIRequest;
-          Base::_ioMPIRequest = nullptr;
-          Base::_ioMode       = IOMode::None;
+      if ( Base::_ioMode==IOMode::MPIReceive ) {
+        assertion( _metaDataSizeMPIRequest == nullptr );
+        assertion( _metaDataSizeBuffer     != nullptr );
 
-          assertionMsg(false, "hier muss ich noch vom flat rueberkopieren")
+        int metaDataDebugFlag = 1;
+        if (_metaDataDebugMPIRequest != nullptr )
+          MPI_Test( _metaDataDebugMPIRequest, &metaDataDebugFlag, MPI_STATUS_IGNORE );
 
-          assertion(_deepCopyBuffer!=nullptr);
-          delete[] _deepCopyBuffer;
-        }
-        else {
-          result = false;
-        }
-      }
-      else if ( Base::_ioMode==IOMode::MPIReceive ) {
-        // @todo Debug
-        logInfo( "tryToFinishSendOrReceive()", "receive complete, but no actual data transferred. No need to free any request therefore: " << Base::toString() );
-        Base::_ioMode = IOMode::None;
-        result = true;
-      }
-      // The send always sends out the meta request non-blocking. Then, it might also
-      // send out the actual data non-blocking.
-      else if ( Base::_ioMode==IOMode::MPISend and Base::_ioMPIRequest!=nullptr ) {
-        assertion( _metaDataMPIRequest!=nullptr );
+        int dataFlag = 1;
+        if (Base::_ioMPIRequest != nullptr )
+          MPI_Test( Base::_ioMPIRequest, &dataFlag, MPI_STATUS_IGNORE );
 
-        int          flag = 0;
-        MPI_Test( Base::_ioMPIRequest, &flag, MPI_STATUS_IGNORE );
-        if (flag) {
-          MPI_Wait( _metaDataMPIRequest, MPI_STATUS_IGNORE );
+        if (metaDataDebugFlag and dataFlag) {
           result = true;
 
-          // @todo Debug
-          logInfo( "tryToFinishSendOrReceive()", "send complete, free both data and meta data request: " << Base::toString() );
+          logDebug( "tryToFinishSendOrReceive()", "receive complete" );
 
-          delete Base::_ioMPIRequest;
-          delete _metaDataMPIRequest;
-          Base::_ioMPIRequest = nullptr;
-          _metaDataMPIRequest = nullptr;
+          workInReceivedMetaData();
 
-          Base::clear();
+          if (_metaDataDebugMPIRequest!=nullptr) {
+            delete    _metaDataDebugMPIRequest;
+            delete[]  _metaDataDebugBuffer;
+            _metaDataDebugMPIRequest = nullptr;
+            _metaDataDebugBuffer     = nullptr;
+          }
+          if (Base::_ioMPIRequest!=nullptr) {
+            workInReceivedData();
+
+            delete    Base::_ioMPIRequest;
+            delete[]  _deepCopyDataBuffer;
+            Base::_ioMPIRequest = nullptr;
+            _deepCopyDataBuffer = nullptr;
+          }
+
           Base::_ioMode = IOMode::None;
-
-          // @todo Debug
-          logInfo( "tryToFinishSendOrReceive()", "delete deep copy" );
-          assertion(_deepCopyBuffer!=nullptr);
-          delete[] _deepCopyBuffer;
         }
         else {
           result = false;
         }
       }
-      // Send without any real data
       else if ( Base::_ioMode==IOMode::MPISend ) {
-        assertion( _metaDataMPIRequest!=nullptr );
+        assertion( _metaDataSizeMPIRequest!=nullptr );
 
-        int          flag = 0;
-        MPI_Test( _metaDataMPIRequest, &flag, MPI_STATUS_IGNORE );
-        if (flag) {
+        int metaDataSizeFlag = 1;
+        if (_metaDataSizeMPIRequest != nullptr )
+          MPI_Test( _metaDataSizeMPIRequest, &metaDataSizeFlag, MPI_STATUS_IGNORE );
+
+        int metaDataDebugFlag = 1;
+        if (_metaDataDebugMPIRequest != nullptr )
+          MPI_Test( _metaDataDebugMPIRequest, &metaDataDebugFlag, MPI_STATUS_IGNORE );
+
+        int dataFlag = 1;
+        if (Base::_ioMPIRequest != nullptr )
+          MPI_Test( Base::_ioMPIRequest, &dataFlag, MPI_STATUS_IGNORE );
+
+        if (metaDataSizeFlag and metaDataDebugFlag and dataFlag) {
           result = true;
 
-          // @todo Debug
-          logInfo( "tryToFinishSendOrReceive()", "send complete, but no data transferred. Delete meta data request: " << Base::toString() );
+          logDebug( "tryToFinishSendOrReceive()", "send complete" );
 
-          delete _metaDataMPIRequest;
-          _metaDataMPIRequest = nullptr;
+          if (_metaDataSizeMPIRequest!=nullptr) {
+            delete    _metaDataSizeMPIRequest;
+            delete[]  _metaDataSizeBuffer;
+            _metaDataSizeMPIRequest = nullptr;
+            _metaDataSizeBuffer     = nullptr;
+          }
+          if (_metaDataDebugMPIRequest!=nullptr) {
+            delete    _metaDataDebugMPIRequest;
+            delete[]  _metaDataDebugBuffer;
+            _metaDataDebugMPIRequest = nullptr;
+            _metaDataDebugBuffer     = nullptr;
+          }
+          if (Base::_ioMPIRequest!=nullptr) {
+            delete    Base::_ioMPIRequest;
+            delete[]  _deepCopyDataBuffer;
+            Base::_ioMPIRequest = nullptr;
+            _deepCopyDataBuffer = nullptr;
+          }
 
           Base::clear();
           Base::_ioMode = IOMode::None;
@@ -362,8 +392,6 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
         else {
           result = false;
         }
-
-        assertion(_deepCopyBuffer==nullptr);
       }
 
       logTraceOutWith1Argument( "tryToFinishSendOrReceive()", result );

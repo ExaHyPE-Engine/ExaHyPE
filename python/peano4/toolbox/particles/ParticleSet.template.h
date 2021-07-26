@@ -40,10 +40,8 @@
   namespace {{ item }} {
 {%- endfor %}
 
-  /**
-   * @todo Muss das ein Struct sein? Dokumentieren!
-   */
-  struct {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
+
+  class {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
     #if PeanoDebug>=1
     private:
      tarch::la::Vector<Dimensions,double> _debugX;
@@ -55,14 +53,8 @@
       tarch::la::Vector<Dimensions,double> getDebugX() const;
       tarch::la::Vector<Dimensions,double> getDebugH() const;
     #endif
-    private:
-      #ifdef Parallel
-      int  _sizeOfParticleSet;
-      #endif
     public:
       typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
-
-      {{CLASSNAME}}();
 
       void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
       static bool send(const peano4::datamanagement::VertexMarker& marker);
@@ -74,14 +66,6 @@
       static void initDatatype();
 
       static void shutdownDatatype();
-
-      static MPI_Datatype   Datatype;
-
-      /**
-       * @see STDVectorOverVectorOfPointersStack.h
-       */
-      int explicitlyStoreSize();
-      int getExplicitlyStoredSize() const;
       #endif
 
       std::string toString() const;
