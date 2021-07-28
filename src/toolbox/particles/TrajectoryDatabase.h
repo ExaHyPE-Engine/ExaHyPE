@@ -38,8 +38,10 @@ class toolbox::particles::TrajectoryDatabase {
     const bool  _clearDatabaseAfterFlush;
 
     /**
-     * This is a hack:
-     * @todo
+     * This is a hack: Usually, I'd just ask the rank what its number is.
+     * However, the database dump often is called in the very end, after
+     * the MPI rank is already down. So it will return -1. So what I do is
+     * that I store this piece of data whenever I insert a new entry.
      */
     int         _rank;
 
@@ -85,7 +87,11 @@ class toolbox::particles::TrajectoryDatabase {
      *
      * The database dumps/stores data if and only if the delta of two particles is
      * bigger than a threshold. We always work with the max norm. There's two different
-     * thresholds: one for the position, one for the data.
+     * thresholds: one for the position, one for the data. So whenever a particle
+     * moves by more than positionDelta in any component of its position, we write a
+     * new snapshot of the particle. Whenever one of the particle's values changes
+     * by more than  dataDelta in one of its components, we write a new snapshot of
+     * this particle (even though it might not have moved).
      *
      * @param clearDatabaseAfterFlush If this flag is set, each flush of the database
      *  will go into a separte file, and the code will clear the database after the
