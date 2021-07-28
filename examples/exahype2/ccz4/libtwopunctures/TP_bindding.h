@@ -2,72 +2,10 @@
 #define __TP_BINDDING__
 
 #include "libtwopunctures/TwoPunctures.h"
+#include "AbstractFiniteVolumeCCZ4.h"
 //The functions in this namespace works as binddings of two puncture library 
 
 namespace TP_bindding {
-	//pre-process, solve the puncture equations
-	inline void prepare(TP::TwoPunctures* tp){
-	    //first we set the parameter. TODO:find a way to read parameter from python script
-	    int swi=0;//0--single black hole, 1--BBH hoc, 2--BBH rotation, 3--GW150914
-	    
-		if (swi==0){
-			tp->par_b=1.0;
-			tp->center_offset[0]=-1.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
-			tp->target_M_plus=1.0;//adm mass
-			tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.0; tp->par_P_plus[2]=0.0;//linear momentum
-			tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
-			tp->target_M_minus=0.0;//adm mass
-			tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=0.0; tp->par_P_minus[2]=0.0;//linear momentum
-			tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
-			tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
-			tp->TP_epsilon=1e-6;}
-			
-		if (swi==1){
-			tp->par_b=4.0;
-			tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
-			tp->target_M_plus=1.0;//adm mass
-			tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.0; tp->par_P_plus[2]=0.0;//linear momentum
-			tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
-			tp->target_M_minus=1.0;//adm mass
-			tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=0.0; tp->par_P_minus[2]=0.0;//linear momentum
-			tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
-			tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
-			tp->TP_epsilon=1e-6;}
-		
-		if (swi==2){
-			tp->par_b=4.251;
-			tp->center_offset[0]=0.0; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
-			tp->give_bare_mass=true;//use puncture mass instead of adm mass
-			tp->par_m_plus=0.494; tp->par_m_minus=0.494;
-			//tp->target_M_plus=999;//adm mass
-			tp->par_P_plus[0]=0.0; tp->par_P_plus[1]=0.1091; tp->par_P_plus[2]=0.0;//linear momentum
-			tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=0.0;//spin
-			//tp->target_M_minus=999;//adm mass
-			tp->par_P_minus[0]=0.0; tp->par_P_minus[1]=-0.1091; tp->par_P_minus[2]=0.0;//linear momentum
-			tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=0.0; //spin		
-			tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
-			tp->TP_epsilon=1e-6;}
-
-		if (swi==3){
-			double D=10.0, q=36.0/29.0, chip=0.31, chim=-0.46, M=1.0;
-			double Pr=-0.00084541526517121, Pphi=0.09530152296974252;
-			double mp=M*q/(1+q), mm=M*1/(1+q);
-			tp->par_b=5.0;
-			tp->center_offset[0]=D*mm-D/2; tp->center_offset[1]=0.0; tp->center_offset[2]=0.0;
-			tp->target_M_plus=mp;//adm mass
-			tp->par_P_plus[0]=Pr; tp->par_P_plus[1]=Pphi; tp->par_P_plus[2]=0.0;//linear momentum
-			tp->par_S_plus[0]=0.0; tp->par_S_plus[1]=0.0; tp->par_S_plus[2]=chip*mp*mp;//spin
-			tp->target_M_minus=1/(1+q);//adm mass
-			tp->par_P_minus[0]=-Pr; tp->par_P_minus[1]=-Pphi; tp->par_P_minus[2]=0.0;//linear momentum
-			tp->par_S_minus[0]=0.0; tp->par_S_minus[1]=0.0; tp->par_S_minus[2]=chim*mm*mm; //spin		
-			tp->grid_setup_method="evaluation"; //evaluation or Taylor expansion
-			tp->TP_epsilon=1e-6;}
-
-		tp->PrintParameters();
-		
-		//then solve the equation
-		tp->Run();
-	}
 	
 	//calculate the soccz4 quantites use the real physics quantities given in TP lib
 	inline void SOCCZ4Cal(double* __restrict__ Q){

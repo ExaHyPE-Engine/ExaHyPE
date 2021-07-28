@@ -295,6 +295,14 @@ class peano4::grid::GridTraversalEventGenerator {
      * But for enterCell and leaveCell, we need copies without these flags.
      * Pruned copies.
      *
+     * The actual data transfer, i.e. which data goes from one stack to which
+     * other one, has to remain in place however: The additional sweeps that
+     * we run on a new rank/core are there to get the spacetree data into the
+     * right order and to send out all boundary data. It is thus essential
+     * that the data transfers stay in. It is "just" the user routines
+     * (computations) that shall not be invoked and therefore we have to unset
+     * the local flags.
+     *
      * <h2> Rationale </h2>
      *
      * I originally thought about having the pruning mechanism as a part of

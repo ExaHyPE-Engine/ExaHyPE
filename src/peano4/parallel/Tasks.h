@@ -117,7 +117,7 @@ class peano4::parallel::Tasks {
      */
     static int getLocationIdentifier(const std::string&  trace);
 
-    static int getTaskType(const std::string&  className, bool useLock=true);
+    static int getTaskType(const std::string&  className, bool useLock=false);
     
     /**
      * Spawn One Task

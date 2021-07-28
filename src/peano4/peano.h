@@ -85,6 +85,11 @@ namespace peano4 {
   void addBibTeXEntry( const std::string& newEntry );
 
   /**
+   * Add further information about this build and run.
+   */
+  void addBuildAndRunInformation( const std::string& newEntry );
+
+  /**
    * Fill Lookup Tables
    *
    * Fill all the lookup tables used within the application. As lookup

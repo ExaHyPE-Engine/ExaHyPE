@@ -198,9 +198,9 @@ class PerformanceData(object):
           if match:
             self.total_time_stepping_steps  = int( match[0].split( "=" )[1] )
           print( "time stepping lasts " + str(self.total_time_stepping_time) + " over " + str(self.total_time_stepping_steps) + " steps" )
-          print( "assume normalised time per time step of " + str(self.normalised_time_per_time_step()) )
-        
-        
+          print( "assume we have " + str(self.number_of_grid_sweeps_per_timeStep) + " sweeps per time step" )
+          print( "assume time per time step of " + str(self.time_per_time_step()) )
+                
         if "plotting:" in line and not "#measurements=0" in line:
           self.total_plotting_time  = float( line.split("plotting:")[1].split( "s" )[0] )
           match = re.findall( r"measurements=\d+", line)
@@ -275,7 +275,7 @@ class PerformanceData(object):
     return len(self._time_step_size)/self.number_of_grid_sweeps_per_timeStep    
 
 
-  def normalised_time_per_time_step(self):
+  def time_per_time_step(self):
     """
       Time of last time step normalised (multiplied) with h^d 
       
@@ -284,7 +284,8 @@ class PerformanceData(object):
       
     """
     raw_data = self.total_time_stepping_time / self.total_time_stepping_steps * self.number_of_grid_sweeps_per_timeStep
-    return raw_data * self._h**self._d
+    #return raw_data * self._h**self._d
+    return raw_data
 
       
 def extract_grid_construction_times(performance_data_points):
@@ -340,7 +341,7 @@ def extract_times_per_step(performance_data_points, max_cores_per_rank=0):
       while insert_at_position<len(x_data) and x_data[insert_at_position]<x_value:
         insert_at_position += 1
       x_data.insert( insert_at_position, x_value )
-      raw_data = point.normalised_time_per_time_step()
+      raw_data = point.time_per_time_step()
       y_data.insert( insert_at_position, raw_data )
     
   return (x_data,y_data)

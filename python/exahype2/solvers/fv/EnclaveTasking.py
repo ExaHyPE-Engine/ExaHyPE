@@ -208,7 +208,7 @@ class EnclaveTaskingFV( FV ):
       patch                       = self._patch,
       patch_overlap_interpolation = self._patch_overlap, 
       patch_overlap_restriction   = self._patch_overlap_new,
-      interpolate_guard           = self._primary_or_initialisation_sweep_predicate,
+      interpolate_guard           = self._primary_sweep_predicate,
       restrict_guard              = self._primary_or_initialisation_sweep_predicate,
       #clear_guard                 = self._primary_or_initialisation_sweep_predicate,
       #interpolate_guard           = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,

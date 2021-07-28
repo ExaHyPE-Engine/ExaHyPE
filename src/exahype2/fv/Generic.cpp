@@ -45,7 +45,8 @@ void exahype2::fv::validatePatch (
   int numberOfVolumesPerAxisInPatch, int haloSize,
   const std::string &location
 ) {
-  #if PeanoDebug>1
+
+  #if PeanoDebug>1 && !defined(OpenMPGPUOffloading)
   const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
   dfor (k,PatchSize) {
     int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
@@ -160,6 +161,7 @@ void exahype2::fv::insertPatch(
   int    haloSizeAroundQin
 ) {
   // @todo kann spaeter mal raus
+# if !defined(OpenMPGPUOffloading)
   assertionEquals(haloSizeAroundQin,1);
   dfor(k,numberOfVolumesPerAxisInPatch-2*haloSizeAroundQin) {
     tarch::la::Vector<Dimensions,int>   destination = k + tarch::la::Vector<Dimensions,int>(haloSizeAroundQin);
@@ -169,6 +171,7 @@ void exahype2::fv::insertPatch(
       QOut[destinationSerialised*(unknowns+auxiliaryVariables)+i] = Qin[sourceSerialised*(unknowns+auxiliaryVariables)+i];
     }
   }
+  #endif
 }
 
 

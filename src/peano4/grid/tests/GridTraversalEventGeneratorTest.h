@@ -26,7 +26,17 @@ class peano4::grid::tests::GridTraversalEventGeneratorTest: public tarch::tests:
      */
     static tarch::logging::Log _log;
 
-    void testAreFacesLocal();
+    void testAreFacesLocal1();
+
+    /**
+     * A simple setup that I extracted from a bug in the code:
+     *
+     * @image html GridTraversalEventGeneratorTest_testAreFacesLocal2.png
+     *
+     * In this example, the middle cell of the 3x3 coarsest pattern is deployed to rank 1.
+     * On rank 1, the marked face thus should not be local on rank 0.
+     */
+    void testAreFacesLocal2();
 
     /**
      * Test face state identification
@@ -95,7 +105,6 @@ Aborted (core dumped)
     void testCreateEnterCellTraversalEvent1();
 
     void testCreateEnterCellTraversalEvent2();
-
   public:
     GridTraversalEventGeneratorTest();
     void run() override;

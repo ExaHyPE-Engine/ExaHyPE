@@ -177,7 +177,7 @@ double mapCoordinate(double c_in, double dc_in, double clower_in, double n_in, d
 double examples::exahype2::swe::TopologyParser::sampledisplacement(double x, double y, double t){
 
   double disp_x = mapCoordinate(x, this->cellsize, this->xlowerleft, this->ncols, this->dispdx, this->dispxlowerleft, this->dispmx);
-  double disp_y = mapCoordinate(1.0-y, this->cellsize, this->ylowerleft, this->nrows, this->dispdy, this->dispylowerleft, this->dispmy);
+  double disp_y = mapCoordinate(y, this->cellsize, this->ylowerleft, this->nrows, this->dispdy, this->dispylowerleft, this->dispmy);
 
   if(disp_x < 0 || disp_y < 0 || disp_x >= dispmx || disp_y >= dispmy){
     return 0.0;

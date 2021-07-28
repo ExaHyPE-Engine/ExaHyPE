@@ -499,7 +499,24 @@ In-situ preprocessing:  """
     self._action_set_handle_boundary                                                  = HandleBoundary(self, self._store_face_data_default_predicate() )
     self._action_set_project_patch_onto_faces                                         = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
     self._action_set_copy_new_patch_overlap_into_overlap                              = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( self._patch, self._patch_overlap, self._patch_overlap_new )
+    
+    #
+    # Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
+    # boundary data has not been received yet and your face data thus is not initialised 
+    # at all.
+    #
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
+      patch = self._patch,
+      patch_overlap_interpolation = self._patch_overlap, 
+      patch_overlap_restriction   = self._patch_overlap_new,
+      interpolate_guard           = """
+  repositories::""" + self.get_name_of_global_instance() + """.getSolverState()!=""" + self._name + """::SolverState::GridInitialisation
+""",
+      additional_includes         = """
+#include "../repositories/SolverRepository.h"
+"""      
+    )
+        
     self._action_set_update_cell                                                      = None
 
 
@@ -608,39 +625,39 @@ In-situ preprocessing:  """
 
 
   @abstractmethod
-  def set_postprocess_updated_patch_kernel(self,kernel, append_to_existing_kernel=True):
+  def set_postprocess_updated_patch_kernel(self, kernel, append_to_existing_kernel=True):
     """
-  
+
     Define a postprocessing routine over the data
-    
+
     The postprocessing kernel often looks similar to the following code:
-    
-  {    
+
+  {
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       enforceCCZ4constraints( targetPatch+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-  } 
+  }
 
-    
+
     Within this kernel, you have at least the following variables available:
-    
+
     - targetPatch This is a pointer to the whole data structure (one large
-        array). 
+        array).
         The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the 
+    - reconstructedPatch This is a pointer to the data snapshot before the
         actual update. This data is combined with the halo layer, i.e. if you
         work with 7x7 patches and a halo of 2, the pointer points to a 11x11
         patch.
     - marker
-    
-    Furthermore, you can use all the symbols (via Jinja2 syntax) from 
+
+    Furthermore, you can use all the symbols (via Jinja2 syntax) from
     _init_dictionary_with_default_parameters().
-    
+
     kernel: String
       C++ code that holds the postprocessing kernel
-      
+
     """
     if append_to_existing_kernel:
       self._postprocess_updated_patch += kernel
@@ -649,7 +666,7 @@ In-situ preprocessing:  """
     self.create_data_structures()
     self.create_action_sets()
 
-  
+
   def add_actions_to_init_grid(self, step):
     """
     
@@ -802,11 +819,11 @@ In-situ preprocessing:  """
 
       This one is called by all algorithmic steps before I invoke
       add_entries_to_text_replacement_dictionary().
-      
+
       See the remarks on set_postprocess_updated_patch_kernel to understand why
       we have to apply the (partially befilled) dictionary to create a new entry
       for this very dictionary.
-      
+
 
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
@@ -829,7 +846,7 @@ In-situ preprocessing:  """
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
 
     if (self._min_h > self._max_h ):
-      raise Exception( "min/max h are inconsistent" ) 
+      raise Exception( "min/max h are inconsistent" )
     d[ "MAX_H"] = self._max_h
     d[ "MIN_H"] = self._min_h
 

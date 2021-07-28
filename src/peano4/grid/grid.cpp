@@ -33,14 +33,17 @@ peano4::grid::GridVertex peano4::grid::createVertex(
 
   result.setState( state );
   result.setAdjacentRanks( adjacentRanks );
+  result.setBackupOfAdjacentRanks( adjacentRanks );
   result.setHasBeenAntecessorOfRefinedVertexInPreviousTreeSweep(not isNewFineGridVertex);
   result.setIsAntecessorOfRefinedVertexInCurrentTreeSweep(not isNewFineGridVertex);
   result.setX(x);
   result.setLevel(level);
 
   // not required logically, but makes valgrind's memchecker happy
-  result.setBackupOfAdjacentRanks( tarch::la::Vector<TwoPowerD,int>(InvalidRank) );
   result.setNumberOfAdjacentRefinedLocalCells(0);
+
+  // @todo raus
+  //result.setBackupOfAdjacentRanks( tarch::la::Vector<TwoPowerD,int>(InvalidRank) );
 
   return result;
 }

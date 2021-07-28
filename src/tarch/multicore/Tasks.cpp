@@ -71,9 +71,32 @@ namespace {
   const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
 
-
+  /**
+   * Upper limit on number of tasks that are fused into one (meta-)task
+   *
+   * By default, there is no upper limit on this count.
+   *
+   * @see configureTaskFusion(int,int)
+   * @see
+   */
   int numberOfTasksThatShouldBeFused  = std::numeric_limits<int>::max();
+
+  /**
+   * Maximum number of large meta tasks that are created
+   *
+   * If this number is exceeded, the code will not fuse any tasks anymore
+   * even though there would be fuse-able tasks around. This threshold plus
+   * numberOfTasksThatShouldBeFused constrain the task fusion behaviour:
+   * One limits the max number of fused (large) tasks, one limits the number
+   * of tasks that feed into one meta task.
+   *
+   * @see numberOfTasksThatShouldBeFused
+   */
   int maxNumberOfFusedTasksAssemblies = 2;
+
+  /**
+   * Statistics counter
+   */
   int numberOfFusedTasksAssemblies    = 0;
 
   /**
@@ -202,6 +225,19 @@ namespace {
 
 
   /**
+   * Algorithm:
+   *
+   * - Lock queue and pop first task from queue.
+   * - If there is a task and task's canFuse() returns true:
+   *   - As long as there are further tasks in the queue and these tasks have the same task type
+   *     (an integer), append these tasks to tasksOfSameType.
+   * - If there has been a task and merged task list is not empty:
+   *   - Call fuse on this list
+   *   - Check if fuse still requires us to run prototype (first) task explicitly
+   *   - Execute this task if required
+   * - If there has been a task and merged task list is empty:
+   *   - Execute the one task extracted from task queue
+   *
    * @return Number of merged/processed tasks
    */
   bool fusePendingTasks(int maxTasks) {
@@ -216,6 +252,8 @@ namespace {
 
     auto pp = nonblockingTasks.begin();
     while (
+      myTask!=nullptr
+      and
       myTask->canFuse()
       and
       pp!=nonblockingTasks.end()

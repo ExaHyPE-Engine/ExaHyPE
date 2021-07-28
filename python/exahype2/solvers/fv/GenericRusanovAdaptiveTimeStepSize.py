@@ -135,7 +135,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     );
 
     {{POSTPROCESS_UPDATED_PATCH}}
-
+    
     double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
       [] (
         const double * __restrict__                  Q,

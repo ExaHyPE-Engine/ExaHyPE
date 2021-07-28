@@ -456,7 +456,7 @@ TwoPunctures::Interpolate (const double* const pos, double *Q, bool low_res) {
             (0, nvar, n1, n2, n3, v, xx, yy, zz);
           break;
         case GSM_evaluation:
-          U = PunctIntPolAtArbitPositionFast(0, nvar, n1, n2, n3, cf_v, xx, yy, zz, low_res);
+          U = PunctIntPolAtArbitPositionFast(cf_v, xx, yy, zz, low_res);
           break;
         default:
           assert (0);

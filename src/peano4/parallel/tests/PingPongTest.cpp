@@ -90,7 +90,7 @@ namespace {
         #if defined(Parallel) and not defined(UseSmartMPI)
         int in = -12;
         static tarch::logging::Log _log( "peano4::parallel::tests::PingPongSendTask" );
-        logDebug( "PingPongReceiveTask()", "receive message from rank 1 with tag " << _id );
+        logInfo( "PingPongReceiveTask()", "receive message from rank 1 with tag " << _id );
         if (_blockingMPI) {
           MPI_Recv(&in,1,MPI_INT,0,_id,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
         }
@@ -100,7 +100,7 @@ namespace {
           tarch::multicore::yield();
           MPI_Wait(&request,MPI_STATUS_IGNORE);
         }
-        logDebug( "PingPongReceiveTask()", "got content " << in );
+        logInfo( "PingPongReceiveTask()", "got content " << in );
         if ( in != 23+_id) {
           logError( "testMultithreadedPingPong()", "received " << in << " instead of " << (23+_id) << " (blocking mode=" << _blockingMPI << ", tag=" << _id << ")" );
           testErrors++;

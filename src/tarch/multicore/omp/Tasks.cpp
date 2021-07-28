@@ -4,6 +4,7 @@
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
 
+#include "tarch/mpi/Rank.h"
 
 #include "tarch/logging/Statistics.h"
 
@@ -48,6 +49,10 @@ namespace {
   }
 
 
+  /**
+   * This implementation variant follows the patterns described in the 2021
+   * IWOMP paper by H. Schulz et al.
+   */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks
   ) {
@@ -85,8 +90,15 @@ namespace {
           tarch::multicore::getRealisation()!=tarch::multicore::Realisation::HoldTasksBackInLocalQueue
         ) {
           const int threadsToGrab = tarch::multicore::getNumberOfPendingTasks() / (NumberOfThreads-busyThreads+1) / 2;
-          tarch::multicore::processPendingTasks( std::max(1,threadsToGrab) );
-          #pragma omp taskyield
+          bool gotATask = tarch::multicore::processPendingTasks( std::max(1,threadsToGrab) );
+          if (not gotATask) {
+            #pragma omp taskyield
+            #if defined(Parallel)
+            // Allow MPI to make progress. We otherwise might starve MPI
+            int flag;
+            MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, MPI_STATUS_IGNORE );
+            #endif
+          }
         }
       }
     }

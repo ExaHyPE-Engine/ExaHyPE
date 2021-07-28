@@ -8,6 +8,7 @@ import peano4.toolbox.particles
 import dastgen2
 
 import numpy as np
+from Probe_file_gene import tracer_seeds_generate
 
 modes = { 
   "release": peano4.output.CompileMode.Release,
@@ -33,30 +34,34 @@ floatparams = {
 	#"tp_epsilon":1e-6
 }
 
-intparams = {"LapseType":0, "tp_grid_setup":0}
+intparams = {"LapseType":0, "tp_grid_setup":0, "swi":99, "ReSwi":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
     parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement" )
     parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default)" )
-    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per cell per direction" )
+    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
-    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "two-punctures"], required="True", help="Scenario" )
-    parser.add_argument("--add-tracer",               dest="add_tracer",      action="store_true", help="Add tracers" )
-
+    parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
+    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
+    parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
+    parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
-    for k, v in intparams.items():   parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s")
+    for k, v in intparams.items():
+      if k=="ReSwi":
+        parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s, choose refinement criterion, 0-no refinement, 1-radius based, 2-SBH phi gradient based, 3-BBH phi gradient based. Notice: 2 and 3 only work with -ext Full")
+      else: parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=int, default=v, help="default: %(default)s")
 
     args = parser.parse_args()
 
     SuperClass = None
-    
+
     if args.implementation=="fv-fixed":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
     if args.implementation=="fv-fixed-enclave":
@@ -130,19 +135,31 @@ if __name__ == "__main__":
           flux=exahype2.solvers.fv.PDETerms.None_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation     
+          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
-        
+
         self.set_postprocess_updated_patch_kernel( """
-  {    
+
+  {
+    #if Dimensions==2
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    #if Dimensions==3
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
     int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+    for (int i=0;i<itmax;i++)
+    {
+
+    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
-  } 
-""" )   
-        
+  }
+""" )
+
 
       def get_user_includes(self):
         """
@@ -284,7 +301,7 @@ if __name__ == "__main__":
 				add puncutrestracker, constraints writer, psi4 writer, AMRflag(currently using gradient of phi)
         """
         self._auxiliary_variables = 9
-        
+
         self._my_user_includes += """
 	#include "../libtwopunctures/TP_PunctureTracker.h"
 	#include "../CCZ4Kernels.h"
@@ -295,9 +312,9 @@ if __name__ == "__main__":
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        
+
 		std::fstream fin;
-		std::string att="_re24.txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
+		std::string att="_"""+args.tra_name+""".txt"; std::string p1="puncture1"; std::string p2="puncture2"; std::string tem="ztem";
 		const int n_a_v=9;
 
 		if (tarch::la::equals(t,0.0)){//initialization
@@ -309,7 +326,7 @@ if __name__ == "__main__":
 			fin.close();
 			//fin.open((tem+att),std::ios::out|std::ios::trunc);
 			//fin << "tem file" << std::endl;
-			//fin.close();		 
+			//fin.close();
 		} else {
 			fin.open((p1+att),std::ios::in);
 			std::string pos=getLastLine(fin);
@@ -429,11 +446,22 @@ if __name__ == "__main__":
       def pick_two_puncture_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=2; /* Two-puncture */  """ )
 
-
+########################################################################################
+#main starts here
+########################################################################################
     userwarnings = []
+    exe="peano4"
+    
+    if args.exe_name!="":
+      exe += "_"
+      exe += args.exe_name
+    if not args.tra_name=="de":
+      exe += "_" + args.tra_name
+    project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4", executable=exe)
 
-    project = exahype2.Project( ["examples", "exahype2", "ccz4"], "ccz4" )
-
+########################################################################################
+#Pick solver
+########################################################################################
     is_aderdg = False
     solver_name = "CCZ4"
     try:
@@ -472,6 +500,9 @@ if __name__ == "__main__":
     else:
       my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h)
 
+########################################################################################
+#Add postpocessing function
+########################################################################################
       if args.extension=="gradient":
         my_solver.add_derivative_calculation()
       if args.extension=="AMRadm":
@@ -479,30 +510,21 @@ if __name__ == "__main__":
       if args.extension=="Full":
         my_solver.add_PT_ConsW_Psi4W_AMRFlag()
 
-    solverconstants=""
-    for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
-    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), eval('args.CCZ4{}'.format(k)))
-    my_solver.set_solver_constants(solverconstants)
-
-    if args.scenario=="gauge":
-      my_solver.pick_Gauge_wave_scenario()
-    elif args.scenario=="linear":
-      my_solver.pick_Linear_wave_scenario()
-    elif args.scenario=="two-punctures":
-      my_solver.pick_two_puncture_scenario()
-    else:
-      raise Exception( "Scenario " + args.scenario + " is now unknown")  
-
-    project.add_solver(my_solver)
-
-
-    build_mode = modes[args.mode]
-    
-    dimensions = 3
+########################################################################################
+#parameter setting according to scenarios
+########################################################################################
     if args.scenario=="two-punctures":
-      msg = "WARNING: Periodic BC deactivated because you pick TP scenario"
+      msg = "Periodic BC deactivated because you pick Puncture scenario\nInitialize binary black holes"
       print(msg)
       periodic_boundary_conditions = [False,False,False]
+      intparams.update({"swi":2})  #notice it may change, see according function in FiniteVolumeCCZ4.cpp
+      print(intparams)
+      userwarnings.append((msg,None))
+    elif args.scenario=="single-puncture":
+      msg = "Periodic BC deactivated because you pick Puncture scenario\nInitialize single black hole"
+      print(msg)
+      periodic_boundary_conditions = [False,False,False]
+      intparams.update({"swi":0}) 
       userwarnings.append((msg,None))
     elif args.periodic_bc:
       print( "Periodic BC set")
@@ -513,17 +535,42 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       userwarnings.append((msg,None))
 
+    intparams.update({"ReSwi":args.CCZ4ReSwi})
+
+    solverconstants=""
+    for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), v)
+    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), v)
+    my_solver.set_solver_constants(solverconstants)
+
     if args.scenario=="gauge":
+      my_solver.pick_Gauge_wave_scenario()
+    elif args.scenario=="linear":
+      my_solver.pick_Linear_wave_scenario()
+    elif  (args.scenario=="two-punctures") or (args.scenario=="single-puncture"):
+      my_solver.pick_two_puncture_scenario()
+    else:
+      raise Exception( "Scenario " + args.scenario + " is now unknown")  
+
+    project.add_solver(my_solver)
+
+    build_mode = modes[args.mode]
+    
+    dimensions = 3
+
+########################################################################################
+#Domain settings
+########################################################################################
+    if args.scenario=="gauge" or args.scenario=="linear":
       offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
       #offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
       msg = "Gauge wave, domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userwarnings.append((msg,None))
-    if args.scenario=="two-punctures":
+    if args.scenario=="two-punctures" or args.scenario=="single-puncture":
       offset=[-20, -20, -20]; domain_size=[40.0, 40.0, 40.0]
       #offset=[-30, -30, -30]; domain_size=[60.0, 60.0, 60.0]
       #offset=[-40, -40, -40]; domain_size=[80.0, 80.0, 80.0]
-      msg = "Two-punctures, domain set as "+str(offset)+" and "+str(domain_size)
+      msg = "Two/single punctures, domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userwarnings.append((msg,None))
 
@@ -538,44 +585,63 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    #project.set_output_path( "/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv2" )
-    #probe_point = [-8,-8,-8]
-    #project.add_plot_filter( probe_point,[16.0,16.0,16.0],1 )
+########################################################################################
+#output dir and proble
+########################################################################################
+    path="./"
+    #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
+    path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1"
+    project.set_output_path(path)
+    probe_point = [-6,-6,-6]
+    project.add_plot_filter( probe_point,[12.0,12.0,12.0],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
-    if args.add_tracer:
-      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=2 )
+########################################################################################
+#Tracer setting 
+########################################################################################
+    if not args.add_tracer==0:
+      tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=4 )
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
       project.add_action_set_to_timestepping(
         exahype2.tracer.FiniteVolumesTracing(
           tracer_particles,my_solver,
-          [17,18,19],[0,16],-1,
+          [17,18,19],range(4),-1,
           #time_stepping_kernel="toolbox::particles::LinearInterp",
-          time_stepping_kernel="toolbox::particles::StaticPosition",
-          observer_kernel="toolbox::particles::ObLinearInterp"
+          time_stepping_kernel="toolbox::particles::StaticPosition"#,
+          #observer_kernel="toolbox::particles::ObLinearInterp"
         )
       )
-      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
-      #project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor( particle_set=tracer_particles,p1=[0.4251,0,0],p2=[-0.4251,0,0]))
-      project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename="t-design.dat", scale_factor=0.4))#"Gauss_Legendre_quadrature.dat" #"t-design.dat"
+      if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
+        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(domain_size[0]+offset[0]),N_x=50,N_y=50,N_z=2)
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=0.99)) #"Line.dat" #slide.dat #volume.dat
+      if args.add_tracer==4:  
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
+      if args.add_tracer==5:
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
+      if args.add_tracer==6 or args.add_tracer==7:
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
 
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=my_solver,
-        filename="zz",
+        filename="zz"+args.tra_name,
         number_of_entries_between_two_db_flushes=1000
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
       #,,-1,"zz",1000))
 
+########################################################################################
+#linking stuff
+########################################################################################
     peano4_project = project.generate_Peano4_project(verbose=True)
 
     if args.scenario=="gauge":
       pass
     elif args.scenario=="linear":
       pass
-    elif args.scenario=="two-punctures":
+    elif args.scenario=="two-punctures" or args.scenario=="single-puncture":
       #
       # There are two different things to do when we pick a scneario: We have
       # to configure the solver accordingly (and keep in mind that every solver
@@ -635,6 +701,8 @@ if __name__ == "__main__":
     peano4_project.build( make_clean_first = True )
 
     # Remind the user of warnings!
+    userwarnings.append(("the executable file name: "+exe, None))
+    userwarnings.append(("output directory: "+path, None))
     if len(userwarnings) >0:
         print("Please note that these warning occured before the build:")
         for msg, exception in userwarnings:

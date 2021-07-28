@@ -223,6 +223,10 @@ void step() {{
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 
   static tarch::logging::Log _log("");
+  #if PeanoDebug>0
+  #else
+  if (tarch::mpi::Rank::getInstance().isGlobalMaster())
+  #endif
   logInfo( "step()", "run " << repositories::StepRepository::toString(stepName) );
 
   tarch::timing::Watch  watch( "::", "step()", false );
@@ -472,6 +476,8 @@ int main(int argc, char** argv) {{
   #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
+  peano4::addBuildAndRunInformation( "\n\nThe present executable has been created by \n\n     " + BuildInformation + "\n\n" );
+  peano4::addBuildAndRunInformation( "\n\nThe underlying Peano 4 configuration is\n\n     " + ConfigureInformation + "\n\n" );
 
   repositories::finishSimulation();
 

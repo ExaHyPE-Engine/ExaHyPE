@@ -189,8 +189,6 @@ double* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::copyPatchData( double* __rest
             targetPatch
           );
 
-          {{POSTPROCESS_UPDATED_PATCH}}
-
           double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
             [] (
               const double * __restrict__                  Q,
@@ -393,10 +391,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCellBoundary(
   );
 
   repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
-
-  {% if POSTPROCESS_UPDATED_PATCH!="" %}
-  assertionMsg(false, "optimistic time stepping does not support pre- and postprocessing" );
-  {% endif %}
 }
 
 

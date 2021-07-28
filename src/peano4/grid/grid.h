@@ -100,6 +100,16 @@ namespace peano4 {
     /**
      * Factory mechanism
      *
+     * We expect the calling code to tell us about the adjacent ranks of a
+     * vertex. There is a routine Spacetree::getAdjacentRanksForNewVertex()
+     * which allows you to distill adjacency information while you step down
+     * within the tree and create new vertices. This is information we write
+     * directly into the new data plus the backup of the old data. This means,
+     * by the time we create a new vertex, anybody analysing the adjacency
+     * information things that this data has always been there.
+     *
+     * <h2> Dummy values </h2>
+     *
      * There are a few attributes which should have dummy values. There are
      * also a few attributes which are set later on throughout the traversal,
      * but I should initialise them here properly to ensure that valgrind's
