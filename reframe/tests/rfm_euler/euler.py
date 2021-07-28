@@ -39,8 +39,9 @@ class Euler_CI(rfm.RunOnlyRegressionTest):
             f"{self.test_dir}/exahype.log-filter",
         ]
 
+        peano_core_path = os.path.join(os.environ["OUTPUT_DIR"], self.current_system.name, f"local_launcher/amd/Build_peano_core_{self.git_rev}/Peano")
         self.prerun_cmds = [
-            f"cp -rf /cosma5/data/durham/dc-turn5/reframe_output/dine/local_launcher/amd/Build_peano_core_6e864469ae4ce2316d7bf77280f2b8eaf71e84dd/Peano .",
+            f"cp -rf {peano_core_path} .",
             
             "pushd Peano",
             "./configure CXX='g++' --enable-blockstructured --enable-exahype --enable-loadbalancing --with-multithreading=omp CXXFLAGS='-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication' --with-mpi=mpicxx", # we need to reconfigure (since we are copying the Peano core to a new location the linker info in the Makefiles needs to be updated before we call the python glue code)
