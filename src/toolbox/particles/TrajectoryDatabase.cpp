@@ -28,7 +28,8 @@ toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwo
   _numberOfDataPointsPerParticle(0),
   _deltaBetweenTwoDatabaseFlushes(growthBetweenTwoDatabaseFlushes),
   _thresholdForNextDatabaseFlush(growthBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : _deltaBetweenTwoDatabaseFlushes),
-  _clearDatabaseAfterFlush(clearDatabaseAfterFlush) {
+  _clearDatabaseAfterFlush(clearDatabaseAfterFlush),
+  _rank(-1) {
 }
 
 
@@ -48,6 +49,7 @@ void toolbox::particles::TrajectoryDatabase::clear() {
       }
     }
   }
+  _data.clear();
 }
 
 
@@ -56,7 +58,10 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
   snapshotFileName << _fileName;
 
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
-    snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
+    if ( _rank<0 ) {
+      _rank = tarch::mpi::Rank::getInstance().getRank();
+    }
+    snapshotFileName << "-rank-" << _rank;
   }
 
   if (_clearDatabaseAfterFlush) {
@@ -71,18 +76,18 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
     logInfo( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
     #if Dimensions==2
-    file << "t, number(0), number(1), x(0), x(1), data " << std::endl;
+    file << "number(0), number(1), t, x(0), x(1), data " << std::endl;
     #else
-    file << "t, number(0), number(1), x(0), x(1), x(2), data " << std::endl;
+    file << "number(0), number(1), t, x(0), x(1), x(2), data " << std::endl;
     #endif
 
     for (auto& particle: _data) {
       for (auto& snapshot: particle.second) {
-        file << snapshot.timestamp
+        file << particle.first.first
              << ", "
-             << particle.first.first
-             << ", "
-             << particle.first.second;
+             << particle.first.second
+			 << ", "
+			 << snapshot.timestamp;
         #if Dimensions==2
         file << ", "
              << snapshot.x(0)
@@ -108,14 +113,13 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
     }
   }
   else {
-    //#if PeanoDebug>=1
+    #if PeanoDebug>=1
     logInfo( "dumpCSVFile()", "particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
-    //#endif
+    #endif
   }
 
-
   if (_clearDatabaseAfterFlush) {
-    _data.clear();
+    clear();
   }
 }
 
@@ -217,6 +221,10 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   double                                       timestamp,
   const tarch::la::Vector<Dimensions,double>&  x
 ) {
+  if ( _rank<0 ) {
+    _rank = tarch::mpi::Rank::getInstance().getRank();
+  }
+
   switch ( getAction(number,x,timestamp) ) {
     case AddSnapshotAction::Ignore:
       break;
@@ -265,6 +273,10 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
 ) {
   assertion( _numberOfDataPointsPerParticle==numberOfDataEntries or _data.empty());
   _numberOfDataPointsPerParticle = std::max(_numberOfDataPointsPerParticle,numberOfDataEntries);
+
+  if ( _rank<0 ) {
+    _rank = tarch::mpi::Rank::getInstance().getRank();
+  }
 
   switch ( getAction(number,x,timestamp,numberOfDataEntries,data) ) {
     case AddSnapshotAction::Ignore:

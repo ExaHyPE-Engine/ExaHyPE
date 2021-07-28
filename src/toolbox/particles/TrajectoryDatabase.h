@@ -37,6 +37,12 @@ class toolbox::particles::TrajectoryDatabase {
      */
     const bool  _clearDatabaseAfterFlush;
 
+    /**
+     * This is a hack:
+     * @todo
+     */
+    int         _rank;
+
     struct Entry {
       tarch::la::Vector<Dimensions,double>  x;
       double                                timestamp;
