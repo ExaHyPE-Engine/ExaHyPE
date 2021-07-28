@@ -21,13 +21,14 @@ toolbox::particles::TrajectoryDatabase::Entry::Entry( const TrajectoryDatabase& 
 }
 
 
-toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta, double dataDelta ):
+toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta, double dataDelta, bool clearDatabaseAfterFlush ):
   _fileName(""),
   _dataDelta(dataDelta),
   _positionDelta(positionDelta),
   _numberOfDataPointsPerParticle(0),
   _deltaBetweenTwoDatabaseFlushes(growthBetweenTwoDatabaseFlushes),
-  _thresholdForNextDatabaseFlush(growthBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : _deltaBetweenTwoDatabaseFlushes) {
+  _thresholdForNextDatabaseFlush(growthBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : _deltaBetweenTwoDatabaseFlushes),
+  _clearDatabaseAfterFlush(clearDatabaseAfterFlush) {
 }
 
 
@@ -51,13 +52,24 @@ void toolbox::particles::TrajectoryDatabase::clear() {
 
 
 void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
-  std::string filename = _fileName;
+  std::ostringstream snapshotFileName;
+  snapshotFileName << _fileName;
 
-  filename += ".csv";
+  if (tarch::mpi::Rank::getInstance().getNumberOfRanks()>0 ) {
+    snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
+  }
+
+  if (_clearDatabaseAfterFlush) {
+    static int snapshotCounter = -1;
+    snapshotCounter++;
+    snapshotFileName << "-snapshot-" << snapshotCounter;
+  }
+
+  snapshotFileName << ".csv";
 
   if (not _data.empty()) {
-
-    std::ofstream file( filename );
+    logInfo( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
+    std::ofstream file( snapshotFileName.str() );
     #if Dimensions==2
     file << "t, number(0), number(1), x(0), x(1), data " << std::endl;
     #else
@@ -96,7 +108,14 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
     }
   }
   else {
-    logInfo( "dumpCSVFile()", "particle trajectory database is empty. Do not dump " + filename );
+    //#if PeanoDebug>=1
+    logInfo( "dumpCSVFile()", "particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
+    //#endif
+  }
+
+
+  if (_clearDatabaseAfterFlush) {
+    _data.clear();
   }
 }
 
