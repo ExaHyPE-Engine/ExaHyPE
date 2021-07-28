@@ -38,8 +38,10 @@ class toolbox::particles::TrajectoryDatabase {
     const bool  _clearDatabaseAfterFlush;
 
     /**
-     * This is a hack:
-     * @todo
+     * This is a hack: Usually, I'd just ask the rank what its number is.
+     * However, the database dump often is called in the very end, after
+     * the MPI rank is already down. So it will return -1. So what I do is
+     * that I store this piece of data whenever I insert a new entry.
      */
     int         _rank;
 
@@ -85,12 +87,33 @@ class toolbox::particles::TrajectoryDatabase {
      *
      * The database dumps/stores data if and only if the delta of two particles is
      * bigger than a threshold. We always work with the max norm. There's two different
-     * thresholds: one for the position, one for the data.
+     * thresholds: one for the position, one for the data. So whenever a particle
+     * moves by more than positionDelta in any component of its position, we write a
+     * new snapshot of the particle. Whenever one of the particle's values changes
+     * by more than  dataDelta in one of its components, we write a new snapshot of
+     * this particle (even though it might not have moved).
+     *
+     * <h2> Flushing the database </h2>
+     *
+     * Please read the documentation of clearDatabaseAfterFlush and
+     * growthBetweenTwoDatabaseFlushes below first. If you flush a database every
+     * now and then and if you clear the database after that, then the following
+     * situation can happen: One particle's data or position changes quite a lot.
+     * Another particle's data doesn't change at all. We trigger a flush and, after
+     * that, clear the database. Again, the one single particle is updated quite a
+     * lot. We flush again. The particle that doesn't change et al will not be
+     * contained in the second database snapshot.
+     *
+     *
      *
      * @param clearDatabaseAfterFlush If this flag is set, each flush of the database
-     *  will go into a separte file, and the code will clear the database after the
-     *  flush. As a consequence, the database will never exceed the memory. However,
-     *  you'll get a lot of files that you have to merge afterwards.
+     *   will go into a separte file, and the code will clear the database after the
+     *   flush. As a consequence, the database will never exceed the memory. However,
+     *   you'll get a lot of files that you have to merge afterwards.
+     * @param growthBetweenTwoDatabaseFlushes Whenver a database has been added more
+     *   than growthBetweenTwoDatabaseFlushes entries, we dump a snapshot. This can be
+     *   growthBetweenTwoDatabaseFlushes different particles, or growthBetweenTwoDatabaseFlushes
+     *   updates for only one single particle. In both cases, we flush.
      */
     TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8, bool clearDatabaseAfterFlush=true );
     ~TrajectoryDatabase();
