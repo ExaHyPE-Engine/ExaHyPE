@@ -593,9 +593,11 @@ if __name__ == "__main__":
     path="./"
     if not args.path=="./":
         path=args.path 
+    #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
+    #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    #probe_point = [-8,-8,-0.1]
-    #project.add_plot_filter( probe_point,[16.0,16.0,0.1],1 )
+    probe_point = [-8,-8,-0.1]
+    project.add_plot_filter( probe_point,[16.0,16.0,0.1],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -616,7 +618,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=-0.4, b=0.4, N_x=10,N_y=10,N_z=2)
+        tracer_seeds_generate(Type=args.add_tracer, a=-0.4, b=0.4, N_x=50,N_y=50,N_z=2)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"Line.dat" #slide.dat #volume.dat
       if args.add_tracer==4:  
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
@@ -624,11 +626,13 @@ if __name__ == "__main__":
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
       if args.add_tracer==6 or args.add_tracer==7:
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
-
+      
+      if path=="./": path1="."
+      else: path1=path
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=my_solver,
-        filename=path+"/zz"+args.tra_name,
+        filename=path1+"/zz"+args.tra_name,
         number_of_entries_between_two_db_flushes=100
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
@@ -706,7 +710,7 @@ if __name__ == "__main__":
     userwarnings.append(("the executable file name: "+exe, None))
     userwarnings.append(("output directory: "+path, None))
     if not args.add_tracer==0:
-        userwarnings.append(("tracer output file: "+path+"/zz"+args.tra_name, None))
+        userwarnings.append(("tracer output file: "+path1+"/zz"+args.tra_name, None))
     if len(userwarnings) >0:
         print("Please note that these warning occured before the build:")
         for msg, exception in userwarnings:
