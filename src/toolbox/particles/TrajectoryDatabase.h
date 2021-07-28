@@ -93,10 +93,27 @@ class toolbox::particles::TrajectoryDatabase {
      * by more than  dataDelta in one of its components, we write a new snapshot of
      * this particle (even though it might not have moved).
      *
+     * <h2> Flushing the database </h2>
+     *
+     * Please read the documentation of clearDatabaseAfterFlush and
+     * growthBetweenTwoDatabaseFlushes below first. If you flush a database every
+     * now and then and if you clear the database after that, then the following
+     * situation can happen: One particle's data or position changes quite a lot.
+     * Another particle's data doesn't change at all. We trigger a flush and, after
+     * that, clear the database. Again, the one single particle is updated quite a
+     * lot. We flush again. The particle that doesn't change et al will not be
+     * contained in the second database snapshot.
+     *
+     *
+     *
      * @param clearDatabaseAfterFlush If this flag is set, each flush of the database
-     *  will go into a separte file, and the code will clear the database after the
-     *  flush. As a consequence, the database will never exceed the memory. However,
-     *  you'll get a lot of files that you have to merge afterwards.
+     *   will go into a separte file, and the code will clear the database after the
+     *   flush. As a consequence, the database will never exceed the memory. However,
+     *   you'll get a lot of files that you have to merge afterwards.
+     * @param growthBetweenTwoDatabaseFlushes Whenver a database has been added more
+     *   than growthBetweenTwoDatabaseFlushes entries, we dump a snapshot. This can be
+     *   growthBetweenTwoDatabaseFlushes different particles, or growthBetweenTwoDatabaseFlushes
+     *   updates for only one single particle. In both cases, we flush.
      */
     TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8, bool clearDatabaseAfterFlush=true );
     ~TrajectoryDatabase();
