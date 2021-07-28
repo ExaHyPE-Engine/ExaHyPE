@@ -580,7 +580,7 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       offset,  domain_size,
       args.end_time,                 # end time
-      30.0, args.plot_step_size,   # snapshots
+      0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
@@ -596,8 +596,8 @@ if __name__ == "__main__":
     if not args.path=="./":
         path=args.path 
     project.set_output_path(path)
-    probe_point = [-8,-8,-0.1]
-    project.add_plot_filter( probe_point,[16.0,16.0,0.1],1 )
+    #probe_point = [-8,-8,-0.1]
+    #project.add_plot_filter( probe_point,[16.0,16.0,0.1],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
