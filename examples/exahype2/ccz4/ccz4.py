@@ -591,8 +591,6 @@ if __name__ == "__main__":
 #output dir and proble
 ########################################################################################
     path="./"
-    path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
-    #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     if not args.path=="./":
         path=args.path 
     project.set_output_path(path)
