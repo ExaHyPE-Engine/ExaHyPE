@@ -22,6 +22,23 @@ case $HOSTNAME in
         ;;
 esac
 
+# First we build the core. This is then drawn upon by the subsequent ReFrame call which issues many tests.
+
+${REFRAME_ROOT:=~}/reframe/bin/reframe \
+    --skip-sanity-check \
+    --max-retries=0 \
+    --exec-policy async \
+    --stage $STAGE_DIR \
+    --purge-env \
+    -C $config \
+    -c build_peano_core.py \
+    -r \
+    -v \
+    --performance-report \
+    -n \
+    'Build_peano_core' \
+    --output $OUTPUT_DIR \
+    --report-file=build_peano_core.log
 
 ${REFRAME_ROOT:=~}/reframe/bin/reframe \
     --max-retries=0 \
