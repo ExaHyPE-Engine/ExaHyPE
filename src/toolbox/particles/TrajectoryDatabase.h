@@ -32,6 +32,16 @@ class toolbox::particles::TrajectoryDatabase {
 
     const int   _deltaBetweenTwoDatabaseFlushes;
     int         _thresholdForNextDatabaseFlush;
+    /**
+     * @see TrajectoryDatabase()
+     */
+    const bool  _clearDatabaseAfterFlush;
+
+    /**
+     * This is a hack:
+     * @todo
+     */
+    int         _rank;
 
     struct Entry {
       tarch::la::Vector<Dimensions,double>  x;
@@ -76,8 +86,13 @@ class toolbox::particles::TrajectoryDatabase {
      * The database dumps/stores data if and only if the delta of two particles is
      * bigger than a threshold. We always work with the max norm. There's two different
      * thresholds: one for the position, one for the data.
+     *
+     * @param clearDatabaseAfterFlush If this flag is set, each flush of the database
+     *  will go into a separte file, and the code will clear the database after the
+     *  flush. As a consequence, the database will never exceed the memory. However,
+     *  you'll get a lot of files that you have to merge afterwards.
      */
-    TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8 );
+    TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8, bool clearDatabaseAfterFlush=true );
     ~TrajectoryDatabase();
 
     void clear();
