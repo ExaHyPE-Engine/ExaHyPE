@@ -51,6 +51,8 @@ if __name__ == "__main__":
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
+    parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
+
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -578,7 +580,7 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       offset,  domain_size,
       args.end_time,                 # end time
-      0.0, args.plot_step_size,   # snapshots
+      30.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
@@ -591,9 +593,11 @@ if __name__ == "__main__":
     path="./"
     path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
+    if not args.path=="./":
+        path=args.path 
     project.set_output_path(path)
-    #probe_point = [-6,-6,-6]
-    #project.add_plot_filter( probe_point,[12.0,12.0,12.0],1 )
+    probe_point = [-8,-8,-0.1]
+    project.add_plot_filter( probe_point,[16.0,16.0,0.1],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -626,8 +630,8 @@ if __name__ == "__main__":
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=my_solver,
-        filename="/cosma5/data/durham/dc-zhan3/zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=3000
+        filename=path+"/zz"+args.tra_name,
+        number_of_entries_between_two_db_flushes=100
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
       #,,-1,"zz",1000))
@@ -703,6 +707,8 @@ if __name__ == "__main__":
     # Remind the user of warnings!
     userwarnings.append(("the executable file name: "+exe, None))
     userwarnings.append(("output directory: "+path, None))
+    if not args.add_tracer==0:
+        userwarnings.append(("tracer output file: "+path+"/zz"+args.tra_name, None))
     if len(userwarnings) >0:
         print("Please note that these warning occured before the build:")
         for msg, exception in userwarnings:
