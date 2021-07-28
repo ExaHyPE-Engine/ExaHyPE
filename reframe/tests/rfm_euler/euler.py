@@ -1,6 +1,5 @@
 import os
 from git import Repo
-import touch
 
 import reframe as rfm
 import reframe.core.launchers.mpi
@@ -14,9 +13,14 @@ from post_processing import getTimeStepping
 GIT_REV = os.environ["GIT_REVISION"]
 
 
-@rfm.parameterized_test(*([git_rev] for git_rev in [GIT_REV]))
-class Euler_CI(rfm.RegressionTest):
-    def __init__(self, git_rev):
+@rfm.parameterized_test(*([git_rev, type_param, mode_param, pbc_param]
+    for git_rev in [GIT_REV]
+    for type_param in ["default", "default-ats", "enclave", "enclave-ats", "enclave-ots"]
+    for mode_param in ["release", "assert"]
+    for pbc_param in ["pbc-on", "pbc-off"]
+))
+class Euler_CI(rfm.RunOnlyRegressionTest):
+    def __init__(self, git_rev, type_param, mode_param, pbc_param):
 
         # 4 ranks here means the domain decomposition fails
         common.setup(self, git_rev, num_tasks=1, num_cpus_per_task=4)
@@ -30,32 +34,20 @@ class Euler_CI(rfm.RegressionTest):
 
         self.test_dir = "Peano/examples/exahype2/euler"
 
-        self.build_system.config_opts = [
-            "--enable-blockstructured",
-            "--enable-exahype",
-            "--enable-loadbalancing",
-            "--with-multithreading=omp",
-        ]
-
-        if self.current_system.name == "dine":
-            self.build_system.config_opts += [
-                'CXXFLAGS="-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication"',
-                "--with-mpi=mpicxx",
-            ]
-        elif self.current_system.name == "hamilton":
-            self.build_system.config_opts += [
-                'CXXFLAGS="-fopenmp -std=c++17"',
-                "--with-mpi=mpiicpc",
-            ]
-
         self.keep_files = [
             f"{self.test_dir}/*.peano-patch-file",
             f"{self.test_dir}/exahype.log-filter",
         ]
 
         self.prerun_cmds = [
+            f"cp -rf /cosma5/data/durham/dc-turn5/reframe_output/dine/local_launcher/amd/Build_peano_core_6e864469ae4ce2316d7bf77280f2b8eaf71e84dd/Peano .",
+            
+            "pushd Peano",
+            "./configure CXX='g++' --enable-blockstructured --enable-exahype --enable-loadbalancing --with-multithreading=omp CXXFLAGS='-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication' --with-mpi=mpicxx", # we need to reconfigure (since we are copying the Peano core to a new location the linker info in the Makefiles needs to be updated before we call the python glue code)
+            "popd",
+            
             f"pushd {self.test_dir}",
-            "python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t default -et 0.0001 -pdt 0.0001",
+            f"python3 example-scripts/finitevolumes.py -cs 0.1 -f --no-compile -t {type_param} -et 0.0001 -pdt 0.0001 -m {mode_param} {'-pbc' if pbc_param == 'pbc-on' else ''}",
             "make -j",
         ]
 
@@ -99,11 +91,12 @@ class Euler_CI(rfm.RegressionTest):
                 continue
 
             for dir_name in os.listdir(os.path.join(str(self.outputdir), "..")):
+                split_out_file = str(self.stdout).split(self.git_rev)
                 target_file = os.path.join(
                     str(self.outputdir),
                     "..",
                     dir_name,
-                    f"rfm_Euler_CI_{hexsha}_job.out",
+                    f"{split_out_file[0]}{hexsha}{split_out_file[1]}",
                 )
                 
                 if hexsha in dir_name and os.path.exists(target_file):
@@ -119,10 +112,10 @@ class Euler_CI(rfm.RegressionTest):
                     
                     if (time_prev_commit * 1.1) < time_this_commit:
                         # Fail the test:
-                        sn.evaluate(assert_true(False, "Performance degredation has been detected"))
+                        sn.evaluate(sn.assert_true(False, "Performance degredation has been detected"))
                     
                     if (time_prev_commit * 0.9) > time_this_commit:
-                        sn.evaluate(assert_true(False, "Performance increase is cause for suspicion"))
+                        sn.evaluate(sn.assert_true(False, "Performance increase is cause for suspicion"))
 
                     return
 
