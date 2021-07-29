@@ -35,6 +35,7 @@
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
+    enum class Offloadable {yes};
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
@@ -96,7 +97,44 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
-    
+   
+    {% if USE_GPU %}
+    // The GPU offloading requires static functions, we do the
+    // TBB trick of overloading static functions with an enum
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+     static void sourceTerm(
+       const double * __restrict__ Q,
+       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       double                                       t,
+       double                                       dt,
+       double * __restrict__ S,
+       Offloadable
+     );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+   
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static void nonconservativeProduct(
+      const double * __restrict__                  Q,         // Q[5+0],
+      const double * __restrict__                  deltaQ,    // [5+0]
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double * __restrict__                        BgradQ,     // BgradQ[5]
+      Offloadable
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+
     {% include "AbstractSolverFixedTimeStepSize.template.h" %}
 };
 
