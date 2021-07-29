@@ -16,7 +16,7 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   RusanovCallOverPatch = """
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
-    
+
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
       targetPatch,
@@ -25,7 +25,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       1 // halo size
     );
-    
+
     {% if USE_SPLIT_LOOP %}
     #if Dimensions==2
     ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
@@ -116,7 +116,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ) -> void {
         repositories::{{SOLVER_INSTANCE}}.sourceTerm(
           Q,
-          x, dx, t, dt, 
+          x, dx, t, dt,
           S
         );
       },
@@ -130,15 +130,15 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       reconstructedPatch,
       targetPatch
     );
-    
+
     {{POSTPROCESS_UPDATED_PATCH}}
-  """ 
+  """
 
 
-  def __init__(self,solver):
+  def __init__(self, solver):
     d = {}
     solver._init_dictionary_with_default_parameters(d)
-    solver.add_entries_to_text_replacement_dictionary(d)   
+    solver.add_entries_to_text_replacement_dictionary(d)
     d[ "USE_SPLIT_LOOP" ] = solver._use_split_loop
 
     ReconstructPatchAndApplyFunctor.__init__(self,
@@ -149,34 +149,32 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       guard = "not marker.isRefined()",
       add_assertions_to_halo_exchange = False
     )
-    
+
     self._solver = solver
-  
-  
+
+
   def get_includes(self):
     return """
 #include "exahype2/fv/BoundaryConditions.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
-  
+""" + self._solver._get_default_includes() + self._solver.get_user_includes()
+
 
 
 
 
 class GenericRusanovFixedTimeStepSize( FV ):
   """
-  
     Probably the simplest solver you could think off. There's a few
-    interesting things to try out with this one nevertheless: You 
-    can inject symbolic flux/pde term implementations, or you can 
+    interesting things to try out with this one nevertheless: You
+    can inject symbolic flux/pde term implementations, or you can
     alter the implementation variant of the cell update kernel. The
-    latter can be combined with different dynamic memory allocation 
-    schemes and thus offers quite some opportunities to tweak and 
-    tune things. 
-  
+    latter can be combined with different dynamic memory allocation
+    schemes and thus offers quite some opportunities to tweak and
+    tune things.
   """
-    
 
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False):
+
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, use_gpu=False):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
@@ -194,20 +192,21 @@ class GenericRusanovFixedTimeStepSize( FV ):
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
+    self._use_gpu = use_gpu
 
-    FV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-    self.set_implementation(flux=flux,ncp=ncp)
+    super(GenericRusanovFixedTimeStepSize, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+    self.set_implementation(flux=flux,ncp=ncp, use_gpu=self._use_gpu)
 
 
   def create_data_structures(self):
     FV.create_data_structures(self)
-    
+
     self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
     self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
-      
+
     self._patch_overlap.generator.send_condition               = "true"
     self._patch_overlap.generator.receive_and_merge_condition  = "true"
-    
+
 
   def create_action_sets(self):
     FV.create_action_sets(self)
@@ -217,39 +216,31 @@ class GenericRusanovFixedTimeStepSize( FV ):
   def set_implementation(self,
     flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
-    use_split_loop          = False
+    use_split_loop          = False,
+    use_gpu =False
   ):
     """
-      If you pass in User_Defined, then the generator will create C++ stubs 
-      that you have to befill manually. If you pass in None_Implementation, it 
+      If you pass in User_Defined, then the generator will create C++ stubs
+      that you have to befill manually. If you pass in None_Implementation, it
       will create nop, i.e. no implementation or defaults. Any other string
-      is copied 1:1 into the implementation. If you pass in None, then the 
+      is copied 1:1 into the implementation. If you pass in None, then the
       set value so far won't be overwritten.
-      
-      Please note that not all options are supported by all solvers. You 
+
+      Please note that not all options are supported by all solvers. You
       cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
-      
+
       This routine should be the very last invoked by the constructor.
     """
-    if flux!=None:
-      self._flux_implementation                       = flux
-    if ncp!=None:
-      self._ncp_implementation                        = ncp
-    if eigenvalues!=None:    
-      self._eigenvalues_implementation                = eigenvalues
-    if boundary_conditions!=None:
-      self._boundary_conditions_implementation        = boundary_conditions
-    if refinement_criterion!=None:
-      self._refinement_criterion_implementation       = refinement_criterion
-    if initial_conditions!=None: 
-      self._initial_conditions_implementation         = initial_conditions
-    if source_term!=None:
-      self._source_term_implementation                = source_term
-
-    if memory_location!=None:
-      self._reconstructed_array_memory_location = memory_location
-    if use_split_loop!=None:
-      self._use_split_loop = use_split_loop
+    if flux                 is not None:  self._flux_implementation                       = flux
+    if ncp                  is not None:  self._ncp_implementation                        = ncp
+    if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
+    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
+    if source_term          is not None:  self._source_term_implementation                = source_term
+    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
+    if use_split_loop                  :  self._use_split_loop                            = use_split_loop
+    if use_gpu                         :  self._use_gpu                                   = use_gpu
 
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
@@ -267,35 +258,30 @@ class GenericRusanovFixedTimeStepSize( FV ):
   #def set_postprocess_updated_patch_kernel(self,kernel):
   #  self._postprocess_updated_patch = kernel
   #  self._action_set_update_cell = UpdateCell(self)
-     
+
 
   def create_action_sets(self):
     """
-    
       Call superclass routine and then reconfigure the update cell call
-      
     """
     FV.create_action_sets(self)
     self._action_set_update_cell = UpdateCell(self)
-       
-      
+
+
   def get_user_includes(self):
     return """
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
-"""    
-    
-  
+"""
+
+
   def add_entries_to_text_replacement_dictionary(self,d):
     """
-     
      d: Dictionary of string to string
         in/out argument
-    
     """
-    d[ "TIME_STEP_SIZE" ]               = self._time_step_size
-    d[ "TIME_STAMP" ]                   = "repositories::"+d[ "SOLVER_INSTANCE" ] + ".getMinTimeStamp()"
-    
+    d[ "TIME_STEP_SIZE" ]                     = self._time_step_size
+    d[ "TIME_STAMP" ]                         = "repositories::{}.getMinTimeStamp()".format(d[ "SOLVER_INSTANCE" ])
     d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
     d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
     d[ "EIGENVALUES_IMPLEMENTATION"]          = self._eigenvalues_implementation
@@ -303,4 +289,5 @@ class GenericRusanovFixedTimeStepSize( FV ):
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
     d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
+    d[ "USE_GPU"]                             = self._use_gpu
 
