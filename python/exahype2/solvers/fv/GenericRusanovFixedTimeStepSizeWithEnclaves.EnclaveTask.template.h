@@ -47,12 +47,17 @@
  *
  * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
  */
+{% if USE_GPU %}
+class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task
+{% else %}
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
+{% endif %}
 #ifdef UseSmartMPI
 , public smartmpi::Task
 #endif
 {
   private:
+    friend class EnclaveBookkeeping;
     static tarch::logging::Log  _log;
     /**
      * This is a class attribute holding a unique integer per enclave task type.
@@ -63,6 +68,23 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     #ifdef UseSmartMPI
     int          _remoteTaskId;
     #endif
+{% if USE_GPU %}
+    static int                                _gpuEnclaveTaskId;
+
+    const ::peano4::datamanagement::CellMarker   _marker;
+    const double                                 _t;
+    double*                                      _reconstructedValues;
+
+    #if Dimensions==2
+    const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const int _sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #elif Dimensions==3
+    const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    const int _sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
+    #endif
+{% endif %}
+
+
   public:
     static void applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 
@@ -88,6 +110,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     static smartmpi::Task* receiveTask(int rank, int tag, MPI_Comm communicator);
     static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator);
     #endif
+
+
+{% if USE_GPU %}
+    bool run() override;
+    bool fuse( const std::list<Task*>& otherTasks ) override;
+    bool canFuse() const override;
+{% endif %}
+    
 };
 
 

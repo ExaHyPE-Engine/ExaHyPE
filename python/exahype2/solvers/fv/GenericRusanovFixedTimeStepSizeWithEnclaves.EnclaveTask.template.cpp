@@ -16,6 +16,10 @@
 
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
+{% if USE_GPU %}
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}", false) );
+{% endif %}
+
 #if defined(UseSmartMPI)
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(
   tarch::multicore::registerSmartMPITask(
@@ -164,9 +168,24 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 }
 
 
-
-
-
+{% if USE_GPU %}
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
+  const ::peano4::datamanagement::CellMarker&    marker,
+  double                                         t,
+  double* __restrict__                           reconstructedValues
+):
+  tarch::multicore::Task(
+    tarch::multicore::reserveTaskNumber(),
+    _gpuEnclaveTaskId,
+    tarch::multicore::Task::DefaultPriority
+  ),
+  _marker(marker),
+  _t(t),
+  _reconstructedValues(reconstructedValues) {
+  logTraceIn( "EnclaveTask(...)" );
+  logTraceOut( "EnclaveTask(...)" );
+}
+{% else %}
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
@@ -309,7 +328,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
 {}
-
+{% endif %}
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   #ifdef UseSmartMPI
@@ -455,3 +474,92 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
   return nullptr;
 }
 #endif
+
+{% if USE_GPU %}
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
+  logTraceIn( "run()" );
+
+  double* outputValues = tarch::allocateMemory(_destinationPatchSize,tarch::MemoryLocation::Heap);
+
+  applyKernelToCell(
+    _marker,
+    _t,
+    _reconstructedValues,
+    outputValues
+  );
+
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,outputValues);
+
+  logTraceOut( "run()" );
+  return false;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
+  #if GPUOffloading
+  return true;
+  #else
+  return false;
+  #endif
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks ) {
+  // @todo Debug
+  logInfo( "fuse(...)", "asked to fuse " << otherTasks.size() << " tasks into one large GPU task" );
+
+  assertion( not otherTasks.empty() );
+
+  // @todo Holger: This patch container also has to store the timestamp and time step size per patch
+  #if Dimensions==2
+  ::exahype2::fv::PatchContainer2d patchkeeper;
+  patchkeeper.reserve(otherTasks.size());
+  for (auto p: otherTasks) {
+    {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
+    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], _t, 0});
+  }
+  #endif
+
+  #if Dimensions==3
+  ::exahype2::fv::PatchContainer3d patchkeeper;
+  patchkeeper.reserve(otherTasks.size());
+  for (auto p: otherTasks) {
+    {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
+    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], currentTask->_marker.x()[2] , currentTask->_marker.h()[2], _t, 0});
+  }
+  #endif
+
+  //
+  // If the user specifies some pre-processing, it is inserted here. If
+  // the preprocessing is empty, this loop should be removed by the
+  // compiler.
+  //
+  //for (int i=0;i<static_cast<int>(localwork.size());i++) {
+    // const auto& marker =
+    // PREPROCESS_RECONSTRUCTED_PATCH has to go in here, but the marker can't be copied yet
+  //}
+
+  double* destinationPatchOnCPU = ::tarch::allocateMemory(
+    _destinationPatchSize*otherTasks.size(),
+    ::tarch::MemoryLocation::Heap
+  );
+  #if Dimensions==2
+  ::exahype2::fv::Fusanov_2D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
+  #elif Dimensions==3
+  ::exahype2::fv::Fusanov_3D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
+  #endif
+    (1, patchkeeper, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize, {{SKIP_FLUX}}, {{SKIP_NCP}});
+
+  for (int i=0;i<static_cast<int>(patchkeeper.size());i++) {
+    const int taskid = std::get<1>(patchkeeper[i]);
+    double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
+    std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, targetPatch);
+    {{POSTPROCESS_UPDATED_PATCH}}
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
+    ::tarch::freeMemory(std::get<0>(patchkeeper[i]), ::tarch::MemoryLocation::Heap);
+  }
+  ::tarch::freeMemory(destinationPatchOnCPU, ::tarch::MemoryLocation::Heap);
+
+  return true;
+}
+{% endif %}
