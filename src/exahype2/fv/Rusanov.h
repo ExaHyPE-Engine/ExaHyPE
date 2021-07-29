@@ -120,7 +120,7 @@ namespace exahype2 {
             const int voxelInPreImage  = x+1      + (y+1) * (numVPAIP+2);
             const int voxelInImage     = x            + y * numVPAIP;
             double sourceTermContributions[unknowns];
-            SOLVER::sourceTerm( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables),  volumeX, volumeH(0), t, dt, sourceTermContributions);
+            SOLVER::sourceTerm( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables),  volumeX, volumeH(0), t, dt, sourceTermContributions, SOLVER::Offloadable::yes);
 
             for (int unknown = 0; unknown < unknowns; unknown++)
             {
@@ -164,8 +164,8 @@ namespace exahype2 {
               
               if (not skipFluxEvaluation)
               {
-                SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
-                SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+                SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL, SOLVER::Offloadable::yes );
+                SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR, SOLVER::Offloadable::yes );
               }
 
               if (not skipNCPEvaluation)
@@ -178,11 +178,11 @@ namespace exahype2 {
                   Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
                   deltaQ[unknown]   = QR[unknown] - QL[unknown];
                 }
-                SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP);
+                SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::yes );
               }
 
-              double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
-              double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
+              double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::yes );
+              double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::yes );
               double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
 
@@ -239,8 +239,8 @@ namespace exahype2 {
 
               if (not skipFluxEvaluation)
               {
-                SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL );
-                SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR );
+                SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL , SOLVER::Offloadable::yes );
+                SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR , SOLVER::Offloadable::yes );
               }
               
               if (not skipNCPEvaluation)
@@ -253,11 +253,11 @@ namespace exahype2 {
                   Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
                   deltaQ[unknown]   = QR[unknown] - QL[unknown];
                 }
-                SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP);
+                SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::yes );
               }
 
-              double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal);
-              double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal);
+              double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::yes );
+              double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::yes );
               double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
               for (int unknown = 0; unknown < unknowns; unknown++)
