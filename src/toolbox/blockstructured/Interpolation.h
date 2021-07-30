@@ -91,7 +91,7 @@ namespace toolbox {
       int                                       unknowns,
       double*                                   fineGridValues,
       double*                                   coarseGridValues,
-	  bool                                      swapInsideOutside=false
+      bool                                      swapInsideOutside=false
     );
 
     void interpolateHaloLayer_AoS_piecewise_constant(
@@ -103,17 +103,17 @@ namespace toolbox {
       double*                                   coarseGridValues
     );
 
-    void restrictOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
+    void restrictOntoOuterHalfOfHaloLayer_AoS_averaging(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
       double*                                   fineGridValues,
       double*                                   coarseGridValues,
-	  bool                                      swapInsideOutside=false
+      bool                                      swapInsideOutside=false
     );
 
-    void restrictHaloLayer_AoS_piecewise_constant(
+    void restrictHaloLayer_AoS_averaging(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
@@ -184,7 +184,7 @@ namespace toolbox {
       double*                                   coarseGridValues
     );
 
-    void restrictCell_AoS_piecewise_constant(
+    void restrictCell_AoS_averaging(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,
