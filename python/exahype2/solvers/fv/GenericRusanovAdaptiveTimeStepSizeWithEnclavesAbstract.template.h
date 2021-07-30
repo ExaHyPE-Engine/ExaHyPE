@@ -35,6 +35,7 @@
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
+    enum class Offloadable{ yes };
     enum class SolverState {
       GridConstruction,
       GridInitialisation,

@@ -79,7 +79,10 @@ namespace {
    * @see configureTaskFusion(int,int)
    * @see
    */
-  int numberOfTasksThatShouldBeFused  = std::numeric_limits<int>::max();
+
+  int numberOfTasksThatShouldBeFused  = 200;
+  //numberOfTasksThatShouldBeFused = atoi(std::getenv("FUSENUM"));
+
 
   /**
    * Maximum number of large meta tasks that are created
@@ -92,7 +95,7 @@ namespace {
    *
    * @see numberOfTasksThatShouldBeFused
    */
-  int maxNumberOfFusedTasksAssemblies = 2;
+  int maxNumberOfFusedTasksAssemblies = std::numeric_limits<int>::max();
 
   /**
    * Statistics counter
