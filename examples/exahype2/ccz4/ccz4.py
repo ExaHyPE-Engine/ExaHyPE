@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     if args.implementation=="fv-fixed":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-enclave":
+    if args.implementation=="fv-fixed-enclave" or args.implementation=="fv-fixed-gpu":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
     if args.implementation=="fv-adaptive":
        SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
@@ -76,8 +76,6 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
     if args.implementation=="ader-fixed":
        SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-gpu":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator
 
     class CCZ4Solver( SuperClass ):
       def __init__(self, name, patch_size, min_h, max_h ):
@@ -110,7 +108,6 @@ if __name__ == "__main__":
 """
 
         if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
-           SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator or \
            SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
           SuperClass.__init__(
             self,
@@ -118,7 +115,8 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_size=1e-2
+            time_step_size=1e-2,
+            use_gpu = True if args.implementation=="fv-fixed-gpu" else False
           )
         else:
           SuperClass.__init__(
@@ -482,8 +480,6 @@ if __name__ == "__main__":
     else:
       solver_name    = "FiniteVolume" + solver_name
 
-    if SuperClass == exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator:
-      solver_name += "OnGPU"
 
     min_h = args.min_h
     if min_h <=0.0:
