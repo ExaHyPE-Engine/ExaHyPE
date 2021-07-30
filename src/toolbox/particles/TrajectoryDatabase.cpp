@@ -298,7 +298,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
     logInfo( "addSnapshot(...)", "flush database file " << _fileName << " (temporary flush - simulation has not terminated yet)" );
-    _thresholdForNextDatabaseFlush += _deltaBetweenTwoDatabaseFlushes;
+    _thresholdForNextDatabaseFlush = _deltaBetweenTwoDatabaseFlushes;
   }
 }
 
