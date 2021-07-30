@@ -201,7 +201,7 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise
         }
       }
     },
-	swapInsideOutside // mapOuterCoarseGridHaloOntoInnerFineGridHalo
+    swapInsideOutside // mapOuterCoarseGridHaloOntoInnerFineGridHalo
   );
 
   logTraceOut( "interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(...)" );
@@ -398,7 +398,70 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
   double*                                   coarseGridValues,
   bool                                      swapInsideOutside
 ) {
+  assertion(overlap==1);
 
+  const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
+  const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside;
+
+  std::fill_n(fineGridValues,0.0,numberOfDoFsPerAxisInPatch*overlap*2*unknowns);
+
+  if (normal==1 and not pickLeftHalfOfHaloOnFineGrid) {
+    //constexpr int Rows = numberOfDoFsPerAxisInPatch*overlap*2*3;
+    constexpr int Rows = 4*1*2*3;
+    constexpr int Cols = 4*1*2;
+    double P[Rows][Cols] = {
+      {3.0/3.0, 0.0,    0.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+      {3.0/3.0, 0.0,    0.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+      {2.0/3.0, 0.0,    1.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+      {1.0/3.0, 0.0,    2.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+
+      {0.0/3.0, 0.0,    3.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+      {0.0/3.0, 0.0,    2.0/3.0, 0.0,     1.0/3.0, 0.0,    0.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+      {0.0/3.0, 0.0,    1.0/3.0, 0.0,     2.0/3.0, 0.0,    0.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     3.0/3.0, 0.0,    0.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+
+      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     2.0/3.0, 0.0,    1.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     1.0/3.0, 0.0,    2.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     0.0/3.0, 0.0,    3.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
+      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     0.0/3.0, 0.0,    3.0/3.0, 0.0},
+      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0}
+    };
+
+    int firstRow = marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch;
+
+    for (int row=0; row<numberOfDoFsPerAxisInPatch*overlap*2; row++)
+    for (int col=0; col<numberOfDoFsPerAxisInPatch*overlap*2; col++) {
+      int rowInP = row + marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch*overlap*2;
+      for (int j=0; j<unknowns; j++) {
+        fineGridValues[ row*unknowns+j] += P[rowInP][col] * coarseGridValues[ col*unknowns+j ];
+      }
+    }
+  }
+  else {
+    toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      unknowns,
+      fineGridValues,
+      coarseGridValues,
+      swapInsideOutside
+    );
+  }
+  #if Dimensions==2
+  //asdf
+  #endif
 }
 
 
@@ -410,7 +473,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
 }
 
 
@@ -421,7 +485,13 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-
+  toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
+    marker,
+    numberOfDoFsPerAxisInPatch,
+    unknowns,
+    fineGridValues,
+    coarseGridValues
+  );
 }
 
 

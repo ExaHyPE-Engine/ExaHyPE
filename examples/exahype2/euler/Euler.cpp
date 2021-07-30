@@ -16,11 +16,17 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
   double                                       t
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+/*
   if ( Q[4]>0.4 ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
   if ( Q[4]<0.2 ) {
     result = ::exahype2::RefinementCommand::Coarsen;
+  }
+*/
+//  if (volumeCentre(0)<0.4) {
+  if (volumeCentre(0)>0.6) {
+    result = ::exahype2::RefinementCommand::Refine;
   }
   return result;
 }
