@@ -35,6 +35,27 @@
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   public:
+    /**
+     * This is a "fake" enum, i.e. we do not use it to distinguish different
+     * variants. Instead, we use it as a fix that allows us to "overload"
+     * operations:
+     *
+     * In C++ you cannot overload w.r.t. static. We however need functions which
+     * exist twice in ExaHyPE: Once as standard (virtual) member functions and
+     * once at static version which an be offloaded to a GPU as it does not
+     * have a state. Both function variants, in theory, have the same signature
+     * but if they had, a compiler could not distinguish them. So I use this
+     * enum for the GPU version.
+     *
+     * If you create a solver without GPU support, this enum will not be used.
+     * It is however always created. Once you write a GPU version and then compile
+     * without GPU support, you will thus still be able to have all your GPU
+     * function variants, and you don't have to work with ifdefs.
+     */
+    enum class Offloadable {
+      Yes
+    };
+
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
@@ -96,7 +117,44 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
-    
+   
+    {% if USE_GPU %}
+    // The GPU offloading requires static functions, we do the
+    // TBB trick of overloading static functions with an enum
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+     static void sourceTerm(
+       const double * __restrict__ Q,
+       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       double                                       t,
+       double                                       dt,
+       double * __restrict__ S,
+       Offloadable
+     );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+   
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static void nonconservativeProduct(
+      const double * __restrict__                  Q,         // Q[5+0],
+      const double * __restrict__                  deltaQ,    // [5+0]
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double * __restrict__                        BgradQ,     // BgradQ[5]
+      Offloadable
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
+
     {% include "AbstractSolverFixedTimeStepSize.template.h" %}
 };
 

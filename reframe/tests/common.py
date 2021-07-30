@@ -24,8 +24,8 @@ def setup(test, git_rev, num_tasks, num_cpus_per_task=1):
     test.sourcepath = './'
     test.build_system.max_concurrency = 32
     
-    # We can't add the normal sanity check when using the maqao profiler as Peano's usual
-    # output won't be generated. For maqao we add a trivial pattern.
+    # We can't add the normal sanity check when using the maqao profiler as Peano's
+    # usual output won't be generated. For maqao we add a trivial pattern.
     if "maqao" not in test.name:
         test.sanity_patterns = sn.assert_found(r'Peano 4 terminated successfully.', test.stdout)
     else:

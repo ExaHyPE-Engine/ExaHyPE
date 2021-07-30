@@ -18,7 +18,7 @@ class DynamicAMR(ActionSet):
   """
   
   
-  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="piecewise_constant", restriction_scheme="piecewise_constant", clear_overlap_in_touch_first_time=True, clear_guard="true", restrict_guard="true", interpolate_guard="true", additional_includes="" ):
+  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="piecewise_constant", restriction_scheme="averaging", clear_overlap_in_touch_first_time=True, clear_guard="true", restrict_guard="true", interpolate_guard="true", additional_includes="" ):
     """
     
     restrict_guard: String
