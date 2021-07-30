@@ -8,7 +8,7 @@ namespace {
 }
 
 
-void toolbox::blockstructured::clearHalfOfHaloLayerAoS(
+void toolbox::blockstructured::internal::clearHalfOfHaloLayerAoS(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
@@ -68,7 +68,7 @@ void toolbox::blockstructured::clearHaloLayerAoS(
 }
 
 
-void toolbox::blockstructured::projectHaloLayers_AoS(
+void toolbox::blockstructured::internal::projectHaloLayers_AoS(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
@@ -161,7 +161,7 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise
 
   const int  normal              = marker.getSelectedFaceNumber() % Dimensions;
 
-  projectHaloLayers_AoS(
+  internal::projectHaloLayers_AoS(
     marker,
     numberOfDoFsPerAxisInPatch,
     overlap,
@@ -223,7 +223,7 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_averaging(
   double scaleFineGridVolume = std::pow(3.0,-static_cast<double>(Dimensions-1));
 
   logDebug( "restrictOntoOuterHalfOfHaloLayer_AoS_averaging(...)", "fineGridValues=" << fineGridValues << ",coarseGridValues=" << coarseGridValues );
-  projectHaloLayers_AoS(
+  internal::projectHaloLayers_AoS(
     marker,
     numberOfDoFsPerAxisInPatch,
     overlap,
@@ -273,7 +273,7 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_averaging(
 }
 
 
-void toolbox::blockstructured::projectCells_AoS(
+void toolbox::blockstructured::internal::projectCells_AoS(
   const peano4::datamanagement::CellMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
   std::function<void(
@@ -338,7 +338,7 @@ void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  projectCells_AoS(
+  internal::projectCells_AoS(
     marker,
     numberOfDoFsPerAxisInPatch,
     [&](
@@ -367,7 +367,7 @@ void toolbox::blockstructured::restrictCell_AoS_averaging(
   double*                                   coarseGridValues
 ) {
   double scaleFineGridVolume = std::pow(3.0,-static_cast<double>(Dimensions-1));
-  projectCells_AoS(
+  internal::projectCells_AoS(
     marker,
     numberOfDoFsPerAxisInPatch,
     [&](
@@ -386,3 +386,42 @@ void toolbox::blockstructured::restrictCell_AoS_averaging(
     }
   );
 }
+
+
+
+void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues,
+  bool                                      swapInsideOutside
+) {
+
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+
+}
+
+
+void toolbox::blockstructured::interpolateCell_AoS_linear(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+
+}
+
+
