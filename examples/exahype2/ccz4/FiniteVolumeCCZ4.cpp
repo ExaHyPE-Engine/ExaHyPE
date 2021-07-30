@@ -167,6 +167,23 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 }
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
+  const double * __restrict__                  Q, // Q[59+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__                        S,  // S[59
+  Offloadable)
+{
+   sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::yes);
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[59+0]

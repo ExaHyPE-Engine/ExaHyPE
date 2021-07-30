@@ -80,8 +80,8 @@ namespace {
    * @see
    */
 
-  int numberOfTasksThatShouldBeFused  = 200;
-  //numberOfTasksThatShouldBeFused = atoi(std::getenv("FUSENUM"));
+  //int numberOfTasksThatShouldBeFused  = 20;
+  int numberOfTasksThatShouldBeFused = atoi(std::getenv("FUSENUM"));
 
 
   /**

@@ -15,6 +15,15 @@ site_configuration = {
                     'max_jobs': 100,
                 },
                 {
+                    'name': 'local_launcher',
+                    'descr': 'local launcher',
+                    'scheduler': 'slurm',
+                    'launcher': 'local',
+                    'access': ['-p bluefield1', '-A durham'],
+                    'environs': ['amd'],
+                    'max_jobs': 100,
+                },
+                {
                     'name': 'multi_ranks_multi_node',
                     'descr': 'parallel jobs',
                     'scheduler': 'slurm',
