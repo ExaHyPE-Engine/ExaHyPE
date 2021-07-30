@@ -15,6 +15,16 @@ site_configuration = {
                     "max_jobs": 100,
                 },
                 {
+                    "name": "local_launcher",
+                    "descr": "local launcher",
+                    "scheduler": "slurm",
+                    "launcher": "local",
+                    "access": ["-p par6.q"],
+                    "environs": ["intel"]
+                    "max_jobs": 100,
+                },
+
+                {
                     "name": "multi_ranks_multi_node",
                     "descr": "parallel jobs (Hamilton7) - single node",
                     "scheduler": "slurm",
