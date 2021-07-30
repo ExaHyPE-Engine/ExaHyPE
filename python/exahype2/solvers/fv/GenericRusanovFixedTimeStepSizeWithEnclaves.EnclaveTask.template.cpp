@@ -516,7 +516,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   patchkeeper.reserve(otherTasks.size());
   for (auto p: otherTasks) {
     {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
-    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], _t, 0});
+    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], _t, {{TIME_STEP_SIZE}}});
   }
   #endif
 
@@ -525,7 +525,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   patchkeeper.reserve(otherTasks.size());
   for (auto p: otherTasks) {
     {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
-    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], currentTask->_marker.x()[2] , currentTask->_marker.h()[2], _t, 0});
+    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], currentTask->_marker.x()[2] , currentTask->_marker.h()[2], _t, {{TIME_STEP_SIZE}}});
   }
   #endif
 
