@@ -136,7 +136,7 @@ void tarch::la::DynamicMatrix::multiply( double* result, double* x ) {
 
 std::string tarch::la::DynamicMatrix::toString() const {
   std::ostringstream msg;
-  msg << "{";
+  msg << "(rows=" << _rows << ",cols=" << _cols << ",{";
   for (int row=0; row<_rows; row++) {
     if (row!=0) msg << ",";
     msg << "{";
@@ -146,7 +146,7 @@ std::string tarch::la::DynamicMatrix::toString() const {
     }
     msg << "}";
   }
-  msg << "}";
+  msg << "})";
   return msg.str();
 }
 
@@ -195,7 +195,7 @@ void tarch::la::DynamicMatrix::replicateRows( int numberOfReplications, int shif
 void tarch::la::DynamicMatrix::insertColumns( int number, int where, int repeatEveryKColumns ) {
   assertion4( number>0,    number, where, repeatEveryKColumns, toString() );
   assertion4( where>=0,    number, where, repeatEveryKColumns, toString() );
-  assertion4( where<_cols, number, where, repeatEveryKColumns, toString() );
+  assertion4( where<=_cols, number, where, repeatEveryKColumns, toString() );
   assertion4( repeatEveryKColumns>=0, number, where, repeatEveryKColumns, toString() );
 
   double* oldData = _m;
