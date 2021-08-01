@@ -5,23 +5,25 @@
 // @todo raus
 #include <iostream>
 
-tarch::la::DynamicMatrix kroneckerProduct( const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs ) {
-  return std::move( tarch::la::DynamicMatrix::kroneckerProduct(lhs,rhs) );
-}
 
-
-tarch::la::DynamicMatrix tarch::la::DynamicMatrix::kroneckerProduct( const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs ) {
-  tarch::la::DynamicMatrix result(lhs._rows*rhs._rows, lhs._cols*rhs._cols);
-
-  for (int lhsRow=0; lhsRow<lhs._rows; lhsRow++)
-  for (int rhsRow=0; rhsRow<rhs._rows; rhsRow++)
-  for (int lhsCol=0; lhsCol<lhs._cols; lhsCol++)
-  for (int rhsCol=0; rhsCol<rhs._cols; rhsCol++) {
-    result._m[ result.serialise(lhsRow*rhs._rows+rhsRow, lhsCol*rhs._cols+rhsCol) ]
-      = lhs._m[ lhs.serialise(lhsRow,lhsCol) ] * rhs._m[ rhs.serialise(rhsRow,rhsCol) ];
+tarch::la::DynamicMatrix::DynamicMatrix(const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs, bool innerProduct) {
+  if (innerProduct) {
+    assertionMsg(false, "not implemented yet");
   }
+  else {
+    _rows = lhs._rows*rhs._rows;
+    _cols = lhs._cols*rhs._cols;
 
-  return std::move(result);
+    _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
+
+    for (int lhsRow=0; lhsRow<lhs._rows; lhsRow++)
+    for (int rhsRow=0; rhsRow<rhs._rows; rhsRow++)
+    for (int lhsCol=0; lhsCol<lhs._cols; lhsCol++)
+    for (int rhsCol=0; rhsCol<rhs._cols; rhsCol++) {
+      _m[ serialise(lhsRow*rhs._rows+rhsRow, lhsCol*rhs._cols+rhsCol) ]
+        = lhs._m[ lhs.serialise(lhsRow,lhsCol) ] * rhs._m[ rhs.serialise(rhsRow,rhsCol) ];
+    }
+  }
 }
 
 
@@ -52,7 +54,6 @@ tarch::la::DynamicMatrix& tarch::la::DynamicMatrix::operator=( std::initializer_
 }
 
 
-
 tarch::la::DynamicMatrix::DynamicMatrix(int rows, int cols):
   _cols(cols),
   _rows(rows),
@@ -62,16 +63,18 @@ tarch::la::DynamicMatrix::DynamicMatrix(int rows, int cols):
 }
 
 
+/*
 tarch::la::DynamicMatrix::DynamicMatrix(const DynamicMatrix&& value):
   _cols(value._cols),
   _rows(value._rows),
   _m(value._m) {
 }
+*/
+
 
 tarch::la::DynamicMatrix::~DynamicMatrix() {
   tarch::freeMemory(_m,tarch::MemoryLocation::Heap);
 }
-
 
 
 bool tarch::la::DynamicMatrix::operator==(const DynamicMatrix& matrix) const {
@@ -84,26 +87,6 @@ bool tarch::la::DynamicMatrix::operator==(const DynamicMatrix& matrix) const {
 
   return result;
 }
-
-
-/*
-tarch::la::DynamicMatrix& tarch::la::DynamicMatrix::operator=( double** values ) {
- for (int col=0; col<_cols; col++)
- for (int row=0; row<_rows; row++) {
-   _x[col*_rows+row] = values[col][row];
- }
- return *this;
-}
-
-
-tarch::la::DynamicMatrix& tarch::la::DynamicMatrix::operator=( double* values ) {
- for (int col=0; col<_cols; col++)
- for (int row=0; row<_rows; row++) {
-   _x[col*_rows+row] = values[col*_cols+row];
- }
- return *this;
-}
-*/
 
 
 double& tarch::la::DynamicMatrix::operator()(int row, int col) {

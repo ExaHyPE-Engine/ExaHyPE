@@ -460,8 +460,7 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
   );
   #elif Dimensions==3
   int firstRow = 0;
-  auto P = kroneckerProduct(P1d,P1d);
-  tarch::la::DynamicMatrix kroneckerProduct( const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs );
+  tarch::la::DynamicMatrix P( P1d, P1d, false);
   if ( normal==0 and pickLeftHalfOfHaloOnFineGrid ) {
     P.insertColumns(1,1,1);
     P.insertRows(1,1,1);
