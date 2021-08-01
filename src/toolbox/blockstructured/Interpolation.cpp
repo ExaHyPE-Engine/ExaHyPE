@@ -1,6 +1,8 @@
 #include "Interpolation.h"
 #include "Enumeration.h"
+
 #include "peano4/utils/Loop.h"
+#include "tarch/la/DynamicMatrix.h"
 
 
 namespace {
@@ -400,67 +402,103 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
 ) {
   assertion(overlap==1);
 
+  tarch::la::DynamicMatrix P1d(3,3,{
+    {1.0/3.0, 2.0/3.0,     0.0},
+    {    0.0, 3.0/3.0,     0.0},
+    {    0.0, 2.0/3.0, 1.0/3.0}
+  });
+  P1d.replicateRows( numberOfDoFsPerAxisInPatch, 1 );
+  P1d.removeColumn(0);
+  P1d.removeColumn(numberOfDoFsPerAxisInPatch);
+
+/*
+ * See comments on missing diagonal element
+ * ========================================
+  P1d(0,0) =  2.0/3.0 + 1.0/3.0 * 2.0;
+  P1d(0,1) = -1.0/3.0;
+  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  2.0/3.0 + 1.0/3.0 * 2.0;
+  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) = -1.0/3.0;
+*/
+
+  P1d(0,0) =  1.0;
+  P1d(0,1) =  0.0;
+  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  1.0;
+  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) =  0.0;
+
   const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
   const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside;
 
-  std::fill_n(fineGridValues,0.0,numberOfDoFsPerAxisInPatch*overlap*2*unknowns);
-
-  if (normal==1 and not pickLeftHalfOfHaloOnFineGrid) {
-    //constexpr int Rows = numberOfDoFsPerAxisInPatch*overlap*2*3;
-    constexpr int Rows = 4*1*2*3;
-    constexpr int Cols = 4*1*2;
-    double P[Rows][Cols] = {
-      {3.0/3.0, 0.0,    0.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-      {3.0/3.0, 0.0,    0.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-      {2.0/3.0, 0.0,    1.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-      {1.0/3.0, 0.0,    2.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-
-      {0.0/3.0, 0.0,    3.0/3.0, 0.0,     0.0/3.0, 0.0,    0.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-      {0.0/3.0, 0.0,    2.0/3.0, 0.0,     1.0/3.0, 0.0,    0.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-      {0.0/3.0, 0.0,    1.0/3.0, 0.0,     2.0/3.0, 0.0,    0.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     3.0/3.0, 0.0,    0.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-
-      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     2.0/3.0, 0.0,    1.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     1.0/3.0, 0.0,    2.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     0.0/3.0, 0.0,    3.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0},
-      {0.0/3.0, 0.0,    0.0/3.0, 0.0,     0.0/3.0, 0.0,    3.0/3.0, 0.0},
-      {    0.0, 0.0,        0.0, 0.0,         0.0, 0.0,        0.0, 0.0}
-    };
-
-    int firstRow = marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch;
-
-    for (int row=0; row<numberOfDoFsPerAxisInPatch*overlap*2; row++)
-    for (int col=0; col<numberOfDoFsPerAxisInPatch*overlap*2; col++) {
-      int rowInP = row + marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch*overlap*2;
-      for (int j=0; j<unknowns; j++) {
-        fineGridValues[ row*unknowns+j] += P[rowInP][col] * coarseGridValues[ col*unknowns+j ];
-      }
-    }
-  }
-  else {
-    toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
-      marker,
-      numberOfDoFsPerAxisInPatch,
-      overlap,
-      unknowns,
-      fineGridValues,
-      coarseGridValues,
-      swapInsideOutside
-    );
-  }
   #if Dimensions==2
-  //asdf
+  int firstRow = 0;
+  auto& P = P1d;
+  if ( normal==0 and pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(1,1,1);
+    P.insertRows(1,1,1);
+    firstRow = marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch;
+  }
+  else if ( normal==0 and not pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(1,0,1);
+    P.insertRows(1,0,1);
+    firstRow = marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch;
+  }
+  else if (normal==1 and pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch);
+    P.insertRows(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch);
+    firstRow = marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch*2;
+  }
+  else if (normal==1 and not pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch);
+    P.insertRows(numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch);
+    firstRow = marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch*2;
+  }
+  P.batchedMultiplyAoS(
+    fineGridValues, // image
+    coarseGridValues,  // preimage
+    unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+    numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+    firstRow
+  );
+  #elif Dimensions==3
+  int firstRow = 0;
+  auto P = kroneckerProduct(P1d,P1d);
+  tarch::la::DynamicMatrix kroneckerProduct( const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs );
+  if ( normal==0 and pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(1,1,1);
+    P.insertRows(1,1,1);
+    firstRow = marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch;
+  }
+  else if ( normal==0 and not pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(1,0,1);
+    P.insertRows(1,0,1);
+    firstRow = marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch;
+  }
+  else if (normal==1 and pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch);
+    P.insertRows(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch);
+    firstRow = marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch*2;
+  }
+  else if (normal==1 and not pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch);
+    P.insertRows(numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch);
+    firstRow = marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch*2;
+  }
+  else if (normal==2 and pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
+    P.insertRows(   numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
+    firstRow = marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch*2;
+  }
+  else if (normal==2 and not pickLeftHalfOfHaloOnFineGrid ) {
+    P.insertColumns(numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
+    P.insertRows(   numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
+    firstRow = marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch*2;
+  }
+  P.batchedMultiplyAoS(
+    fineGridValues, // image
+    coarseGridValues,  // preimage
+    unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+    numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+    firstRow
+  );
   #endif
 }
 
@@ -473,8 +511,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
-  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
+  interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
+  interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
 }
 
 
