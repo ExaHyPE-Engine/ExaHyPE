@@ -259,15 +259,15 @@ and
   }
 
   enum class MemoryLocation {
-	/**
-	 * Create data on the heap of the local device. That is, if you run
-	 * on an accelerator, use the accelerator's heap. If you invoke it 
-	 * on the host, use the host's accelerator.
-	 */
+    /**
+     * Create data on the heap of the local device. That is, if you run
+     * on an accelerator, use the accelerator's heap. If you invoke it
+     * on the host, use the host's accelerator.
+     */
     Heap,
     /**
-	 * To be used on host only.
-	 */
+     * To be used on host only.
+     */
     ManagedAcceleratorMemory
   };
 
