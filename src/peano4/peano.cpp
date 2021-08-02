@@ -92,7 +92,7 @@ namespace {
     #endif
 
     peano4::addBibTeXEntry(
-"## Memory footprint ##                                  \n"
+"## Data structure modelling ##                                  \n"
 "                                                                            \n"
 "Peano models its data structures via a tool called DaStGen. The actual DaStGen "
 "version in use is the second generation of DaStGen which is integrated into "
