@@ -527,9 +527,11 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       intparams.update({"swi":0}) 
       userwarnings.append((msg,None))
-    elif args.periodic_bc:
-      print( "Periodic BC set")
+    elif args.periodic_bc=="True":
+      msg = "Periodic BC set"
+      print(msg)
       periodic_boundary_conditions = [True,True,True]          # Periodic BC
+      userwarnings.append((msg,None))
     else:
       msg = "WARNING: Periodic BC deactivated by hand"
       print(msg)
