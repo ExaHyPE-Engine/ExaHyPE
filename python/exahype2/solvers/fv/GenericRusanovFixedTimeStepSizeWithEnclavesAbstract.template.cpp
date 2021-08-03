@@ -167,7 +167,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   {% endif %}
 }
 
-   {% if USE_GPU %}
+   {% if USE_GPU and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -193,7 +193,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
 {% endif %}
   
 // Fusanov always needs this symbol
-{% if USE_GPU %}
+{% if USE_GPU and NCP_IMPLEMENTATION!="<user-defined>" %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -213,3 +213,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
 #pragma omp end declare target
 #endif
 {% endif %}
+
+
+{% if USE_GPU and FLUX_IMPLEMENTATION!="<user-defined>" %}
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
+ const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+ const tarch::la::Vector<Dimensions,double>&  faceCentre,
+ const tarch::la::Vector<Dimensions,double>&  volumeH,
+ double                                       t,
+ int                                          normal,
+ double * __restrict__ F, // F[{{NUMBER_OF_UNKNOWNS}}]
+ Offloadable
+) {
+  
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
+{% endif %}
+
