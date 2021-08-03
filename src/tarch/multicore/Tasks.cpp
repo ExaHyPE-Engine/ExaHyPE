@@ -253,6 +253,8 @@ namespace {
       nonblockingTasks.pop_front();
     }
 
+    printf("Got max %lu tasks here\n", nonblockingTasks.size());
+
     auto pp = nonblockingTasks.begin();
     while (
       myTask!=nullptr
