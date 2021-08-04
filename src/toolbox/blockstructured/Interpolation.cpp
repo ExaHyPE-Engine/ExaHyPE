@@ -7,6 +7,33 @@
 
 namespace {
   tarch::logging::Log _log( "toolbox::blockstructured" );
+
+  tarch::la::DynamicMatrix  create1dLinearInterpolation(int numberOfDoFsPerAxisInPatch) {
+    tarch::la::DynamicMatrix P1d(3,3,{
+      {1.0/3.0, 2.0/3.0,     0.0},
+      {    0.0, 3.0/3.0,     0.0},
+      {    0.0, 2.0/3.0, 1.0/3.0}
+    });
+    P1d.replicateRows( numberOfDoFsPerAxisInPatch, 1 );
+    P1d.removeColumn(0);
+    P1d.removeColumn(numberOfDoFsPerAxisInPatch);
+
+  /*
+   * See comments on missing diagonal element
+   * ========================================
+    P1d(0,0) =  2.0/3.0 + 1.0/3.0 * 2.0;
+    P1d(0,1) = -1.0/3.0;
+    P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  2.0/3.0 + 1.0/3.0 * 2.0;
+    P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) = -1.0/3.0;
+  */
+
+    P1d(0,0) =  1.0;
+    P1d(0,1) =  0.0;
+    P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  1.0;
+    P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) =  0.0;
+
+    return P1d;
+  }
 }
 
 
@@ -402,28 +429,7 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
 ) {
   assertion(overlap==1);
 
-  tarch::la::DynamicMatrix P1d(3,3,{
-    {1.0/3.0, 2.0/3.0,     0.0},
-    {    0.0, 3.0/3.0,     0.0},
-    {    0.0, 2.0/3.0, 1.0/3.0}
-  });
-  P1d.replicateRows( numberOfDoFsPerAxisInPatch, 1 );
-  P1d.removeColumn(0);
-  P1d.removeColumn(numberOfDoFsPerAxisInPatch);
-
-/*
- * See comments on missing diagonal element
- * ========================================
-  P1d(0,0) =  2.0/3.0 + 1.0/3.0 * 2.0;
-  P1d(0,1) = -1.0/3.0;
-  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  2.0/3.0 + 1.0/3.0 * 2.0;
-  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) = -1.0/3.0;
-*/
-
-  P1d(0,0) =  1.0;
-  P1d(0,1) =  0.0;
-  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  1.0;
-  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) =  0.0;
+  tarch::la::DynamicMatrix P1d( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch) );
 
   const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
   const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside;
