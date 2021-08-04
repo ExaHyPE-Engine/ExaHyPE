@@ -7,6 +7,8 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 
+#include "tarch/la/DynamicMatrix.h"
+
 
 namespace toolbox {
   namespace blockstructured {
@@ -248,6 +250,19 @@ namespace toolbox {
 
 
     namespace internal {
+      /**
+       * <h2> Insertion of empty lines/rows </h2>
+       *
+       * We assume that the result is "symmetric" - not in a linear equation system
+       * sense, but in that the columns and row insertions always have to match.
+       *
+       *
+       * @param number How many additional zero lines and columns are required?
+       *              Set to -1 to disable any row/column insertion.
+       * @see tarch::la::DynamicMatrix::insertColumns()
+       */
+      tarch::la::DynamicMatrix  create1dLinearInterpolation(int numberOfDoFsPerAxisInPatch, int number, int where, int repeat);
+
       /**
        * Clear half of a halo layer
        *
