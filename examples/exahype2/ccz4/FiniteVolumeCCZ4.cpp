@@ -289,6 +289,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   }
   if (CCZ4ReSwi==2){ //single black hole
     if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      if ((radius<7) and (volumeH(0)>1)) { result=::exahype2::RefinementCommand::Refine; }
       if ((radius<5) and (volumeH(0)>0.3)) { result=::exahype2::RefinementCommand::Refine; }
       else if (radius<2.5) { result=::exahype2::RefinementCommand::Refine; }
       else {result = ::exahype2::RefinementCommand::Keep;}
@@ -317,6 +318,20 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       else if (Q[65]>0.2) { result=::exahype2::RefinementCommand::Refine; }
       else {result = ::exahype2::RefinementCommand::Keep;}
     }
+  }
+  if (CCZ4ReSwi==4){ //gauge wave test
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      if ((std::abs(volumeCentre(0))<0.1) and (volumeH(0)>0.1)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (std::abs(volumeCentre(0))<0.06) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    } 
+  }
+  if (CCZ4ReSwi==5){ //gauge wave test
+    if (tarch::la::equals(t,0.0)){  //as we use a quantity calculated in postpocessing, we need to provide criterion at the first timestep 
+      if ((std::abs(volumeCentre(1))<0.1) and (volumeH(0)>0.1)) { result=::exahype2::RefinementCommand::Refine; }
+      else if (std::abs(volumeCentre(1))<0.06) { result=::exahype2::RefinementCommand::Refine; }
+      else {result = ::exahype2::RefinementCommand::Keep;}
+    } 
   }
   return result;
 }

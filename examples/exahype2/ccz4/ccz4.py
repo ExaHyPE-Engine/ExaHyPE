@@ -108,9 +108,8 @@ if __name__ == "__main__":
 #include "../CCZ4Kernels.h"
 #include "exahype2/PatchUtils.h"
 """
-
+           #SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator or \
         if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
-           SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator or \
            SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
           SuperClass.__init__(
             self,
@@ -127,7 +126,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.25
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -482,8 +481,8 @@ if __name__ == "__main__":
     else:
       solver_name    = "FiniteVolume" + solver_name
 
-    if SuperClass == exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator:
-      solver_name += "OnGPU"
+   # if SuperClass == exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator:
+   #   solver_name += "OnGPU"
 
     min_h = args.min_h
     if min_h <=0.0:
@@ -528,9 +527,11 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       intparams.update({"swi":0}) 
       userwarnings.append((msg,None))
-    elif args.periodic_bc:
-      print( "Periodic BC set")
+    elif args.periodic_bc=="True":
+      msg = "Periodic BC set"
+      print(msg)
       periodic_boundary_conditions = [True,True,True]          # Periodic BC
+      userwarnings.append((msg,None))
     else:
       msg = "WARNING: Periodic BC deactivated by hand"
       print(msg)
@@ -563,8 +564,8 @@ if __name__ == "__main__":
 #Domain settings
 ########################################################################################
     if args.scenario=="gauge" or args.scenario=="linear":
-      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      #offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
+      #offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
       msg = "Gauge wave, domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userwarnings.append((msg,None))
@@ -596,8 +597,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-8,-8,-0.1]
-    project.add_plot_filter( probe_point,[16.0,16.0,0.1],1 )
+    probe_point = [-8,-8,-0.5]
+    project.add_plot_filter( probe_point,[16.0,16.0,0.5],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -633,7 +634,7 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"/zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=100
+        number_of_entries_between_two_db_flushes=30000
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
       #,,-1,"zz",1000))
