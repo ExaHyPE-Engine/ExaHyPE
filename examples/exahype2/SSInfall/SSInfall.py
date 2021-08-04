@@ -106,52 +106,63 @@ if __name__ == "__main__":
           refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
+        self.set_postprocess_updated_patch_kernel( """
 
+  {
+    #if Dimensions==2
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    #if Dimensions==3
+    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    #endif
+
+    int index = 0;
+    for (int i=0;i<itmax;i++)
+    {
+
+    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+    //  examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+""" )
       def get_user_includes(self):
         """
          We take this routine to add a few additional include statements.
         """
         return SuperClass.get_user_includes(self) + self._my_user_includes
 
-      def add_derivative_calculation(self):
+      def add_mass_cal(self):
         """
 
-         Add the constraint verification code
-
-         We introduce new auxiliary variables. Prior to each time step, I
-         compute the Laplacian and store it in the auxiliary variable. This
-         is kind of a material parameter F(Q) which does not feed back into
-         the solution.
-
-         Changing the number of unknowns a posteriori is a delicate update
-         to the solver, so we invoke the constructor again to be on the safe
-         side.
-
         """
-        self._auxiliary_variables = 59*3
+        self._my_user_includes += """
+#include "../SSInfall.h"
+    """
+        self._auxiliary_variables = 0
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        if (not tarch::la::equals(t,repositories::{{SOLVER_INSTANCE}}.t_record)){
+          repositories::{{SOLVER_INSTANCE}}.t_record=t;
+          std::cout << repositories::{{SOLVER_INSTANCE}}.m_tot << std::endl;
+          repositories::{{SOLVER_INSTANCE}}.m_tot=0;
+        }
         dfor(cell,patchSize) {
+          tarch::la::Vector<Dimensions,double> coor;
+          for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+          double r_coor=(coor(0)-0)*(coor(0)-0)+(coor(1)-0)*(coor(1)-0)+(coor(2)-0)*(coor(2)-0);
+          r_coor=pow(r_coor,0.5);
+               
+          repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*5+0],volumeH);       
+          //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
+          //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;}
 
-          // Lets look left vs right and compute the gradient. Then, lets
-          // loop up and down. So we look three times for the respective
-          // directional gradients
-          for (int d=0; d<3; d++) {
-            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-            leftCell(d)  -= 1;
-            rightCell(d) += 1;
-            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
-            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
-            for (int i=0; i<59; i++) {
-              reconstructedPatch[cellSerialised*(59*4)+59+i*3+d] =
-                ( reconstructedPatch[rightCellSerialised*(59*4)+i] - reconstructedPatch[leftCellSerialised*(59*4)+i] ) / 2.0 / volumeH;
-            }
-          }
+          
         }
     """)
 
@@ -208,6 +219,8 @@ if __name__ == "__main__":
       )
     else:
       my_solver = SSInfallSolver(solver_name, args.patch_size, min_h, args.max_h)
+      
+    my_solver.add_mass_cal()
 
 ########################################################################################
 #parameter setting according to scenarios
@@ -241,7 +254,7 @@ if __name__ == "__main__":
 ########################################################################################
     if True:
       offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      msg = "Gauge wave, domain set as "+str(offset)+" and "+str(domain_size)
+      msg = "domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userwarnings.append((msg,None))
 

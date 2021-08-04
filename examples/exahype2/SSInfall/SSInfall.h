@@ -23,7 +23,10 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     static tarch::logging::Log   _log;
 
   public:
-    
+    double m_tot=0;
+    double r_s[1]={2};
+    double t_record=0.0;
+
     ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -90,7 +93,11 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double * __restrict__ F // F[5]
     ) override;
 
-      
+    void add_mass(
+      const double r_coor,
+      const double rho,
+      const double size
+    );  
     
 
 

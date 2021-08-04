@@ -46,6 +46,7 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   Q[2] = 0;
   Q[3] = 0;
   Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
+  //Q[4] = 0.5; // inner energy
 }
 
 
@@ -136,14 +137,6 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   double * __restrict__ F // F[5]
 )  {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-  assertion4( normal>=0, faceCentre, volumeH, t, normal );
-  assertion4( normal<Dimensions, faceCentre, volumeH, t, normal);
-  nonCriticalAssertion9( Q[0]==Q[0], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[1]==Q[1], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[2]==Q[2], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[3]==Q[3], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
 
   constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
@@ -152,12 +145,6 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   #else
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
-
-  nonCriticalAssertion( F[0]==F[0] );
-  nonCriticalAssertion( F[1]==F[1] );
-  nonCriticalAssertion( F[2]==F[2] );
-  nonCriticalAssertion( F[3]==F[3] );
-  nonCriticalAssertion( F[4]==F[4] );
 
   const double coeff = irho*Q[normal+1];
   F[0] = coeff*Q[0];
@@ -170,6 +157,35 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 
   logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
+
+void examples::exahype2::SSInfall::SSInfall::add_mass(
+  const double r_coor,
+  const double rho,
+  const double size
+) {
+  double m=rho*pow(size,3);
+
+  if (r_coor<r_s[0]){
+    m_tot+=m;
+    //std::cout << m_tot << std::endl;
+  }
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
