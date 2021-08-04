@@ -485,9 +485,17 @@ If you require a better inter-grid transfer scheme or if you want to introduce y
 
 \begin{itemize}
   \item Create your own new subclass of the solver you want to use. See the CCZ4 example for a blueprint.
-  \item Study the header/implementation file pair \texttt{toolbox/blockstructured/Interpolation}. Different interpolation/restriction variants differ in their suffix. 
-  The routines \linebreak \texttt{piecewise\_constant} are those used by default.
-  \item Make your solver (in Python) use another scheme. I present a variant here where you want to use linear interpolation:
+  \item Overwrite the superclass' \texttt{create\_action\_sets()}. You should
+  still call the superclass routine
+  \begin{code}
+def create_action_sets(self):
+  FV.create_action_sets(self)
+  
+  \end{code}
+  but then you have to change the AMR handling afterwards by adding the
+  following line:
+  \item Make your solver (in Python) use another interpolation scheme. I present
+  a variant here where you want to use linear interpolation:
   \begin{code}
 self.create_data_structures()
 self.create_action_sets()
@@ -526,11 +534,16 @@ For the interpolation, we have the following routines:
 Some codes need to postprocess their interpolation data. At the moment, I only support volume-wise postprocessing.
 To enable it, you pass a function call to the DynamicAMR argument: 
 \begin{code}
-point_wise_postprocessing="enforceCCZ4(targetPatch)"
+point_wise_postprocessing="enforceCCZ4(targetVolume)"
 \end{code}
 
 \noindent
-\texttt{targetPatch} is a double pointer to the volume that has been interpolated before.
+\texttt{targetVolume} is a double pointer to the volume that has been interpolated.
+There are a few more values available for any function call you wanna make, but
+the pointer to the quantities usually is the most important one.
+You can use the attribute \texttt{additional_includes} to give the resulting
+source code access to other routines.
+
 
 
 \section{GPU support}

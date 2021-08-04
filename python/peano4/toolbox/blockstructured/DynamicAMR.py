@@ -104,10 +104,22 @@ class DynamicAMR(ActionSet):
     );
     
     {% if POINT_WISE_POSTPROCESSING!="" %}
-    dfore()
-    {{POINT_WISE_POSTPROCESSING}}
+    const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
+    const bool pickLeftHalfOfHaloOnFineGrid  = marker.getSelectedFaceNumber() < Dimensions;
+
+    dfore(k,{{DOFS_PER_AXIS}},normal,pickLeftHalfOfHaloOnFineGrid ? 0 : {{OVERLAP}}) {
+      for (int i=0; i<{{OVERLAP}}; i++) {
+        tarch::la::Vector<Dimensions,int>    fineVolume = k;
+        fineVolume(normal) +=i ;
+        int fineVolumeLinearised = toolbox::blockstructured::serialisePatchIndexInOverlap(
+          fineVolume,
+          {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal
+        );
+        double* targetVolume = {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value + fineVolumeLinearised * {{UNKNOWNS}};
+        {{POINT_WISE_POSTPROCESSING}};
+      }  
+    }
     {% endif %}
-    {{POINT_WISE_POSTPROCESSING}}
     
     logTraceOut( "createHangingFace(...)---DynamicAMR" );
   }
@@ -226,5 +238,6 @@ class DynamicAMR(ActionSet):
   def get_includes(self):
     return """
 #include "peano4/utils/Loop.h"
+#include "toolbox/blockstructured/Enumeration.h"
 #include "toolbox/blockstructured/Interpolation.h"
 """ + self.additional_includes

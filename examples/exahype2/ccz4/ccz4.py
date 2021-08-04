@@ -142,16 +142,6 @@ if __name__ == "__main__":
           refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
-            patch=self._patch, # do not alter 
-            patch_overlap_interpolation=self._patch_overlap,    
-            patch_overlap_restriction=self._patch_overlap_new, 
-            interpolation_scheme="linear",  
-            restriction_scheme="averaging",   
-            point_wise_postprocessing="enforceCCZ4(targetPatch)"
-          )
-
-
         self.set_postprocess_updated_patch_kernel( """
 
   {
@@ -174,6 +164,23 @@ if __name__ == "__main__":
   }
 """ )
 
+   
+      def create_action_sets(self):
+        SuperClass.create_action_sets(self)
+        
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
+            patch=self._patch, # do not alter 
+            patch_overlap_interpolation=self._patch_overlap,    
+            patch_overlap_restriction=self._patch_overlap_new, 
+            interpolation_scheme="linear",  
+            restriction_scheme="averaging",   
+            point_wise_postprocessing="examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)",
+            additional_includes=""" 
+#include "../CCZ4Kernels.h"
+            """
+          )
+
+  
 
       def get_user_includes(self):
         """
