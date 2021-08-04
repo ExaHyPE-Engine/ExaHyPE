@@ -8,7 +8,18 @@
 namespace {
   tarch::logging::Log _log( "toolbox::blockstructured" );
 
-  tarch::la::DynamicMatrix  create1dLinearInterpolation(int numberOfDoFsPerAxisInPatch) {
+  /**
+   * <h2> Insertion of empty lines/rows </h2>
+   *
+   * We assume that the result is "symmetric" - not in a linear equation system
+   * sense, but in that the columns and row insertions always have to match.
+   *
+   *
+   * @param number How many additional zero lines and columns are required?
+   *              Set to -1 to disable any row/column insertion.
+   * @see tarch::la::DynamicMatrix::insertColumns()
+   */
+  tarch::la::DynamicMatrix  create1dLinearInterpolation(int numberOfDoFsPerAxisInPatch, int number, int where, int repeat) {
     tarch::la::DynamicMatrix P1d(3,3,{
       {1.0/3.0, 2.0/3.0,     0.0},
       {    0.0, 3.0/3.0,     0.0},
@@ -32,7 +43,19 @@ namespace {
     P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  1.0;
     P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) =  0.0;
 
-    return P1d;
+    if (where!=-1) {
+      #if Dimensions==3
+      tarch::la::DynamicMatrix P( P1d, P1d, false);
+      P.insertColumns(number,where,repeat);
+      P.insertRows(number,where,repeat);
+      return P;
+      #else
+      P1d.insertColumns(number,where,repeat);
+      P1d.insertRows(number,where,repeat);
+      return P1d;
+      #endif
+    }
+    else return P1d;
   }
 }
 
@@ -429,82 +452,121 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
 ) {
   assertion(overlap==1);
 
-  tarch::la::DynamicMatrix P1d( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch) );
-
   const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
   const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside;
 
   #if Dimensions==2
-  int matrixRowBlock = 0;
-  auto& P = P1d;
   if ( normal==0 and pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(1,1,1);
-    P.insertRows(1,1,1);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,1,1) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
+    );
   }
   else if ( normal==0 and not pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(1,0,1);
-    P.insertRows(1,0,1);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,0,1) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
+    );
   }
   else if (normal==1 and pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch);
-    P.insertRows(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0);
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0);
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
+    );
   }
   else if (normal==1 and not pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch);
-    P.insertRows(numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0);
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0);
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
+    );
   }
-  P.batchedMultiplyAoS(
-    fineGridValues, // image
-    coarseGridValues,  // preimage
-    unknowns,          // batch size, i.e. how often to apply it in one AoS rush
-    numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-    matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
-  );
   #elif Dimensions==3
-  int firstRow = 0;
-  tarch::la::DynamicMatrix P( P1d, P1d, false);
-  int matrixRowBlock = 0;
   if ( normal==0 and pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(1,1,1);
-    P.insertRows(1,1,1);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1) + marker.getRelativePositionWithinFatherCell()(2)*3;
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,1,1) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1) + marker.getRelativePositionWithinFatherCell()(2)*3;
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
+    );
   }
   else if ( normal==0 and not pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(1,0,1);
-    P.insertRows(1,0,1);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1) + marker.getRelativePositionWithinFatherCell()(2)*3;
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,0,1) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1) + marker.getRelativePositionWithinFatherCell()(2)*3;
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
+    );
   }
   else if (normal==1 and pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch);
-    P.insertRows(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(2)*3;
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(2)*3;
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
+    );
   }
   else if (normal==1 and not pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch);
-    P.insertRows(numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(2)*3;
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(2)*3;
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
+    );
   }
   else if (normal==2 and pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
-    P.insertRows(   numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(1)*3;
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(1)*3;
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
+    );
   }
   else if (normal==2 and not pickLeftHalfOfHaloOnFineGrid ) {
-    P.insertColumns(numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
-    P.insertRows(   numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
-    matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(1)*3;
+    tarch::la::DynamicMatrix P( create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch) );
+    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(1)*3;
+    P.batchedMultiplyAoS(
+      fineGridValues, // image
+      coarseGridValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
+      matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
+    );
   }
-  P.batchedMultiplyAoS(
-    fineGridValues, // image
-    coarseGridValues,  // preimage
-    unknowns,          // batch size, i.e. how often to apply it in one AoS rush
-    numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-    matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
-  );
   #endif
 }
 
