@@ -10,6 +10,9 @@ import dastgen2
 import numpy as np
 from Probe_file_gene import tracer_seeds_generate
 
+from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
+
+
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
@@ -138,6 +141,16 @@ if __name__ == "__main__":
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
+
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
+            patch=self._patch, # do not alter 
+            patch_overlap_interpolation=self._patch_overlap,    
+            patch_overlap_restriction=self._patch_overlap_new, 
+            interpolation_scheme="linear",  
+            restriction_scheme="averaging",   
+            point_wise_postprocessing="enforceCCZ4(targetPatch)"
+          )
+
 
         self.set_postprocess_updated_patch_kernel( """
 
