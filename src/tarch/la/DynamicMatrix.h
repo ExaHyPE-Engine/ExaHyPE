@@ -44,7 +44,7 @@ class tarch::la::DynamicMatrix {
 
     DynamicMatrix( int rows, int cols, std::initializer_list< std::initializer_list<double> > values );
 
-    DynamicMatrix(const DynamicMatrix&) = delete;
+    DynamicMatrix(const DynamicMatrix&);
     DynamicMatrix(const DynamicMatrix&&) = delete;
 
     DynamicMatrix(const DynamicMatrix& lhs, const DynamicMatrix& rhs, bool innerProduct);

@@ -2,8 +2,8 @@
 #include "tarch/multicore/multicore.h"
 
 
-// @todo raus
 #include <iostream>
+#include <cstring>
 
 
 tarch::la::DynamicMatrix::DynamicMatrix(const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs, bool innerProduct) {
@@ -39,6 +39,15 @@ tarch::la::DynamicMatrix::DynamicMatrix(int rows, int cols, std::initializer_lis
     _m[index] = *pp;
     index++;
   }
+}
+
+
+tarch::la::DynamicMatrix::DynamicMatrix(const DynamicMatrix& rhs):
+  _cols(rhs._cols),
+  _rows(rhs._rows),
+  _m(nullptr) {
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
+  memcpy(_m, rhs._m, _cols*_rows*sizeof(double));
 }
 
 
