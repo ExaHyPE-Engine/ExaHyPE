@@ -193,6 +193,34 @@ namespace toolbox {
      * </pre>
      *
      */
+    template <int NumberOfDoFsPerAxisInPatch>
+    void interpolateOntoOuterHalfOfHaloLayer_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside=false
+    );
+    template <int NumberOfDoFsPerAxisInPatch>
+    void interpolateHaloLayer_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+    template <int NumberOfDoFsPerAxisInPatch>
+    void interpolateCell_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+
     void interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -309,5 +337,8 @@ namespace toolbox {
     }
   }
 }
+
+
+#include "Interpolation.cpph"
 
 #endif
