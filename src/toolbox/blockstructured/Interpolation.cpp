@@ -579,8 +579,8 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
-  interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
 }
 
 

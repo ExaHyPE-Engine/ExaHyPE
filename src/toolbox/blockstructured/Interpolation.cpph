@@ -1,0 +1,54 @@
+template <int NumberOfDoFsPerAxisInPatch>
+void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside
+) {
+  assertionEquals( NumberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch );
+  toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
+    marker,
+    numberOfDoFsPerAxisInPatch,
+    overlap,
+    unknowns,
+    fineGridValues,
+    coarseGridValues,
+    swapInsideOutside
+  );
+}
+
+
+template <int NumberOfDoFsPerAxisInPatch>
+void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+) {
+  assertionEquals( NumberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch );
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear_precomputed_operators<NumberOfDoFsPerAxisInPatch>(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear_precomputed_operators<NumberOfDoFsPerAxisInPatch>(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
+}
+
+
+/**
+ * This version is not optimised (yet) as I think it is used infrequently.
+ */
+template <int NumberOfDoFsPerAxisInPatch>
+void toolbox::blockstructured::interpolateCell_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+) {
+  assertionEquals( NumberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch );
+  toolbox::blockstructured::interpolateCell_AoS_linear(marker,numberOfDoFsPerAxisInPatch,unknowns,fineGridValues,coarseGridValues);
+}
+
+
