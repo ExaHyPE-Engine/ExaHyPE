@@ -12,9 +12,9 @@ import exahype2.sympy
 import exahype2.postprocessing
 
 
-clawpack_path = "/home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1"
+clawpack_path = "/ddn/data/cvxs42/clawpack_src/clawpack-v5.8.0"
 
-peano_path = "/home/marion/workspace/Projects/ExaClaw/Peano"
+peano_path = "/ddn/data/cvxs42/Peano"
 
 
 output_files = [
