@@ -30,10 +30,24 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   bool                                         gridIsConstructred
 ) {
   logDebug( "initialCondition(...)", "init volume at " << volumeCentre << "x" << volumeH << " (grid constructed=" << gridIsConstructred << ")" );
+  constexpr double pi = M_PI;
+  double x=volumeCentre(0)-center(0);
+  double y=volumeCentre(1)-center(1);
+  double z=volumeCentre(2)-center(2);
 
-  // Manual offset to make the wave originate slightly to the left of the center --- helps
-  // to detect if wave is moving to the left or right
-  #if Dimensions==2
+  bool isInTheSphere = ( (x*x+y*y+z*z) < r_ini*r_ini );
+  double H_i=2/(3*t_ini);
+  double rho_ini=1/(6*pi*G*t_ini*t_ini);
+
+  // initial conditions
+  Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;  // rho
+  //Q[0] = 0.1;
+  Q[1] = Q[0]*H_i*x;    // velocities
+  Q[2] = Q[0]*H_i*y;
+  Q[3] = Q[0]*H_i*z;
+  Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+initial_internal_energy; // inner energy
+
+/*  #if Dimensions==2
   tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
   #else
   tarch::la::Vector<Dimensions,double> circleCentre = {0,0,0};
@@ -46,7 +60,7 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   Q[2] = 0;
   Q[3] = 0;
   Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
-  //Q[4] = 0.5; // inner energy
+*/
 }
 
 
@@ -59,13 +73,37 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double * __restrict__                        S  // S[5
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
-  // @todo implement
+  constexpr double pi = M_PI;
   logTraceOut( "sourceTerm(...)" );
+  double x=volumeX(0)-center(0);
+  double y=volumeX(1)-center(1);
+  double z=volumeX(2)-center(2);
+
+  double r_coor=x*x+y*y+z*z;
+  r_coor=pow(r_coor,0.5);
+  double rho_ini=1/(6*pi*G*t_ini*t_ini);
+  double m_in=0;
+  
+  if (tarch::la::equals(t,0)){
+    if (r_coor<r_ini) { m_in=4*pi*rho_ini*(1+delta_rho)*pow(r_coor,3)/3;}
+    else { m_in=4*pi*rho_ini*pow(r_coor,3)/3;+4*pi*rho_ini*delta_rho*pow(r_ini,3)/3;}
+  } else {
+    m_in=mass_interpolate(r_coor);
+  }
+
+  double force_density_norm=Q[0]*G*m_in/pow(r_coor,3);
+
+  S[0] = 0;  // rho
+  S[1] = -force_density_norm*x;    // velocities
+  S[2] = -force_density_norm*y;
+  S[3] = -force_density_norm*z;
+  S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
+/*
   S[0] = 0;  // rho
   S[1] = 0;    // velocities
   S[2] = 0;
   S[3] = 0;
-  S[4] = 0;
+  S[4] = 0;*/
 }
 
 
@@ -165,15 +203,39 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
 ) {
   double m=rho*pow(size,3);
 
-  if (r_coor<r_s[0]){
-    m_tot+=m;
-    //std::cout << m_tot << std::endl;
+  for (int i=0;i<sample_number;i++){
+    if (r_coor<r_s[i]){
+      m_tot[i]+=m;
+      //std::cout << m_tot << std::endl;
+    }
   }
-
-
 }
 
+double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
+  const double r_coor
+) {
+  double a,b;
+  double m_a,m_b;
+  double m_result;
 
+  if (r_coor<r_s[0]) {
+    a=0; b=r_s[0];
+    m_a=0; m_b=m_tot[0];
+  } else{
+    for (int i=1;i<sample_number;i++){
+      if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])){
+        a=r_s[i-1]; b=r_s[i];
+        m_a=m_tot[i-1]; m_b=m_tot[i];
+        //std::cout << m_tot << std::endl;
+      }
+    }
+  }
+  if (true) { //linear interpolation
+    m_result=m_a*(b-r_coor)/(b-a)+m_b*(r_coor-a)/(b-a);
+  }
+
+  return m_result;
+}
 
 
 

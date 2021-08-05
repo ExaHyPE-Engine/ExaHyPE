@@ -17,10 +17,10 @@ modes = {
 }
 
 floatparams = {
-        "sk":1.0, "bs":1.0
+         "G":1.0, "t_ini":0.5, "r_ini":0.2, "delta_rho":0.01, "initial_internal_energy":0.1, 
 }
 
-intparams = {"swi":99, "ReSwi":0}
+intparams = {"swi":99, "ReSwi":0, "sample_number":10}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - SSInfall script')
@@ -38,11 +38,11 @@ if __name__ == "__main__":
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
 
 
-    for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="SSInfall{}".format(k), type=float, default=v, help="default: %(default)s")
+    for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
       if k=="ReSwi":
-        parser.add_argument("--{}".format(k), dest="SSInfall{}".format(k), type=int, default=v, help="default: %(default)s, choose refinement criterion, 0-no refinement, 1-radius based, 2-SBH phi gradient based, 3-BBH phi gradient based. Notice: 2 and 3 only work with -ext Full")
-      else: parser.add_argument("--{}".format(k), dest="SSInfall{}".format(k), type=int, default=v, help="default: %(default)s")
+        parser.add_argument("--{}".format(k), dest="{}".format(k), type=int, default=v, help="default: %(default)s, choose refinement criterion, 0-no refinement, 1-radius based, 2-SBH phi gradient based, 3-BBH phi gradient based. Notice: 2 and 3 only work with -ext Full")
+      else: parser.add_argument("--{}".format(k), dest="{}".format(k), type=int, default=v, help="default: %(default)s")
 
     args = parser.parse_args()
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.25
+            time_step_relaxation=0.1
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -139,31 +139,36 @@ if __name__ == "__main__":
         """
         self._my_user_includes += """
 #include "../SSInfall.h"
+#include <iomanip>
     """
         self._auxiliary_variables = 0
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         if (not tarch::la::equals(t,repositories::{{SOLVER_INSTANCE}}.t_record)){
+          for (int i=0;i<sample;i++) {
+            std::cout << std::setprecision (4) << repositories::{{SOLVER_INSTANCE}}.m_tot[i] << " ";
+            repositories::{{SOLVER_INSTANCE}}.m_tot[i]=0;
+          }
           repositories::{{SOLVER_INSTANCE}}.t_record=t;
-          std::cout << repositories::{{SOLVER_INSTANCE}}.m_tot << std::endl;
-          repositories::{{SOLVER_INSTANCE}}.m_tot=0;
+          std::cout << std::endl;
         }
+        tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
-          double r_coor=(coor(0)-0)*(coor(0)-0)+(coor(1)-0)*(coor(1)-0)+(coor(2)-0)*(coor(2)-0);
+          double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
                
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*5+0],volumeH);       
           //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
-          //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;}
-
-          
+          //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;         
         }
+        
     """)
 
         self.create_data_structures()
@@ -221,7 +226,16 @@ if __name__ == "__main__":
       my_solver = SSInfallSolver(solver_name, args.patch_size, min_h, args.max_h)
       
     my_solver.add_mass_cal()
-
+    
+########################################################################################
+#Domain settings
+########################################################################################
+    if True:
+      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      msg = "domain set as "+str(offset)+" and "+str(domain_size)
+      print(msg)
+      userwarnings.append((msg,None))
+      
 ########################################################################################
 #parameter setting according to scenarios
 ########################################################################################
@@ -236,11 +250,20 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       userwarnings.append((msg,None))
 
-    intparams.update({"ReSwi":args.SSInfallReSwi})
+    intparams.update({"ReSwi":args.ReSwi})
+    intparams.update({"sample_number":args.sample_number})
 
     solverconstants=""
-    for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("SSInfall{}".format(k), v)
-    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("SSInfall{}".format(k), v)
+    for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
+    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)
+    solverconstants+= "double m_tot[{}]={};\n".format(args.sample_number,"{0}")
+    r_list=np.linspace(0,(domain_size[0]+offset[0])*3**0.5,(args.sample_number+1))[1:]
+    solverconstants+= "double r_s[{}]={}".format(args.sample_number,"{")
+    for r in r_list:
+      solverconstants+= str(r)+", "
+    solverconstants=solverconstants[:-2]
+    solverconstants+= "};\n"
+    
     my_solver.set_solver_constants(solverconstants)
 
     project.add_solver(my_solver)
@@ -248,15 +271,6 @@ if __name__ == "__main__":
     build_mode = modes[args.mode]
     
     dimensions = 3
-
-########################################################################################
-#Domain settings
-########################################################################################
-    if True:
-      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      msg = "domain set as "+str(offset)+" and "+str(domain_size)
-      print(msg)
-      userwarnings.append((msg,None))
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions

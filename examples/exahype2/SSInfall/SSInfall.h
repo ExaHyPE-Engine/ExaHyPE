@@ -23,9 +23,16 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     static tarch::logging::Log   _log;
 
   public:
-    double m_tot=0;
-    double r_s[1]={2};
+    //int sample_number=10;
+    //double m_tot[10]={0,0,0,0,0,0,0,0,0,0};
+    //double r_s[10]={0.05*1.732,0.1*1.732,0.15*1.732,0.20*1.732,0.25*1.732,0.3*1.732,0.35*1.732,0.4*1.732,0.45*1.732,0.5*1.732};
     double t_record=0.0;
+    const tarch::la::Vector<Dimensions,double> center={0,0,0};
+    //double G=1;
+    //double t_ini=0.5;
+    //double r_ini=0.2;
+    //double delta_rho=0.01;
+    //double initial_internal_energy=0.1;
 
     ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__ Q, // Q[5+0],
@@ -99,7 +106,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       const double size
     );  
     
-
+    double mass_interpolate(
+      const double r_coor
+    );  
 
     
 };
