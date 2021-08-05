@@ -41,9 +41,9 @@ my_unknowns = 3  # height and two velocities
 my_auxiliary_variables = 1  # bathymetry
 my_time_step_size = 0.00001 # keep this in, even though we do adaptive time stepping, for snapshot frequency
 my_max_h = 1.0 / 9.0
-my_min_h = 1.0 / 9.0
+my_min_h = 1.0 / 27.0
 
-end_time = 0.000015
+end_time = 0.0001
 
 my_solver = exahype2.solvers.fv.PointWiseClawPackAdaptiveTimeStepSize(
     name="SWE",
