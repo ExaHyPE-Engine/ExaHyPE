@@ -100,8 +100,8 @@ summarise some key options below:
 \begin{center}
  \begin{longtable}{lp{10cm}}
   \texttt{--with-multithreading} & Switch on multithreading. By default, we
-  build without multithreading, but a \texttt{--with-multithreading=cpp}, e.g.,
-  makes \Peano\  use the C++ threading model. Please consult \texttt{--help} for
+  build without multithreading, but a \texttt{--with-multithreading=omp}, e.g.,
+  makes \Peano\  use the OpenMP threading model. Please consult \texttt{--help} for
   details. Note: To use OpenMP multithreading, you will need a compiler which
   supports OpenMP 5.0 (e.g - GCC 9.x)\footnote{\Peano\ realises its GPGPU
   offloading via OpenMP, too. Some compilers struggle to translate these GPGPU
@@ -110,7 +110,7 @@ summarise some key options below:
    \\
   \texttt{--with-mpi} & Enable the MPI version of \Peano. You have to tell the
   build environment however which compile command to use. Please note that
-  we need a C++ MPI wrapper. So \texttt{--with-mpi=mpcxx} is a typical call. 
+  we need a C++ MPI wrapper. So \texttt{--with-mpi=mpcxx} is a typical call. Currently, you also need \texttt{--with-multithreading} if you want to use MPI. 
    \\
   \texttt{--with-vtk} & Inform \Peano\  that VTK is available on the system.
   \Peano\ mainly
