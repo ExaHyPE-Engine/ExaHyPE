@@ -55,7 +55,7 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-interp", "--interpolation", dest="interpolation",     choices=["constant", "linear", "linear+enforce" ], default="linear",  help="interpolation scheme for AMR" )
+    parser.add_argument("-interp", "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-slow+enforce", "linear", "linear+enforce" ], default="linear-slow",  help="interpolation scheme for AMR" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -174,15 +174,15 @@ if __name__ == "__main__":
         if args.interpolation=="constant":
           interpolation_scheme = "piecewise_constant"
           print( "Interpolation rule: piecewise_constant" )
-        if args.interpolation=="linear":
-          interpolation_scheme = "linear_precomputed_operators<" + str(self._patch_size) +">"
+        if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
+          interpolation_scheme = "linear" + str(self._patch_size) +">"
           print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
-        if args.interpolation=="linear+enforce":
+        if args.interpolation=="linear" or args.interpolation=="linear+enforce":
           interpolation_scheme = "linear_precomputed_operators<" + str(self._patch_size) +">"
           print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
           
         postprocessing = ""
-        if args.interpolation=="linear+enforce":
+        if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
           interpolation_scheme = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
         
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
