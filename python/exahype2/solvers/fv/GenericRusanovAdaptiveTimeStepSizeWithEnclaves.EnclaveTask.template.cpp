@@ -615,7 +615,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   for (int i=0;i<static_cast<int>(patchkeeper.size());i++) {
     const int taskid = std::get<1>(patchkeeper[i]);
     double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-    std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, targetPatch);
+    //std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, targetPatch);
+    for (int j=0;j<_destinationPatchSize;j++) targetPatch[j] = *(destinationPatchOnCPU +j + i*_destinationPatchSize);
     {{POSTPROCESS_UPDATED_PATCH}}
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
     ::tarch::freeMemory(std::get<0>(patchkeeper[i]), ::tarch::MemoryLocation::Heap);

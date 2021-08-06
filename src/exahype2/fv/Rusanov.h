@@ -312,6 +312,7 @@ namespace exahype2 {
       double * destinationPatch = Qout;
 
       double* RP = ::tarch::allocateMemory(LR, ::tarch::MemoryLocation::Heap);
+      // double RP[LR];// = ::tarch::allocateMemory(LR, ::tarch::MemoryLocation::Heap);
 
       // Move all data to the device, prepare arrays first
       double T[NPT], DT[NPT], X0[NPT], X1[NPT], X2[NPT], H0[NPT], H1[NPT], H2[NPT];
@@ -319,7 +320,10 @@ namespace exahype2 {
       for (size_t i=0; i<patchVec.size(); i++)
       {
         auto patch = patchVec[i];
-        std::copy(std::get<0>(patch), std::get<0>(patch)+sourcePatchSize, RP + i*sourcePatchSize);
+        // std::copy(std::get<0>(patch), std::get<0>(patch)+sourcePatchSize, RP + i*sourcePatchSize);
+        for (int j=0;j<sourcePatchSize;j++) RP[i*sourcePatchSize+j] = *(std::get<0>(patch) + j);
+        
+        // std::copy(std::get<0>(patch), std::get<0>(patch)+sourcePatchSize, RP + i*sourcePatchSize);
         TID[i]  = std::get<1>(patch);
         X0[i]   = std::get<2>(patch);
         H0[i]   = std::get<3>(patch);
@@ -358,7 +362,7 @@ namespace exahype2 {
 #pragma omp target enter data map(to:T[0:NPT]) map(to:DT[0:NPT]) map(to:TID[0:NPT]) map(to:X0[0:NPT]) map(to:X1[0:NPT])  map(to:X2[0:NPT])  map(to:H0[0:NPT]) map(to:H1[0:NPT])  map(to:H2[0:NPT])
 
 #pragma omp target// map(tofrom:destinationPatch[0:LTOT])
-#pragma omp teams num_teams(nteams) //thread_limit(block_threads)
+#pragma omp teams //num_teams(nteams) //thread_limit(block_threads)
 {
     #pragma omp distribute parallel for collapse(4) //dist_schedule(static,1)
     for (size_t pidx=0;pidx<NPT;pidx++)
@@ -765,7 +769,7 @@ printf("Done\n");
 //     //  exit(0);///abort();
 //   }
 // }
-      ::tarch::freeMemory(RP, tarch::MemoryLocation::Heap);
+      // ::tarch::freeMemory(RP, tarch::MemoryLocation::Heap);
       printf("Bye bye");
     };
 
