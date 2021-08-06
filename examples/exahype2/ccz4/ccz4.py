@@ -175,8 +175,8 @@ if __name__ == "__main__":
           interpolation_scheme = "piecewise_constant"
           print( "Interpolation rule: piecewise_constant" )
         if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
-          interpolation_scheme = "linear" + str(self._patch_size) +">"
-          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
+          interpolation_scheme = "linear" 
+          print( "Interpolation rule: linear interpolation without optimisation" )
         if args.interpolation=="linear" or args.interpolation=="linear+enforce":
           interpolation_scheme = "linear_precomputed_operators<" + str(self._patch_size) +">"
           print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
