@@ -134,6 +134,7 @@ if __name__ == "__main__":
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
+        self._patch_size = patch_size
 
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -172,10 +173,13 @@ if __name__ == "__main__":
         interpolation_scheme = ""
         if args.interpolation=="constant":
           interpolation_scheme = "piecewise_constant"
+          print( "Interpolation rule: piecewise_constant" )
         if args.interpolation=="linear":
-          interpolation_scheme = "linear_precomputed_operators<" + str(patch_size) +">"
+          interpolation_scheme = "linear_precomputed_operators<" + str(self._patch_size) +">"
+          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
         if args.interpolation=="linear+enforce":
-          interpolation_scheme = "linear_precomputed_operators<" + str(patch_size) +">"
+          interpolation_scheme = "linear_precomputed_operators<" + str(self._patch_size) +">"
+          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
           
         postprocessing = ""
         if args.interpolation=="linear+enforce":
