@@ -55,6 +55,7 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
+    parser.add_argument("-interp", "--interpolation", dest="interpolation",     choices=["constant", "linear", "linear+enforce" ], default="linear",  help="interpolation scheme for AMR" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -167,14 +168,26 @@ if __name__ == "__main__":
    
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
+
+        interpolation_scheme = ""
+        if args.interpolation=="constant":
+          interpolation_scheme = "piecewise_constant"
+        if args.interpolation=="linear":
+          interpolation_scheme = "linear_precomputed_operators<" + str(patch_size) +">"
+        if args.interpolation=="linear+enforce":
+          interpolation_scheme = "linear_precomputed_operators<" + str(patch_size) +">"
+          
+        postprocessing = ""
+        if args.interpolation=="linear+enforce":
+          interpolation_scheme = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
         
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
             patch=self._patch, # do not alter 
             patch_overlap_interpolation=self._patch_overlap,    
             patch_overlap_restriction=self._patch_overlap_new, 
-            interpolation_scheme="linear",  
+            interpolation_scheme=interpolation_scheme,  
             restriction_scheme="averaging",   
-            point_wise_postprocessing="examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)",
+            point_wise_postprocessing=postprocessing,
             additional_includes=""" 
 #include "../CCZ4Kernels.h"
             """
