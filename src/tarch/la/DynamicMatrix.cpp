@@ -51,6 +51,16 @@ tarch::la::DynamicMatrix::DynamicMatrix(const DynamicMatrix& rhs):
 }
 
 
+tarch::la::DynamicMatrix::DynamicMatrix(DynamicMatrix&& rhs):
+  _cols(rhs._cols),
+  _rows(rhs._rows),
+  _m(rhs._m) {
+  rhs._m = nullptr;
+  rhs._cols = 0;
+  rhs._rows = 0;
+}
+
+
 tarch::la::DynamicMatrix& tarch::la::DynamicMatrix::operator=( std::initializer_list< std::initializer_list<double> > values ) {
   int index = 0;
   for (typename std::initializer_list< std::initializer_list<double> >::const_iterator p  = values.begin(); p!=values.end(); p++)
@@ -82,7 +92,9 @@ tarch::la::DynamicMatrix::DynamicMatrix(const DynamicMatrix&& value):
 
 
 tarch::la::DynamicMatrix::~DynamicMatrix() {
-  tarch::freeMemory(_m,tarch::MemoryLocation::Heap);
+  if (_m!=nullptr) {
+    tarch::freeMemory(_m,tarch::MemoryLocation::Heap);
+  }
 }
 
 
