@@ -10,6 +10,9 @@ import dastgen2
 import numpy as np
 from Probe_file_gene import tracer_seeds_generate
 
+from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
+
+
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
@@ -52,6 +55,7 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
+    parser.add_argument("-interp", "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-slow+enforce", "linear", "linear+enforce" ], default="linear-slow",  help="interpolation scheme for AMR" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -106,7 +110,7 @@ if __name__ == "__main__":
 #include "../CCZ4Kernels.h"
 #include "exahype2/PatchUtils.h"
 """
-
+           #SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator or \
         if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
            SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
           SuperClass.__init__(
@@ -130,6 +134,7 @@ if __name__ == "__main__":
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
+        self._patch_size = patch_size
 
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -161,6 +166,38 @@ if __name__ == "__main__":
   }
 """ )
 
+   
+      def create_action_sets(self):
+        SuperClass.create_action_sets(self)
+
+        interpolation_scheme = ""
+        if args.interpolation=="constant":
+          interpolation_scheme = "piecewise_constant"
+          print( "Interpolation rule: piecewise_constant" )
+        if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
+          interpolation_scheme = "linear" 
+          print( "Interpolation rule: linear interpolation without optimisation" )
+        if args.interpolation=="linear" or args.interpolation=="linear+enforce":
+          interpolation_scheme = "linear_precomputed_operators<" + str(self._patch_size) +">"
+          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
+          
+        postprocessing = ""
+        if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
+          interpolation_scheme = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
+        
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
+            patch=self._patch, # do not alter 
+            patch_overlap_interpolation=self._patch_overlap,    
+            patch_overlap_restriction=self._patch_overlap_new, 
+            interpolation_scheme=interpolation_scheme,  
+            restriction_scheme="averaging",   
+            point_wise_postprocessing=postprocessing,
+            additional_includes=""" 
+#include "../CCZ4Kernels.h"
+            """
+          )
+
+  
 
       def get_user_includes(self):
         """
@@ -525,9 +562,11 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       intparams.update({"swi":0}) 
       userwarnings.append((msg,None))
-    elif args.periodic_bc:
-      print( "Periodic BC set")
+    elif args.periodic_bc=="True":
+      msg = "Periodic BC set"
+      print(msg)
       periodic_boundary_conditions = [True,True,True]          # Periodic BC
+      userwarnings.append((msg,None))
     else:
       msg = "WARNING: Periodic BC deactivated by hand"
       print(msg)
@@ -560,8 +599,8 @@ if __name__ == "__main__":
 #Domain settings
 ########################################################################################
     if args.scenario=="gauge" or args.scenario=="linear":
-      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      #offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
+      #offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
       msg = "Gauge wave, domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userwarnings.append((msg,None))
@@ -593,8 +632,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-8,-8,-0.1]
-    project.add_plot_filter( probe_point,[16.0,16.0,0.1],1 )
+    probe_point = [-8,-8,-0.5]
+    project.add_plot_filter( probe_point,[16.0,16.0,0.5],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -630,7 +669,7 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"/zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=100
+        number_of_entries_between_two_db_flushes=30000
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
       #,,-1,"zz",1000))

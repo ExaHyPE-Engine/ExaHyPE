@@ -7,6 +7,8 @@
 #include "peano4/datamanagement/CellMarker.h"
 #include "peano4/datamanagement/FaceMarker.h"
 
+#include "tarch/la/DynamicMatrix.h"
+
 
 namespace toolbox {
   namespace blockstructured {
@@ -132,6 +134,95 @@ namespace toolbox {
     );
 
 
+    /**
+     * The realisation relies on the following observations/follows these
+     * steps:
+     *
+     * <h2> A 1d setup </h2>
+     *
+     * We first construct a 1d interpolation. Starting from the hard-coded pattern
+     *
+     * <pre>
+    {1.0/3.0, 2.0/3.0,     0.0},
+    {    0.0, 3.0/3.0,     0.0},
+    {    0.0, 2.0/3.0, 1.0/3.0}
+       </pre>
+     *
+     * we repeat this whole thing numberOfDoFsPerAxisInPatch times and each time
+     * shift by one. For numberOfDoFsPerAxisInPatch=4 this yields for example
+     *
+     * <pre>
+    {0.333333,0.666667,       0,0,0,0},
+    {0,              1,       0,0,0,0},
+    {0,       0.666667,0.333333,0,0,0},
+    {0,       0.333333,0.666667,0,0,0},
+    {0,              0,       1,0,0,0},
+    ...
+       </pre>
+     *
+     * Let this be the matrix P1d. If we had a 1d setup, we could compute
+     *  fine = P1d * coarse
+     * and would get all fine grid values in one rush. Obviously, we do not have a
+     * 1d setup.
+     *
+     * <h2> 2d extensions </h2>
+     *
+     * Once we know P1d, we have to "blow is up". The input does not have
+     * numberOfDoFsPerAxisInPatch entries but has numberOfDoFsPerAxisInPatch*2
+     * entries. Also the image has to be multiplied by two. We fist determine the
+     * normal and look whether we are left or right of this normal for the fine
+     * grid face. Next, we reiterate that we work with a lexicographic enumeration.
+     * If we want to study the left face of a cell,
+     *
+     *
+     * <h2> The issue with the missing diagonal element </h2>
+     *
+     * We do not know the diagonal element which we'd need to interpolate the
+     * outmost cells in our data. Without knowing them, two options are on the
+     * table: We can interpolate constantly at the edges, or we can extrapolate.
+     * While extrapolation might sound to be a good choice, I found that it
+     * sometimes yields physically invalid results. The Euler equations, for
+     * example, will immediately give you negative (tiny) energies or negative
+     * pressure. So I disable any extrapolation by default. If you need it,
+     * the following two lines would do the trick (see also commented out
+     * fragments in source code);
+     *
+     * <pre>
+  P1d(0,0) =  2.0/3.0 + 1.0/3.0 * 2.0;
+  P1d(0,1) = -1.0/3.0;
+  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  2.0/3.0 + 1.0/3.0 * 2.0;
+  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) = -1.0/3.0;
+     * </pre>
+     *
+     */
+    template <int NumberOfDoFsPerAxisInPatch>
+    void interpolateOntoOuterHalfOfHaloLayer_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside=false
+    );
+    template <int NumberOfDoFsPerAxisInPatch>
+    void interpolateHaloLayer_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+    template <int NumberOfDoFsPerAxisInPatch>
+    void interpolateCell_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+
     void interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -159,6 +250,19 @@ namespace toolbox {
 
 
     namespace internal {
+      /**
+       * <h2> Insertion of empty lines/rows </h2>
+       *
+       * We assume that the result is "symmetric" - not in a linear equation system
+       * sense, but in that the columns and row insertions always have to match.
+       *
+       *
+       * @param number How many additional zero lines and columns are required?
+       *              Set to -1 to disable any row/column insertion.
+       * @see tarch::la::DynamicMatrix::insertColumns()
+       */
+      tarch::la::DynamicMatrix  create1dLinearInterpolation(int numberOfDoFsPerAxisInPatch, int number, int where, int repeat);
+
       /**
        * Clear half of a halo layer
        *
@@ -248,5 +352,8 @@ namespace toolbox {
     }
   }
 }
+
+
+#include "Interpolation.cpph"
 
 #endif

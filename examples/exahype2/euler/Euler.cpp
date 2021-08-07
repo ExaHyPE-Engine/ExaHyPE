@@ -16,12 +16,14 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
   double                                       t
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
+
   if ( Q[4]>0.4 ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
   if ( Q[4]<0.2 ) {
     result = ::exahype2::RefinementCommand::Coarsen;
   }
+
   return result;
 }
 
@@ -70,11 +72,12 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  const double u_n = Q[normal + 1] * irho;
+  nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   const double c   = std::sqrt(gamma * p * irho);
 
+  const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
-  assertion10( result>=0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4] );
+  nonCriticalAssertion14( result>=0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   return result;
 }
 

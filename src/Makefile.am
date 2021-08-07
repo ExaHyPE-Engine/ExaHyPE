@@ -95,6 +95,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/la/ScalarOperations.cpp \
  tarch/la/Scalar.cpp \
  tarch/la/Vector.cpp \
+ tarch/la/DynamicMatrix.cpp \
  tarch/multicore/BooleanSemaphore.cpp \
  tarch/multicore/multicore.cpp \
  tarch/multicore/Core.cpp \
