@@ -164,7 +164,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void examples::exahype2::euler::AbstractEuler::nonconservativeProduct(
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__                  Q,         // Q[5+0],
   const double * __restrict__                  deltaQ,    // [5+0]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,

@@ -9,14 +9,11 @@
 #ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
 #define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
 
-
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"
 
 #include "tarch/la/Vector.h"
-
 #include "peano4/utils/Globals.h"
-
 #include "Constants.h"
 
 
@@ -30,7 +27,6 @@
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
-
 
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
@@ -111,16 +107,51 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     {% endif %}
 
 
-    virtual void sourceTerm(
-      const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+     virtual void sourceTerm(
+       const double * __restrict__ Q,
+       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       double                                       t,
+       double                                       dt,
+       double * __restrict__ S
+     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
+
+     {% if USE_GPU %}
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+     static void sourceTerm(
+       const double * __restrict__ Q,
+       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       double                                       t,
+       double                                       dt,
+       double * __restrict__ S,
+       Offloadable
+     );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static void nonconservativeProduct(
+      const double * __restrict__                  Q,    
+      const double * __restrict__                  deltaQ,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
-      double                                       dt,
-      double * __restrict__ S
-    ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
+      int                                          normal,
+      double * __restrict__                        BgradQ,
+      Offloadable
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+     {% endif %}
 
-     
+
     {% include "AbstractSolverAdaptiveTimeStepSize.template.h" %}
 };
 
