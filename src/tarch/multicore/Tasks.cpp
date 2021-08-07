@@ -77,11 +77,8 @@ namespace {
    * By default, there is no upper limit on this count.
    *
    * @see configureTaskFusion(int,int)
-   * @see
    */
-
-  //int numberOfTasksThatShouldBeFused  = 20;
-  int numberOfTasksThatShouldBeFused = atoi(std::getenv("FUSENUM"));
+  int numberOfTasksThatShouldBeFused  = 20;
 
 
   /**
