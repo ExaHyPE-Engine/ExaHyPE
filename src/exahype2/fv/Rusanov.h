@@ -364,7 +364,8 @@ namespace exahype2 {
 #pragma omp target// map(tofrom:destinationPatch[0:LTOT])
 #pragma omp teams //num_teams(nteams) //thread_limit(block_threads)
 {
-    #pragma omp distribute parallel for collapse(4) //dist_schedule(static,1)
+    #pragma omp distribute parallel for
+        // collapse(4) //dist_schedule(static,1)
     for (size_t pidx=0;pidx<NPT;pidx++)
     {
       //printf("A: %lu/%lu\n", pidx, NPT);
@@ -384,7 +385,7 @@ namespace exahype2 {
           + numVPAIP + haloSize * 2 + haloSize;
 
       int helper = numVPAIP+haloSize*2;
-      // #pragma omp parallel for collapse(3)
+      // #pragma omp parallel for // collapse(3)
       for (int z = 0; z < numVPAIP; z++)
       {
         for (int y = 0; y < numVPAIP; y++)
@@ -438,7 +439,7 @@ namespace exahype2 {
     // printf("Do I get here?\n");
     for (int shift = 0; shift < 2; shift++)
     {
-      #pragma omp distribute parallel for collapse(4)// dist_schedule(static, block_threads)
+      #pragma omp distribute parallel for // collapse(4)// dist_schedule(static, block_threads)
       for (size_t pidx=0;pidx<NPT;pidx++)
       {
         // printf("B: %lu/%lu\n", pidx, NPT);
@@ -539,7 +540,7 @@ namespace exahype2 {
         }
       }
 
-      #pragma omp distribute parallel for collapse(4)
+      #pragma omp distribute parallel for // collapse(4)
       for (size_t pidx=0;pidx<NPT;pidx++)
       {
         double                    t =   T[pidx];
@@ -628,7 +629,7 @@ namespace exahype2 {
         }
       }
 
-      #pragma omp distribute parallel for collapse(4)
+      #pragma omp distribute parallel for // collapse(4)
       for (size_t pidx=0;pidx<NPT;pidx++)
       {
         double                    t =   T[pidx];
@@ -849,7 +850,7 @@ printf("Done\n");
 
 
 
-//#pragma omp parallel for collapse(3)// dist_schedule(static, block_threads)
+//#pragma omp parallel for // collapse(3)// dist_schedule(static, block_threads)
         for (int z = 0; z < numVPAIP; z++)
         {
           for (int y = 0; y < numVPAIP; y++)
@@ -891,7 +892,7 @@ printf("Done\n");
           }
         }
 
-//#pragma omp parallel for collapse(4)// dist_schedule(static, block_threads)
+//#pragma omp parallel for // collapse(4)// dist_schedule(static, block_threads)
         for (int shift = 0; shift < 2; shift++)
         {
           for (int x = shift; x <= numVPAIP; x += 2)
@@ -970,7 +971,7 @@ printf("Done\n");
           }
         }
 
-//#pragma omp parallel for collapse(4)// dist_schedule(static, block_threads)
+//#pragma omp parallel for // collapse(4)// dist_schedule(static, block_threads)
         for (int shift = 0; shift < 2; shift++)
         {
           for (int y = shift; y <= numVPAIP; y += 2)
@@ -1048,7 +1049,7 @@ printf("Done\n");
           }
         }
 
-//#pragma omp parallel for collapse(4)// dist_schedule(static, block_threads)
+//#pragma omp parallel for // collapse(4)// dist_schedule(static, block_threads)
         for (int shift = 0; shift < 2; shift++)
         {
           for (int z = shift; z <= numVPAIP; z += 2)
@@ -1162,7 +1163,7 @@ printf("Done\n");
         #if defined(OpenMPGPUOffloading)
         #pragma omp target
         #endif
-      #pragma omp parallel for collapse(2)
+      #pragma omp parallel for // collapse(2)
       #endif
       for (int x = 0; x < numVPAIP; x++)
       {
@@ -1203,7 +1204,7 @@ printf("Done\n");
            #if defined(OpenMPGPUOffloading)
            #pragma omp target
            #endif
-        #pragma omp parallel for collapse(2)
+        #pragma omp parallel for // collapse(2)
         #endif
 
         for (int x = shift; x <= numVPAIP; x += 2)
@@ -1270,7 +1271,7 @@ printf("Done\n");
            #if defined(OpenMPGPUOffloading)
            #pragma omp target
            #endif
-        #pragma omp parallel for collapse(2)
+        #pragma omp parallel for // collapse(2)
         #endif
         for (int y = shift; y <= numVPAIP; y += 2)
         {
@@ -1382,7 +1383,7 @@ printf("Done\n");
         #if defined(OpenMPGPUOffloading)
         #pragma omp target
         #endif
-      #pragma omp parallel for collapse(2)
+      #pragma omp parallel for // collapse(2)
       #endif
       for (int x = 0; x < numVPAIP; x++)
       for (int y = 0; y < numVPAIP; y++) {
@@ -1422,7 +1423,7 @@ printf("Done\n");
            #if defined(OpenMPGPUOffloading)
            #pragma omp target
            #endif
-        #pragma omp parallel for collapse(2)
+        #pragma omp parallel for // collapse(2)
         #endif
 
         for (int x = shift; x <= numVPAIP; x += 2)
@@ -1489,7 +1490,7 @@ printf("Done\n");
            #if defined(OpenMPGPUOffloading)
            #pragma omp target
            #endif
-        #pragma omp parallel for collapse(2)
+        #pragma omp parallel for // collapse(2)
         #endif
         for (int y = shift; y <= numVPAIP; y += 2)
         {
@@ -1577,7 +1578,7 @@ printf("Done\n");
         #if defined(OpenMPGPUOffloading)
         #pragma omp target
         #endif
-      #pragma omp parallel for collapse(3)
+      #pragma omp parallel for // collapse(3)
       #endif
       for (int x = 0; x < numVPAIP; x++)
       for (int y = 0; y < numVPAIP; y++)
@@ -1621,7 +1622,7 @@ printf("Done\n");
            #if defined(OpenMPGPUOffloading)
            #pragma omp target
            #endif
-        #pragma omp parallel for collapse(3)
+        #pragma omp parallel for // collapse(3)
         #endif
         for (int x = shift; x <= numVPAIP; x += 2)
         {
@@ -1686,7 +1687,7 @@ printf("Done\n");
            #if defined(OpenMPGPUOffloading)
            #pragma omp target
            #endif
-        #pragma omp parallel for collapse(3)
+        #pragma omp parallel for // collapse(3)
         #endif
         for (int y = shift; y <= numVPAIP; y += 2)
         {
@@ -1750,7 +1751,7 @@ printf("Done\n");
            #if defined(OpenMPGPUOffloading)
            #pragma omp target
            #endif
-        #pragma omp parallel for collapse(3)
+        #pragma omp parallel for // collapse(3)
         #endif
         for (int z = shift; z <= numVPAIP; z += 2)
         {
