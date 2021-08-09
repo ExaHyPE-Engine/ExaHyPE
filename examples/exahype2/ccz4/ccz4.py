@@ -170,33 +170,25 @@ if __name__ == "__main__":
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
 
-        interpolation_scheme = ""
-        if args.interpolation=="constant":
-          interpolation_scheme = "piecewise_constant"
-          print( "Interpolation rule: piecewise_constant" )
-        if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
-          interpolation_scheme = "linear" 
-          print( "Interpolation rule: linear interpolation without optimisation" )
-        if args.interpolation=="linear" or args.interpolation=="linear+enforce":
-          interpolation_scheme = "linear_precomputed_operators<" + str(self._patch_size) +">"
-          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
-          
-        postprocessing = ""
-        if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
-          interpolation_scheme = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
-        
-        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
-            patch=self._patch, # do not alter 
-            patch_overlap_interpolation=self._patch_overlap,    
-            patch_overlap_restriction=self._patch_overlap_new, 
-            interpolation_scheme=interpolation_scheme,  
-            restriction_scheme="averaging",   
-            point_wise_postprocessing=postprocessing,
-            additional_includes=""" 
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
 #include "../CCZ4Kernels.h"
             """
-          )
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
 
+        interpolation_scheme = ""
+        if args.interpolation=="constant":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
+          print( "Interpolation rule: piecewise_constant" )
+        if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+          print( "Interpolation rule: linear interpolation without optimisation" )
+        if args.interpolation=="linear" or args.interpolation=="linear+enforce":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
+          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
+          
+        if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_interpolation( "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
   
 
       def get_user_includes(self):

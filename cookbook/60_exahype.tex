@@ -497,20 +497,12 @@ def create_action_sets(self):
   \item Make your solver (in Python) use another interpolation scheme. I present
   a variant here where you want to use linear interpolation:
   \begin{code}
-self.create_data_structures()
-self.create_action_sets()
-self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
-  patch=self._patch, # do not alter 
-  patch_overlap_interpolation=self._patch_overlap,   # do not alter 
-  patch_overlap_restriction=self._patch_overlap_new, # do not alter
-  interpolation_scheme="linear",  # by default set to "piecewise_constant"
-  restriction_scheme="averaging"   # this is the default
- )
+self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+  #include "../CCZ4Kernels.h"
+"""
+# self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
   \end{code}
-  You might need an
-  \begin{code}
-from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
-  \end{code} 
 \end{itemize}
 
 \noindent
@@ -534,7 +526,11 @@ For the interpolation, we have the following routines:
 Some codes need to postprocess their interpolation data. At the moment, I only support volume-wise postprocessing.
 To enable it, you pass a function call to the DynamicAMR argument: 
 \begin{code}
-point_wise_postprocessing="enforceCCZ4(targetVolume)"
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+#include "../CCZ4Kernels.h"
+            """
+self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_interpolation(
+"examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
 \end{code}
 
 \noindent
