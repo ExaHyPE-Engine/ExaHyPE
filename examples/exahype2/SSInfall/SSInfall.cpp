@@ -91,8 +91,10 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
     m_in=mass_interpolate(r_coor);
   }
 
-  double force_density_norm=Q[0]*G*m_in/pow(r_coor,3);
+  //double force_density_norm=Q[0]*G*m_in/pow(r_coor,3);
+  //if (force_density_norm>1 and r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
 
+  double force_density_norm=0;
   S[0] = 0;  // rho
   S[1] = -force_density_norm*x;    // velocities
   S[2] = -force_density_norm*y;
@@ -221,7 +223,12 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   if (r_coor<r_s[0]) {
     a=0; b=r_s[0];
     m_a=0; m_b=m_tot[0];
-  } else{
+  }
+  if (r_coor>r_s[sample_number-1]) {
+    a=r_s[sample_number-2]; b=r_s[sample_number-1];
+    m_a=m_tot[sample_number-2]; m_b=m_tot[sample_number-1];    
+  }
+  else{
     for (int i=1;i<sample_number;i++){
       if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])){
         a=r_s[i-1]; b=r_s[i];
