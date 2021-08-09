@@ -64,6 +64,8 @@ void exahype2::fv::splitRusanov1d(
   if (not skipFluxEvaluation) {
     fluxFL   = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
     fluxFR   = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
+    for (int i=0;i<unknowns;i++) fluxFL[i]=0;
+    for (int i=0;i<unknowns;i++) fluxFR[i]=0;
 
     flux(QL,x,dx,t,dt,normal,fluxFL);
     flux(QR,x,dx,t,dt,normal,fluxFR);

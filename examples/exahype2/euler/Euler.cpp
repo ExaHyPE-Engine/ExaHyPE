@@ -187,6 +187,7 @@ void examples::exahype2::euler::Euler::boundaryConditions(
  */
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
+#endif
 double examples::exahype2::euler::Euler::maxEigenvalue(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -209,6 +210,9 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
   return result;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 void examples::exahype2::euler::Euler::flux(
@@ -243,8 +247,6 @@ void examples::exahype2::euler::Euler::flux(
   F[normal+1] += p;
   F[4]        += coeff*p;
 }
-#pragma omp end declare target
 
-#endif
 
 

@@ -152,21 +152,42 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
   double                                       dt,
   double * __restrict__                        S  // S[59
 ) {
+#if !defined(OpenMPGPUOffloading)
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
   for(int i=0; i<NumberOfUnknowns; i++){
     assertion3( std::isfinite(Q[i]), i, volumeX, t );
   }
+#endif
 
-  memset(S, 0, NumberOfUnknowns*sizeof(double));
-  //pdesource_(S,Q);    //  S(Q)
-  source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+  examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(Q, volumeX, volumeH, t, dt, S, Offloadable::Yes);
+
+#if !defined(OpenMPGPUOffloading)
   for(int i=0; i<NumberOfUnknowns; i++){
     nonCriticalAssertion3( std::isfinite(S[i]), i, volumeX, t );
   }
   logTraceOut( "sourceTerm(...)" );
+#endif
 }
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
+  const double * __restrict__                  Q, // Q[59+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__                        S,  // S[59
+  Offloadable)
+{
+  memset(S, 0, NumberOfUnknowns*sizeof(double));
+  source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[59+0]
@@ -193,6 +214,22 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   int                                          normal
 )
 {
+   return maxEigenvalue(Q, faceCentre, volumeH, t, normal, Offloadable::Yes);
+}
+
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
+  const double * __restrict__ Q, // Q[59+0],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  Offloadable
+)
+{
+
 #if defined(CCZ4EINSTEIN)
   const double qmin = std::min({Q[0],Q[3],Q[5]});
   const double alpha = std::max({1.0, std::exp(Q[16])}) * std::max({1.0, std::exp(Q[54])}) / std::sqrt(qmin);
@@ -211,36 +248,11 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   //}
   //return flag? 2*tem: tem;
   return tem;
-  //// we are only interested in the maximum eigenvalue
-  //return std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
-
-  //logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
-  //constexpr int Unknowns = 59;
-  //double lambda[Unknowns];
-  //for (int i=0; i<Unknowns; i++) {
-    //nonCriticalAssertion4( std::isfinite(Q[i]), i, x, t, normal );
-    //lambda[i] = 1.0;
-  //}
-
-  //// routine requires explicit normal vector
-  //double normalVector[3];
-  //normalVector[0] = normal % 3 == 0 ? 1.0 : 0.0;
-  //normalVector[1] = normal % 3 == 1 ? 1.0 : 0.0;
-  //normalVector[2] = normal % 3 == 2 ? 1.0 : 0.0;
-
-  //// actual method invocation
-  //pdeeigenvalues_(lambda, Q, normalVector);
-
-  //// we are only interested in the maximum eigenvalue
-  //double result = 0.0;
-  //for (int i=0; i<Unknowns; i++) {
-    //result = std::max(result,std::abs(lambda[i]));
-  //}
-  //logTraceOut( "maxEigenvalue(...)" );
-  //printf("%f vs %f diff: %f alpha: %f tempA: %f\n\n", result, result2, result-result2, alpha, tempA/alpha);
-  //return result;
+   //return examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(Q, faceCentre, volumeH, t , normal);
 }
-
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const double * __restrict__ Q, // Q[59+0],
@@ -256,6 +268,31 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   assertion( normal>=0 );
   assertion( normal<Dimensions );
 #endif
+  
+  nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ, Offloadable::Yes);
+
+#if !defined(OpenMPGPUOffloading)
+  for (int i=0; i<NumberOfUnknowns; i++) {
+    nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, faceCentre, t, normal );
+  }
+  logTraceOut( "nonconservativeProduct(...)" );
+#endif
+}
+
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
+  const double * __restrict__ Q, // Q[59+0],
+  const double * __restrict__             deltaQ, // [59+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double * __restrict__ BgradQ, // BgradQ[59]
+  Offloadable
+)
+{
   double gradQSerialised[NumberOfUnknowns*3];
   for (int i=0; i<NumberOfUnknowns; i++) {
     gradQSerialised[i+0*NumberOfUnknowns] = 0.0;
@@ -265,15 +302,11 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
     gradQSerialised[i+normal*NumberOfUnknowns] = deltaQ[i];
   }
   ncp(BgradQ, Q, gradQSerialised, normal, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4mu);
-  //pdencp_(BgradQ, Q, gradQSerialised);
-
-#if !defined(OpenMPGPUOffloading)
-  for (int i=0; i<NumberOfUnknowns; i++) {
-    nonCriticalAssertion4( std::isfinite(BgradQ[i]), i, faceCentre, t, normal );
-  }
-  logTraceOut( "nonconservativeProduct(...)" );
-#endif
+   //examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ);
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 ::exahype2::RefinementCommand examples::exahype2::ccz4::FiniteVolumeCCZ4::refinementCriterion(
   const double * __restrict__ Q,

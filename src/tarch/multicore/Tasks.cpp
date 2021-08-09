@@ -77,11 +77,8 @@ namespace {
    * By default, there is no upper limit on this count.
    *
    * @see configureTaskFusion(int,int)
-   * @see
    */
-
-  int numberOfTasksThatShouldBeFused  = 200;
-  //numberOfTasksThatShouldBeFused = atoi(std::getenv("FUSENUM"));
+  int numberOfTasksThatShouldBeFused  = 20;
 
 
   /**
@@ -252,6 +249,8 @@ namespace {
       myTask = nonblockingTasks.front();
       nonblockingTasks.pop_front();
     }
+
+    printf("Got max %lu tasks here\n", nonblockingTasks.size());
 
     auto pp = nonblockingTasks.begin();
     while (

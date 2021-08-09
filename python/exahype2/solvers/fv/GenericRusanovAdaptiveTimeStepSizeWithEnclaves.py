@@ -35,7 +35,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
   }
   else { // is an enclave cell
     assertion( marker.isEnclaveCell() );
-    ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+    auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
@@ -142,6 +142,10 @@ class GenericRusanovAdaptiveTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
     implementationDictionary = {}
     self._init_dictionary_with_default_parameters(implementationDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
+
+    # Bit of a hack so we can easily instantiate templates
+    implementationDictionary["SKIP_NCP"]  = "true" if implementationDictionary["NCP_IMPLEMENTATION"]  == "<none>" else "false"
+    implementationDictionary["SKIP_FLUX"] = "true" if implementationDictionary["FLUX_IMPLEMENTATION"] == "<none>" else "false"
 
     task_name = self._enclave_task_name()
 

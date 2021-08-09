@@ -47,7 +47,7 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu", "fv-adaptive-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
@@ -55,6 +55,7 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
+    parser.add_argument("-interp", "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-slow+enforce", "linear", "linear+enforce" ], default="linear-slow",  help="interpolation scheme for AMR" )
 
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -69,18 +70,16 @@ if __name__ == "__main__":
 
     if args.implementation=="fv-fixed":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-enclave":
+    if args.implementation=="fv-fixed-enclave" or args.implementation=="fv-fixed-gpu":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
     if args.implementation=="fv-adaptive":
        SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
-    if args.implementation=="fv-adaptive-enclave":
+    if args.implementation=="fv-adaptive-enclave" or args.implementation=="fv-adaptive-gpu":
        SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
     if args.implementation=="fv-optimistic-enclave":
        SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
     if args.implementation=="ader-fixed":
        SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-gpu":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator
 
     class CCZ4Solver( SuperClass ):
       def __init__(self, name, patch_size, min_h, max_h ):
@@ -120,7 +119,8 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_size=1e-2
+            time_step_size=1e-2,
+            use_gpu = True if args.implementation=="fv-fixed-gpu" else False
           )
         else:
           SuperClass.__init__(
@@ -129,10 +129,12 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.1,
+            use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
+        self._patch_size = patch_size
 
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -167,14 +169,29 @@ if __name__ == "__main__":
    
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
+
+        interpolation_scheme = ""
+        if args.interpolation=="constant":
+          interpolation_scheme = "piecewise_constant"
+          print( "Interpolation rule: piecewise_constant" )
+        if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
+          interpolation_scheme = "linear" 
+          print( "Interpolation rule: linear interpolation without optimisation" )
+        if args.interpolation=="linear" or args.interpolation=="linear+enforce":
+          interpolation_scheme = "linear_precomputed_operators<" + str(self._patch_size) +">"
+          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
+          
+        postprocessing = ""
+        if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
+          interpolation_scheme = "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)"
         
         self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
             patch=self._patch, # do not alter 
             patch_overlap_interpolation=self._patch_overlap,    
             patch_overlap_restriction=self._patch_overlap_new, 
-            interpolation_scheme="linear",  
+            interpolation_scheme=interpolation_scheme,  
             restriction_scheme="averaging",   
-            point_wise_postprocessing="examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)",
+            point_wise_postprocessing=postprocessing,
             additional_includes=""" 
 #include "../CCZ4Kernels.h"
             """
@@ -501,8 +518,6 @@ if __name__ == "__main__":
     else:
       solver_name    = "FiniteVolume" + solver_name
 
-   # if SuperClass == exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator:
-   #   solver_name += "OnGPU"
 
     min_h = args.min_h
     if min_h <=0.0:

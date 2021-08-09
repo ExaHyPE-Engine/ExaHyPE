@@ -118,7 +118,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
    
-    {% if USE_GPU %}
+    {% if USE_GPU  and SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
     // The GPU offloading requires static functions, we do the
     // TBB trick of overloading static functions with an enum
     #if defined(OpenMPGPUOffloading)
@@ -136,7 +136,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
+    {% endif %}
    
+    {% if USE_GPU  and NCP_IMPLEMENTATION!="<user-defined>" %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif

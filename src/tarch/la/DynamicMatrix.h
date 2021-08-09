@@ -40,12 +40,18 @@ class tarch::la::DynamicMatrix {
 
   public:
     DynamicMatrix(int rows, int cols);
+
+    /**
+     * Free the array on the heap. If the matrix has been moved before (due to 
+     * return value optimisation, e.g.) _m is equal to nullptr and we should 
+     * not delete it anymore. Otherwise, _m always has to be freed.
+     */
     ~DynamicMatrix();
 
     DynamicMatrix( int rows, int cols, std::initializer_list< std::initializer_list<double> > values );
 
     DynamicMatrix(const DynamicMatrix&);
-    DynamicMatrix(const DynamicMatrix&&) = delete;
+    DynamicMatrix(DynamicMatrix&&);
 
     DynamicMatrix(const DynamicMatrix& lhs, const DynamicMatrix& rhs, bool innerProduct);
 
