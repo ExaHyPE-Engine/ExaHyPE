@@ -206,9 +206,9 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   const double tempB = Q[17+normal];//DOT_PRODUCT(Q(18:20),nv(:))
   double tem = std::max({1.0, std::abs(-tempA-tempB), std::abs(tempA-tempB)});
   bool flag = false;
-  for(int i=0; i<(NumberOfUnknowns-1); i++){
-    if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
-  }
+  //for(int i=0; i<(NumberOfUnknowns-1); i++){
+  //  if ( std::abs(Q[i]) > 2.0) { flag = true; break; }
+  //}
   //return flag? 2*tem: tem;
   return tem;
   //// we are only interested in the maximum eigenvalue

@@ -17,7 +17,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1.0, "t_ini":0.5, "r_ini":0.2, "delta_rho":0.01, "initial_internal_energy":0.1, 
+         "G":1.0, "t_ini":0.5, "r_ini":1, "delta_rho":0.01, "initial_internal_energy":0.1, 
 }
 
 intparams = {"swi":99, "ReSwi":0, "sample_number":10}
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.25
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -231,7 +231,8 @@ if __name__ == "__main__":
 #Domain settings
 ########################################################################################
     if True:
-      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      #offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      offset=[-5, -5, -5]; domain_size=[10, 10, 10]
       msg = "domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userwarnings.append((msg,None))
@@ -257,7 +258,7 @@ if __name__ == "__main__":
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)
     solverconstants+= "double m_tot[{}]={};\n".format(args.sample_number,"{0}")
-    r_list=np.linspace(0,(domain_size[0]+offset[0])*3**0.5,(args.sample_number+1))[1:]
+    r_list=np.linspace(0,(domain_size[0]+offset[0]),(args.sample_number+1))[1:]
     solverconstants+= "double r_s[{}]={}".format(args.sample_number,"{")
     for r in r_list:
       solverconstants+= str(r)+", "
@@ -292,8 +293,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    #probe_point = [-8,-8,-0.5]
-    #project.add_plot_filter( probe_point,[16.0,16.0,0.5],1 )
+    probe_point = [-20,-20,-0.5]
+    project.add_plot_filter( probe_point,[40.0,40.0,1],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -308,8 +309,10 @@ if __name__ == "__main__":
     userwarnings.append(("the executable file name: "+exe, None))
     userwarnings.append(("output directory: "+path, None))
     if len(userwarnings) >0:
-        print("Please note that these warning occured before the build:")
+        print("The building infomation:")
         for msg, exception in userwarnings:
             if exception is None:
                 print(msg)
             else: print(msg, "Exception: {}".format(exception))
+    print(intparams)
+    print(floatparams)
