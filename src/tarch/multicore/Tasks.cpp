@@ -33,6 +33,8 @@ namespace {
 
   tarch::multicore::Realisation realisation = tarch::multicore::Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
 
+  tarch::logging::Log _log( "tarch::multicore" );
+
   /**
    * Determines how to handle the tasks dumped into nonblockingTasks.
    *
