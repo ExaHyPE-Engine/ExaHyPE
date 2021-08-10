@@ -325,7 +325,12 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       constexpr int NumberOfRefinementLayers = 3;
       //double Radius[NumberOfRefinementLayers] = {7.0, 5.0, 2.5};
       double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
+      // nice test case which fits on my laptop:
+      //double Radius[NumberOfRefinementLayers] = {3.0, 1.0, 0.5};
       double MaxH[NumberOfRefinementLayers]   = {1.0, 0.3, 0.0};
+      // setup where Han has observed NaNs:
+//      double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
+//      double MaxH[NumberOfRefinementLayers]   = {1.0, 0.3, 0.0};
 
       result = ::exahype2::RefinementCommand::Keep;
       for (int i=0; i<NumberOfRefinementLayers; i++) {

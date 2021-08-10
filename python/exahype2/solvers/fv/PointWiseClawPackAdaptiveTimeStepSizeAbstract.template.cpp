@@ -1,6 +1,9 @@
 {% include "AbstractSolverAdaptiveTimeStepSize.template.cpp" %}
 
 
+#include "exahype2/NonCriticalAssertions.h"
+
+
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
   _timeStamp(0.0),
@@ -50,7 +53,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   #else
   _timeStepSize = newTimeStepSize;
   #endif
-  
+
+  if (_timeStepSize!=_timeStepSize or tarch::la::smallerEquals(_timeStepSize,0.0) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>0", "invalid (exploding or degenerated) time step size" );
+  }
+
   _admissibleTimeStepSize = std::numeric_limits<double>::max();
 }
 
