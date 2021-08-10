@@ -252,7 +252,7 @@ namespace {
       nonblockingTasks.pop_front();
     }
 
-    logInfo( "fusePendingTasks(int)", "got " << nonblockingTasks.size() << "(max=" << maxTasks << ")" );
+    logDebug( "fusePendingTasks(int)", "got " << nonblockingTasks.size() << " (max=" << maxTasks << ")" );
 
     auto pp = nonblockingTasks.begin();
     while (
