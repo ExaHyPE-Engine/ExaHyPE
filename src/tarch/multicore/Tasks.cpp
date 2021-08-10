@@ -250,7 +250,7 @@ namespace {
       nonblockingTasks.pop_front();
     }
 
-    printf("Got max %lu tasks here\n", nonblockingTasks.size());
+    logInfo( "fusePendingTasks(int)", "got " << nonblockingTasks.size() << "(max=" << maxTasks << ")" );
 
     auto pp = nonblockingTasks.begin();
     while (
