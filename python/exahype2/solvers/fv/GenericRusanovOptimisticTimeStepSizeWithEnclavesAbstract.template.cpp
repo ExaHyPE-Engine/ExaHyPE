@@ -2,6 +2,9 @@
 #include <algorithm>
 
 
+#include "exahype2/NonCriticalAssertions.h"
+
+
 #ifdef Parallel
 #include <mpi.h>
 #endif
@@ -258,6 +261,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       }
     }
   }
+
+  if (_timeStepSize!=_timeStepSize or tarch::la::smaller(_timeStepSize,0.0) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>=0", "invalid (exploding or degenerated) time step size" );
+  }
+
 
   logDebug( "finishTimeStep()",
     "spawnEnclaveTaskInPrimaryTraversal=" << _spawnEnclaveTaskInPrimaryTraversal <<
