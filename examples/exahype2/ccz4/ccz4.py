@@ -188,7 +188,7 @@ if __name__ == "__main__":
           print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
 
         if args.restriction=="average":
-          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "average" )
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
           print( "Restiction rule: averaging" )
         if args.restriction=="inject" or args.restriction=="linear-slow+enforce":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "inject" )
