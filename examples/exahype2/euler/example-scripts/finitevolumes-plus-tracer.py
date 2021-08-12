@@ -125,6 +125,9 @@ elif args.type=="default-ats":
   )
 
 
+thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
+
+
 project.add_solver( thesolver )
 
 
@@ -165,7 +168,7 @@ if args.dim==3:
   
 project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.h/8.0, noise=True ))    
 
-project.add_action_set_to_timestepping( exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,thesolver,particle_spacing/10.0,"TracerDB") )
+#project.add_action_set_to_timestepping( exahype2.tracer.DumpTrajectoryIntoDatabase(tracer_particles,thesolver,particle_spacing/10.0,"TracerDB") )
 project.add_action_set_to_timestepping( peano4.toolbox.particles.ParticleParticleInteraction(
   particle_set = tracer_particles,
   cell_compute_kernel = exahype2.tracer.perserveCartesianTracerLayout(thesolver,particle_spacing),

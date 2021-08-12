@@ -44,15 +44,15 @@ void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::str
 
     rankWhichHasSetNonCriticalAssertion = tarch::mpi::Rank::getInstance().getRank();
 
-    #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
     if (not tarch::mpi::Rank::getInstance().isGlobalMaster()) {
+      #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
       int rank = tarch::mpi::Rank::getInstance().getRank();
 
       MPI_Put( &rank, 1, MPI_INT, 0, 0, 1, MPI_INT, assertionWindow );
+      #elif defined(Parallel)
+      assertionMsg( false, "Noncritical assertion triggered, but system does not support single-sided communication so program will shut down immediately");
+      #endif
     }
-    #elif defined(Parallel)
-    assertionMsg( false, "Noncritical assertion triggered, but system does not support single-sided communication so program will shut down immediately");
-    #endif
   }
 }
 

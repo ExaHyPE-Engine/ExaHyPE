@@ -33,6 +33,8 @@ namespace {
 
   tarch::multicore::Realisation realisation = tarch::multicore::Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
 
+  tarch::logging::Log _log( "tarch::multicore" );
+
   /**
    * Determines how to handle the tasks dumped into nonblockingTasks.
    *
@@ -77,9 +79,9 @@ namespace {
    * By default, there is no upper limit on this count.
    *
    * @see configureTaskFusion(int,int)
-   * @see
    */
-  int numberOfTasksThatShouldBeFused  = std::numeric_limits<int>::max();
+  int numberOfTasksThatShouldBeFused  = 20;
+
 
   /**
    * Maximum number of large meta tasks that are created
@@ -92,7 +94,7 @@ namespace {
    *
    * @see numberOfTasksThatShouldBeFused
    */
-  int maxNumberOfFusedTasksAssemblies = 2;
+  int maxNumberOfFusedTasksAssemblies = std::numeric_limits<int>::max();
 
   /**
    * Statistics counter
@@ -249,6 +251,8 @@ namespace {
       myTask = nonblockingTasks.front();
       nonblockingTasks.pop_front();
     }
+
+    logDebug( "fusePendingTasks(int)", "got " << nonblockingTasks.size() << " (max=" << maxTasks << ")" );
 
     auto pp = nonblockingTasks.begin();
     while (

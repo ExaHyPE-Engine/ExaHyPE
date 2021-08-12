@@ -4,10 +4,21 @@
 #define _PEANO4_STACKS_STACK_H_
 
 
+#include <string>
+
+
 namespace peano4 {
   namespace stacks {
+    enum class IOMode {
+      None,
+      MPISend,
+      MPIReceive
+    };
   }
 }
+
+
+std::string toString( peano4::stacks::IOMode mode );
 
 
 #endif

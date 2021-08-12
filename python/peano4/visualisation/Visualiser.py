@@ -1,9 +1,16 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from peano4.visualisation.OutputFileParser import OutputFileParser
-from paraview.simple import *
 
-import vtk
+try:
+    from paraview.simple import *
+except ImportError:
+    print("Unable to import paraview")
+
+try:
+    import vtk
+except ImportError:
+    print("Unable to import vtk")
 
 import traceback
 
@@ -573,6 +580,3 @@ class Visualiser(object):
 """
     meta_file = open( file_name + ".pvd", "w" )
     meta_file.write( pvd_file )
-    
-    
-    

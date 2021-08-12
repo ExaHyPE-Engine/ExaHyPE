@@ -50,7 +50,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::loadPersistently(const peano4::d
 
 std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
   std::ostringstream msg;
-  msg << "(#" << size();
+  msg << "(size=" << size();
   #if PeanoDebug>=1
   msg << ",x=" << _debugX
       << ",h=" << _debugH;
@@ -62,14 +62,13 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString() const {
 
 #ifdef Parallel
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initDatatype() {
+  DoFType::initDatatype();
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::shutdownDatatype() {
+  DoFType::shutdownDatatype();
 }
-
-
-MPI_Datatype   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::Datatype;
 #endif
 
 

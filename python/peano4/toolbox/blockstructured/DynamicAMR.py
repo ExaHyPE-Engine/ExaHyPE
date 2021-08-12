@@ -3,26 +3,36 @@
 from peano4.solversteps.ActionSet import ActionSet
 
 
+import jinja2
+
 
 class DynamicAMR(ActionSet):
   """
   This class assumes that you have an 2MxNxN patch on your faces. 
   
   patch: peano4.datamodel.Patch
-  patch_overlap_interpolation:  peano4.datamodel.Patch. 
+  patch_overlap_interpolation:  peano4.datamodel.Patch
     Consult remark above about how the dimensions of this overlap 
     patch have to match. This overlap is used for the 
     interpolation. It can be the same as for the restriction.
-  patch_overlap_restriction: peano4.datamodel.Patch. 
+  patch_overlap_restriction: peano4.datamodel.Patch
                  
   """
   
   
-  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="piecewise_constant", restriction_scheme="piecewise_constant", clear_overlap_in_touch_first_time=True, clear_guard="true", restrict_guard="true", interpolate_guard="true", additional_includes="" ):
+  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="linear", restriction_scheme="averaging", clear_overlap_in_touch_first_time=True, clear_guard="true", restrict_guard="true", interpolate_guard="true", additional_includes="", point_wise_postprocessing_of_interpolation="" , point_wise_postprocessing_of_restriction="" ):
     """
     
     restrict_guard: String
       Predicate as C++ expression. It determines which faces are cleared. 
+      
+    interpolation_scheme: String
+      This is a string that is used to assemble the interpolation scheme that 
+      is actually used. At the moment, I mainly offer three variants here:
+      - piecewise_constant.
+      - linear.
+      - linear_precomputed_operators<3>. The 3 has to be replaced by the 
+        number of unknowns that you use per coordinate axis.
     
     """
     self.d = {}
@@ -45,6 +55,8 @@ class DynamicAMR(ActionSet):
     self.d[ "CLEAR_GUARD" ]               = clear_guard
     self.d[ "RESTRICT_GUARD" ]            = restrict_guard
     self.d[ "INTERPOLATE_GUARD" ]         = interpolate_guard
+    self.d[ "POINT_WISE_POSTPROCESSING_INTERPOLATION" ] = point_wise_postprocessing_of_interpolation
+    self.d[ "POINT_WISE_POSTPROCESSING_RESTRICTION" ]   = point_wise_postprocessing_of_restriction
     
     self._clear_overlap_in_touch_first_time = clear_overlap_in_touch_first_time    
     self.additional_includes                = additional_includes
@@ -70,139 +82,184 @@ class DynamicAMR(ActionSet):
     return False
 
 
-  __Template_TouchFaceFirstTime = """
-  if ( {CLEAR_GUARD} ) {{
+  __Template_TouchFaceFirstTime = jinja2.Template( """
+  if ( {{CLEAR_GUARD}} ) {
     logTraceIn( "touchFaceFirstTime(...)---DynamicAMR" );
+    
+    logDebug( "touchFaceFirstTime(...)", "clear " << marker.toString() );
 
     ::toolbox::blockstructured::clearHaloLayerAoS(
       marker,
-      {DOFS_PER_AXIS},
-      {OVERLAP},
-      {UNKNOWNS},
-      {FINE_GRID_FACE_ACCESSOR_RESTRICTION}.value
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.value
     );
 
     logTraceOut( "touchFaceFirstTime(...)---DynamicAMR" );
-  }}
-"""
+  }
+""")
 
 
-  __Template_CreateHangingFace = """
-  if ( {INTERPOLATE_GUARD} ) {{
-    logTraceIn( "createHangingFace(...)---DynamicAMR" );
+  __Template_CreateHangingFace = jinja2.Template( """
+  if ( {{INTERPOLATE_GUARD}} ) {
+    logTraceInWith1Argument( "createHangingFace(...)---DynamicAMR", marker.toString() );
 
-    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{INTERPOLATION_SCHEME}(
+    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
-      {DOFS_PER_AXIS},
-      {OVERLAP},
-      {UNKNOWNS},
-      {FINE_GRID_FACE_ACCESSOR_INTERPOLATION}.value,
-      {COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}(marker.getSelectedFaceNumber()).value
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value,
+      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value
     );
+    
+    {% if POINT_WISE_POSTPROCESSING_INTERPOLATION!="" %}
+    const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
+    const bool pickLeftHalfOfHaloOnFineGrid  = marker.getSelectedFaceNumber() < Dimensions;
+
+    dfore(k,{{DOFS_PER_AXIS}},normal,pickLeftHalfOfHaloOnFineGrid ? 0 : {{OVERLAP}}) {
+      for (int i=0; i<{{OVERLAP}}; i++) {
+        tarch::la::Vector<Dimensions,int>    fineVolume = k;
+        fineVolume(normal) +=i ;
+        int fineVolumeLinearised = toolbox::blockstructured::serialisePatchIndexInOverlap(
+          fineVolume,
+          {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal
+        );
+        double* targetVolume = {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value + fineVolumeLinearised * {{UNKNOWNS}};
+        {{POINT_WISE_POSTPROCESSING_INTERPOLATION}};
+      }  
+    }
+    {% endif %}
     
     logTraceOut( "createHangingFace(...)---DynamicAMR" );
-  }}
-"""
+  }
+  else {
+    logDebug( "createHangingFace(...)", "skip interpolation for " << marker.toString() << " as interpolation guard did not yield true" );
+  }
+""")
 
-  __Template_DestroyHangingFace = """
-  if ( {RESTRICT_GUARD} ) {{
-    logTraceInWith3Arguments( "destroyHangingFace(...)---DynamicAMR", "{FINE_GRID_FACE_ACCESSOR_RESTRICTION}", "{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}", marker.getSelectedFaceNumber() );
 
-    ::toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_{RESTRICTION_SCHEME}(
+  __Template_DestroyHangingFace = jinja2.Template( """
+  if ( {{RESTRICT_GUARD}} ) {
+    logTraceInWith4Arguments( "destroyHangingFace(...)---DynamicAMR", "{{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}", "{{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}", marker.getSelectedFaceNumber(), marker.toString() );
+
+    ::toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
       marker,
-      {DOFS_PER_AXIS},
-      {OVERLAP},
-      {UNKNOWNS},
-      {FINE_GRID_FACE_ACCESSOR_RESTRICTION}.value,
-      {COARSE_GRID_FACE_ACCESSOR_RESTRICTION}(marker.getSelectedFaceNumber()).value
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.value,
+      {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).value
     );
 
+    
+    {% if POINT_WISE_POSTPROCESSING_RESTRICTION!="" %}
+    const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
+    const bool pickLeftHalfOfHaloOnFineGrid  = marker.getSelectedFaceNumber() < Dimensions;
+
+    dfore(k,{{DOFS_PER_AXIS}},normal,pickLeftHalfOfHaloOnFineGrid ? 0 : {{OVERLAP}}) {
+      for (int i=0; i<{{OVERLAP}}; i++) {
+        tarch::la::Vector<Dimensions,int>    fineVolume = k;
+        fineVolume(normal) +=i ;
+        int fineVolumeLinearised = toolbox::blockstructured::serialisePatchIndexInOverlap(
+          fineVolume,
+          {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal
+        );
+        double* targetVolume = {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}.value + fineVolumeLinearised * {{UNKNOWNS}};
+        {{POINT_WISE_POSTPROCESSING_RESTRICTION}};
+      }  
+    }
+    {% endif %}
+
     logTraceOut( "destroyHangingFace(...)---DynamicAMR" );
-  }}
-"""
+  }
+""")
 
-  __Template_CreatePersistentFace = """
+
+  __Template_CreatePersistentFace = jinja2.Template( """
   logTraceIn( "createPersistentFace(...)---DynamicAMR" );
 
-  ::toolbox::blockstructured::interpolateHaloLayer_AoS_{INTERPOLATION_SCHEME}(
+  ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
-      {DOFS_PER_AXIS},
-      {OVERLAP},
-      {UNKNOWNS},
-      {FINE_GRID_FACE_ACCESSOR_INTERPOLATION}.value,
-      {COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}(marker.getSelectedFaceNumber()).value
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value,
+      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value
   );
     
   logTraceOut( "createPersistentFace(...)---DynamicAMR" );
-"""
+""")
+  
 
-  __Template_DestroyPersistentFace = """
+  __Template_DestroyPersistentFace = jinja2.Template( """
   logTraceIn( "createPersistentFace(...)---DynamicAMR" );
 
-  ::toolbox::blockstructured::restrictHaloLayer_AoS_{RESTRICTION_SCHEME}(
+  ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
       marker,
-      {DOFS_PER_AXIS},
-      {OVERLAP},
-      {UNKNOWNS},
-      {FINE_GRID_FACE_ACCESSOR_INTERPOLATION}.value,
-      {COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}(marker.getSelectedFaceNumber()).value
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value,
+      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value
   );
     
   logTraceOut( "createPersistentFace(...)---DynamicAMR" );
-"""
+""")
 
 
-  __Template_CreateCell = """
+  __Template_CreateCell = jinja2.Template( """
   logTraceIn( "createCell(...)---DynamicAMR" );
 
-  ::toolbox::blockstructured::interpolateCell_AoS_{INTERPOLATION_SCHEME}(
+  ::toolbox::blockstructured::interpolateCell_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
-      {DOFS_PER_AXIS},
-      {UNKNOWNS},
-      {FINE_GRID_CELL}.value,
-      {COARSE_GRID_CELL}.value
+      {{DOFS_PER_AXIS}},
+      {{UNKNOWNS}},
+      {{FINE_GRID_CELL}}.value,
+      {{COARSE_GRID_CELL}}.value
   );
     
   logTraceOut( "createCell(...)---DynamicAMR" );
-"""
+""")
 
-  __Template_DestroyCell = """
+  __Template_DestroyCell = jinja2.Template( """
   logTraceIn( "destroyCell(...)---DynamicAMR" );
 
-  ::toolbox::blockstructured::restrictCell_AoS_{RESTRICTION_SCHEME}(
+  ::toolbox::blockstructured::restrictCell_AoS_{{RESTRICTION_SCHEME}}(
       marker,
-      {DOFS_PER_AXIS},
-      {UNKNOWNS},
-      {FINE_GRID_CELL}.value,
-      {COARSE_GRID_CELL}.value
+      {{DOFS_PER_AXIS}},
+      {{UNKNOWNS}},
+      {{FINE_GRID_CELL}}.value,
+      {{COARSE_GRID_CELL}}.value
   );
     
   logTraceOut( "destroyCell(...)---DynamicAMR" );
-"""
+""")
 
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
-      result = self.__Template_CreateHangingFace.format(**self.d)
+      result = self.__Template_CreateHangingFace.render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE:
-      result = self.__Template_CreatePersistentFace.format(**self.d)
+      result = self.__Template_CreatePersistentFace.render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
-      result = self.__Template_DestroyHangingFace.format(**self.d)
+      result = self.__Template_DestroyHangingFace.render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_PERSISTENT_FACE:
-      result = self.__Template_DestroyPersistentFace.format(**self.d)
+      result = self.__Template_DestroyPersistentFace.render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
-      result = self.__Template_CreateCell.format(**self.d)
+      result = self.__Template_CreateCell.render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_CELL:
-      result = self.__Template_DestroyCell.format(**self.d)
+      result = self.__Template_DestroyCell.render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME and self._clear_overlap_in_touch_first_time:
-      result = self.__Template_TouchFaceFirstTime.format(**self.d)
+      result = self.__Template_TouchFaceFirstTime.render(**self.d)
       pass 
     return result
 
@@ -214,5 +271,35 @@ class DynamicAMR(ActionSet):
   def get_includes(self):
     return """
 #include "peano4/utils/Loop.h"
+#include "toolbox/blockstructured/Enumeration.h"
 #include "toolbox/blockstructured/Interpolation.h"
 """ + self.additional_includes
+
+
+  def get_clear_guard(self):
+    return self.d[ "CLEAR_GUARD" ]
+
+  
+  def get_restrict_guard(self):
+    return self.d[ "RESTRICT_GUARD" ]
+
+
+  def get_interpolate_guard(self):
+    return self.d[ "INTERPOLATE_GUARD" ]
+
+
+  def switch_interpolation_scheme(self,interpolation_scheme):
+    self.d[ "INTERPOLATION_SCHEME" ]      = interpolation_scheme
+
+
+  def switch_restriction_scheme(self,restriction_scheme):
+    self.d[ "RESTRICTION_SCHEME" ]        = restriction_scheme
+
+
+  def switch_point_wise_postprocessing_of_interpolation(self,point_wise_postprocessing_of_interpolation):
+    self.d[ "POINT_WISE_POSTPROCESSING_INTERPOLATION" ] = point_wise_postprocessing_of_interpolation
+
+
+  def switch_point_wise_postprocessing_of_restriction(self,point_wise_postprocessing_of_restriction):
+    self.d[ "POINT_WISE_POSTPROCESSING_RESTRICTION" ]   = point_wise_postprocessing_of_restriction
+
