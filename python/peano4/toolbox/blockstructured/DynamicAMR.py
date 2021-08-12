@@ -48,8 +48,8 @@ class DynamicAMR(ActionSet):
     self.d[ "COARSE_GRID_CELL" ]          = "coarseGridCell"  + patch.name
     self.d[ "FINE_GRID_FACE_ACCESSOR_INTERPOLATION" ]   = "fineGridFace"  + patch_overlap_interpolation.name
     self.d[ "COARSE_GRID_FACE_ACCESSOR_INTERPOLATION" ] = "coarseGridFaces"  + patch_overlap_interpolation.name
-    self.d[ "FINE_GRID_FACE_ACCESSOR_RESTRICTION" ]   = "fineGridFace"  + patch_overlap_restriction.name
-    self.d[ "COARSE_GRID_FACE_ACCESSOR_RESTRICTION" ] = "coarseGridFaces"  + patch_overlap_restriction.name
+    self.d[ "FINE_GRID_FACE_ACCESSOR_RESTRICTION" ]     = "fineGridFace"  + patch_overlap_restriction.name
+    self.d[ "COARSE_GRID_FACE_ACCESSOR_RESTRICTION" ]   = "coarseGridFaces"  + patch_overlap_restriction.name
     self.d[ "INTERPOLATION_SCHEME" ]      = interpolation_scheme
     self.d[ "RESTRICTION_SCHEME" ]        = restriction_scheme
     self.d[ "CLEAR_GUARD" ]               = clear_guard
@@ -166,7 +166,7 @@ class DynamicAMR(ActionSet):
           fineVolume,
           {{DOFS_PER_AXIS}}, {{OVERLAP}}, normal
         );
-        double* targetVolume = {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}.value + fineVolumeLinearised * {{UNKNOWNS}};
+        double* targetVolume = {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).value + fineVolumeLinearised * {{UNKNOWNS}};
         {{POINT_WISE_POSTPROCESSING_RESTRICTION}};
       }  
     }
