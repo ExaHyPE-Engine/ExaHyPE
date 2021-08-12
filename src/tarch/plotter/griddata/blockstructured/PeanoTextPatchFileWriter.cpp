@@ -41,8 +41,14 @@ double tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::getL
   for (auto line: lines) {
     if (line.find( Token_TimeStamp )!=std::string::npos ) {
       std::string timeStampToken = line.substr( line.find(Token_TimeStamp) + Token_TimeStamp.length() );
-      double timeStamp = std::stod(timeStampToken);
-      result = std::max(result,timeStamp);
+      try {
+        double timeStamp = std::stod(timeStampToken);
+        result = std::max(result,timeStamp);
+      }
+      catch (std::exception& ) {
+        logError( "getLatestTimeStepInIndexFile()", "file " << _indexFile << " contained invalid time stamp " << timeStampToken );
+        result = std::numeric_limits<double>::max();
+      }
     }
   }
 

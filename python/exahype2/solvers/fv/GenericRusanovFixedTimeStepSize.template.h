@@ -9,9 +9,7 @@
 #ifndef {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
 #define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
 
-
 #include "Abstract{{CLASSNAME}}.h"
-
 #include "tarch/logging/Log.h"
 
 {% for item in NAMESPACE -%}
@@ -23,7 +21,6 @@
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}
-
 
 
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
@@ -83,6 +80,47 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       double                                       t,
       int                                          normal
     ) override;
+
+      {% if USE_GPU %}
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    /**
+     * GPU variant of routine
+     *
+     * If you work without GPU support, please ignore this routine and
+     * leave it as it is. It won't be called anyway. If you work with a
+     * GPU and you deploy this solver to the accelerator, then you will
+     * need a stateless version of the routine, i.e. a version that can
+     * evaluate all data without having a solver object. It is the
+     * statelessness, that allows us to offload routines to the
+     * accelerator.
+     *
+     * Nothing stops you from having two versions of this routine: One
+     * that uses a state, and one that does not. This happens for
+     * non-linear PDEs, where some regions of the computational domain
+     * can just straightforwardly evaluate the operation while others
+     * require a complex query of the state. The latter cannot be
+     * deployed to an accelerator then.
+     *
+     * For a lot of codes, the operation is stateless always. These
+     * codes then often implement only the offloadable function variant
+     * and make the object method call the static version.
+     *
+     * @see Offloadable
+     */
+    static double maxEigenvalue(
+      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      Offloadable
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+    {% endif %}
     {% endif %}
 
 
@@ -95,6 +133,48 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
+
+      {% if USE_GPU %}
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    /**
+     * GPU variant of routine
+     *
+     * If you work without GPU support, please ignore this routine and
+     * leave it as it is. It won't be called anyway. If you work with a
+     * GPU and you deploy this solver to the accelerator, then you will
+     * need a stateless version of the routine, i.e. a version that can
+     * evaluate all data without having a solver object. It is the
+     * statelessness, that allows us to offload routines to the
+     * accelerator.
+     *
+     * Nothing stops you from having two versions of this routine: One
+     * that uses a state, and one that does not. This happens for
+     * non-linear PDEs, where some regions of the computational domain
+     * can just straightforwardly evaluate the operation while others
+     * require a complex query of the state. The latter cannot be
+     * deployed to an accelerator then.
+     *
+     * For a lot of codes, the operation is stateless always. These
+     * codes then often implement only the offloadable function variant
+     * and make the object method call the static version.
+     *
+     * @see Offloadable
+     */
+    static void flux(
+      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double * __restrict__ F, // F[{{NUMBER_OF_UNKNOWNS}}]
+      Offloadable
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+      {% endif %}
     {% endif %}
 
 
@@ -108,6 +188,44 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
+
+
+      {% if USE_GPU %}
+    /**
+     * GPU variant of routine
+     *
+     * If you work without GPU support, please ignore this routine and
+     * leave it as it is. It won't be called anyway. If you work with a
+     * GPU and you deploy this solver to the accelerator, then you will
+     * need a stateless version of the routine, i.e. a version that can
+     * evaluate all data without having a solver object. It is the
+     * statelessness, that allows us to offload routines to the
+     * accelerator.
+     *
+     * Nothing stops you from having two versions of this routine: One
+     * that uses a state, and one that does not. This happens for
+     * non-linear PDEs, where some regions of the computational domain
+     * can just straightforwardly evaluate the operation while others
+     * require a complex query of the state. The latter cannot be
+     * deployed to an accelerator then.
+     *
+     * For a lot of codes, the operation is stateless always. These
+     * codes then often implement only the offloadable function variant
+     * and make the object method call the static version.
+     *
+     * @see Offloadable
+     */
+    static void nonconservativeProduct(
+      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double * __restrict__ BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
+      Offloadable
+    );
+      {% endif %}
     {% endif %}
 };
 

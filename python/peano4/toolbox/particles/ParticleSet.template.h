@@ -40,6 +40,7 @@
   namespace {{ item }} {
 {%- endfor %}
 
+
   class {{CLASSNAME}}: public std::vector< {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}* > {
     #if PeanoDebug>=1
     private:
@@ -52,8 +53,9 @@
       tarch::la::Vector<Dimensions,double> getDebugX() const;
       tarch::la::Vector<Dimensions,double> getDebugH() const;
     #endif
-
     public:
+      typedef {% for item in NAMESPACE -%}{% if not loop.last %}{{ item }}::{% endif %}{%- endfor %}globaldata::{{PARTICLE_TYPE}}  DoFType;
+
       void merge(const {{CLASSNAME}}& neighbour, const peano4::datamanagement::VertexMarker& marker);
       static bool send(const peano4::datamanagement::VertexMarker& marker);
       static bool receiveAndMerge(const peano4::datamanagement::VertexMarker& marker);
@@ -61,20 +63,9 @@
       static bool loadPersistently(const peano4::datamanagement::VertexMarker& marker);
 
       #ifdef Parallel
-      /**
-       * Sets the Datatype to MPI_Double.
-       */
       static void initDatatype();
 
-      /**
-       * Degenerates to nop here, but we need such a function to fit to all other types.
-       */
       static void shutdownDatatype();
-
-      /**
-       * Map each entry to an MPI_DOUBLE.
-       */
-      static MPI_Datatype   Datatype;
       #endif
 
       std::string toString() const;

@@ -20,7 +20,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWri
   _writer._snapshotFileOut << "begin cell-metadata \"" << identifier << "\"" << std::endl
                << "  number-of-unknowns " << _numberOfUnknowns << std::endl
                << "  number-of-dofs-per-axis " << _numberOfCellsPerAxis << std::endl
-               << "  description \"" << description << "\"" << std::endl;
+               << "  description " << description << std::endl;
 
   _writer.writeMetaData(metaData);
   _writer.writeMapping(getCellsPerPatch(),mapping);

@@ -479,27 +479,67 @@ considerations willl have higher priority and \Peano\ might decide to continue w
 
 \subsection{Interpolation/restriction schemes}
 
-All Finite Volume solvers by default employ a piece-wise constant interpolation/restriction in 
+By default, all Finite Volume solvers employ a piece-wise constant interpolation and simple averaging as restriction in 
 \ExaHyPE.
 If you require a better inter-grid transfer scheme or if you want to introduce your own one, you have to do the following steps:
 
 \begin{itemize}
-  \item Create your own new subclass of the solver you want to use. See the CCZ4 example for a blueprint. Here, we already create our new solver subclass anyway.
-  \item Study the header/implementation file pair \texttt{toolbox/blockstructured/Interpolation}. Different interpolation/restriction variants differ in their suffix. The routines \texttt{piecewise\_constant} are those used by default.
-  \item Make your solver (in Python) use another scheme. I present a variant here where you want to use linear interpolation and a tailored conservative scheme for the restriction:
+  \item Create your own new subclass of the solver you want to use. See the CCZ4 example for a blueprint.
+  \item Overwrite the superclass' \texttt{create\_action\_sets()}. You should
+  still call the superclass routine
   \begin{code}
-self.create_data_structures()
-self.create_action_sets()
-self._action_set_coupld_resolution_transitions_and_handle_dynamic_mesh_refinement =
- DynamicAMR( 
-  patch=self._patch, # do not alter 
-  patch_overlap_interpolation=self._patch_overlap,   # do not alter 
-  patch_overlap_restriction=self._patch_overlap_new, # do not alter
-  interpolation_scheme="dlinear",  # by default set to "piecewise_constant"
-  restriction_scheme="myconservativescheme" "piecewise_constant" )
+def create_action_sets(self):
+  FV.create_action_sets(self)
+  
   \end{code}
-  \item Implement the corresponding routines with the extensions \texttt{dlinear} or \texttt{myconservativescheme} in \texttt{Interpolation} if they are not there yet. You have to stick to their signature and the same naming convention. 
+  but then you have to change the AMR handling afterwards by adding the
+  following line:
+  \item Make your solver (in Python) use another interpolation scheme. I present
+  a variant here where you want to use linear interpolation:
+  \begin{code}
+self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+  #include "../CCZ4Kernels.h"
+"""
+# self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+  \end{code}
 \end{itemize}
+
+\noindent
+At the moment, we have only implemented \texttt{averaging} for the restriction. 
+For the interpolation, we have the following routines:
+
+\begin{center}
+ \begin{tabular}{l|p{8cm}}
+  {\bf scheme} & description \\
+  \hline
+  \texttt{piecewise\_constant} & Interpolate piece-wise constant (default) \\
+  \texttt{linear} & Interpolate linear or bi-linear along faces \\  
+  \texttt{linear\_precomputed\_operators<X>} & This is an aggressively optimised version of the linear interpolation.
+   It has to know which patch size you are using, i.e.~if you alter the patch size you also have to alter the \texttt{X}.
+   The code pre-computes all face operators and thus often is faster. 
+   However, you have to examine whether this speedup can be observed for your particular application. \\  
+ \end{tabular}
+\end{center}
+
+\noindent
+Some codes need to postprocess their interpolation data. At the moment, I only support volume-wise postprocessing.
+To enable it, you pass a function call to the DynamicAMR argument: 
+\begin{code}
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+#include "../CCZ4Kernels.h"
+            """
+self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_interpolation(
+"examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+\end{code}
+
+\noindent
+\texttt{targetVolume} is a double pointer to the volume that has been interpolated.
+There are a few more values available for any function call you wanna make, but
+the pointer to the quantities usually is the most important one.
+You can use the attribute \texttt{additional\_includes} to give the resulting
+source code access to other routines.
+
 
 
 \section{GPU support}

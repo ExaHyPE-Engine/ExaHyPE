@@ -336,6 +336,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         or
         not {full_qualified_type}::loadPersistently(marker)
       ) {{
+        logDebug( "loadCell(...)", "initialise data of vertex {name} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << ": load persistent data=" << {full_qualified_type}::loadPersistently(marker) );
         data.setDebugX( marker.x(outVertexStackPosition) );
         data.setDebugH( marker.h() );
       }}
@@ -445,6 +446,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         or
         not {full_qualified_type}::loadPersistently(marker)
       ) {{
+        logDebug( "loadCell(...)", "initialise data of face {name} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << ": load persistent data=" << {full_qualified_type}::loadPersistently(marker) );
         data.setDebugX( marker.x(outFaceStackPosition) );
         data.setDebugH( marker.h() );
       }}
@@ -552,6 +554,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       or
       not {full_qualified_type}::loadPersistently(marker)
     ) {{
+      logDebug( "loadCell(...)", "initialise data of cell {name} with " << marker.x() << " x " << marker.h() );
       data.setDebugX( marker.x() );
       data.setDebugH( marker.h() );
     }}
@@ -772,7 +775,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
   {{
     const int inCellStack   = peano4::grid::PeanoCurve::CallStack;
     const int outCellStack  = event.getCellData();
-    logDebug("leaveCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
+    logDebug("storeCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack );
 
     peano4::datamanagement::CellMarker  marker(event);
 
@@ -786,6 +789,9 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
       (not peano4::grid::PeanoCurve::isInOutStack(outCellStack) or {full_qualified_type}::storePersistently(marker))
     ) {{
       repositories::DataRepository::_{logical_type_name}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outCellStack))->push( view.get(0) );
+    }}
+    else {{
+      logDebug( "storeCell(...)", "do not store cell {name} with " << marker.x() << " x " << marker.h() );
     }}
   }}
 """
@@ -855,7 +861,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
     for (int i=0; i<TwoTimesD; i++) {{
       int inFaceStackPosition  = event.getFaceDataFrom(i);
       int outFaceStack         = event.getFaceDataTo(i);
-      logDebug("leaveCell(...)", "pos-" << inFaceStackPosition << "->face stack " << outFaceStack );
+      logDebug("storeCell(...)", "pos-" << inFaceStackPosition << "->face stack " << outFaceStack );
 
       peano4::datamanagement::FaceMarker  marker(event,inFaceStackPosition);
 
@@ -870,7 +876,11 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
         and
         (not peano4::grid::PeanoCurve::isInOutStack(outFaceStack) or {full_qualified_type}::storePersistently(marker))
       ) {{
+        logDebug( "storeCell(...)", "store face {name} with " << marker.x(inFaceStackPosition) << " x " << marker.h() );
         repositories::DataRepository::_{logical_type_name}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outFaceStack))->push(data);
+      }}
+      else {{
+        logDebug( "storeCell(...)", "do not store face {name} with " << marker.x(inFaceStackPosition) << " x " << marker.h() << ": store persistently=" << {full_qualified_type}::storePersistently(marker) );
       }}
     }}
   }}
@@ -936,7 +946,7 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
     for (int i=0; i<TwoPowerD; i++) {{
       int inVertexStackPosition  = event.getVertexDataFrom(i);
       int outVertexStack         = event.getVertexDataTo(i);
-      logDebug("leaveCell(...)", "pos-" << inVertexStackPosition << "->vertex stack " << outVertexStack );
+      logDebug("storeCell(...)", "pos-" << inVertexStackPosition << "->vertex stack " << outVertexStack);
 
       peano4::datamanagement::VertexMarker  marker(event,inVertexStackPosition);
 
@@ -951,7 +961,11 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
         and
         (not peano4::grid::PeanoCurve::isInOutStack(outVertexStack) or {full_qualified_type}::storePersistently(marker))
       ) {{
+        logDebug( "storeCell(...)", "store vertex {name} with " << marker.x(inVertexStackPosition) << " x " << marker.h() );
         repositories::DataRepository::_{logical_type_name}Stack.getForPush(repositories::DataRepository::DataKey(_spacetreeId,outVertexStack))->push(data);
+      }}
+      else {{
+        logDebug( "storeCell(...)", "do not store vertex {name} with " << marker.x(inVertexStackPosition) << " x " << marker.h() );
       }}
     }}
   }}

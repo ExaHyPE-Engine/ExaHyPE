@@ -1,23 +1,16 @@
-# This file is part of the ExaHyPE2 project. For conditions of distribution and 
+# This file is part of the ExaHyPE2 project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .FV                       import *
- 
 from .PDETerms import PDETerms
 
-import peano4
-import exahype2
+import peano4, exahype2
 
-import jinja2
-
-from .GenericRusanovFixedTimeStepSize import GenericRusanovFixedTimeStepSize 
-from .GenericRusanovFixedTimeStepSize import UpdateCell 
+from .GenericRusanovFixedTimeStepSize import GenericRusanovFixedTimeStepSize
+from .GenericRusanovFixedTimeStepSize import UpdateCell
 from .EnclaveTasking                  import MergeEnclaveTaskOutcome
 from .EnclaveTasking                  import EnclaveTaskingFV
 
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
-
-
-import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 
 class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
@@ -30,41 +23,41 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       1, // halo
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
-  
+
   if (marker.isSkeletonCell()) {
     tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       reconstructedPatch,
       targetPatch
-    );  
+    );
   }
   else { // is an enclave cell
     assertion( marker.isEnclaveCell() );
-    ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+    // ::exahype2::EnclaveTask* newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+    auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
       reconstructedPatch
     );
-          
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
 
-    peano4::parallel::Tasks spawn( 
+    peano4::parallel::Tasks spawn(
       newEnclaveTask,
       peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
       peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
-    );   
+    );
   }
-  """      
-  
-    
-  def __init__(self,solver,use_split_loop=False):
+  """
+
+  def __init__(self, solver, use_split_loop=False):
+    import jinja2
     d = {}
     solver._init_dictionary_with_default_parameters(d)
     solver.add_entries_to_text_replacement_dictionary(d)
-    d["USE_SPLIT_LOOP"] = use_split_loop      
-    
-    ReconstructPatchAndApplyFunctor.__init__(self,
+    d["USE_SPLIT_LOOP"] = use_split_loop
+
+    super(UpdateCellWithEnclaves, self).__init__(
       solver._patch,
       solver._patch_overlap,
       jinja2.Template( self.TemplateUpdateCell ).render(**d),
@@ -72,7 +65,7 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
       "not marker.isRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
-      ")", 
+      ")",
       add_assertions_to_halo_exchange = True
     )
     self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
@@ -85,91 +78,82 @@ class UpdateCellWithEnclaves(ReconstructPatchAndApplyFunctor):
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
+""" + self._solver._get_default_includes() + self._solver.get_user_includes()
 
 
 class GenericRusanovFixedTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, flux=PDETerms.User_Defined_Implementation, ncp=None, plot_grid_properties=False, use_gpu=False):
     """
-    
     A fixed time stepping scheme with enclave tasking
-    
-    This is a simple implementation of a FV scheme using a generic 
-    Rusanov solver. It applies the concept of enclave tasking and 
-    thus exhibits a higher concurrency level than a plain FV 
-    counterpart. The price to pay is a higher memory pressure and 
+
+    This is a simple implementation of a FV scheme using a generic
+    Rusanov solver. It applies the concept of enclave tasking and
+    thus exhibits a higher concurrency level than a plain FV
+    counterpart. The price to pay is a higher memory pressure and
     further admin overhead.
-    
+
     Algorithmic workflow:
-    
+
     The enclave tasking variant here is simpler than the original
-    enclave tasking as proposed by Charrier et al. The reason that 
+    enclave tasking as proposed by Charrier et al. The reason that
     we keep it simpler is that the baseline code scales better.
     Therefore, it is reasonable to keep the enclave complexity and
     overhead down more aggressively.
-    
-    The basic idea behind enclave tasking is that each time step 
-    consists of two grid sweeps and that we distinguish enclave 
+
+    The basic idea behind enclave tasking is that each time step
+    consists of two grid sweeps and that we distinguish enclave
     tasks from skeleton cells. Skeleton cells are cells that are
-    adjacent to a resolution transition or adjacent to a domain 
+    adjacent to a resolution transition or adjacent to a domain
     boundary. The FV steps are distributed among these two sweeps
     as follows:
-    
+
     image:: GenericRusanovFixedTimeStepSizeWithEnclaves_state-transitions.svg
-    
+
     The variant of enclave tasking as it is discussed here has nothing
-    in common with the fused tasking as discussed by Charrier and 
+    in common with the fused tasking as discussed by Charrier and
     Weinzierl.
-    
-    
-    
+
     Methods:
-  
-    We extend the superclass' add_actions_to_perform_time_step(), 
+
+    We extend the superclass' add_actions_to_perform_time_step(),
     add_to_Peano4_datamodel() and add_use_data_statements_to_Peano4_solver_step().
     For the actions, I add a further action which administers the task
-    spawning over the enclaves. I plug into the data model routines to 
-    add the marker to the cell which holds the semaphore/cell number.      
-    
+    spawning over the enclaves. I plug into the data model routines to
+    add the marker to the cell which holds the semaphore/cell number.
     """
-    self._time_step_size = time_step_size
 
-    EnclaveTaskingFV.__init__(self, name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+    self._time_step_size = time_step_size
+    self._use_gpu = use_gpu
+
+    super(GenericRusanovFixedTimeStepSizeWithEnclaves, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
 
     self.set_implementation(flux=flux,ncp=ncp)
 
- 
-  def add_entries_to_text_replacement_dictionary(self,d):
+
+  def add_entries_to_text_replacement_dictionary(self, d):
     """
-     
      d: Dictionary of string to string
         in/out argument
-    
     """
-    EnclaveTaskingFV.add_entries_to_text_replacement_dictionary(self,d)
+    super(GenericRusanovFixedTimeStepSizeWithEnclaves, self).add_entries_to_text_replacement_dictionary(d)
     d[ "TIME_STEP_SIZE" ] = self._time_step_size
+    d[ "USE_GPU" ] = self._use_gpu
 
 
   def create_action_sets(self):
-    EnclaveTaskingFV.create_action_sets(self)
-
+    super(GenericRusanovFixedTimeStepSizeWithEnclaves, self).create_action_sets()
     self._action_set_update_cell = UpdateCellWithEnclaves(self)
 
 
-  def _enclave_task_name(self):
-    return self._name + "EnclaveTask"
+  def _enclave_task_name(self): return "{}EnclaveTask".format(self._name)
 
 
   def add_implementation_files_to_project(self,namespace,output):
     """
-
       Add the enclave task for the GPU
-
     """
-    EnclaveTaskingFV.add_implementation_files_to_project(self,namespace,output)
 
-    # TODO this is not working if we have inheritance
-    # templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/" + self.__class__.__name__
+    super(GenericRusanovFixedTimeStepSizeWithEnclaves, self).add_implementation_files_to_project(namespace, output)
     templatefile_prefix = os.path.join(os.path.dirname(os.path.realpath(__file__)), "GenericRusanovFixedTimeStepSizeWithEnclaves")
 
 
@@ -177,13 +161,18 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
     self._init_dictionary_with_default_parameters(implementationDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
 
+    # Bit of a hack so we can easily instantiate templates
+    implementationDictionary["SKIP_NCP"]  = "true" if implementationDictionary["NCP_IMPLEMENTATION"]  == "<none>" else "false"
+    implementationDictionary["SKIP_FLUX"] = "true" if implementationDictionary["FLUX_IMPLEMENTATION"] == "<none>" else "false"
+
     task_name = self._enclave_task_name()
 
+    import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
-      templatefile_prefix + ".EnclaveTask.template.h",
-      templatefile_prefix + ".EnclaveTask.template.cpp",
+      "{}.EnclaveTask.template.h".format(templatefile_prefix),
+      "{}.EnclaveTask.template.cpp".format(templatefile_prefix),
       task_name,
-      namespace + [ "tasks" ],
+      namespace + ["tasks"],
       "tasks",
       implementationDictionary,
       True)
@@ -191,3 +180,10 @@ class GenericRusanovFixedTimeStepSizeWithEnclaves( EnclaveTaskingFV ):
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
 
+
+    if self._use_gpu:
+        # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
+        # this hack has to suffice
+        peanodir = templatefile_prefix.split("python/exahype2",1)[0]
+        output.makefile.d["PEANODIR"] = peanodir
+        exahype2.gpu.add_exahype_objects(output.makefile)

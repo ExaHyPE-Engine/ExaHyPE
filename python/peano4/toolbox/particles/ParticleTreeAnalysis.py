@@ -15,6 +15,33 @@ class ParticleTreeAnalysis(ActionSet):
   """
   
     This action set implements an analysed tree grammar
+  
+    The grammar goes down to the finest level and writes into each 
+    leaf cell of the tree the following data:
+    
+    - Number of particles within this cell
+    - The flag ParentOfRefinedCell is set to false
+    
+    We then run through the tree bottom-up and set these two flags
+    on each spacetree cell along the following rules:
+    
+    - Number of particles of a refined cell in the spacetree equals
+      the number of all the children cells plus the local particles,
+      i.e. those particles stored on the present level.
+    - ParentOfRefinedCell becomes true if one of the children is 
+      refined. If none of the children is refined, the flag is false.
+  
+    I use the analysed tree data to determine if a tree's has to be
+    refined further as it hosts too many particles. I also use it to 
+    steer if a tree has to be coarsened if there are not enough 
+    particles. Finally, I use the flag ParentOfRefinedCell to ensure 
+    that we always remove at most one level from the tree in one 
+    tree sweep, as I only erase refined tree nodes for which 
+    ParentOfRefinedCell does not hold.
+    
+    
+    
+    :: Usage ::  
     
     I need a particle set to work properly. You also have to
     invoke add the tree cell properties to the tree and tell

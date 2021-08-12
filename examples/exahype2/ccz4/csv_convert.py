@@ -17,16 +17,18 @@ for item in lis:
 	if item.endswith(".pvd") or item.endswith(".vtp"): os.remove(os.path.join("./",item))
 
 parser = argparse.ArgumentParser(description='Tracer_conversion')
-parser.add_argument("-if",   "--input-file",  dest="file_name", required="True", type=str, help="input csv file name" )
+parser.add_argument("-if",   "--input-file",  dest="file_name", required="True", type=str, help="input csv file name (and directory)" )
 parser.add_argument("-dt",   "--delta-time",  dest="dt", default=-1, type=float, help="time interval between two snapshot, default is to print every timestep" )
-parser.add_argument("-of",   "--output-file",  dest="output_name", default="TracerData", type=str, help="output file name, extension and number will be add automatically" )
+parser.add_argument("-of",   "--output-file",  dest="output_name", default=" ", type=str, help="output file name, extension and number will be add automatically" )
 args = parser.parse_args()
 
 
 dt=args.dt;
 file_name=args.file_name
-output_name=args.output_name
-
+if args.output_name==" ":
+	output_name="TracerData"
+else:
+	output_name=args.output_name
 
 #########################################################################################################################
 #main code	

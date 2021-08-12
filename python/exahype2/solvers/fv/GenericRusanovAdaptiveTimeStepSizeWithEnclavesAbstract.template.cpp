@@ -2,6 +2,9 @@
 #include <algorithm>
 
 
+#include "exahype2/NonCriticalAssertions.h"
+
+
 #ifdef Parallel
 #include <mpi.h>
 #endif
@@ -75,6 +78,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     #else
     _timeStepSize = newTimeStepSize;
     #endif
+
+    if (_timeStepSize!=_timeStepSize or tarch::la::smallerEquals(_timeStepSize,0.0) ) {
+      ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>0", "invalid (exploding or degenerated) time step size" );
+    }
 
     _admissibleTimeStepSize = std::numeric_limits<double>::max();
   }
@@ -167,8 +174,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
 {% endif %}
 
 
-
-
 {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__                  Q,
@@ -184,4 +189,50 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
   {% endif %}
 }
+
+   {% if USE_GPU %}
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
+  const double * __restrict__                  Q,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__                        S,
+  Offloadable
+) {
+  {% if SOURCE_TERM_IMPLEMENTATION!="<empty>" %}
+  {{SOURCE_TERM_IMPLEMENTATION}}
+  {% else %}
+  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
+  {% endif %}
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
+   {% endif %}
+{% endif %}
+  
+// Fusanov always needs this symbol
+{% if USE_GPU %}
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
+  const double * __restrict__                  Q,         // Q[5+0],
+  const double * __restrict__                  deltaQ,    // [5+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double * __restrict__                        BgradQ,     // BgradQ[5]
+  Offloadable
+) {
+
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 {% endif %}

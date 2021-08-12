@@ -10,6 +10,9 @@ import dastgen2
 import numpy as np
 from Probe_file_gene import tracer_seeds_generate
 
+from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
+
+
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
@@ -44,13 +47,17 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu", "fv-adaptive-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
+    parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-slow+enforce", "linear", "linear+enforce" ], default="linear-slow",  help="interpolation scheme for AMR" )
+    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
+
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="CCZ4{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -64,18 +71,16 @@ if __name__ == "__main__":
 
     if args.implementation=="fv-fixed":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-enclave":
+    if args.implementation=="fv-fixed-enclave" or args.implementation=="fv-fixed-gpu":
        SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
     if args.implementation=="fv-adaptive":
        SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
-    if args.implementation=="fv-adaptive-enclave":
+    if args.implementation=="fv-adaptive-enclave" or args.implementation=="fv-adaptive-gpu":
        SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
     if args.implementation=="fv-optimistic-enclave":
        SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
     if args.implementation=="ader-fixed":
        SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-gpu":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator
 
     class CCZ4Solver( SuperClass ):
       def __init__(self, name, patch_size, min_h, max_h ):
@@ -106,9 +111,8 @@ if __name__ == "__main__":
 #include "../CCZ4Kernels.h"
 #include "exahype2/PatchUtils.h"
 """
-
+           #SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator or \
         if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
-           SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator or \
            SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
           SuperClass.__init__(
             self,
@@ -116,7 +120,8 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_size=1e-2
+            time_step_size=1e-2,
+            use_gpu = True if args.implementation=="fv-fixed-gpu" else False
           )
         else:
           SuperClass.__init__(
@@ -125,10 +130,12 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.1,
+            use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
+        self._patch_size = patch_size
 
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
@@ -160,6 +167,36 @@ if __name__ == "__main__":
   }
 """ )
 
+   
+      def create_action_sets(self):
+        SuperClass.create_action_sets(self)
+
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.additional_includes += """ 
+#include "../CCZ4Kernels.h"
+            """
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+
+        if args.interpolation=="constant":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
+          print( "Interpolation rule: piecewise_constant" )
+        if args.interpolation=="linear-slow" or args.interpolation=="linear-slow+enforce":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+          print( "Interpolation rule: linear interpolation without optimisation" )
+        if args.interpolation=="linear" or args.interpolation=="linear+enforce":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
+          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
+
+        if args.restriction=="average":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+          print( "Restiction rule: averaging" )
+        if args.restriction=="inject" or args.restriction=="linear-slow+enforce":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "inject" )
+          print( "Restiction rule: injection" )
+          
+        if args.interpolation=="linear+enforce" or args.interpolation=="linear-slow+enforce":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_interpolation( "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
+  
 
       def get_user_includes(self):
         """
@@ -480,8 +517,6 @@ if __name__ == "__main__":
     else:
       solver_name    = "FiniteVolume" + solver_name
 
-    if SuperClass == exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator:
-      solver_name += "OnGPU"
 
     min_h = args.min_h
     if min_h <=0.0:
@@ -526,9 +561,11 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       intparams.update({"swi":0}) 
       userwarnings.append((msg,None))
-    elif args.periodic_bc:
-      print( "Periodic BC set")
+    elif args.periodic_bc=="True":
+      msg = "Periodic BC set"
+      print(msg)
       periodic_boundary_conditions = [True,True,True]          # Periodic BC
+      userwarnings.append((msg,None))
     else:
       msg = "WARNING: Periodic BC deactivated by hand"
       print(msg)
@@ -561,8 +598,8 @@ if __name__ == "__main__":
 #Domain settings
 ########################################################################################
     if args.scenario=="gauge" or args.scenario=="linear":
-      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      #offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
+      #offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
       msg = "Gauge wave, domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userwarnings.append((msg,None))
@@ -589,11 +626,13 @@ if __name__ == "__main__":
 #output dir and proble
 ########################################################################################
     path="./"
+    if not args.path=="./":
+        path=args.path 
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
-    path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv1"
+    #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-6,-6,-6]
-    project.add_plot_filter( probe_point,[12.0,12.0,12.0],1 )
+    probe_point = [-8,-8,-0.5]
+    project.add_plot_filter( probe_point,[16.0,16.0,0.5],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -602,32 +641,34 @@ if __name__ == "__main__":
 ########################################################################################
     if not args.add_tracer==0:
       tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
-      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=4 )
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=65 )
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
       project.add_action_set_to_timestepping(
         exahype2.tracer.FiniteVolumesTracing(
           tracer_particles,my_solver,
-          [17,18,19],range(4),-1,
+          [17,18,19],range(65),-1,
           #time_stepping_kernel="toolbox::particles::LinearInterp",
           time_stepping_kernel="toolbox::particles::StaticPosition"#,
           #observer_kernel="toolbox::particles::ObLinearInterp"
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(domain_size[0]+offset[0]),N_x=50,N_y=50,N_z=2)
-        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=0.99)) #"Line.dat" #slide.dat #volume.dat
+        tracer_seeds_generate(Type=args.add_tracer, a=-0.4, b=0.4, N_x=50,N_y=50,N_z=2)
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"Line.dat" #slide.dat #volume.dat
       if args.add_tracer==4:  
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
       if args.add_tracer==5:
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesbyCoor ( particle_set=tracer_particles, N=3, coor_s=[[0.4251,0,0],[-0.4251,0,0],[0.2,0.2,0]]))
       if args.add_tracer==6 or args.add_tracer==7:
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
-
+      
+      if path=="./": path1="."
+      else: path1=path
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=my_solver,
-        filename="zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=1000
+        filename=path1+"/zz"+args.tra_name,
+        number_of_entries_between_two_db_flushes=30000
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
       #,,-1,"zz",1000))
@@ -703,6 +744,8 @@ if __name__ == "__main__":
     # Remind the user of warnings!
     userwarnings.append(("the executable file name: "+exe, None))
     userwarnings.append(("output directory: "+path, None))
+    if not args.add_tracer==0:
+        userwarnings.append(("tracer output file: "+path1+"/zz"+args.tra_name, None))
     if len(userwarnings) >0:
         print("Please note that these warning occured before the build:")
         for msg, exception in userwarnings:

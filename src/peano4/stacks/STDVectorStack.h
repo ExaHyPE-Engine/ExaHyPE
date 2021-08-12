@@ -7,6 +7,7 @@
 #include <vector>
 #include <algorithm>
 
+#include "stacks.h"
 
 #include "peano4/parallel/Node.h"
 
@@ -26,17 +27,8 @@ namespace peano4 {
     class STDVectorStack;
 
     typedef STDVectorStack< peano4::grid::GridVertex >   GridVertexStack;
-
-    enum class IOMode {
-      None,
-      MPISend,
-      MPIReceive
-    };
   }
 }
-
-
-std::string toString( peano4::stacks::IOMode mode );
 
 
 /**
@@ -44,7 +36,7 @@ std::string toString( peano4::stacks::IOMode mode );
  */
 template <class T>
 class peano4::stacks::STDVectorStack {
-  private:
+  protected:
     /**
      * Logging device.
      */

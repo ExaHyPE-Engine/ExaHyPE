@@ -26,10 +26,10 @@ sources. Typically, I invoke the script via
 python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py arguments
 """)
 
-modes = { 
+modes = {
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, 
+  "assert":  peano4.output.CompileMode.Asserts,
   "stats":   peano4.output.CompileMode.Stats,
   "debug":   peano4.output.CompileMode.Debug,
 }
@@ -45,7 +45,7 @@ parser.add_argument("-pd", "--peano-dir",              dest="peanodir",         
 parser.add_argument("-cd", "--configure-dir",          dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("-o",  "--output",                 dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("-f",  "--force",                  dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["default", "default-ats", "enclave", "enclave-ats", "enclave-ots", "gpu"], default="default", help="Pick implementation variant" )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["default", "default-ats", "enclave", "enclave-ats", "enclave-ots", "gpu-fixed", "gpu-ats"], default="default", help="Pick implementation variant" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
@@ -59,7 +59,7 @@ if args.dim not in [2,3]:
     import sys
     sys.exit(1)
 
-if args.mode not in modes: 
+if args.mode not in modes:
     print("Error, mode must be {} or {}, you supplied {}".format(", ",join(modes.keys()[:-1]),modes.keys()[-1],args.mode))
     import sys
     sys.exit(1)
@@ -99,16 +99,26 @@ admissible_time_step_size = min_h/args.patch_size*0.01
 auxiliary_variables = 0
 
 thesolver = None
-if args.type=="gpu":
-  print("Turning on OpenMP for GPUs")
-  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator(
-    "EulerOnGPU",
+if args.type=="gpu-fixed":
+  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+    "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     admissible_time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    use_gpu=True
   )
+elif args.type=="gpu-ats":
+  thesolver = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves(
+    "Euler",
+    args.patch_size,
+    unknowns, auxiliary_variables,
+    min_h, max_h,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    use_gpu=True
+  )
+  print("yesssss")
 elif args.type=="enclave":
   thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
     "Euler",
@@ -174,11 +184,11 @@ else:
 # Lets configure some global parameters
 #
 project.set_global_simulation_parameters(
-  dimensions = dimensions, 
-  offset = [0.0,0.0,0.0], 
+  dimensions = dimensions,
+  offset = [0.0,0.0,0.0],
   size = [1.0,1.0,1.0],
-  end_time = args.end_time, 
-  first_plot_time_stamp = 0.0, 
+  end_time = args.end_time,
+  first_plot_time_stamp = 0.0,
   time_in_between_plots = args.plot_snapshot_interval,      # snapshots
   periodic_BC = periodic_BC
 )
