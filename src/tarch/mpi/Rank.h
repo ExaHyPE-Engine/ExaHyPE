@@ -210,7 +210,6 @@ class tarch::mpi::Rank {
     ...,
     [&]() -> void {
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-      answerQuestions();
     }
   );
        </pre>
@@ -226,6 +225,10 @@ class tarch::mpi::Rank {
       std::function<void()> waitor = []() -> void {}
     );
 
+
+    /**
+     * @see allReduce
+     */
     void reduce(
       const void *sendbuf, void *recvbuf, int count,
       MPI_Datatype datatype,
