@@ -600,6 +600,11 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_outflow(
 ) {
   assertionEquals(overlap,1);
 
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
+    marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues,
+    not swapInsideOutside
+  );
+
   const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
   const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside;
 
@@ -631,8 +636,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_outflow(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  // It is important that we use linear here, as outflow makes
-  // no sense if we set both layer halves
   interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
   interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
 }
