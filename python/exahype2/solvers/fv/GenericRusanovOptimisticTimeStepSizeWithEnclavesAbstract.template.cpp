@@ -262,8 +262,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     }
   }
 
-  if (_timeStepSize!=_timeStepSize or tarch::la::smaller(_timeStepSize,0.0) ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>=0", "invalid (exploding or degenerated) time step size" );
+  if ( std::isnan(_timeStepSize) or std::isinf(_timeStepSize) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_timeStepSize) );
   }
 
 
