@@ -45,6 +45,11 @@ namespace exahype2 {
   void shutdownNonCritialAssertionEnvironment();
   void initNonCritialAssertionEnvironment();
 
+  /**
+   * Switch noncritical assertions on/off.
+   */
+  void enableNonCriticalAssertions(bool value);
+
   void triggerNonCriticalAssertion( std::string file, int line, std::string expression, std::string parameterValuePairs );
   bool hasNonCriticalAssertionBeenViolated();
 }
