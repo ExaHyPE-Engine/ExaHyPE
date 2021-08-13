@@ -185,6 +185,55 @@ class tarch::mpi::Rank {
      */
     void barrier(std::function<void()> waitor = []() -> void {} );
 
+    #ifdef Parallel
+    /**
+     * Wrapper around allreduce
+     *
+     * Peano relies heavily on unexpected, asynchronous message exchange to admin
+     * the workload. Ranks tell other ranks on th fly, for example, if they
+     * delete trees or create new ones. They also use MPI messages to realise
+     * global semaphores.
+     *
+     * As a consequence, any reduction runs risk to introduce a deadlock: Rank A
+     * enters an allreduce. Rank B sends something to A and then would enter the
+     * allreduce. However, this send of A (and perhaps an immediate receive of a
+     * confirmation message) might not go through, as A is busy in the reduction.
+     * Therefore, we should never use an allreduce but instead issue a non-blocking
+     * allreduce. While the reduce is pending, we should be able to do something
+     * else such as answering to further request messages.
+     *
+     * This alreduce allows us to do so. The default waitor is a receive of
+     * pending messages. So most codes use the allReduce as follows:
+     *
+     * <pre>
+  tarch::mpi::Rank::getInstance().allReduce(
+    ...,
+    [&]() -> void {
+      tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+      answerQuestions();
+    }
+  );
+       </pre>
+     *
+     * I wanted to make this routine a normal one that degenerates to nop if you
+     * don't translate with MPI support. However, that doesn't work as the signature
+     * requires MPI-specific datatypes.
+     */
+    void allReduce(
+      const void *sendbuf, void *recvbuf, int count,
+      MPI_Datatype datatype,
+      MPI_Op op,
+      std::function<void()> waitor = []() -> void {}
+    );
+
+    void reduce(
+      const void *sendbuf, void *recvbuf, int count,
+      MPI_Datatype datatype,
+      MPI_Op op, int root,
+      std::function<void()> waitor = []() -> void {}
+    );
+    #endif
+
     /**
      * In older DaStGen version, I tried to find out whether a particular
      * message type is in the MPI queue. That is, I looked whether a message
