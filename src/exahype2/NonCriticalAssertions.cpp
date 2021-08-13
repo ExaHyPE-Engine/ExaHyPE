@@ -15,6 +15,12 @@ namespace {
   #if defined(Parallel) and defined(MPISupportsSingleSidedCommunication)
   MPI_Win assertionWindow;
   #endif
+  bool                                 useNonCriticalAssertions = true;
+}
+
+
+void exahype2::enableNonCriticalAssertions(bool value) {
+  useNonCriticalAssertions = value;
 }
 
 
@@ -37,7 +43,7 @@ void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::str
 
   tarch::multicore::Lock lock( _assertionSemaphore );
 
-  if (rankWhichHasSetNonCriticalAssertion<0) {
+  if (rankWhichHasSetNonCriticalAssertion<0 and useNonCriticalAssertions) {
     logError( "triggerNonCriticalAssertion(...)", "noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
     logError( "triggerNonCriticalAssertion(...)", parameterValuePairs );
     logError( "triggerNonCriticalAssertion(...)", "inform rank 0 to dump solution and to shutdown application" );

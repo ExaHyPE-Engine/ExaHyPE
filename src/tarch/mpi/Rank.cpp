@@ -269,6 +269,96 @@ tarch::mpi::Rank::~Rank() {
 }
 
 
+#ifdef Parallel
+void tarch::mpi::Rank::allReduce(
+  const void *sendbuf, void *recvbuf, int count,
+  MPI_Datatype datatype,
+  MPI_Op op,
+  std::function<void()> waitor
+) {
+  logTraceIn( "allReduce()" );
+
+  if (getNumberOfRanks()>1) {
+    MPI_Request* request = new MPI_Request();
+    MPI_Iallreduce(sendbuf, recvbuf, count, datatype, op, getCommunicator(), request );
+
+    auto timeOutWarning          = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+    auto timeOutShutdown         = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+    bool triggeredTimeoutWarning = false;
+    int flag                     = 0;
+    while (not flag) {
+      if (
+        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
+       (!triggeredTimeoutWarning)
+       ) {
+        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::Rank", "allReduce()", -1, -1 );
+        triggeredTimeoutWarning = true;
+      }
+      if (
+        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
+        (std::chrono::system_clock::now()>timeOutShutdown)
+      ) {
+        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::Rank", "allReduce()", -1, -1 );
+      }
+      waitor();
+      // leads to deadlock/starve situations
+      //tarch::multicore::yield();
+      MPI_Test( request, &flag, MPI_STATUS_IGNORE );
+    }
+
+    delete request;
+  }
+
+  logTraceOut( "allReduce()" );
+}
+
+
+void tarch::mpi::Rank::reduce(
+  const void *sendbuf, void *recvbuf, int count,
+  MPI_Datatype datatype,
+  MPI_Op op, int root,
+  std::function<void()> waitor
+) {
+  logTraceIn( "reduce()" );
+
+  if (getNumberOfRanks()>1) {
+    MPI_Request* request = new MPI_Request();
+    MPI_Ireduce(sendbuf, recvbuf, count, datatype, op, root, getCommunicator(), request );
+
+    auto timeOutWarning          = tarch::mpi::Rank::getInstance().getDeadlockWarningTimeStamp();
+    auto timeOutShutdown         = tarch::mpi::Rank::getInstance().getDeadlockTimeOutTimeStamp();
+    bool triggeredTimeoutWarning = false;
+    int flag                     = 0;
+    while (not flag) {
+      if (
+        tarch::mpi::Rank::getInstance().isTimeOutWarningEnabled() &&
+        (std::chrono::system_clock::now()>timeOutWarning) &&
+       (!triggeredTimeoutWarning)
+       ) {
+        tarch::mpi::Rank::getInstance().writeTimeOutWarning( "tarch::mpi::Rank", "reduce()", -1, -1 );
+        triggeredTimeoutWarning = true;
+      }
+      if (
+        tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
+        (std::chrono::system_clock::now()>timeOutShutdown)
+      ) {
+        tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut( "tarch::mpi::Rank", "reduce()", -1, -1 );
+      }
+      waitor();
+      // leads to deadlock/starve situations
+      //tarch::multicore::yield();
+      MPI_Test( request, &flag, MPI_STATUS_IGNORE );
+    }
+
+    delete request;
+  }
+
+  logTraceOut( "reduce()" );
+}
+#endif
+
+
 void tarch::mpi::Rank::barrier(std::function<void()> waitor) {
   #ifdef Parallel
   logTraceIn( "barrier()" );
