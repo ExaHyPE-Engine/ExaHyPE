@@ -85,7 +85,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     double localNextAdmissibleTimeStepSize = _admissibleTimeStepSize;
     double nextAdmissibleTimeStepSize      = 0;
     #ifdef Parallel
-    MPI_Allreduce(&localNextAdmissibleTimeStepSize, &nextAdmissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
+    tarch::mpi::Rank::getInstance().allReduce(
+          &localNextAdmissibleTimeStepSize,
+          &nextAdmissibleTimeStepSize,
+          1,
+          MPI_DOUBLE,
+          MPI_MIN, 
+          [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+          );
     #else
     nextAdmissibleTimeStepSize = localNextAdmissibleTimeStepSize;
     #endif
