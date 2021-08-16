@@ -17,7 +17,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1.0, "t_ini":0.5, "r_ini":1, "delta_rho":0.01, "initial_internal_energy":0.1, 
+         "G":1.0, "t_ini":0.5, "r_ini":0.2, "delta_rho":0.1, "initial_internal_energy":0.05, 
 }
 
 intparams = {"swi":99, "ReSwi":0, "sample_number":10}
@@ -139,7 +139,6 @@ if __name__ == "__main__":
         """
         self._my_user_includes += """
 #include "../SSInfall.h"
-#include <iomanip>
     """
         self._auxiliary_variables = 0
 
@@ -147,14 +146,14 @@ if __name__ == "__main__":
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
-        if (not tarch::la::equals(t,repositories::{{SOLVER_INSTANCE}}.t_record)){
+        /*if (not tarch::la::equals(t,repositories::{{SOLVER_INSTANCE}}.t_record)){
           for (int i=0;i<sample;i++) {
             std::cout << std::setprecision (4) << repositories::{{SOLVER_INSTANCE}}.m_tot[i] << " ";
             repositories::{{SOLVER_INSTANCE}}.m_tot[i]=0;
           }
           repositories::{{SOLVER_INSTANCE}}.t_record=t;
           std::cout << std::endl;
-        }
+        }*/
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
@@ -253,11 +252,14 @@ if __name__ == "__main__":
 
     intparams.update({"ReSwi":args.ReSwi})
     intparams.update({"sample_number":args.sample_number})
+    floatparams.update({"r_ini":1.0})
+    floatparams.update({"t_ini":0.5})
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)
     solverconstants+= "double m_tot[{}]={};\n".format(args.sample_number,"{0}")
+    solverconstants+= "double m_tot_copy[{}]={};\n".format(args.sample_number,"{0}")
     r_list=np.linspace(0,(domain_size[0]+offset[0]),(args.sample_number+1))[1:]
     solverconstants+= "double r_s[{}]={}".format(args.sample_number,"{")
     for r in r_list:
@@ -290,11 +292,11 @@ if __name__ == "__main__":
     path="./"
     if not args.path=="./":
         path=args.path 
-    #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
+    path="/cosma5/data/durham/dc-zhan3/output"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-20,-20,-0.5]
-    project.add_plot_filter( probe_point,[40.0,40.0,1],1 )
+    #probe_point = [-20,-20,-0.5]
+    #project.add_plot_filter( probe_point,[40.0,40.0,1],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 

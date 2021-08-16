@@ -6,7 +6,20 @@
 
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
-
+void examples::exahype2::SSInfall::SSInfall::startTimeStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+){
+  AbstractSSInfall::startTimeStep(globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize);
+  for (int i=0;i<sample_number;i++) {
+    m_tot_copy[i]=m_tot[i];
+    //std::cout << std::setprecision (4) << m_tot[i] << " ";
+    m_tot[i]=0;
+  }
+  //std::cout << std::endl;
+}
 
 
 ::exahype2::RefinementCommand examples::exahype2::SSInfall::SSInfall::refinementCriterion(
@@ -35,8 +48,8 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   double y=volumeCentre(1)-center(1);
   double z=volumeCentre(2)-center(2);
 
-  bool isInTheSphere = ( (x*x+y*y+z*z) < r_ini*r_ini );
-  double H_i=2/(3*t_ini);
+  bool isInTheSphere = ( (x*x+y*y+z*z) < r_ini*r_ini );//overdensity region
+  double H_i=2/(3*t_ini); //Hubble constant
   double rho_ini=1/(6*pi*G*t_ini*t_ini);
 
   // initial conditions
@@ -84,17 +97,19 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double rho_ini=1/(6*pi*G*t_ini*t_ini);
   double m_in=0;
   
-  if (tarch::la::equals(t,0)){
+  if (tarch::la::equals(t,0)){//we know the mass distri at the beginning
     if (r_coor<r_ini) { m_in=4*pi*rho_ini*(1+delta_rho)*pow(r_coor,3)/3;}
     else { m_in=4*pi*rho_ini*pow(r_coor,3)/3;+4*pi*rho_ini*delta_rho*pow(r_ini,3)/3;}
-  } else {
+  } 
+  else {
     m_in=mass_interpolate(r_coor);
   }
 
-  //double force_density_norm=Q[0]*G*m_in/pow(r_coor,3);
-  //if (force_density_norm>1 and r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
+  double force_density_norm=Q[0]*G*m_in/pow(r_coor,3);
+  if (force_density_norm>1 and r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
 
-  double force_density_norm=0;
+  //force_density_norm=0;
+
   S[0] = 0;  // rho
   S[1] = -force_density_norm*x;    // velocities
   S[2] = -force_density_norm*y;
@@ -222,18 +237,18 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
 
   if (r_coor<r_s[0]) {
     a=0; b=r_s[0];
-    m_a=0; m_b=m_tot[0];
+    m_a=0; m_b=m_tot_copy[0];
   }
   if (r_coor>r_s[sample_number-1]) {
     a=r_s[sample_number-2]; b=r_s[sample_number-1];
-    m_a=m_tot[sample_number-2]; m_b=m_tot[sample_number-1];    
+    m_a=m_tot_copy[sample_number-2]; m_b=m_tot_copy[sample_number-1];    
   }
   else{
     for (int i=1;i<sample_number;i++){
       if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])){
         a=r_s[i-1]; b=r_s[i];
-        m_a=m_tot[i-1]; m_b=m_tot[i];
-        //std::cout << m_tot << std::endl;
+        m_a=m_tot_copy[i-1]; m_b=m_tot_copy[i];
+        //std::cout << m_tot_copy << std::endl;
       }
     }
   }
