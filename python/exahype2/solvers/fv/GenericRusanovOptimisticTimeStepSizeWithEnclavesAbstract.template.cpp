@@ -85,7 +85,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     double localNextAdmissibleTimeStepSize = _admissibleTimeStepSize;
     double nextAdmissibleTimeStepSize      = 0;
     #ifdef Parallel
-    MPI_Allreduce(&localNextAdmissibleTimeStepSize, &nextAdmissibleTimeStepSize, 1, MPI_DOUBLE, MPI_MIN, tarch::mpi::Rank::getInstance().getCommunicator() );
+    tarch::mpi::Rank::getInstance().allReduce(
+          &localNextAdmissibleTimeStepSize,
+          &nextAdmissibleTimeStepSize,
+          1,
+          MPI_DOUBLE,
+          MPI_MIN, 
+          [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+          );
     #else
     nextAdmissibleTimeStepSize = localNextAdmissibleTimeStepSize;
     #endif
@@ -262,8 +269,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     }
   }
 
-  if (_timeStepSize!=_timeStepSize or tarch::la::smaller(_timeStepSize,0.0) ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>=0", "invalid (exploding or degenerated) time step size" );
+  if ( std::isnan(_timeStepSize) or std::isinf(_timeStepSize) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_timeStepSize) );
   }
 
 

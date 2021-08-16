@@ -249,6 +249,7 @@ namespace toolbox {
       double*                                   coarseGridValues
     );
 
+
     void interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -267,6 +268,61 @@ namespace toolbox {
       double*                                   coarseGridValues
     );
     void interpolateCell_AoS_linear(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+
+
+    /**
+     * Outflow AMR condition
+     *
+     * The idea here is that a wave travels from a fine grid resolution into
+     * a coarse one. If the wave has a unique direction of travel, there should
+     * be no reflections and we could use simple outflow conditions, i.e.
+     * homogeneous Neumann.
+     *
+     * This does not work 1:1 in Peano, as hanging faces do not carry
+     * information: Any hanging face/vertex is created throughout the traversal
+     * and it is deleted towards the end. They are not persistent. So we can't
+     * impose Neumann conditions: The fine grid patch projects its data onto the
+     * inner layer of the face, but this projection is lost in the next sweep.
+     *
+     * So I have to create a face: I know that the next coarser face holds
+     * meaningful data. I interpolate d-linearly onto the inner(!) halo layer,
+     * i.e. those cells which should coincide with the patch content and are not
+     * used along a hanging face. This is an approximation, as this layer should
+     * hold copies of the patch interior. Now it holds a restricted plus
+     * interpolated data set. With this approximation, I can now impose Neumann
+     * conditions.
+     */
+    void interpolateOntoOuterHalfOfHaloLayer_AoS_outflow(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues,
+      bool                                      swapInsideOutside=false
+    );
+    /**
+     *  Interpolate whole edge
+     *
+     *  This is usually called if we create a new face, e.g. It is important
+     *  that we use linear here, as outflow makes no sense if we set both
+     *  layer halves.
+     */
+    void interpolateHaloLayer_AoS_outflow(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridValues,
+      double*                                   coarseGridValues
+    );
+    void interpolateCell_AoS_outflow(
       const peano4::datamanagement::CellMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       unknowns,

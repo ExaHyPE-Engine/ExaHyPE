@@ -589,6 +589,75 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
 }
 
 
+void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_outflow(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues,
+  bool                                      swapInsideOutside
+) {
+  assertionEquals(overlap,1);
+
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
+    marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues,
+    not swapInsideOutside
+  );
+
+  const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
+  const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside;
+
+  dfore(fineVolumeOutside,numberOfDoFsPerAxisInPatch,normal,pickLeftHalfOfHaloOnFineGrid ? 0 : 1) {
+    tarch::la::Vector<Dimensions,int>    fineVolumeInside = fineVolumeOutside;
+    fineVolumeInside(normal) = pickLeftHalfOfHaloOnFineGrid ? 1 : 0;
+
+    int fineVolumeOutsideLinearised = serialisePatchIndexInOverlap(
+      fineVolumeOutside,
+      numberOfDoFsPerAxisInPatch, overlap, normal
+      );
+    int fineVolumeInsideLinearised = serialisePatchIndexInOverlap(
+      fineVolumeInside,
+      numberOfDoFsPerAxisInPatch, overlap, normal
+      );
+
+    for (int j=0; j<unknowns; j++) {
+      fineGridValues[fineVolumeOutsideLinearised*unknowns+j] = fineGridValues[fineVolumeInsideLinearised*unknowns+j];
+    }
+  }
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_outflow(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
+  interpolateOntoOuterHalfOfHaloLayer_AoS_linear(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
+}
+
+
+void toolbox::blockstructured::interpolateCell_AoS_outflow(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+  toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
+    marker,
+    numberOfDoFsPerAxisInPatch,
+    unknowns,
+    fineGridValues,
+    coarseGridValues
+  );
+}
+
+
 void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_inject(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
