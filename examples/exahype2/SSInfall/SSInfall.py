@@ -17,10 +17,10 @@ modes = {
 }
 
 floatparams = {
-         "G":1.0, "t_ini":0.5, "r_ini":0.2, "delta_rho":0.1, "initial_internal_energy":0.05, 
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0 
 }
 
-intparams = {"swi":99, "ReSwi":0, "sample_number":10}
+intparams = {"swi":0, "ReSwi":0, "sample_number":10}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - SSInfall script')
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.25
+            time_step_relaxation=0.05
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     intparams.update({"ReSwi":args.ReSwi})
     intparams.update({"sample_number":args.sample_number})
     floatparams.update({"r_ini":1.0})
-    floatparams.update({"t_ini":0.5})
+    #floatparams.update({"t_ini":0.5})
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
@@ -292,7 +292,7 @@ if __name__ == "__main__":
     path="./"
     if not args.path=="./":
         path=args.path 
-    path="/cosma5/data/durham/dc-zhan3/output"
+    #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
     #probe_point = [-20,-20,-0.5]

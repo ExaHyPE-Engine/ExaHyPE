@@ -49,18 +49,28 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   double z=volumeCentre(2)-center(2);
 
   bool isInTheSphere = ( (x*x+y*y+z*z) < r_ini*r_ini );//overdensity region
-  double H_i=2/(3*t_ini); //Hubble constant
-  double rho_ini=1/(6*pi*G*t_ini*t_ini);
+  //double H_i=2/(3*t_ini); //Hubble constant
+  //double rho_ini=1/(6*pi*G*t_ini*t_ini);
+
+  double rho_ini=tilde_rho_ini;
+  //constexpr double gamma = 5.0/3.0;
+
+  Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;  // rho
+  Q[1] = 0;    // velocities
+  Q[2] = 0;
+  Q[3] = 0;
+  Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini/(gamma-1); // inner energy
 
   // initial conditions
+/*
   Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;  // rho
-  //Q[0] = 0.1;
   Q[1] = Q[0]*H_i*x;    // velocities
   Q[2] = Q[0]*H_i*y;
   Q[3] = Q[0]*H_i*z;
   Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+initial_internal_energy; // inner energy
-
-/*  #if Dimensions==2
+*/
+/*
+  #if Dimensions==2
   tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
   #else
   tarch::la::Vector<Dimensions,double> circleCentre = {0,0,0};
@@ -94,7 +104,8 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 
   double r_coor=x*x+y*y+z*z;
   r_coor=pow(r_coor,0.5);
-  double rho_ini=1/(6*pi*G*t_ini*t_ini);
+  //double rho_ini=1/(6*pi*G*t_ini*t_ini);
+  double rho_ini=tilde_rho_ini;
   double m_in=0;
   
   if (tarch::la::equals(t,0)){//we know the mass distri at the beginning
@@ -164,7 +175,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   assertion(normal<Dimensions);
   assertion( Q[0]>0.0 );
 
-  constexpr double gamma = 1.4;
+  //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
@@ -176,7 +187,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const double c   = std::sqrt(gamma * p * irho);
 
   const double u_n = Q[normal + 1] * irho;
-  double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
+  double result = std::max( std::abs(u_n - c), std::abs(u_n + c));
   nonCriticalAssertion14( result>=0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   return result;
 }
@@ -193,7 +204,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 )  {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 
-  constexpr double gamma = 5.0/3.0;
+  //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
