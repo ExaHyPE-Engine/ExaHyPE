@@ -12,10 +12,11 @@ import exahype2.sympy
 import exahype2.postprocessing
 
 
-clawpack_path = "/ddn/data/cvxs42/clawpack_src/clawpack-v5.8.0"
+#clawpack_path = "/ddn/data/cvxs42/clawpack_src/clawpack-v5.8.0"
+clawpack_path = "/home/marion/workspace/Projects/ExaClaw/clawpack/src/clawpack-v5.7.1"
 
-peano_path = "/ddn/data/cvxs42/Peano"
-
+#peano_path = "/ddn/data/cvxs42/Peano"
+peano_path = "/home/marion/workspace/Projects/ExaClaw/Peano"
 
 output_files = [
     f
@@ -177,9 +178,9 @@ peano4_project.build(make_clean_first=True, number_of_parallel_builds=parallel_b
 # Please note that we pipe the terminal output into a file. This way, we can postprocess the data in the next step.
 
 
-peano4_project.run(
-    [], prefix=["mpirun", "-n", "4"], pipefile="output.txt", rebuild_if_required=False
-)
+#peano4_project.run(
+#    [], prefix=["mpirun", "-n", "4"], pipefile="output.txt", rebuild_if_required=False
+#)
 
 
 
