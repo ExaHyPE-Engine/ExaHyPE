@@ -40,11 +40,11 @@ project = exahype2.Project(["examples", "exahype2", "swe"], "exaclaw")
 my_patch_size = 40
 my_unknowns = 3  # height and two velocities
 my_auxiliary_variables = 1  # bathymetry
-my_time_step_size = 0.00001 # keep this in, even though we do adaptive time stepping, for snapshot frequency
+my_time_step_size = 0.0001 # keep this in, even though we do adaptive time stepping, for snapshot frequency
 my_max_h = 1.0 / 9.0
 my_min_h = 1.0 / 27.0
 
-end_time = 0.0001
+end_time = 0.001
 
 my_solver = exahype2.solvers.fv.PointWiseClawPackAdaptiveTimeStepSize(
     name="SWE",
@@ -135,7 +135,8 @@ peano4_project = project.generate_Peano4_project()
 
 
 peano4_project.output.makefile.add_Fortran_flag("-g")
-peano4_project.output.makefile.add_library("gfortran")
+#peano4_project.output.makefile.add_library("gfortran")
+peano4_project.output.makefile.add_library("ifcore")
 peano4_project.output.makefile.add_library("stdc++")
 peano4_project.output.makefile.add_library("m")
 peano4_project.output.makefile.add_Fortran_module(
