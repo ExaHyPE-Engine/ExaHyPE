@@ -9,6 +9,7 @@ debug  examples                            -1     black
 debug  exahype2                            -1     black
 
 info  tarch                                -1     white always-on
+info  tarch                                -1     black timestep
 info  peano4                               -1     white always-on
 info  examples                             -1     white always-on
 info  exahype2                             -1     white always-on

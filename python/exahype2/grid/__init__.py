@@ -1,7 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from .SetLabels       import create_face_label
-from .EnclaveLabels   import create_enclave_cell_label 
+from .FaceLabel      import create_face_label
+from .CellLabel      import create_cell_label 
 
-from .SetLabels       import SetLabels
-from .EnclaveLabels   import EnclaveLabels 
+from .FaceLabel      import UpdateFaceLabel
+from .CellLabel      import UpdateCellLabel 

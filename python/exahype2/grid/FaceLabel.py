@@ -6,14 +6,9 @@ import dastgen2
 import peano4.datamodel.DaStGen2
 
 
-def create_face_label():
-  result = peano4.datamodel.DaStGen2( SetLabels.AttributeName )
-  result.data.add_attribute( dastgen2.attributes.Boolean("Boundary") )
-  return result
-
-
-class SetLabels(ActionSet):
-  AttributeName = "Label"
+class UpdateFaceLabel(ActionSet):
+  def get_attribute_name(solver_name):
+    return solver_name + "FaceLabel"
   
   """
   
@@ -21,7 +16,8 @@ class SetLabels(ActionSet):
    steps by the project. There's nothing for the user solvers to be done here.
   
   """
-  def __init__(self):
+  def __init__(self, solver_name):
+    self._solver_name = solver_name
     pass
 
 
@@ -56,7 +52,7 @@ class SetLabels(ActionSet):
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
   }}
-  fineGridFace""" + self.AttributeName + """.setBoundary( isBoundary );
+  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setBoundary( isBoundary );
 """
 
     return result
@@ -70,4 +66,19 @@ class SetLabels(ActionSet):
     return """
 #include "Constants.h"
 """    
+
+
+def create_face_label(solver_name):
+  """
+
+   Build up the DaStGen2 data structure that we need per face to maintain
+   per-face data per solver.
+     
+   solver_name: string
+     Name of the solver
+     
+  """
+  result = peano4.datamodel.DaStGen2( UpdateFaceLabel.get_attribute_name( solver_name ) )
+  result.data.add_attribute( dastgen2.attributes.Boolean("Boundary") )
+  return result
 

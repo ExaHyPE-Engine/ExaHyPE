@@ -43,6 +43,10 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   create a new temporary array, and copy data from both the cell patch and the faces
   into this array (gather operation). After that, we can launch the passed functor
   giving it access to the temporary, large array plus the original patch data. 
+
+  If you want to swap the functor, please replace     
+  
+  self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ]
   
   """
   

@@ -20,6 +20,9 @@ from peano4.toolbox.blockstructured.BackupPatchOverlap         import BackupPatc
 from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
 
 
+import exahype2
+
+
 class AbstractFVActionSet( ActionSet ):
   def __init__(self,solver):
     """
@@ -223,9 +226,9 @@ class HandleBoundary(AbstractFVActionSet):
       and
       not marker.isRefined() 
       and 
-      fineGridFaceLabel.getBoundary()
+      fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
     ) {
-      logTraceInWith3Arguments( "touchFaceFirstTime(...)---HandleBoundary", fineGridFaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
+      logTraceInWith3Arguments( "touchFaceFirstTime(...)---HandleBoundary", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
       ::exahype2::fv::applyBoundaryConditions(
         [&](
           const double * __restrict__                  Qinside,
@@ -483,6 +486,9 @@ In-situ preprocessing:  """
 #include "../repositories/SolverRepository.h"
 """    
 
+    self._cell_label = exahype2.grid.create_cell_label( self._name )
+    self._face_label = exahype2.grid.create_face_label( self._name )  
+
 
   @abstractmethod
   def create_action_sets(self):
@@ -499,7 +505,9 @@ In-situ preprocessing:  """
     self._action_set_handle_boundary                                                  = HandleBoundary(self, self._store_face_data_default_predicate() )
     self._action_set_project_patch_onto_faces                                         = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
     self._action_set_copy_new_patch_overlap_into_overlap                              = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
-    
+
+    self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
+    self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
     #
     # Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
     # boundary data has not been received yet and your face data thus is not initialised 
@@ -567,10 +575,12 @@ In-situ preprocessing:  """
       print( "Patch overlap data" )
       print( "----------" )
       print( str(self._patch_overlap_new) )
+    datamodel.add_cell(self._cell_label)
     datamodel.add_cell(self._patch)
     datamodel.add_face(self._patch_overlap)
     datamodel.add_face(self._patch_overlap_new)
- 
+    datamodel.add_face(self._face_label)
+
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     """
@@ -582,8 +592,10 @@ In-situ preprocessing:  """
     
     """
     step.use_cell(self._patch)
+    step.use_cell(self._cell_label)
     step.use_face(self._patch_overlap)
     step.use_face(self._patch_overlap_new)
+    step.use_face(self._face_label)
 
   
   def _get_default_includes(self):
@@ -682,10 +694,20 @@ In-situ preprocessing:  """
     step.add_action_set( self._action_set_initial_conditions ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
+    """
+    
+     The boundary information is set only once. It is therefore important that
+     we ues the face label and initialise it properly.
+     
+    """
     step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
     if evaluate_refinement_criterion:
       step.add_action_set( self._action_set_AMR )
     else:
@@ -751,6 +773,8 @@ In-situ preprocessing:  """
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_update_cell )

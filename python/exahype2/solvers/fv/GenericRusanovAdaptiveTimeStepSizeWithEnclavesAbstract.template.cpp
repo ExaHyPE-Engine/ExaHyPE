@@ -89,7 +89,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     if ( std::isnan(_timeStepSize) or std::isinf(_timeStepSize) ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_timeStepSize) );
     }
-    if (tarch::la::smallerEquals(_timeStepSize,0.0,1e-12) ) {
+    // Second and required to mask out very first sweep where we analyse the time step sizes
+    if (tarch::la::smallerEquals(_timeStepSize,0.0,1e-10) and _timeStepSize!=0.0 ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>0", "degenerated time step size of " + std::to_string(_timeStepSize) );
     }
 

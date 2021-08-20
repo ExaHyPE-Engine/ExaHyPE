@@ -33,8 +33,6 @@ void examples::exahype2::euler::Euler::initialCondition(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructed
 ) {
-  logDebug( "initialCondition(...)", "init volume at " << volumeCentre << "x" << volumeH << " (grid constructed=" << gridIsConstructred << ")" );
-
   // Manual offset to make the wave originate slightly to the left of the center --- helps
   // to detect if wave is moving to the left or right
   #if Dimensions==2
@@ -63,6 +61,9 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   assertion(normal>=0);
   assertion(normal<Dimensions);
   assertion( Q[0]>0.0 );
+
+  if (Q[0]<=0.0 or Q[0]!=Q[0])
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative" );
 
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -100,6 +101,15 @@ void examples::exahype2::euler::Euler::flux(
   nonCriticalAssertion9( Q[3]==Q[3], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   nonCriticalAssertion9( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   nonCriticalAssertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+
+  if (Q[0]<=0.0  or Q[0]!=Q[0]) {
+    std::ostringstream msg;
+    msg << "density is negative"
+        << ".faceCentre=" << faceCentre
+        << ",volumeH=" << volumeH
+        << ",normal=" << normal;
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", msg.str() );
+  }
 
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -163,6 +173,7 @@ void examples::exahype2::euler::Euler::boundaryConditions(
 
 
 
+#if defined(OpenMPGPUOffloading)
 /**
  * Please ignore everything below if you don't have GPUs
  *
@@ -185,9 +196,7 @@ void examples::exahype2::euler::Euler::boundaryConditions(
  * why you need different versions of one routine. So I prefer to replicate
  * code here. As pointed out: You likely would not do this in a proper app.
  */
-#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
-#endif
 double examples::exahype2::euler::Euler::maxEigenvalue(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -210,9 +219,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
   return result;
 }
-#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
-#endif
 
 
 void examples::exahype2::euler::Euler::flux(
@@ -249,4 +256,6 @@ void examples::exahype2::euler::Euler::flux(
 }
 
 
+
+#endif
 
