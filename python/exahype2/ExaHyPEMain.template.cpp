@@ -285,7 +285,7 @@ void step() {{
           and
           repositories::loadBalancer.isEnabled(false)
         ) {{
-          logInfo( "step()", "grid initialisation on this rank seems to be stable, disable load balancing temporarily" );
+          logInfo( "step()", "grid construction and decomposition on this rank seem to be stable, disable load balancing temporarily" );
           repositories::loadBalancer.enable(false);
         }}
 
