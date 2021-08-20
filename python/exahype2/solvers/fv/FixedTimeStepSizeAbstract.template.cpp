@@ -31,6 +31,8 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStepSize(double value) {
+  assertion1(value<std::numeric_limits<double>::max()/10.0,value);
+  assertion1(value>=0.0,value);
   _minTimeStepSize = std::min(value,_minTimeStepSize);
   assertion2(_minTimeStepSize<=getMaxTimeStepSize(), _minTimeStepSize, getMaxTimeStepSize() );
 }
@@ -38,6 +40,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStepSize(double value) {
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStamp(double value) {
   assertion1(value<std::numeric_limits<double>::max()/10.0,value);
+  assertion1(value>=0.0,value);
   _maxTimeStamp = std::max(value,_maxTimeStamp);
   _minTimeStamp = std::min(value,_minTimeStamp);
 }
