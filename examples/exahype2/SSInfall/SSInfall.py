@@ -17,7 +17,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0 
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1 
 }
 
 intparams = {"swi":0, "ReSwi":0, "sample_number":10}
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.05
+            time_step_relaxation=0.1
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
@@ -295,8 +295,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    #probe_point = [-20,-20,-0.5]
-    #project.add_plot_filter( probe_point,[40.0,40.0,1],1 )
+    probe_point = [-20,-20,-0.01]
+    project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 

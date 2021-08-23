@@ -109,14 +109,15 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double m_in=0;
   
   if (tarch::la::equals(t,0)){//we know the mass distri at the beginning
-    if (r_coor<r_ini) { m_in=4*pi*rho_ini*(1+delta_rho)*pow(r_coor,3)/3;}
-    else { m_in=4*pi*rho_ini*pow(r_coor,3)/3;+4*pi*rho_ini*delta_rho*pow(r_ini,3)/3;}
+    if (r_coor<r_ini) { m_in=rho_ini*delta_rho*pow(r_coor,3)/3;}
+    else { m_in=rho_ini*delta_rho*pow(r_ini,3)/3;}
   } 
   else {
-    m_in=mass_interpolate(r_coor);
+    m_in=mass_interpolate(r_coor)/4/pi; //remove the overall 4\pi coefficient. 
   }
 
-  double force_density_norm=Q[0]*G*m_in/pow(r_coor,3);
+  double a=0.0287*pow((-t/11.8+5.35695),-2);//when code time t=61.2, a~1
+  double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
   if (force_density_norm>1 and r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
 
   //force_density_norm=0;
@@ -229,7 +230,7 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   const double rho,
   const double size
 ) {
-  double m=rho*pow(size,3);
+  double m=(rho-1)*pow(size,3); //notice here we use overdensity
 
   for (int i=0;i<sample_number;i++){
     if (r_coor<r_s[i]){
