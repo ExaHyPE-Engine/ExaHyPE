@@ -7,6 +7,7 @@ import exahype2
 import peano4.toolbox.particles
 import dastgen2
 
+from Probe_file_gene import tracer_seeds_generate
 import numpy as np
 
 modes = { 
@@ -36,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-
+    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -279,7 +280,7 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       offset,  domain_size,
       args.end_time,                 # end time
-      0.0, args.plot_step_size,   # snapshots
+      110.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
@@ -299,6 +300,40 @@ if __name__ == "__main__":
     project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+
+########################################################################################
+#Tracer setting 
+########################################################################################
+    if not args.add_tracer==0:
+      tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=5 )
+       #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
+      project.add_action_set_to_timestepping(
+        exahype2.tracer.FiniteVolumesTracing(
+          tracer_particles,my_solver,
+          [17,18,19],range(5),-1,
+          #time_stepping_kernel="toolbox::particles::LinearInterp",
+          time_stepping_kernel="toolbox::particles::StaticPosition"#,
+          #observer_kernel="toolbox::particles::ObLinearInterp"
+        )
+      )
+      if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
+        tracer_seeds_generate(Type=args.add_tracer, a=0, b=(offset[0]+domain_size[0]), N_x=80,N_y=50,N_z=2)
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
+
+      if path=="./": path1="."
+      else: path1=path
+      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+        particle_set=tracer_particles,
+        solver=my_solver,
+        filename=path1+"/zz"+args.tra_name,
+        number_of_entries_between_two_db_flushes=30000,
+        output_precision=16,
+        position_delta_between_two_snapsots=1e-20,
+        data_delta_between_two_snapsots=0
+      ))
+      #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
+      #,,-1,"zz",1000))
 
 ########################################################################################
 #compile for the real executable

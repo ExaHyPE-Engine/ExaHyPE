@@ -87,14 +87,17 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
              << ", "
              << particle.first.second
 			 << ", "
+			 << std::setprecision (6)
 			 << snapshot.timestamp;
         #if Dimensions==2
-        file << ", "
+        file << std::setprecision (_precision) 
+             << ", "
              << snapshot.x(0)
              << ", "
              << snapshot.x(1);
         #else
-        file << ", "
+        file << std::setprecision (_precision) 
+             << ", "
              << snapshot.x(0)
              << ", "
              << snapshot.x(1)
@@ -103,6 +106,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
         #endif
 
         if (snapshot.data!=nullptr) {
+          file.precision(_precision);
           for (int i=0; i<_numberOfDataPointsPerParticle; i++) {
             file << ", "
                  << snapshot.data[i];
@@ -128,6 +132,9 @@ void toolbox::particles::TrajectoryDatabase::setOutputFileName( const std::strin
   _fileName = filename;
 }
 
+void toolbox::particles::TrajectoryDatabase::setOutputPrecision( int precision ) {
+  _precision = precision;
+}
 
 void toolbox::particles::TrajectoryDatabase::setDataDeltaBetweenTwoSnapshots( double value ) {
   assertion(value>=0.0);
