@@ -17,8 +17,9 @@
 tarch::logging::Log  toolbox::loadbalancing::RecursiveSubdivision::_log( "toolbox::loadbalancing::RecursiveSubdivision" );
 
 
-toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double targetBalancingRatio, bool makeSplitDependentOnMemory ):
+toolbox::loadbalancing::RecursiveSubdivision::RecursiveSubdivision(double targetBalancingRatio, int minTreeSize, bool makeSplitDependentOnMemory ):
   _TargetBalancingRatio( targetBalancingRatio ),
+  _MinTreeSize( minTreeSize ),
   _blacklist(),
   _initialBlacklistWeight(),
   _hasSpreadOutOverAllRanks( false ),
@@ -342,6 +343,18 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     tarch::mpi::Rank::getInstance().isGlobalMaster()
   ) {
     return StrategyStep::SpreadEquallyOverAllRanks;
+  }
+
+  if (
+    getWeightOfHeaviestLocalSpacetree()<=_MinTreeSize
+  ) {
+    // @todo Debug?
+    logInfo(
+      "getStrategyStep()",
+      "biggest local tree has size " << getWeightOfHeaviestLocalSpacetree() <<
+      " and thus is small then minimal tree size of " << _MinTreeSize
+    );
+    return StrategyStep::Wait;
   }
 
   const bool rankViolatesBalancingCondition = doesRankViolateBalancingCondition();
