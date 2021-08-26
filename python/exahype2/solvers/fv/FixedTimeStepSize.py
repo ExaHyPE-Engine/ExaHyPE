@@ -189,7 +189,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   def __init__(self, solver):
     ReconstructPatchAndApplyFunctor.__init__(self,
       patch = solver._patch,
-      patch_overlap = solver._patch_overlap,
+      # todo hier muessen beide rein, denn ich muss ja interpolieren
+      patch_overlap = solver._patch_overlap_new,
       functor_implementation = """
 #error please switch to your Riemann solver of choice
 """,
@@ -270,14 +271,14 @@ class FixedTimeStepSize( FV ):
     self.set_implementation(flux=flux, ncp=ncp, eigenvalues=eigenvalues, riemann_solver=riemann_solver, use_gpu=self._use_gpu)
 
 
-  def create_data_structures(self):
-    FV.create_data_structures(self)
-
-    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate()
-    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
-
-    self._patch_overlap.generator.send_condition               = "true"
-    self._patch_overlap.generator.receive_and_merge_condition  = "true"
+#  def create_data_structures(self):
+#    FV.create_data_structures(self)
+#
+#    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate()
+#    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
+#
+#    self._patch_overlap.generator.send_condition               = "true"
+#    self._patch_overlap.generator.receive_and_merge_condition  = "true"
 
 
   def create_action_sets(self):

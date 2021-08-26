@@ -45,7 +45,7 @@ parser.add_argument("-pd", "--peano-dir",              dest="peanodir",         
 parser.add_argument("-cd", "--configure-dir",          dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("-o",  "--output",                 dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("-f",  "--force",                  dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["default", "default-ats", "enclave", "enclave-ats", "enclave-ots", "gpu-fixed", "gpu-ats"], default="default", help="Pick implementation variant" )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "default-ats", "enclave", "enclave-ats", "enclave-ots", "gpu-fixed", "gpu-ats"], default="global-fixed", help="Pick implementation variant" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
@@ -144,7 +144,7 @@ elif args.type=="enclave-ots":
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
-elif args.type=="default":
+elif args.type=="global-fixed":
   thesolver = exahype2.solvers.fv.FixedTimeStepSize(
     "Euler",
     args.patch_size,

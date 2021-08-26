@@ -9,305 +9,15 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
+from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
+
 import jinja2
 
 from abc import abstractmethod
 
-from peano4.solversteps.ActionSet import ActionSet
-
-from peano4.toolbox.blockstructured.ProjectPatchOntoFaces      import ProjectPatchOntoFaces
-from peano4.toolbox.blockstructured.BackupPatchOverlap         import BackupPatchOverlap
-from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
-
-
 import exahype2
 
-
-class AbstractFVActionSet( ActionSet ):
-  def __init__(self,solver):
-    """
-   
-    solver: ADERDG
-      Reference to creating class 
-   
-    """
-    self._solver = solver
-    pass
-  
-  
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
-
-
-  def user_should_modify_template(self):
-    return False
-
-
-  def get_includes(self):
-    return """
-#include <functional>
-#include "exahype2/PatchUtils.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
-
-
-class AMROnPatch(AbstractFVActionSet):
-  """
-  
-  The action set to realise AMR
-  
-  AMR is a multistep process in ExaHyPE. Most of the relevant documentation 
-  on it is documented in the class exahype2::RefinementControl. As it is a 
-  multistep algorithm, it is also clear even observers that do not want AMR
-  have to include this action set - though with a context-specific choice 
-  of boolean flags.
-  
-  There are different phases in ExaHyPE: grid generation (either with 
-  refinement or without), initialisation, plotting and time stepping. It 
-  depends on your solver in which time stepping to use AMR, but the there
-  are some things to take into account:
-  
-  - The grid creation does already create all volumetric data as we have to
-    evaluate the refinement criteria. There is however no need to manage all
-    face data et al in this step, as we have a dedicated init sweep after 
-    the grid generation has terminated.
-  - The plotting usually has to implement AMR as we have a multi-stage 
-    adaptive refinement. It might not re-evalutae the AMR again, as the 
-    solution is not changed.
-  
-  """
-  
-  
-  TemplateAMR = """  
-  if ({{PREDICATE}}) { 
-    ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
-
-    if (tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
-      refinementCriterion = ::exahype2::RefinementCommand::Refine;
-    } 
-    else {
-      int index = 0;
-      dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-        refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-          ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
-          ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-          repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
-        );
-        index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-      }
-     
-      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.getMinMeshSize() ) {
-        refinementCriterion = ::exahype2::RefinementCommand::Keep;
-      } 
-      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
-        refinementCriterion = ::exahype2::RefinementCommand::Keep;
-      } 
-    }
     
-    _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion );
-  }
-  """
-  
-    
-  def __init__(self, solver, predicate, build_up_new_refinement_instructions, implement_previous_refinement_instructions):
-    """
-    
-    predicate: C++ expression which evaluates to true or false
-      A per cell decision whether we should study a cell or not.
-    
-    build_up_new_refinement_instructions: Boolean
-      See remarks on multistep realisation of AMR in C++ class 
-      exahype2::RefinementControl.
-        
-    implement_previous_refinement_instructions: Boolean
-      See remarks on multistep realisation of AMR in C++ class 
-      exahype2::RefinementControl.
-    
-    """
-    AbstractFVActionSet.__init__(self,solver)
-    self.predicate                                   = predicate
-    self._build_up_new_refinement_instructions       = build_up_new_refinement_instructions
-    self._implement_previous_refinement_instructions = implement_previous_refinement_instructions
-
-  
-  def get_body_of_getGridControlEvents(self):
-    if self._implement_previous_refinement_instructions:
-      return """
-    return repositories::refinementControl.getGridControlEvents();
-""" 
-    else:
-      return """
-    return std::vector< peano4::grid::GridControlEvent >();
-"""      
-
-
-  def get_body_of_operation(self,operation_name):
-    result = ""
-    if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      result = """
-  _localRefinementControl.clear();
-"""
-
-    if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_END_TRAVERSAL:
-      result = """
-  repositories::refinementControl.merge( _localRefinementControl );
-"""
-    
-    if self._build_up_new_refinement_instructions and operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      d = {}
-      if self._solver._patch.dim[0] != self._solver._patch.dim[1]:
-        raise Exception( "Error: Can only handle square patches." )
-      
-      d[ "UNKNOWNS" ]           = str(self._solver._patch.no_of_unknowns)
-      d[ "DOFS_PER_AXIS" ]      = str(self._solver._patch.dim[0])
-      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
-      d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
-      d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver._patch.name
-      d[ "PREDICATE" ]          = self.predicate
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)      
-      result = jinja2.Template( self.TemplateAMR ).render(**d)
-
-    return result
-
-
-  def get_attributes(self):
-    return """
-    ::exahype2::RefinementControl         _localRefinementControl;
-"""
-
-
-class InitialCondition(AbstractFVActionSet):
-  TemplateInitialCondition = """
-  if ({{PREDICATE}}) { 
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      repositories::{{SOLVER_INSTANCE}}.initialCondition(
-        fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
-        ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-        {{GRID_IS_CONSTRUCTED}}
-      );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  } 
-"""
-  
-  def __init__(self,solver,predicate,grid_is_constructed):
-    AbstractFVActionSet.__init__(self,solver)
-    self.predicate           = predicate
-    self.grid_is_constructed = grid_is_constructed
-
-
-  def get_body_of_operation(self,operation_name):
-    result = ""
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]           = self.predicate      
-      d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed      
-      result = jinja2.Template(self.TemplateInitialCondition).render(**d)
-      pass 
-    return result
-
-
-class HandleBoundary(AbstractFVActionSet):
-  """
-  
-    The global periodic boundary conditions are set in the Constants.h. 
-   
-  """
-  TemplateHandleBoundary = """
-    if (
-      {{PREDICATE}}
-      and
-      not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
-      and
-      not marker.isRefined() 
-      and 
-      fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
-    ) {
-      logTraceInWith3Arguments( "touchFaceFirstTime(...)---HandleBoundary", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
-      ::exahype2::fv::applyBoundaryConditions(
-        [&](
-          const double * __restrict__                  Qinside,
-          double * __restrict__                        Qoutside,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> void {
-          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
-        },  
-        marker.x(),
-        marker.h(),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        marker.getSelectedFaceNumber(),
-        fineGridFace{{UNKNOWN_IDENTIFIER}}.value
-      );
-      logTraceOut( "touchFaceFirstTime(...)---HandleBoundary" );
-    }
-"""
-  def __init__(self,solver,predicate):
-    AbstractFVActionSet.__init__(self,solver)
-    self.predicate = predicate
-
-
-  def get_body_of_operation(self,operation_name):
-    result = ""
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ] = self.predicate      
-      result = jinja2.Template(self.TemplateHandleBoundary).render(**d)
-      pass 
-    return result
-
-
-  def get_includes(self):
-    return """
-#include "exahype2/PatchUtils.h"
-#include "exahype2/fv/BoundaryConditions.h"
-""" + AbstractFVActionSet.get_includes(self) 
-
-
-class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFaces ):
-  def __init__(self,solver, predicate, project_onto_new = True):
-    if project_onto_new:
-      peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
-        self,
-        solver._patch,
-        solver._patch_overlap_new,
-        predicate, 
-        solver._get_default_includes() + solver.get_user_includes()
-      )
-    else:
-      peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
-        self,
-        solver._patch,
-        solver._patch_overlap,
-        predicate, 
-        solver._get_default_includes() + solver.get_user_includes()
-      )
-    
-    
-class CopyNewPatchOverlapIntoCurrentOverlap( BackupPatchOverlap ):
-  def __init__(self,solver, predicate):
-    BackupPatchOverlap.__init__(self, 
-      solver._patch_overlap_new,
-      solver._patch_overlap,
-      False,
-      predicate,
-      solver._get_default_includes() + solver.get_user_includes()
-    )
-    
-
 class FV(object):
   """ 
     An abstract finite volume solver step sizes that works on patch-based
@@ -446,13 +156,13 @@ In-situ preprocessing:  """
      
     """
     self._patch             = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap     = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._patch_overlap_old = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
     self._patch_overlap_new = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
     
-    self._patch_overlap.generator.merge_method_definition     = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
-    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap)
+    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
+    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
     
-    self._patch_overlap.generator.includes     += """
+    self._patch_overlap_old.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
@@ -464,22 +174,22 @@ In-situ preprocessing:  """
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate()
     
-    self._patch_overlap.generator.send_condition               = "false"
-    self._patch_overlap.generator.receive_and_merge_condition  = "false"
+    self._patch_overlap_old.generator.send_condition               = "true"
+    self._patch_overlap_old.generator.receive_and_merge_condition  = "true"
 
-    self._patch_overlap_new.generator.send_condition               = "false"
-    self._patch_overlap_new.generator.receive_and_merge_condition  = "false"
+    self._patch_overlap_new.generator.send_condition               = "true"
+    self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
-    self._patch_overlap.generator.store_persistent_condition   = "false"
-    self._patch_overlap.generator.load_persistent_condition    = "false"
+    self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_predicate()
+    self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_predicate()
 
-    self._patch_overlap_new.generator.store_persistent_condition   = "false"
-    self._patch_overlap_new.generator.load_persistent_condition    = "false"
+    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate()
+    self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()
 
     self._patch.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
-    self._patch_overlap.generator.includes  += """
+    self._patch_overlap_old.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
     self._patch_overlap_new.generator.includes  += """
@@ -498,13 +208,12 @@ In-situ preprocessing:  """
      action sets.
      
     """
-    self._action_set_initial_conditions                                               = InitialCondition(self, "not marker.isRefined()", "true" )
-    self._action_set_initial_conditions_for_grid_construction                         = InitialCondition(self, "not marker.isRefined()", "false")
-    self._action_set_AMR                                                              = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
-    self._action_set_AMR_commit_without_further_analysis                              = AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
-    self._action_set_handle_boundary                                                  = HandleBoundary(self, self._store_face_data_default_predicate() )
-    self._action_set_project_patch_onto_faces                                         = ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
-    self._action_set_copy_new_patch_overlap_into_overlap                              = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate())
+    self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, "not marker.isRefined()", "true" )
+    self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.fv.actionsets.InitialCondition(self, "not marker.isRefined()", "false")
+    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_predicate() )
+    self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
@@ -515,7 +224,7 @@ In-situ preprocessing:  """
     #
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
       patch = self._patch,
-      patch_overlap_interpolation = self._patch_overlap, 
+      patch_overlap_interpolation = self._patch_overlap_old, 
       patch_overlap_restriction   = self._patch_overlap_new,
       interpolate_guard           = """
   repositories::""" + self.get_name_of_global_instance() + """.getSolverState()!=""" + self._name + """::SolverState::GridInitialisation
@@ -571,13 +280,13 @@ In-situ preprocessing:  """
       print( str(self._patch) )
       print( "Patch overlap data" )
       print( "----------" )
-      print( str(self._patch_overlap) )
+      print( str(self._patch_overlap_old) )
       print( "Patch overlap data" )
       print( "----------" )
       print( str(self._patch_overlap_new) )
     datamodel.add_cell(self._cell_label)
     datamodel.add_cell(self._patch)
-    datamodel.add_face(self._patch_overlap)
+    datamodel.add_face(self._patch_overlap_old)
     datamodel.add_face(self._patch_overlap_new)
     datamodel.add_face(self._face_label)
 
@@ -593,7 +302,7 @@ In-situ preprocessing:  """
     """
     step.use_cell(self._patch)
     step.use_cell(self._cell_label)
-    step.use_face(self._patch_overlap)
+    step.use_face(self._patch_overlap_old)
     step.use_face(self._patch_overlap_new)
     step.use_face(self._face_label)
 
@@ -693,7 +402,6 @@ In-situ preprocessing:  """
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_initial_conditions ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
-    step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
 
@@ -780,7 +488,6 @@ In-situ preprocessing:  """
     step.add_action_set( self._action_set_update_cell )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
-    step.add_action_set( self._action_set_copy_new_patch_overlap_into_overlap )
 
 
   @abstractmethod
@@ -851,7 +558,7 @@ In-situ preprocessing:  """
 
     """
     d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
-    d["HALO_SIZE"]                      = int(self._patch_overlap.dim[0]/2)
+    d["HALO_SIZE"]                      = int(self._patch_overlap_old.dim[0]/2)
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
@@ -859,7 +566,7 @@ In-situ preprocessing:  """
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
     d["SOLVER_NUMBER"]                  = 22
 
-    if self._patch_overlap.dim[0]/2!=1:
+    if self._patch_overlap_old.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
 
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
