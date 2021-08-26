@@ -20,7 +20,7 @@ class DynamicAMR(ActionSet):
   """
   
   
-  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="linear", restriction_scheme="averaging", clear_overlap_in_touch_first_time=True, clear_guard="true", restrict_guard="true", interpolate_guard="true", additional_includes="", point_wise_postprocessing_of_interpolation="" , point_wise_postprocessing_of_restriction="" ):
+  def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="linear", restriction_scheme="averaging", clear_guard="true", restrict_guard="true", interpolate_guard="true", additional_includes="", point_wise_postprocessing_of_interpolation="" , point_wise_postprocessing_of_restriction="" ):
     """
     
     restrict_guard: String
@@ -33,7 +33,7 @@ class DynamicAMR(ActionSet):
       - linear.
       - linear_precomputed_operators<3>. The 3 has to be replaced by the 
         number of unknowns that you use per coordinate axis.
-    
+        
     """
     self.d = {}
     if patch_overlap_interpolation.dim[0] % 2 != 0:
@@ -58,7 +58,6 @@ class DynamicAMR(ActionSet):
     self.d[ "POINT_WISE_POSTPROCESSING_INTERPOLATION" ] = point_wise_postprocessing_of_interpolation
     self.d[ "POINT_WISE_POSTPROCESSING_RESTRICTION" ]   = point_wise_postprocessing_of_restriction
     
-    self._clear_overlap_in_touch_first_time = clear_overlap_in_touch_first_time    
     self.additional_includes                = additional_includes
 
 
@@ -84,10 +83,8 @@ class DynamicAMR(ActionSet):
 
   __Template_TouchFaceFirstTime = jinja2.Template( """
   if ( {{CLEAR_GUARD}} ) {
-    logTraceIn( "touchFaceFirstTime(...)---DynamicAMR" );
+    logTraceInWith2Arguments( "touchFaceFirstTime(...)---DynamicAMR", marker.toString(), "{{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}" );
     
-    logDebug( "touchFaceFirstTime(...)", "clear " << marker.toString() );
-
     ::toolbox::blockstructured::clearHaloLayerAoS(
       marker,
       {{DOFS_PER_AXIS}},
@@ -258,7 +255,7 @@ class DynamicAMR(ActionSet):
     if operation_name==ActionSet.OPERATION_DESTROY_CELL:
       result = self.__Template_DestroyCell.render(**self.d)
       pass 
-    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME and self._clear_overlap_in_touch_first_time:
+    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = self.__Template_TouchFaceFirstTime.render(**self.d)
       pass 
     return result
