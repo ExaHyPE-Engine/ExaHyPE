@@ -60,7 +60,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
 ) {
   assertion(normal>=0);
   assertion(normal<Dimensions);
-  assertion( Q[0]>0.0 );
+  //assertion( Q[0]>0.0 );
 
   if (Q[0]<=0.0 or Q[0]!=Q[0])
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative" );
@@ -100,14 +100,14 @@ void examples::exahype2::euler::Euler::flux(
   nonCriticalAssertion9( Q[2]==Q[2], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   nonCriticalAssertion9( Q[3]==Q[3], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   nonCriticalAssertion9( Q[4]==Q[4], Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  nonCriticalAssertion9( Q[0]>1e-12, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
 
-  if (Q[0]<=0.0  or Q[0]!=Q[0]) {
+  if (Q[0]<=1e-12  or Q[0]!=Q[0]) {
     std::ostringstream msg;
     msg << "density is negative"
         << ".faceCentre=" << faceCentre
         << ",volumeH=" << volumeH
-        << ",normal=" << normal;
+        << ",normal=" << normal
+        << ",Q[0]=" << Q[0];
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", msg.str() );
   }
 
@@ -147,9 +147,7 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
-)
-{
-
+) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[0]==Qinside[0], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[1]==Qinside[1], faceCentre, volumeH, t, normal );
@@ -157,9 +155,8 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   nonCriticalAssertion4( Qinside[3]==Qinside[3], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
-  //nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
-
+  assert( Qinside[0]>1e-12 );
 
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];

@@ -9,8 +9,6 @@ import peano4.output.TemplatedHeaderImplementationFilePair
 import peano4.output.Jinja2TemplatedHeaderFile
 import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
-from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
-
 import jinja2
 
 from abc import abstractmethod
@@ -154,10 +152,33 @@ In-situ preprocessing:  """
      or auxiliary variables. See class description's subsection on 
      data flow.
      
+     _patch: Patch (NxNxN)
+       Actual patch data. We use Finite Volumes, so this is 
+       always the current snapshot, i.e. the valid data at one point.
+    
+     _patch_overlap_old, _patch_overlap_new: Patch (2xNxN)
+       This is a copy/excerpt from the two adjacent finite volume
+       snapshots plus the old data as backup. If I want to implement
+       local timestepping, I don't have to backup the whole patch 
+       (see _patch), but I need a backup of the face data to be able
+       to interpolate in time.
+       
+     _patch_overlap_update: Patch (2xNxN)
+       This is hte new update. After the time step, I roll this 
+       information over into _patch_overlap_new, while I backup the 
+       previous _patch_overlap_new into _patch_overlap_old. If I 
+       worked with regular meshes only, I would not need this update
+       field and could work directly with _patch_overlap_new. However,
+       AMR requires me to accumulate data within new while I need 
+       the new and old data temporarily. Therefore, I employ this 
+       accumulation/roll-over data which usually is not stored
+       persistently.
+       
     """
-    self._patch             = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap_old = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap_new = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
+    self._patch                = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._patch_overlap_old    = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
+    self._patch_overlap_new    = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
+    self._patch_overlap_update = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
     
     self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
@@ -180,11 +201,17 @@ In-situ preprocessing:  """
     self._patch_overlap_new.generator.send_condition               = "true"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
+    self._patch_overlap_update.generator.send_condition               = "false"
+    self._patch_overlap_update.generator.receive_and_merge_condition  = "false"
+
     self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_predicate()
     self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_predicate()
 
     self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate()
     self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()
+
+    self._patch_overlap_update.generator.store_persistent_condition   = "false"
+    self._patch_overlap_update.generator.load_persistent_condition    = "false"
 
     self._patch.generator.includes  += """
 #include "../repositories/SolverRepository.h"
@@ -193,6 +220,9 @@ In-situ preprocessing:  """
 #include "../repositories/SolverRepository.h"
 """    
     self._patch_overlap_new.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+    self._patch_overlap_update.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
 
@@ -208,31 +238,17 @@ In-situ preprocessing:  """
      action sets.
      
     """
-    self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, "not marker.isRefined()", "true" )
-    self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.fv.actionsets.InitialCondition(self, "not marker.isRefined()", "false")
-    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
-    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, predicate="not marker.isRefined()", build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_predicate(), "true" )
+    self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_predicate(), "false")
+    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, predicate=self._store_cell_data_default_predicate(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, predicate=self._store_cell_data_default_predicate(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
     self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_predicate() )
     self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
+    self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_predicate())
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
-    #
-    # Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
-    # boundary data has not been received yet and your face data thus is not initialised 
-    # at all.
-    #
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
-      patch = self._patch,
-      patch_overlap_interpolation = self._patch_overlap_old, 
-      patch_overlap_restriction   = self._patch_overlap_new,
-      interpolate_guard           = """
-  repositories::""" + self.get_name_of_global_instance() + """.getSolverState()!=""" + self._name + """::SolverState::GridInitialisation
-""",
-      additional_includes         = """
-#include "../repositories/SolverRepository.h"
-"""      
-    )
         
     self._action_set_update_cell                                                      = None
 
@@ -288,6 +304,7 @@ In-situ preprocessing:  """
     datamodel.add_cell(self._patch)
     datamodel.add_face(self._patch_overlap_old)
     datamodel.add_face(self._patch_overlap_new)
+    datamodel.add_face(self._patch_overlap_update)
     datamodel.add_face(self._face_label)
 
  
@@ -304,6 +321,7 @@ In-situ preprocessing:  """
     step.use_cell(self._cell_label)
     step.use_face(self._patch_overlap_old)
     step.use_face(self._patch_overlap_new)
+    step.use_face(self._patch_overlap_update)
     step.use_face(self._face_label)
 
   
@@ -404,6 +422,7 @@ In-situ preprocessing:  """
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_roll_over_update_of_faces )
 
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -488,6 +507,7 @@ In-situ preprocessing:  """
     step.add_action_set( self._action_set_update_cell )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_roll_over_update_of_faces )
 
 
   @abstractmethod

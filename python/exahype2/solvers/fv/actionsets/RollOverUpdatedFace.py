@@ -14,17 +14,17 @@ class RollOverUpdatedFace(AbstractFVActionSet):
   """
   TemplateHandleFace = jinja2.Template( """
     if ( {{GUARD}} ) {
-      logTraceInWith2Arguments( "touchFaceFirstTime(...)---RollOverUpdatedFace", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), marker.toString() );
+      logTraceInWith2Arguments( "touchFaceLastTime(...)---RollOverUpdatedFace", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), marker.toString() );
+      int index = 0;
       dfore(k,{{DOFS_PER_AXIS}},0,0) {
-        int index = 0;
-        for (int i=0; i<{{OVERLAP}}; i++) 
+        for (int i=0; i<2*{{OVERLAP}}; i++) 
         for (int j=0; j<{{UNKNOWNS}}; j++) {
           {{OLD_ACCESSOR}}.value[index] = {{NEW_ACCESSOR}}.value[index]; 
           {{NEW_ACCESSOR}}.value[index] = {{UPDATE_ACCESSOR}}.value[index]; 
           index++;
         }
       }
-      logTraceOut( "touchFaceFirstTime(...)---RollOverUpdatedFace" );
+      logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace" );
     }
 """ )
   
@@ -34,7 +34,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
     self.d = {}
     self.d[ "GUARD" ]           = guard
     self.d[ "UNKNOWNS" ]        = str(solver._patch_overlap_update.no_of_unknowns)
-    self.d[ "DOFS_PER_AXIS" ]   = str(solver._patch_overlap_update.dim[0])
+    self.d[ "DOFS_PER_AXIS" ]   = str(solver._patch.dim[0])
     self.d[ "OVERLAP" ]         = str(int(solver._patch_overlap_update.dim[0]/2))
     self.d[ "UPDATE_ACCESSOR" ] = "fineGridFace" + solver._patch_overlap_update.name
     self.d[ "OLD_ACCESSOR" ]    = "fineGridFace" + solver._patch_overlap_old.name

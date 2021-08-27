@@ -10,6 +10,12 @@ class HandleBoundary(AbstractFVActionSet):
   """
   
     The global periodic boundary conditions are set in the Constants.h. 
+    
+    There is no need to update QOld along the faces. QOld is always rolled
+    over from QNew, i.e. we may assume it is already set correctly. It is 
+    not correctly set in the very first time step (after InitGrid, we haven't
+    yet set QOld), so apply the boundary conditions here would even confuse
+    the assertions.
    
   """
   TemplateHandleBoundary = """
@@ -37,34 +43,13 @@ class HandleBoundary(AbstractFVActionSet):
         },  
         marker.x(),
         marker.h(),
+        // @todo falscher timesteamp
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
-      );
-      ::exahype2::fv::applyBoundaryConditions(
-        [&](
-          const double * __restrict__                  Qinside,
-          double * __restrict__                        Qoutside,
-          const tarch::la::Vector<Dimensions,double>&  faceCentre,
-          const tarch::la::Vector<Dimensions,double>&  volumeH,
-          double                                       t,
-          double                                       dt,
-          int                                          normal
-        ) -> void {
-          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
-        },  
-        marker.x(),
-        marker.h(),
-// fineGridFaceEulerFaceLabel -> andere Zeit
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
-        marker.getSelectedFaceNumber(),
-        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value
       );
       logTraceOut( "touchFaceFirstTime(...)---HandleBoundary" );
     }
