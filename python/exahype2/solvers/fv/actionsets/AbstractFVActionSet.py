@@ -19,6 +19,13 @@ class AbstractFVActionSet( ActionSet ):
   
   
   def get_action_set_name(self):
+    """
+     
+     You should replicate this function in each subclass, so you get 
+     meaningful action set names (otherwise, it will be 
+     AbstractFVActionSet0,1,2,...).
+     
+    """
     return __name__.replace(".py", "").replace(".", "_")
 
 

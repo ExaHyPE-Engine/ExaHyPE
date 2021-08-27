@@ -9,6 +9,7 @@ import jinja2
 class InitialCondition(AbstractFVActionSet):
   TemplateInitialCondition = """
   if ({{PREDICATE}}) { 
+    logTraceIn( "touchCellFirstTime(...)---InitialCondition" );
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
@@ -19,6 +20,7 @@ class InitialCondition(AbstractFVActionSet):
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
+    logTraceOut( "touchCellFirstTime(...)---InitialCondition" );
   } 
 """
   
@@ -39,3 +41,7 @@ class InitialCondition(AbstractFVActionSet):
       result = jinja2.Template(self.TemplateInitialCondition).render(**d)
       pass 
     return result
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")

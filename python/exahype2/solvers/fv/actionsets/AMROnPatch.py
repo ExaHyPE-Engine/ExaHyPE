@@ -131,3 +131,7 @@ class AMROnPatch(AbstractFVActionSet):
     return """
     ::exahype2::RefinementControl         _localRefinementControl;
 """
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")

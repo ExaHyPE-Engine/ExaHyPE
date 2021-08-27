@@ -42,7 +42,29 @@ class HandleBoundary(AbstractFVActionSet):
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
         marker.getSelectedFaceNumber(),
-        fineGridFace{{UNKNOWN_IDENTIFIER}}.value
+        fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
+      );
+      ::exahype2::fv::applyBoundaryConditions(
+        [&](
+          const double * __restrict__                  Qinside,
+          double * __restrict__                        Qoutside,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> void {
+          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
+        },  
+        marker.x(),
+        marker.h(),
+// fineGridFaceEulerFaceLabel -> andere Zeit
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        marker.getSelectedFaceNumber(),
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value
       );
       logTraceOut( "touchFaceFirstTime(...)---HandleBoundary" );
     }
@@ -69,3 +91,7 @@ class HandleBoundary(AbstractFVActionSet):
 #include "exahype2/PatchUtils.h"
 #include "exahype2/fv/BoundaryConditions.h"
 """ + AbstractFVActionSet.get_includes(self) 
+
+
+  def get_action_set_name(self):
+    return __name__.replace(".py", "").replace(".", "_")
