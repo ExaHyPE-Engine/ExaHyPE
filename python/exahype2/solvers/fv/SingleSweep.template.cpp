@@ -16,9 +16,7 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
   logTraceInWith3Arguments( "refinementCriterion(...)", volumeX, volumeH, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
+  // see comments in header file
 
   logTraceOutWith1Argument( "refinementCriterion(...)", ::toString(result) );
   return result;

@@ -2,8 +2,6 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .FV                       import FV
  
-from .PDETerms import PDETerms
-
 import peano4
 import exahype2
 
@@ -56,6 +54,14 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
  
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + cellTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
+    
+    assertion6( 
+      cellTimeStepSize==0 
+      or 
+      cellTimeStepSize<=repositories::{{SOLVER_INSTANCE}}.getMaxTimeStepSize(),
+      cellTimeStepSize, cellTimeStamp, marker.toString(), repositories::{{SOLVER_INSTANCE}}.getMaxTimeStepSize(),
+      marker.h()(0), repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize()
+    );
 
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
@@ -233,7 +239,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 
 
-class FixedTimeStepSize( FV ):
+class SingleSweep( FV ):
   """
     Probably the simplest solver you could think off. There's a few
     interesting things to try out with this one nevertheless: You
@@ -245,8 +251,7 @@ class FixedTimeStepSize( FV ):
   """
 
 
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, 
-    flux=PDETerms.User_Defined_Implementation, eigenvalues=PDETerms.User_Defined_Implementation, ncp=None, riemann_solver=None, plot_grid_properties=False, use_gpu=False):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, plot_grid_properties):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
@@ -267,7 +272,7 @@ class FixedTimeStepSize( FV ):
     self._use_split_loop                      = False
     self._use_gpu = use_gpu
 
-    super(FixedTimeStepSize, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+    super(SingleSweep, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
     self.set_implementation(flux=flux, ncp=ncp, eigenvalues=eigenvalues, riemann_solver=riemann_solver, use_gpu=self._use_gpu)
 
 

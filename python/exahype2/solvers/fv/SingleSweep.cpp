@@ -146,7 +146,10 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 ) {
   _solverState = SolverState::TimeStep;
   _minTimeStepSize = {{TIME_STEP_SIZE}};
-  _minTimeStamp    = _minTimeStamp + {{TIME_STEP_SIZE}};
+//  _minTimeStamp    = _minTimeStamp + {{TIME_STEP_SIZE}};
+//  _maxTimeStamp    = _maxTimeStamp - {{TIME_STEP_SIZE}};
+  _minTimeStamp = std::numeric_limits<double>::max();
+  _maxTimeStamp = std::numeric_limits<double>::min();
 }
 
 
