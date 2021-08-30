@@ -54,6 +54,10 @@ class UpdateFaceLabel(ActionSet):
   }}
   fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setBoundary( isBoundary );
 """
+    if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      result = """
+  fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setUpdated( false );
+"""
 
     return result
 
@@ -80,5 +84,9 @@ def create_face_label(solver_name):
   """
   result = peano4.datamodel.DaStGen2( UpdateFaceLabel.get_attribute_name( solver_name ) )
   result.data.add_attribute( dastgen2.attributes.Boolean("Boundary") )
+  result.data.add_attribute( dastgen2.attributes.BooleanArray("Updated","2") )
+  result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("UpdatedTimeStamp","2") )
+  result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
+  result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
   return result
 
