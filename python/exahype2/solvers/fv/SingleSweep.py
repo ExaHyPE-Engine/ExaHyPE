@@ -1,6 +1,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from .FV                       import FV
+from .FV       import FV
+from .PDETerms import PDETerms
  
 import peano4
 import exahype2
@@ -12,56 +13,14 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
-#  RiemannSolverCall_ClawPack = """
-#        double wave[{{NUMBER_OF_UNKNOWNS}}][{{NUMBER_OF_UNKNOWNS}}]; 
-#        double speed[{{NUMBER_OF_UNKNOWNS}}]; 
-#
-#        int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
-#        int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-#        int num_waves = {{NUMBER_OF_UNKNOWNS}}; 
-#
-#        {{CLAWPACK_RIEMANN_SOLVER}}_(
-#          {%if DISCRIMINATE_NORMAL %}
-#            &normal,
-#          {% endif %}   
-#          &num_eqn,
-#          &num_aux,
-#          &num_waves, 
-#          QL,                                 // double* q_l 
-#          QR,                                 // double* q_r
-#          QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
-#          QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
-#          wave,
-#          speed,
-#          FL,                                 // double* amdq
-#          FR                                  // double* apdq
-#        );
-#
-#        for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
-#          FL[i] = -FL[i];
-#        }
-#"""
-
-
   SolveRiemannProblemsOverPatch = jinja2.Template( """
+    double cellTimeStepSize = -1.0;
+    double cellTimeStamp    = -1.0;
+     
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
-
-    double cellTimeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() * repositories::{{SOLVER_INSTANCE}}.getMaxTimeStepSize();
-    double cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-
-    repositories::{{SOLVER_INSTANCE}}.setTimeStepSize(cellTimeStepSize);
-    repositories::{{SOLVER_INSTANCE}}.setTimeStamp(cellTimeStamp + cellTimeStepSize);
- 
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + cellTimeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
     
-    assertion6( 
-      cellTimeStepSize==0 
-      or 
-      cellTimeStepSize<=repositories::{{SOLVER_INSTANCE}}.getMaxTimeStepSize(),
-      cellTimeStepSize, cellTimeStamp, marker.toString(), repositories::{{SOLVER_INSTANCE}}.getMaxTimeStepSize(),
-      marker.h()(0), repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize()
-    );
+    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
+    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
 
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
@@ -96,72 +55,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         double                                       FL[],
         double                                       FR[]
       ) -> void {
-        {% if RIEMANN_SOLVER_IMPLEMENTATION!="<none>" and RIEMANN_SOLVER_IMPLEMENTATION=="<user-defined>"%}
-        repositories::{{SOLVER_INSTANCE}}.solveRiemannProblem(
-          QL, QR,
-          x, dx, t, dt, 
-          normal,
-          FL, FR
-        );
-        {% elif RIEMANN_SOLVER_IMPLEMENTATION!="<none>" %}
-          {{RIEMANN_SOLVER_IMPLEMENTATION}}
-        {% else %}
-        ::exahype2::fv::splitRusanov1d(
-          [] (
-            const double * __restrict__                  Q,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       F[]
-          ) -> void {
-            {% if FLUX_IMPLEMENTATION=="<none>" %}
-            for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) F[i] = 0.0;
-            {% else %}
-            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
-            {% endif %}
-          },
-          [] (
-            const double * __restrict__                  Q,
-            const double * __restrict__                  deltaQ,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       BgradQ[]
-          ) -> void {
-            {% if NCP_IMPLEMENTATION!="<none>" %}
-            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
-            {% endif %}
-          },
-          [] (
-            const double * __restrict__                  Q,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-          ) -> double {
-            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-          },
-          QL, QR, x, dx, t, dt, normal,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR,
-          {% if FLUX_IMPLEMENTATION=="<none>" %}
-          true,
-          {% else %}
-          false,
-          {% endif %}
-          {% if NCP_IMPLEMENTATION=="<none>" %}
-          true
-          {% else %}
-          false
-          {% endif %}
-        );
-        {% endif %}
+        {{RIEMANN_SOLVER_CALL}}
       },
       [&](
         const double * __restrict__                  Q,
@@ -171,11 +65,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         double                                       dt,
         double * __restrict__                        S
       ) -> void {
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(
-          Q,
-          x, dx, t, dt,
-          S
-        );
+        {{SOURCE_TERM_CALL}}
       },
       marker.x(),
       marker.h(),
@@ -189,6 +79,9 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     );
 
     {{POSTPROCESS_UPDATED_PATCH}}
+    
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + cellTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
   """ )
 
 
@@ -221,13 +114,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     self._solver.add_entries_to_text_replacement_dictionary(self.d)
     self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**self.d)
 
-
-  def enable_Rusanov_solver(self,flux=None,ncp=None,eigenvalues=None):
-    self.d[ "RIEMANN_SOLVER_TYPE"]  = "RUSANOV"
-    self.d[ "RIEMANN_SOLVER"]  = """
-    """
-    self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**d)
-
   
   def get_includes(self):
     return """
@@ -241,102 +127,45 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 class SingleSweep( FV ):
   """
-    Probably the simplest solver you could think off. There's a few
-    interesting things to try out with this one nevertheless: You
-    can inject symbolic flux/pde term implementations, or you can
-    alter the implementation variant of the cell update kernel. The
-    latter can be combined with different dynamic memory allocation
-    schemes and thus offers quite some opportunities to tweak and
-    tune things.
+    Probably the simplest solver you could think off. 
+
+    :: Write your own specialisation ::
+    
+    self._preprocess_reconstructed_patch 
+      Has to hold any preprocessing, but it also has to set the doubles
+      cellTimeStepSize and cellTimeStamp to valid data.
+      
+    
+
   """
 
 
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, plot_grid_properties):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    self._time_step_size = time_step_size
-
-    self._flux_implementation                 = PDETerms.None_Implementation
-    self._ncp_implementation                  = PDETerms.None_Implementation
-    self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
-    self._source_term_implementation          = PDETerms.Empty_Implementation
-    self._riemann_solver_implementation       = PDETerms.None_Implementation
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
-    self._use_gpu = use_gpu
+    
+    self._preprocess_reconstructed_patch      = ""
+    self._postprocess_updated_patch           = ""
+    
+    self._source_term_call          = "#error Not yet defined"
+    self._Riemann_solver_call       = "#error Not yet defined"
+    self._abstract_solver_user_declarations        = ""
+    self._abstract_solver_user_definitions         = ""
+    self._solver_user_declarations                 = ""
+    self._solver_user_definitions                  = ""
 
     super(SingleSweep, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-    self.set_implementation(flux=flux, ncp=ncp, eigenvalues=eigenvalues, riemann_solver=riemann_solver, use_gpu=self._use_gpu)
 
-
-#  def create_data_structures(self):
-#    FV.create_data_structures(self)
-#
-#    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate()
-#    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()
-#
-#    self._patch_overlap.generator.send_condition               = "true"
-#    self._patch_overlap.generator.receive_and_merge_condition  = "true"
-
-
-  def create_action_sets(self):
-    FV.create_action_sets(self)
-    self._action_set_update_cell = UpdateCell(self)
-
-
-  def set_implementation(self,
-    flux=None,ncp=None,
-    eigenvalues=None,
-    riemann_solver=None,
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    memory_location         = None,
-    use_split_loop          = False,
-    use_gpu =False
-  ):
-    """
-      If you pass in User_Defined, then the generator will create C++ stubs
-      that you have to befill manually. If you pass in None_Implementation, it
-      will create nop, i.e. no implementation or defaults. Any other string
-      is copied 1:1 into the implementation. If you pass in None, then the
-      set value so far won't be overwritten.
-
-      Please note that not all options are supported by all solvers. You
-      cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
-
-      This routine should be the very last invoked by the constructor.
-    """
-    if flux                 is not None:  self._flux_implementation                       = flux
-    if ncp                  is not None:  self._ncp_implementation                        = ncp
-    if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
-    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
-    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
-    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
-    if source_term          is not None:  self._source_term_implementation                = source_term
-    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
-    if use_split_loop                  :  self._use_split_loop                            = use_split_loop
-    if use_gpu                         :  self._use_gpu                                   = use_gpu
-    if riemann_solver       is not None:  self._riemann_solver_implementation             = riemann_solver
-
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
-  
-    if self._riemann_solver_implementation!=PDETerms.None_Implementation and self._flux_implementation!=PDETerms.None_Implementation:
-      raise Exception( "you cannot specify a Riemann solver and a flux function" )
-    if self._riemann_solver_implementation!=PDETerms.None_Implementation and self._ncp_implementation!=PDETerms.None_Implementation:
-      raise Exception( "you cannot specify a Riemann solver and an ncp term" )
-    if self._riemann_solver_implementation!=PDETerms.None_Implementation and self._eigenvalues_implementation!=PDETerms.None_Implementation:
-      raise Exception( "you cannot specify a Riemann solver and an eigenvalue implementation (as you use a fixed time stepping scheme)" )
-
-    self.create_action_sets()
+    self._solver_template_file_class_name     = "SingleSweep"
 
 
   def create_action_sets(self):
@@ -354,22 +183,107 @@ class SingleSweep( FV ):
 """
 
 
+  def set_implementation(self,
+    boundary_conditions, refinement_criterion, initial_conditions,
+    memory_location,
+    use_split_loop
+  ):
+    """
+      If you pass in User_Defined, then the generator will create C++ stubs
+      that you have to befill manually. If you pass in None_Implementation, it
+      will create nop, i.e. no implementation or defaults. Any other string
+      is copied 1:1 into the implementation. If you pass in None, then the
+      set value so far won't be overwritten.
+
+      Please note that not all options are supported by all solvers. You
+      cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
+
+      This routine should be the very last invoked by the constructor.
+    """
+    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
+    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
+    if use_split_loop                  :  self._use_split_loop                            = use_split_loop
+
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+
+    self.create_action_sets()
+
+
   def add_entries_to_text_replacement_dictionary(self,d):
     """
      d: Dictionary of string to string
         in/out argument
     """
-    d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
-    d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
-    d[ "EIGENVALUES_IMPLEMENTATION"]          = self._eigenvalues_implementation
-    d[ "RIEMANN_SOLVER_IMPLEMENTATION"]       = self._riemann_solver_implementation
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
-    d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
-    d[ "USE_GPU"]                             = self._use_gpu
+    
+    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call).render( **d )
+    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call).render( **d )
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch).render( **d )
+    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch).render( **d )
+    d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations).render( **d )
+    d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions).render( **d )
+    d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations).render( **d )
+    d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions).render( **d )
 
-    d[ "TIME_STEP_SIZE" ]                     = self._time_step_size
+
+  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+    """
+  
+    Most subclasses will redefine/overwrite this operation as they have
+    to incorporate the kernel into their generated stuff
+  
+    """
+    self._preprocess_reconstructed_patch = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  def set_postprocess_updated_patch_kernel(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+
+    The postprocessing kernel often looks similar to the following code:
+
+  {
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      enforceCCZ4constraints( targetPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+
+
+    Within this kernel, you have at least the following variables available:
+
+    - targetPatch This is a pointer to the whole data structure (one large
+        array).
+        The patch is not supplemented by a halo layer.
+    - reconstructedPatch This is a pointer to the data snapshot before the
+        actual update. This data is combined with the halo layer, i.e. if you
+        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
+        patch.
+    - marker
+
+    Furthermore, you can use all the symbols (via Jinja2 syntax) from
+    _init_dictionary_with_default_parameters().
+
+    kernel: String
+      C++ code that holds the postprocessing kernel
+
+    """
+    self._postprocess_updated_patch += kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
 
 #  def add_implementation_files_to_project(self,namespace,output):
 #    """

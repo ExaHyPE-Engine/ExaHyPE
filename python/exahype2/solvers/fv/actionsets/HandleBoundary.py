@@ -43,8 +43,7 @@ class HandleBoundary(AbstractFVActionSet):
         },  
         marker.x(),
         marker.h(),
-        // @todo falscher timesteamp
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
+        {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
         repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -56,17 +55,17 @@ class HandleBoundary(AbstractFVActionSet):
 """
   def __init__(self,solver,predicate):
     AbstractFVActionSet.__init__(self,solver)
-    self.predicate = predicate
+    self.d = {}
+    self.d[ "PREDICATE" ] = predicate      
+    self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + solver._face_label.name
 
 
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      d = {}
-      self._solver._init_dictionary_with_default_parameters(d)
-      self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ] = self.predicate      
-      result = jinja2.Template(self.TemplateHandleBoundary).render(**d)
+      self._solver._init_dictionary_with_default_parameters(self.d)
+      self._solver.add_entries_to_text_replacement_dictionary(self.d)
+      result = jinja2.Template(self.TemplateHandleBoundary).render(**self.d)
       pass 
     return result
 

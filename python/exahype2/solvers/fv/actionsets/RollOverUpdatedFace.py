@@ -15,15 +15,40 @@ class RollOverUpdatedFace(AbstractFVActionSet):
   TemplateHandleFace = jinja2.Template( """
     if ( {{GUARD}} ) {
       logTraceInWith2Arguments( "touchFaceLastTime(...)---RollOverUpdatedFace", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), marker.toString() );
-      int index = 0;
-      dfore(k,{{DOFS_PER_AXIS}},0,0) {
-        for (int i=0; i<2*{{OVERLAP}}; i++) 
-        for (int j=0; j<{{UNKNOWNS}}; j++) {
-          {{OLD_ACCESSOR}}.value[index] = {{NEW_ACCESSOR}}.value[index]; 
-          {{NEW_ACCESSOR}}.value[index] = {{UPDATE_ACCESSOR}}.value[index]; 
-          index++;
+      
+      const int normal = marker.getSelectedFaceNumber() % Dimensions;
+      // Left half
+      if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)) {
+        dfore(k,{{DOFS_PER_AXIS}},normal,0) {
+          for (int i=0; i<{{OVERLAP}}; i++) {
+            tarch::la::Vector<Dimensions,int> overlapCell = k;
+            overlapCell(normal) = i;
+            const int index = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
+            logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
+            for (int j=0; j<{{UNKNOWNS}}; j++) {
+              {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+            }
+          }
         }
       }
+      // Right half
+      if ({{FACE_METADATA_ACCESSOR}}.getUpdated(1)) {
+        dfore(k,{{DOFS_PER_AXIS}},normal,0) {
+          for (int i={{OVERLAP}}; i<2*{{OVERLAP}}; i++) {
+            tarch::la::Vector<Dimensions,int> overlapCell = k;
+            overlapCell(normal) = i;
+            const int index = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{{DOFS_PER_AXIS}},{{OVERLAP}},normal);
+            logDebug( "touchFaceLastTime(...)", "normal=" << normal << ",{{NEW_ACCESSOR}}[" << index << "]->{{OLD_ACCESSOR}}[" << index << "]" );
+            for (int j=0; j<{{UNKNOWNS}}; j++) {
+              {{OLD_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+              {{NEW_ACCESSOR}}.value[index*{{UNKNOWNS}}+j] = {{UPDATE_ACCESSOR}}.value[index*{{UNKNOWNS}}+j]; 
+            }
+          }
+        }
+      }
+      
+      int index = 0;
       logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace" );
     }
 """ )
@@ -39,6 +64,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
     self.d[ "UPDATE_ACCESSOR" ] = "fineGridFace" + solver._patch_overlap_update.name
     self.d[ "OLD_ACCESSOR" ]    = "fineGridFace" + solver._patch_overlap_old.name
     self.d[ "NEW_ACCESSOR" ]    = "fineGridFace" + solver._patch_overlap_new.name
+    self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + solver._face_label.name
 
 
   def get_body_of_operation(self,operation_name):
@@ -55,6 +81,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
     return """
 #include "exahype2/PatchUtils.h"
 #include "peano4/utils/Loop.h"
+#include "toolbox/blockstructured/Enumeration.h"
 """ + AbstractFVActionSet.get_includes(self) 
 
 

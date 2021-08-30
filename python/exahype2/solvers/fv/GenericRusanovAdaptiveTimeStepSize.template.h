@@ -1,1 +1,0 @@
-{% include "GenericRusanovFixedTimeStepSize.template.h" %}

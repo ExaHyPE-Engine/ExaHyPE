@@ -34,15 +34,16 @@ class AMROnPatch(AbstractFVActionSet):
   
   
   TemplateAMR = """  
-  if ({{PREDICATE}}) { 
-    ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
+  ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
-    if (tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
-      refinementCriterion = ::exahype2::RefinementCommand::Refine;
-    } 
-    else {
-      int index = 0;
-      dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+  if (tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+    refinementCriterion = ::exahype2::RefinementCommand::Refine;
+  } 
+  else if (
+    {{PREDICATE}}
+  ) { 
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
         refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
           fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
           ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
@@ -50,18 +51,17 @@ class AMROnPatch(AbstractFVActionSet):
           repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp()
         );
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-      }
-     
-      if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.getMinMeshSize() ) {
-        refinementCriterion = ::exahype2::RefinementCommand::Keep;
-      } 
-      else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
-        refinementCriterion = ::exahype2::RefinementCommand::Keep;
-      } 
     }
-    
-    _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion );
+     
+    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.getMinMeshSize() ) {
+      refinementCriterion = ::exahype2::RefinementCommand::Keep;
+    } 
+    else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+      refinementCriterion = ::exahype2::RefinementCommand::Keep;
+    } 
   }
+    
+  _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion );
   """
   
     

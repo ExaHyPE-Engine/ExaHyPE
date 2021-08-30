@@ -5,7 +5,7 @@ from .PDETerms                                          import PDETerms
 import exahype2.solvers.fv.actionsets
 
 from .FV                                                import FV
-from .FixedTimeStepSize                                 import FixedTimeStepSize
+from .Rusanov                                           import Rusanov_GlobalFixedTimeStep
 
 #from .GenericRusanovAdaptiveTimeStepSize                import GenericRusanovAdaptiveTimeStepSize
 #from .GenericRusanovAdaptiveTimeStepSizeWithEnclaves    import GenericRusanovAdaptiveTimeStepSizeWithEnclaves

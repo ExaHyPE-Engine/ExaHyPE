@@ -93,9 +93,6 @@ class FV(object):
     self._max_h                = max_h 
     self._plot_grid_properties = plot_grid_properties
 
-    self._preprocess_reconstructed_patch      = ""
-    self._postprocess_updated_patch           = ""
-    
     self._patch_size           = patch_size  
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
@@ -347,64 +344,6 @@ In-situ preprocessing:  """
     return ""
   
   
-  @abstractmethod
-  def set_preprocess_reconstructed_patch_kernel(self,kernel, append_to_existing_kernel=True):
-    """
-  
-    Most subclasses will redefine/overwrite this operation as they have
-    to incorporate the kernel into their generated stuff
-  
-    """
-    if append_to_existing_kernel:
-      self._preprocess_reconstructed_patch += kernel
-    else:
-      self._preprocess_reconstructed_patch = kernel
-    self.create_data_structures()
-    self.create_action_sets()
-
-
-  @abstractmethod
-  def set_postprocess_updated_patch_kernel(self, kernel, append_to_existing_kernel=True):
-    """
-
-    Define a postprocessing routine over the data
-
-    The postprocessing kernel often looks similar to the following code:
-
-  {
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-      enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
-
-
-    Within this kernel, you have at least the following variables available:
-
-    - targetPatch This is a pointer to the whole data structure (one large
-        array).
-        The patch is not supplemented by a halo layer.
-    - reconstructedPatch This is a pointer to the data snapshot before the
-        actual update. This data is combined with the halo layer, i.e. if you
-        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
-        patch.
-    - marker
-
-    Furthermore, you can use all the symbols (via Jinja2 syntax) from
-    _init_dictionary_with_default_parameters().
-
-    kernel: String
-      C++ code that holds the postprocessing kernel
-
-    """
-    if append_to_existing_kernel:
-      self._postprocess_updated_patch += kernel
-    else:
-      self._postprocess_updated_patch = kernel
-    self.create_data_structures()
-    self.create_action_sets()
-
 
   def add_actions_to_init_grid(self, step):
     """
@@ -604,6 +543,3 @@ In-situ preprocessing:  """
     d[ "INCLUDES"] = self.get_user_includes()
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
-
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]  = jinja2.Template(self._preprocess_reconstructed_patch).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH" ]       = jinja2.Template(self._postprocess_updated_patch).render( **d )

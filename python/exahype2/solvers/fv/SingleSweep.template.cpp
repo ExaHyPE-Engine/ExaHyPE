@@ -40,37 +40,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 {% endif %}
 
 
-{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
-  const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  double * __restrict__                        S  // S[{{NUMBER_OF_UNKNOWNS}}
-) {
-  logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
-  // @todo implement
-  logTraceOut( "sourceTerm(...)" );
-}
-{% endif %}
-
-
-{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
-  const double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  double                                       dt,
-  double * __restrict__ S
-) {
-  if (tarch::la::equals(t,0.0) ) {
-    {{SOURCE_TERM_IMPLEMENTATION}}
-  }
-}
-{% endif %}
-
 
 {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
@@ -88,50 +57,4 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 {% endif %}
 
 
-{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::maxEigenvalue(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal
-)  {
-  logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "maxEigenvalue(...)" );
-}
-{% endif %}
-
-
-{% if FLUX_IMPLEMENTATION=="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::flux(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal,
-  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
-)  {
-  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "flux(...)" );
-}
-{% endif %}
-
-
-{% if NCP_IMPLEMENTATION=="<user-defined>" %}
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::nonconservativeProduct(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal,
-  double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
-)  {
-  logTraceInWith4Arguments( "nonconservativeProduct(...)", faceCentre, volumeH, t, normal );
-  // @todo implement
-  logTraceOut( "nonconservativeProduct(...)" );
-}
-{% endif %}
-
+{{SOLVER_USER_DEFINITIONS}}
