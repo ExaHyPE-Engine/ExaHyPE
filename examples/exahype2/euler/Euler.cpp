@@ -17,11 +17,13 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( Q[4]>0.4 ) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
-  if ( Q[4]<0.2 ) {
-    result = ::exahype2::RefinementCommand::Coarsen;
+  if ( tarch::la::greater(t,0.0) ) {
+    if ( Q[4]>0.4 ) {
+      result = ::exahype2::RefinementCommand::Refine;
+    }
+    if ( Q[4]<0.2 ) {
+      result = ::exahype2::RefinementCommand::Coarsen;
+    }
   }
 
   return result;
@@ -109,6 +111,7 @@ void examples::exahype2::euler::Euler::flux(
         << ",normal=" << normal
         << ",Q[0]=" << Q[0];
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", msg.str() );
+    //assertion(false);
   }
 
   constexpr double gamma = 1.4;
@@ -156,7 +159,6 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
-  assert( Qinside[0]>1e-12 );
 
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];
