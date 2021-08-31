@@ -111,7 +111,6 @@ void examples::exahype2::euler::Euler::flux(
         << ",normal=" << normal
         << ",Q[0]=" << Q[0];
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", msg.str() );
-    //assertion(false);
   }
 
   constexpr double gamma = 1.4;
