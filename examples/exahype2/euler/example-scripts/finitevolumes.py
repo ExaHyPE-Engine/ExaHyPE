@@ -145,7 +145,7 @@ elif args.type=="enclave-ots":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 elif args.type=="global-fixed":
-  thesolver = exahype2.solvers.fv.Rusanov_GlobalFixedTimeStep(
+  thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
@@ -155,7 +155,7 @@ elif args.type=="global-fixed":
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 elif args.type=="global-adaptive":
-  thesolver = exahype2.solvers.fv.Rusanov_GlobalAdaptiveTimeStep(
+  thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
