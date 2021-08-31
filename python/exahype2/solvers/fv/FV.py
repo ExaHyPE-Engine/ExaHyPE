@@ -14,6 +14,7 @@ import jinja2
 from abc import abstractmethod
 
 import exahype2
+import exahype2.solvers.fv.actionsets
 
     
 class FV(object):
@@ -482,6 +483,7 @@ In-situ preprocessing:  """
       namespace,
       ".", 
       abstractHeaderDictionary,
+      True,
       True)
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(
       templatefile_prefix + ".template.h",
@@ -490,7 +492,8 @@ In-situ preprocessing:  """
       namespace,
       ".", 
       implementationDictionary,
-      False)
+      False,
+      True)
 
     output.add( generated_abstract_header_file )
     output.add( generated_solver_files )

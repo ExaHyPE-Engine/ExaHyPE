@@ -6,6 +6,7 @@
 
 
 #include "tarch/multicore/Lock.h"
+#include "exahype2/NonCriticalAssertions.h"
 
 
 tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}" );
@@ -36,17 +37,31 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStepSizeAndTimeStamp(double timeStepSize, double timeStamp) {
   tarch::multicore::Lock lock(_semaphore);
 
-  assertion1(timeStepSize<std::numeric_limits<double>::max()/10.0,timeStepSize);
-  assertion1(timeStepSize>=0.0,timeStepSize);
-  _minTimeStepSize = std::min(timeStepSize,_minTimeStepSize);
-  _maxTimeStepSize = std::max(timeStepSize,_maxTimeStepSize);
-  assertion2(_minTimeStepSize<=_maxTimeStepSize, _minTimeStepSize, _maxTimeStepSize );
+  if ( tarch::la::greater(timeStepSize,0.0) ) {
+    assertion1(timeStepSize<std::numeric_limits<double>::max()/10.0,timeStepSize);
+    assertion1(timeStepSize>=0.0,timeStepSize);
+    _minTimeStepSize = std::min(timeStepSize,_minTimeStepSize);
+    _maxTimeStepSize = std::max(timeStepSize,_maxTimeStepSize);
+    assertion2(_minTimeStepSize<=_maxTimeStepSize, _minTimeStepSize, _maxTimeStepSize );
+  }
 
   assertion1(timeStamp<std::numeric_limits<double>::max()/10.0,timeStamp);
   assertion1(timeStamp>=0.0,timeStamp);
   _maxTimeStamp = std::max(timeStamp,_maxTimeStamp);
   _minTimeStamp = std::min(timeStamp,_minTimeStamp);
   assertion2(_minTimeStamp<=_maxTimeStamp, _minTimeStamp, _maxTimeStamp );
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStepSize(double timeStepSize) {
+  if ( tarch::la::greater(timeStepSize,0.0) ) {
+    tarch::multicore::Lock lock(_semaphore);
+    assertion1(timeStepSize<std::numeric_limits<double>::max()/10.0,timeStepSize);
+    assertion1(timeStepSize>=0.0,timeStepSize);
+    _minTimeStepSize = std::min(timeStepSize,_minTimeStepSize);
+    _maxTimeStepSize = std::max(timeStepSize,_maxTimeStepSize);
+    assertion2(_minTimeStepSize<=_maxTimeStepSize, _minTimeStepSize, _maxTimeStepSize );
+  }
 }
 
 
@@ -123,6 +138,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   _minH({{MIN_H}}),
   _minTimeStepSize(0.0),
   _maxTimeStepSize(0.0) {
+  {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
 
@@ -149,14 +165,17 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  _solverState = SolverState::TimeStep;
-  _minTimeStamp += _maxTimeStepSize;
+  _solverState     = SolverState::TimeStep;
+  _minTimeStamp    = std::numeric_limits<double>::max();
+  _maxTimeStamp    = std::numeric_limits<double>::min();
   _minTimeStepSize = std::numeric_limits<double>::max();
   _maxTimeStepSize = std::numeric_limits<double>::min();
+  {{START_TIME_STEP_IMPLEMENTATION}}
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
+  {{FINISH_TIME_STEP_IMPLEMENTATION}}
 }
 
 

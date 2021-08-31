@@ -184,7 +184,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double getMaxMeshSize() const override;
     double getMinMeshSize() const override;
 
+    /**
+     * @see setTimeStepSize(double)
+     */
     void setTimeStepSizeAndTimeStamp(double timeStepSize, double timeStamp);
+
+    void setTimeStepSize(double timeStepSize);
 
     SolverState  getSolverState() const;
 

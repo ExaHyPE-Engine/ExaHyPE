@@ -22,6 +22,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
     assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
 
+    const double usedTimeStepSize = cellTimeStepSize;
+
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
       targetPatch,
@@ -69,8 +71,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       },
       marker.x(),
       marker.h(),
-      cellTimeStepSize,
       cellTimeStamp,
+      cellTimeStepSize,
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -80,8 +82,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
     {{POSTPROCESS_UPDATED_PATCH}}
     
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + cellTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
+    
+    repositories::{{SOLVER_INSTANCE}}.setTimeStepSizeAndTimeStamp(cellTimeStepSize, cellTimeStamp + usedTimeStepSize);
   """ )
 
 
@@ -135,7 +139,11 @@ class SingleSweep( FV ):
       Has to hold any preprocessing, but it also has to set the doubles
       cellTimeStepSize and cellTimeStamp to valid data.
       
-    
+    self._postprocess_updated_patch 
+      You don't have to redefine this one, but if you want to alter the
+      time step size, then this is the right place to do so. If you don't
+      alter cellTimeStepSize, the code will automatically continue with
+      the current one subject to a preprocessing in the next step.
 
   """
 
@@ -163,6 +171,11 @@ class SingleSweep( FV ):
     self._solver_user_declarations                 = ""
     self._solver_user_definitions                  = ""
 
+    self._start_time_step_implementation           = ""
+    self._finish_time_step_implementation          = ""
+    
+    self._constructor_implementation = ""
+    
     super(SingleSweep, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
 
     self._solver_template_file_class_name     = "SingleSweep"
@@ -223,14 +236,17 @@ class SingleSweep( FV ):
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
     
-    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call).render( **d )
-    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call).render( **d )
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch).render( **d )
-    d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations).render( **d )
-    d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions).render( **d )
-    d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations).render( **d )
-    d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions).render( **d )
+    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "START_TIME_STEP_IMPLEMENTATION" ]     = jinja2.Template(self._start_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "FINISH_TIME_STEP_IMPLEMENTATION" ]    = jinja2.Template(self._finish_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
 
 
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
