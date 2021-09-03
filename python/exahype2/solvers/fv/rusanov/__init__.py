@@ -4,4 +4,4 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 
 from .GlobalFixedTimeStep                     import GlobalFixedTimeStep
 from .GlobalAdaptiveTimeStep                  import GlobalAdaptiveTimeStep
-from .GlobalFixedTimeStepWithEnclaveTasking   import GlobalFixedTimeStepWithEnclaveTasking
+#from .GlobalFixedTimeStepWithEnclaveTasking   import GlobalFixedTimeStepWithEnclaveTasking
