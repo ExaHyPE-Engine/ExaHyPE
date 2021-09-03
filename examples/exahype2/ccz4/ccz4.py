@@ -47,7 +47,8 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu", "fv-adaptive-gpu"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive"], required="True",  help="Pick solver type" )
+    #parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu", "fv-adaptive-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
@@ -69,18 +70,18 @@ if __name__ == "__main__":
 
     SuperClass = None
 
-    if args.implementation=="fv-fixed":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-enclave" or args.implementation=="fv-fixed-gpu":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
-    if args.implementation=="fv-adaptive":
-       SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
-    if args.implementation=="fv-adaptive-enclave" or args.implementation=="fv-adaptive-gpu":
-       SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
-    if args.implementation=="fv-optimistic-enclave":
-       SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
-    if args.implementation=="ader-fixed":
-       SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
+    if args.implementation=="fv-global-fixed":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep
+    if args.implementation=="fv-global-adaptive":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
+#    if args.implementation=="fv-fixed-enclave" or args.implementation=="fv-fixed-gpu":
+#       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
+#    if args.implementation=="fv-adaptive-enclave" or args.implementation=="fv-adaptive-gpu":
+#       SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
+#    if args.implementation=="fv-optimistic-enclave":
+#       SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
+#    if args.implementation=="ader-fixed":
+#       SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
 
     class CCZ4Solver( SuperClass ):
       def __init__(self, name, patch_size, min_h, max_h ):
@@ -111,17 +112,16 @@ if __name__ == "__main__":
 #include "../CCZ4Kernels.h"
 #include "exahype2/PatchUtils.h"
 """
-           #SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator or \
-        if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
-           SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
+
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_size=1e-2,
-            use_gpu = True if args.implementation=="fv-fixed-gpu" else False
+            time_step_size=1e-2
+#            use_gpu = True if args.implementation=="fv-fixed-gpu" else False
           )
         else:
           SuperClass.__init__(
@@ -130,8 +130,8 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.1,
-            use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
+            time_step_relaxation=0.1
+#                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
 
         self._solver_template_file_class_name = SuperClass.__name__
