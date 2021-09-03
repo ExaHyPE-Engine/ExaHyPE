@@ -359,7 +359,27 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
 \end{code}
 
 \noindent
-on your \ExaHyPE\ project. 
+on your \ExaHyPE\ project. There are (optional) arguments to this call. Via
+\begin{code}
+project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "(0.8,200)" )
+\end{code}
+
+\noindent
+for example, you instruct the load balancing that you want it to be well-balanced 
+accross ranks up to 80\% (the default is 90\%) and you also to constrain the tree (subpartition) size 
+by 200 cells.
+This means that no domain on a rank will be split if this rank's load is $\pm20\%$ off, and a partition
+will never split up if it has less than 200 cells.
+
+\begin{remark}
+ There is a always a trade-off between the different settings: 
+ If you increase the quality of the domain decomposition, then the time per time step will go down.
+ However, the load balancing will need way longer. 
+ If you pick a minimum cell size, then the grid will build up first until it can accommodate the constraint, and then it will decompose.
+ Grid decomposition however is both time consuming and requires (temporarily) quite a lot of memory.
+\end{remark}   
+ 
+
 
 
 \paragraph{Task parallelism}

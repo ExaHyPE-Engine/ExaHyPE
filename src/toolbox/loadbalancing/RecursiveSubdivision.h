@@ -257,6 +257,10 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     void updateGlobalView();
     
+    /**
+     * This operation checks if the inter-rank load decomposition does
+     * violate the overall load balancing constraints.
+     */
     bool doesRankViolateBalancingCondition() const;
 
     void updateBlacklist();
@@ -312,8 +316,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     /**
      * This is part of the action SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning.
      *
-     * @param cellsPerCore I think I could reconstruct these guys manually, but
-     *          I have this value available when I call the function anyway.
+     * @param Number of splits that the code should run
      */
     int getNumberOfSplitsOnLocalRank() const;
 

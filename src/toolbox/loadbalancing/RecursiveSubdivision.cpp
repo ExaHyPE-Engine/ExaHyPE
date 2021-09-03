@@ -374,20 +374,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     );
     return StrategyStep::SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning;
   }
-  else if (
-    peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()==1
-    and
-    not rankViolatesBalancingCondition
-    and
-    tarch::multicore::Core::getInstance().getNumberOfThreads()>1
-    and
-    _makeSplitDependentOnMemory
-  ) {
-    logWarning(
-      "getStrategyStep()",
-      "code has not split yet can assumes that it would exceed memory. You might want to disable this analysis type"
-    );
-  }
 
 
   // solely for info
@@ -436,8 +422,6 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() < tarch::multicore::Core::getInstance().getNumberOfThreads()
     and
     not rankViolatesBalancingCondition
-    //and
-    //_state==StrategyState::WaitForRoundRobinToken
     and
     canSplitLocally()
   ) {
@@ -527,7 +511,19 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
 
   int worstCaseEstimateForSizeOfSpacetree = tarch::getMemoryUsage( tarch::MemoryUsageFormat::MByte );
   int maxAdditionalSplitsDueToMemory      = tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) / worstCaseEstimateForSizeOfSpacetree;
+  int estimatedCellsPerTree               = maxSizeOfLocalRank / (numberOfSplits+1);
 
+  if ( estimatedCellsPerTree<_MinTreeSize ) {
+	const int adoptedSplits = std::max(1, maxSizeOfLocalRank / _MinTreeSize - 1 );
+    logInfo(
+      "getNumberOfSplitsOnLocalRank(...)",
+       "coded wanted to split " << numberOfSplits <<
+       " times, but this would yield around " << estimatedCellsPerTree <<
+	   " cells per tree, whereas the number of cells per tree should be at least " << _MinTreeSize <<
+	   ". Split only " << adoptedSplits << " times"
+    );
+    numberOfSplits = adoptedSplits;
+  }
   if (
     peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size()<=1
     or
@@ -537,10 +533,10 @@ int toolbox::loadbalancing::RecursiveSubdivision::getNumberOfSplitsOnLocalRank()
       "getNumberOfSplitsOnLocalRank(...)",
        "assume enough memory is available, so split " << numberOfSplits <<
        " times (current mem footprint=" << worstCaseEstimateForSizeOfSpacetree << " MByte, free memory=" <<
-       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " MByte)"
+       tarch::getFreeMemory( tarch::MemoryUsageFormat::MByte ) << " MByte, est. cells per tree=" << estimatedCellsPerTree << ")"
     );
   }
-  else {
+  else if (_makeSplitDependentOnMemory) {
     int adoptedSplitCount = std::max(1,maxAdditionalSplitsDueToMemory);
     logInfo( 
       "getNumberOfSplitsOnLocalRank(...)", 
@@ -663,6 +659,12 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
             "split local rank and assign it " << cellsPerCore << " cell(s)"
           );
           triggerSplit(heaviestSpacetree, cellsPerCore, tarch::mpi::Rank::getInstance().getRank());
+        }
+        else if (_blacklist.count(heaviestSpacetree)!=0) {
+          logInfo(
+            "finishStep()",
+            "can't split heaviest tree " << heaviestSpacetree << " as this rank is on the blacklist"
+          );
         }
       }
       break;
