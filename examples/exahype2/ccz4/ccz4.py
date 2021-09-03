@@ -134,7 +134,6 @@ if __name__ == "__main__":
 #                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
 
-        self._solver_template_file_class_name = SuperClass.__name__
         self._patch_size = patch_size
 
         self.set_implementation(
