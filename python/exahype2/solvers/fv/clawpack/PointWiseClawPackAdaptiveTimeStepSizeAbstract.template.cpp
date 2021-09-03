@@ -1,10 +1,14 @@
-{% include "AbstractSolverFixedTimeStepSize.template.cpp" %}
+{% include "AbstractSolverAdaptiveTimeStepSize.template.cpp" %}
 
+
+#include "exahype2/NonCriticalAssertions.h"
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
   _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
   _timeStamp(0.0),
+  _timeStepSize(0.0),
+  _admissibleTimeStepSize(std::numeric_limits<double>::max()),
   _solverState(SolverState::GridConstruction),
   _maxH({{MAX_H}}),
   _minH({{MIN_H}})
@@ -41,7 +45,30 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-  _timeStamp += {{TIME_STEP_SIZE}};
+  _timeStamp += getMaxTimeStepSize();
+  
+  double newTimeStepSize = _admissibleTimeStepSize;
+  #ifdef Parallel
+  tarch::mpi::Rank::getInstance().allReduce(
+        &newTimeStepSize,
+        &_timeStepSize,
+        1,
+        MPI_DOUBLE,
+        MPI_MIN, 
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+  #else
+  _timeStepSize = newTimeStepSize;
+  #endif
+
+  if ( std::isnan(_timeStepSize) or std::isinf(_timeStepSize) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_timeStepSize) );
+  }
+  if (tarch::la::smallerEquals(_timeStepSize,0.0,1e-10) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_timeStepSize>0", "degenerated time step size of " + std::to_string(_timeStepSize) );
+  }
+
+  _admissibleTimeStepSize = std::numeric_limits<double>::max();
 }
 
 
@@ -90,3 +117,4 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::sourceTerm(
   {% endif %}
 }
 {% endif %}
+

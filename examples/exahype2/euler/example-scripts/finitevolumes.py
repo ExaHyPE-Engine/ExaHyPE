@@ -45,7 +45,7 @@ parser.add_argument("-pd", "--peano-dir",              dest="peanodir",         
 parser.add_argument("-cd", "--configure-dir",          dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("-o",  "--output",                 dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("-f",  "--force",                  dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["default", "default-ats", "enclave", "enclave-ats", "enclave-ots", "gpu-fixed", "gpu-ats"], default="default", help="Pick implementation variant" )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "enclave", "enclave-ats", "enclave-ots", "gpu-fixed", "gpu-ats"], default="global-fixed", help="Pick implementation variant" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
@@ -100,17 +100,18 @@ auxiliary_variables = 0
 
 thesolver = None
 if args.type=="gpu-fixed":
-  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+  thesolver = exahype2.solvers.fv.FixedTimeStepSizeWithEnclaves(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     admissible_time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalue = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     use_gpu=True
   )
 elif args.type=="gpu-ats":
-  thesolver = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves(
+  thesolver = exahype2.solvers.fv.AdaptiveTimeStepSizeWithEnclaves(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
@@ -118,9 +119,8 @@ elif args.type=="gpu-ats":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     use_gpu=True
   )
-  print("yesssss")
 elif args.type=="enclave":
-  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+  thesolver = exahype2.solvers.fv.FixedTimeStepSizeWithEnclaves(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
@@ -129,7 +129,7 @@ elif args.type=="enclave":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 elif args.type=="enclave-ats":
-  thesolver = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves(
+  thesolver = exahype2.solvers.fv.AdaptiveTimeStepSizeWithEnclaves(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
@@ -137,29 +137,31 @@ elif args.type=="enclave-ats":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 elif args.type=="enclave-ots":
-  thesolver = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves(
+  thesolver = exahype2.solvers.fv.OptimisticTimeStepSizeWithEnclaves(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
-elif args.type=="default":
-  thesolver = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize(
+elif args.type=="global-fixed":
+  thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     admissible_time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
-elif args.type=="default-ats":
-  thesolver = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize(
+elif args.type=="global-adaptive":
+  thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.01
   )
 

@@ -108,9 +108,14 @@ class exahype2::RefinementControl {
     std::vector< peano4::grid::GridControlEvent >  getGridControlEvents() const;
 
     /**
-	   * @param x Centre of the cell for which this command is triggered
-	   * @param h Size of this cell
-	   */
+     * Add a new command.
+     *
+     * Depending on the context, we add a new refinement instruction
+     * interpreting x and h. If you refine, I divide h by three.
+     *
+     * @param x Centre of the cell for which this command is triggered
+     * @param h Size of this cell
+     */
     void addCommand(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,

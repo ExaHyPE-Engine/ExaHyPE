@@ -3,25 +3,26 @@
 #
 # General debug settings
 #
-debug  tarch                               -1     black
-debug  peano4                              -1     black
-debug  examples                            -1     black
-debug  exahype2                            -1     black
+debug  tarch                               -1     black always-on
+debug  peano4                              -1     black always-on
+debug  examples                            -1     black always-on
+debug  exahype2                            -1     black always-on
 
 info  tarch                                -1     white always-on
+info  tarch                                -1     black timestep
 info  peano4                               -1     white always-on
 info  examples                             -1     white always-on
 info  exahype2                             -1     white always-on
-info  toolbox                              -1     black
+info  toolbox                              -1     white  always-on
 
-info  ::step                               -1     black
-info  ::step                                0     white
+info  ::step                               -1     black always-on
+info  ::step                                0     white always-on
  
-trace  tarch                               -1     black
-trace  peano4                              -1     black
-trace  examples                            -1     black
-trace  exahype2                            -1     black
-trace  toolbox                             -1     black
+trace  tarch                               -1     black always-on
+trace  peano4                              -1     black always-on
+trace  examples                            -1     black always-on
+trace  exahype2                            -1     black always-on
+trace  toolbox                             -1     black always-on
 
 
 

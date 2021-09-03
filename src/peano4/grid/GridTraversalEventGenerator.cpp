@@ -272,13 +272,6 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   event.setIsVertexAdjacentToParallelDomainBoundary( areVerticesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true) );
   event.setIsFaceAdjacentToParallelDomainBoundary( areFacesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true));
 
-  #if !defined(SharedMemoryParallelisation)
-  for (int i=0; i<TwoPowerD; i++)
-    assertion1( event.getIsVertexLocal(i) or not event.getIsVertexAdjacentToParallelDomainBoundary(i), event.toString() );
-  for (int i=0; i<TwoTimesD; i++)
-    assertion1( event.getIsFaceLocal(i) or not event.getIsFaceAdjacentToParallelDomainBoundary(i), event.toString() );
-  #endif
-
   const std::bitset<Dimensions> coordinates = PeanoCurve::getFirstVertexIndex(state);
   for (int i=0; i<TwoPowerD; i++) {
     const std::bitset<Dimensions>           vertexIndex( coordinates ^ std::bitset<Dimensions>(i) );

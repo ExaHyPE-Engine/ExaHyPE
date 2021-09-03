@@ -6,9 +6,9 @@ import dastgen2
 import peano4.datamodel.DaStGen2
 
 
-class EnclaveLabels(ActionSet):
+class UpdateCellLabel(ActionSet):
   def get_attribute_name(solver_name):
-    return solver_name + "CellSemaphoreLabel"
+    return solver_name + "CellLabel"
 
   """
   
@@ -46,9 +46,10 @@ class EnclaveLabels(ActionSet):
     result = "\n"
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
       result += """
-  fineGridCell""" + EnclaveLabels.get_attribute_name(self._solver_name) + """.setSemaphoreNumber(  ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setSemaphoreNumber(  ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStamp(  0.0 );
+  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStepSize( 0.0 );
 """
-
     return result
 
 
@@ -65,13 +66,18 @@ class EnclaveLabels(ActionSet):
 
 
 
-def create_enclave_cell_label(solver_name):
+def create_cell_label(solver_name):
   """
-  
+
+   Build up the DaStGen2 data structure that we need per cell to maintain
+   per-cell data per solver.
+     
    solver_name: string
      Name of the solver
      
   """
-  result = peano4.datamodel.DaStGen2( EnclaveLabels.get_attribute_name( solver_name ) )
+  result = peano4.datamodel.DaStGen2( UpdateCellLabel.get_attribute_name( solver_name ) )
   result.data.add_attribute( dastgen2.attributes.Integer("SemaphoreNumber") )
+  result.data.add_attribute( dastgen2.attributes.Double("TimeStamp") )
+  result.data.add_attribute( dastgen2.attributes.Double("TimeStepSize") )
   return result

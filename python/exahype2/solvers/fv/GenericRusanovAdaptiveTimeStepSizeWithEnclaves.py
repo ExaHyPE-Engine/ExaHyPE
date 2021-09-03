@@ -5,7 +5,7 @@ from .PDETerms import PDETerms
 
 import peano4, exahype2
 
-from .GenericRusanovFixedTimeStepSize import GenericRusanovFixedTimeStepSize
+#from .GenericRusanovFixedTimeStepSize import GenericRusanovFixedTimeStepSize
 from .GenericRusanovFixedTimeStepSize import UpdateCell
 from .EnclaveTasking                  import MergeEnclaveTaskOutcome
 from .EnclaveTasking                  import EnclaveTaskingFV

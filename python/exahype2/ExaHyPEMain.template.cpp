@@ -270,6 +270,11 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing:
       {{
+    	if ( creepingNumberOfLocalCells < ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() - 1 ) {{
+          logInfo( "step()", "it seems the grid has just refined before we switched to the phase where we make the load balancing converge. Wait for a few iterations more to give load balancing chance to catch up" );
+          creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()+tarch::multicore::Core::getInstance().getNumberOfThreads()*3;
+    	}}
+
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid-and-converge-load-balancing" );
         // The smaller here corresponds to the -1 below
         if (
@@ -285,7 +290,7 @@ void step() {{
           and
           repositories::loadBalancer.isEnabled(false)
         ) {{
-          logInfo( "step()", "grid initialisation on this rank seems to be stable, disable load balancing temporarily" );
+          logInfo( "step()", "grid construction and decomposition on this rank seem to be stable as we have around " << creepingNumberOfLocalCells << " local cells in the heaviest tree. Disable load balancing temporarily" );
           repositories::loadBalancer.enable(false);
         }}
 
@@ -300,8 +305,8 @@ void step() {{
 
         if (
           ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
-	  and
-	  not repositories::loadBalancer.hasSplitRecently()
+          and
+          not repositories::loadBalancer.hasSplitRecently()
           and
           repositories::loadBalancer.isEnabled(false)
         ) {{
