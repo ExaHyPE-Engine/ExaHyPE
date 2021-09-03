@@ -54,8 +54,10 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
 
   double rho_ini=tilde_rho_ini;
   //constexpr double gamma = 5.0/3.0;
-
-  Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;  // rho
+  if (iseed==0)
+  	{Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;}  // rho
+  if (iseed==1)
+  	{Q[0] = ( pow((x*x+y*y+z*z),0.5) < 1e-8 ) ? rho_ini+delta_m/pow(volumeH(0),3) : rho_ini;}
   Q[1] = 0;    // velocities
   Q[2] = 0;
   Q[3] = 0;
@@ -69,21 +71,7 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   Q[3] = Q[0]*H_i*z;
   Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+initial_internal_energy; // inner energy
 */
-/*
-  #if Dimensions==2
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-  #else
-  tarch::la::Vector<Dimensions,double> circleCentre = {0,0,0};
-  #endif
 
-  // initial conditions
-  bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
-  Q[0] = 0.1;  // rho
-  Q[1] = 0;    // velocities
-  Q[2] = 0;
-  Q[3] = 0;
-  Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
-*/
 }
 
 
@@ -109,8 +97,13 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double m_in=0;
   
   if (tarch::la::equals(t,0)){//we know the mass distri at the beginning
-    if (r_coor<r_ini) { m_in=rho_ini*delta_rho*pow(r_coor,3)/3;}
-    else { m_in=rho_ini*delta_rho*pow(r_ini,3)/3;}
+    if (iseed==0){
+		  if (r_coor<r_ini) { m_in=rho_ini*delta_rho*pow(r_coor,3)/3;}
+		  else { m_in=rho_ini*delta_rho*pow(r_ini,3)/3;}
+		}
+		if (iseed==1){
+		  m_in=delta_m/4/pi;
+		}
   } 
   else {
     m_in=mass_interpolate(r_coor)/4/pi; //remove the overall 4\pi coefficient. 
