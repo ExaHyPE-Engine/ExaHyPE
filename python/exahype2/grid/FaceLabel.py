@@ -83,10 +83,14 @@ def create_face_label(solver_name):
      
   """
   result = peano4.datamodel.DaStGen2( UpdateFaceLabel.get_attribute_name( solver_name ) )
+
   result.data.add_attribute( dastgen2.attributes.Boolean("Boundary") )
   result.data.add_attribute( dastgen2.attributes.BooleanArray("Updated","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("UpdatedTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
+  
+  #result._peano4_aspect
+  
   return result
 

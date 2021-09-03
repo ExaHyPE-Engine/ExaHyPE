@@ -32,6 +32,7 @@ trace  examples                            -1     black plot-solution
 trace  examples                            -1     black time-step
 trace  examples                            -1     black always-on
 trace  examples::exahype2::euler::Euler    -1     black always-on
+trace  examples::exahype2::euler::observers  -1     black always-on
 trace  exahype2                            -1     black always-on
 trace  toolbox                             -1     black always-on
 

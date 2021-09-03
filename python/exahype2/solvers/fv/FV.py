@@ -180,6 +180,7 @@ In-situ preprocessing:  """
     
     self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
     self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
+    #self._patch_overlap_update.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_update)
     
     self._patch_overlap_old.generator.includes     += """
 #include "peano4/utils/Loop.h"
@@ -193,8 +194,8 @@ In-situ preprocessing:  """
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate()
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate()
     
-    self._patch_overlap_old.generator.send_condition               = "true"
-    self._patch_overlap_old.generator.receive_and_merge_condition  = "true"
+    self._patch_overlap_old.generator.send_condition               = "false"
+    self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
 
     self._patch_overlap_new.generator.send_condition               = "true"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
@@ -226,7 +227,7 @@ In-situ preprocessing:  """
 
     self._cell_label = exahype2.grid.create_cell_label( self._name )
     self._face_label = exahype2.grid.create_face_label( self._name )  
-
+    
 
   @abstractmethod
   def create_action_sets(self):
