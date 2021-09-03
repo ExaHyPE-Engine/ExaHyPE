@@ -207,11 +207,6 @@ class SingleSweep( FV ):
       will create nop, i.e. no implementation or defaults. Any other string
       is copied 1:1 into the implementation. If you pass in None, then the
       set value so far won't be overwritten.
-
-      Please note that not all options are supported by all solvers. You
-      cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
-
-      This routine should be the very last invoked by the constructor.
     """
     if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
     if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
@@ -298,20 +293,3 @@ class SingleSweep( FV ):
     self._postprocess_updated_patch += kernel
     self.create_data_structures()
     self.create_action_sets()
-
-
-
-#  def add_implementation_files_to_project(self,namespace,output):
-#    """
-#    
-#      Invoke add_implementation_files_to_project() of superclass and
-#      then add all the Fortran files to the makefile.
-#      
-#    """
-#    FV.add_implementation_files_to_project(self,namespace,output)
-#    for f in self.Riemann_solver_implementation_files:
-#      output.makefile.add_Fortran_file(f)
-#
-#
-# Discriminate normal fehlt noch
-#

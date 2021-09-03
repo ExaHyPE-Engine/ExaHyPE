@@ -13,6 +13,24 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 
 
+
+#  def add_implementation_files_to_project(self,namespace,output):
+#    """
+#    
+#      Invoke add_implementation_files_to_project() of superclass and
+#      then add all the Fortran files to the makefile.
+#      
+#    """
+#    FV.add_implementation_files_to_project(self,namespace,output)
+#    for f in self.Riemann_solver_implementation_files:
+#      output.makefile.add_Fortran_file(f)
+#
+#
+# Discriminate normal fehlt noch
+#
+
+
+
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   RiemannCallOverPatch = """
     {{PREPROCESS_RECONSTRUCTED_PATCH}}

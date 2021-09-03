@@ -1,13 +1,92 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from .FV                       import *
+from .FV       import FV
+from .PDETerms import PDETerms
  
 import peano4
 import exahype2
 
 import jinja2
 
-from .PDETerms import PDETerms
+from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
+from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionSet
+
+
+class UpdateCell(ReconstructPatchAndApplyFunctor):
+  TemplateUpdateCell = jinja2.Template( """
+    double cellTimeStepSize = -1.0;
+    double cellTimeStamp    = -1.0;
+     
+    {{PREPROCESS_RECONSTRUCTED_PATCH}}
+    
+    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
+    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+
+    const double usedTimeStepSize = cellTimeStepSize;
+  ::exahype2::fv::validatePatch(
+      reconstructedPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      1, // halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+  ); // previous time step has to be valid
+
+  if (marker.isSkeletonCell()) {
+    tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
+      marker,
+      cellTimeStamp,
+      cellTimeStepSize,
+      reconstructedPatch,
+      targetPatch
+    );
+  }
+  else { // is an enclave cell
+    assertion( marker.isEnclaveCell() );
+    auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+      marker,
+      cellTimeStamp,
+      cellTimeStepSize,
+      reconstructedPatch
+    );
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+
+    peano4::parallel::Tasks spawn(
+      newEnclaveTask,
+      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
+      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
+    );
+  }
+  """)
+
+  def __init__(self,solver):
+    d = {}
+    solver._init_dictionary_with_default_parameters(d)
+    solver.add_entries_to_text_replacement_dictionary(d)
+
+    ReconstructPatchAndApplyFunctor.__init__(self,
+      patch = solver._patch,
+      # todo hier muessen beide rein, denn ich muss ja interpolieren
+      patch_overlap = solver._patch_overlap_new,
+      functor_implementation = self.TemplateUpdateCell.render(**d),
+      reconstructed_array_memory_location = solver._reconstructed_array_memory_location,
+      guard  = "not marker.isRefined() and (" + \
+      "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
+      "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
+      ")",
+      add_assertions_to_halo_exchange = True
+    )
+    #self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
+
+    self._solver    = solver
+
+
+  def get_includes(self):
+    return ReconstructPatchAndApplyFunctor.get_includes(self) + """
+#include "peano4/parallel/Tasks.h"
+#include "repositories/SolverRepository.h"
+#include "tasks/""" + self._solver._name + """EnclaveTask.h"
+""" + self._solver._get_default_includes() + self._solver.get_user_includes()
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
@@ -32,7 +111,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 """
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
-    self.label_name = exahype2.grid.EnclaveLabels.get_attribute_name(solver._name)
+    self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
 
   def get_body_of_operation(self,operation_name):
     result = ""
@@ -46,21 +125,39 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     return result
 
 
-class EnclaveTaskingFV( FV ):
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
-    self._flux_implementation                 = PDETerms.None_Implementation
-    self._ncp_implementation                  = PDETerms.None_Implementation
-    self._eigenvalues_implementation          = PDETerms.User_Defined_Implementation
+class EnclaveTasking( FV ):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
+    """
+    
+     Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
+     which uses this field. 
+     
+    """
+    self._name = name
+    
+    
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
-    self._source_term_implementation          = PDETerms.Empty_Implementation
-    
-    self._name = name
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
+    
+    self._preprocess_reconstructed_patch      = ""
+    self._postprocess_updated_patch           = ""
+    
+    self._source_term_call          = "#error Not yet defined"
+    self._Riemann_solver_call       = "#error Not yet defined"
+    self._abstract_solver_user_declarations        = ""
+    self._abstract_solver_user_definitions         = ""
+    self._solver_user_declarations                 = ""
+    self._solver_user_definitions                  = ""
 
+    self._start_time_step_implementation           = ""
+    self._finish_time_step_implementation          = ""
+    
+    self._constructor_implementation = ""
+    
     self._initialisation_sweep_predicate = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
@@ -115,9 +212,11 @@ class EnclaveTaskingFV( FV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
+ 
+    super(EnclaveTasking, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+     
+    self._solver_template_file_class_name     = "EnclaveTasking"
       
-    FV.__init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
-
 
   def create_data_structures(self):
     """
@@ -135,25 +234,17 @@ class EnclaveTaskingFV( FV ):
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
       self._primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
     
-    self._patch_overlap.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate
-    self._patch_overlap.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._primary_sweep_or_plot_predicate
+    self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate
+    self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._primary_sweep_or_plot_predicate
 
-    self._patch_overlap.generator.send_condition               = self._initialisation_sweep_predicate
-    self._patch_overlap.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_predicate
+    #self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_predicate
+    #self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_predicate
 
     self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._primary_sweep_predicate
     self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._secondary_sweep_predicate
 
-    self._patch_overlap_new.generator.send_condition               = "true"
-    self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
-
-    self._patch_overlap.generator.includes  += """
-#include "../repositories/SolverRepository.h"
-"""    
-    self._patch_overlap_new.generator.includes  += """
-#include "../repositories/SolverRepository.h"
-"""    
-
+    #self._patch_overlap_new.generator.send_condition               = "true"
+    #self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
 
   def create_action_sets(self):
@@ -177,97 +268,46 @@ class EnclaveTaskingFV( FV ):
         
     """
     FV.create_action_sets(self)
+    self._action_set_update_cell = UpdateCell(self)
 
     #
     # AMR and adjust cell have to be there always, i.e. also throughout 
     # the grid construction.
     #
-    self._action_set_AMR.predicate                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
-    self._action_set_AMR_commit_without_further_analysis.predicate = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
-    self._action_set_handle_boundary.predicate                     = self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate
     
-    self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self,
-      self._store_cell_data_default_predicate() + " and (" + \
-         "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
-      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
-      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
-      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
-      ")"
-    )
-    self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate)
+    # @todo Not in SingleSweep yet
+    #self._action_set_AMR.predicate                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
+    #self._action_set_AMR_commit_without_further_analysis.predicate = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
+    #self._action_set_handle_boundary.predicate                     = self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate
+    
+    #self._action_set_project_patch_onto_faces            = ProjectPatchOntoFaces(self,
+    #  self._store_cell_data_default_predicate() + " and (" + \
+    #     "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
+    #  "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
+    #  "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
+    #  "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
+    #  ")"
+    #)
+    #self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate)
 
     self._merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
     
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
-      patch                       = self._patch,
-      patch_overlap_interpolation = self._patch_overlap, 
-      patch_overlap_restriction   = self._patch_overlap_new,
-      interpolate_guard           = self._primary_sweep_predicate,
-      restrict_guard              = self._primary_or_initialisation_sweep_predicate,
+    #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
+    #  patch                       = self._patch,
+    #  patch_overlap_interpolation = self._patch_overlap, 
+    #  patch_overlap_restriction   = self._patch_overlap_new,
+    #  interpolate_guard           = self._primary_sweep_predicate,
+    #  restrict_guard              = self._primary_or_initialisation_sweep_predicate,
       #clear_guard                 = self._primary_or_initialisation_sweep_predicate,
       #interpolate_guard           = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
       #restrict_guard              = "not marker.isRefined() and " + self._secondary_sweep_or_grid_initialisation_predicate,
       #clear_guard                 = "not fineGridFaceLabel.getBoundary() and " + self._primary_or_initialisation_sweep_predicate,
-      clear_guard                 = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
-      additional_includes         = """
+    #  clear_guard                 = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
+    #  additional_includes         = """
 #include "../repositories/SolverRepository.h"
-"""      
-    )
+#"""      
+    #)
 
-    
-  def set_implementation(self,
-    flux=None,ncp=None,eigenvalues=None,boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    memory_location         = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
-    use_split_loop          = False
-  ):
-    """
-      If you pass in User_Defined, then the generator will create C++ stubs 
-      that you have to befill manually. If you pass in None_Implementation, it 
-      will create nop, i.e. no implementation or defaults. Any other string
-      is copied 1:1 into the implementation. If you pass in None, then the 
-      set value so far won't be overwritten.
-      
-      Please note that not all options are supported by all solvers. You 
-      cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
-    """
-    if flux!=None:
-      self._flux_implementation                       = flux
-    if ncp!=None:
-      self._ncp_implementation                        = ncp
-    if eigenvalues!=None:    
-      self._eigenvalues_implementation                = eigenvalues
-    if boundary_conditions!=None:
-      self._boundary_conditions_implementation        = boundary_conditions
-    if refinement_criterion!=None:
-      self._refinement_criterion_implementation       = refinement_criterion
-    if initial_conditions!=None: 
-      self._initial_conditions_implementation         = initial_conditions
-    if source_term!=None:
-      self._source_term_implementation                = source_term
-
-    if memory_location!=None:
-      self._reconstructed_array_memory_location = memory_location
-    if use_split_loop!=None:
-      self._use_split_loop = use_split_loop
-
-    if self._reconstructed_array_memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete and \
-       self._reconstructed_array_memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete and \
-       self._reconstructed_array_memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      raise Exception( "memory mode without immedidate (call stack) free chosen. This will lead into a segmentation fault" )
-
-    self.create_action_sets()
-    
-
-  #def set_preprocess_reconstructed_patch_kernel(self,kernel):
-  #  self._preprocess_reconstructed_patch = kernel
-  #  self.create_action_sets()
-
-
-  #def set_postprocess_updated_patch_kernel(self,kernel):
-  #  self._postprocess_updated_patch = kernel
-  #  self.create_action_sets()
-
-  
   def get_user_includes(self):
     return """
 #include "exahype2/fv/Generic.h"
@@ -278,15 +318,53 @@ class EnclaveTaskingFV( FV ):
 #include "../repositories/SolverRepository.h"
 """    
 
+    
+  def set_implementation(self,
+    boundary_conditions, refinement_criterion, initial_conditions,
+    memory_location,
+    use_split_loop
+  ):
+    """
+      If you pass in User_Defined, then the generator will create C++ stubs 
+      that you have to befill manually. If you pass in None_Implementation, it 
+      will create nop, i.e. no implementation or defaults. Any other string
+      is copied 1:1 into the implementation. If you pass in None, then the 
+      set value so far won't be overwritten.
+    """
+    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
+    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
+    if use_split_loop                  :  self._use_split_loop                            = use_split_loop
+
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+
+    self.create_action_sets()
+    
 
   def add_entries_to_text_replacement_dictionary(self,d):
-    d[ "FLUX_IMPLEMENTATION"]                 = self._flux_implementation
-    d[ "NCP_IMPLEMENTATION"]                  = self._ncp_implementation
-    d[ "EIGENVALUES_IMPLEMENTATION"]          = self._eigenvalues_implementation
+    """
+     d: Dictionary of string to string
+        in/out argument
+    """
     d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
-    d[ "SOURCE_TERM_IMPLEMENTATION"]          = self._source_term_implementation
+
+    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "START_TIME_STEP_IMPLEMENTATION" ]     = jinja2.Template(self._start_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "FINISH_TIME_STEP_IMPLEMENTATION" ]    = jinja2.Template(self._finish_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
 
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
@@ -294,26 +372,68 @@ class EnclaveTaskingFV( FV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_2D" ] = (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D" ] = (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     
-    d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.EnclaveLabels.get_attribute_name(self._name)
+    d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
 
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete:
-      d[ "FREE_SKELETON_MEMORY" ] = "delete[] reconstructedPatch;"
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
-      d[ "FREE_SKELETON_MEMORY" ] = "::tarch::freeMemory(reconstructedPatch, ::tarch::MemoryLocation::Heap);"
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      d[ "FREE_SKELETON_MEMORY" ] = "::tarch::freeMemory(reconstructedPatch, ::tarch::MemoryLocation::ManagedAcceleratorMemory);"
-    pass
+
+  def set_preprocess_reconstructed_patch_kernel(self,kernel):
+    """
+  
+    Most subclasses will redefine/overwrite this operation as they have
+    to incorporate the kernel into their generated stuff
+  
+    """
+    self._preprocess_reconstructed_patch = kernel
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  def set_postprocess_updated_patch_kernel(self, kernel):
+    """
+
+    Define a postprocessing routine over the data
+
+    The postprocessing kernel often looks similar to the following code:
+
+  {
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+      enforceCCZ4constraints( targetPatch+index );
+      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+  }
+
+
+    Within this kernel, you have at least the following variables available:
+
+    - targetPatch This is a pointer to the whole data structure (one large
+        array).
+        The patch is not supplemented by a halo layer.
+    - reconstructedPatch This is a pointer to the data snapshot before the
+        actual update. This data is combined with the halo layer, i.e. if you
+        work with 7x7 patches and a halo of 2, the pointer points to a 11x11
+        patch.
+    - marker
+
+    Furthermore, you can use all the symbols (via Jinja2 syntax) from
+    _init_dictionary_with_default_parameters().
+
+    kernel: String
+      C++ code that holds the postprocessing kernel
+
+    """
+    self._postprocess_updated_patch += kernel
+    self.create_data_structures()
+    self.create_action_sets()
 
 
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     FV.add_actions_to_create_grid(self,step,evaluate_refinement_criterion)
-    step.add_action_set( exahype2.grid.EnclaveLabels( self._name ) )
+    step.add_action_set( exahype2.grid.UpdateCellLabel( self._name ) )
 
 
   def add_actions_to_init_grid(self, step):
     FV.add_actions_to_init_grid(self,step)
-    step.add_action_set( exahype2.grid.EnclaveLabels( self._name ) )
-    step.add_action_set( ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate(), False) )
+    step.add_action_set( exahype2.grid.UpdateCellLabel( self._name ) )
 
 
   def add_actions_to_perform_time_step(self, step):
@@ -330,15 +450,11 @@ class EnclaveTaskingFV( FV ):
       respectively. One wraps the implementation of _HandleCellTemplate into a 
       task, the other communicates with the task bookkeeping only. Both rely on
       additional labels within the cell. We therefore end up with three new 
-      action sets: reconstruct_patch_and_apply_FV_kernel, exahype2.grid.EnclaveLabels
+      action sets: reconstruct_patch_and_apply_FV_kernel, exahype2.grid.UpdateCellLabel
       and roll_over_enclave_task_results.
  
     """
     FV.add_actions_to_perform_time_step(self,step)
-    step.add_action_set( exahype2.grid.EnclaveLabels(self._name) ) 
+    step.add_action_set( exahype2.grid.UpdateCellLabel(self._name) ) 
     step.add_action_set( self._merge_enclave_task_outcome )
  
- 
-  def add_use_data_statements_to_Peano4_solver_step(self, step):
-    FV.add_use_data_statements_to_Peano4_solver_step(self,step)
-    step.use_cell(self._cell_semaphore_label)
