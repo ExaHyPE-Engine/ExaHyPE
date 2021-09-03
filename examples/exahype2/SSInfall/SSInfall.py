@@ -18,10 +18,10 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1 
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15 
 }
 
-intparams = {"swi":0, "ReSwi":0, "sample_number":10}
+intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - SSInfall script')
@@ -38,6 +38,7 @@ if __name__ == "__main__":
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
+    parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -140,6 +141,7 @@ if __name__ == "__main__":
         """
         self._my_user_includes += """
 #include "../SSInfall.h"
+#include <math.h>
     """
         self._auxiliary_variables = 0
 
@@ -147,14 +149,6 @@ if __name__ == "__main__":
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
-        /*if (not tarch::la::equals(t,repositories::{{SOLVER_INSTANCE}}.t_record)){
-          for (int i=0;i<sample;i++) {
-            std::cout << std::setprecision (4) << repositories::{{SOLVER_INSTANCE}}.m_tot[i] << " ";
-            repositories::{{SOLVER_INSTANCE}}.m_tot[i]=0;
-          }
-          repositories::{{SOLVER_INSTANCE}}.t_record=t;
-          std::cout << std::endl;
-        }*/
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
@@ -163,7 +157,8 @@ if __name__ == "__main__":
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
           double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
-               
+          
+          if (isnan(reconstructedPatch[cellSerialised*5+0])) {std::abort();}     
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*5+0],volumeH);       
           //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
           //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;         
@@ -231,8 +226,8 @@ if __name__ == "__main__":
 #Domain settings
 ########################################################################################
     if True:
-      #offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      offset=[-5, -5, -5]; domain_size=[10, 10, 10]
+      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      #offset=[-5, -5, -5]; domain_size=[10, 10, 10]
       msg = "domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userwarnings.append((msg,None))
@@ -251,10 +246,19 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       userwarnings.append((msg,None))
 
-    intparams.update({"ReSwi":args.ReSwi})
-    intparams.update({"sample_number":args.sample_number})
-    floatparams.update({"r_ini":1.0})
-    #floatparams.update({"t_ini":0.5})
+    for k, v in intparams.items():
+      intparams.update({k:eval("args.{}".format(k))})
+    for k, v in floatparams.items():
+      floatparams.update({k:eval("args.{}".format(k))})
+
+    if args.seed=="tophat":
+      floatparams.update({"r_ini":1})
+      floatparams.update({"delta_rho":0.05})
+      userwarnings.append(("Tophat overdensity region set",None))
+    if args.seed=="point":
+      intparams.update({"iseed":1})
+      floatparams.update({"delta_m":0.15})
+      userwarnings.append(("Point mass seed set",None))
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
@@ -280,7 +284,7 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       offset,  domain_size,
       args.end_time,                 # end time
-      110.0, args.plot_step_size,   # snapshots
+      0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
@@ -296,7 +300,7 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-20,-20,-0.01]
+    probe_point = [0,0,-0.01]
     project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
@@ -327,8 +331,8 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"/zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=30000,
-        output_precision=16,
+        number_of_entries_between_two_db_flushes=500,
+        output_precision=10,
         position_delta_between_two_snapsots=1e-20,
         data_delta_between_two_snapsots=0
       ))
