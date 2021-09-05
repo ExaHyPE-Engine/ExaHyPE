@@ -20,9 +20,10 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    plot_grid_properties=False
+    plot_grid_properties=False,
+    use_gpu=False
   ):
-    super(GlobalFixedTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties) 
+    super(GlobalFixedTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties,use_gpu) 
     
     self._time_step_size = time_step_size
 
@@ -31,7 +32,7 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch      = """
+    self._preprocess_reconstructed_patch_throughout_sweep      = """
   cellTimeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() * """ + str(time_step_size) + """;
   cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 """
@@ -77,7 +78,7 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._abstract_solver_user_definitions  = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._solver_user_declarations          = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._solver_user_definitions           = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-      
+
     EnclaveTasking.set_implementation(self, boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
 
 
