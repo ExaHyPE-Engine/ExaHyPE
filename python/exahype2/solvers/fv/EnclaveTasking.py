@@ -114,6 +114,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   }
 
   if ( not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
+    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
     
     repositories::{{SOLVER_INSTANCE}}.setTimeStepSizeAndTimeStamp(
