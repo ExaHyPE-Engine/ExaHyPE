@@ -383,7 +383,7 @@ class EnclaveTasking( FV ):
     d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "FUSED_RIEMANN_SOLVER_CALL"]           = jinja2.Template(self._fused_Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-
+    
     d[ "PREPROCESS_RECONSTRUCTED_PATCH_THROUGHOUT_SWEEP" ]     = jinja2.Template(self._preprocess_reconstructed_patch_throughout_sweep, undefined=jinja2.DebugUndefined).render( **d )
     d[ "POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP" ]          = jinja2.Template(self._postprocess_updated_patch_throughout_sweep,      undefined=jinja2.DebugUndefined).render( **d )
     d[ "PREPROCESS_RECONSTRUCTED_PATCH_IN_ENCLAVE_TASK" ]      = jinja2.Template(self._preprocess_reconstructed_patch_in_enclave_task,  undefined=jinja2.DebugUndefined).render( **d )
@@ -406,10 +406,8 @@ class EnclaveTasking( FV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D" ] = (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
-    
     d[ "USE_GPU" ] = self._use_gpu
-
-
+    
   def set_preprocess_reconstructed_patch_kernel(self,kernel, can_offload_into_enclave_task = True ):
     """
   
