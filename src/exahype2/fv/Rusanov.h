@@ -49,7 +49,8 @@ namespace exahype2 {
       int                                          auxiliaryVariables,
       typename SOLVER,
       bool                                         skipFluxEvaluation,
-      bool                                         skipNCPEvaluation
+      bool                                         skipNCPEvaluation,
+      bool                                         skipSourceTerm
       >
     void Fusanov_2D(
       int                                          haloSize,
@@ -297,7 +298,8 @@ namespace exahype2 {
       int                                          auxiliaryVariables,
       typename SOLVER,
       bool                                         skipFluxEvaluation,
-      bool                                         skipNCPEvaluation
+      bool                                         skipNCPEvaluation,
+      bool                                         skipSourceTerm
     >
     void Fusanov_3D(
       int                                          haloSize,
