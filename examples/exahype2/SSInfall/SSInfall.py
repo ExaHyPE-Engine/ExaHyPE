@@ -97,7 +97,7 @@ if __name__ == "__main__":
           flux=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
         self._patch_size = patch_size
