@@ -31,7 +31,8 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
+    #parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
@@ -50,20 +51,10 @@ if __name__ == "__main__":
 
     SuperClass = None
 
-    if args.implementation=="fv-fixed":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-enclave":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
-    if args.implementation=="fv-adaptive":
-       SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
-    if args.implementation=="fv-adaptive-enclave":
-       SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
-    if args.implementation=="fv-optimistic-enclave":
-       SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
-    if args.implementation=="ader-fixed":
-       SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-gpu":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator
+    if args.implementation=="fv-global-fixed":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep
+    if args.implementation=="fv-global-adaptive":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
 
     class SSInfallSolver( SuperClass ):
       def __init__(self, name, patch_size, min_h, max_h ):
@@ -78,8 +69,9 @@ if __name__ == "__main__":
         self._my_user_includes = """
 #include "exahype2/PatchUtils.h"
 """
-        if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
-           SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
+        #if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
+        #   SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
@@ -98,36 +90,20 @@ if __name__ == "__main__":
             time_step_relaxation=0.1
           )
 
-        self._solver_template_file_class_name = SuperClass.__name__
+        #self._solver_template_file_class_name = SuperClass.__name__
 
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
+
+        self._patch_size = patch_size
 
         self.set_postprocess_updated_patch_kernel( """
 
-  {
-    #if Dimensions==2
-    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
-    #endif
-
-    #if Dimensions==3
-    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
-    #endif
-
-    int index = 0;
-    for (int i=0;i<itmax;i++)
-    {
-
-    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-    //  examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
 """ )
       def get_user_includes(self):
         """
@@ -150,7 +126,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
-        dfor(cell,patchSize) {
+        /*dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
@@ -162,7 +138,7 @@ if __name__ == "__main__":
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*5+0],volumeH);       
           //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
           //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;         
-        }
+        }*/
         
     """)
 
@@ -300,10 +276,10 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [0,0,-0.01]
-    project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
+    #probe_point = [0,0,-0.01]
+    #project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "(0.9,8000)" )
 
 ########################################################################################
 #Tracer setting 

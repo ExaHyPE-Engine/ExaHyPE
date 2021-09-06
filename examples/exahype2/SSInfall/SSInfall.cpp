@@ -13,11 +13,11 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
   double globalMaxTimeStepSize
 ){
   AbstractSSInfall::startTimeStep(globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize);
-  for (int i=0;i<sample_number;i++) {
-    m_tot_copy[i]=m_tot[i];
+  //for (int i=0;i<sample_number;i++) {
+    //m_tot_copy[i]=m_tot[i];
     //std::cout << std::setprecision (4) << m_tot[i] << " ";
-    m_tot[i]=0;
-  }
+    //m_tot[i]=0;
+  //}
   //std::cout << std::endl;
 }
 
@@ -43,7 +43,7 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   bool                                         gridIsConstructred
 ) {
   logDebug( "initialCondition(...)", "init volume at " << volumeCentre << "x" << volumeH << " (grid constructed=" << gridIsConstructred << ")" );
-  constexpr double pi = M_PI;
+/*  constexpr double pi = M_PI;
   double x=volumeCentre(0)-center(0);
   double y=volumeCentre(1)-center(1);
   double z=volumeCentre(2)-center(2);
@@ -57,12 +57,12 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   if (iseed==0)
   	{Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;}  // rho
   if (iseed==1)
-  	{Q[0] = ( pow((x*x+y*y+z*z),0.5) < 1e-8 ) ? rho_ini+delta_m/pow(volumeH(0),3) : rho_ini;}
+  	{Q[0] = rho_ini;}
   Q[1] = 0;    // velocities
   Q[2] = 0;
   Q[3] = 0;
   Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini/(gamma-1); // inner energy
-
+*/
   // initial conditions
 /*
   Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;  // rho
@@ -71,6 +71,15 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   Q[3] = Q[0]*H_i*z;
   Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+initial_internal_energy; // inner energy
 */
+  tarch::la::Vector<Dimensions,double> circleCentre = {0,0,0};
+
+  // initial conditions
+  bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.2 );
+  Q[0] = 0.1;  // rho
+  Q[1] = 0;    // velocities
+  Q[2] = 0;
+  Q[3] = 0;
+  Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
 
 }
 
@@ -84,7 +93,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double * __restrict__                        S  // S[5
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
-  constexpr double pi = M_PI;
+/*  constexpr double pi = M_PI;
   logTraceOut( "sourceTerm(...)" );
   double x=volumeX(0)-center(0);
   double y=volumeX(1)-center(1);
@@ -106,26 +115,31 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 		}
   } 
   else {
-    m_in=mass_interpolate(r_coor)/4/pi; //remove the overall 4\pi coefficient. 
+    if (iseed==0){
+      m_in=mass_interpolate(r_coor)/4/pi; //remove the overall 4\pi coefficient. 
+    }
+    if (iseed==1){
+		  m_in=(mass_interpolate(r_coor)+delta_m)/4/pi;
+		}
   }
 
   double a=0.0287*pow((-t/11.8+5.35695),-2);//when code time t=61.2, a~1
   double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
   if (force_density_norm>1 and r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
-
+*/
   //force_density_norm=0;
-
+/*
   S[0] = 0;  // rho
   S[1] = -force_density_norm*x;    // velocities
   S[2] = -force_density_norm*y;
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
-/*
+*/
   S[0] = 0;  // rho
   S[1] = 0;    // velocities
   S[2] = 0;
   S[3] = 0;
-  S[4] = 0;*/
+  S[4] = 0;
 }
 
 
@@ -181,8 +195,8 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const double c   = std::sqrt(gamma * p * irho);
 
   const double u_n = Q[normal + 1] * irho;
-  double result = std::max( std::abs(u_n - c), std::abs(u_n + c));
-  nonCriticalAssertion14( result>=0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  double result = std::max( std::abs(u_n - c), std::abs(u_n + c));// result=1;
+  nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   return result;
 }
 
