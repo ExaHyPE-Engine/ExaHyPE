@@ -42,9 +42,8 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     
     self._preprocess_reconstructed_patch_throughout_sweep = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping()
     self._postprocess_updated_patch_throughout_sweep      = """
-  const double cellTimeStamp    = fineGridCellEulerCellLabel.getTimeStamp();
-  const double cellTimeStepSize = fineGridCellEulerCellLabel.getTimeStepSize();
-  double*       targetPatch     = fineGridCellEulerQ.value;
+  const double cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  const double cellTimeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 """ +    create_postprocess_updated_patch_for_adaptive_time_stepping()
     self.set_implementation(flux=flux, 
       ncp=ncp, 
