@@ -177,34 +177,29 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     or
     _solverState == SolverState::PrimaryAfterGridInitialisation
   ) {
-    _solverState = SolverState::Secondary;
-  }
-  else if ( _solverState == SolverState::Secondary ) {
-    // @todo Debug
-    logInfo( "startTimeStep(...)", "reset t and dt as state had been " << toString(_solverState) );
+    logDebug( "startTimeStep(...)", "reset t and dt as state had been " << toString(_solverState) );
     _minTimeStamp    = std::numeric_limits<double>::max();
     _maxTimeStamp    = std::numeric_limits<double>::min();
     _minTimeStepSize = std::numeric_limits<double>::max();
     _maxTimeStepSize = std::numeric_limits<double>::min();
-    _solverState = SolverState::Primary;
+
+    _solverState = SolverState::Secondary;
   }
   else { // plot initial condition, e.g.
     _solverState = SolverState::Primary;
   }
 
-  // @todo Debug
-  logInfo( "startTimeStep(...)", "new state is " << toString(_solverState) );
+  logDebug( "startTimeStep(...)", "new state is " << toString(_solverState) );
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-  // @todo Debug
-  logInfo( "finishTimeStep(...)", "t_min=" << _minTimeStamp );
-  logInfo( "finishTimeStep(...)", "t_max=" << _maxTimeStamp );
-  logInfo( "finishTimeStep(...)", "dt_min=" << _minTimeStepSize );
-  logInfo( "finishTimeStep(...)", "dt_max=" << _maxTimeStepSize );
+  logDebug( "finishTimeStep(...)", "t_min=" << _minTimeStamp );
+  logDebug( "finishTimeStep(...)", "t_max=" << _maxTimeStamp );
+  logDebug( "finishTimeStep(...)", "dt_min=" << _minTimeStepSize );
+  logDebug( "finishTimeStep(...)", "dt_max=" << _maxTimeStepSize );
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 }

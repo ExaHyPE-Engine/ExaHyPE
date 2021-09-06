@@ -62,8 +62,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   
   fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
   fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
-  
-  repositories::{{SOLVER_INSTANCE}}.setTimeStepSizeAndTimeStamp(cellTimeStepSize, cellTimeStamp + usedTimeStepSize);
   """)
 
   def __init__(self,solver):
@@ -117,6 +115,11 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
   if ( not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
     {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
+    
+    repositories::{{SOLVER_INSTANCE}}.setTimeStepSizeAndTimeStamp(
+      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize() + fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()
+    );
   }
 """
   def __init__(self,solver):
@@ -263,7 +266,7 @@ class EnclaveTasking( FV ):
     #self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._secondary_sweep_predicate
 
     self._patch_overlap_new.generator.send_condition               = self._secondary_sweep_or_grid_initialisation_or_plot_predicate
-    self._patch_overlap_new.generator.receive_and_merge_condition  = self._primary_sweep_predicate
+    self._patch_overlap_new.generator.receive_and_merge_condition  = self._primary_sweep_or_plot_predicate
 
 
   def create_action_sets(self):
@@ -402,19 +405,24 @@ class EnclaveTasking( FV ):
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
 
 
-  def set_preprocess_reconstructed_patch_throughout_sweep_kernel(self,kernel):
+  def set_preprocess_reconstructed_patch_kernel(self,kernel, can_offload_into_enclave_task = True ):
     """
   
     Most subclasses will redefine/overwrite this operation as they have
     to incorporate the kernel into their generated stuff
   
     """
-    self._preprocess_reconstructed_patch_throughout_sweep = kernel
+    if can_offload_into_enclave_task:
+      self._preprocess_reconstructed_patch_in_enclave_task  += kernel
+      self._preprocess_reconstructed_patch_in_skeleton_cell += kernel
+    else:
+      self._preprocess_reconstructed_patch_throughout_sweep += kernel
+      
     self.create_data_structures()
     self.create_action_sets()
 
 
-  def set_postprocess_updated_patch_throughout_sweep_kernel(self, kernel):
+  def set_postprocess_updated_patch_kernel(self, kernel, can_offload_into_enclave_task = True):
     """
 
     Define a postprocessing routine over the data
@@ -448,7 +456,12 @@ class EnclaveTasking( FV ):
       C++ code that holds the postprocessing kernel
 
     """
-    self._postprocess_updated_patch_throughout_sweep += kernel
+    if can_offload_into_enclave_task:
+      self._postprocess_updated_patch_throughout_sweep += kernel
+    else:
+      self._postprocess_updated_patch_in_enclave_task  += kernel
+      self._postprocess_updated_patch_in_skeleton_cell += kernel
+
     self.create_data_structures()
     self.create_action_sets()
 

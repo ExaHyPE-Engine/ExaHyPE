@@ -5,6 +5,111 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 import jinja2
 
 
+def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size ):
+  return """
+  cellTimeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() * """ + str(time_step_size) + """;
+  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+"""
+
+
+def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping():
+  return """
+  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
+  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+"""
+
+
+def create_postprocess_updated_patch_for_adaptive_time_stepping():
+  return """
+    const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+      [] (
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) -> double {
+        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+      },
+      marker.x(),
+      marker.h(),
+      cellTimeStamp,
+      cellTimeStepSize,
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      targetPatch
+    );
+    
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
+"""
+
+
+def create_constructor_implementation_for_adaptive_time_stepping():
+  return "_admissibleTimeStepSize = 0.0;"
+  
+
+def create_abstract_solver_user_declarations_for_adaptive_time_stepping():
+  return """
+private:
+  double _maxEigenvalue;
+  double _admissibleTimeStepSize;
+public:
+  void setMaxEigenvalue( double eigenvalue );  
+  double getAdmissibleTimeStepSize() const;  
+    """  
+    
+    
+def create_abstract_solver_user_definitions_for_adaptive_time_stepping():
+  return """
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
+  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
+    tarch::multicore::Lock lock(_semaphore);
+    _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
+  }
+}    
+
+
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
+  return _admissibleTimeStepSize;
+}
+    """  
+
+
+def create_start_time_step_implementation_for_adaptive_time_stepping():
+  return """
+  _maxEigenvalue = 0.0;
+"""
+
+    
+def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_relaxation):
+  return """
+  #ifdef Parallel
+  double newMaxEigenvalue = _maxEigenvalue;
+  tarch::mpi::Rank::getInstance().allReduce(
+        &_maxEigenvalue,
+        &newMaxEigenvalue,
+        1,
+        MPI_DOUBLE,
+        MPI_MAX, 
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+  #endif
+
+  _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * _minH / _maxEigenvalue / 3.0;
+  if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
+  }
+  if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "degenerated time step size of " + std::to_string(_admissibleTimeStepSize) );
+  }
+  
+  _maxTimeStepSize  = _admissibleTimeStepSize; // for plotting reasons
+  _minTimeStepSize  = std::min( _minTimeStepSize, _admissibleTimeStepSize );
+"""
+
+
 def create_source_term_kernel_for_Rusanov(source_term_implementation, use_gpu):
   Template = jinja2.Template( """
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
@@ -23,7 +128,6 @@ def create_source_term_kernel_for_Rusanov(source_term_implementation, use_gpu):
   return Template.render(**d)
   
     
-
 def create_compute_Riemann_kernel_for_Rusanov_fixed_timestepping(flux_implementation, ncp_implementation, eigenvalues_implementation, use_gpu):
   Template = jinja2.Template( """
         ::exahype2::fv::splitRusanov1d(

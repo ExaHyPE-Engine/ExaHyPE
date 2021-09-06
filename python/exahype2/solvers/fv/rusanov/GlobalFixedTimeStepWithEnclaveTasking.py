@@ -11,6 +11,7 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
+from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping
 
 
 class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
@@ -32,11 +33,7 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch_throughout_sweep      = """
-  cellTimeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() * """ + str(time_step_size) + """;
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-"""
-    self._postprocess_updated_patch      = ""
+    self._preprocess_reconstructed_patch_throughout_sweep  = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size )
 
     self.set_implementation(flux=flux, 
       ncp=ncp, 

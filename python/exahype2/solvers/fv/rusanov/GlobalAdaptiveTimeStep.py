@@ -11,7 +11,13 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
-
+from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping
+from .kernels import create_postprocess_updated_patch_for_adaptive_time_stepping
+from .kernels import create_finish_time_step_implementation_for_adaptive_time_stepping
+from .kernels import create_start_time_step_implementation_for_adaptive_time_stepping
+from .kernels import create_abstract_solver_user_declarations_for_adaptive_time_stepping
+from .kernels import create_abstract_solver_user_definitions_for_adaptive_time_stepping
+from .kernels import create_constructor_implementation_for_adaptive_time_stepping
 
 
 class GlobalAdaptiveTimeStep( SingleSweep ):
@@ -32,35 +38,8 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch      = """
-  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-"""
-    self._postprocess_updated_patch      = """
-    const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-      [] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-      },
-      marker.x(),
-      marker.h(),
-      cellTimeStamp,
-      cellTimeStepSize,
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      targetPatch
-    );
-    
-    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
-"""
-
+    self._preprocess_reconstructed_patch      = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping()
+    self._postprocess_updated_patch           = create_postprocess_updated_patch_for_adaptive_time_stepping()
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -97,64 +76,16 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._source_term_call    = create_source_term_kernel_for_Rusanov(self._source_term_implementation, False)
     self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov_fixed_timestepping(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, False)
 
-    self._abstract_solver_user_declarations = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    self._abstract_solver_user_definitions  = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    self._solver_user_declarations          = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    self._solver_user_definitions           = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-
-    self._constructor_implementation = "_admissibleTimeStepSize = 0.0;"
+    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._constructor_implementation         = create_constructor_implementation_for_adaptive_time_stepping()
+    self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
+    self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_adaptive_time_stepping()
     
-    self._abstract_solver_user_declarations += """
-private:
-  double _maxEigenvalue;
-  double _admissibleTimeStepSize;
-public:
-  void setMaxEigenvalue( double eigenvalue );  
-  double getAdmissibleTimeStepSize() const;  
-    """  
-
-    self._abstract_solver_user_definitions += """
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
-  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
-    tarch::multicore::Lock lock(_semaphore);
-    _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
-  }
-}    
-
-
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() const {
-  return _admissibleTimeStepSize;
-}
-    """  
-    
-    self._start_time_step_implementation          = """
-  _maxEigenvalue = 0.0;
-"""
-
-    self._finish_time_step_implementation          = """
-  #ifdef Parallel
-  double newMaxEigenvalue = _maxEigenvalue;
-  tarch::mpi::Rank::getInstance().allReduce(
-        &_maxEigenvalue,
-        &newMaxEigenvalue,
-        1,
-        MPI_DOUBLE,
-        MPI_MAX, 
-        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-        );
-  #endif
-
-  _admissibleTimeStepSize = """ + str(self._time_step_relaxation) + """ * _minH / _maxEigenvalue / 3.0;
-  if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
-  }
-  if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "degenerated time step size of " + std::to_string(_admissibleTimeStepSize) );
-  }
-  
-  _maxTimeStepSize  = _admissibleTimeStepSize; // for plotting reasons
-  _minTimeStepSize  = std::min( _minTimeStepSize, _admissibleTimeStepSize );
-"""
+    self._start_time_step_implementation          = create_start_time_step_implementation_for_adaptive_time_stepping()
+    self._finish_time_step_implementation         = create_finish_time_step_implementation_for_adaptive_time_stepping(self._time_step_relaxation)
     
     SingleSweep.set_implementation(self, boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
 
