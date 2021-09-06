@@ -236,31 +236,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
           );
 
           {{POSTPROCESS_UPDATED_PATCH_IN_ENCLAVE_TASK}}
-
-          /*
-          double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-            [] (
-              const double * __restrict__                  Q,
-              const tarch::la::Vector<Dimensions,double>&  faceCentre,
-              const tarch::la::Vector<Dimensions,double>&  volumeH,
-              double                                       t,
-              double                                       dt,
-              int                                          normal
-            ) -> double {
-              return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-            },
-            marker.x(),
-            marker.h(),
-            t,
-            dt,
-            {{NUMBER_OF_VOLUMES_PER_AXIS}},
-            {{NUMBER_OF_UNKNOWNS}},
-            {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            targetPatch
-          );
-
-          repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
-          */
         }
   )
   #ifdef UseSmartMPI
@@ -494,12 +469,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   );
   for (size_t i = 0;i<_destinationPatchSize*otherTasks.size();i++) *(destinationPatchOnCPU + i) =0;
   
-  #if Dimensions==2
-  ::exahype2::fv::Fusanov_2D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
-  #elif Dimensions==3
-  ::exahype2::fv::Fusanov_3D<{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}}>
-  #endif
-    (1, patchkeeper, destinationPatchOnCPU, _sourcePatchSize, _destinationPatchSize, {{SKIP_FLUX}}, {{SKIP_NCP}});
+  {{FUSED_RIEMANN_SOLVER_CALL}}
+  (
+    1,
+    patchkeeper,
+    destinationPatchOnCPU,
+    _sourcePatchSize,
+    _destinationPatchSize
+  );
 
   for (int i=0;i<static_cast<int>(patchkeeper.size());i++) {
     const int taskid = std::get<1>(patchkeeper[i]);

@@ -128,7 +128,29 @@ def create_source_term_kernel_for_Rusanov(source_term_implementation, use_gpu):
   return Template.render(**d)
   
     
-def create_compute_Riemann_kernel_for_Rusanov_fixed_timestepping(flux_implementation, ncp_implementation, eigenvalues_implementation, use_gpu):
+def create_fused_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation):
+  Template = jinja2.Template( """
+#if Dimensions==2
+::exahype2::fv::Fusanov_2D
+#elif Dimensions==3
+::exahype2::fv::Fusanov_3D
+#endif
+  <{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}},{{SKIP_FLUX}},{{SKIP_NCP}}>
+""", undefined=jinja2.DebugUndefined)
+  
+  d= {}
+  if flux_implementation==PDETerms.None_Implementation or flux_implementation==PDETerms.Empty_Implementation:
+    d[ "SKIP_FLUX"] = "true"
+  else:
+    d[ "SKIP_FLUX"] = "false"
+  if ncp_implementation==PDETerms.None_Implementation or ncp_implementation==PDETerms.Empty_Implementation:
+    d[ "SKIP_NCP"]  = "true"
+  else:
+    d[ "SKIP_NCP"] = "false"
+  return Template.render(**d)
+    
+    
+def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation):
   Template = jinja2.Template( """
         ::exahype2::fv::splitRusanov1d(
           [] (
@@ -192,8 +214,6 @@ def create_compute_Riemann_kernel_for_Rusanov_fixed_timestepping(flux_implementa
   d= {}
   d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
-  d[ "USE_GPU"]                             = use_gpu
   return Template.render(**d)
 
 
