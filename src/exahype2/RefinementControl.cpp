@@ -19,7 +19,7 @@ exahype2::RefinementCommand operator&&( exahype2::RefinementCommand lhs, exahype
     return exahype2::RefinementCommand::Keep;
   }
   else {
-	return exahype2::RefinementCommand::Coarsen;
+    return exahype2::RefinementCommand::Coarsen;
   }
 }
 
@@ -73,7 +73,7 @@ void exahype2::RefinementControl::addCommand(
           peano4::grid::GridControlEvent::RefinementControl::Refine,
           x-0.5 * h - shift,
           expandedH,
-          1.0/3.0 * h
+          1.0/3.0 * (1.0+_Tolerance) * h
         );
         assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
         assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
