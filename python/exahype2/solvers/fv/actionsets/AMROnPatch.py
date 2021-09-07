@@ -36,7 +36,7 @@ class AMROnPatch(AbstractFVActionSet):
   TemplateAMR = """  
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
-  if (tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+  if (tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } 
   else if (
@@ -53,10 +53,10 @@ class AMROnPatch(AbstractFVActionSet):
         index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
     }
      
-    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.getMinMeshSize() ) {
+    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
-    else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() ) {
+    else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
   }

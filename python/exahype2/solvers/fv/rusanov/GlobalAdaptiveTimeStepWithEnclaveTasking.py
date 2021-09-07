@@ -23,7 +23,7 @@ from .kernels import create_fused_compute_Riemann_kernel_for_Rusanov
 
 class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
   def __init__(self, 
-    name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_relaxation,
+    name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
@@ -31,7 +31,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     plot_grid_properties=False,
     use_gpu=False
   ):
-    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties, use_gpu) 
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, use_gpu) 
     
     self._time_step_relaxation = time_step_relaxation
 

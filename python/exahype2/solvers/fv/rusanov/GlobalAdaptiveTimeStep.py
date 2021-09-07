@@ -22,14 +22,14 @@ from .kernels import create_constructor_implementation_for_adaptive_time_steppin
 
 class GlobalAdaptiveTimeStep( SingleSweep ):
   def __init__(self, 
-    name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_relaxation,
+    name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False
   ):
-    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties) 
+    super(GlobalAdaptiveTimeStep,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
     
     self._time_step_relaxation = time_step_relaxation
 

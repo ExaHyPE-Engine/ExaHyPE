@@ -83,9 +83,8 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 #
 unknowns       = 5
 time_step_size = 0.000001
-max_h          = args.h
-
-min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels)
+max_h          = args.h / args.patch_size
+min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels) / args.patch_size
 
 
 admissible_time_step_size = min_h/args.patch_size*0.01

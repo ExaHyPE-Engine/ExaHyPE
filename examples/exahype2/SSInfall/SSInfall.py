@@ -25,8 +25,8 @@ intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - SSInfall script')
-    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default)" )
+    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
+    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume size, i.e. not to patch size" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
@@ -57,7 +57,7 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
 
     class SSInfallSolver( SuperClass ):
-      def __init__(self, name, patch_size, min_h, max_h ):
+      def __init__(self, name, patch_size, min_volume_h, max_volume_h ):
         unknowns = {
           "rho":1,
           "j":3,
@@ -77,7 +77,7 @@ if __name__ == "__main__":
             name=name, patch_size=patch_size,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
-            min_h=min_h, max_h=max_h,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_size=1e-2
           )
         else:
@@ -86,7 +86,7 @@ if __name__ == "__main__":
             name=name, patch_size=patch_size,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
-            min_h=min_h, max_h=max_h,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=0.1
           )
 

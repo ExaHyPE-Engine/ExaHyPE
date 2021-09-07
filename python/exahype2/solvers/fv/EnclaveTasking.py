@@ -117,9 +117,10 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
     
-    repositories::{{SOLVER_INSTANCE}}.setTimeStepSizeAndTimeStamp(
+    repositories::{{SOLVER_INSTANCE}}.update(
       fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize() + fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()
+      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize() + fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+      marker.h()(0)
     );
   }
 """
@@ -145,7 +146,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
 class EnclaveTasking( FV ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties, use_gpu):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, use_gpu):
     """
     
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
@@ -237,7 +238,7 @@ class EnclaveTasking( FV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
  
-    super(EnclaveTasking, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+    super(EnclaveTasking, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
      
     self._solver_template_file_class_name     = "EnclaveTasking"
       

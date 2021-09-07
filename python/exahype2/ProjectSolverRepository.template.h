@@ -55,6 +55,9 @@
   double getMinMeshSize();
   double getMaxMeshSize();
 
+  double getMaxAdmissibleMeshSize();
+  double getMinAdmissibleMeshSize();
+
   void startGridConstructionStep();
   void startGridInitialisationStep();
 
