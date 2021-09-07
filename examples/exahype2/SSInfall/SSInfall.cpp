@@ -195,7 +195,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const double c   = std::sqrt(gamma * p * irho);
 
   const double u_n = Q[normal + 1] * irho;
-  double result = std::max( std::abs(u_n - c), std::abs(u_n + c)); result=1;
+  double result = std::max( std::abs(u_n - c), std::abs(u_n + c)); //result=1;
   nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   return result;
 }
