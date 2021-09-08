@@ -186,8 +186,8 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     self._patch_overlap_old.generator.send_condition               = "false"
     self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
 
-    self._patch_overlap_new.generator.send_condition               = "true"
-    self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
+    self._patch_overlap_new.generator.send_condition               = "false"
+    self._patch_overlap_new.generator.receive_and_merge_condition  = "false"
 
     self._patch_overlap_update.generator.send_condition               = "false"
     self._patch_overlap_update.generator.receive_and_merge_condition  = "false"
@@ -233,6 +233,8 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_predicate() )
     self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
     self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_predicate())
+    # @todo Sollte spezifisches Action Set sein, so dass auch die Timestamps kopiert werden
+    self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_predicate(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
@@ -345,15 +347,26 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
      set order is inverted while we ascend within the tree again. Therefore, we
      add the AMR action set first which means it will be called last when we go
      from fine to coarse levels within the tree.
+     
+     :: Ordering ::
+     
+     The order of the action sets is preserved throughout the steps down within
+     the tree hierarchy. It is inverted throughout the backrolling. Therefore, 
+     we add the copying and roll over first, as it will then be the last thing
+     when we go up through the grid hierarchies.
+     
+     The remaining actions are either top-down on faces or a volumentric (cell)
+     operations.
     
     """
+    step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
+    step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_initial_conditions ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
-    step.add_action_set( self._action_set_roll_over_update_of_faces )
-
+    
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     """

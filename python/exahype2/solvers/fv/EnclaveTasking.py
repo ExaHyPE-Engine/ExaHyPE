@@ -253,23 +253,17 @@ class EnclaveTasking( FV ):
     further, you have to alter them before you invoke this class' create_data_structures().
     
     """
-    super(EnclaveTasking, self).create_data_structures(self)
+    super(EnclaveTasking, self).create_data_structures()
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
       self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
       self._primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
     
-    #self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_or_plot_predicate
-    #self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._primary_sweep_or_plot_predicate
-
-    #self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_predicate
-    #self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_predicate
-
-    #self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate() + " and " + self._primary_sweep_predicate
-    #self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()  + " and " + self._secondary_sweep_predicate
-
     self._patch_overlap_new.generator.send_condition               = self._secondary_sweep_or_grid_initialisation_or_plot_predicate
     self._patch_overlap_new.generator.receive_and_merge_condition  = self._primary_sweep_or_plot_predicate
+
+    self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_predicate
+    self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_predicate
 
 
   def create_action_sets(self):

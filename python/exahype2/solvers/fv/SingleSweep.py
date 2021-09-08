@@ -188,14 +188,17 @@ class SingleSweep( FV ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
     first_iteration_after_initialisation_predicate = "(" + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
-      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
 
-    self._patch_overlap_old.generator.send_condition               = "false"
-    self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
+    self._patch_overlap_new.generator.send_condition               = "true"
+    self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
+
+    self._patch_overlap_old.generator.send_condition               = initialisation_sweep_predicate
+    self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_predicate
       
-      
+            
   def create_action_sets(self):
     """
       Call superclass routine and then reconfigure the update cell call
