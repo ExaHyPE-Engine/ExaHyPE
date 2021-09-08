@@ -177,7 +177,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  _solverState     = SolverState::TimeStep;
+  if ( _solverState==SolverState::GridInitialisation ) {
+    _solverState     = SolverState::TimeStepAfterGridInitialisation;
+  }
+  else {
+    assertion( _solverState!=SolverState::GridConstruction );
+    _solverState     = SolverState::TimeStep;
+  }
+
   _minTimeStamp    = std::numeric_limits<double>::max();
   _maxTimeStamp    = std::numeric_limits<double>::min();
   _minTimeStepSize = std::numeric_limits<double>::max();
@@ -253,7 +260,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  _solverState = SolverState::Plotting;
+  if ( _solverState== SolverState::GridInitialisation) {
+    _solverState = SolverState::PlottingAfterGridInitialisation;
+  }
+  else {
+    _solverState = SolverState::Plotting;
+  }
 }
 
 

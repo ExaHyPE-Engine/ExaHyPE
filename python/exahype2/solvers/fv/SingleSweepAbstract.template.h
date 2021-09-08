@@ -60,7 +60,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
       GridConstruction,
       GridInitialisation,
       TimeStep,
-      Plotting
+      Plotting,
+      TimeStepAfterGridInitialisation,
+      PlottingAfterGridInitialisation
     };
 
     static std::string toString(SolverState);

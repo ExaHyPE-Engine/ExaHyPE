@@ -181,11 +181,26 @@ class SingleSweep( FV ):
     self._solver_template_file_class_name     = "SingleSweep"
 
 
+  def create_data_structures(self):
+    super(SingleSweep, self).create_data_structures()
+
+    initialisation_sweep_predicate = "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
+      ")"
+    first_iteration_after_initialisation_predicate = "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
+    ")"
+
+    self._patch_overlap_old.generator.send_condition               = "false"
+    self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
+      
+      
   def create_action_sets(self):
     """
       Call superclass routine and then reconfigure the update cell call
     """
-    FV.create_action_sets(self)
+    super(SingleSweep, self).create_action_sets()
     self._action_set_update_cell = UpdateCell(self)
 
 

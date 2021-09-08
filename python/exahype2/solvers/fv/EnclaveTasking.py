@@ -253,7 +253,7 @@ class EnclaveTasking( FV ):
     further, you have to alter them before you invoke this class' create_data_structures().
     
     """
-    FV.create_data_structures(self)
+    super(EnclaveTasking, self).create_data_structures(self)
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
       self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
@@ -292,7 +292,7 @@ class EnclaveTasking( FV ):
     face are skeleton cells.
         
     """
-    FV.create_action_sets(self)
+    super(EnclaveTasking, self).create_action_sets()
 
     self._action_set_update_cell     = UpdateCell(self)
     self._merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
@@ -409,6 +409,7 @@ class EnclaveTasking( FV ):
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
     d[ "USE_GPU" ] = self._use_gpu
+    
     
   def set_preprocess_reconstructed_patch_kernel(self,kernel, can_offload_into_enclave_task = True ):
     """
