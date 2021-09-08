@@ -87,7 +87,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.05
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
-        /*dfor(cell,patchSize) {
+        dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
@@ -138,7 +138,7 @@ if __name__ == "__main__":
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*5+0],volumeH);       
           //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
           //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;         
-        }*/
+        }
         
     """)
 
@@ -276,8 +276,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    #probe_point = [0,0,-0.01]
-    #project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
+    probe_point = [0,0,-0.01]
+    project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "(0.9,8000)" )
 
