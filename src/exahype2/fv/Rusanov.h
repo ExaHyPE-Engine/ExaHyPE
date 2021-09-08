@@ -47,15 +47,17 @@ namespace exahype2 {
       int                                          numVPAIP, // numberofVolumesPerAxisInPatch
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      typename SOLVER>
+      typename SOLVER,
+      bool                                         skipFluxEvaluation,
+      bool                                         skipNCPEvaluation,
+      bool                                         skipSourceTerm
+      >
     void Fusanov_2D(
       int                                          haloSize,
       const PatchContainer2d&                      patchVec,
       double * __restrict__                        Qout,
       int                                          sourcePatchSize,
-      int                                          destPatchSize,
-      bool                                         skipFluxEvaluation=false,
-      bool                                         skipNCPEvaluation=false
+      int                                          destPatchSize
     )
     {
       const size_t NPT  = patchVec.size();
@@ -294,15 +296,17 @@ namespace exahype2 {
       int                                          numberofVolumesPerAxisInPatch,
       int                                          unknowns,
       int                                          auxiliaryVariables,
-      typename SOLVER>
+      typename SOLVER,
+      bool                                         skipFluxEvaluation,
+      bool                                         skipNCPEvaluation,
+      bool                                         skipSourceTerm
+    >
     void Fusanov_3D(
       int                                          haloSize,
       const PatchContainer3d&                      patchVec,
       double * __restrict__                        Qout,
       int                                          sourcePatchSize,
-      int                                          destPatchSize,
-      bool                                         skipFluxEvaluation=false,
-      bool                                         skipNCPEvaluation=true
+      int                                          destPatchSize
     )
     {
       const int numVPAIP = numberofVolumesPerAxisInPatch;

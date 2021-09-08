@@ -56,7 +56,21 @@ void peano4::grid::tests::GridControlEventTest::testMerge2() {
 
   events = peano4::grid::merge( events, 0.4 );
 
-  validateEquals( events.size(), 1 );
+  validateEquals( events.size(), 2 );
+  #endif
+}
+
+
+void peano4::grid::tests::GridControlEventTest::testMerge3() {
+  #if Dimensions==2
+  std::vector< GridControlEvent > events;
+
+  events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {0.65,0.65},         {0.366667,0.366667}, {0.111111,0.111111} ));
+  events.push_back( GridControlEvent( GridControlEvent::RefinementControl::Refine, {0.883333,0.883333}, {0.122222,0.122222}, {0.037037,0.037037} ));
+
+  events = peano4::grid::merge( events, 0.4 );
+
+  validateEquals( events.size(), 2 );
   #endif
 }
 
@@ -64,6 +78,7 @@ void peano4::grid::tests::GridControlEventTest::testMerge2() {
 void peano4::grid::tests::GridControlEventTest::run() {
   testMethod( testMerge1 );
   testMethod( testMerge2 );
+  testMethod( testMerge3 );
 }
 
 

@@ -11,6 +11,7 @@
 
 #include "AbstractSSInfall.h"
 #include "tarch/logging/Log.h"
+#include <iomanip>
 
 namespace examples {namespace exahype2 {namespace SSInfall {
   class SSInfall;
@@ -33,6 +34,13 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     //double r_ini=0.2;
     //double delta_rho=0.01;
     //double initial_internal_energy=0.1;
+
+    void startTimeStep(
+      double globalMinTimeStamp,
+      double globalMaxTimeStamp,
+      double globalMinTimeStepSize,
+      double globalMaxTimeStepSize
+    ) override;
 
     ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__ Q, // Q[5+0],

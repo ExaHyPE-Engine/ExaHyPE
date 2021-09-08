@@ -372,25 +372,6 @@ class Project(object):
       
 
     self.__generate_solver_repository();
-
-    face_label = exahype2.grid.create_face_label()  
-    self._project.datamodel.add_face(face_label)
-    
-    self.create_grid.use_face(face_label)
-    self.init_grid.use_face(face_label)
-    self.create_grid_but_postpone_refinement.use_face(face_label)
-    self.create_grid_and_converge_lb.use_face(face_label)
-    self.plot_solution.use_face(face_label)
-    self.perform_time_step.use_face(face_label)
-    
-    set_labels_action_set = exahype2.grid.SetLabels()
-
-    self.create_grid.add_action_set( set_labels_action_set )
-    self.init_grid.add_action_set( set_labels_action_set )
-    self.create_grid_but_postpone_refinement.add_action_set( set_labels_action_set )
-    self.create_grid_and_converge_lb.add_action_set( set_labels_action_set )
-    self.plot_solution.add_action_set( set_labels_action_set )
-    self.perform_time_step.add_action_set( set_labels_action_set )
     
     self._project.main = exahype2.ExaHyPEMain(self._project,self._periodic_BC,self._dimensions)
 

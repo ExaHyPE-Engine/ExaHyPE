@@ -12,7 +12,7 @@
 #include <string>
 #include <map>
 #include <list>
-
+#include <iomanip>
 
 namespace toolbox {
   namespace particles {
@@ -32,6 +32,7 @@ class toolbox::particles::TrajectoryDatabase {
 
     const int   _deltaBetweenTwoDatabaseFlushes;
     int         _thresholdForNextDatabaseFlush;
+    int         _precision;
     /**
      * @see TrajectoryDatabase()
      */
@@ -122,6 +123,7 @@ class toolbox::particles::TrajectoryDatabase {
     void dumpCSVFile();
 
     void setOutputFileName( const std::string& filename );
+    void setOutputPrecision( int precision );
     void setDataDeltaBetweenTwoSnapshots( double value );
     void setPositionDeltaBetweenTwoSnapshots( double value );
 

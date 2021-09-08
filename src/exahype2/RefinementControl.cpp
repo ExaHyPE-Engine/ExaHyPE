@@ -11,7 +11,7 @@ exahype2::RefinementCommand operator&&( exahype2::RefinementCommand lhs, exahype
   if (
     lhs == exahype2::RefinementCommand::Refine or rhs == exahype2::RefinementCommand::Refine
   ) {
-	return exahype2::RefinementCommand::Refine;
+    return exahype2::RefinementCommand::Refine;
   }
   else if (
     lhs == exahype2::RefinementCommand::Keep or rhs == exahype2::RefinementCommand::Keep
@@ -19,7 +19,7 @@ exahype2::RefinementCommand operator&&( exahype2::RefinementCommand lhs, exahype
     return exahype2::RefinementCommand::Keep;
   }
   else {
-	return exahype2::RefinementCommand::Coarsen;
+    return exahype2::RefinementCommand::Coarsen;
   }
 }
 
@@ -66,15 +66,17 @@ void exahype2::RefinementControl::addCommand(
   switch (command) {
     case ::exahype2::RefinementCommand::Refine:
       {
-        tarch::la::Vector<Dimensions,double> expandedH = (1.0+_Tolerance) * h;
-        tarch::la::Vector<Dimensions,double> shift     = 0.5 * _Tolerance * h;
+        tarch::la::Vector<Dimensions,double> expandedWidth   = (1.0+_Tolerance) * h;
+        tarch::la::Vector<Dimensions,double> shift           = 0.5 * (expandedWidth - h);
+        tarch::la::Vector<Dimensions,double> refinedMeshSize = 1.0/3.0 * h;
 
         peano4::grid::GridControlEvent newEvent(
           peano4::grid::GridControlEvent::RefinementControl::Refine,
           x-0.5 * h - shift,
-          expandedH,
-          (1.0+_Tolerance) * 1.0/3.0 * h
+          expandedWidth,
+          refinedMeshSize
         );
+
         assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
         assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
         _newEvents.push_back( newEvent );
@@ -84,6 +86,7 @@ void exahype2::RefinementControl::addCommand(
     case ::exahype2::RefinementCommand::Keep:
       break;
     case ::exahype2::RefinementCommand::Coarsen:
+      logDebug( "addCommend()", "not implemented yet" );
       break;
   }
   logTraceOutWith1Argument( "addCommand()", _newEvents.size() );

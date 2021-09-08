@@ -544,7 +544,7 @@ class Visualiser(object):
     del writer
 
 
-  def write_vtu_time_series(self):
+  def write_vtu_time_series(self,strip_relative_pathes):
     pvd_file = """<?xml version="1.0"?>
 <VTKFile type="Collection" version="0.1"
          byte_order="LittleEndian"
@@ -565,8 +565,11 @@ class Visualiser(object):
         else:
           snapshot_file_name = file_name + "-" + str(i) + ".vtu"
           self.write_vtu( snapshot_file_name )
+          link_file_name = snapshot_file_name
+          if strip_relative_pathes:
+            link_file_name = link_file_name.split( "/" )[-1]
           pvd_file += """
-    <DataSet timestep=\"""" + str(i) + """\" group="" part="0" file=\"""" + snapshot_file_name + """\" />
+    <DataSet timestep=\"""" + str(i) + """\" group="" part="0" file=\"""" + link_file_name + """\" />
 """
           i+=1
     except Exception as e:
@@ -580,3 +583,15 @@ class Visualiser(object):
 """
     meta_file = open( file_name + ".pvd", "w" )
     meta_file.write( pvd_file )
+    
+    if "/" in file_name and not strip_relative_pathes:
+      print( """
+WARNING: The conversion tool has processed a dataset stored in a different
+directory. If the resulting .pvd file (""" + file_name + """.pvd)
+contains relative pathes, you will have to copy it into the present working
+directory before you load the outcome into Paraview. Otherwise, Paraview 
+will not be able to locate your actual data files.
+
+Alternatively, you can rerun the postprocessing and eliminate relative 
+pathes (see documentation/help of your conversion script).
+""" )

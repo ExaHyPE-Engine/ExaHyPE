@@ -312,19 +312,19 @@ std::string tarch::multicore::getListOfRealisations() {
 std::string tarch::multicore::toString( Realisation realisation ) {
   switch (realisation) {
     case Realisation::MapOntoNativeTasks:
-      return "native";
+      return "map-onto-native-tasks";
     case Realisation::HoldTasksBackInLocalQueue:
-      return "hold-back";
+      return "hold-tasks-back-in-local-queue";
     case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
-      return "hold-back-and-eventually-map-onto-native-task";
+      return "hold-tasks-back-in-local-queue-and-eventually-map-onto-native-task";
     case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-      return "backfill";
+      return "hold-tasks-back-in-local-queue-and-backfill";
     case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
-      return "backfill-and-eventually-map-onto-native-task";
+      return "hold-tasks-back-in-local-queue-and-backfill-and-eventually-map-onto-native-task";
     case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-      return "merge";
+      return "hold-tasks-back-in-local-queue-merge-and-backfill";
     case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
-      return "merge-and-eventually-map-onto-native-task";
+      return "hold-tasks-back-in-local-queue-merge-and-backfill-and-eventually-map-onto-native-task";
   }
   return "<undef>";
 }

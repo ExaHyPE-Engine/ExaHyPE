@@ -6,7 +6,20 @@
 
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
-
+void examples::exahype2::SSInfall::SSInfall::startTimeStep(
+  double globalMinTimeStamp,
+  double globalMaxTimeStamp,
+  double globalMinTimeStepSize,
+  double globalMaxTimeStepSize
+){
+  AbstractSSInfall::startTimeStep(globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize);
+  for (int i=0;i<sample_number;i++) {
+    m_tot_copy[i]=m_tot[i];
+    //std::cout << std::setprecision (4) << m_tot[i] << " ";
+    m_tot[i]=0;
+  }
+  //std::cout << std::endl;
+}
 
 
 ::exahype2::RefinementCommand examples::exahype2::SSInfall::SSInfall::refinementCriterion(
@@ -35,26 +48,33 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   double y=volumeCentre(1)-center(1);
   double z=volumeCentre(2)-center(2);
 
-  bool isInTheSphere = ( (x*x+y*y+z*z) < r_ini*r_ini );
-  double H_i=2/(3*t_ini);
-  double rho_ini=1/(6*pi*G*t_ini*t_ini);
+  bool isInTheSphere = ( (x*x+y*y+z*z) < r_ini*r_ini );//overdensity region
+  //double H_i=2/(3*t_ini); //Hubble constant
+  //double rho_ini=1/(6*pi*G*t_ini*t_ini);
+
+  double rho_ini=tilde_rho_ini;
+  //constexpr double gamma = 5.0/3.0;
+  if (iseed==0)
+  	{Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;}  // rho
+  if (iseed==1)
+  	{Q[0] = rho_ini;}
+  Q[1] = 0;    // velocities
+  Q[2] = 0;
+  Q[3] = 0;
+  Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini/(gamma-1); // inner energy
 
   // initial conditions
+/*
   Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;  // rho
-  //Q[0] = 0.1;
   Q[1] = Q[0]*H_i*x;    // velocities
   Q[2] = Q[0]*H_i*y;
   Q[3] = Q[0]*H_i*z;
   Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+initial_internal_energy; // inner energy
-
-/*  #if Dimensions==2
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-  #else
+*/
   tarch::la::Vector<Dimensions,double> circleCentre = {0,0,0};
-  #endif
-
+/*
   // initial conditions
-  bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
+  bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.2 );
   Q[0] = 0.1;  // rho
   Q[1] = 0;    // velocities
   Q[2] = 0;
@@ -81,27 +101,41 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 
   double r_coor=x*x+y*y+z*z;
   r_coor=pow(r_coor,0.5);
-  double rho_ini=1/(6*pi*G*t_ini*t_ini);
+  //double rho_ini=1/(6*pi*G*t_ini*t_ini);
+  double rho_ini=tilde_rho_ini;
   double m_in=0;
   
-  if (tarch::la::equals(t,0)){
-    if (r_coor<r_ini) { m_in=4*pi*rho_ini*(1+delta_rho)*pow(r_coor,3)/3;}
-    else { m_in=4*pi*rho_ini*pow(r_coor,3)/3;+4*pi*rho_ini*delta_rho*pow(r_ini,3)/3;}
-  } else {
-    m_in=mass_interpolate(r_coor);
+  if (tarch::la::equals(t,0)){//we know the mass distri at the beginning
+    if (iseed==0){
+		  if (r_coor<r_ini) { m_in=rho_ini*delta_rho*pow(r_coor,3)/3;}
+		  else { m_in=rho_ini*delta_rho*pow(r_ini,3)/3;}
+		}
+		if (iseed==1){
+		  m_in=delta_m/4/pi;
+		}
+  } 
+  else {
+    if (iseed==0){
+      m_in=mass_interpolate(r_coor)/4/pi; //remove the overall 4\pi coefficient. 
+    }
+    if (iseed==1){
+		  m_in=(mass_interpolate(r_coor)+delta_m)/4/pi;
+		}
   }
 
-  //double force_density_norm=Q[0]*G*m_in/pow(r_coor,3);
-  //if (force_density_norm>1 and r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
+  double a=0.0287*pow((-t/11.8+5.35695),-2);//when code time t=61.2, a~1
+  double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
+  if (force_density_norm>1 and r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
 
-  double force_density_norm=0;
+  //force_density_norm=0;
+
   S[0] = 0;  // rho
   S[1] = -force_density_norm*x;    // velocities
   S[2] = -force_density_norm*y;
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
-/*
-  S[0] = 0;  // rho
+
+/*  S[0] = 0;  // rho
   S[1] = 0;    // velocities
   S[2] = 0;
   S[3] = 0;
@@ -149,7 +183,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   assertion(normal<Dimensions);
   assertion( Q[0]>0.0 );
 
-  constexpr double gamma = 1.4;
+  //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
@@ -161,8 +195,8 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const double c   = std::sqrt(gamma * p * irho);
 
   const double u_n = Q[normal + 1] * irho;
-  double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
-  nonCriticalAssertion14( result>=0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  double result = std::max( std::abs(u_n - c), std::abs(u_n + c)); //result=1;
+  nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   return result;
 }
 
@@ -178,7 +212,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 )  {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 
-  constexpr double gamma = 5.0/3.0;
+  //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
@@ -203,7 +237,7 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   const double rho,
   const double size
 ) {
-  double m=rho*pow(size,3);
+  double m=(rho-1)*pow(size,3); //notice here we use overdensity
 
   for (int i=0;i<sample_number;i++){
     if (r_coor<r_s[i]){
@@ -222,18 +256,18 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
 
   if (r_coor<r_s[0]) {
     a=0; b=r_s[0];
-    m_a=0; m_b=m_tot[0];
+    m_a=0; m_b=m_tot_copy[0];
   }
   if (r_coor>r_s[sample_number-1]) {
     a=r_s[sample_number-2]; b=r_s[sample_number-1];
-    m_a=m_tot[sample_number-2]; m_b=m_tot[sample_number-1];    
+    m_a=m_tot_copy[sample_number-2]; m_b=m_tot_copy[sample_number-1];    
   }
   else{
     for (int i=1;i<sample_number;i++){
       if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])){
         a=r_s[i-1]; b=r_s[i];
-        m_a=m_tot[i-1]; m_b=m_tot[i];
-        //std::cout << m_tot << std::endl;
+        m_a=m_tot_copy[i-1]; m_b=m_tot_copy[i];
+        //std::cout << m_tot_copy << std::endl;
       }
     }
   }

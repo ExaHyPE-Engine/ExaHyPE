@@ -116,8 +116,10 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      * @param targetBalancingRation Ratio which ill-balancing we accept. A ratio of
      *   almost one means we do not accept any ill-balancing. The smaller the value,
      *   the more relaxed we are.
+     * @param minTreeSize Only split up local tree if the local tree is bigger or
+     *   equal to minTreeSize.
      */
-    RecursiveSubdivision(double targetBalancingRation=0.9, bool makeSplitDependentOnMemory=false );
+    RecursiveSubdivision(double targetBalancingRation=0.9, int minTreeSize = 0, bool makeSplitDependentOnMemory=false );
     ~RecursiveSubdivision();
 
     /**
@@ -194,6 +196,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     static tarch::logging::Log  _log;
 
     const double _TargetBalancingRatio;
+    const int    _MinTreeSize;
 
     /**
      * Each rank that is on this list may not be split. We hold an integer per rank
@@ -254,6 +257,10 @@ class toolbox::loadbalancing::RecursiveSubdivision {
 
     void updateGlobalView();
     
+    /**
+     * This operation checks if the inter-rank load decomposition does
+     * violate the overall load balancing constraints.
+     */
     bool doesRankViolateBalancingCondition() const;
 
     void updateBlacklist();
@@ -309,8 +316,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     /**
      * This is part of the action SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning.
      *
-     * @param cellsPerCore I think I could reconstruct these guys manually, but
-     *          I have this value available when I call the function anyway.
+     * @param Number of splits that the code should run
      */
     int getNumberOfSplitsOnLocalRank() const;
 

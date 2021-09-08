@@ -7,6 +7,7 @@ import exahype2
 import peano4.toolbox.particles
 import dastgen2
 
+from Probe_file_gene import tracer_seeds_generate
 import numpy as np
 
 modes = { 
@@ -17,26 +18,28 @@ modes = {
 }
 
 floatparams = {
-         "G":1.0, "t_ini":0.5, "r_ini":1, "delta_rho":0.01, "initial_internal_energy":0.1, 
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15 
 }
 
-intparams = {"swi":99, "ReSwi":0, "sample_number":10}
+intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - SSInfall script')
-    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default)" )
+    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
+    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume size, i.e. not to patch size" )
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
+    #parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-
+    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
+    parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -48,23 +51,13 @@ if __name__ == "__main__":
 
     SuperClass = None
 
-    if args.implementation=="fv-fixed":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-enclave":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves
-    if args.implementation=="fv-adaptive":
-       SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSize
-    if args.implementation=="fv-adaptive-enclave":
-       SuperClass = exahype2.solvers.fv.GenericRusanovAdaptiveTimeStepSizeWithEnclaves
-    if args.implementation=="fv-optimistic-enclave":
-       SuperClass = exahype2.solvers.fv.GenericRusanovOptimisticTimeStepSizeWithEnclaves
-    if args.implementation=="ader-fixed":
-       SuperClass = exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize
-    if args.implementation=="fv-fixed-gpu":
-       SuperClass = exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithAccelerator
+    if args.implementation=="fv-global-fixed":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep
+    if args.implementation=="fv-global-adaptive":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
 
     class SSInfallSolver( SuperClass ):
-      def __init__(self, name, patch_size, min_h, max_h ):
+      def __init__(self, name, patch_size, min_volume_h, max_volume_h ):
         unknowns = {
           "rho":1,
           "j":3,
@@ -76,14 +69,15 @@ if __name__ == "__main__":
         self._my_user_includes = """
 #include "exahype2/PatchUtils.h"
 """
-        if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
-           SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
+        #if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
+        #   SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
-            min_h=min_h, max_h=max_h,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_size=1e-2
           )
         else:
@@ -92,40 +86,24 @@ if __name__ == "__main__":
             name=name, patch_size=patch_size,
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
-            min_h=min_h, max_h=max_h,
-            time_step_relaxation=0.25
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_relaxation=0.05
           )
 
-        self._solver_template_file_class_name = SuperClass.__name__
+        #self._solver_template_file_class_name = SuperClass.__name__
 
         self.set_implementation(
           boundary_conditions=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           flux=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
           ncp=exahype2.solvers.fv.PDETerms.None_Implementation,
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-          refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+          refinement_criterion = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
+
+        self._patch_size = patch_size
 
         self.set_postprocess_updated_patch_kernel( """
 
-  {
-    #if Dimensions==2
-    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
-    #endif
-
-    #if Dimensions==3
-    constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
-    #endif
-
-    int index = 0;
-    for (int i=0;i<itmax;i++)
-    {
-
-    // dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-    //  examples::exahype2::ccz4::enforceCCZ4constraints( targetPatch+index );
-      index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-  }
 """ )
       def get_user_includes(self):
         """
@@ -139,7 +117,7 @@ if __name__ == "__main__":
         """
         self._my_user_includes += """
 #include "../SSInfall.h"
-#include <iomanip>
+#include <math.h>
     """
         self._auxiliary_variables = 0
 
@@ -147,14 +125,6 @@ if __name__ == "__main__":
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
-        if (not tarch::la::equals(t,repositories::{{SOLVER_INSTANCE}}.t_record)){
-          for (int i=0;i<sample;i++) {
-            std::cout << std::setprecision (4) << repositories::{{SOLVER_INSTANCE}}.m_tot[i] << " ";
-            repositories::{{SOLVER_INSTANCE}}.m_tot[i]=0;
-          }
-          repositories::{{SOLVER_INSTANCE}}.t_record=t;
-          std::cout << std::endl;
-        }
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
@@ -163,7 +133,8 @@ if __name__ == "__main__":
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
           double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
-               
+          
+          if (isnan(reconstructedPatch[cellSerialised*5+0])) {std::abort();}     
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*5+0],volumeH);       
           //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
           //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;         
@@ -231,8 +202,8 @@ if __name__ == "__main__":
 #Domain settings
 ########################################################################################
     if True:
-      #offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      offset=[-5, -5, -5]; domain_size=[10, 10, 10]
+      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      #offset=[-5, -5, -5]; domain_size=[10, 10, 10]
       msg = "domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userwarnings.append((msg,None))
@@ -251,13 +222,25 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       userwarnings.append((msg,None))
 
-    intparams.update({"ReSwi":args.ReSwi})
-    intparams.update({"sample_number":args.sample_number})
+    for k, v in intparams.items():
+      intparams.update({k:eval("args.{}".format(k))})
+    for k, v in floatparams.items():
+      floatparams.update({k:eval("args.{}".format(k))})
+
+    if args.seed=="tophat":
+      floatparams.update({"r_ini":1})
+      floatparams.update({"delta_rho":0.05})
+      userwarnings.append(("Tophat overdensity region set",None))
+    if args.seed=="point":
+      intparams.update({"iseed":1})
+      floatparams.update({"delta_m":0.15})
+      userwarnings.append(("Point mass seed set",None))
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)
     solverconstants+= "double m_tot[{}]={};\n".format(args.sample_number,"{0}")
+    solverconstants+= "double m_tot_copy[{}]={};\n".format(args.sample_number,"{0}")
     r_list=np.linspace(0,(domain_size[0]+offset[0]),(args.sample_number+1))[1:]
     solverconstants+= "double r_s[{}]={}".format(args.sample_number,"{")
     for r in r_list:
@@ -290,13 +273,47 @@ if __name__ == "__main__":
     path="./"
     if not args.path=="./":
         path=args.path 
-    #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
+    #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-20,-20,-0.5]
-    project.add_plot_filter( probe_point,[40.0,40.0,1],1 )
+    probe_point = [0,0,-0.01]
+    project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "(0.9,8000)" )
+
+########################################################################################
+#Tracer setting 
+########################################################################################
+    if not args.add_tracer==0:
+      tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=5 )
+       #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
+      project.add_action_set_to_timestepping(
+        exahype2.tracer.FiniteVolumesTracing(
+          tracer_particles,my_solver,
+          [17,18,19],range(5),-1,
+          #time_stepping_kernel="toolbox::particles::LinearInterp",
+          time_stepping_kernel="toolbox::particles::StaticPosition"#,
+          #observer_kernel="toolbox::particles::ObLinearInterp"
+        )
+      )
+      if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
+        tracer_seeds_generate(Type=args.add_tracer, a=0, b=(offset[0]+domain_size[0]), N_x=80,N_y=50,N_z=2)
+        project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
+
+      if path=="./": path1="."
+      else: path1=path
+      project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
+        particle_set=tracer_particles,
+        solver=my_solver,
+        filename=path1+"/zz"+args.tra_name,
+        number_of_entries_between_two_db_flushes=500,
+        output_precision=10,
+        position_delta_between_two_snapsots=1e-20,
+        data_delta_between_two_snapsots=0
+      ))
+      #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
+      #,,-1,"zz",1000))
 
 ########################################################################################
 #compile for the real executable

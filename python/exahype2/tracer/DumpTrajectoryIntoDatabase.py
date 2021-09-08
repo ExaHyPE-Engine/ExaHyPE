@@ -9,7 +9,7 @@ import jinja2
 
 
 class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
-  def __init__(self,particle_set,solver,filename,number_of_entries_between_two_db_flushes=65536,data_delta_between_two_snapsots=1e-8,position_delta_between_two_snapsots=1e-8):
+  def __init__(self, particle_set,solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, output_precision=8):
     """
      
     delta_between_two_snapshots: Float
@@ -27,6 +27,7 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "DATA_DELTA" ]               = data_delta_between_two_snapsots
     self.d[ "POSITION_DELTA" ]           = position_delta_between_two_snapsots
+    self.d[ "OUTPUT_PRECISION"]          = output_precision
     self.d[ "FILENAME" ]                 = filename
     self.d[ "SOLVER_NAME" ]              = solver._name
     self.d[ "SOLVER_INSTANCE" ]          = solver.get_name_of_global_instance()
@@ -71,6 +72,7 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
   def get_constructor_body(self):
     template = jinja2.Template("""
   _database.setOutputFileName( "{{FILENAME}}" );
+  _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
   _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}} );
   _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}} );
 """)

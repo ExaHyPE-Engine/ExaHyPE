@@ -1,16 +1,8 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
-from .PDETerms                                          import PDETerms
-from .FV                                                import FV
+from exahype2.solvers.fv.PDETerms    import PDETerms
 
-from .GenericRiemannFixedTimeStepSize                   import GenericRiemannFixedTimeStepSize
-from .GenericRusanovFixedTimeStepSize                   import GenericRusanovFixedTimeStepSize
-from .GenericRusanovFixedTimeStepSizeWithEnclaves       import GenericRusanovFixedTimeStepSizeWithEnclaves
-
-from .GenericRusanovAdaptiveTimeStepSize                import GenericRusanovAdaptiveTimeStepSize
-from .GenericRusanovAdaptiveTimeStepSizeWithEnclaves    import GenericRusanovAdaptiveTimeStepSizeWithEnclaves
-from .GenericRusanovOptimisticTimeStepSizeWithEnclaves  import GenericRusanovOptimisticTimeStepSizeWithEnclaves
-
-from .PointWiseClawPackFixedTimeStepSize                import PointWiseClawPackFixedTimeStepSize
-from .PointWiseClawPackAdaptiveTimeStepSize             import PointWiseClawPackAdaptiveTimeStepSize
+import exahype2.solvers.fv.rusanov
+import exahype2.solvers.fv.clawpack
+import exahype2.solvers.fv.riemann
 

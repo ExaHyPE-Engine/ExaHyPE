@@ -38,7 +38,7 @@ class ProjectPatchOntoFaces(ActionSet):
     self.d[ "OVERLAP" ]            = str(int(patch_overlap.dim[0]/2))
     self.d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + patch_overlap.name
     self.d[ "CELL_ACCESSOR" ]      = "fineGridCell" + patch.name
-    self.d[ "GUARD" ]                                        = guard
+    self.d[ "GUARD" ]              = guard
     if add_assertions:
       self.d[ "ASSERTION_PREFIX" ] = "false"
     else:
@@ -68,25 +68,13 @@ class ProjectPatchOntoFaces(ActionSet):
     return False
 
 
-  __Template_TouchCellFirstTime = """
-  auto serialisePatchIndex = [](tarch::la::Vector<Dimensions,int> overlapCell, int normal) {{
-    int base   = 1;
-    int result = 0;
-    for (int d=0; d<Dimensions; d++) {{
-      result += overlapCell(d) * base;
-      if (d==normal) {{
-        base *= {OVERLAP}*2;
-      }}
-      else {{
-        base *= {DOFS_PER_AXIS};
-      }}
-    }}
-    return result;
-  }};
-  
+  __Template_TouchCellLastTime_Preamble = """
   if ( {GUARD} ) {{
     logTraceIn( "touchCellLastTime(...)---ProjectPatchOntoFaces" );
-  
+"""
+
+
+  __Template_TouchCellLastTime_Core = """
     for(int d=0; d<Dimensions; d++) {{
       /**
        * d-loop over all dimensions except d. The vector k's entry d is set
@@ -101,7 +89,7 @@ class ProjectPatchOntoFaces(ActionSet):
           overlapCell(d) = i+{OVERLAP};
           
           int patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
-          int overlapCellSerialised = serialisePatchIndex(overlapCell,d);
+          int overlapCellSerialised = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{DOFS_PER_AXIS},{OVERLAP},d);
           for (int j=0; j<{UNKNOWNS}; j++) {{
             assertion7( 
               {ASSERTION_PREFIX}
@@ -117,7 +105,7 @@ class ProjectPatchOntoFaces(ActionSet):
           overlapCell(d) = i;
           
           patchCellSerialised   = peano4::utils::dLinearised(patchCell,{DOFS_PER_AXIS});
-          overlapCellSerialised = serialisePatchIndex(overlapCell,d);
+          overlapCellSerialised = toolbox::blockstructured::serialisePatchIndexInOverlap(overlapCell,{DOFS_PER_AXIS},{OVERLAP},d);
           for (int j=0; j<{UNKNOWNS}; j++) {{
             assertion7( 
               {ASSERTION_PREFIX}
@@ -131,6 +119,10 @@ class ProjectPatchOntoFaces(ActionSet):
         }}
       }}
     }}
+"""
+
+
+  __Template_TouchCellLastTime_Epilogue = """
     logTraceOut( "touchCellLastTime(...)---ProjectPatchOntoFaces" );
   }}
   else {{
@@ -143,7 +135,9 @@ class ProjectPatchOntoFaces(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
-      result = self.__Template_TouchCellFirstTime.format(**self.d)
+      result  = self.__Template_TouchCellLastTime_Preamble.format(**self.d)
+      result += self.__Template_TouchCellLastTime_Core.format(**self.d)
+      result += self.__Template_TouchCellLastTime_Epilogue.format(**self.d)
       pass 
     return result
 
@@ -155,4 +149,5 @@ class ProjectPatchOntoFaces(ActionSet):
   def get_includes(self):
     return """
 #include "peano4/utils/Loop.h"
+#include "toolbox/blockstructured/Enumeration.h"
 """ + self.additional_includes

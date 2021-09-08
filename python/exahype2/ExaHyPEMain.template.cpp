@@ -124,11 +124,11 @@ bool selectNextAlgorithmicStep() {{
   else if (not gridConstructed) {{
     // Grid construction termination criterion
     if (
-      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinMeshSize()
+      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinAdmissibleMeshSize()
       and
       repositories::loadBalancer.getGlobalNumberOfTrees()<=globalNumberOfTrees
     ) {{
-      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << repositories::getMinMeshSize() << " reached." );
+      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << repositories::getMinAdmissibleMeshSize() << " with mesh size of " << tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) << " reached." );
       gridConstructed = true;
       addGridSweepWithoutGridRefinementNext = false;
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
@@ -241,6 +241,7 @@ void step() {{
     case repositories::StepRepository::Steps::CreateGridButPostponeRefinement:
       {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid-but-postpone-refinement" );
+
         repositories::startGridConstructionStep();
 
         observers::CreateGridButPostponeRefinement  observer;
@@ -254,6 +255,7 @@ void step() {{
     case repositories::StepRepository::Steps::CreateGrid:
       {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
+
         repositories::startGridConstructionStep();
         
         observers::CreateGrid  observer;
@@ -270,6 +272,11 @@ void step() {{
       break;
     case repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing:
       {{
+    	if ( creepingNumberOfLocalCells < ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() - 1 ) {{
+          logInfo( "step()", "it seems the grid has just refined before we switched to the phase where we make the load balancing converge. Wait for a few iterations more to give load balancing chance to catch up" );
+          creepingNumberOfLocalCells = ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree()+tarch::multicore::Core::getInstance().getNumberOfThreads()*3;
+    	}}
+
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid-and-converge-load-balancing" );
         // The smaller here corresponds to the -1 below
         if (
@@ -285,7 +292,7 @@ void step() {{
           and
           repositories::loadBalancer.isEnabled(false)
         ) {{
-          logInfo( "step()", "grid initialisation on this rank seems to be stable, disable load balancing temporarily" );
+          logInfo( "step()", "grid construction and decomposition on this rank seem to be stable as we have around " << creepingNumberOfLocalCells << " local cells in the heaviest tree. Disable load balancing temporarily" );
           repositories::loadBalancer.enable(false);
         }}
 
@@ -300,8 +307,8 @@ void step() {{
 
         if (
           ::toolbox::loadbalancing::getWeightOfHeaviestLocalSpacetree() <= creepingNumberOfLocalCells
-	  and
-	  not repositories::loadBalancer.hasSplitRecently()
+          and
+          not repositories::loadBalancer.hasSplitRecently()
           and
           repositories::loadBalancer.isEnabled(false)
         ) {{
@@ -359,12 +366,16 @@ void step() {{
         const double maxTimeStamp    = repositories::getMaxTimeStamp();
         const double minTimeStepSize = repositories::getMinTimeStepSize();
         const double maxTimeStepSize = repositories::getMaxTimeStepSize();
+        const double minMeshSize     = repositories::getMinMeshSize();
+        const double maxMeshSize     = repositories::getMaxMeshSize();
 
         if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
           logInfo( "step()", "t_{{min}}  = " << minTimeStamp );
           logInfo( "step()", "t_{{max}}  = " << maxTimeStamp );
           logInfo( "step()", "dt_{{min}} = " << minTimeStepSize );
           logInfo( "step()", "dt_{{max}} = " << maxTimeStepSize );
+          logInfo( "step()", "h_{{min}}  = " << minMeshSize );
+          logInfo( "step()", "h_{{max}}  = " << maxMeshSize );
         }}
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
         
