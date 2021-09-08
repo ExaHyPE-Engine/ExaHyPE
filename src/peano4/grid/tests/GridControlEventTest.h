@@ -76,6 +76,13 @@ class peano4::grid::tests::GridControlEventTest: public tarch::tests::TestCase {
      *
      */
     void testMerge2();
+
+    /**
+     * Test for this bug:
+     *
+peano4::grid::merge(...)  merge two adjacent events ((refinementControl=Refine,offset=[0.65,0.65],width=[0.366667,0.366667],h=[0.111111,0.111111]) and (refinementControl=Refine,offset=[0.883333,0.883333],width=[0.122222,0.122222],h=[0.037037,0.037037])) into (refinementControl=Refine,offset=[0.65,0.65],width=[0.366667,0.366667],h=[0.111111,0.111111])
+     */
+    void testMerge3();
   public:
     GridControlEventTest();
     void run() override;
