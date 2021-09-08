@@ -36,7 +36,11 @@ class AMROnPatch(AbstractFVActionSet):
   TemplateAMR = """  
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
-  if (tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
+  if ( 
+    not marker.isRefined() 
+    and
+    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
+  ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } 
   else if (
