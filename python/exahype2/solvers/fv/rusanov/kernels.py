@@ -7,7 +7,7 @@ import jinja2
 
 def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size ):
   return """
-  cellTimeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() * """ + str(time_step_size) + """;
+  cellTimeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleVolumeH * """ + str(time_step_size) + """;
   cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 """
 
@@ -97,7 +97,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
         );
   #endif
 
-  _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * _minH / _maxEigenvalue / 3.0;
+  _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * getMinVolumeSize() / _maxEigenvalue / 3.0;
   if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
   }

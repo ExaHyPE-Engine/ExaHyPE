@@ -65,6 +65,28 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     static std::string toString(SolverState);
 
+    static constexpr int  NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
+
+    /**
+     * Maximum mesh size that this solver wants/is allowed to support. Peano 4
+     * has to ensure that none of its ExaHyPE 2 solvers has to work on a mesh
+     * which is coarser than its MaxH value.
+     */
+    static constexpr double MaxAdmissiblePatchH  = {{MAX_VOLUME_H}} * NumberOfFiniteVolumesPerAxisPerPatch;
+    static constexpr double MaxAdmissibleVolumeH = {{MAX_VOLUME_H}};
+
+    /**
+     * Minimum mesh size that this solver wants to support. Peano 4 tries
+     * to ensure that none of its ExaHyPE 2 solvers has to work on a mesh
+     * which is finer than its MinH value. However, if there are multiple
+     * solvers, the interplay of these solvers might imply that some solvers
+     * work with fine mesh resolutions even though they have specified a
+     * coarser MinH.
+     */
+    static constexpr double MinAdmissiblePatchH  = {{MIN_VOLUME_H}} * NumberOfFiniteVolumesPerAxisPerPatch;
+    static constexpr double MinAdmissibleVolumeH = {{MIN_VOLUME_H}};
+
+
     {{CLASSNAME}}();
 
     /**
@@ -181,15 +203,27 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     void finishPlottingStep() override;
 
 
-    double getMaxMeshSize() const override;
-    double getMinMeshSize() const override;
+    /**
+     * @return Actually observed sizes, not the admissible quantities
+     */
+    double getMaxPatchSize() const;
+    double getMinPatchSize() const;
+    double getMaxVolumeSize() const;
+    double getMinVolumeSize() const;
 
     /**
+     * Within the FV context, mesh is an alias for patch.
+     */
+    double getMaxMeshSize() const override final;
+    double getMinMeshSize() const override final;
+
+    /**
+     * Update the global solver state, i.e. inform the solver about some
+     * updated global quantities.
+     *
      * @see setTimeStepSize(double)
      */
-    void setTimeStepSizeAndTimeStamp(double timeStepSize, double timeStamp);
-
-    void setTimeStepSize(double timeStepSize);
+    void update(double timeStepSize, double timeStamp, double patchSize);
 
     SolverState  getSolverState() const;
 
@@ -207,18 +241,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   protected:
     static tarch::logging::Log  _log;
 
-    const int  _NumberOfFiniteVolumesPerAxisPerPatch;
+    SolverState  _solverState;
 
     double     _minTimeStamp;
     double     _maxTimeStamp;
 
-    SolverState  _solverState;
+    double     _minVolumeH;
+    double     _maxVolumeH;
 
-    double     _maxH;
-    double     _minH;
-
-    double     _maxTimeStepSize;
     double     _minTimeStepSize;
+    double     _maxTimeStepSize;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 

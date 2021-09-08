@@ -85,7 +85,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
     
-    repositories::{{SOLVER_INSTANCE}}.setTimeStepSizeAndTimeStamp(cellTimeStepSize, cellTimeStamp + usedTimeStepSize);
+    repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
   """ )
 
 
@@ -148,7 +148,7 @@ class SingleSweep( FV ):
   """
 
 
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
@@ -176,7 +176,7 @@ class SingleSweep( FV ):
     
     self._constructor_implementation = ""
     
-    super(SingleSweep, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties)
+    super(SingleSweep, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
 
     self._solver_template_file_class_name     = "SingleSweep"
 

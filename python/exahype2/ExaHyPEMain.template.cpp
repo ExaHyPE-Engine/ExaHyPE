@@ -124,11 +124,11 @@ bool selectNextAlgorithmicStep() {{
   else if (not gridConstructed) {{
     // Grid construction termination criterion
     if (
-      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinMeshSize()
+      tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) <= repositories::getMinAdmissibleMeshSize()
       and
       repositories::loadBalancer.getGlobalNumberOfTrees()<=globalNumberOfTrees
     ) {{
-      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << repositories::getMinMeshSize() << " reached." );
+      logInfo( "selectNextAlgorithmicStep()", "finest mesh resolution of " << repositories::getMinAdmissibleMeshSize() << " with mesh size of " << tarch::la::max( peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getMinH() ) << " reached." );
       gridConstructed = true;
       addGridSweepWithoutGridRefinementNext = false;
       globalNumberOfTrees = repositories::loadBalancer.getGlobalNumberOfTrees();
@@ -241,6 +241,7 @@ void step() {{
     case repositories::StepRepository::Steps::CreateGridButPostponeRefinement:
       {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid-but-postpone-refinement" );
+
         repositories::startGridConstructionStep();
 
         observers::CreateGridButPostponeRefinement  observer;
@@ -254,6 +255,7 @@ void step() {{
     case repositories::StepRepository::Steps::CreateGrid:
       {{
         tarch::logging::LogFilter::getInstance().switchProgramPhase( "create-grid" );
+
         repositories::startGridConstructionStep();
         
         observers::CreateGrid  observer;
@@ -364,12 +366,16 @@ void step() {{
         const double maxTimeStamp    = repositories::getMaxTimeStamp();
         const double minTimeStepSize = repositories::getMinTimeStepSize();
         const double maxTimeStepSize = repositories::getMaxTimeStepSize();
+        const double minMeshSize     = repositories::getMinMeshSize();
+        const double maxMeshSize     = repositories::getMaxMeshSize();
 
         if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
           logInfo( "step()", "t_{{min}}  = " << minTimeStamp );
           logInfo( "step()", "t_{{max}}  = " << maxTimeStamp );
           logInfo( "step()", "dt_{{min}} = " << minTimeStepSize );
           logInfo( "step()", "dt_{{max}} = " << maxTimeStepSize );
+          logInfo( "step()", "h_{{min}}  = " << minMeshSize );
+          logInfo( "step()", "h_{{max}}  = " << maxMeshSize );
         }}
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
         

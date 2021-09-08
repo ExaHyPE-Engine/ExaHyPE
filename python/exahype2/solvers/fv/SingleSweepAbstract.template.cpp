@@ -14,13 +14,45 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::
 std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}::PeriodicBC = {{NAMESPACE | join("::")}}::PeriodicBC;
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
-  return _minH;
+{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
+  _solverState(SolverState::GridConstruction),
+  _minTimeStamp(0.0),
+  _maxTimeStamp(0.0),
+  _minVolumeH(0.0),
+  _maxVolumeH(0.0),
+  _minTimeStepSize(0.0),
+  _maxTimeStepSize(0.0) {
+  {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
-  return _maxH;
+  return getMaxPatchSize();
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
+  return getMinPatchSize();
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
+  return _minVolumeH * NumberOfFiniteVolumesPerAxisPerPatch;
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize() const {
+  return _maxVolumeH * NumberOfFiniteVolumesPerAxisPerPatch;
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinVolumeSize() const {
+  return _minVolumeH;
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxVolumeSize() const {
+  return _maxVolumeH;
 }
 
 
@@ -34,7 +66,17 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp() const {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStepSizeAndTimeStamp(double timeStepSize, double timeStamp) {
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
+  return _minTimeStepSize;
+}
+
+
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
+  return _maxTimeStepSize;
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double patchSize) {
   tarch::multicore::Lock lock(_semaphore);
 
   if ( tarch::la::greater(timeStepSize,0.0) ) {
@@ -50,28 +92,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStepSizeAndTimeStamp(doub
   _maxTimeStamp = std::max(timeStamp,_maxTimeStamp);
   _minTimeStamp = std::min(timeStamp,_minTimeStamp);
   assertion2(_minTimeStamp<=_maxTimeStamp, _minTimeStamp, _maxTimeStamp );
-}
 
-
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::setTimeStepSize(double timeStepSize) {
-  if ( tarch::la::greater(timeStepSize,0.0) ) {
-    tarch::multicore::Lock lock(_semaphore);
-    assertion1(timeStepSize<std::numeric_limits<double>::max()/10.0,timeStepSize);
-    assertion1(timeStepSize>=0.0,timeStepSize);
-    _minTimeStepSize = std::min(timeStepSize,_minTimeStepSize);
-    _maxTimeStepSize = std::max(timeStepSize,_maxTimeStepSize);
-    assertion2(_minTimeStepSize<=_maxTimeStepSize, _minTimeStepSize, _maxTimeStepSize );
-  }
-}
-
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStepSize() const {
-  return _minTimeStepSize;
-}
-
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
-  return _maxTimeStepSize;
+  assertion1(patchSize<std::numeric_limits<double>::max()/10.0,patchSize);
+  assertion1(patchSize>0.0,patchSize);
+  _maxVolumeH = std::max(_maxVolumeH,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
+  _minVolumeH = std::min(_minVolumeH,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
 }
 
 
@@ -90,7 +115,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::smallerEquals(_maxH,_NumberOfFiniteVolumesPerAxisPerPatch*tarch::la::max(volumeH)) ) {
+  if ( tarch::la::greater(volumeH,MaxVolumeH ) {
     result = ::exahype2::RefinementCommand::Refine;
   }
 
@@ -128,21 +153,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
 {% endif %}
 
 
-
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
-  _NumberOfFiniteVolumesPerAxisPerPatch( {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-  _minTimeStamp(0.0),
-  _maxTimeStamp(0.0),
-  _solverState(SolverState::GridConstruction),
-  _maxH({{MAX_H}}),
-  _minH({{MIN_H}}),
-  _minTimeStepSize(0.0),
-  _maxTimeStepSize(0.0) {
-  {{CONSTRUCTOR_IMPLEMENTATION}}
-}
-
-
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startGridConstructionStep() {
+  assertion( _solverState == SolverState::GridConstruction );
 }
 
 
@@ -170,11 +182,67 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   _maxTimeStamp    = std::numeric_limits<double>::min();
   _minTimeStepSize = std::numeric_limits<double>::max();
   _maxTimeStepSize = std::numeric_limits<double>::min();
+  _maxVolumeH      = 0.0;
+  _minVolumeH      = std::numeric_limits<double>::max();
   {{START_TIME_STEP_IMPLEMENTATION}}
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
+  #ifdef Parallel
+  double newMinTimeStamp = _minTimeStamp;
+  double newMaxTimeStamp = _maxTimeStamp;
+  double newMinVolumeH   = _minVolumeH;
+  double newMaxVolumeH   = _maxVolumeH;
+  double newMinTimeStepSize = _minTimeStepSize;
+  double newMaxTimeStepSize = _maxTimeStepSize;
+
+  tarch::mpi::Rank::getInstance().allReduce(
+      &_minTimeStamp,
+      &newMinTimeStamp,
+      1, MPI_DOUBLE,
+      MPI_MIN,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+  tarch::mpi::Rank::getInstance().allReduce(
+      &_maxTimeStamp,
+      &newMaxTimeStamp,
+      1, MPI_DOUBLE,
+      MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+
+  tarch::mpi::Rank::getInstance().allReduce(
+      &_minVolumeH,
+      &newMinVolumeH,
+      1, MPI_DOUBLE,
+      MPI_MIN,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+  tarch::mpi::Rank::getInstance().allReduce(
+      &_maxVolumeH,
+      &newMaxVolumeH,
+      1, MPI_DOUBLE,
+      MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+
+  tarch::mpi::Rank::getInstance().allReduce(
+      &_minTimeStepSize,
+      &newMinTimeStepSize,
+      1, MPI_DOUBLE,
+      MPI_MIN,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+  tarch::mpi::Rank::getInstance().allReduce(
+      &_maxTimeStepSize,
+      &newMaxTimeStepSize,
+      1, MPI_DOUBLE,
+      MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+  #endif
+
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 }
 

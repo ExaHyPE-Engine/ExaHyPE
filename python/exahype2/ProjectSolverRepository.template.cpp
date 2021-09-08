@@ -69,6 +69,24 @@ double getMaxMeshSize() {
 }
 
 
+double getMaxAdmissibleMeshSize() {
+  double result = 0.0;
+  {% for item in SOLVERS -%}
+    result = std::max( result, {{ item[1] }}.MaxAdmissiblePatchH );
+  {%- endfor %}
+  return result;
+}
+
+
+double getMinAdmissibleMeshSize() {
+  double result = 0.0;
+  {% for item in SOLVERS -%}
+    result = std::max( result, {{ item[1] }}.MinAdmissiblePatchH );
+  {%- endfor %}
+  return result;
+}
+
+
 double getMinTimeStepSize() {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}

@@ -54,7 +54,7 @@ class FV(object):
   """
   
       
-  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_h, max_h, plot_grid_properties):
+  def __init__(self, name, patch_size, overlap, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties):
     """
   name: string
      A unique name for the solver. This one will be used for all generated 
@@ -79,9 +79,11 @@ class FV(object):
      work with AoS. But the solver has to be able to distinguish them, as 
      only the unknowns are subject to a hyperbolic formulation.
      
-  min_h: double
-  
-  max_h: double
+  min_volume_h: double
+     This size refers to the individual Finite Volume.
+    
+  max_volume_h: double
+     This size refers to the individual Finite Volume.
   
   plot_grid_properties: Boolean
      Clarifies whether a dump of the data should be enriched with grid info
@@ -90,8 +92,8 @@ class FV(object):
     """
     self._name              = name
     
-    self._min_h                = min_h
-    self._max_h                = max_h 
+    self._min_volume_h         = min_volume_h
+    self._max_volume_h         = max_volume_h 
     self._plot_grid_properties = plot_grid_properties
 
     self._patch_size           = patch_size  
@@ -100,8 +102,8 @@ class FV(object):
 
     self.solver_constants_ = ""
     
-    if min_h>max_h:
-       print( "Error: min_h (" + str(min_h) + ") is bigger than max_h (" + str(max_h) + ")" )
+    if min_volume_h>max_volume_h:
+       print( "Error: min_volume_h (" + str(min_volume_h) + ") is bigger than max_volume_h (" + str(max_volume_h) + ")" )
 
     self._reconstructed_array_memory_location=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
 
@@ -120,8 +122,8 @@ Type:                   """ + self.__class__.__name__ + """
 Patch size:             """ + str( self._patch_size ) + """  
 Unknowns:               """ + str( self._unknowns ) + """
 Auxiliary variables:    """ + str( self._auxiliary_variables ) + """
-h_min:                  """ + str( self._min_h ) + """
-h_max:                  """ + str( self._max_h ) + """
+h_volume_min:           """ + str( self._min_volume_h ) + """
+h_volume_max:           """ + str( self._max_volume_h ) + """
 """
     return result
 
@@ -526,10 +528,10 @@ h_max:                  """ + str( self._max_h ) + """
     d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
 
-    if (self._min_h > self._max_h ):
+    if (self._min_volume_h > self._max_volume_h ):
       raise Exception( "min/max h are inconsistent" )
-    d[ "MAX_H"] = self._max_h
-    d[ "MIN_H"] = self._min_h
+    d[ "MAX_VOLUME_H"] = self._max_volume_h
+    d[ "MIN_VOLUME_H"] = self._min_volume_h
 
     d[ "INCLUDES"] = self.get_user_includes()
 
