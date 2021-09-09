@@ -43,7 +43,7 @@ class AMROnPatch(AbstractFVActionSet):
   ) {
     refinementCriterion = ::exahype2::RefinementCommand::Refine;
   } 
-  else if (
+  else if ( 
     {{PREDICATE}}
   ) { 
     int index = 0;
@@ -61,6 +61,26 @@ class AMROnPatch(AbstractFVActionSet):
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
     else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
+      refinementCriterion = ::exahype2::RefinementCommand::Keep;
+    } 
+  }
+  else if ( not marker.isRefined() and tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)  ) { 
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+        refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+          ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
+          ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+          0.0
+        );
+        index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+     
+    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
+      refinementCriterion = ::exahype2::RefinementCommand::Keep;
+    } 
+    else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen ) {
+      logDebug( "touchCellFirstTime(...)", "drop coarsen instructions, as we are in initial grid setup phase" );
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
   }

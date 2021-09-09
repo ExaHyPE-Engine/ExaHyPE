@@ -17,6 +17,20 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
+  // This is an example how to implement a priori refinement. If
+  // you only have this thing, then you work with static AMR, as
+  // you never invoke erase.
+  if ( tarch::la::equals(t,0.0) ) {
+    tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+    bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
+    if (isInTheCentre)
+      result = ::exahype2::RefinementCommand::Refine;
+  }
+
+  // This is an example how to implement dynamic AMR, as the
+  // AMR instruction depends on the actual solution (which is
+  // not directly available throughout the grid construction).
+  // If you remove this part, you get static AMR.
   if ( tarch::la::greater(t,0.0) ) {
     if ( Q[4]>0.4 ) {
       result = ::exahype2::RefinementCommand::Refine;
@@ -31,7 +45,7 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 
 void examples::exahype2::euler::Euler::initialCondition(
   double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructed
 ) {
@@ -44,7 +58,7 @@ void examples::exahype2::euler::Euler::initialCondition(
   #endif
 
   // initial conditions
-  bool isInTheCentre = ( tarch::la::norm2( volumeX-circleCentre ) < 0.05 );
+  bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
   Q[0] = 0.1;  // rho
   Q[1] = 0;    // velocities
   Q[2] = 0;
