@@ -91,7 +91,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=0.05
+            time_step_relaxation=0.1
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__
@@ -167,16 +167,16 @@ if __name__ == "__main__":
 ########################################################################################
     is_aderdg = False
     solver_name = "SSInfall"
-    try:
-      if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
-        is_aderdg = True
-        order = 3
-        unknowns = 59
-        time_step_size = 0.001
-    except Exception as e:
-        msg = "Warning: ADER-DG no supported on this machine"
-        print(msg)
-        userwarnings.append((msg,e))
+    #try:
+    #  if SuperClass==exahype2.solvers.aderdg.NonFusedGenericRusanovFixedTimeStepSize:
+    #    is_aderdg = True
+    #    order = 3
+    #    unknowns = 59
+    #    time_step_size = 0.001
+    #except Exception as e:
+    #    msg = "Warning: ADER-DG no supported on this machine"
+    #    print(msg)
+    #    userwarnings.append((msg,e))
 
     if is_aderdg:
       solver_name    = "ADERDG" + solver_name
