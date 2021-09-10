@@ -88,8 +88,8 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
   #ifdef Parallel
   double newMaxEigenvalue = _maxEigenvalue;
   tarch::mpi::Rank::getInstance().allReduce(
-        &_maxEigenvalue,
         &newMaxEigenvalue,
+        &_maxEigenvalue,
         1,
         MPI_DOUBLE,
         MPI_MAX, 
@@ -97,14 +97,26 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
         );
   #endif
 
-  _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * getMinVolumeSize() / _maxEigenvalue / 3.0;
-  if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
+  if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
+    _admissibleTimeStepSize = _admissibleTimeStepSize;
   }
-  if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "degenerated time step size of " + std::to_string(_admissibleTimeStepSize) );
+  else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
+    logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
+    _admissibleTimeStepSize = 0.0;
+    _minTimeStamp           = std::numeric_limits<double>::max();
+    _maxTimeStamp           = std::numeric_limits<double>::max();
   }
-  
+  else {
+    _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * getMinVolumeSize() / _maxEigenvalue / 3.0;
+    if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
+      ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
+    }
+    if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
+      logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug" );
+    }
+  }
+   
   _maxTimeStepSize  = _admissibleTimeStepSize; // for plotting reasons
   _minTimeStepSize  = std::min( _minTimeStepSize, _admissibleTimeStepSize );
 """

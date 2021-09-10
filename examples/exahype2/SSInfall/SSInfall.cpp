@@ -240,10 +240,9 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   double m=(rho-1)*pow(size,3); //notice here we use overdensity
 
   for (int i=0;i<sample_number;i++){
-    if (r_coor<r_s[i]){
-      m_tot[i]+=m;
-      //std::cout << m_tot << std::endl;
-    }
+    if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;}
+    else if ((r_coor-size/2)>r_s[i]) {m_tot[i]+=0;}
+    else {m_tot[i]+=m*(r_s[i]-r_coor+size/2)/size;}
   }
 }
 

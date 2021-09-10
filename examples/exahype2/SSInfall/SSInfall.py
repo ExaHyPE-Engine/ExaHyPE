@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     #parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive"], required="True",  help="Pick solver type" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
@@ -55,6 +55,10 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep
     if args.implementation=="fv-global-adaptive":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep
+    if args.implementation=="fv-global-fixed-enclave":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking
+    if args.implementation=="fv-global-adaptive-enclave":
+       SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 
     class SSInfallSolver( SuperClass ):
       def __init__(self, name, patch_size, min_volume_h, max_volume_h ):
@@ -71,7 +75,7 @@ if __name__ == "__main__":
 """
         #if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
         #   SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
-        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep or SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
@@ -279,7 +283,7 @@ if __name__ == "__main__":
     probe_point = [0,0,-0.01]
     project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "(0.9,8000)" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision" )
 
 ########################################################################################
 #Tracer setting 

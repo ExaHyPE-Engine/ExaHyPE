@@ -40,7 +40,21 @@ namespace exahype2 {
       int    auxiliaryVariables,
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize,
-      const std::string& location = ""
+      const std::string& location = "",
+      bool   triggerNonCriticalAssertion = true
+    );
+
+    /**
+     * Plot patch.
+     *
+     * Usually used for debugging
+     */
+    std::string plotPatch(
+      const double* __restrict__ Q,
+      int    unknowns,
+      int    auxiliaryVariables,
+      int    numberOfVolumesPerAxisInPatch,
+      int    haloSize
     );
 
     /**
