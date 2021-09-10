@@ -39,14 +39,57 @@ std::string exahype2::fv::plotVolume(
 }
 
 
+std::string exahype2::fv::plotPatch(
+  const double* __restrict__ Q,
+  int    unknowns,
+  int    auxiliaryVariables,
+  int    numberOfVolumesPerAxisInPatch,
+  int    haloSize
+) {
+  const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
+
+  std::ostringstream result;
+
+  dfor (k,PatchSize) {
+    int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
+
+    // It is a diagonal entry if this counter is bigger than 1. If it equals
+    // 0, it is interior. If it equals 1, then this is a face-connected halo
+    // entry.
+    int isDiagonal = tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1);
+
+    result << "(";
+    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      const int entry = index+i;
+
+      if (i==0)
+        result << "d[" << entry << "]=";
+      else
+        result << ",d[" << entry << "]=";
+
+      if (haloSize==0 or isDiagonal==0)
+        result << Q[entry];
+      else
+        result << "x";
+    }
+    result << ")";
+  }
+
+  return result.str();
+}
+
+
+
 void exahype2::fv::validatePatch (
   const double *__restrict__ Q, int unknowns,
   int auxiliaryVariables,
   int numberOfVolumesPerAxisInPatch, int haloSize,
-  const std::string &location
+  const std::string &location,
+  bool   triggerNonCriticalAssertion
 ) {
-
   #if PeanoDebug>1 && !defined(OpenMPGPUOffloading)
+  static tarch::logging::Log _log( "exahype2::fv" );
+  logTraceInWith5Arguments( "validatePatch(...)", unknowns, auxiliaryVariables, numberOfVolumesPerAxisInPatch, haloSize, location );
   const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
   dfor (k,PatchSize) {
     int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
@@ -57,17 +100,30 @@ void exahype2::fv::validatePatch (
     int isDiagonal = tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1);
 
     for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+      const int entry = index+i;
       if (haloSize==0 or isDiagonal==0) {
-        nonCriticalAssertion9(
-          std::isfinite(Q[index+i]),
-          unknowns,
-          auxiliaryVariables,
-          isDiagonal, haloSize,
-          numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
-
+        if (triggerNonCriticalAssertion) {
+          nonCriticalAssertion9(
+            Q[entry]==Q[entry] and std::isfinite(Q[entry]),
+            unknowns,
+            auxiliaryVariables,
+            isDiagonal, haloSize,
+            numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
+        }
+        else {
+          assertion10(
+            Q[entry]==Q[entry] and std::isfinite(Q[entry]),
+            unknowns,
+            auxiliaryVariables,
+            isDiagonal, haloSize,
+            numberOfVolumesPerAxisInPatch, haloSize, k, i, location,
+            plotPatch(Q,unknowns,auxiliaryVariables,numberOfVolumesPerAxisInPatch,haloSize)
+          );
+        }
       }
     }
   }
+  logTraceOut( "validatePatch(...)" );
   #endif
 }
 

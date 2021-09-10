@@ -43,6 +43,11 @@ void exahype2::triggerNonCriticalAssertion( std::string file, int line, std::str
 
   tarch::multicore::Lock lock( _assertionSemaphore );
 
+  if (rankWhichHasSetNonCriticalAssertion>=0 and useNonCriticalAssertions) {
+    logError( "triggerNonCriticalAssertion(...)", "noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
+    logError( "triggerNonCriticalAssertion(...)", parameterValuePairs );
+    logError( "triggerNonCriticalAssertion(...)", "there has been a non-critical assertion before, so node should already be in shutdown mode" );
+  }
   if (rankWhichHasSetNonCriticalAssertion<0 and useNonCriticalAssertions) {
     logError( "triggerNonCriticalAssertion(...)", "noncritical assertion " << expression << " failed in (" << file << ":" << line << ")" );
     logError( "triggerNonCriticalAssertion(...)", parameterValuePairs );

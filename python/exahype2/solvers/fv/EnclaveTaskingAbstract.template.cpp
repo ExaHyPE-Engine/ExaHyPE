@@ -219,45 +219,45 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   double newMaxTimeStepSize = _maxTimeStepSize;
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &_minTimeStamp,
       &newMinTimeStamp,
+      &_minTimeStamp,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   tarch::mpi::Rank::getInstance().allReduce(
-      &_maxTimeStamp,
       &newMaxTimeStamp,
+      &_maxTimeStamp,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &_minVolumeH,
       &newMinVolumeH,
+      &_minVolumeH,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   tarch::mpi::Rank::getInstance().allReduce(
-      &_maxVolumeH,
       &newMaxVolumeH,
+      &_maxVolumeH,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &_minTimeStepSize,
       &newMinTimeStepSize,
+      &_minTimeStepSize,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   tarch::mpi::Rank::getInstance().allReduce(
-      &_maxTimeStepSize,
       &newMaxTimeStepSize,
+      &_maxTimeStepSize,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }

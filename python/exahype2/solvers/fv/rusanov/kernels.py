@@ -88,8 +88,8 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
   #ifdef Parallel
   double newMaxEigenvalue = _maxEigenvalue;
   tarch::mpi::Rank::getInstance().allReduce(
-        &_maxEigenvalue,
         &newMaxEigenvalue,
+        &_maxEigenvalue,
         1,
         MPI_DOUBLE,
         MPI_MAX, 
