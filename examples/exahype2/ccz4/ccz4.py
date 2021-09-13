@@ -641,10 +641,10 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-8,-8,-0.5]
-    project.add_plot_filter( probe_point,[16.0,16.0,0.5],1 )
+    probe_point = [-0,-0,-0.0]
+    project.add_plot_filter( probe_point,[20.0,20.0,0.1],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "(0.9,8000)" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision" )
 
 ########################################################################################
 #Tracer setting 
@@ -663,7 +663,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=-0.4, b=0.4, N_x=50,N_y=50,N_z=2)
+        tracer_seeds_generate(Type=args.add_tracer, a=-15, b=15, N_x=1000,N_y=1,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"Line.dat" #slide.dat #volume.dat
       if args.add_tracer==4:  
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesAlongCartesianMesh( particle_set=tracer_particles, h=args.max_h/2.0, noise=True ))
@@ -673,7 +673,7 @@ if __name__ == "__main__":
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=abs(offset[0])*0.8)) #"Gauss_Legendre_quadrature.dat" #"t-design.dat" 
       
       if path=="./": path1="."
-      else: path1=path
+      else: path1="/cosma5/data/durham/dc-zhan3/sbh-tracer"
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=my_solver,
