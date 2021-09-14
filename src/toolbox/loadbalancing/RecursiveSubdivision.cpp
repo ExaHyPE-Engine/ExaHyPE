@@ -250,18 +250,18 @@ bool toolbox::loadbalancing::RecursiveSubdivision::doesRankViolateBalancingCondi
     localCells += peano4::parallel::SpacetreeSet::getInstance().getGridStatistics(p).getNumberOfLocalUnrefinedCells();
   }
 
-  const double threshold = static_cast<double>(_globalNumberOfInnerUnrefinedCells)
+  const double optimalCellCount = static_cast<double>(_globalNumberOfInnerUnrefinedCells)
                          / tarch::mpi::Rank::getInstance().getNumberOfRanks();
 
-  const double illbalancing   = (static_cast<double>(localCells)-threshold) / threshold;
+  const double illbalancing   = (static_cast<double>(localCells)-optimalCellCount) / optimalCellCount;
   const double balancingRatio = _configuration->getWorstCaseBalancingRatio(Configuration::Phase::InterRankBalancing);
   bool result = (localCells < _globalNumberOfInnerUnrefinedCells) and (illbalancing > 1.0 - balancingRatio);
 
   if (result) {
-    logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", rank-local threshold=" << threshold << ")" );
+    logInfo( "doesRankViolateBalancingCondition()", "rank does violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
   }
   else {
-    logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", rank-local threshold=" << threshold << ")" );
+    logDebug( "doesRankViolateBalancingCondition()", "rank does not violate balancing as we have ill-balancing of " << illbalancing << " (global cells=" << _globalNumberOfInnerUnrefinedCells << ", local cells=" << localCells << ", optimal cell count=" << optimalCellCount << ")" );
   }
 
   return result;
