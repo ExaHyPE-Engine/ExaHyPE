@@ -31,6 +31,7 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
   // AMR instruction depends on the actual solution (which is
   // not directly available throughout the grid construction).
   // If you remove this part, you get static AMR.
+/*
   if ( tarch::la::greater(t,0.0) ) {
     if ( Q[4]>0.4 ) {
       result = ::exahype2::RefinementCommand::Refine;
@@ -39,6 +40,7 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
       result = ::exahype2::RefinementCommand::Coarsen;
     }
   }
+*/
 
   return result;
 }
@@ -172,6 +174,7 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
+  assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];

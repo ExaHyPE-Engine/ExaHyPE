@@ -24,6 +24,15 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
     const double usedTimeStepSize = cellTimeStepSize;
 
+    ::exahype2::fv::validatePatch(
+      reconstructedPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      1, // halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    ); // previous time step has to be valid
+  
     ::exahype2::fv::copyPatch(
       reconstructedPatch,
       targetPatch,
@@ -86,6 +95,15 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
     
     repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
+
+    ::exahype2::fv::validatePatch(
+      targetPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      0, // halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    ); // outcome has to be valid
   """ )
 
 

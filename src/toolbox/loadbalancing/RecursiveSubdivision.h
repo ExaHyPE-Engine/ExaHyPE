@@ -7,6 +7,9 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/mpi/mpi.h"
+
+#include "peano4/parallel/Node.h"
+
 #include <map>
 
 
@@ -113,17 +116,123 @@ namespace toolbox {
 class toolbox::loadbalancing::RecursiveSubdivision {
   public:
     /**
-     * @param targetBalancingRation Ratio which ill-balancing we accept. A ratio of
-     *   almost one means we do not accept any ill-balancing. The smaller the value,
-     *   the more relaxed we are.
-     * @param minTreeSize Only split up local tree if the local tree is bigger or
-     *   equal to minTreeSize.
+     * @see getStrategyStep()
      */
-    RecursiveSubdivision(double targetBalancingRation=0.9, int minTreeSize = 0, bool makeSplitDependentOnMemory=false );
+    enum class StrategyStep {
+      /**
+       * Required for the strategy.
+       */
+      Unspecified,
+      Wait,
+      SpreadEquallyOverAllRanks,
+      SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
+      SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
+      SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning,
+      SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning
+    };
+
+    /**
+     * Abstract interface to tweak the behaviour of the recursive subdivision.
+     *
+     * The idea is that the recursive subdivision internally makes decisions what it
+     * would do. These decisions then are tweaked/tailored via the configuration.
+     *
+     * My default implementations all are stateless, but you can always add a state
+     * to the configuration and thus make it alter its answers depending on where
+     * you are in your code.
+     */
+    class Configuration {
+      public:
+        enum class Phase {
+          /**
+           * Code has not yet spread out over all ranks but would like to do so
+           * now.
+           */
+          InitialInterRankDistribution,
+
+          /**
+           * Code has spread over all ranks, but it has not spread over all cores
+           * yet, i.e. there's around one tree per rank and that's it w.r.t. the
+           * global decomposition.
+           */
+          InitialIntraRankDistribution,
+
+          /**
+           * We have completed the first two phases and try to balance between the
+           * ranks now to meet the load balancing quality.
+           */
+          InterRankBalancing,
+
+          /**
+           * The code is satisfied with the load balancing quality between the
+           * ranks and now spawns more partitions per rank to increase the per-rank
+           * concurrency.
+           */
+          APosterioriBalancingPerRank
+        };
+
+        virtual ~Configuration() = default;
+
+        /**
+         * Use the operating system's memory queries to get the memory out and to
+         * veto too many local splits. Each split creates some overhead, so it can
+         * happen that we run out of memory.
+         */
+        virtual bool   makeSplitDependOnMemory(Phase phase) = 0;
+
+        /**
+         * Constraint on the number of trees per rank. The number is always
+         * constrained by peano4::parallel::Node::MaxSpacetreesPerRank, but you
+         * can cut it down further.
+         *
+         * You can use an arbitary large value if you don't care bout a maximum
+         * number of subpartitions per rank. I however do recommend that you
+         * return peano4::parallel::Node::MaxSpacetreesPerRank.
+         */
+        virtual int    getMaxLocalTreesPerRank(Phase phase) = 0;
+
+        /**
+         * Control when to balance between ranks.
+         */
+        virtual double getWorstCaseBalancingRatio(Phase phase) = 0;
+
+        /**
+         * Minimum tree size.
+         */
+        virtual int getMinTreeSize(Phase phase) = 0;
+    };
+
+
+    class DefaultConfiguration: public Configuration {
+      bool makeSplitDependOnMemory(Phase phase) override {
+        return false;
+      }
+
+      int getMaxLocalTreesPerRank(Phase phase) override {
+        return peano4::parallel::Node::MaxSpacetreesPerRank;
+      }
+
+      double getWorstCaseBalancingRatio(Phase phase) override {
+        return 0.9;
+      }
+
+      int getMinTreeSize(Phase phase) override {
+        return 0;
+      }
+    };
+
+
+    /**
+     * Set up recursive subdivision
+     *
+     * The ownership of the pointer goes over to the recursive subdivision
+     * instance, i.e. you don't have to delete the passed object.
+     */
+    RecursiveSubdivision(Configuration* configuration = new DefaultConfiguration());
     ~RecursiveSubdivision();
 
     /**
-     * Triggers actual load balancing data exchange, triggers reblaancing, and
+     * Triggers actual load balancing data exchange, triggers rebalancing, and
      * dumps statistics.
      *
      * <h2> Spread equally </h2>
@@ -165,18 +274,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     int getGlobalNumberOfTrees() const;
   private:
     /**
-     * @see getStrategyStep()
-     */
-    enum class StrategyStep {
-      Wait,
-      SpreadEquallyOverAllRanks,
-      SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_UseAllRanks_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_DontUseLocalRank_UseRecursivePartitioning,
-      SplitHeaviestLocalTreeOnce_UseLocalRank_UseRecursivePartitioning
-    };
-
-    /**
      * It is totally annoying, but it seems that MPI's maxloc and reduction are broken
      * in some MPI implementations if we use them for integers.
      */
@@ -194,9 +291,6 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     StrategyStep getStrategyStep() const;
 
     static tarch::logging::Log  _log;
-
-    const double _TargetBalancingRatio;
-    const int    _MinTreeSize;
 
     /**
      * Each rank that is on this list may not be split. We hold an integer per rank
@@ -314,7 +408,8 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     bool isLocalBalancingBad() const;
 
     /**
-     * This is part of the action SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning.
+     * This is part of the action SplitHeaviestLocalTreeMultipleTimes_UseLocalRank_UseRecursivePartitioning,
+     * i.e. we use it for the original local splitting.
      *
      * @param Number of splits that the code should run
      */
@@ -323,7 +418,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
     /**
      * Ensure enough memory is left-over.
      */
-    bool canSplitLocally() const;
+    bool fitsIntoMemory(Configuration::Phase phase) const;
 
     #ifdef Parallel
     MPI_Request*    _globalSumRequest;
@@ -354,7 +449,7 @@ class toolbox::loadbalancing::RecursiveSubdivision {
      */
     int _roundRobinToken;
 
-    bool _makeSplitDependentOnMemory;
+    Configuration*  _configuration;
 
     void waitForGlobalStatisticsExchange();
 };

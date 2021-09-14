@@ -351,17 +351,20 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
      :: Ordering ::
      
      The order of the action sets is preserved throughout the steps down within
-     the tree hierarchy. It is inverted throughout the backrolling. Therefore, 
-     we add the copying and roll over first, as it will then be the last thing
-     when we go up through the grid hierarchies.
+     the tree hierarchy. It is inverted throughout the backrolling. 
      
-     The remaining actions are either top-down on faces or a volumentric (cell)
-     operations.
+     This is what we want to achieve:
+     
+     - Roll updates over on the faces onto Q_old and Q_new.
+     - Copy new face data into old face data, as this is the initial sweep, i.e.
+       the old face data otherwise might hold rubbish.
+     - Restrict the data to the coarser level if we are on a hanging face. 
+     
     
     """
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
-    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_initial_conditions ) 
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
@@ -396,11 +399,18 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     
   
   def add_actions_to_plot_solution(self, step, output_path):
+    """
+    
+     Consult the discussion in add_actions_to_init_grid() around the order
+     of the individual action sets.
+     
+    """
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
-    
-    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+
+    # There should be none of these actually, as we don't roll over any updates in this step.    
+    # step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
@@ -443,14 +453,14 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
-    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_update_cell )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
-    step.add_action_set( self._action_set_roll_over_update_of_faces )
 
 
   @abstractmethod

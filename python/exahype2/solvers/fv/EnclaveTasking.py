@@ -42,6 +42,15 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       reconstructedPatch,
       targetPatch
     );
+
+    ::exahype2::fv::validatePatch(
+      targetPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      0, // halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    ); // outcome has to be valid
   }
   else { // is an enclave cell
     assertion( marker.isEnclaveCell() );

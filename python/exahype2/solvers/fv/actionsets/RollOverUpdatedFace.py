@@ -19,6 +19,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
       const int normal = marker.getSelectedFaceNumber() % Dimensions;
       // Left half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)) {
+        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on left face)"  );
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i=0; i<{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
@@ -31,9 +32,16 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             }
           }
         }
+        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on left face)"  );
       }
+      else {
+        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip left face)"  );
+        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (skip left face)"  );
+      }
+      
       // Right half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(1)) {
+        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on right face)"  );
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i={{OVERLAP}}; i<2*{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
@@ -46,6 +54,11 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             }
           }
         }
+        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on right face)"  );
+      }
+      else {
+        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip right face)"  );
+        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (skip right face)"  );
       }
       
       int index = 0;

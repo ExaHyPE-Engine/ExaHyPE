@@ -10,6 +10,7 @@ endif
 ExaHyPE2Sources = \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
+  LoadBalancingConfiguration.cpp \
   NonCriticalAssertions.cpp \
   PatchUtils.cpp \
   PlotFilter.cpp \

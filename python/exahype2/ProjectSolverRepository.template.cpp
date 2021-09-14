@@ -5,6 +5,8 @@
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
+#include "exahype2/LoadBalancingConfiguration.h"
+
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
