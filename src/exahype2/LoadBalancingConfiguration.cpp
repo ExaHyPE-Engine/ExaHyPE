@@ -15,14 +15,14 @@ bool exahype2::LoadBalancingConfiguration::makeSplitDependOnMemory(toolbox::load
 
 int exahype2::LoadBalancingConfiguration::getMaxLocalTreesPerRank(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
   if (
-    phase==Configuration::Phase::InterRankBalancing
+    phase==Configuration::Phase::InitialIntraRankDistribution
     or
     phase==Configuration::Phase::APosterioriBalancingPerRank
   ) {
-    return std::numeric_limits<int>::max();
+    return _maxNumberOfTrees;
   }
   else {
-    return _maxNumberOfTrees;
+    return std::numeric_limits<int>::max();
   }
 }
 
