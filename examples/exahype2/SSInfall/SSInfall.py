@@ -123,11 +123,12 @@ if __name__ == "__main__":
 #include "../SSInfall.h"
 #include <math.h>
     """
-        self._auxiliary_variables = 0
+        self._auxiliary_variables = 2
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        int aux_var=2;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
@@ -139,9 +140,15 @@ if __name__ == "__main__":
           r_coor=pow(r_coor,0.5);
           
           if (isnan(reconstructedPatch[cellSerialised*5+0])) {std::abort();}     
-          repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*5+0],volumeH);       
+          repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);       
           //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
           //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;         
+          double m1=reconstructedPatch[cellSerialised*(5+aux_var)+1];
+          double m2=reconstructedPatch[cellSerialised*(5+aux_var)+2];
+          double m3=reconstructedPatch[cellSerialised*(5+aux_var)+3];
+          double e =reconstructedPatch[cellSerialised*(5+aux_var)+4];
+          reconstructedPatch[cellSerialised*(5+aux_var)+5]=e*1e6; //just incease the E here for illustration
+          reconstructedPatch[cellSerialised*(5+aux_var)+6]=1e6*(5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3))/reconstructedPatch[cellSerialised*(5+aux_var)+0];
         }
         
     """)
@@ -297,12 +304,12 @@ if __name__ == "__main__":
           tracer_particles,my_solver,
           [17,18,19],range(5),-1,
           #time_stepping_kernel="toolbox::particles::LinearInterp",
-          time_stepping_kernel="toolbox::particles::StaticPosition"#,
+          time_stepping_kernel="toolbox::particles::StaticPosition",
           #observer_kernel="toolbox::particles::ObLinearInterp"
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=0, b=(offset[0]+domain_size[0]), N_x=100,N_y=1,N_z=1)
+        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=50,N_y=50,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
 
       if path=="./": path1="."
@@ -311,7 +318,7 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"/zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=10000,
+        number_of_entries_between_two_db_flushes=30000,
         output_precision=10,
         position_delta_between_two_snapsots=1e-20,
         data_delta_between_two_snapsots=0
