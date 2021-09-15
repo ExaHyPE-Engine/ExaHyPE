@@ -95,6 +95,8 @@ def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank, sho
   line_counter   = 0
   my_alpha       = 0.1+(1.0-0.1)/len(Ranks)
   
+  final_number_of_cells = 0
+  
   for rank in Ranks:
     x_data_sum = []
     y_data_sum = []  
@@ -130,8 +132,12 @@ def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank, sho
     if line_counter==2:
       line_symbol = ":"
     
-    if sum_per_rank: 
+    if sum_per_rank and rank==0: 
+      plt.plot(x_data_sum, y_data_sum, line_symbol+Symbols[symbol_counter], color=Colours[colour_counter], markevery=symbol_counter*3+2, label="Rank 0 (sum of cells)" )
+    else:
       plt.plot(x_data_sum, y_data_sum, line_symbol+Symbols[symbol_counter], color=Colours[colour_counter], markevery=symbol_counter*3+2 )
+        
+    final_number_of_cells += y_data_sum[-1]
 
     symbol_counter += 1
     colour_counter += 1
@@ -141,6 +147,10 @@ def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank, sho
       colour_counter = 0
       line_counter  += 1
 
+  if show_optimum:
+    plt.plot([0,x_data_sum[-1]], [final_number_of_cells/len(Ranks),final_number_of_cells/len(Ranks)], "--", color="#000000", label="opt. #cells/rank" )
+      
+      
  
 def plot_trees_per_rank( filename, verbose ):
   (ranks,threads) = get_ranks_and_threads( filename )
