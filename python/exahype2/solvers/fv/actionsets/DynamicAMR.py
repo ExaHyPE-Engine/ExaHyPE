@@ -11,6 +11,18 @@ import peano4.toolbox.blockstructured.DynamicAMR
 
 
 class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
+  """
+  
+   The ExaHyPE 2 Finite Volume handling of (dynamically) adaptive meshes
+   
+   This class is basically a plain copy of the DynamicAMR action set
+   from the toolbox. However, we have to ensure that we also set the
+   update markers appropriately such that restricted data are taken 
+   into account. This action set thus has to be studied in combination 
+   with the ProjectPatchOntoFaces action set which is very similar and
+   also enriches the toolbox version by this marker aspect.
+  
+  """
     #
     # Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
     # boundary data has not been received yet and your face data thus is not initialised 
@@ -28,6 +40,11 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
 #include "../repositories/SolverRepository.h"
 """      
 )
+    self.__Template_DestroyHangingFace_Core += """
+  bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= Dimensions;
+  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
+"""
+
     
 
     # @todo Interpolate

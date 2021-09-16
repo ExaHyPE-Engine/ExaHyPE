@@ -81,7 +81,7 @@ class DynamicAMR(ActionSet):
     return False
 
 
-  __Template_TouchFaceFirstTime = jinja2.Template( """
+  __Template_TouchFaceFirstTime = """
   if ( {{CLEAR_GUARD}} ) {
     logTraceInWith2Arguments( "touchFaceFirstTime(...)---DynamicAMR", marker.toString(), "{{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}" );
     
@@ -95,10 +95,10 @@ class DynamicAMR(ActionSet):
 
     logTraceOut( "touchFaceFirstTime(...)---DynamicAMR" );
   }
-""")
+"""
 
 
-  __Template_CreateHangingFace = jinja2.Template( """
+  __Template_CreateHangingFace = """
   if ( {{INTERPOLATE_GUARD}} ) {
     logTraceInWith1Argument( "createHangingFace(...)---DynamicAMR", marker.toString() );
 
@@ -134,13 +134,16 @@ class DynamicAMR(ActionSet):
   else {
     logDebug( "createHangingFace(...)", "skip interpolation for " << marker.toString() << " as interpolation guard did not yield true" );
   }
-""")
+"""
 
 
-  __Template_DestroyHangingFace = jinja2.Template( """
+  __Template_DestroyHangingFace_Prologue = """
   if ( {{RESTRICT_GUARD}} ) {
     logTraceInWith4Arguments( "destroyHangingFace(...)---DynamicAMR", "{{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}", "{{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}", marker.getSelectedFaceNumber(), marker.toString() );
+"""
 
+
+  __Template_DestroyHangingFace_Core = """
     ::toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -149,8 +152,9 @@ class DynamicAMR(ActionSet):
       {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}.value,
       {{COARSE_GRID_FACE_ACCESSOR_RESTRICTION}}(marker.getSelectedFaceNumber()).value
     );
-
+"""
     
+  __Template_DestroyHangingFace_Epilogue = """
     {% if POINT_WISE_POSTPROCESSING_RESTRICTION!="" %}
     const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
     const bool pickLeftHalfOfHaloOnFineGrid  = marker.getSelectedFaceNumber() < Dimensions;
@@ -171,10 +175,10 @@ class DynamicAMR(ActionSet):
 
     logTraceOut( "destroyHangingFace(...)---DynamicAMR" );
   }
-""")
+"""
 
 
-  __Template_CreatePersistentFace = jinja2.Template( """
+  __Template_CreatePersistentFace = """
   logTraceIn( "createPersistentFace(...)---DynamicAMR" );
 
   ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
@@ -187,10 +191,10 @@ class DynamicAMR(ActionSet):
   );
     
   logTraceOut( "createPersistentFace(...)---DynamicAMR" );
-""")
+"""
   
 
-  __Template_DestroyPersistentFace = jinja2.Template( """
+  __Template_DestroyPersistentFace = """
   logTraceIn( "createPersistentFace(...)---DynamicAMR" );
 
   ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
@@ -203,10 +207,10 @@ class DynamicAMR(ActionSet):
   );
     
   logTraceOut( "createPersistentFace(...)---DynamicAMR" );
-""")
+"""
 
 
-  __Template_CreateCell = jinja2.Template( """
+  __Template_CreateCell = """
   logTraceIn( "createCell(...)---DynamicAMR" );
 
   ::toolbox::blockstructured::interpolateCell_AoS_{{INTERPOLATION_SCHEME}}(
@@ -218,9 +222,9 @@ class DynamicAMR(ActionSet):
   );
     
   logTraceOut( "createCell(...)---DynamicAMR" );
-""")
+"""
 
-  __Template_DestroyCell = jinja2.Template( """
+  __Template_DestroyCell = """
   logTraceIn( "destroyCell(...)---DynamicAMR" );
 
   ::toolbox::blockstructured::restrictCell_AoS_{{RESTRICTION_SCHEME}}(
@@ -232,31 +236,33 @@ class DynamicAMR(ActionSet):
   );
     
   logTraceOut( "destroyCell(...)---DynamicAMR" );
-""")
+"""
 
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
-      result = self.__Template_CreateHangingFace.render(**self.d)
+      result = jinja2.Template(self.__Template_CreateHangingFace).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE:
-      result = self.__Template_CreatePersistentFace.render(**self.d)
+      result = jinja2.Template(self.__Template_CreatePersistentFace).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
-      result = self.__Template_DestroyHangingFace.render(**self.d)
+      result  = jinja2.Template(self.__Template_DestroyHangingFace_Prologue).render(**self.d)
+      result += jinja2.Template(self.__Template_DestroyHangingFace_Core).render(**self.d)
+      result += jinja2.Template(self.__Template_DestroyHangingFace_Epilogue).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_PERSISTENT_FACE:
-      result = self.__Template_DestroyPersistentFace.render(**self.d)
+      result = jinja2.Template(self.__Template_DestroyPersistentFace).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
-      result = self.__Template_CreateCell.render(**self.d)
+      result = jinja2.Template(self.__Template_CreateCell).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_CELL:
-      result = self.__Template_DestroyCell.render(**self.d)
+      result = jinja2.Template(self.__Template_DestroyCell).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
-      result = self.__Template_TouchFaceFirstTime.render(**self.d)
+      result = jinja2.Template(self.__Template_TouchFaceFirstTime).render(**self.d)
       pass 
     return result
 
