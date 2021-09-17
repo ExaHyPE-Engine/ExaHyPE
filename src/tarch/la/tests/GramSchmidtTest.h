@@ -39,12 +39,7 @@ public:
   /**
    * This routine is triggered by the TestCaseCollection
    */
-  virtual void run();
-
-  /**
-   * Setup your test case.
-   */
-  virtual void setUp() {};
+  void run() override;
 };
 
 #endif /* _LA_TARCH_TESTS_MATRIXTEST_H_ */
