@@ -1,60 +1,107 @@
-#include "GramSchmidtTest.h"
-#include "tarch/la/Matrix.h"
-#include "tarch/la/GramSchmidt.h"
-#include "tarch/la/MatrixMatrixOperations.h"
-#include "tarch/la/ScalarOperations.h"
+#include "DynamicMatrixTest.h"
+#include "tarch/la/DynamicMatrix.h"
 
 
-
-
-tarch::la::tests::GramSchmidtTest::GramSchmidtTest():
-  TestCase ("tarch::la::GramSchmidtTest") {
+tarch::la::tests::DynamicMatrixTest::DynamicMatrixTest():
+  TestCase ("tarch::la::DynamicMatrixTest") {
 }
 
 
-void tarch::la::tests::GramSchmidtTest::run() {
-  testMethod (testModifiedGramSchmidt);
+void tarch::la::tests::DynamicMatrixTest::run() {
+  testMethod (testBatchedMultiplyAoS);
 }
 
 
-void tarch::la::tests::GramSchmidtTest::testModifiedGramSchmidt() {
-  Matrix<4,4,double> A;
+void tarch::la::tests::DynamicMatrixTest::testBatchedMultiplyAoS() {
+  tarch::la::DynamicMatrix P(24,8);
+  P = {
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 1, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0.666667, 0, 0.333333, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0.333333, 0, 0.666667, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 1, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0.666667, 0, 0.333333, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0.333333, 0, 0.666667, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 1, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0.666667, 0, 0.333333},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0.333333, 0, 0.666667},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 1},
+  {0, 0, 0, 0, 0, 0, 0, 0},
+  {0, 0, 0, 0, 0, 0, 0, 1}
+  };
 
-  // Set values according to Hilbert matrix.
-  for (int i=0; i < 4; i++) {
-     for (int j=0; j < 4; j++) {
-        double entry = 1.0 / static_cast<double>(i + j + 1);
-        A(i,j) = entry;
-    }
-  }
+  double Q[] = {
+    4.0, 0.0, 0.0, 0.0, 0.0, // Q[0] as AoS
+    0.1, 0.0, 0.0, 0.0, 0.0,
+    4.0, 0.0, 0.0, 0.0, 0.0,
+    0.1, 0.0, 0.0, 0.0, 0.0,
+    4.0, 0.0, 0.0, 0.0, 0.0,
+    0.1, 0.0, 0.0, 0.0, 0.0,
+    4.0, 0.0, 0.0, 0.0, 0.0,
+    0.1, 0.0, 0.0, 0.0, 0.0
+  };
 
-  Matrix<4,4,double> Acopy(A);
-  Matrix<4,4,double> Q;
-  Matrix<4,4,double> R;
-  modifiedGramSchmidt (Acopy, Q, R);
+  double result[5*4*2];
 
-  Matrix<4,4,double> QTQ(0.0);
-  QTQ = multiply(transpose(Q), Q);
+  P.batchedMultiplyAoS(
+    result, // image
+    Q,  // preimage
+    5,          // batch size, i.e. how often to apply it in one AoS rush
+    4*2,
+    0 // first block
+  );
 
-  for (int i=0; i < 4; i++) {
-    for (int j=0; j < 4; j++) {
-      if (i == j) {
-        validate (equals(QTQ(i,j), 1.0, 1e-12));
-      }
-      else {
-        validate (equals(QTQ(i,j), 0.0, 1e-12));
-      }
-    }
-  }
+  validateEqualsWithParams1( result[0*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[1*5], 0.1, P.toString(true) );
+  validateEqualsWithParams1( result[2*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[3*5], 0.1, P.toString(true) );
+  validateEqualsWithParams1( result[4*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[5*5], 0.1, P.toString(true) );
+  validateEqualsWithParams1( result[6*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[7*5], 0.1, P.toString(true) );
 
-  for (int i=0; i < 4; i++) {
-     for (int j=0; j < 4; j++) {
-        double value = 0.0;
-        for ( int k=0; k < Q.cols(); k++ ) {
-           value += Q(i,k) * R(k,j);
-        }
-        validate (equals(value, A(i,j)));
-        value = 0.0;
-     }
-  }
+  P.batchedMultiplyAoS(
+    result, // image
+    Q,  // preimage
+    5,          // batch size, i.e. how often to apply it in one AoS rush
+    4*2,
+    8 // first block
+  );
+
+  validateEqualsWithParams1( result[0*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[1*5], 0.1, P.toString(true) );
+  validateEqualsWithParams1( result[2*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[3*5], 0.1, P.toString(true) );
+  validateEqualsWithParams1( result[4*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[5*5], 0.1, P.toString(true) );
+  validateEqualsWithParams1( result[6*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[7*5], 0.1, P.toString(true) );
+
+  P.batchedMultiplyAoS(
+    result, // image
+    Q,  // preimage
+    5,          // batch size, i.e. how often to apply it in one AoS rush
+    4*2,
+    16 // first block
+  );
+
+  validateEqualsWithParams1( result[0*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[1*5], 0.1, P.toString(true) );
+  validateEqualsWithParams1( result[2*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[3*5], 0.1, P.toString(true) );
+  validateEqualsWithParams1( result[4*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[5*5], 0.1, P.toString(true) );
+  validateEqualsWithParams1( result[6*5], 0.0, P.toString(true) );
+  validateEqualsWithParams1( result[7*5], 0.1, P.toString(true) );
 }
