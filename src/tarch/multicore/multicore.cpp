@@ -3,7 +3,6 @@
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
-#include "scheduler/Factory.h"
 #include "topology/topologies.h"
 #endif
 
@@ -32,9 +31,8 @@ void tarch::multicore::initSmartMPI() {
   );
   smartmpi::init( smartMPITopology );
 
-  std::vector<smartmpi::scheduler::Scheduler*> schedulers = smartmpi::scheduler::Factory::parse( "ForwardTasksToOneRank" );
-  schedulers.push_back( new SmartScheduler() );
-  smartmpi::appendScheduler( schedulers );
+  smartmpi::appendToSchedulerChain( "ForwardTasksToOneRank" );
+  smartmpi::appendToSchedulerChain( new SmartScheduler() );
 
   tarch::mpi::Rank::getInstance().setCommunicator( smartMPITopology->computeNodeOrSmartServerCommunicator );
   #endif
