@@ -101,7 +101,7 @@ class tarch::la::DynamicMatrix {
 
     bool operator==(const DynamicMatrix& matrix) const;
 
-    std::string toString() const;
+    std::string toString(bool addLineBreaks=false) const;
 
     double& operator()(int row, int col);
     double  operator()(int row, int col) const;
