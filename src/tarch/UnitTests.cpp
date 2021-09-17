@@ -4,6 +4,7 @@
 #include "tarch/tests/TreeTestCaseCollection.h"
 
 
+#include "tarch/la/tests/DynamicMatrixTest.h"
 #include "tarch/la/tests/GramSchmidtTest.h"
 #include "tarch/la/tests/LUDecompositionTest.h"
 #include "tarch/la/tests/MatrixTest.h"
@@ -24,6 +25,7 @@ tarch::tests::TestCase* tarch::getUnitTests() {
   result->addTestCase( new tarch::la::tests::ScalarTest() );
   result->addTestCase( new tarch::la::tests::VectorTest() );
   result->addTestCase( new tarch::mpi::tests::StringTest() );
+  result->addTestCase( new tarch::la::tests::DynamicMatrixTest() );
 
   return result;
 }

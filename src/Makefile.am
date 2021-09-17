@@ -86,6 +86,7 @@ Peano4Core_SOURCES = \
 
 Tarch_SOURCES= tarch/tarch.cpp \
  tarch/UnitTests.cpp \
+ tarch/la/tests/DynamicMatrixTest.cpp \
  tarch/la/tests/MatrixVectorTest.cpp \
  tarch/la/tests/MatrixTest.cpp \
  tarch/la/tests/ScalarTest.cpp \
