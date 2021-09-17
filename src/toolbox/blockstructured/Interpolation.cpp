@@ -10,7 +10,7 @@ namespace {
 }
 
 
-tarch::la::DynamicMatrix  toolbox::blockstructured::internal::create1dLinearInterpolation(int numberOfDoFsPerAxisInPatch, int number, int where, int repeat) {
+tarch::la::DynamicMatrix  toolbox::blockstructured::internal::create1dLinearInterpolation(int numberOfDoFsPerAxisInPatch, int number=1, int where=-1, int repeat=0) {
     tarch::la::DynamicMatrix P1d(3,3,{
       {1.0/3.0, 2.0/3.0,     0.0},
       {    0.0, 3.0/3.0,     0.0},
@@ -443,6 +443,8 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
   const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
   const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside;
 
+  logTraceInWith6Arguments( "interpolateOntoOuterHalfOfHaloLayer_AoS_linear(...)", numberOfDoFsPerAxisInPatch, overlap, unknowns, swapInsideOutside, normal, pickLeftHalfOfHaloOnFineGrid );
+
   #if Dimensions==2
   if ( normal==0 and pickLeftHalfOfHaloOnFineGrid ) {
     tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,1,1) );
@@ -457,13 +459,14 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
   }
   else if ( normal==0 and not pickLeftHalfOfHaloOnFineGrid ) {
     tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,0,1) );
-    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
+    const int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
+    const int firstRowInP    = matrixRowBlock * numberOfDoFsPerAxisInPatch * 2;
     P.batchedMultiplyAoS(
       fineGridValues, // image
       coarseGridValues,  // preimage
       unknowns,          // batch size, i.e. how often to apply it in one AoS rush
       numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-      matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
+      firstRowInP
     );
   }
   else if (normal==1 and pickLeftHalfOfHaloOnFineGrid ) {
@@ -556,6 +559,8 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
     );
   }
   #endif
+
+  logTraceOut( "interpolateOntoOuterHalfOfHaloLayer_AoS_linear(...)")
 }
 
 

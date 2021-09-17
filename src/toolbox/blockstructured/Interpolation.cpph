@@ -29,7 +29,7 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear_pr
     );
   }
   else if ( normal==0 and not pickLeftHalfOfHaloOnFineGrid ) {
-	static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,0,1) );
+    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,0,1) );
     int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
     P.batchedMultiplyAoS(
       fineGridValues, // image
