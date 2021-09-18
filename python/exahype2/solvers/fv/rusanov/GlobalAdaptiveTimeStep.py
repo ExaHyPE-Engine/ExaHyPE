@@ -77,12 +77,12 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_adaptive_time_stepping()
     self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._constructor_implementation         = create_constructor_implementation_for_adaptive_time_stepping()
-    self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
-    self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_adaptive_time_stepping()
     
     self._start_time_step_implementation          = create_start_time_step_implementation_for_adaptive_time_stepping()
     self._finish_time_step_implementation         = create_finish_time_step_implementation_for_adaptive_time_stepping(self._time_step_relaxation)
