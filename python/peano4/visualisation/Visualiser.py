@@ -432,7 +432,7 @@ def render_dataset(filename, identifier, dataset_number=0, display_as_tree = Tru
       print( "Apply " + str(len(filter)) + " filter(s) to concatenated data set" )
     for p in filter:
      if p.run_on_concatenated_data:
-       print( "apply filter " + str(p) + " to concatenated data")
+       print( "apply filter " + str(p) )
        cell_data, dof, dimensions, unknowns, description, mapping = p.render(cell_data, dof, dimensions, unknowns, description, mapping)
 
   if dimensions == 2 and display_as_tree:
