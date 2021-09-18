@@ -409,7 +409,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     doesRankViolateBalancingCondition()
   ) {
     if (
-      peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 2*_configuration->getMaxLocalTreesPerRank(Configuration::Phase::InterRankBalancing)
+      peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > 2*std::min(tarch::multicore::Core::getInstance().getNumberOfThreads(),_configuration->getMaxLocalTreesPerRank(Configuration::Phase::InterRankBalancing))
     ) {
       static bool wroteWarning = false;
       if (not wroteWarning) {
@@ -464,7 +464,8 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
     isLocalBalancingBad()
   ) {
     if (
-      peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() > _configuration->getMaxLocalTreesPerRank(Configuration::Phase::APosterioriBalancingPerRank)
+      peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >
+      std::min( tarch::multicore::Core::getInstance().getNumberOfThreads(), _configuration->getMaxLocalTreesPerRank(Configuration::Phase::APosterioriBalancingPerRank))
     ) {
       static bool wroteWarning = false;
       if (not wroteWarning) {
