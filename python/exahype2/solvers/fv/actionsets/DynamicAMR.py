@@ -31,7 +31,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   def __init__(self,solver):
     peano4.toolbox.blockstructured.DynamicAMR.__init__(self,      
       patch = solver._patch,
-      patch_overlap_interpolation = solver._patch_overlap_old,  # hier muss mit new verknuepft werden
+      patch_overlap_interpolation = solver._patch_overlap_old,
       patch_overlap_restriction   = solver._patch_overlap_update,
       interpolate_guard           = """
   repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::GridInitialisation
@@ -45,6 +45,24 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
 """
 
+    self.__Template_CreateHangingFace_Core = """
+    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
+      marker,
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      fineGridFace""" + solver._name + """QOld.value,
+      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value
+    );
+    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
+      marker,
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      fineGridFace""" + solver._name + """QNew.value,
+      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value
+    );
+"""
     
 
     # @todo Interpolate

@@ -83,7 +83,7 @@ class DynamicAMR(ActionSet):
 
   __Template_TouchFaceFirstTime = """
   if ( {{CLEAR_GUARD}} ) {
-    logTraceInWith2Arguments( "touchFaceFirstTime(...)---DynamicAMR", marker.toString(), "{{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}" );
+    logTraceInWith2Arguments( "touchFaceFirstTime(...)---DynamicAMR", marker.toString(), "clear halo layer {{FINE_GRID_FACE_ACCESSOR_RESTRICTION}}" );
     
     ::toolbox::blockstructured::clearHaloLayerAoS(
       marker,
@@ -98,10 +98,13 @@ class DynamicAMR(ActionSet):
 """
 
 
-  __Template_CreateHangingFace = """
+  __Template_CreateHangingFace_Prologue = """
   if ( {{INTERPOLATE_GUARD}} ) {
     logTraceInWith1Argument( "createHangingFace(...)---DynamicAMR", marker.toString() );
+"""
 
+
+  __Template_CreateHangingFace_Core = """
     ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -110,7 +113,9 @@ class DynamicAMR(ActionSet):
       {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value,
       {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value
     );
-    
+"""
+
+  __Template_CreateHangingFace_Epilogue = """
     {% if POINT_WISE_POSTPROCESSING_INTERPOLATION!="" %}
     const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
     const bool pickLeftHalfOfHaloOnFineGrid  = marker.getSelectedFaceNumber() < Dimensions;
@@ -242,7 +247,9 @@ class DynamicAMR(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
-      result = jinja2.Template(self.__Template_CreateHangingFace).render(**self.d)
+      result =  jinja2.Template(self.__Template_CreateHangingFace_Prologue).render(**self.d)
+      result += jinja2.Template(self.__Template_CreateHangingFace_Core).render(**self.d)
+      result += jinja2.Template(self.__Template_CreateHangingFace_Epilogue).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE:
       result = jinja2.Template(self.__Template_CreatePersistentFace).render(**self.d)
