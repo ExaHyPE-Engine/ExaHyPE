@@ -7,7 +7,7 @@ import jinja2
 
 def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size ):
   return """
-  cellTimeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleVolumeH * """ + str(time_step_size) + """;
+  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
   cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 """
 
@@ -49,6 +49,23 @@ def create_postprocess_updated_patch_for_adaptive_time_stepping():
 def create_constructor_implementation_for_adaptive_time_stepping():
   return "_admissibleTimeStepSize = 0.0;"
   
+
+def create_abstract_solver_user_declarations_for_fixed_time_stepping():
+  return """
+private:
+  double _timeStepSize;
+public:
+  double getTimeStepSize() const;  
+    """  
+    
+    
+def create_abstract_solver_user_definitions_for_fixed_time_stepping():
+  return """
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
+  return _timeStepSize;
+}
+    """  
+
 
 def create_abstract_solver_user_declarations_for_adaptive_time_stepping():
   return """
@@ -119,6 +136,15 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
    
   _maxTimeStepSize  = _admissibleTimeStepSize; // for plotting reasons
   _minTimeStepSize  = std::min( _minTimeStepSize, _admissibleTimeStepSize );
+"""
+
+
+def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
+  return """
+  assertion( _minVolumeH > 0.0 );
+  assertion( MaxAdmissibleVolumeH > 0.0 );
+  assertion( _minVolumeH <= MaxAdmissibleVolumeH );
+  _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minVolumeH / MaxAdmissibleVolumeH;
 """
 
 
