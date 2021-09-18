@@ -465,7 +465,7 @@ toolbox::loadbalancing::RecursiveSubdivision::StrategyStep toolbox::loadbalancin
   ) {
     if (
       peano4::parallel::SpacetreeSet::getInstance().getLocalSpacetrees().size() >
-      std::min( tarch::multicore::Core::getInstance().getNumberOfThreads(), _configuration->getMaxLocalTreesPerRank(Configuration::Phase::APosterioriBalancingPerRank))
+      std::min( tarch::multicore::Core::getInstance().getNumberOfThreads()-1, _configuration->getMaxLocalTreesPerRank(Configuration::Phase::APosterioriBalancingPerRank))
     ) {
       static bool wroteWarning = false;
       if (not wroteWarning) {
