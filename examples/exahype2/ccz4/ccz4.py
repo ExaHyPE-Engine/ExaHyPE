@@ -136,7 +136,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.5
 #                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
 
@@ -230,12 +230,12 @@ if __name__ == "__main__":
          side.
 
         """
-        self._auxiliary_variables = 9
+        self._auxiliary_variables = 6
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        const int n_a_v=9;
+        const int n_a_v=6;
         dfor(cell,patchSize) {
           //tarch::la::Vector<Dimensions,int> currentPosition=marker.getOffset()+(cell+0.5)*volumeH;
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
@@ -272,11 +272,18 @@ if __name__ == "__main__":
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
 
           admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
+          
+          //NaN detector here/////////////////////////////////
+          for(int i=0;i<59;i++){
+            if ( std::isnan(reconstructedPatch[cellSerialised*(59+n_a_v)+i]) ) {
+              ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "[Quantity should no be NaN]", "NaN detected at t=" + std::to_string(t) + " for quantity "+std::to_string(i)+" at position ["+std::to_string(currentPosition[0])+", "+std::to_string(currentPosition[1])+", "++std::to_string(currentPosition[2])+"]");
+          }
+          ///////////////////////////////////////////////////
 
-          for(int i=0;i<(n_a_v-1);i++){
+          for(int i=0;i<6;i++){
             reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
           }
-          
+          /*
           //here we calculate the norm of conformal factor phi as the refinement condition
           double Phi = std::exp(reconstructedPatch[cellSerialised*(59+n_a_v)+54]);
           double P1  = reconstructedPatch[cellSerialised*(59+n_a_v)+55]*Phi;
@@ -289,7 +296,7 @@ if __name__ == "__main__":
           Psi4Calc(Psi4, reconstructedPatch+cellSerialised*(59+n_a_v), gradQ, currentPosition);
           reconstructedPatch[cellSerialised*(59+n_a_v)+59+7]=Psi4[0];//re part of psi4
 		      reconstructedPatch[cellSerialised*(59+n_a_v)+59+8]=Psi4[1];//im part of psi4
-		      
+		      */
 		      //std::cout<< Psi4[0] << std::endl;
         }
     """)
@@ -496,7 +503,7 @@ if __name__ == "__main__":
 ########################################################################################
 #main starts here
 ########################################################################################
-    userwarnings = []
+    userinfo = []
     exe="peano4"
     
     if args.exe_name!="":
@@ -520,7 +527,7 @@ if __name__ == "__main__":
     except Exception as e:
         msg = "Warning: ADER-DG no supported on this machine"
         print(msg)
-        userwarnings.append((msg,e))
+        userinfo.append((msg,e))
 
     if is_aderdg:
       solver_name    = "ADERDG" + solver_name
@@ -564,23 +571,23 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       intparams.update({"swi":2})  #notice it may change, see according function in FiniteVolumeCCZ4.cpp
       print(intparams)
-      userwarnings.append((msg,None))
+      userinfo.append((msg,None))
     elif args.scenario=="single-puncture":
       msg = "Periodic BC deactivated because you pick Puncture scenario\nInitialize single black hole"
       print(msg)
       periodic_boundary_conditions = [False,False,False]
       intparams.update({"swi":0}) 
-      userwarnings.append((msg,None))
+      userinfo.append((msg,None))
     elif args.periodic_bc=="True":
       msg = "Periodic BC set"
       print(msg)
       periodic_boundary_conditions = [True,True,True]          # Periodic BC
-      userwarnings.append((msg,None))
+      userinfo.append((msg,None))
     else:
       msg = "WARNING: Periodic BC deactivated by hand"
       print(msg)
       periodic_boundary_conditions = [False,False,False]
-      userwarnings.append((msg,None))
+      userinfo.append((msg,None))
 
     intparams.update({"ReSwi":args.CCZ4ReSwi})
 
@@ -612,14 +619,14 @@ if __name__ == "__main__":
       #offset=[-1.5, -1.5, -1.5]; domain_size=[3.0, 3.0, 3.0]
       msg = "Gauge wave, domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
-      userwarnings.append((msg,None))
+      userinfo.append((msg,None))
     if args.scenario=="two-punctures" or args.scenario=="single-puncture":
       offset=[-20, -20, -20]; domain_size=[40.0, 40.0, 40.0]
       #offset=[-30, -30, -30]; domain_size=[60.0, 60.0, 60.0]
       #offset=[-40, -40, -40]; domain_size=[80.0, 80.0, 80.0]
       msg = "Two/single punctures, domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
-      userwarnings.append((msg,None))
+      userinfo.append((msg,None))
 
     project.set_global_simulation_parameters(
       dimensions,               # dimensions
@@ -641,10 +648,10 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-0,-0,-0.0]
-    project.add_plot_filter( probe_point,[20.0,20.0,0.1],1 )
+    probe_point = [-20,-20,-0.0]
+    project.add_plot_filter( probe_point,[40.0,40.0,0.1],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 
 ########################################################################################
 #Tracer setting 
@@ -752,13 +759,17 @@ if __name__ == "__main__":
     peano4_project.build( make_clean_first = True )
 
     # Remind the user of warnings!
-    userwarnings.append(("the executable file name: "+exe, None))
-    userwarnings.append(("output directory: "+path, None))
+    userinfo.append(("the executable file name: "+exe, None))
+    userinfo.append(("output directory: "+path, None))
+    print("=========================================================")
     if not args.add_tracer==0:
-        userwarnings.append(("tracer output file: "+path1+"/zz"+args.tra_name, None))
-    if len(userwarnings) >0:
+        userinfo.append(("tracer output file: "+path1+"/zz"+args.tra_name, None))
+    if len(userinfo) >0:
         print("Please note that these warning occured before the build:")
-        for msg, exception in userwarnings:
+        for msg, exception in userinfo:
             if exception is None:
                 print(msg)
             else: print(msg, "Exception: {}".format(exception))
+    print(intparams)
+    print(floatparams)
+    print("=========================================================")
