@@ -84,7 +84,7 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
     self._constructor_implementation         = create_constructor_implementation_for_adaptive_time_stepping()
     
-    self._start_time_step_implementation          = create_start_time_step_implementation_for_adaptive_time_stepping()
+    self._start_time_step_implementation          = create_start_time_step_implementation_for_adaptive_time_stepping(False)
     self._finish_time_step_implementation         = create_finish_time_step_implementation_for_adaptive_time_stepping(self._time_step_relaxation)
     
     SingleSweep.set_implementation(self, boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)

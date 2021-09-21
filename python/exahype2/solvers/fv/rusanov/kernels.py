@@ -94,12 +94,53 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
     """  
 
 
-def create_start_time_step_implementation_for_adaptive_time_stepping():
+def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
+  predicate = """
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxVolumeH>0.0
+  """
+  
+  if use_enclave_tasking:
+    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
+      
   return """
-  _maxEigenvalue = 0.0;
+  if (""" + predicate + """) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t       = " << _minTimeStamp );
+    logInfo( "step()", "dt      = " << getTimeStepSize() );
+    logInfo( "step()", "h_{min} = " << _minVolumeH << " (volume size)");
+    logInfo( "step()", "h_{max} = " << _maxVolumeH << " (volume size)" );
+  }
 """
 
     
+def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave_tasking):
+  predicate = """
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxVolumeH>0.0
+  """
+  
+  if use_enclave_tasking:
+    predicate += """and _solverState == SolverState::Secondary """
+      
+  statistics = """
+  if (""" + predicate + """) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t            = " << _minTimeStamp );
+    logInfo( "step()", "dt           = " << getAdmissibleTimeStepSize() );
+    logInfo( "step()", "h_{min}      = " << _minVolumeH << " (volume size)");
+    logInfo( "step()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
+    logInfo( "step()", "\lambda_{max} = " << _maxEigenvalue );
+  }
+"""
+    
+  return statistics + """
+  _maxEigenvalue = 0.0;
+"""
+
+
 def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_relaxation):
   return """
   #ifdef Parallel

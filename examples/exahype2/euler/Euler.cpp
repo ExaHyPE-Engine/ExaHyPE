@@ -12,11 +12,12 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 enum class Scenario {
   PointExplosion,
   PointExplosionWithDynamicAMR,
-  BreakingDamWith
+  BreakingDam,
+  BreakingDamResolutionStudies
 };
 
 
-Scenario scenario = Scenario::BreakingDamWith;
+Scenario scenario = Scenario::BreakingDamResolutionStudies;
 
 
 
@@ -66,18 +67,24 @@ Scenario scenario = Scenario::BreakingDamWith;
         }
       }
       break;
-    case Scenario::BreakingDamWith:
+    case Scenario::BreakingDam:
       {
-        if ( volumeCentre(1)<0.5 ) {
+        if ( volumeCentre(1)<0.3 ) {
           result = ::exahype2::RefinementCommand::Refine;
         }
       }
       break;
-  }
-
-
-  if ( tarch::la::equals(t,0.0) and volumeCentre(0)<0.5) {
-    result = ::exahype2::RefinementCommand::Refine;
+    case Scenario::BreakingDamResolutionStudies:
+      {
+        if (
+          volumeCentre(1)>0.5-0.5*volumeH(1)*NumberOfFiniteVolumesPerAxisPerPatch
+          and
+          volumeCentre(1)<0.5+0.5*volumeH(1)*NumberOfFiniteVolumesPerAxisPerPatch
+        ) {
+          result = ::exahype2::RefinementCommand::Refine;
+        }
+      }
+      break;
   }
 
   return result;
@@ -110,7 +117,8 @@ void examples::exahype2::euler::Euler::initialCondition(
         Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
       }
       break;
-    case Scenario::BreakingDamWith:
+    case Scenario::BreakingDam:
+    case Scenario::BreakingDamResolutionStudies:
       {
         Q[0] = 0.1;  // rho
         Q[1] = 0;    // velocities

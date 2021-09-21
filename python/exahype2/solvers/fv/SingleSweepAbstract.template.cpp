@@ -177,6 +177,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
+  {{START_TIME_STEP_IMPLEMENTATION}}
+
   if ( _solverState==SolverState::GridInitialisation ) {
     _solverState     = SolverState::TimeStepAfterGridInitialisation;
   }
@@ -191,7 +193,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   _maxTimeStepSize = std::numeric_limits<double>::min();
   _maxVolumeH      = 0.0;
   _minVolumeH      = std::numeric_limits<double>::max();
-  {{START_TIME_STEP_IMPLEMENTATION}}
 }
 
 

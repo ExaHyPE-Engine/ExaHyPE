@@ -90,7 +90,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
     self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_adaptive_time_stepping()
     
-    self._start_time_step_implementation           = create_start_time_step_implementation_for_adaptive_time_stepping()
+    self._start_time_step_implementation           = create_start_time_step_implementation_for_adaptive_time_stepping(True)
     self._finish_time_step_implementation          = """
 if (_solverState==SolverState::Secondary) {
 """ +    create_finish_time_step_implementation_for_adaptive_time_stepping(self._time_step_relaxation) + """

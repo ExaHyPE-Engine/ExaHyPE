@@ -179,6 +179,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
+  {{START_TIME_STEP_IMPLEMENTATION}}
+
   if (
     _solverState == SolverState::GridInitialisation
   ) {
@@ -204,8 +206,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   }
 
   logDebug( "startTimeStep(...)", "new state is " << toString(_solverState) );
-
-  {{START_TIME_STEP_IMPLEMENTATION}}
 }
 
 
