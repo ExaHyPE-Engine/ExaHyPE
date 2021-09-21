@@ -40,6 +40,8 @@ if __name__ == "__main__":
     parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
     parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
+    parser.add_argument("-eigen", "--eigenvalue-control",    dest="eigen", choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
+
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -123,12 +125,12 @@ if __name__ == "__main__":
 #include "../SSInfall.h"
 #include <math.h>
     """
-        self._auxiliary_variables = 2
+        self._auxiliary_variables = 0
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        int aux_var=2;
+        int aux_var=0;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
@@ -143,12 +145,18 @@ if __name__ == "__main__":
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);       
           //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
           //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;         
-          double m1=reconstructedPatch[cellSerialised*(5+aux_var)+1];
+          /*double m1=reconstructedPatch[cellSerialised*(5+aux_var)+1];
           double m2=reconstructedPatch[cellSerialised*(5+aux_var)+2];
           double m3=reconstructedPatch[cellSerialised*(5+aux_var)+3];
           double e =reconstructedPatch[cellSerialised*(5+aux_var)+4];
           reconstructedPatch[cellSerialised*(5+aux_var)+5]=e*1e6; //just incease the E here for illustration
           reconstructedPatch[cellSerialised*(5+aux_var)+6]=1e6*(5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3))/reconstructedPatch[cellSerialised*(5+aux_var)+0];
+          */
+          if (r_coor<1e-8) {
+            reconstructedPatch[cellSerialised*(5+aux_var)+1]=0;
+            reconstructedPatch[cellSerialised*(5+aux_var)+2]=0;
+            reconstructedPatch[cellSerialised*(5+aux_var)+3]=0;
+          }
         }
         
     """)
@@ -159,7 +167,7 @@ if __name__ == "__main__":
 ########################################################################################
 #main starts here
 ########################################################################################
-    userwarnings = []
+    userinfo = []
     exe="peano4"
     
     if args.exe_name!="":
@@ -183,7 +191,7 @@ if __name__ == "__main__":
     #except Exception as e:
     #    msg = "Warning: ADER-DG no supported on this machine"
     #    print(msg)
-    #    userwarnings.append((msg,e))
+    #    userinfo.append((msg,e))
 
     if is_aderdg:
       solver_name    = "ADERDG" + solver_name
@@ -217,7 +225,7 @@ if __name__ == "__main__":
       #offset=[-5, -5, -5]; domain_size=[10, 10, 10]
       msg = "domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
-      userwarnings.append((msg,None))
+      userinfo.append((msg,None))
       
 ########################################################################################
 #parameter setting according to scenarios
@@ -226,26 +234,35 @@ if __name__ == "__main__":
       msg = "Periodic BC set"
       print(msg)
       periodic_boundary_conditions = [True,True,True]          # Periodic BC
-      userwarnings.append((msg,None))
+      userinfo.append((msg,None))
     else:
       msg = "WARNING: Periodic BC deactivated by hand"
       print(msg)
       periodic_boundary_conditions = [False,False,False]
-      userwarnings.append((msg,None))
+      userinfo.append((msg,None))
 
     for k, v in intparams.items():
       intparams.update({k:eval("args.{}".format(k))})
     for k, v in floatparams.items():
       floatparams.update({k:eval("args.{}".format(k))})
 
+    if args.eigen=="exp":
+      floatparams["C_1"]=(1e-4)/floatparams["tilde_P_ini"]
+      floatparams["C_2"]=(2*1e-5)/floatparams["tilde_P_ini"]
+      userinfo.append(("Use exponential formula for eigenvalues",None))
+    if args.eigen=="none":
+      floatparams["C_1"]=0
+      floatparams["C_2"]=0
+      userinfo.append(("Use original formula for eigenvalues",None))
+
     if args.seed=="tophat":
       floatparams.update({"r_ini":1})
       floatparams.update({"delta_rho":0.05})
-      userwarnings.append(("Tophat overdensity region set",None))
+      userinfo.append(("Tophat overdensity region set",None))
     if args.seed=="point":
       intparams.update({"iseed":1})
       floatparams.update({"delta_m":0.15})
-      userwarnings.append(("Point mass seed set",None))
+      userinfo.append(("Point mass seed set",None))
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
@@ -287,10 +304,10 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [0,0,-0.01]
+    probe_point = [-20,-20,-0.01]
     project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "(0.9,8000)")
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
 ########################################################################################
 #Tracer setting 
@@ -309,7 +326,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=50,N_y=50,N_z=1)
+        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=300,N_y=50,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
 
       if path=="./": path1="."
@@ -318,7 +335,7 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"/zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=30000,
+        number_of_entries_between_two_db_flushes=20000,
         output_precision=10,
         position_delta_between_two_snapsots=1e-20,
         data_delta_between_two_snapsots=0
@@ -334,13 +351,17 @@ if __name__ == "__main__":
     peano4_project.build( make_clean_first = True )
 
     # Remind the user of warnings!
-    userwarnings.append(("the executable file name: "+exe, None))
-    userwarnings.append(("output directory: "+path, None))
-    if len(userwarnings) >0:
+    userinfo.append(("the executable file name: "+exe, None))
+    userinfo.append(("output directory: "+path, None))
+    print("=========================================================")
+    if not args.add_tracer==0:
+        userinfo.append(("tracer output file: "+path1+"/zz"+args.tra_name, None))
+    if len(userinfo) >0:
         print("The building infomation:")
-        for msg, exception in userwarnings:
+        for msg, exception in userinfo:
             if exception is None:
                 print(msg)
             else: print(msg, "Exception: {}".format(exception))
     print(intparams)
     print(floatparams)
+    print("=========================================================")

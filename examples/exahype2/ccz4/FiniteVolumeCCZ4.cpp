@@ -184,6 +184,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::sourceTerm(
 {
   memset(S, 0, NumberOfUnknowns*sizeof(double));
   source(S,Q, CCZ4LapseType, CCZ4ds, CCZ4c, CCZ4e, CCZ4f, CCZ4bs, CCZ4sk, CCZ4xi, CCZ4itau, CCZ4eta, CCZ4k1, CCZ4k2, CCZ4k3);
+  //for (int i=0;i<59;i++){S[i]=S[i]*tarch::la::volume(volumeH);}
 }
 #if defined(OpenMPGPUOffloading)
 #pragma omp end declare target

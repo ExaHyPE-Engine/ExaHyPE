@@ -61,8 +61,16 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   Q[1] = 0;    // velocities
   Q[2] = 0;
   Q[3] = 0;
-  Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini/(gamma-1); // inner energy
+  Q[4] = (0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini)/(gamma-1); // inner energy
 
+  const double irho = 1./Q[0];
+  #if Dimensions==3
+  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+  #else
+  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+  #endif
+
+  nonCriticalAssertion6( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], volumeH );
   // initial conditions
 /*
   Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;  // rho
@@ -134,7 +142,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   S[2] = -force_density_norm*y;
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
-
+  //for (int i=0;i<5;i++){S[i]=S[i]*tarch::la::volume(volumeH);}
 /*  S[0] = 0;  // rho
   S[1] = 0;    // velocities
   S[2] = 0;
@@ -191,12 +199,17 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
+  if ( p<0 ) {
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"]");
+  }
+
   nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   const double c   = std::sqrt(gamma * p * irho);
 
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c)); //result=1;
   nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  result=result*(1+C_1*exp(-C_2*t));
   return result;
 }
 
