@@ -207,7 +207,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(opts.LBQ) + ")" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(" + str(opts.LBQ) + ",0))" )
     peano4_project = project.generate_Peano4_project()
 
 
