@@ -163,7 +163,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 """ + self._solver._get_default_includes() + self._solver.get_user_includes()
 
 
-class ClawpackFixedTimeStep( SingleSweep ):
+class GlobalFixedTimeStep( SingleSweep ):
   def __init__(self,
     name, patch_size, unknowns, auxiliary_variables, min_volume_h,
     max_volume_h, time_step_size, clawpack_name, clawpack_files,
@@ -223,7 +223,7 @@ class ClawpackFixedTimeStep( SingleSweep ):
 # // #include "exahype2/fv/Rusanov.h"
 # """
   def set_implementation(self,
-          boundary_conditions=None,eigenvalues=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+          boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
           memory_location = None, use_split_loop = False):
     """
     Overwrite default settings and call create_action_sets.
@@ -235,23 +235,23 @@ class ClawpackFixedTimeStep( SingleSweep ):
       self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions is not None:
       self._initial_conditions_implementation         = initial_conditions
-    if source_term is not None:
-      self._source_term_implementation                = source_term
-    if eigenvalues is not None:
-      self._eigenvalues_implementation                = eigenvalues
     if memory_location is not None:
       self._reconstructed_array_memory_location       = memory_location
     if use_split_loop is not None:
       self._use_split_loop = use_split_loop
 
+    self._source_term_call    = ""  # has to be empty
+    self._Riemann_solver_call = """
+    This has to be the real Riemann solver call (what's been in update above)
+"""    
 
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      raise Exception( "Memory mode ({}) without appropriate delete chosen, i.e. this will lead to a memory leak".format(self._reconstructed_array_memory_location) )
+    # Tweak solver structure (later on)
+    #self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    #self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_fixed_time_stepping()
+    #self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    #self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_fixed_time_stepping()
 
     super(ClawpackFixedTimeStep,self).create_action_sets()
-    self._action_set_update_cell = UpdateCell(self)
 
 
 
@@ -281,22 +281,5 @@ class ClawpackFixedTimeStep( SingleSweep ):
     code += kernel
     code += "  postProcessingIndex += {};\n}}\n".format(self._unknowns + self._auxiliary_variables);
     self.set_postprocess_updated_patch_kernel( code )
-
-
-  # def set_implementation(self, **kwargs):
-    # if flux                 is not None:  self._flux_implementation                       = flux
-    # if ncp                  is not None:  self._ncp_implementation                        = ncp
-    # if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
-    # if source_term          is not None:  self._source_term_implementation                = source_term
-
-    # self._source_term_call    = create_source_term_kernel_for_Rusanov(self._source_term_implementation)
-    # self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
-
-    # self._abstract_solver_user_declarations = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    # self._abstract_solver_user_definitions  = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    # self._solver_user_declarations          = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    # self._solver_user_definitions           = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-
-    # SingleSweep.set_implementation(self, boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
 
 

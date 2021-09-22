@@ -240,6 +240,8 @@ class SingleSweep( FV ):
       Call superclass routine and then reconfigure the update cell call.
       Only the UpdateCell action set is specific to a single sweep.
       
+      This operation is implicity called via the superconstructor.
+      
     """
     super(SingleSweep, self).create_action_sets()
     self._action_set_update_cell = UpdateCell(self)
