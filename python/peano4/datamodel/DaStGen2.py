@@ -48,12 +48,16 @@ class DaStGen2(DoF):
     A DaStGen2 data type generator. To add fields to this object, just
     use the DaStGen2 instance data of this field, i.e. data.add_attribute().
     
-    :Attributes:
+    ==========
+    Attributes
+    ==========
     
     data: dastgen2.DataModel
       Add elements to this guy to enrich your data model.
     
-    :Arguments:
+    =========
+    Arguments
+    =========
     
     name: String
       Name (unqualified)
@@ -67,9 +71,6 @@ class DaStGen2(DoF):
     
     self.data             = dastgen2.DataModel(name)
     
-
-    
-    #@todo ifdef PeanoDebug
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugX", "Dimensions" ) )
     self.data.add_attribute( peano4.dastgen2.Peano4DoubleArray( "debugH", "Dimensions" ) )
     

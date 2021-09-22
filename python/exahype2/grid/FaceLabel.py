@@ -90,7 +90,9 @@ def create_face_label(solver_name):
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
   
-  #result._peano4_aspect
+  result.data.merge_method_definition     = """
+#error test
+"""
   
   return result
 

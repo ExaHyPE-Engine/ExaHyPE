@@ -95,7 +95,7 @@ if __name__ == "__main__":
     end_time = opts.ENDTIME
 
 
-    my_solver = exahype2.solvers.fv.clawpack.ClawpackFixedTimeStep(
+    my_solver = exahype2.solvers.fv.clawpack.GlobalFixedTimeStep(
       "SWE",
       my_patch_size,
       my_unknowns,

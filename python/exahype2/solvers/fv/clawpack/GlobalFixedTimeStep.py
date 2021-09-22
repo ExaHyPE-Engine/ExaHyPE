@@ -12,7 +12,7 @@ import peano4
 # from .kernels import create_abstract_solver_definitions
 # from .kernels import create_solver_declarations
 # from .kernels import create_solver_definitions
-# from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping
+from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping
 
 
 class GlobalFixedTimeStep( SingleSweep ):
@@ -27,6 +27,11 @@ class GlobalFixedTimeStep( SingleSweep ):
   step size, and we have to augment the dictionary with entries that 
   are ClawPack-specific.
   
+
+  ==========
+  Attributes
+  ==========
+  
   There are two particularly important flags: 
   
   clawpack_name: String
@@ -40,18 +45,39 @@ class GlobalFixedTimeStep( SingleSweep ):
     This is a flag which switches between two ways how the ClawPack
     solvers are called.
     
+  clawpack_files: [String]
+    List of Fortran files. Will be forwarded to   
+    add_implementation_files_to_project(). You can always leave this 
+    one empty and add files later on.
+    
+  ================
+  Invocation order
+  ================
+  
+  We call the superclass constructor which will establish all the finite volume
+  data structures et al. See the documentation of the superclass or FV.
+  
+  The FV setup will automatically invoke add_entries_to_text_replacement_dictionary()
+  at multiple points to translate some templates into meaningful (default) 
+  C++ code. Obviously, you can always alter setups later on by altering
+  the object state. In this case, you will have to regenerate all data
+  structures. 
+  
+  Our ClawPack-specific dictionary entries have to know what the name of 
+  the chosen ClawPack routine is and whether or not we use 
+  
   """
   def __init__(self,
     name, patch_size, unknowns, auxiliary_variables, min_volume_h,
-    max_volume_h, time_step_size, clawpack_name, clawpack_files,
+    max_volume_h, time_step_size, clawpack_name, clawpack_files = [],
     plot_grid_properties=False, discriminate_normal=False,
     kernel_implemenatation=None
   ):
-    super(ClawpackFixedTimeStep,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
-
     self._clawpack_Riemann_solver             = clawpack_name
-    self._Riemann_solver_implementation_files = clawpack_files
-    
+    self._discriminate_normal                 = discriminate_normal
+
+    super(GlobalFixedTimeStep,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
+   
     self._time_step_size = time_step_size
 
     # Defaults
@@ -64,7 +90,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._preprocess_reconstructed_patch      = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size )
     self._postprocess_updated_patch           = ""
 
-    self._discriminate_normal = discriminate_normal
+    self._Riemann_solver_implementation_files = clawpack_files
 
 
   def add_entries_to_text_replacement_dictionary(self,d):
@@ -77,7 +103,7 @@ class GlobalFixedTimeStep( SingleSweep ):
      calls et al. 
     
     """  
-    super(ClawpackFixedTimeStep,self).add_entries_to_text_replacement_dictionary(d)
+    super(GlobalFixedTimeStep,self).add_entries_to_text_replacement_dictionary(d)
     d["ADDITIONALINCLUDES"] = '#include "TopologyParser.h"'
 
     rpn2 = 'extern "C" int rpn2_(int* ixy, int* num_eqn, int* num_aux, int* num_waves,'
@@ -87,12 +113,19 @@ class GlobalFixedTimeStep( SingleSweep ):
     d["ADDITIONALDEFS"]     = rpn2
 
     d["CLAWPACK_RIEMANN_SOLVER"] = self._clawpack_Riemann_solver
-    d["DISCRIMINATE_NORMAL"]     = self._Riemann_solver_implementation_files
+    d["DISCRIMINATE_NORMAL"]     = self._discriminate_normal
 
 
   def add_implementation_files_to_project(self,namespace,output):
-    super(ClawpackFixedTimeStep,self).add_implementation_files_to_project(namespace,output)
-    for f in self.Riemann_solver_implementation_files:
+    """
+
+      We just tell the superclass too add its implementation files, 
+      and then we add our own Fortran files as handed over to the 
+      constructor.
+          
+    """
+    super(GlobalFixedTimeStep,self).add_implementation_files_to_project(namespace,output)
+    for f in self._Riemann_solver_implementation_files:
       output.makefile.add_Fortran_file(f)
 
 
@@ -116,3 +149,23 @@ class GlobalFixedTimeStep( SingleSweep ):
     self.set_postprocess_updated_patch_kernel( code )
 
 
+  def set_implementation(self,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
+    memory_location         = None,
+    use_split_loop          = False
+  ):
+    """
+
+    """
+    #self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    #self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_fixed_time_stepping()
+    #self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    #self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_fixed_time_stepping()
+
+    #self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    #self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+
+    #self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(False)
+    #self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
+      
+    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
