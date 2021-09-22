@@ -108,10 +108,15 @@ class GlobalFixedTimeStep( SingleSweep ):
     """
     
      Let the superclass befill the dictionary with stuff that then has
-     to enter all the templates. There's a few additional entries that
-     we add, which are ClawPack-specific. Those are the includes, the 
-     Fortran wrapper definitions, some flags to tailor the Riemann 
-     calls et al. 
+     to enter all the templates. Besides standard things that are already
+     handled by the superclass - such as includes - there is one more 
+     important thing that we have to do: We have to declare ClawPack's 
+     Fortran routines and mark them as extern.
+     
+     I could create a whole framework to handle this, but logically a 
+     extern declaration is very similar to an include. So I hijack the
+     includes in the dictionary and add an extern statement here that
+     replaces the dictionary entry.
     
     """  
     super(GlobalFixedTimeStep,self).add_entries_to_text_replacement_dictionary(d)
@@ -120,7 +125,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     rpn2 += 'const double * __restrict__ q_l, const double * __restrict__ q_r,'
     rpn2 += 'const double * __restrict__ aux_l, const double * __restrict__ aux_r,'
     rpn2 += 'double wave[3][3], double* s, double* amdq, double* apdq);\n'
-    d["ADDITIONALDEFS"]     = rpn2
+    d["INCLUDES"] += rpn2
 
 
   def add_implementation_files_to_project(self,namespace,output):

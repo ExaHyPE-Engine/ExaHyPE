@@ -21,6 +21,9 @@
 #include "Constants.h"
 
 
+{{INCLUDES}}
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
