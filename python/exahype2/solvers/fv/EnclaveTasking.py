@@ -343,7 +343,7 @@ class EnclaveTasking( FV ):
     #)
 
   def get_user_includes(self):
-    return """
+    return super(SingleSweep, self).get_user_includes() + """
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
@@ -356,7 +356,8 @@ class EnclaveTasking( FV ):
   def set_implementation(self,
     boundary_conditions, refinement_criterion, initial_conditions,
     memory_location,
-    use_split_loop
+    use_split_loop,
+    additional_includes
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs 
@@ -374,6 +375,8 @@ class EnclaveTasking( FV ):
     if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete and \
        memory_location!=None:
       raise Exception( "only valid memory mode for enclave tasking is heap without a delete, as enclave tasks delete memory themselves through the tarch. Selected mode=" + str(solver._reconstructed_array_memory_location) )
+
+    self.user_includes = additional_includes
 
     self.create_action_sets()
     
