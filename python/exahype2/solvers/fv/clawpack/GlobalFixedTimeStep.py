@@ -11,6 +11,7 @@ from .kernels import create_abstract_solver_user_declarations_for_fixed_time_ste
 from .kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
 from .kernels import create_start_time_step_implementation_for_fixed_time_stepping
 from .kernels import create_finish_time_step_implementation_for_fixed_time_stepping
+from .kernels import create_empty_source_term_kernel
 
 
 class GlobalFixedTimeStep( SingleSweep ):
@@ -161,5 +162,7 @@ class GlobalFixedTimeStep( SingleSweep ):
 
     self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(False)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
+
+    self._source_term_call    = create_empty_source_term_kernel()
       
     super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_includes)
