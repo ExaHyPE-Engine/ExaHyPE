@@ -256,8 +256,8 @@ class SingleSweep( FV ):
 
   def set_implementation(self,
     boundary_conditions, refinement_criterion, initial_conditions,
-    memory_location,
-    use_split_loop
+    memory_location=None,
+    use_split_loop=False
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
