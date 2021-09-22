@@ -121,11 +121,27 @@ class GlobalFixedTimeStep( SingleSweep ):
     """  
     super(GlobalFixedTimeStep,self).add_entries_to_text_replacement_dictionary(d)
 
-    rpn2 = 'extern "C" int rpn2_(int* ixy, int* num_eqn, int* num_aux, int* num_waves,'
-    rpn2 += 'const double * __restrict__ q_l, const double * __restrict__ q_r,'
-    rpn2 += 'const double * __restrict__ aux_l, const double * __restrict__ aux_r,'
-    rpn2 += 'double wave[3][3], double* s, double* amdq, double* apdq);\n'
-    d["INCLUDES"] += rpn2
+    # @todo This should also go into kernels, as we'll need it for other solvers, too. 
+    # After all, the extern declaration is independent of the ExaHyPE 2 solver.
+    rpn  = 'extern "C" int '
+    rpn  += self._clawpack_Riemann_solver
+    if self._discriminate_normal:
+      rpn  += """_(
+  int* ixy, int* num_eqn, int* num_aux, int* num_waves,
+  const double * __restrict__ q_l, const double * __restrict__ q_r,
+  const double * __restrict__ aux_l, const double * __restrict__ aux_r,
+  double wave[3][3], double* s, double* amdq, double* apdq
+);
+"""
+    else:
+      rpn  += """_(
+  int* num_eqn, int* num_aux, int* num_waves,
+  const double * __restrict__ q_l, const double * __restrict__ q_r,
+  const double * __restrict__ aux_l, const double * __restrict__ aux_r,
+  double wave[3][3], double* s, double* amdq, double* apdq
+);
+"""
+    d["INCLUDES"] += rpn
 
 
   def add_implementation_files_to_project(self,namespace,output):
