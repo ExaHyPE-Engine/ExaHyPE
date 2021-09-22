@@ -248,7 +248,7 @@ class SingleSweep( FV ):
 
 
   def get_user_includes(self):
-    return """
+    return super(SingleSweep, self).get_user_includes() + """
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 """
@@ -256,8 +256,9 @@ class SingleSweep( FV ):
 
   def set_implementation(self,
     boundary_conditions, refinement_criterion, initial_conditions,
-    memory_location=None,
-    use_split_loop=False
+    memory_location,
+    use_split_loop,
+    additional_includes
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -276,6 +277,8 @@ class SingleSweep( FV ):
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+
+    self.user_includes = additional_includes
 
     self.create_action_sets()
 

@@ -176,7 +176,8 @@ class FV(object):
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
 
-    self.solver_constants_ = ""
+    self.solver_constants_     = ""
+    self.user_includes         = ""
     
     if min_volume_h>max_volume_h:
        print( "Error: min_volume_h (" + str(min_volume_h) + ") is bigger than max_volume_h (" + str(max_volume_h) + ")" )
@@ -186,7 +187,7 @@ class FV(object):
     self._solver_template_file_class_name = None
 
     self.plot_description = ""
-    
+        
     self.create_data_structures()
     self.create_action_sets()
 
@@ -206,6 +207,10 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 
   __repr__ = __str__
   
+
+  def get_user_includes(self):
+    return self.user_includes
+
 
   @abstractmethod
   def create_data_structures(self):
@@ -428,18 +433,6 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 """
 
 
-  @abstractmethod
-  def get_user_includes(self):
-    """
-  
-    Use this to add include statements to the generated C++ code. Is there for
-    subclasses to hook in.
-  
-    """
-    return ""
-  
-  
-
   def add_actions_to_init_grid(self, step):
     """
     
@@ -572,10 +565,14 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 
   def add_implementation_files_to_project(self,namespace,output):
     """
+    
      The ExaHyPE2 project will call this operation when it sets
      up the overall environment.
+     
+     This routine is typically not invoked by a user.
 
      output: peano4.output.Output
+     
     """
     templatefile_prefix = os.path.dirname( os.path.realpath(__file__) ) + "/"
 
@@ -619,8 +616,6 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 
   def add_solver_constants(self, datastring): self.solver_constants_ += datastring
 
-  def get_solver_constants(self): return self.solver_constants_
-
 
   def _init_dictionary_with_default_parameters(self,d):
     """
@@ -658,6 +653,6 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     d[ "MAX_VOLUME_H"] = self._max_volume_h
     d[ "MIN_VOLUME_H"] = self._min_volume_h
 
-    d[ "INCLUDES"] = self.get_user_includes()
-
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
+
+    d[ "INCLUDES" ] = self.get_user_includes()

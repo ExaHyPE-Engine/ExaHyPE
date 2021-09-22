@@ -172,6 +172,9 @@ if __name__ == "__main__":
           Q[2] = 0.0;
           Q[3] = z; // bathymetry
         """,
+        additional_includes = """
+#include "TopologyParser.h"
+"""
     )
 
 

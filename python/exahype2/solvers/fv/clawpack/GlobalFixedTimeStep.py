@@ -50,6 +50,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     add_implementation_files_to_project(). You can always leave this 
     one empty and add files later on.
     
+
   ================
   Invocation order
   ================
@@ -96,7 +97,7 @@ class GlobalFixedTimeStep( SingleSweep ):
   def add_entries_to_text_replacement_dictionary(self,d):
     """
     
-     Let the superclass befill the dictionary with stuff that then hsa
+     Let the superclass befill the dictionary with stuff that then has
      to enter all the templates. There's a few additional entries that
      we add, which are ClawPack-specific. Those are the includes, the 
      Fortran wrapper definitions, some flags to tailor the Riemann 
@@ -104,7 +105,6 @@ class GlobalFixedTimeStep( SingleSweep ):
     
     """  
     super(GlobalFixedTimeStep,self).add_entries_to_text_replacement_dictionary(d)
-    d["ADDITIONALINCLUDES"] = '#include "TopologyParser.h"'
 
     rpn2 = 'extern "C" int rpn2_(int* ixy, int* num_eqn, int* num_aux, int* num_waves,'
     rpn2 += 'const double * __restrict__ q_l, const double * __restrict__ q_r,'
@@ -152,7 +152,8 @@ class GlobalFixedTimeStep( SingleSweep ):
   def set_implementation(self,
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
     memory_location         = None,
-    use_split_loop          = False
+    use_split_loop          = False,
+    additional_includes     = ""
   ):
     """
 
@@ -168,4 +169,4 @@ class GlobalFixedTimeStep( SingleSweep ):
     #self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(False)
     #self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
       
-    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
+    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_includes)

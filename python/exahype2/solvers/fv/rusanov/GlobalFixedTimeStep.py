@@ -62,7 +62,8 @@ class GlobalFixedTimeStep( SingleSweep ):
     eigenvalues=None,
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
-    use_split_loop          = False
+    use_split_loop          = False,
+    additional_includes     = ""
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -95,6 +96,6 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(False)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
       
-    super(SingleSweep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
+    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_includes)
 
 
