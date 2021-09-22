@@ -94,7 +94,7 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_ti
 """
 
 
-def create_empty_source_term_kernel(source_term_implementation):
+def create_empty_source_term_kernel():
   return """
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
 """
