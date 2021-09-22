@@ -45,6 +45,7 @@ def create_compute_Riemann_kernel_for_ClawPack():
   return Template.render(**d)
 
 
+# @todo replication of Rusanov. Have to consolidate!
 def create_abstract_solver_user_declarations_for_fixed_time_stepping():
   return """
 private:
@@ -60,3 +61,34 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
   return _timeStepSize;
 }
     """  
+
+# @todo replication of Rusanov. Have to consolidate!
+def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
+  predicate = """
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxVolumeH>0.0
+  """
+  
+  if use_enclave_tasking:
+    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
+      
+  return """
+  if (""" + predicate + """) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t       = " << _minTimeStamp );
+    logInfo( "step()", "dt      = " << getTimeStepSize() );
+    logInfo( "step()", "h_{min} = " << _minVolumeH << " (volume size)");
+    logInfo( "step()", "h_{max} = " << _maxVolumeH << " (volume size)" );
+  }
+"""
+
+
+# @todo replication of Rusanov. Have to consolidate!
+def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
+  return """
+  assertion( _minVolumeH > 0.0 );
+  assertion( MaxAdmissibleVolumeH > 0.0 );
+  assertion( _minVolumeH <= MaxAdmissibleVolumeH );
+  _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minVolumeH / MaxAdmissibleVolumeH;
+"""
