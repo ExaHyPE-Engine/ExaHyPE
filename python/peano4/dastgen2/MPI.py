@@ -9,15 +9,59 @@ class MPI(object):
   """ 
   
   Represents Peano's MPI aspect injected into a DaStGen model. 
-  It mainly ensures that we include the right headers.
   
-  The instance is to be added to a DaStGen2 model through add_aspect().
-    
-  @param dof_association Should be of type DoFAssociation
+  
+  This is an aspect to a DaStGen object, i.e. something that's
+  added to a data model to augment it with some behaviour. The
+  realisation of this aspect is manifold yet all serves the 
+  purpose to make data fit for MPI:
+  
+  - The aspect ensures that we include the right headers.
+  - The aspect ensures that the generated has the right signature
+    which in turn depends on the fact to which grid entity the type
+    is associated to
+  - The aspect lets you embed a data merge operation into the 
+    generated data. 
+  
+  =====
+  Usage
+  =====
+  
+  The instance is to be added to a DaStGen2 model through add_aspect().  
+  
+  If you want to inject a particular merge code, just set the internal 
+  string self.merge_implementation.
+  
+  ==========
+  Attributes
+  ==========
+
+  dof_association: DoFAssociation
+    Clarifies which grid entity the underlying datatype is associated
+    to.
+  
   """
   def __init__(self, dof_association_):
     self.dof_association = dof_association_
+    self.merge_implementation = ""
     pass
+
+
+  def __str__(self):
+    result = "("
+    if self.dof_association==DoFAssociation.Vertex:
+      result += "vertex"
+    if self.dof_association==DoFAssociation.Face:
+      result += "face"
+    if self.dof_association==DoFAssociation.Cell:
+      result += "cell"
+    if self.merge_implementation!="":
+      result += ",merge-impl="
+      result += self.merge_implementation
+    else:
+      result += ",empty-merge-impl"
+    result += ")"
+    return result
 
 
   def set_model(self,data_model):
@@ -149,6 +193,7 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
     if self.dof_association==DoFAssociation.Vertex:
       result += """
 void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::VertexMarker& marker) {
+""" + self.merge_implementation + """
 }
 
 
@@ -176,6 +221,7 @@ bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagem
     elif self.dof_association==DoFAssociation.Face:
       result += """
 void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::FaceMarker& marker) {
+""" + self.merge_implementation + """
 }
 
 
@@ -201,6 +247,7 @@ bool """ + full_qualified_name + """::loadPersistently(const peano4::datamanagem
     elif self.dof_association==DoFAssociation.Cell:
       result += """
 void """ + full_qualified_name + "::merge(const """ + full_qualified_name + """& neighbour, const peano4::datamanagement::CellMarker& marker) {
+""" + self.merge_implementation + """
 }
 
 

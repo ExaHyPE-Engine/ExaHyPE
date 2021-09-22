@@ -55,6 +55,12 @@ class DaStGen2(DoF):
     data: dastgen2.DataModel
       Add elements to this guy to enrich your data model.
     
+    _peano4_aspect: peano4.dastgen2.MPI
+      This aspect adds the Peano-specific MPI routines to the data type, 
+      i.e. routines used for boundary and re-balancing exchange. Modify 
+      this one if you want to control certain data exchange or merge
+      patterns.
+    
     =========
     Arguments
     =========
