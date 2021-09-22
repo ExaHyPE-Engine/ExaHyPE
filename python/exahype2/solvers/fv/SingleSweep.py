@@ -16,94 +16,97 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   SolveRiemannProblemsOverPatch = jinja2.Template( """
     double cellTimeStepSize = -1.0;
     double cellTimeStamp    = -1.0;
+    bool   updateCellIfItHoldsData = true;
      
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
     
-    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
-    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+    if (updateCellIfItHoldsData) {
+      assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
+      assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
 
-    const double usedTimeStepSize = cellTimeStepSize;
+      const double usedTimeStepSize = cellTimeStepSize;
 
-    ::exahype2::fv::validatePatch(
-      reconstructedPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1, // halo
-      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // previous time step has to be valid
+      ::exahype2::fv::validatePatch(
+        reconstructedPatch,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        1, // halo
+        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+      ); // previous time step has to be valid
   
-    ::exahype2::fv::copyPatch(
-      reconstructedPatch,
-      targetPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1 // halo size
-    );
+      ::exahype2::fv::copyPatch(
+        reconstructedPatch,
+        targetPatch,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        1 // halo size
+      );
 
-    {% if USE_SPLIT_LOOP %}
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-    #endif
-    {% else %}
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-    #endif
-    {% endif %}
-      [&](
-        const double * __restrict__                  QL,
-        const double * __restrict__                  QR,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       FL[],
-        double                                       FR[]
-      ) -> void {
-        {{RIEMANN_SOLVER_CALL}}
-      },
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        double * __restrict__                        S
-      ) -> void {
-        {{SOURCE_TERM_CALL}}
-      },
-      marker.x(),
-      marker.h(),
-      cellTimeStamp,
-      cellTimeStepSize,
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      reconstructedPatch,
-      targetPatch
-    );
-
-    {{POSTPROCESS_UPDATED_PATCH}}
+      {% if USE_SPLIT_LOOP %}
+      #if Dimensions==2
+      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
+      #else
+      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
+      #endif
+      {% else %}
+      #if Dimensions==2
+      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+      #else
+      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+      #endif
+      {% endif %}
+        [&](
+          const double * __restrict__                  QL,
+          const double * __restrict__                  QR,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       dx,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double                                       FL[],
+          double                                       FR[]
+        ) -> void {
+          {{RIEMANN_SOLVER_CALL}}
+        },
+        [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       dx,
+          double                                       t,
+          double                                       dt,
+          double * __restrict__                        S
+        ) -> void {
+          {{SOURCE_TERM_CALL}}
+        },
+        marker.x(),
+        marker.h(),
+        cellTimeStamp,
+        cellTimeStepSize,
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        reconstructedPatch,
+        targetPatch
+      );
+  
+      {{POSTPROCESS_UPDATED_PATCH}}
     
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
     
-    repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
+      repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
 
-    ::exahype2::fv::validatePatch(
-      targetPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      0, // halo
-      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // outcome has to be valid
+      ::exahype2::fv::validatePatch(
+        targetPatch,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        0, // halo
+        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+      ); // outcome has to be valid
+    }
   """ )
 
 
@@ -200,6 +203,20 @@ class SingleSweep( FV ):
 
 
   def create_data_structures(self):
+    """
+    
+     Call the superclass' create_data_structures() to ensure that all the data
+     structures are in place, i.e. each cell can host a patch, that each face hosts 
+     patch overlaps, and so forth. These quantities are all set to defaults. See
+     FV.create_data_structures().
+     
+     After that, take the patch overlap (that's the data stored within the faces)
+     and ensure that these are sent and received via MPI whenever they are also 
+     stored persistently. The default in FV is that no domain boundary data exchange
+     is active. Finally, ensure that the old data is only exchanged between the 
+     initialisation sweep and the first first grid run-through.
+    
+    """
     super(SingleSweep, self).create_data_structures()
 
     initialisation_sweep_predicate = "(" + \
@@ -219,7 +236,10 @@ class SingleSweep( FV ):
             
   def create_action_sets(self):
     """
-      Call superclass routine and then reconfigure the update cell call
+
+      Call superclass routine and then reconfigure the update cell call.
+      Only the UpdateCell action set is specific to a single sweep.
+      
     """
     super(SingleSweep, self).create_action_sets()
     self._action_set_update_cell = UpdateCell(self)

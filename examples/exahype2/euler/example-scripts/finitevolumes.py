@@ -45,7 +45,7 @@ parser.add_argument("-pd", "--peano-dir",              dest="peanodir",         
 parser.add_argument("-cd", "--configure-dir",          dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("-o",  "--output",                 dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("-f",  "--force",                  dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-fixed-enclave-gpu", "global-adaptive-enclave-gpu"], default="global-fixed", help="Pick implementation variant" )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-fixed-enclave-gpu", "global-adaptive-enclave-gpu", "subcycling-fixed"], default="global-fixed", help="Pick implementation variant" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
@@ -135,6 +135,16 @@ elif args.type=="global-adaptive-enclave":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.01
+  )
+elif args.type=="subcycling-fixed":
+  thesolver = exahype2.solvers.fv.rusanov.SubcyclingFixedTimeStep(
+    "Euler",
+    args.patch_size,
+    unknowns, auxiliary_variables,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   )
 elif args.type=="global-fixed-enclave-gpu":
   thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking(

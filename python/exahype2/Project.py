@@ -318,23 +318,12 @@ class Project(object):
      Build the Peano4 project, i.e. all the action sets et al that you require
      to run this ExaHyPE2 application. 
      
-     To get all the pathes right, please invoke set_Peano4_installation() prior
-     to this call.
-     
-     
-     !!! self.create_grid
-     
-     
-     !!! self.create_grid_but_postpone_refinement
-     
-     The same as self.create_grid, but this traversal type does not evaluate the AMR 
-     criteria. The rationale is that a self.create_grid call might add quite a lot
-     of mesh elements and consequently require some rebalancing. This is 
-     expensive memory- and time-wisely and might trigger follow-up rebalancing.
-     If we ran the next mesh refinement immediately afterwards, we would likely
-     run out of memory at one point and the mesh construction would last 
-     forever. With self.create_grid_but_postpone_refinement, we give the main code
-     the opportunity to insert a few "empty"ish traversals in-between.
+     This routine generates a Peano project, i.e. the domain-specific ExaHyPE 
+     view is translated into a Peano model. Once you have called this routine,
+     any changes to the ExaHyPE 2 configuration do not propagate into the Peano
+     setup anymore. If you alter the ExaHyPE setup, you have to call 
+     generate_Peano4_project() again to get a new snapshot/version of the
+     Peano setup.
      
     """
     #self._project.cleanup()

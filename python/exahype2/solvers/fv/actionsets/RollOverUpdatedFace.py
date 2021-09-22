@@ -8,8 +8,16 @@ import jinja2
 
 class RollOverUpdatedFace(AbstractFVActionSet):
   """
-  
-    The global periodic boundary conditions are set in the Constants.h. 
+
+    This action set takes the updated data per face and writes it into
+    new. So it takes the outcome from ProjectPatchOntoFaces and writes 
+    it onto the (persistent) face data. Before it does so, the action
+    set also rolls over the new data to the old one.
+    
+    We may not roll over data if no data has been written onto the 
+    face. So we check the updated flag. It is reset by the UpdateFaceLabel
+    action set in the grid subpackage and set again by either the face
+    projection or the dynamic amr handling.
    
   """
   TemplateHandleFace = jinja2.Template( """
@@ -32,6 +40,10 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             }
           }
         }
+        
+        {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0) );
+        {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(0) );
+        
         logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on left face)"  );
       }
       else {
@@ -54,6 +66,10 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             }
           }
         }
+        
+        {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1) );
+        {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(1) );
+        
         logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on right face)"  );
       }
       else {

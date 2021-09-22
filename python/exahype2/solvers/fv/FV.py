@@ -21,15 +21,58 @@ class FV(object):
   """ 
     An abstract finite volume solver step sizes that works on patch-based
     AMR with a halo layer of one.
-  
+    
+    
+    FV is the base class of all FV solvers. It defines what kind of action sets do 
+    exist, i.e. what in principle can be done while we run through the grid. It also
+    provides some kind of very basic infrastructure, i.e. what the name of a solver
+    is, what data is to be held per face or cell, or where in the multiscale mesh
+    we actually have to hold data.
+
+    The FV class cannot/should not be instantiated. There are two direct children:
+    SingleSweep and EnclaveTasking. The FV base class defines what data are available.
+    The two subclasses define how we run through the mesh: once per time step or 
+    twice per time step with some tasking. So FV defines what can be done, the 
+    subclasses define how the steps are orchestrated. Again, they do not (yet) say
+    what is computed. That's then the responsibility of classes that inherit from 
+    SingleSweep or EnclaveTasking, respectively.
+    
+    A finite volume solver in ExaHyPE 2 (actually any solver) is first of all a 
+    static collection of data logically tied to grid entities and some operations 
+    over the mesh that are just there. All data and action sets however have guards,
+    i.e. boolean predicates that define
+    
+    - are data to be stored in-between traversals,
+    - are action sets really invoked in a particular traversal or can they be 
+      skipped.
+      
+    In the baseline FV class, these predicates are usually set to default values.
+    That is, all action sets per time step are invoked always (the predicate is 
+    true) and all data are always stored on the finest mesh. If you want to alter
+    this behaviour, i.e. store data not always or skip steps, you can overwrite
+    the corresponding attributes of the attributes, i.e. the predicates of the
+    associated data. 
+    
+    See the discussion on "Control flow between this class and subclasses" below.
+
+    :: Data structures
+    
+    They key responsibility of FV is to establish which grid entities hold which 
+    data.
+    
+    Each cell holds a patch of (finite) volumes.   
+    
     We use two overlaps in this case: the standard one and one we call new. In the
     time stepping, we use the new one to project our data to. Then we roll it over
     at the end of the iteration. This way, we ensure that the one from the previous
     iteration is not overwritten by some adjacent cell halfway through the 
     computation.
 
+    @todo TW write more
     
-    Data flow:
+    :: Data flow
+    
+    @todo Rewrite
     
     The class has a number of guards. They are boolean expression which control 
     whether data is stored and communicated. If you want to redefine these guards,
@@ -39,18 +82,51 @@ class FV(object):
     refine them by adding more and and or clauses.
   
   
-    Parallelisation:
+    :: Parallelisation
     
     I do equip both Q and NewQ with proper merge routines. However, all merge guards
     set to "never" by default. If you need some data exchange, you have to activate
     them manually.
     
     
-    Add further data structures:
+    :: Control flow between this class and subclasses
     
-    To add more data structures, plug into create_data_structures() and 
-    create_action_sets().
+    There are three key routines: the constructor, create_data_structures() and 
+    create_action_sets(). The constructor sets some global variables (such as the 
+    name) and then invokes the other two routines.
     
+    create_data_structures() establishes all the data structures tied to the 
+    grid entities. It also sets some properties of these data such as the patch 
+    size, e.g. If you want to add additional data (such as additional quantities
+    per cell) or if you want to alter the configuration of data tied to grid
+    entities, you should redefine create_data_structures(). However, any 
+    subclass still should call FV's create_data_structures() - or the create_data_structures()
+    of the SingleSweep or EnclaveTasking, respectively. This will ensure that the
+    baseline configuration of all data is in place. After that, you can modify 
+    the properties.
+    
+    create_action_sets() establishes the action sets, i.e. activities that are to 
+    be triggered whenever you run a time step, you plot, you initialise the grid.
+    
+    Both create_data_structures() and create_action_sets() add attributes to the 
+    FV class. See self._patch for example within create_action_sets(). These 
+    attributes have predicates such as self._action_set_initial_conditions.predicate.
+    These predicates are set to defaults in FV. It is basically the job of SingleSweep
+    or EnclaveTasking - they determine when which data are used - to reset these
+    predicates from a default to something tailored to the particular data flow.
+    
+    If you want to redefine when data is stored or operations are invoked, overwrite
+    create_data_structures(), and call the superclass, i.e. either SingleSweep or 
+    EnclaveTasking. This is what happens:
+    
+    - SingleSweep or EnclaveTasking pass on the call to FV.create_data_structures().
+      This call ensures that all the data structures are in place. Then it returns.
+    - SingleSweep's or EnclaveTasking's create_data_structures() then sets the 
+      predicate, i.e. they configure when data is stored or used.
+    - Finally, your own overwrite of create_data_structures() can augment the 
+      data structures (which are now in place and called at the right time) with 
+      information what it actually shall do.
+        
   """
   
       
@@ -139,6 +215,20 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
      or auxiliary variables. See class description's subsection on 
      data flow.
      
+     :: Call order and ownership
+     
+     This operation can be called multiple times. However, only the very
+     last call matters. All previous calls are wiped out.
+     
+     If you have a hierarchy of solvers, every create_data_structure()
+     should first(!) call its parent version. This way, you always ensure
+     that all data are in place before you continue to alter the more
+     specialised versions. So it is (logically) a top-down (general to
+     specialised) run through all create_data_structure() variants 
+     within the inheritance tree.
+     
+     :: Arguments
+     
      _patch: Patch (NxNxN)
        Actual patch data. We use Finite Volumes, so this is 
        always the current snapshot, i.e. the valid data at one point.
@@ -224,6 +314,18 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     
      Overwrite in subclasses if you wanna create different
      action sets.
+     
+     :: Call order and ownership
+     
+     This operation can be called multiple times. However, only the very
+     last call matters. All previous calls are wiped out.
+     
+     If you have a hierarchy of solvers, every create_data_structure()
+     should first(!) call its parent version. This way, you always ensure
+     that all data are in place before you continue to alter the more
+     specialised versions. So it is (logically) a top-down (general to
+     specialised) run through all create_data_structure() variants 
+     within the inheritance tree.
      
     """
     self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_predicate(), "true" )

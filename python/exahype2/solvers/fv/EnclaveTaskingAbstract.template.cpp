@@ -20,8 +20,11 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _maxTimeStamp(0.0),
   _minVolumeH(0.0),
   _maxVolumeH(0.0),
+  _minVolumeHFromPreviousTimeStep(0.0),
+  _maxVolumeHFromPreviousTimeStep(0.0),
   _minTimeStepSize(0.0),
-  _maxTimeStepSize(0.0) {
+  _maxTimeStepSize(0.0),
+  _patchUpdates(0) {
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
@@ -36,23 +39,23 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize() const {
-  return _minVolumeH * NumberOfFiniteVolumesPerAxisPerPatch;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool currentTimeStep) const {
+  return getMinVolumeSize(currentTimeStep) * NumberOfFiniteVolumesPerAxisPerPatch;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize() const {
-  return _maxVolumeH * NumberOfFiniteVolumesPerAxisPerPatch;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize(bool currentTimeStep) const {
+  return getMaxVolumeSize(currentTimeStep) * NumberOfFiniteVolumesPerAxisPerPatch;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinVolumeSize() const {
-  return _minVolumeH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinVolumeSize(bool currentTimeStep) const {
+  return currentTimeStep ? _minVolumeH : _minVolumeHFromPreviousTimeStep;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxVolumeSize() const {
-  return _maxVolumeH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxVolumeSize(bool currentTimeStep) const {
+  return currentTimeStep ? _maxVolumeH : _maxVolumeHFromPreviousTimeStep;
 }
 
 
@@ -97,6 +100,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   assertion1(patchSize>0.0,patchSize);
   _maxVolumeH = std::max(_maxVolumeH,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
   _minVolumeH = std::min(_minVolumeH,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
+
+  _patchUpdates++;
 }
 
 
@@ -196,8 +201,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _maxTimeStamp    = std::numeric_limits<double>::min();
     _minTimeStepSize = std::numeric_limits<double>::max();
     _maxTimeStepSize = std::numeric_limits<double>::min();
+
+    _minVolumeHFromPreviousTimeStep = _minVolumeH;
+    _maxVolumeHFromPreviousTimeStep = _maxVolumeH;
+
     _maxVolumeH      = 0.0;
     _minVolumeH      = std::numeric_limits<double>::max();
+    _patchUpdates    = 0;
 
     _solverState = SolverState::Secondary;
   }
@@ -217,6 +227,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   double newMaxVolumeH   = _maxVolumeH;
   double newMinTimeStepSize = _minTimeStepSize;
   double newMaxTimeStepSize = _maxTimeStepSize;
+  int    newPatchUpdates    = _patchUpdates;
 
   tarch::mpi::Rank::getInstance().allReduce(
       &newMinTimeStamp,
@@ -262,13 +273,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
+
+  tarch::mpi::Rank::getInstance().allReduce(
+      &newPatchUpdates,
+      &_patchUpdates,
+      1, MPI_INT,
+      MPI_SUM,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
   #endif
-
-
-  logDebug( "finishTimeStep(...)", "t_min=" << _minTimeStamp );
-  logDebug( "finishTimeStep(...)", "t_max=" << _maxTimeStamp );
-  logDebug( "finishTimeStep(...)", "dt_min=" << _minTimeStepSize );
-  logDebug( "finishTimeStep(...)", "dt_max=" << _maxTimeStepSize );
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}
 }

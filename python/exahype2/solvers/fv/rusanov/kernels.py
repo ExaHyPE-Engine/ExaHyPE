@@ -12,6 +12,30 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time
 """
 
 
+def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size ):
+  return """
+  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
+  // always chosen such that the finest grid does something meaningful.
+  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+    repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
+    0.0;
+  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  
+  updateCellIfItHoldsData = true;
+  
+  for (int i=0; i<Dimensions; i++) {
+    // updateCellIfItHoldsData
+    // double t = fineGridFacesEulerFaceLabel(i).getOldTimeStamp(0);
+    std::cout << " " << fineGridFacesEulerFaceLabel(i).getOldTimeStamp(0) 
+              << "x" << fineGridFacesEulerFaceLabel(i).getNewTimeStamp(0) 
+              << "x" << fineGridFacesEulerFaceLabel(i).getUpdatedTimeStamp(0);
+  }
+  
+  // @todo den bool wieder raus. Der muss frueher rein. ich will ja net erst rekonstruieren und dann alles weg schmeissen
+
+"""
+
+
 def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping():
   return """
   cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
@@ -115,6 +139,30 @@ def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_ta
 """
 
     
+def create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(use_enclave_tasking):
+  predicate = """
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxVolumeH>0.0
+  """
+  
+  if use_enclave_tasking:
+    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
+      
+  return """
+  if (""" + predicate + """) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t_{min}  = " << _minTimeStamp );
+    logInfo( "step()", "t_{max}  = " << _maxTimeStamp );
+    logInfo( "step()", "dt_{min} = " << _minTimeStepSize );
+    logInfo( "step()", "dt_{max} = " << _maxTimeStepSize );
+    logInfo( "step()", "h_{min}  = " << _minVolumeH << " (volume size)");
+    logInfo( "step()", "h_{max}  = " << _maxVolumeH << " (volume size)" );
+    logInfo( "step()", "#updates = " << _patchUpdates << " (no of patches)" );
+  }
+"""
+
+
 def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave_tasking):
   predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 

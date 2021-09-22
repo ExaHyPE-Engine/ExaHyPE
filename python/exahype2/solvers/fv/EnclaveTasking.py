@@ -17,60 +17,63 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = jinja2.Template( """
   double cellTimeStepSize = -1.0;
   double cellTimeStamp    = -1.0;
+  bool   updateCellIfItHoldsData = true;
      
   {{PREPROCESS_RECONSTRUCTED_PATCH_THROUGHOUT_SWEEP}}
     
-  assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
-  assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
-
-  const double usedTimeStepSize = cellTimeStepSize;
+  if (updateCellIfItHoldsData) {
+      assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
+      assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
     
-  ::exahype2::fv::validatePatch(
-      reconstructedPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1, // halo
-      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-  ); // previous time step has to be valid
-
-  if (marker.isSkeletonCell()) {
-    tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
-      marker,
-      cellTimeStamp,
-      cellTimeStepSize,
-      reconstructedPatch,
-      targetPatch
-    );
-
-    ::exahype2::fv::validatePatch(
-      targetPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      0, // halo
-      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // outcome has to be valid
+      const double usedTimeStepSize = cellTimeStepSize;
+        
+      ::exahype2::fv::validatePatch(
+          reconstructedPatch,
+          {{NUMBER_OF_UNKNOWNS}},
+          {{NUMBER_OF_AUXILIARY_VARIABLES}},
+          {{NUMBER_OF_VOLUMES_PER_AXIS}},
+          1, // halo
+          std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+      ); // previous time step has to be valid
+    
+      if (marker.isSkeletonCell()) {
+        tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
+          marker,
+          cellTimeStamp,
+          cellTimeStepSize,
+          reconstructedPatch,
+          targetPatch
+        );
+    
+        ::exahype2::fv::validatePatch(
+          targetPatch,
+          {{NUMBER_OF_UNKNOWNS}},
+          {{NUMBER_OF_AUXILIARY_VARIABLES}},
+          {{NUMBER_OF_VOLUMES_PER_AXIS}},
+          0, // halo
+          std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+        ); // outcome has to be valid
+      }
+      else { // is an enclave cell
+        assertion( marker.isEnclaveCell() );
+        auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+          marker,
+          cellTimeStamp,
+          cellTimeStepSize,
+          reconstructedPatch
+        );
+        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+    
+        peano4::parallel::Tasks spawn(
+          newEnclaveTask,
+          peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
+          peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
+        );
+      }
+      
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
   }
-  else { // is an enclave cell
-    assertion( marker.isEnclaveCell() );
-    auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
-      marker,
-      cellTimeStamp,
-      cellTimeStepSize,
-      reconstructedPatch
-    );
-    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-
-    peano4::parallel::Tasks spawn(
-      newEnclaveTask,
-      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
-      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
-    );
-  }
-  
-  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
   """)
 
   def __init__(self,solver):

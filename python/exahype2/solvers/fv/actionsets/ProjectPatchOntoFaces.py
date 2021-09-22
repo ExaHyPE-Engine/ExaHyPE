@@ -13,6 +13,11 @@ class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFace
    This class is very similar to peano4.toolbox.blockstructured.ProjectPatchOntoFaces, 
    but there are some delicate differences.
    
+   The big difference is that the projection also sets the isUpdated() flag and the 
+   UpdatedTimeStamp(). As the projection writes to these two updated records, it is
+   important that you roll it over afterwards. This is done via the mapping
+   RollOverUpdatedFace.
+      
   """
   def __init__(self,solver, predicate):
     peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(self,solver._patch,solver._patch_overlap_update,predicate,solver._get_default_includes() + solver.get_user_includes(), True)
