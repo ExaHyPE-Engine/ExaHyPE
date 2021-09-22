@@ -1,7 +1,7 @@
 #include "{{CLASSNAME}}.h"
 
 // user includes
-{{INCLUDES}}
+{{SOLVER_INCLUDES}}
 
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"

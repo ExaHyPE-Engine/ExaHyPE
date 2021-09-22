@@ -208,11 +208,11 @@ if __name__ == "__main__":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_point_wise_postprocessing_of_restriction( "examples::exahype2::ccz4::enforceCCZ4constraints(targetVolume)" )
 
 
-      def get_user_includes(self):
+      def get_user_action_set_includes(self):
         """
          We take this routine to add a few additional include statements.
         """
-        return SuperClass.get_user_includes(self) + self._my_user_includes
+        return SuperClass.get_user_action_set_includes(self) + self._my_user_includes
 
 
       def add_constraint_RefinementFlag_verification(self):

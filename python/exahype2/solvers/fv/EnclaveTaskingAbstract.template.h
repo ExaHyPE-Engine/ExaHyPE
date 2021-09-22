@@ -21,7 +21,7 @@
 #include "Constants.h"
 
 
-{{INCLUDES}}
+{{SOLVER_INCLUDES}}
 
 
 {% for item in NAMESPACE -%}

@@ -60,7 +60,8 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
     use_split_loop          = False,
-    additional_includes     = ""
+    additional_action_set_includes = "",
+    additional_user_includes       = ""
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -98,5 +99,5 @@ if (_solverState==SolverState::Secondary) {
 }
 """
     
-    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_includes)
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 

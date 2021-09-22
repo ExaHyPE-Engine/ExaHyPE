@@ -176,8 +176,9 @@ class FV(object):
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
 
-    self.solver_constants_     = ""
-    self.user_includes         = ""
+    self.solver_constants_         = ""
+    self.user_action_set_includes  = ""
+    self.user_solver_includes      = ""
     
     if min_volume_h>max_volume_h:
        print( "Error: min_volume_h (" + str(min_volume_h) + ") is bigger than max_volume_h (" + str(max_volume_h) + ")" )
@@ -208,10 +209,14 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
   __repr__ = __str__
   
 
-  def get_user_includes(self):
-    return self.user_includes
+  def get_user_action_set_includes(self):
+    return self.user_action_set_includes
 
+  
+  def get_user_solver_includes(self):
+    return self.user_solver_includes
 
+  
   @abstractmethod
   def create_data_structures(self):
     """
@@ -655,4 +660,4 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
 
-    d[ "INCLUDES" ] = self.get_user_includes()
+    d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()

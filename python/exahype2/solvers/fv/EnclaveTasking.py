@@ -17,63 +17,60 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = jinja2.Template( """
   double cellTimeStepSize = -1.0;
   double cellTimeStamp    = -1.0;
-  bool   updateCellIfItHoldsData = true;
      
   {{PREPROCESS_RECONSTRUCTED_PATCH_THROUGHOUT_SWEEP}}
     
-  if (updateCellIfItHoldsData) {
-      assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
-      assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+  assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
+  assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+
+  const double usedTimeStepSize = cellTimeStepSize;
     
-      const double usedTimeStepSize = cellTimeStepSize;
-        
-      ::exahype2::fv::validatePatch(
-          reconstructedPatch,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          {{NUMBER_OF_VOLUMES_PER_AXIS}},
-          1, // halo
-          std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-      ); // previous time step has to be valid
-    
-      if (marker.isSkeletonCell()) {
-        tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
-          marker,
-          cellTimeStamp,
-          cellTimeStepSize,
-          reconstructedPatch,
-          targetPatch
-        );
-    
-        ::exahype2::fv::validatePatch(
-          targetPatch,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          {{NUMBER_OF_VOLUMES_PER_AXIS}},
-          0, // halo
-          std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-        ); // outcome has to be valid
-      }
-      else { // is an enclave cell
-        assertion( marker.isEnclaveCell() );
-        auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
-          marker,
-          cellTimeStamp,
-          cellTimeStepSize,
-          reconstructedPatch
-        );
-        fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
-    
-        peano4::parallel::Tasks spawn(
-          newEnclaveTask,
-          peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
-          peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
-        );
-      }
-      
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
+  ::exahype2::fv::validatePatch(
+      reconstructedPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      1, // halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+  ); // previous time step has to be valid
+
+  if (marker.isSkeletonCell()) {
+    tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
+      marker,
+      cellTimeStamp,
+      cellTimeStepSize,
+      reconstructedPatch,
+      targetPatch
+    );
+
+    ::exahype2::fv::validatePatch(
+      targetPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      0, // halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    ); // outcome has to be valid
   }
+  else { // is an enclave cell
+    assertion( marker.isEnclaveCell() );
+    auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
+      marker,
+      cellTimeStamp,
+      cellTimeStepSize,
+      reconstructedPatch
+    );
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+
+    peano4::parallel::Tasks spawn(
+      newEnclaveTask,
+      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
+      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
+    );
+  }
+  
+  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
+  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
   """)
 
   def __init__(self,solver):
@@ -102,7 +99,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_includes()
+""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
@@ -321,35 +318,16 @@ class EnclaveTasking( FV ):
       ")"
     self._action_set_roll_over_update_of_faces.predicate = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.predicate = self._store_cell_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate
-
    
-   # )
-   # #self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, 
-    #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
-    
-    #  patch                       = self._patch,
-    #  patch_overlap_interpolation = self._patch_overlap, 
-    #  patch_overlap_restriction   = self._patch_overlap_new,
-    #  interpolate_guard           = self._primary_sweep_predicate,
-    #  restrict_guard              = self._primary_or_initialisation_sweep_predicate,
-      #clear_guard                 = self._primary_or_initialisation_sweep_predicate,
-      #interpolate_guard           = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
-      #restrict_guard              = "not marker.isRefined() and " + self._secondary_sweep_or_grid_initialisation_predicate,
-      #clear_guard                 = "not fineGridFaceLabel.getBoundary() and " + self._primary_or_initialisation_sweep_predicate,
-    #  clear_guard                 = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
-    #  additional_includes         = """
-#include "../repositories/SolverRepository.h"
-#"""      
-    #)
 
-  def get_user_includes(self):
-    return super(SingleSweep, self).get_user_includes() + """
+  def get_user_action_set_includes(self):
+    return super(EnclaveTasking, self).get_user_action_set_includes() + """
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
-#include "../repositories/SolverRepository.h"
+#include "repositories/SolverRepository.h"
 """    
 
     
@@ -357,7 +335,8 @@ class EnclaveTasking( FV ):
     boundary_conditions, refinement_criterion, initial_conditions,
     memory_location,
     use_split_loop,
-    additional_includes
+    additional_action_set_includes,
+    additional_user_includes
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs 
@@ -376,7 +355,8 @@ class EnclaveTasking( FV ):
        memory_location!=None:
       raise Exception( "only valid memory mode for enclave tasking is heap without a delete, as enclave tasks delete memory themselves through the tarch. Selected mode=" + str(solver._reconstructed_array_memory_location) )
 
-    self.user_includes = additional_includes
+    self.user_action_set_includes += additional_action_set_includes
+    self.user_solver_includes     += additional_user_includes
 
     self.create_action_sets()
     

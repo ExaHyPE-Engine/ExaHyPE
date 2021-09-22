@@ -16,47 +16,45 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   SolveRiemannProblemsOverPatch = jinja2.Template( """
     double cellTimeStepSize = -1.0;
     double cellTimeStamp    = -1.0;
-    bool   updateCellIfItHoldsData = true;
      
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
     
-    if (updateCellIfItHoldsData) {
-      assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
-      assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
+    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
 
-      const double usedTimeStepSize = cellTimeStepSize;
+    const double usedTimeStepSize = cellTimeStepSize;
 
-      ::exahype2::fv::validatePatch(
+    ::exahype2::fv::validatePatch(
         reconstructedPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         1, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-      ); // previous time step has to be valid
+    ); // previous time step has to be valid
   
-      ::exahype2::fv::copyPatch(
+    ::exahype2::fv::copyPatch(
         reconstructedPatch,
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         1 // halo size
-      );
+    );
 
-      {% if USE_SPLIT_LOOP %}
-      #if Dimensions==2
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-      #else
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-      #endif
-      {% else %}
-      #if Dimensions==2
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-      #else
-      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-      #endif
-      {% endif %}
+    {% if USE_SPLIT_LOOP %}
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
+    #endif
+    {% else %}
+    #if Dimensions==2
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
+    #else
+    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
+    #endif
+    {% endif %}
         [&](
           const double * __restrict__                  QL,
           const double * __restrict__                  QR,
@@ -89,24 +87,23 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         reconstructedPatch,
         targetPatch
-      );
+    );
   
-      {{POSTPROCESS_UPDATED_PATCH}}
+    {{POSTPROCESS_UPDATED_PATCH}}
     
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
     
-      repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
+    repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
 
-      ::exahype2::fv::validatePatch(
+    ::exahype2::fv::validatePatch(
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         0, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-      ); // outcome has to be valid
-    }
+    ); // outcome has to be valid
   """ )
 
 
@@ -144,7 +141,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     return """
 #include "exahype2/fv/BoundaryConditions.h"
 #include "exahype2/NonCriticalAssertions.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_includes()
+""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
 
 
 
@@ -232,7 +229,7 @@ class SingleSweep( FV ):
 
     self._patch_overlap_old.generator.send_condition               = initialisation_sweep_predicate
     self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_predicate
-      
+
             
   def create_action_sets(self):
     """
@@ -247,8 +244,8 @@ class SingleSweep( FV ):
     self._action_set_update_cell = UpdateCell(self)
 
 
-  def get_user_includes(self):
-    return super(SingleSweep, self).get_user_includes() + """
+  def get_user_action_set_includes(self):
+    return super(SingleSweep, self).get_user_action_set_includes() + """
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 """
@@ -258,7 +255,8 @@ class SingleSweep( FV ):
     boundary_conditions, refinement_criterion, initial_conditions,
     memory_location,
     use_split_loop,
-    additional_includes
+    additional_action_set_includes,
+    additional_user_includes
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -278,7 +276,8 @@ class SingleSweep( FV ):
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
-    self.user_includes = additional_includes
+    self.user_action_set_includes += additional_action_set_includes
+    self.user_solver_includes     += additional_user_includes
 
     self.create_action_sets()
 

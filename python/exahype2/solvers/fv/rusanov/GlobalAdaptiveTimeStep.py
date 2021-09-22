@@ -55,7 +55,8 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
     use_split_loop          = False,
-    additional_includes     = ""
+    additional_action_set_includes = "",
+    additional_user_includes       = ""
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -88,5 +89,5 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._start_time_step_implementation          = create_start_time_step_implementation_for_adaptive_time_stepping(False)
     self._finish_time_step_implementation         = create_finish_time_step_implementation_for_adaptive_time_stepping(self._time_step_relaxation)
     
-    SingleSweep.set_implementation(self, boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_includes)
+    SingleSweep.set_implementation(self, boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 

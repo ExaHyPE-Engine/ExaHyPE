@@ -104,25 +104,6 @@ class GlobalFixedTimeStep( SingleSweep ):
       source_term=source_term )
 
 
-  def add_entries_to_text_replacement_dictionary(self,d):
-    """
-    
-     Let the superclass befill the dictionary with stuff that then has
-     to enter all the templates. Besides standard things that are already
-     handled by the superclass - such as includes - there is one more 
-     important thing that we have to do: We have to declare ClawPack's 
-     Fortran routines and mark them as extern.
-     
-     I could create a whole framework to handle this, but logically a 
-     extern declaration is very similar to an include. So I hijack the
-     includes in the dictionary and add an extern statement here that
-     replaces the dictionary entry.
-    
-    """  
-    super(GlobalFixedTimeStep,self).add_entries_to_text_replacement_dictionary(d)
-
-    # @todo This should also go into kernels, as we'll need it for other solvers, too. 
-    # After all, the extern declaration is independent of the ExaHyPE 2 solver.
     rpn  = 'extern "C" int '
     rpn  += self._clawpack_Riemann_solver
     if self._discriminate_normal:
@@ -141,7 +122,9 @@ class GlobalFixedTimeStep( SingleSweep ):
   double wave[3][3], double* s, double* amdq, double* apdq
 );
 """
-    d["INCLUDES"] += rpn
+
+    self.user_solver_includes     += rpn
+    #self.user_action_set_includes += rpn
 
 
   def add_implementation_files_to_project(self,namespace,output):
@@ -181,7 +164,8 @@ class GlobalFixedTimeStep( SingleSweep ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
     use_split_loop          = False,
-    additional_includes     = ""
+    additional_action_set_includes = "",
+    additional_user_includes       = ""
   ):
     """
 
@@ -201,4 +185,4 @@ class GlobalFixedTimeStep( SingleSweep ):
       self._source_term_call    = create_user_defined_source_term_kernel()
     self._Riemann_solver_call   = create_compute_Riemann_kernel_for_ClawPack(self._clawpack_Riemann_solver, self._discriminate_normal)
       
-    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_includes)
+    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)

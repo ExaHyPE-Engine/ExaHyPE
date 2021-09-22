@@ -63,7 +63,8 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
     use_split_loop          = False,
-    additional_includes     = ""
+    additional_action_set_includes = "",
+    additional_user_includes       = ""
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -96,6 +97,20 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(False)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
       
-    super(SubcyclingFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_includes)
+    super(SubcyclingFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
 
+  def create_action_sets(self):
+    """
+    
+    The actual action sets all are created by the superclass. So nothing
+    is to be done here. But we want to reset the actual updates and 
+    projection, and these only happen if we are allowed to update 
+    indeed.
+    
+    """
+    super(SubcyclingFixedTimeStep, self).create_action_sets()
+   
+    self._action_set_project_patch_onto_faces.predicate  += "and false"
+#    self._action_set_update_cell.predicate               += "and false"
+    

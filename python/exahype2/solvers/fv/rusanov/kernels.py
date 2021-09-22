@@ -23,14 +23,21 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time
   
   updateCellIfItHoldsData = true;
   
-  for (int i=0; i<Dimensions; i++) {
-    // updateCellIfItHoldsData
-    // double t = fineGridFacesEulerFaceLabel(i).getOldTimeStamp(0);
-    std::cout << " " << fineGridFacesEulerFaceLabel(i).getOldTimeStamp(0) 
-              << "x" << fineGridFacesEulerFaceLabel(i).getNewTimeStamp(0) 
-              << "x" << fineGridFacesEulerFaceLabel(i).getUpdatedTimeStamp(0);
+  for (int d=0; d<Dimensions; d++) {
+    updateCellIfItHoldsData &= tarch::la::greaterEquals( 
+      fineGridFacesEulerFaceLabel(d).getNewTimeStamp(1),
+      cellTimeStamp
+    );
+    updateCellIfItHoldsData &= tarch::la::greaterEquals( 
+      fineGridFacesEulerFaceLabel(d+Dimensions).getNewTimeStamp(0),
+      cellTimeStamp
+    );
   }
-  
+ 
+ 
+//  if ( updateCellIfItHoldsData ) {
+//    logInfo( "todo", "update " << marker.toString() );
+//  }
   // @todo den bool wieder raus. Der muss frueher rein. ich will ja net erst rekonstruieren und dann alles weg schmeissen
 
 """
@@ -180,7 +187,7 @@ def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave
     logInfo( "step()", "dt           = " << getAdmissibleTimeStepSize() );
     logInfo( "step()", "h_{min}      = " << _minVolumeH << " (volume size)");
     logInfo( "step()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
-    logInfo( "step()", "\lambda_{max} = " << _maxEigenvalue );
+    logInfo( "step()", "lambda_{max} = " << _maxEigenvalue );
   }
 """
     

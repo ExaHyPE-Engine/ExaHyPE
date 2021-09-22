@@ -10,7 +10,7 @@
 #define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
 
 
-{{INCLUDES}}
+{{SOLVER_INCLUDES}}
 
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"

@@ -111,11 +111,11 @@ if __name__ == "__main__":
         self.set_postprocess_updated_patch_kernel( """
 
 """ )
-      def get_user_includes(self):
+      def get_user_action_set_includes(self):
         """
          We take this routine to add a few additional include statements.
         """
-        return SuperClass.get_user_includes(self) + self._my_user_includes
+        return SuperClass.get_user_action_set_includes(self) + self._my_user_includes
 
       def add_mass_cal(self):
         """
