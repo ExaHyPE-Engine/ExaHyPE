@@ -95,6 +95,6 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(False)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
       
-    super(SingleSweep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
+    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
 
 
