@@ -152,7 +152,8 @@ class GlobalFixedTimeStep( SingleSweep ):
   def set_implementation(self,
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
     memory_location         = None,
-    use_split_loop          = False
+    use_split_loop          = False,
+    additional_includes     = ""
   ):
     """
 
@@ -168,12 +169,4 @@ class GlobalFixedTimeStep( SingleSweep ):
     #self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(False)
     #self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
       
-    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
-
-
-  #def get_user_includes(self):
-  #  """
-  #  
-  #  For the ClawPack users, we typically have to give the 
-  #  
-  #  """
+    super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_includes)
