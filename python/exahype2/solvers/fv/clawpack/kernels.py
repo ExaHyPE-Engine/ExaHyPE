@@ -43,3 +43,20 @@ def create_compute_Riemann_kernel_for_ClawPack():
   
   d= {}
   return Template.render(**d)
+
+
+def create_abstract_solver_user_declarations_for_fixed_time_stepping():
+  return """
+private:
+  double _timeStepSize;
+public:
+  double getTimeStepSize() const;  
+    """  
+
+
+def create_abstract_solver_user_definitions_for_fixed_time_stepping():
+  return """
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
+  return _timeStepSize;
+}
+    """  
