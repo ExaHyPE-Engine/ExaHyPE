@@ -180,9 +180,9 @@ class EnclaveTasking( FV ):
     self._preprocess_reconstructed_patch_in_skeleton_cell      = ""
     self._postprocess_updated_patch_in_skeleton_cell           = ""
     
-    self._source_term_call                = "#error Not yet defined"
-    self._Riemann_solver_call             = "#error Not yet defined"
-    self._fused_Riemann_solver_call       = "#error Not yet defined"
+    self._source_term_call                = "#error Not yet defined. Set self._source_term_call in your Python solver class."
+    self._Riemann_solver_call             = "#error Not yet defined. Set self._Riemann_solver_call in your Python solver class."
+    self._fused_Riemann_solver_call       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
     self._abstract_solver_user_declarations        = ""
     self._abstract_solver_user_definitions         = ""
     self._solver_user_declarations                 = ""

@@ -10,19 +10,30 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time
 """
 
 
-def create_compute_Riemann_kernel_for_ClawPack():
-  Template = jinja2.Template( """
-        double wave[{{NUMBER_OF_UNKNOWNS}}][{{NUMBER_OF_UNKNOWNS}}];
-        double speed[{{NUMBER_OF_UNKNOWNS}}];
+def create_compute_Riemann_kernel_for_ClawPack(clawpack_Riemann_solver, discriminate_normal):
+  """
+  
+  clawpack_Riemann_solver: String
+    Name of the ClawPack solver that is to be used.
+    
+  discriminate_normal: Boolean
+    There are two different versions of the kernels. One discriminates the directions,
+    the other one not.
+      
+  """
+  preamble = """
+          double wave[{{NUMBER_OF_UNKNOWNS}}][{{NUMBER_OF_UNKNOWNS}}];
+          double speed[{{NUMBER_OF_UNKNOWNS}}];
 
-        int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
-        int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-        int num_waves = {{NUMBER_OF_UNKNOWNS}};
-
-        {{CLAWPACK_RIEMANN_SOLVER}}_(
-          {%if DISCRIMINATE_NORMAL %}
-            &normal,
-          {% endif %}
+          int num_eqn   = {{NUMBER_OF_UNKNOWNS}};
+          int num_aux   = {{NUMBER_OF_AUXILIARY_VARIABLES}};
+          int num_waves = {{NUMBER_OF_UNKNOWNS}};
+        """
+        
+  arguments = ""
+  if discriminate_normal:
+    arguments = """(
+          &normal,
           &num_eqn,
           &num_aux,
           &num_waves,
@@ -35,14 +46,29 @@ def create_compute_Riemann_kernel_for_ClawPack():
           FL,                                 // double* amdq
           FR                                  // double* apdq
         );
+    """
+  else:
+    arguments = """(
+          &num_eqn,
+          &num_aux,
+          &num_waves,
+          QL,                                 // double* q_l
+          QR,                                 // double* q_r
+          QL+{{NUMBER_OF_UNKNOWNS}},          // double* aux_l
+          QR+{{NUMBER_OF_UNKNOWNS}},          // double* aux_r
+          wave,
+          speed,
+          FL,                                 // double* amdq
+          FR                                  // double* apdq
+        );
+    """
 
-        for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
-          FL[i] = -FL[i];
-        }
-""", undefined=jinja2.DebugUndefined)
-  
-  d= {}
-  return Template.render(**d)
+  epilogue = """
+          for (int i=0; i<{{NUMBER_OF_UNKNOWNS}}; i++) {
+            FL[i] = -FL[i];
+          }
+"""
+  return preamble + clawpack_Riemann_solver + "_" + arguments + epilogue
 
 
 # @todo replication of Rusanov. Have to consolidate!
@@ -97,4 +123,14 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_ti
 def create_empty_source_term_kernel():
   return """
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
+"""
+
+
+def create_user_defined_source_term_kernel():
+  return """
+  repositories::{{SOLVER_INSTANCE}}.sourceTerm(
+    Q,
+    x, dx, t, dt,
+    S
+  );
 """

@@ -12,6 +12,8 @@ from .kernels import create_abstract_solver_user_definitions_for_fixed_time_step
 from .kernels import create_start_time_step_implementation_for_fixed_time_stepping
 from .kernels import create_finish_time_step_implementation_for_fixed_time_stepping
 from .kernels import create_empty_source_term_kernel
+from .kernels import create_user_defined_source_term_kernel
+from .kernels import create_compute_Riemann_kernel_for_ClawPack
 
 
 class GlobalFixedTimeStep( SingleSweep ):
@@ -70,6 +72,7 @@ class GlobalFixedTimeStep( SingleSweep ):
   def __init__(self,
     name, patch_size, unknowns, auxiliary_variables, min_volume_h,
     max_volume_h, time_step_size, clawpack_name, clawpack_files = [],
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False, discriminate_normal=False,
     kernel_implemenatation=None
   ):
@@ -92,6 +95,14 @@ class GlobalFixedTimeStep( SingleSweep ):
 
     self._Riemann_solver_implementation_files = clawpack_files
 
+    self._source_term_implementation          = PDETerms.None_Implementation
+
+    self.set_implementation(
+      boundary_conditions=boundary_conditions, 
+      refinement_criterion=refinement_criterion, 
+      initial_conditions=initial_conditions, 
+      source_term=source_term )
+
 
   def add_entries_to_text_replacement_dictionary(self,d):
     """
@@ -110,9 +121,6 @@ class GlobalFixedTimeStep( SingleSweep ):
     rpn2 += 'const double * __restrict__ aux_l, const double * __restrict__ aux_r,'
     rpn2 += 'double wave[3][3], double* s, double* amdq, double* apdq);\n'
     d["ADDITIONALDEFS"]     = rpn2
-
-    d["CLAWPACK_RIEMANN_SOLVER"] = self._clawpack_Riemann_solver
-    d["DISCRIMINATE_NORMAL"]     = self._discriminate_normal
 
 
   def add_implementation_files_to_project(self,namespace,output):
@@ -149,7 +157,7 @@ class GlobalFixedTimeStep( SingleSweep ):
 
 
   def set_implementation(self,
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
     use_split_loop          = False,
     additional_includes     = ""
@@ -157,12 +165,19 @@ class GlobalFixedTimeStep( SingleSweep ):
     """
 
     """
+    
+    if source_term          is not None:  self._source_term_implementation                = source_term
+
     self._abstract_solver_user_declarations = create_abstract_solver_user_declarations_for_fixed_time_stepping()
     self._abstract_solver_user_definitions  = create_abstract_solver_user_definitions_for_fixed_time_stepping()
 
     self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(False)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
 
-    self._source_term_call    = create_empty_source_term_kernel()
+    if self._source_term_implementation == PDETerms.None_Implementation:
+      self._source_term_call    = create_empty_source_term_kernel()
+    else:
+      self._source_term_call    = create_user_defined_source_term_kernel()
+    self._Riemann_solver_call   = create_compute_Riemann_kernel_for_ClawPack(self._clawpack_Riemann_solver, self._discriminate_normal)
       
     super(GlobalFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_includes)

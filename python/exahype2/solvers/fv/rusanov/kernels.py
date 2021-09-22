@@ -237,6 +237,7 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_ti
 """
 
 
+# @todo Umbenennen und extrahieren. ClawPack nimmt gleichen
 def create_source_term_kernel_for_Rusanov(source_term_implementation):
   Template = jinja2.Template( """
   {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
