@@ -108,6 +108,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 
   def __init__(self, solver):
+    """
+    
+    
+    """
     ReconstructPatchAndApplyFunctor.__init__(self,
       patch = solver._patch,
       # todo hier muessen beide rein, denn ich muss ja interpolieren
@@ -119,22 +123,22 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       guard = "not marker.isRefined()",
       add_assertions_to_halo_exchange = False
     )
-
     self._solver = solver
-    self.d[ "USE_SPLIT_LOOP" ] = solver._use_split_loop
-    self.update_compute_kernel()
 
 
-  def update_compute_kernel(self):
+  def _add_action_set_entries_to_dictionary(self,d):
     """
     
-     Whenever you change the operators/types of Riemann solvers
-     that you want to use, you have to invoke this routine.
+    This is our plug-in point to alter the underlying dictionary
     
     """
-    self._solver._init_dictionary_with_default_parameters(self.d)
-    self._solver.add_entries_to_text_replacement_dictionary(self.d)
-    self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**self.d)
+    super(UpdateCell,self)._add_action_set_entries_to_dictionary(d)
+    
+    self._solver._init_dictionary_with_default_parameters(d)
+    self._solver.add_entries_to_text_replacement_dictionary(d)
+    
+    d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**d)
+    d[ "USE_SPLIT_LOOP" ]              = self._solver._use_split_loop
 
   
   def get_includes(self):
@@ -216,10 +220,10 @@ class SingleSweep( FV ):
     """
     super(SingleSweep, self).create_data_structures()
 
-    initialisation_sweep_predicate = "(" + \
+    initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
-    first_iteration_after_initialisation_predicate = "(" + \
+    first_iteration_after_initialisation_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
@@ -227,8 +231,8 @@ class SingleSweep( FV ):
     self._patch_overlap_new.generator.send_condition               = "true"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
-    self._patch_overlap_old.generator.send_condition               = initialisation_sweep_predicate
-    self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_predicate
+    self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
+    self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
 
             
   def create_action_sets(self):

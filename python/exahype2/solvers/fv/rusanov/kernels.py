@@ -4,12 +4,8 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 
 import jinja2
 
-
-def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size ):
-  return """
-  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-"""
+from exahype2.solvers.fv.kernels import create_empty_source_term_kernel
+from exahype2.solvers.fv.kernels import create_user_defined_source_term_kernel
 
 
 def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size ):
@@ -81,22 +77,6 @@ def create_constructor_implementation_for_adaptive_time_stepping():
   return "_admissibleTimeStepSize = 0.0;"
   
 
-def create_abstract_solver_user_declarations_for_fixed_time_stepping():
-  return """
-private:
-  double _timeStepSize;
-public:
-  double getTimeStepSize() const;  
-    """  
-    
-    
-def create_abstract_solver_user_definitions_for_fixed_time_stepping():
-  return """
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
-  return _timeStepSize;
-}
-    """  
-
 
 def create_abstract_solver_user_declarations_for_adaptive_time_stepping():
   return """
@@ -123,51 +103,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
   return _admissibleTimeStepSize;
 }
     """  
-
-
-def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
-  predicate = """
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
-    _maxVolumeH>0.0
-  """
-  
-  if use_enclave_tasking:
-    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
-      
-  return """
-  if (""" + predicate + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << _minTimeStamp );
-    logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minVolumeH << " (volume size)");
-    logInfo( "step()", "h_{max} = " << _maxVolumeH << " (volume size)" );
-  }
-"""
-
-    
-def create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(use_enclave_tasking):
-  predicate = """
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
-    _maxVolumeH>0.0
-  """
-  
-  if use_enclave_tasking:
-    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
-      
-  return """
-  if (""" + predicate + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t_{min}  = " << _minTimeStamp );
-    logInfo( "step()", "t_{max}  = " << _maxTimeStamp );
-    logInfo( "step()", "dt_{min} = " << _minTimeStepSize );
-    logInfo( "step()", "dt_{max} = " << _maxTimeStepSize );
-    logInfo( "step()", "h_{min}  = " << _minVolumeH << " (volume size)");
-    logInfo( "step()", "h_{max}  = " << _maxVolumeH << " (volume size)" );
-    logInfo( "step()", "#updates = " << _patchUpdates << " (no of patches)" );
-  }
-"""
 
 
 def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave_tasking):
@@ -235,31 +170,11 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
 """
 
 
-def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
-  return """
-  assertion( _minVolumeH > 0.0 );
-  assertion( MaxAdmissibleVolumeH > 0.0 );
-  assertion( _minVolumeH <= MaxAdmissibleVolumeH );
-  _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minVolumeH / MaxAdmissibleVolumeH;
-"""
-
-
-# @todo Umbenennen und extrahieren. ClawPack nimmt gleichen
 def create_source_term_kernel_for_Rusanov(source_term_implementation):
-  Template = jinja2.Template( """
-  {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-  repositories::{{SOLVER_INSTANCE}}.sourceTerm(
-    Q,
-    x, dx, t, dt,
-    S
-  );
-  {% else %}
-  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
-  {% endif %}
-""", undefined=jinja2.DebugUndefined)
-  d= {}
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  return Template.render(**d)
+  if source_term_implementation==PDETerms.None_Implementation:
+    return create_empty_source_term_kernel()
+  else:
+    return create_user_defined_source_term_kernel()
   
     
 def create_fused_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation, source_term_implementation):

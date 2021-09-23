@@ -82,7 +82,6 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   them. 
    
     """
-    self.d = {}
     if patch_overlap.dim[0] % 2 != 0:
       print( "Error: Patch associated to face has to have even number of cells. Otherwise, it is not a symmetric overlap." )
       assert( patch_overlap.dim[0] % 2 == 0 )
@@ -92,87 +91,100 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     if patch_overlap.dim[1] != patch.dim[0]:
       print( "Error: Patch of overlap and patch of cell have to match" )
       assert( patch_overlap.dim[1] == patch.dim[0] )
-      
-    self.d[ "GUARD" ]              = guard
 
-    self.d[ "UNKNOWNS" ]           = str(int(patch.no_of_unknowns))
-    self.d[ "DOFS_PER_AXIS" ]      = str(int(patch.dim[0]))
-    self.d[ "OVERLAP" ]            = str(int(patch_overlap.dim[0]/2))
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ]      = str(int(patch.no_of_unknowns * patch.dim[0] * patch.dim[0]))
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ]      = str(int(patch.no_of_unknowns * patch.dim[0] * patch.dim[0] * patch.dim[0]))
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(int(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0])))
-    self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = str(int(patch.no_of_unknowns * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0]) * (patch_overlap.dim[0] + patch.dim[0])))
-    self.d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + patch_overlap.name
-    self.d[ "CELL_ACCESSOR" ]      = "fineGridCell" + patch.name
+    self.guard          = guard
+    self.no_of_unknowns = int(patch.no_of_unknowns)
+    self.dofs_per_axis  = int(patch.dim[0])
+    self.total_overlap  = int(patch_overlap.dim[0])
+    self.overlap_name   = patch_overlap.name
+    self.patch_name     = patch.name
     
-    self.d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "assertion1"
-    self.d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "assertion2"
-    self.d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "assertion3"
-    self.d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "assertion4"
-    self.d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "assertion5"
-    self.d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "assertion6"
-    self.d[ "ASSERTION_WITH_7_ARGUMENTS" ] = "assertion7"
+    self.functor_implementation              = functor_implementation
+    self.add_assertions_to_halo_exchange     = add_assertions_to_halo_exchange
+    self.reconstructed_array_memory_location = reconstructed_array_memory_location
     
-    self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = functor_implementation
+        
+  def _add_action_set_entries_to_dictionary(self,d):
+    d[ "GUARD" ]              = self.guard
 
-    if add_assertions_to_halo_exchange:
-      self.d[ "ASSERTION_PREFIX_FOR_HALO" ] = "false"
+    d[ "UNKNOWNS" ]           = str(self.no_of_unknowns)
+    d[ "DOFS_PER_AXIS" ]      = str(self.dofs_per_axis)
+    d[ "OVERLAP" ]            = str(self.total_overlap/2)
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis)
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ]      = str(self.no_of_unknowns * self.dofs_per_axis * self.dofs_per_axis * self.dofs_per_axis)
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))
+    d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] = str(self.no_of_unknowns * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis) * (self.total_overlap + self.dofs_per_axis))
+    d[ "FACES_ACCESSOR" ]     = "fineGridFaces"  + self.overlap_name
+    d[ "CELL_ACCESSOR" ]      = "fineGridCell" + self.patch_name
+    
+    d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "assertion1"
+    d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "assertion2"
+    d[ "ASSERTION_WITH_3_ARGUMENTS" ] = "assertion3"
+    d[ "ASSERTION_WITH_4_ARGUMENTS" ] = "assertion4"
+    d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "assertion5"
+    d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "assertion6"
+    d[ "ASSERTION_WITH_7_ARGUMENTS" ] = "assertion7"
+    
+    d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.functor_implementation
+
+    if self.add_assertions_to_halo_exchange:
+      d[ "ASSERTION_PREFIX_FOR_HALO" ] = "false"
     else:
-      self.d[ "ASSERTION_PREFIX_FOR_HALO" ] = "true"
+      d[ "ASSERTION_PREFIX_FOR_HALO" ] = "true"
       
 
-    if reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
-      self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
+    if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapWithoutDelete:
+      d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-    double* reconstructedPatch = new double[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    double* reconstructedPatch = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
     #elif Dimensions==3
-    double* reconstructedPatch = new double[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    double* reconstructedPatch = new double[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """    
-    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.CallStack:
-      self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
+    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.CallStack:
+      d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     #if Dimensions==2
-    double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
+    double reconstructedPatch[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """];
     #elif Dimensions==3
-    double reconstructedPatch[""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
+    double reconstructedPatch[""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """];
     #endif
 """    
-    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
-      self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
+    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete:
+      d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     double* reconstructedPatch;
     #if Dimensions==2
-    reconstructedPatch = ::tarch::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::Heap);
+    reconstructedPatch = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::Heap);
     #elif Dimensions==3
-    reconstructedPatch = ::tarch::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::Heap);
+    reconstructedPatch = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::Heap);
     #endif
 """    
-    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator or reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      self.d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
+    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator or self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+      d[ "CREATE_RECONSTRUCTED_PATCH" ] = """
     double* reconstructedPatch;
     #if Dimensions==2
-    reconstructedPatch = ::tarch::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
+    reconstructedPatch = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_2D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
     #elif Dimensions==3
-    reconstructedPatch = ::tarch::allocateMemory(""" + self.d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
+    reconstructedPatch = ::tarch::allocateMemory(""" + d[ "NUMBER_OF_DOUBLE_VALUES_IN_RECONSTRUCTED_PATCH_3D" ] + """, ::tarch::MemoryLocation::ManagedAcceleratorMemory);
     #endif
 """    
     else:  
       printf( "Error: memory allocation mode for patch reconstruction not known")
 
 
-    if reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap:
-      self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
+    if self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Heap:
+      d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
     delete[] reconstructedPatch;
 """    
-    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch:
-      self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
+    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.HeapThroughTarch:
+      d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
     ::tarch::freeMemory(reconstructedPatch, tarch::MemoryLocation::Heap );
 """    
-    elif reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator:
-      self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
+    elif self.reconstructed_array_memory_location==ReconstructedArrayMemoryLocation.Accelerator:
+      d[ "DESTROY_RECONSTRUCTED_PATCH" ] = """
     ::tarch::freeMemory(reconstructedPatch, tarch::MemoryLocation::ManagedAcceleratorMemory );
 """    
     else:
-      self.d[ "DESTROY_RECONSTRUCTED_PATCH" ] = ""
+      d[ "DESTROY_RECONSTRUCTED_PATCH" ] = ""
 
 
   def get_constructor_body(self):
@@ -282,7 +294,9 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   def get_body_of_operation(self,operation_name):
     result = "\n"
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result = self.__Template_TouchCellFirstTime.format(**self.d)
+      d = {}
+      self._add_action_set_entries_to_dictionary(d)
+      result = self.__Template_TouchCellFirstTime.format(**d)
       pass 
     return result
 

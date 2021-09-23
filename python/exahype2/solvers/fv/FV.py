@@ -40,17 +40,17 @@ class FV(object):
     A finite volume solver in ExaHyPE 2 (actually any solver) is first of all a 
     static collection of data logically tied to grid entities and some operations 
     over the mesh that are just there. All data and action sets however have guards,
-    i.e. boolean predicates that define
+    i.e. boolean guards that define
     
     - are data to be stored in-between traversals,
     - are action sets really invoked in a particular traversal or can they be 
       skipped.
       
-    In the baseline FV class, these predicates are usually set to default values.
-    That is, all action sets per time step are invoked always (the predicate is 
+    In the baseline FV class, these guards are usually set to default values.
+    That is, all action sets per time step are invoked always (the guard is 
     true) and all data are always stored on the finest mesh. If you want to alter
     this behaviour, i.e. store data not always or skip steps, you can overwrite
-    the corresponding attributes of the attributes, i.e. the predicates of the
+    the corresponding attributes of the attributes, i.e. the guards of the
     associated data. 
     
     See the discussion on "Control flow between this class and subclasses" below.
@@ -76,9 +76,9 @@ class FV(object):
     
     The class has a number of guards. They are boolean expression which control 
     whether data is stored and communicated. If you want to redefine these guards,
-    you have to redefine create_data_structures() and reset the predicates after
+    you have to redefine create_data_structures() and reset the guards after
     you have called the superclass' operation. I recommend that you refrain from
-    defining completely new predicates. Use the predefined predicates instead and
+    defining completely new guards. Use the predefined guards instead and
     refine them by adding more and and or clauses.
   
   
@@ -110,10 +110,10 @@ class FV(object):
     
     Both create_data_structures() and create_action_sets() add attributes to the 
     FV class. See self._patch for example within create_action_sets(). These 
-    attributes have predicates such as self._action_set_initial_conditions.predicate.
-    These predicates are set to defaults in FV. It is basically the job of SingleSweep
+    attributes have guards such as self._action_set_initial_conditions.guard.
+    These guards are set to defaults in FV. It is basically the job of SingleSweep
     or EnclaveTasking - they determine when which data are used - to reset these
-    predicates from a default to something tailored to the particular data flow.
+    guards from a default to something tailored to the particular data flow.
     
     If you want to redefine when data is stored or operations are invoked, overwrite
     create_data_structures(), and call the superclass, i.e. either SingleSweep or 
@@ -122,7 +122,7 @@ class FV(object):
     - SingleSweep or EnclaveTasking pass on the call to FV.create_data_structures().
       This call ensures that all the data structures are in place. Then it returns.
     - SingleSweep's or EnclaveTasking's create_data_structures() then sets the 
-      predicate, i.e. they configure when data is stored or used.
+      guard, i.e. they configure when data is stored or used.
     - Finally, your own overwrite of create_data_structures() can augment the 
       data structures (which are now in place and called at the right time) with 
       information what it actually shall do.
@@ -280,8 +280,8 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 #include "repositories/SolverRepository.h" 
 """
    
-    self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate()
-    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate()
+    self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
     
     self._patch_overlap_old.generator.send_condition               = "false"
     self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
@@ -292,11 +292,11 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     self._patch_overlap_update.generator.send_condition               = "false"
     self._patch_overlap_update.generator.receive_and_merge_condition  = "false"
 
-    self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_predicate()
-    self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_predicate()
+    self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_guard()
+    self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_guard()
 
-    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_predicate()
-    self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_predicate()
+    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_guard()
+    self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_guard()
 
     self._patch_overlap_update.generator.store_persistent_condition   = "false"
     self._patch_overlap_update.generator.load_persistent_condition    = "false"
@@ -338,15 +338,15 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
      within the inheritance tree.
      
     """
-    self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_predicate(), "true" )
-    self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_predicate(), "false")
-    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, predicate=self._store_cell_data_default_predicate(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
-    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, predicate=self._store_cell_data_default_predicate(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
-    self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_predicate() )
-    self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_predicate())
-    self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_predicate())
+    self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
+    self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
+    self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_guard())
+    self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
     # @todo Sollte spezifisches Action Set sein, so dass auch die Timestamps kopiert werden
-    self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_predicate(), self._get_default_includes())
+    self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
@@ -355,23 +355,23 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     self._action_set_update_cell                                                      = None
 
 
-  def _store_cell_data_default_predicate(self):
+  def _store_cell_data_default_guard(self):
     return "not marker.isRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
-  def _load_cell_data_default_predicate(self):
+  def _load_cell_data_default_guard(self):
     return "not marker.isRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
 
-  def _store_face_data_default_predicate(self):
+  def _store_face_data_default_guard(self):
     return "not marker.isRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
-  def _load_face_data_default_predicate(self):
+  def _load_face_data_default_guard(self):
     return "not marker.isRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
@@ -518,7 +518,7 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
       patch=self._patch, 
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
-      guard_predicate="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_predicate(),
+      guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
       additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
@@ -531,7 +531,7 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
       step.add_action_set( peano4.toolbox.PlotGridInPeanoBlockFormat( 
         filename = output_path + "grid-" + self._name,
         cell_unknown=None,
-        guard_predicate="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_predicate(),
+        guard_guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"

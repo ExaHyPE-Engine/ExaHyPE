@@ -192,55 +192,55 @@ class EnclaveTasking( FV ):
     
     self._constructor_implementation = ""
     
-    self._initialisation_sweep_predicate = "(" + \
+    self._initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
       
-    self._first_iteration_after_initialisation_predicate = "(" + \
+    self._first_iteration_after_initialisation_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
     ")"
 
-    self._primary_sweep_predicate = "(" + \
+    self._primary_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
-    self._primary_sweep_or_plot_predicate = "(" + \
+    self._primary_sweep_or_plot_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
 
-    self._primary_or_initialisation_sweep_predicate= "(" + \
+    self._primary_or_initialisation_sweep_guard= "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
-    self._primary_or_grid_construction_or_initialisation_sweep_predicate= "(" + \
+    self._primary_or_grid_construction_or_initialisation_sweep_guard= "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
       ")"
 
-    self._secondary_sweep_predicate = "(" + \
+    self._secondary_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
       ")"
 
-    self._secondary_sweep_or_grid_construction_predicate = "(" + \
+    self._secondary_sweep_or_grid_construction_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
       ")"
 
-    self._secondary_sweep_or_grid_initialisation_predicate = "(" + \
+    self._secondary_sweep_or_grid_initialisation_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
 
-    self._secondary_sweep_or_grid_initialisation_or_plot_predicate = "(" + \
+    self._secondary_sweep_or_grid_initialisation_or_plot_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
@@ -256,23 +256,23 @@ class EnclaveTasking( FV ):
     """
     
     This routine does not really add new data, but it heavily tailors when data are
-    stored, exchanged, ... Each generator has some guard attributes, i.e. some predicates,
+    stored, exchanged, ... Each generator has some guard attributes, i.e. some guards,
     which control when data is stored, sent, received. The routine takes these guards
-    and rewires them to the local predicates of this object. If you alter these predicates
+    and rewires them to the local guards of this object. If you alter these guards
     further, you have to alter them before you invoke this class' create_data_structures().
     
     """
     super(EnclaveTasking, self).create_data_structures()
-    self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
-      self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
-    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
-      self._primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
+    self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard() + " and (" + \
+      self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.isSkeletonCell())"
+    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
+      self._primary_sweep_or_plot_guard + " or marker.isSkeletonCell())"
     
-    self._patch_overlap_new.generator.send_condition               = self._secondary_sweep_or_grid_initialisation_or_plot_predicate
-    self._patch_overlap_new.generator.receive_and_merge_condition  = self._primary_sweep_or_plot_predicate
+    self._patch_overlap_new.generator.send_condition               = self._secondary_sweep_or_grid_initialisation_or_plot_guard
+    self._patch_overlap_new.generator.receive_and_merge_condition  = self._primary_sweep_or_plot_guard
 
-    self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_predicate
-    self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_predicate
+    self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_guard
+    self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_guard
 
 
   def create_action_sets(self):
@@ -305,19 +305,19 @@ class EnclaveTasking( FV ):
     # the grid construction.
     #
     
-    self._action_set_initial_conditions.predicate                       = self._action_set_initial_conditions.predicate
-    self._action_set_initial_conditions_for_grid_construction.predicate = self._action_set_initial_conditions_for_grid_construction.predicate
-    self._action_set_AMR.predicate                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
-    self._action_set_AMR_commit_without_further_analysis.predicate = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
-    self._action_set_handle_boundary.predicate                     = self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate
-    self._action_set_project_patch_onto_faces.predicate            = self._store_cell_data_default_predicate() + " and (" + \
+    self._action_set_initial_conditions.guard                       = self._action_set_initial_conditions.guard
+    self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard
+    self._action_set_AMR.guard                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_guard
+    self._action_set_AMR_commit_without_further_analysis.guard = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_guard
+    self._action_set_handle_boundary.guard                     = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
+    self._action_set_project_patch_onto_faces.guard            = self._store_cell_data_default_guard() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
       ")"
-    self._action_set_roll_over_update_of_faces.predicate = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.predicate = self._store_cell_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate
+    self._action_set_roll_over_update_of_faces.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guard = self._store_cell_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
    
 
   def get_user_action_set_includes(self):

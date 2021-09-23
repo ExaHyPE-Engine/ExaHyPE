@@ -12,10 +12,10 @@ from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
 from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling
-from .kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
-from .kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
-from .kernels import create_finish_time_step_implementation_for_fixed_time_stepping
-from .kernels import create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling
+from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling
 
 
 class SubcyclingFixedTimeStep( SingleSweep ):
@@ -111,6 +111,17 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     """
     super(SubcyclingFixedTimeStep, self).create_action_sets()
    
-    self._action_set_project_patch_onto_faces.predicate  += "and false"
+    self._action_set_initial_conditions.predicate     = "and false"
+    self._action_set_initial_conditions_for_grid_construction.predicate = "and false"
+    self._action_set_AMR.predicate                                 = " and false"
+    self._action_set_AMR_commit_without_further_analysis.predicate = " and false"
+    self._action_set_handle_boundary.predicate                     = " and false"
+    self._action_set_project_patch_onto_faces.predicate            = " and false"
+    
+    
+    #+= geht net. Zuweisung geht
+    
+    print( "XXXXXXX " + str( self._action_set_project_patch_onto_faces ) )
+    self._action_set_project_patch_onto_faces.predicate += "and false" 
 #    self._action_set_update_cell.predicate               += "and false"
     

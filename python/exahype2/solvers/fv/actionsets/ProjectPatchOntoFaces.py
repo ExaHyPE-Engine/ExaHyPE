@@ -19,8 +19,8 @@ class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFace
    RollOverUpdatedFace.
       
   """
-  def __init__(self,solver, predicate):
-    peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(self,solver._patch,solver._patch_overlap_update,predicate,solver._get_default_includes() + solver.get_user_action_set_includes(), True)
+  def __init__(self,solver, guard):
+    peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(self,solver._patch,solver._patch_overlap_update,guard,solver._get_default_includes() + solver.get_user_action_set_includes(), True)
 
     self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFaces"  + solver._face_label.name
     self.d[ "CELL_METADATA_ACCESSOR" ] = "fineGridCell""" + solver._cell_label.name

@@ -53,18 +53,19 @@ class HandleBoundary(AbstractFVActionSet):
       logTraceOut( "touchFaceFirstTime(...)---HandleBoundary" );
     }
 """
-  def __init__(self,solver,predicate):
+  def __init__(self,solver,guard):
     AbstractFVActionSet.__init__(self,solver)
-    self.d = {}
-    self.d[ "PREDICATE" ] = predicate      
-    self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + solver._face_label.name
+    self.guard = guard
 
 
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      self.d = {}
       self._solver._init_dictionary_with_default_parameters(self.d)
       self._solver.add_entries_to_text_replacement_dictionary(self.d)
+      self.d[ "PREDICATE" ] = self.guard      
+      self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + self._solver._face_label.name
       result = jinja2.Template(self.TemplateHandleBoundary).render(**self.d)
       pass 
     return result
