@@ -41,8 +41,12 @@ toolbox::particles::TrajectoryDatabase::~TrajectoryDatabase() {
 }
 
 
-void toolbox::particles::TrajectoryDatabase::clear() {
-  tarch::multicore::Lock lock(_semaphore);
+void toolbox::particles::TrajectoryDatabase::clear(bool lockSemaphore) {
+  tarch::multicore::Lock lock(_semaphore, false);
+
+  if (lockSemaphore) {
+	lock.lock();
+  }
 
   for (auto& particle: _data) {
     for (auto& snapshot: particle.second) {
@@ -124,10 +128,9 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
     logInfo( "dumpCSVFile()", "particle trajectory database is empty. Do not dump " << snapshotFileName.str() );
     #endif
   }
-  lock.free();
 
   if (_clearDatabaseAfterFlush) {
-    clear();
+    clear(false);
   }
 }
 
@@ -215,7 +218,8 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
 }
 
 
-bool toolbox::particles::TrajectoryDatabase::dumpDatabaseSnapshot() const {
+bool toolbox::particles::TrajectoryDatabase::dumpDatabaseSnapshot() {
+  tarch::multicore::Lock lock(_semaphore);
   int totalSize = 0;
   for (auto p: _data) {
     totalSize += p.second.size();
@@ -250,6 +254,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
       }
       break;
   }
+  lock.free();
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
@@ -304,6 +309,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
       }
       break;
   }
+  lock.free();
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
