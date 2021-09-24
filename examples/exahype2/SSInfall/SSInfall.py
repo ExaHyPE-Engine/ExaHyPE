@@ -247,7 +247,7 @@ if __name__ == "__main__":
       floatparams.update({k:eval("args.{}".format(k))})
 
     if args.eigen=="exp":
-      floatparams["C_1"]=(1e-4)/floatparams["tilde_P_ini"]
+      floatparams["C_1"]=(1000*1e-4)/floatparams["tilde_P_ini"]
       floatparams["C_2"]=(2*1e-5)/floatparams["tilde_P_ini"]
       userinfo.append(("Use exponential formula for eigenvalues",None))
     if args.eigen=="none":
@@ -304,7 +304,7 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-20,-20,-0.01]
+    probe_point = [0,0,-0.01]
     project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
@@ -326,7 +326,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=300,N_y=50,N_z=1)
+        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=100,N_y=50,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
 
       if path=="./": path1="."
@@ -335,7 +335,7 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"/zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=20000,
+        number_of_entries_between_two_db_flushes=30000,
         output_precision=10,
         position_delta_between_two_snapsots=1e-20,
         data_delta_between_two_snapsots=0
