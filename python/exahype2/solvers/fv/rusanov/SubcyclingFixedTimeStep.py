@@ -110,18 +110,12 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     
     """
     super(SubcyclingFixedTimeStep, self).create_action_sets()
-   
-    self._action_set_initial_conditions.predicate     = "and false"
-    self._action_set_initial_conditions_for_grid_construction.predicate = "and false"
-    self._action_set_AMR.predicate                                 = " and false"
-    self._action_set_AMR_commit_without_further_analysis.predicate = " and false"
-    self._action_set_handle_boundary.predicate                     = " and false"
-    self._action_set_project_patch_onto_faces.predicate            = " and false"
-    
-    
-    #+= geht net. Zuweisung geht
-    
-    print( "XXXXXXX " + str( self._action_set_project_patch_onto_faces ) )
-    self._action_set_project_patch_onto_faces.predicate += "and false" 
-#    self._action_set_update_cell.predicate               += "and false"
+
+    self._action_set_update_cell.guard += " and ::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel)"
+
+
+  def get_user_action_set_includes(self):
+    return super(SubcyclingFixedTimeStep, self).get_user_action_set_includes() + """
+#include "exahype2/TimeStepping.h"
+"""
     

@@ -42,7 +42,9 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
 )
     self.__Template_DestroyHangingFace_Core += """
   bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= Dimensions;
+  double newTimeStamp = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), fineGridFace""" + solver._face_label.name + """.getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ));
   coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
+  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1,newTimeStamp);
 """
 
     self.__Template_CreateHangingFace_Core = """
@@ -62,6 +64,9 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       fineGridFace""" + solver._name + """QNew.value,
       coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value
     );
+    const int leftRightEntry = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
+    fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp(leftRightEntry));
+    fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(leftRightEntry));
 """
     
 

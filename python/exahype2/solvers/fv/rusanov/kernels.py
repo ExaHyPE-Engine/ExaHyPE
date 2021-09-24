@@ -17,8 +17,9 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time
     0.0;
   cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
   
-  updateCellIfItHoldsData = true;
-  
+  bool updateCellIfItHoldsData = true;
+
+  // @todo raus. Braucht kein Mensch  
   for (int d=0; d<Dimensions; d++) {
     updateCellIfItHoldsData &= tarch::la::greaterEquals( 
       fineGridFacesEulerFaceLabel(d).getNewTimeStamp(1),

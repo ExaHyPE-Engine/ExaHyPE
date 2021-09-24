@@ -50,9 +50,23 @@ class HandleBoundary(AbstractFVActionSet):
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
       );
+      
+      bool isLeftEntryOutside = marker.getSelectedFaceNumber() < Dimensions;
+      double innerTimeStamp;
+      
+      innerTimeStamp = {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp( isLeftEntryOutside ? 1 : 0 );
+      {{FACE_METADATA_ACCESSOR}}.setUpdatedTimeStamp( isLeftEntryOutside ? 0 : 1, innerTimeStamp );
+      
+      innerTimeStamp = {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp( isLeftEntryOutside ? 1 : 0 );
+      {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp( isLeftEntryOutside ? 0 : 1, innerTimeStamp );
+
+      innerTimeStamp = {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp( isLeftEntryOutside ? 1 : 0 );
+      {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp( isLeftEntryOutside ? 0 : 1, innerTimeStamp );
+
       logTraceOut( "touchFaceFirstTime(...)---HandleBoundary" );
     }
 """
+
   def __init__(self,solver,guard):
     AbstractFVActionSet.__init__(self,solver)
     self.guard = guard
