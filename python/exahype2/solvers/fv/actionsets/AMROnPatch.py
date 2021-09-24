@@ -89,10 +89,10 @@ class AMROnPatch(AbstractFVActionSet):
   """
   
     
-  def __init__(self, solver, predicate, build_up_new_refinement_instructions, implement_previous_refinement_instructions):
+  def __init__(self, solver, guard, build_up_new_refinement_instructions, implement_previous_refinement_instructions):
     """
     
-    predicate: C++ expression which evaluates to true or false
+    guard: C++ expression which evaluates to true or false
       A per cell decision whether we should study a cell or not.
     
     build_up_new_refinement_instructions: Boolean
@@ -105,7 +105,7 @@ class AMROnPatch(AbstractFVActionSet):
     
     """
     AbstractFVActionSet.__init__(self,solver)
-    self.predicate                                   = predicate
+    self.guard                                       = guard
     self._build_up_new_refinement_instructions       = build_up_new_refinement_instructions
     self._implement_previous_refinement_instructions = implement_previous_refinement_instructions
 
@@ -143,7 +143,7 @@ class AMROnPatch(AbstractFVActionSet):
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver._patch.name
-      d[ "PREDICATE" ]          = self.predicate
+      d[ "PREDICATE" ]          = self.guard
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)      
       result = jinja2.Template( self.TemplateAMR ).render(**d)

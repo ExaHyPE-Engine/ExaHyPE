@@ -113,11 +113,11 @@ if __name__ == "__main__":
           source_term=exahype2.solvers.fv.PDETerms.User_Defined_Implementation
         )
 
-      def get_user_includes(self):
+      def get_user_action_set_includes(self):
         """
          We take this routine to add a few additional include statements.
         """
-        return SuperClass.get_user_includes(self) + """
+        return SuperClass.get_user_action_set_includes(self) + """
     #include "../MGCCZ4Kernels.h"
     #include "exahype2/PatchUtils.h"
     """

@@ -189,8 +189,8 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSends() {
-  if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
     #if defined(Parallel) and not defined(UseSmartMPI)
+  if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
     int out = 23;
     testErrors = 0;
     if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {

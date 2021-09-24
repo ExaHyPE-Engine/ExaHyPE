@@ -12,10 +12,10 @@ from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
 from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling
-from .kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
-from .kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
-from .kernels import create_finish_time_step_implementation_for_fixed_time_stepping
-from .kernels import create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling
+from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling
 
 
 class SubcyclingFixedTimeStep( SingleSweep ):
@@ -62,7 +62,9 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     eigenvalues=None,
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
-    use_split_loop          = False
+    use_split_loop          = False,
+    additional_action_set_includes = "",
+    additional_user_includes       = ""
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -95,6 +97,25 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(False)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
       
-    super(SubcyclingFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop)
+    super(SubcyclingFixedTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
 
+  def create_action_sets(self):
+    """
+    
+    The actual action sets all are created by the superclass. So nothing
+    is to be done here. But we want to reset the actual updates and 
+    projection, and these only happen if we are allowed to update 
+    indeed.
+    
+    """
+    super(SubcyclingFixedTimeStep, self).create_action_sets()
+
+    self._action_set_update_cell.guard += " and ::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel)"
+
+
+  def get_user_action_set_includes(self):
+    return super(SubcyclingFixedTimeStep, self).get_user_action_set_includes() + """
+#include "exahype2/TimeStepping.h"
+"""
+    

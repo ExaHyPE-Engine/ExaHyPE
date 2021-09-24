@@ -356,7 +356,7 @@ dfor( volume, """ + str(self._patch_size) + """ ) {
     d[ "EIGENVALUES_IMPLEMENTATION"]          = self._eigenvalues_implementation
 
   
-  def get_user_includes(self):
+  def get_user_action_set_includes(self):
     return """
 #include "exahype2/fv/Generic.h"
 """    

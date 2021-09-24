@@ -21,6 +21,14 @@ namespace toolbox {
 }
 
 
+/**
+ * A simple particle database
+ *
+ * The database can be configured with various thresholds such that we write
+ * out snapshots whenever a certain maximum size is reached.
+ *
+ * The database is thread-safe.
+ */
 class toolbox::particles::TrajectoryDatabase {
   private:
     static tarch::logging::Log _log;

@@ -41,6 +41,7 @@ if __name__ == "__main__":
     op.add_option("--maxh", dest="MAXH", type=float, default=1./81, help="AMR max h (default: %default)")
     op.add_option("--minh", dest="MINH", type=float, default=1./81, help="AMR min h (default: %default)")
     op.add_option("-l", "--lbg", dest="LBQ", type=float, default=0.9, help="Load balancing quality (default: %default)")
+    op.add_option("-t", "--trees", dest="MAXTREES", type=int, default=sys.maxsize, help="Max number of trees (default: %default)")
     op.add_option("-p", dest="PEANO", default=None, help="Peano path (default: %default)")
     op.add_option("-s", dest="SOLVER", default="rpn2", help="Clawpack solver (default: %default)")
     op.add_option("-m", dest="BUILDMODE", default="release", help="Buildmode (default: %default)")
@@ -95,7 +96,7 @@ if __name__ == "__main__":
     end_time = opts.ENDTIME
 
 
-    my_solver = exahype2.solvers.fv.clawpack.ClawpackFixedTimeStep(
+    my_solver = exahype2.solvers.fv.clawpack.GlobalFixedTimeStep(
       "SWE",
       my_patch_size,
       my_unknowns,
@@ -171,6 +172,10 @@ if __name__ == "__main__":
           Q[2] = 0.0;
           Q[3] = z; // bathymetry
         """,
+#        additional_action_set_includes = """
+        additional_user_includes = """
+#include "TopologyParser.h"
+"""
     )
 
 
@@ -204,7 +209,7 @@ if __name__ == "__main__":
 
     project.set_Peano4_installation("../../..", build_mode)
 
-    project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(opts.LBQ) + ")" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration({},0,{}))".format(opts.LBQ, opts.MAXTREES) )
     peano4_project = project.generate_Peano4_project()
 
 

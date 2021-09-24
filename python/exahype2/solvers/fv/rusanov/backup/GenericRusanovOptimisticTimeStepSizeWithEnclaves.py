@@ -149,7 +149,7 @@ and
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
 #include "tasks/""" + self._solver._name + """OptimisticTask.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
+""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes() 
 
 
 class MergeInEnclaveTaskOutcomeInSecondarySweep(AbstractFVActionSet):
@@ -282,7 +282,7 @@ class MergeInEnclaveTaskOutcomeInSecondarySweep(AbstractFVActionSet):
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
 #include "tasks/""" + self._solver._name + """OptimisticTask.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_includes() 
+""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes() 
 
 
 class GenericRusanovOptimisticTimeStepSizeWithEnclaves( EnclaveTaskingFV ):

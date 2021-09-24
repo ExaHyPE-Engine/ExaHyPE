@@ -21,6 +21,9 @@
 #include "Constants.h"
 
 
+{{SOLVER_INCLUDES}}
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
