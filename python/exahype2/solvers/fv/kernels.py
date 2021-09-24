@@ -87,8 +87,14 @@ def create_start_time_step_implementation_for_fixed_time_stepping_with_subcyclin
     logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
     logInfo( "step()", "t_{min}  = " << _minTimeStamp );
     logInfo( "step()", "t_{max}  = " << _maxTimeStamp );
-    logInfo( "step()", "dt_{min} = " << _minTimeStepSize );
-    logInfo( "step()", "dt_{max} = " << _maxTimeStepSize );
+    if (_minTimeStepSize > _maxTimeStepSize ) {
+      logInfo( "step()", "dt_{min} = <not yet known>" );
+      logInfo( "step()", "dt_{max} = <not yet known>" );
+    }
+    else {
+      logInfo( "step()", "dt_{min} = " << _minTimeStepSize );
+      logInfo( "step()", "dt_{max} = " << _maxTimeStepSize );
+    }
     logInfo( "step()", "h_{min}  = " << _minVolumeH << " (volume size)");
     logInfo( "step()", "h_{max}  = " << _maxVolumeH << " (volume size)" );
     logInfo( "step()", "#updates = " << _patchUpdates << " (no of patches)" );

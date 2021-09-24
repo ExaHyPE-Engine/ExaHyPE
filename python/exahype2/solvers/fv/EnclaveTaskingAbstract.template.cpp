@@ -88,6 +88,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
     _minTimeStepSize = std::min(timeStepSize,_minTimeStepSize);
     _maxTimeStepSize = std::max(timeStepSize,_maxTimeStepSize);
     assertion2(_minTimeStepSize<=_maxTimeStepSize, _minTimeStepSize, _maxTimeStepSize );
+
+    _patchUpdates++;
   }
 
   assertion1(timeStamp<std::numeric_limits<double>::max()/10.0,timeStamp);
@@ -100,8 +102,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   assertion1(patchSize>0.0,patchSize);
   _maxVolumeH = std::max(_maxVolumeH,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
   _minVolumeH = std::min(_minVolumeH,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
-
-  _patchUpdates++;
 }
 
 

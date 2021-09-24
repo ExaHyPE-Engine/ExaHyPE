@@ -104,6 +104,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
+  // @todo Hier fehlt die Abfrage, ob tatsaechlich ein Task gespawnt worden ist.
   if ( marker.isEnclaveCell() and not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
     const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
 

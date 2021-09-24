@@ -200,7 +200,7 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     return False
 
 
-  __Template_TouchCellFirstTime = """
+  _Template_TouchCellFirstTime_Preamble = """
   auto serialisePatchIndex = [](tarch::la::Vector<Dimensions,int> overlapCell, int normal) {{
     int base   = 1;
     int result = 0;
@@ -215,10 +215,14 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     }}
     return result;
   }};
-
+  
   if ({GUARD}) {{
     logTraceInWith1Argument( "touchCellFirstTime(...)", marker.toString() );
 
+"""
+
+
+  _Template_TouchCellFirstTime_Core = """
     {CREATE_RECONSTRUCTED_PATCH}
 
     //
@@ -285,7 +289,10 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     {CELL_FUNCTOR_IMPLEMENTATION}
     
     {DESTROY_RECONSTRUCTED_PATCH}
-    
+"""
+
+
+  _Template_TouchCellFirstTime_Epilogue = """
     logTraceOut( "touchCellFirstTime(...)" );
   }}
 """
@@ -296,7 +303,9 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       d = {}
       self._add_action_set_entries_to_dictionary(d)
-      result = self.__Template_TouchCellFirstTime.format(**d)
+      result  = self._Template_TouchCellFirstTime_Preamble.format(**d)
+      result += self._Template_TouchCellFirstTime_Core.format(**d)
+      result += self._Template_TouchCellFirstTime_Epilogue.format(**d)
       pass 
     return result
 
