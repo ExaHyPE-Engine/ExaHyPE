@@ -15,7 +15,7 @@ GIT_REV = os.environ["GIT_REVISION"]
 
 @rfm.parameterized_test(*([git_rev, type_param, mode_param, pbc_param]
     for git_rev in [GIT_REV]
-    for type_param in ["default", "default-ats", "enclave", "enclave-ats", "enclave-ots"]
+    for type_param in ["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave"]
     for mode_param in ["release", "assert"]
     for pbc_param in ["pbc-on", "pbc-off"]
 ))
