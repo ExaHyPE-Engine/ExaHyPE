@@ -20,7 +20,7 @@ site_configuration = {
                     "scheduler": "slurm",
                     "launcher": "local",
                     "access": ["-p par6.q"],
-                    "environs": ["intel"]
+                    "environs": ["intel"],
                     "max_jobs": 100,
                 },
 
