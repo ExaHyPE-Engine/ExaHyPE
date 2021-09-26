@@ -114,7 +114,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     """
     ReconstructPatchAndApplyFunctor.__init__(self,
       patch = solver._patch,
-      # todo hier muessen beide rein, denn ich muss ja interpolieren
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = """
 #error please switch to your Riemann solver of choice

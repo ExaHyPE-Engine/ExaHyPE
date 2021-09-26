@@ -68,10 +68,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp(leftRightEntry));
     fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(leftRightEntry));
 """
+
     
-
-    # @todo Interpolate
-
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
 

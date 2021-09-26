@@ -72,6 +72,7 @@ def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_ta
   }
 """
 
+
 def create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(use_enclave_tasking):
   predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
@@ -99,4 +100,78 @@ def create_start_time_step_implementation_for_fixed_time_stepping_with_subcyclin
     logInfo( "step()", "h_{max}  = " << _maxVolumeH << " (volume size)" );
     logInfo( "step()", "#updates = " << _patchUpdates << " (no of patches)" );
   }
+"""
+
+
+def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(solver):
+  """
+  
+  This is a straightforward modification of ReconstructPatchAndApplyFunctor._Template_TouchCellFirstTime_Fill_Halos
+  in the blockstructured toolkit.
+  
+  """
+  return """
+    //
+    // Bring in the auxiliary patches, i.e. befill halo
+    //
+    for(int d=0; d<Dimensions; d++) {{
+      logTraceInWith1Argument( "touchCellFirstTime(...)::loopOverFace", d );
+      //
+      // d-loop over all dimensions except d. The vector k's entry d is set
+      // to 0. We start with the left/bottom face, i.e. the one closer to the 
+      // coordinate system's origin.
+      //
+      dfore(k,{DOFS_PER_AXIS},d,0) {{
+        double cellTimeStamp = fineGridCell""" + solver + """CellLabel.getTimeStamp();        
+        std::pair<double,double> oldNewWeightsLeft  = ::exahype2::getInterpolationWeights( 
+          fineGridFaces""" + solver + """FaceLabel(d).getOldTimeStamp(0),
+          fineGridFaces""" + solver + """FaceLabel(d).getNewTimeStamp(0),
+          cellTimeStamp
+        );
+        std::pair<double,double> oldNewWeightsRight = ::exahype2::getInterpolationWeights(
+          fineGridFaces""" + solver + """FaceLabel(d+Dimensions).getOldTimeStamp(1),
+          fineGridFaces""" + solver + """FaceLabel(d+Dimensions).getNewTimeStamp(1),
+          cellTimeStamp
+        );
+        fineGridCell""" + solver + """CellLabel.setTimeStamp(cellTimeStamp);        
+      
+        for (int i=0; i<{OVERLAP}; i++) {{
+          tarch::la::Vector<Dimensions,int> destinationCell = k + tarch::la::Vector<Dimensions,int>({OVERLAP});
+          tarch::la::Vector<Dimensions,int> sourceCell      = k;
+          destinationCell(d) = i;
+          sourceCell(d)      = i;
+          
+          int destinationCellSerialised   = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
+          int sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
+
+          for (int j=0; j<{UNKNOWNS}; j++) {{
+            reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] 
+              = oldNewWeightsLeft.first  * fineGridFaces""" + solver + """QOld(d).value[ sourceCellSerialised*{UNKNOWNS}+j ]
+              + oldNewWeightsLeft.second * fineGridFaces""" + solver + """QNew(d).value[ sourceCellSerialised*{UNKNOWNS}+j ]
+            {ASSERTION_WITH_7_ARGUMENTS}( 
+              {ASSERTION_PREFIX_FOR_HALO} or 
+              reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
+              sourceCell, destinationCell, j, d, marker.toString(), _treeNumber, marker.toString()
+            );
+          }}
+
+          destinationCell(d) = i+{DOFS_PER_AXIS}+{OVERLAP};
+          sourceCell(d)      = i+{OVERLAP};
+
+          destinationCellSerialised   = peano4::utils::dLinearised(destinationCell,{DOFS_PER_AXIS} + 2*{OVERLAP});
+          sourceCellSerialised        = serialisePatchIndex(sourceCell,d);
+          for (int j=0; j<{UNKNOWNS}; j++) {{
+            reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] 
+              = oldNewWeightsLeft.first  * fineGridFaces""" + solver + """QOld(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ]
+              + oldNewWeightsLeft.second * fineGridFaces""" + solver + """QNew(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ]
+            {ASSERTION_WITH_7_ARGUMENTS}( 
+              {ASSERTION_PREFIX_FOR_HALO} or 
+              reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
+              sourceCell, destinationCell, j, d, marker.toString(), _treeNumber, marker.toString()
+            );
+          }}
+        }}
+      }}
+      logTraceOut( "touchCellFirstTime(...)::loopOverFace" );
+    }}
 """

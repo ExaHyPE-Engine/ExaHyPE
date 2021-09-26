@@ -12,6 +12,8 @@ from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
 from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling
+
+from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
@@ -25,7 +27,8 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
-    plot_grid_properties=False
+    plot_grid_properties=False,
+    interpolate_linearly_in_time=True
   ):
     """
   
@@ -36,6 +39,8 @@ class SubcyclingFixedTimeStep( SingleSweep ):
       to max_volume_h.
   
     """
+    self._interpolate_linearly_in_time        = interpolate_linearly_in_time
+    
     super(SubcyclingFixedTimeStep,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties) 
     
     self._time_step_size = time_step_size
@@ -47,7 +52,7 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     
     self._preprocess_reconstructed_patch      = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size )
     self._postprocess_updated_patch           = ""
-
+    
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 
@@ -112,7 +117,10 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     super(SubcyclingFixedTimeStep, self).create_action_sets()
 
     self._action_set_update_cell.guard += " and ::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel)"
-
+    
+    if self._interpolate_linearly_in_time:
+      self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)
+    
 
   def get_user_action_set_includes(self):
     return super(SubcyclingFixedTimeStep, self).get_user_action_set_includes() + """

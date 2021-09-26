@@ -219,12 +219,11 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
   if ({GUARD}) {{
     logTraceInWith1Argument( "touchCellFirstTime(...)", marker.toString() );
 
+    {CREATE_RECONSTRUCTED_PATCH}
 """
 
 
-  _Template_TouchCellFirstTime_Core = """
-    {CREATE_RECONSTRUCTED_PATCH}
-
+  _Template_TouchCellFirstTime_Fill_Patch = """
     //
     // Loop over original patch (k) and copy stuff over.
     //
@@ -237,7 +236,10 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
         {ASSERTION_WITH_4_ARGUMENTS}( reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j]==reconstructedPatch[destinationCellSerialised*{UNKNOWNS}+j], sourceCell, j, _treeNumber, marker.toString() );
       }}
     }}
+"""
+
   
+  _Template_TouchCellFirstTime_Fill_Halos = """
     //
     // Bring in the auxiliary patches, i.e. befill halo
     //
@@ -284,7 +286,10 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       }}
       logTraceOut( "touchCellFirstTime(...)::loopOverFace" );
     }}
+"""
 
+
+  _Template_TouchCellFirstTime_Core = """
     double* targetPatch = {CELL_ACCESSOR}.value;
     {CELL_FUNCTOR_IMPLEMENTATION}
     
@@ -304,6 +309,8 @@ class ReconstructPatchAndApplyFunctor(ActionSet):
       d = {}
       self._add_action_set_entries_to_dictionary(d)
       result  = self._Template_TouchCellFirstTime_Preamble.format(**d)
+      result += self._Template_TouchCellFirstTime_Fill_Patch.format(**d)
+      result += self._Template_TouchCellFirstTime_Fill_Halos.format(**d)
       result += self._Template_TouchCellFirstTime_Core.format(**d)
       result += self._Template_TouchCellFirstTime_Epilogue.format(**d)
       pass 
