@@ -11,7 +11,6 @@ import jinja2
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
 
-
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   SolveRiemannProblemsOverPatch = jinja2.Template( """
     double cellTimeStepSize = -1.0;

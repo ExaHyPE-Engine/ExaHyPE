@@ -50,7 +50,7 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch      = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size )
+    self._preprocess_reconstructed_patch      = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size, name )
     self._postprocess_updated_patch           = ""
     
     self.set_implementation(flux=flux, 
@@ -126,4 +126,12 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     return super(SubcyclingFixedTimeStep, self).get_user_action_set_includes() + """
 #include "exahype2/TimeStepping.h"
 """
+
+
+  def create_data_structures(self):
+    super(SubcyclingFixedTimeStep, self).create_data_structures()
+
+    self._patch_overlap_old.generator.send_condition               = "true"
+    self._patch_overlap_old.generator.receive_and_merge_condition  = "true"
+
     

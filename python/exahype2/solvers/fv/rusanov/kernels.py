@@ -8,36 +8,22 @@ from exahype2.solvers.fv.kernels import create_empty_source_term_kernel
 from exahype2.solvers.fv.kernels import create_user_defined_source_term_kernel
 
 
-def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size ):
-  return """
+def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
+  result = """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
   cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-  
-  bool updateCellIfItHoldsData = true;
+  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
+"""  
 
-  // @todo raus. Braucht kein Mensch  
-  for (int d=0; d<Dimensions; d++) {
-    updateCellIfItHoldsData &= tarch::la::greaterEquals( 
-      fineGridFacesEulerFaceLabel(d).getNewTimeStamp(1),
-      cellTimeStamp
-    );
-    updateCellIfItHoldsData &= tarch::la::greaterEquals( 
-      fineGridFacesEulerFaceLabel(d+Dimensions).getNewTimeStamp(0),
-      cellTimeStamp
-    );
-  }
- 
- 
-//  if ( updateCellIfItHoldsData ) {
-//    logInfo( "todo", "update " << marker.toString() );
-//  }
-  // @todo den bool wieder raus. Der muss frueher rein. ich will ja net erst rekonstruieren und dann alles weg schmeissen
-
+  if remove_accumulation_errors:
+    result += """
+  cellTimeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, cellTimeStepSize);
 """
+
+  return result
 
 
 def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping():

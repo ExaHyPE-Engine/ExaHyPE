@@ -86,15 +86,17 @@ def create_start_time_step_implementation_for_fixed_time_stepping_with_subcyclin
   return """
   if (""" + predicate + """) {
     logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t_{min}  = " << _minTimeStamp );
-    logInfo( "step()", "t_{max}  = " << _maxTimeStamp );
+    logInfo( "step()", "t_{min,global}     = " << _minTimeStamp );
+    logInfo( "step()", "t_{max,global}     = " << _maxTimeStamp );
+    logInfo( "step()", "t_{min,this-step}  = " << _minTimeStampThisTimeStep );
+    logInfo( "step()", "t_{max,this-step}  = " << _maxTimeStampThisTimeStep );
     if (_minTimeStepSize > _maxTimeStepSize ) {
       logInfo( "step()", "dt_{min} = <not yet known>" );
       logInfo( "step()", "dt_{max} = <not yet known>" );
     }
     else {
-      logInfo( "step()", "dt_{min} = " << _minTimeStepSize );
-      logInfo( "step()", "dt_{max} = " << _maxTimeStepSize );
+      logInfo( "step()", "dt_{min,this-step} = " << _minTimeStepSize );
+      logInfo( "step()", "dt_{max,this-step} = " << _maxTimeStepSize );
     }
     logInfo( "step()", "h_{min}  = " << _minVolumeH << " (volume size)");
     logInfo( "step()", "h_{max}  = " << _maxVolumeH << " (volume size)" );
@@ -122,18 +124,16 @@ def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(so
       // coordinate system's origin.
       //
       dfore(k,{DOFS_PER_AXIS},d,0) {{
-        double cellTimeStamp = fineGridCell""" + solver + """CellLabel.getTimeStamp();        
         std::pair<double,double> oldNewWeightsLeft  = ::exahype2::getInterpolationWeights( 
           fineGridFaces""" + solver + """FaceLabel(d).getOldTimeStamp(0),
           fineGridFaces""" + solver + """FaceLabel(d).getNewTimeStamp(0),
-          cellTimeStamp
+          fineGridCell""" + solver + """CellLabel.getTimeStamp()
         );
         std::pair<double,double> oldNewWeightsRight = ::exahype2::getInterpolationWeights(
           fineGridFaces""" + solver + """FaceLabel(d+Dimensions).getOldTimeStamp(1),
           fineGridFaces""" + solver + """FaceLabel(d+Dimensions).getNewTimeStamp(1),
-          cellTimeStamp
+          fineGridCell""" + solver + """CellLabel.getTimeStamp()
         );
-        fineGridCell""" + solver + """CellLabel.setTimeStamp(cellTimeStamp);        
       
         for (int i=0; i<{OVERLAP}; i++) {{
           tarch::la::Vector<Dimensions,int> destinationCell = k + tarch::la::Vector<Dimensions,int>({OVERLAP});

@@ -99,8 +99,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp() const final;
-    double getMaxTimeStamp() const final;
+    double getMinTimeStamp(bool ofLastTimeStepOnly=false) const final;
+    double getMaxTimeStamp(bool ofLastTimeStepOnly=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -157,8 +157,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     void finishGridConstructionStep() override;
 
-
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -170,9 +168,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     void finishGridInitialisationStep() override;
-
-
-
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -257,6 +252,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     double     _minTimeStamp;
     double     _maxTimeStamp;
+
+    double     _minTimeStampThisTimeStep;
+    double     _maxTimeStampThisTimeStep;
 
     double     _minVolumeH;
     double     _maxVolumeH;
