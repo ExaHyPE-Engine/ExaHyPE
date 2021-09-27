@@ -114,7 +114,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     """
     ReconstructPatchAndApplyFunctor.__init__(self,
       patch = solver._patch,
-      # todo hier muessen beide rein, denn ich muss ja interpolieren
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = """
 #error please switch to your Riemann solver of choice
@@ -124,6 +123,20 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       add_assertions_to_halo_exchange = False
     )
     self._solver = solver
+    
+    self._Template_TouchCellFirstTime_Epilogue += """
+  else if (not marker.isRefined()) {{
+    double cellTimeStepSize = -1.0;
+    double cellTimeStamp    = -1.0;
+     
+    {PREPROCESS_RECONSTRUCTED_PATCH}
+    
+    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
+    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+
+    repositories::{SOLVER_INSTANCE}.update(0.0, cellTimeStamp, marker.h()(0) );
+  }}
+"""
 
 
   def _add_action_set_entries_to_dictionary(self,d):

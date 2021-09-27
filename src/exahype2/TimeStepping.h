@@ -8,6 +8,8 @@
 
 #include "peano4/datamanagement/FaceEnumerator.h"
 
+#include <utility>
+
 
 namespace exahype2 {
   /**
@@ -36,6 +38,14 @@ namespace exahype2 {
 
     return updateCell;
   }
+
+
+  /**
+   * @param cellTimeStamp This is an in-out parameter, as we can adopt the stamp size to
+   *   avoid the accummulation of rounding errors.
+   * @return Weight of (old,new) data.
+   */
+  std::pair<double,double> getInterpolationWeights( double oldTimeStampOnFace, double newTimeStampOnFace, double& cellTimeStamp );
 }
 
 #endif

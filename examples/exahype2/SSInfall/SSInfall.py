@@ -141,7 +141,7 @@ if __name__ == "__main__":
           double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
           
-          if (isnan(reconstructedPatch[cellSerialised*5+0])) {std::abort();}     
+          if (std::isnan(reconstructedPatch[cellSerialised*5+0])) {std::abort();}     
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);       
           //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
           //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;         

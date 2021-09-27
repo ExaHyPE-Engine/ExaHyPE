@@ -7,7 +7,6 @@ import exahype2
 import peano4.toolbox.particles
 import dastgen2
 
-import numpy as np
 from Probe_file_gene import tracer_seeds_generate
 
 from peano4.toolbox.blockstructured.DynamicAMR                 import DynamicAMR
@@ -46,6 +45,7 @@ if __name__ == "__main__":
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
+    parser.add_argument( "--gpu",            dest="GPU",            default=False, action="store_true",  help="Run with accelerator support" )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave"], required="True",  help="Pick solver type" )
     #parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu", "fv-adaptive-gpu"], required="True",  help="Pick solver type" )
@@ -126,8 +126,8 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_size=1e-2
-#            use_gpu = True if args.implementation=="fv-fixed-gpu" else False
+            time_step_size=1e-2,
+            use_gpu =args.GPU #=="fv-fixed-gpu" else False
           )
         else:
           SuperClass.__init__(
@@ -136,7 +136,8 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=0.5
+            time_step_relaxation=0.5,
+            use_gpu =args.GPU #=="fv-fixed-gpu" else False
 #                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
 

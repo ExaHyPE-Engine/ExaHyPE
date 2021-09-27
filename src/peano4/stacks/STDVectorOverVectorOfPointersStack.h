@@ -232,7 +232,6 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
         _deepCopyDataBuffer = new typename T::DoFType[ flattenedDataSize ];
         prepareDataToSendOut();
         logDebug( "startSend(int,int)", "created deep copy of all " << entry << " entries in the vector of pointers" );
-        assertionEquals( flattenedDataSize, entry );
 
         Base::_ioMPIRequest = new MPI_Request;
         MPI_Isend( _deepCopyDataBuffer, flattenedDataSize, T::DoFType::Datatype, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), Base::_ioMPIRequest);
