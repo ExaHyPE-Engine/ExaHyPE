@@ -247,7 +247,7 @@ if __name__ == "__main__":
       floatparams.update({k:eval("args.{}".format(k))})
 
     if args.eigen=="exp":
-      floatparams["C_1"]=(1000*1e-4)/floatparams["tilde_P_ini"]
+      floatparams["C_1"]=(1*1e-4)/floatparams["tilde_P_ini"]
       floatparams["C_2"]=(2*1e-5)/floatparams["tilde_P_ini"]
       userinfo.append(("Use exponential formula for eigenvalues",None))
     if args.eigen=="none":
@@ -335,7 +335,7 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"/zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=30000,
+        number_of_entries_between_two_db_flushes=10000,
         output_precision=10,
         position_delta_between_two_snapsots=1e-20,
         data_delta_between_two_snapsots=0

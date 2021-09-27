@@ -37,7 +37,7 @@ floatparams = {
 	#"tp_epsilon":1e-6
 }
 
-intparams = {"LapseType":0, "tp_grid_setup":0, "swi":99, "ReSwi":0}
+intparams = {"LapseType":0, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -230,7 +230,12 @@ if __name__ == "__main__":
          side.
 
         """
-        self._auxiliary_variables = 6
+        self._auxiliary_variables = 6+59
+
+        self._my_user_includes += """
+	#include "../CCZ4Kernels.h"
+	#include "../AbstractFiniteVolumeCCZ4.h"
+    """
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
@@ -274,15 +279,22 @@ if __name__ == "__main__":
           admconstraints(constraints,reconstructedPatch+cellSerialised*(59+n_a_v),gradQ);
           
           //NaN detector here/////////////////////////////////
-          for(int i=0;i<59;i++){
+          /*for(int i=0;i<59;i++){
             if ( std::isnan(reconstructedPatch[cellSerialised*(59+n_a_v)+i]) ) {
-              ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "[Quantity should no be NaN]", "NaN detected at t=" + std::to_string(t) + " for quantity "+std::to_string(i)+" at position ["+std::to_string(currentPosition[0])+", "+std::to_string(currentPosition[1])+", "++std::to_string(currentPosition[2])+"]");
-          }
+              ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "[Quantity should no be NaN]", "NaN detected at t=" + std::to_string(t) + " for quantity "+std::to_string(i)+" at position ["+std::to_string(currentPosition[0])+", "+std::to_string(currentPosition[1])+", "+std::to_string(currentPosition[2])+"]");}
+          }*/
           ///////////////////////////////////////////////////
 
           for(int i=0;i<6;i++){
             reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
           }
+          
+          double sour[59]={ 0 };
+          examples::exahype2::ccz4::source(sour,reconstructedPatch+cellSerialised*(59+n_a_v),0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0, 0.5);
+          for(int i=0;i<59;i++){
+            reconstructedPatch[cellSerialised*(59+n_a_v)+59+6+i] = sour[i];
+          }
+
           /*
           //here we calculate the norm of conformal factor phi as the refinement condition
           double Phi = std::exp(reconstructedPatch[cellSerialised*(59+n_a_v)+54]);
@@ -648,8 +660,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-20,-20,-0.0]
-    project.add_plot_filter( probe_point,[40.0,40.0,0.1],1 )
+    probe_point = [-1,-1,0.0]
+    project.add_plot_filter( probe_point,[40.0,40.0,0.01],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 
