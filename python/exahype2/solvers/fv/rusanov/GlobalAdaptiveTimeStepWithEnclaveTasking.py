@@ -101,3 +101,7 @@ if (_solverState==SolverState::Secondary) {
     
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
+
+  def create_data_structures(self):
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).create_data_structures()
+    self._optimise_patch_storage_for_global_time_stepping()

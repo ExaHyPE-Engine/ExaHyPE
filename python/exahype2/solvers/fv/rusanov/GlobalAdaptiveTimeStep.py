@@ -89,5 +89,4 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     self._start_time_step_implementation          = create_start_time_step_implementation_for_adaptive_time_stepping(False)
     self._finish_time_step_implementation         = create_finish_time_step_implementation_for_adaptive_time_stepping(self._time_step_relaxation)
     
-    SingleSweep.set_implementation(self, boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
-
+    super(GlobalAdaptiveTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)

@@ -51,6 +51,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       0, // halo
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
     ); // outcome has to be valid
+
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
   }
   else { // is an enclave cell
     assertion( marker.isEnclaveCell() );
@@ -104,26 +106,31 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
-  // @todo Hier fehlt die Abfrage, ob tatsaechlich ein Task gespawnt worden ist.
-  if ( marker.isEnclaveCell() and not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
-    const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+  if ( 
+    not marker.isRefined() 
+    and 
+    {{GUARD}}
+    and
+    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
+  ) {
+    if ( marker.isEnclaveCell() ) {
+      const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
 
-    if ( taskNumber>=0 ) {
-      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
-    }
-    fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+      if ( taskNumber>=0 ) {
+        ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+      }
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
       
-    ::exahype2::fv::validatePatch(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      0,
-      std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
-    );
-  }
+      ::exahype2::fv::validatePatch(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        0,
+        std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
+      );
+    }
 
-  if ( not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
     double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
     
@@ -137,6 +144,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
     self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
+    self.guard      = "true"
 
 
   def get_body_of_operation(self,operation_name):
@@ -146,6 +154,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "LABEL_NAME" ] = self.label_name      
+      d[ "GUARD" ]      = self.guard
       result = jinja2.Template(self.Template).render(**d)
       pass 
     return result
@@ -264,16 +273,35 @@ class EnclaveTasking( FV ):
     
     """
     super(EnclaveTasking, self).create_data_structures()
-    self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard() + " and (" + \
-      self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.isSkeletonCell())"
-    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
-      self._primary_sweep_or_plot_guard + " or marker.isSkeletonCell())"
     
     self._patch_overlap_new.generator.send_condition               = self._secondary_sweep_or_grid_initialisation_or_plot_guard
     self._patch_overlap_new.generator.receive_and_merge_condition  = self._primary_sweep_or_plot_guard
 
     self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_guard
     self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_guard
+
+
+  def _optimise_patch_storage_for_global_time_stepping(self):
+    """
+  
+    If you work with global time stepping, you know that each enclave cell will
+    be updated per grid traversal duo. Consequently, every enclave cell's data
+    doesn't have to be stored in-between two grid traversals - we know that it
+    is currently outsourced to a task.
+  
+    Things are different if we use local time stepping, as there will always be
+    cells that are currently processed, and then there are cells which are not 
+    updated and which we consequently should keep.
+    
+    If you want to have this optimisation, you have to call this routine 
+    explicitly in create_data_structures(). By default, we always store the 
+    patches all the time.
+  
+    """
+    self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard() + " and (" + \
+      self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.isSkeletonCell())"
+    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
+      self._primary_sweep_or_plot_guard + " or marker.isSkeletonCell())"
 
 
   def create_action_sets(self):
@@ -298,8 +326,8 @@ class EnclaveTasking( FV ):
     """
     super(EnclaveTasking, self).create_action_sets()
 
-    self._action_set_update_cell     = UpdateCell(self)
-    self._merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+    self._action_set_update_cell                = UpdateCell(self)
+    self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
 
     #
     # AMR and adjust cell have to be there always, i.e. also throughout 
@@ -491,8 +519,7 @@ class EnclaveTasking( FV ):
  
     """
     super(EnclaveTasking, self).add_actions_to_perform_time_step(step)
-    #step.add_action_set( exahype2.grid.UpdateCellLabel(self._name) ) 
-    step.add_action_set( self._merge_enclave_task_outcome )
+    step.add_action_set( self._action_set_merge_enclave_task_outcome )
  
 
   def add_implementation_files_to_project(self,namespace,output):
