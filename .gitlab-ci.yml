@@ -1,0 +1,14 @@
+reframedine:
+  stage: build
+  tags:
+    - dine
+  script:
+    - cd /cosma5/data/durham/hschulz/Peano/reframe/tests/rfm_euler && git pull && module purge && module load python/3.6.5 &&  STAGE_DIR=/cosma5/data/durham/hschulz/reframe_stage OUTPUT_DIR=/cosma5/data/durham/hschulz/reframe_output TESTLIB=/cosma5/data/durham/hschulz/Peano/reframe/tests  ./euler.sh $CI_COMMIT_SHA
+
+reframehamilton:
+  stage: build
+  tags:
+    - hamilton
+  script:
+    - cd  /ddn/data/gcgt96/Peano/reframe/tests/rfm_euler&& module purge && module load python/3.6.8 &&  REFRAMEROOT=/ddn/data/gcgt96 ./euler.sh $CI_COMMIT_SHA
+
