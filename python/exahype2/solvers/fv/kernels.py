@@ -18,6 +18,14 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_ti
 """
 
 
+def create_finish_time_step_implementation_for_local_time_stepping():
+  return """
+  assertion( _minVolumeH >= 0.0 );
+  assertion( MaxAdmissibleVolumeH > 0.0 );
+  assertion( _minVolumeH <= MaxAdmissibleVolumeH );
+"""
+
+
 def create_empty_source_term_kernel():
   return """
   std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
@@ -118,11 +126,22 @@ def create_start_time_step_implementation_for_adaptive_time_stepping_with_subcyc
   statistics = """
   if (""" + predicate + """) {
     logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t            = " << _minTimeStamp );
-    logInfo( "step()", "dt           = " << getAdmissibleTimeStepSize() );
+    logInfo( "step()", "t_{min,global}     = " << _minTimeStamp );
+    logInfo( "step()", "t_{max,global}     = " << _maxTimeStamp );
+    logInfo( "step()", "t_{min,this-step}  = " << _minTimeStampThisTimeStep );
+    logInfo( "step()", "t_{max,this-step}  = " << _maxTimeStampThisTimeStep );
+    if (_minTimeStepSize > _maxTimeStepSize ) {
+      logInfo( "step()", "dt_{min} = <not yet known>" );
+      logInfo( "step()", "dt_{max} = <not yet known>" );
+    }
+    else {
+      logInfo( "step()", "dt_{min,this-step} = " << _minTimeStepSize );
+      logInfo( "step()", "dt_{max,this-step} = " << _maxTimeStepSize );
+    }
     logInfo( "step()", "h_{min}      = " << _minVolumeH << " (volume size)");
     logInfo( "step()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
     logInfo( "step()", "lambda_{max} = " << _maxEigenvalue );
+    logInfo( "step()", "#updates = " << _patchUpdates << " (no of patches)" );
   }
 """
     

@@ -44,6 +44,17 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_t
   return result
 
 
+def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
+  result = """
+  cellTimeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();  
+  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
+
+  cellTimeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, cellTimeStepSize);
+"""
+
+  return result
+
+
 def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping():
   return """
   cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
@@ -51,6 +62,36 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_t
 """
 
 
+def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation):
+  return """
+    double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+      [] (
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) -> double {
+        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+      },
+      marker.x(),
+      marker.h(),
+      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      targetPatch
+    );
+    
+    maxEigenvalue = std::max(maxEigenvalue,1.0);
+    double newTimeStepSize = """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
+    //logInfo( "touchCellLastTime(...)", marker.toString() << ": " << fineGridCell{{SOLVER_NAME}}CellLabel.toString() );  
+"""
+    
+    
 def create_postprocess_updated_patch_for_adaptive_time_stepping():
   return """
     const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
@@ -117,6 +158,10 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
     """  
 
 
+def create_finish_time_step_implementation_for_local_time_stepping():
+  return ""
+    
+    
 def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_relaxation):
   return """
   #ifdef Parallel
@@ -133,7 +178,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
 
   if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
-    _admissibleTimeStepSize = _admissibleTimeStepSize;
+    _admissibleTimeStepSize = _admissibleTimeStepSize; // keep time step size
   }
   else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
     logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
@@ -142,7 +187,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
     _maxTimeStamp           = std::numeric_limits<double>::max();
   }
   else {
-    _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * getMinVolumeSize() / _maxEigenvalue / 3.0;
+    _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * getMinVolumeSize() / _maxEigenvalue;
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
     }
