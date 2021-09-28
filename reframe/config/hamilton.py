@@ -29,7 +29,7 @@ site_configuration = {
                     "descr": "parallel jobs (Hamilton7) - single node",
                     "scheduler": "slurm",
                     "launcher": "mpirun",
-                    "access": ["-p par6.q"],
+                    "access": ["-p par7.q"],
                     "environs": ["intel"],
                     "max_jobs": 30,
                 },
@@ -38,7 +38,7 @@ site_configuration = {
     ],
     "environments": [
         {
-            "modules": ["intel/2020.4", "intelmpi/intel/2019.6", "python/3.6.8"], # gsl/intel/2.4 breaks Euler on Hamilton; similarly intel/2019.5 is not a suitable replacement for intel/2020.4
+            "modules": ["gsl/intel/2.4", "intel/2020.4", "gcc/9.3.0", "intelmpi/intel/2019.6", "python/3.6.8"], # intel/2019.5 is not a suitable replacement for intel/2020.4. Note also: this setup loads gcc/8.2.0 by default - this must be manually unloaded in the test case.
             "name": "intel",
             "cc": "icc",
             "cxx": "icpc",
