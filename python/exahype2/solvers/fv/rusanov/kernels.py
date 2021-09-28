@@ -26,6 +26,24 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time
   return result
 
 
+def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping_with_subcycling( solver_name, remove_accumulation_errors=True ):
+  result = """
+  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
+  // always chosen such that the finest grid does something meaningful.
+  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+    repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
+    0.0;
+  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
+"""  
+
+  if remove_accumulation_errors:
+    result += """
+  cellTimeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, cellTimeStepSize);
+"""
+
+  return result
+
+
 def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping():
   return """
   cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
@@ -72,6 +90,13 @@ private:
   double _admissibleTimeStepSize;
 public:
   void setMaxEigenvalue( double eigenvalue );  
+  /**
+   * @return Admissible time step size for the current sweep, i.e. 
+   *         return _admissibleTimeStepSize. This value always refers
+   *         to the minimum mesh volume size. If you use subcycling,
+   *         you have to scale it for cells that are not on the finest
+   *         mesh resolution. 
+   */
   double getAdmissibleTimeStepSize() const;  
     """  
     
@@ -90,32 +115,6 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
   return _admissibleTimeStepSize;
 }
     """  
-
-
-def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave_tasking):
-  predicate = """
-    tarch::mpi::Rank::getInstance().isGlobalMaster() 
-    and
-    _maxVolumeH>0.0
-  """
-  
-  if use_enclave_tasking:
-    predicate += """and _solverState == SolverState::Secondary """
-      
-  statistics = """
-  if (""" + predicate + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t            = " << _minTimeStamp );
-    logInfo( "step()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "step()", "h_{min}      = " << _minVolumeH << " (volume size)");
-    logInfo( "step()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
-    logInfo( "step()", "lambda_{max} = " << _maxEigenvalue );
-  }
-"""
-    
-  return statistics + """
-  _maxEigenvalue = 0.0;
-"""
 
 
 def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_relaxation):

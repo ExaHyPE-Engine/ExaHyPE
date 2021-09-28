@@ -105,6 +105,57 @@ def create_start_time_step_implementation_for_fixed_time_stepping_with_subcyclin
 """
 
 
+def create_start_time_step_implementation_for_adaptive_time_stepping_with_subcycling(use_enclave_tasking):
+  predicate = """
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxVolumeH>0.0
+  """
+  
+  if use_enclave_tasking:
+    predicate += """and _solverState == SolverState::Secondary """
+      
+  statistics = """
+  if (""" + predicate + """) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t            = " << _minTimeStamp );
+    logInfo( "step()", "dt           = " << getAdmissibleTimeStepSize() );
+    logInfo( "step()", "h_{min}      = " << _minVolumeH << " (volume size)");
+    logInfo( "step()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
+    logInfo( "step()", "lambda_{max} = " << _maxEigenvalue );
+  }
+"""
+    
+  return statistics + """
+  _maxEigenvalue = 0.0;
+"""
+
+def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave_tasking):
+  predicate = """
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxVolumeH>0.0
+  """
+  
+  if use_enclave_tasking:
+    predicate += """and _solverState == SolverState::Secondary """
+      
+  statistics = """
+  if (""" + predicate + """) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t            = " << _minTimeStamp );
+    logInfo( "step()", "dt           = " << getAdmissibleTimeStepSize() );
+    logInfo( "step()", "h_{min}      = " << _minVolumeH << " (volume size)");
+    logInfo( "step()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
+    logInfo( "step()", "lambda_{max} = " << _maxEigenvalue );
+  }
+"""
+    
+  return statistics + """
+  _maxEigenvalue = 0.0;
+"""
+
+
 def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(solver):
   """
   
