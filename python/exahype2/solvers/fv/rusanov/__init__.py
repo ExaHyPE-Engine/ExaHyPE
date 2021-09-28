@@ -9,4 +9,5 @@ from .GlobalAdaptiveTimeStepWithEnclaveTasking      import GlobalAdaptiveTimeSte
 from .SubcyclingFixedTimeStep                       import SubcyclingFixedTimeStep
 from .SubcyclingFixedTimeStepWithEnclaveTasking     import SubcyclingFixedTimeStepWithEnclaveTasking
 from .SubcyclingAdaptiveTimeStepWithEnclaveTasking  import SubcyclingAdaptiveTimeStepWithEnclaveTasking
+from .LocalTimeStepWithEnclaveTasking               import LocalTimeStepWithEnclaveTasking
 
