@@ -109,31 +109,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
 
   {{POSTPROCESS_UPDATED_PATCH_IN_SKELETON_CELL}}
-
-  /*
-  double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-    [] (
-      const double * __restrict__                  Q,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal
-    ) -> double {
-      return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-    },
-    marker.x(),
-    marker.h(),
-    t,
-    dt,
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    targetPatch
-  );
-
-  repositories::{{SOLVER_INSTANCE}}.setMaximumEigenvalue( maxEigenvalue );
-  */
 }
 
 
