@@ -18,12 +18,9 @@ ReFrame-Hamilton:
   tags:
     - hamilton
   script:
-    - pwd
     - cd /ddn/data/gcgt96/Peano/reframe/tests/rfm_euler
-    - pwd
     - git pull  
     - module purge
     - module load python/3.6.8
-    - REFRAMEROOT=/ddn/data/gcgt96
-    - ./euler.sh $CI_COMMIT_SHA
+    - REFRAMEROOT=/ddn/data/gcgt96 ./euler.sh $CI_COMMIT_SHA
 
