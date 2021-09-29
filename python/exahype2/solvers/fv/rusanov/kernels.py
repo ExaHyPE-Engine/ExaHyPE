@@ -84,11 +84,20 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
       targetPatch
     );
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
     
-    maxEigenvalue = std::max(maxEigenvalue,1.0);
-    double newTimeStepSize = """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-    //logInfo( "touchCellLastTime(...)", marker.toString() << ": " << fineGridCell{{SOLVER_NAME}}CellLabel.toString() );  
+    if (tarch::la::equals( maxEigenvalue,0.0) ) {
+      maxEigenvalue = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue();
+    }
+    
+    if (tarch::la::equals( maxEigenvalue,0.0) ) {
+      logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
+    }
+    else {
+      double newTimeStepSize = """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);    
+    }
 """
     
     
@@ -121,8 +130,11 @@ def create_postprocess_updated_patch_for_adaptive_time_stepping():
 
 def create_constructor_implementation_for_adaptive_time_stepping():
   return "_admissibleTimeStepSize = 0.0;"
-  
 
+
+def create_constructor_implementation_for_local_time_stepping():
+  return "_maxEigenvalue = std::numeric_limits<double>::max();"
+  
 
 def create_abstract_solver_user_declarations_for_adaptive_time_stepping():
   return """
@@ -142,6 +154,24 @@ public:
     """  
     
     
+def create_abstract_solver_user_declarations_for_local_time_stepping():
+  return """
+private:
+  double _maxEigenvalue;
+  double _maxEigenvalueOfPreviousSweep;
+public:
+  /**
+   * @return Minimum non-zero eigenvalue. Keep in mind that the per-cell 
+   *         eigenvalues can become zero for some non-linear problems (if 
+   *         nothing happens), so it is important to neglect those when we
+   *         take the minimum.
+   */
+  double getMaxEigenvalue() const;  
+
+  void setMaxEigenvalue( double eigenvalue );
+    """  
+    
+    
 def create_abstract_solver_user_definitions_for_adaptive_time_stepping():
   return """
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
@@ -156,10 +186,42 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
   return _admissibleTimeStepSize;
 }
     """  
+    
+    
+def create_abstract_solver_user_definitions_for_local_time_stepping():
+  return """
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
+  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
+    tarch::multicore::Lock lock(_semaphore);
+    _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
+  }
+}    
+
+
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue() const {
+  return _maxEigenvalueOfPreviousSweep;
+}
+    """  
 
 
 def create_finish_time_step_implementation_for_local_time_stepping():
-  return ""
+  return """
+  #ifdef Parallel
+  double newMaxEigenvalue = _maxEigenvalue;
+  tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxEigenvalue,
+        &_maxEigenvalue,
+        1,
+        MPI_DOUBLE,
+        MPI_MAX, 
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+  #endif
+  
+  if ( _solverState == SolverState::Secondary ) {
+    _maxEigenvalueOfPreviousSweep = _maxEigenvalue;
+  }
+"""
     
     
 def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_relaxation):

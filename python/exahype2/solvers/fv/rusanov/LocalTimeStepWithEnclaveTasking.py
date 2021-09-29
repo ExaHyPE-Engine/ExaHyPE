@@ -14,13 +14,16 @@ from .kernels import create_solver_definitions
 from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_local_time_stepping
 from .kernels import create_postprocess_updated_patch_for_local_time_stepping
 from .kernels import create_fused_compute_Riemann_kernel_for_Rusanov
+from .kernels import create_abstract_solver_user_declarations_for_local_time_stepping
+from .kernels import create_abstract_solver_user_definitions_for_local_time_stepping
 
 from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
-from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_local_time_stepping
-from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling
+from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_local_time_stepping
 
+from .kernels import create_constructor_implementation_for_local_time_stepping
+from .kernels import create_finish_time_step_implementation_for_local_time_stepping
 
 class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
   def __init__(self, 
@@ -98,10 +101,15 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._use_gpu)
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._use_gpu)
 
+    self._constructor_implementation         = create_constructor_implementation_for_local_time_stepping()
+
+    self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_local_time_stepping()
+    self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_local_time_stepping()
+
     self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._use_gpu)
     self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._use_gpu)
 
-    self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(True)
+    self._start_time_step_implementation     = create_start_time_step_implementation_for_local_time_stepping(True)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_local_time_stepping()
       
     super(LocalTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)

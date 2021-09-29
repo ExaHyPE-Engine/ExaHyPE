@@ -81,6 +81,10 @@ def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_ta
 """
 
 
+def create_start_time_step_implementation_for_local_time_stepping(use_enclave_tasking):
+  return create_start_time_step_implementation_for_adaptive_time_stepping_with_subcycling(use_enclave_tasking)
+  
+
 def create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(use_enclave_tasking):
   predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
