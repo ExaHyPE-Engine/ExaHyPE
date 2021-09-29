@@ -32,6 +32,9 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
      Similar to velocity indices. Cardinality of index set has to match the 
      tracer's data cardinality, i.e. the number of unknowns the tracer shall
      track.
+     
+    scaling_of_velocities: Float
+     Can we set 0 if you don't want the particles to move.
 
     """
     

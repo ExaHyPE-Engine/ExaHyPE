@@ -87,7 +87,7 @@ class Project(object):
   LibraryStats   = "_stats"
     
     
-  def set_Peano4_installation(self, src_path, mode ):
+  def set_Peano4_installation(self, src_path, mode=peano4.output.CompileMode.Release ):
     """
       src_path: string
         Path (relative or absolute) to the src directory of Peano. This path 
