@@ -51,6 +51,11 @@ class exahype2::EnclaveBookkeeping {
     EnclaveBookkeeping() = default;
   public:
     static constexpr int NoEnclaveTaskNumber = -1;
+    /**
+     * Skeletons are not really tasks in the traditional sense. But we can
+     * see them as tasks which are immediately ran.
+     */
+    static constexpr int SkeletonTask        = -2;
 
     static EnclaveBookkeeping& getInstance();
 

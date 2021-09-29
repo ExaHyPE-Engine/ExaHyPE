@@ -14,7 +14,7 @@ from .kernels import create_solver_definitions
 from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping
 from .kernels import create_postprocess_updated_patch_for_adaptive_time_stepping
 from .kernels import create_finish_time_step_implementation_for_adaptive_time_stepping
-from .kernels import create_start_time_step_implementation_for_adaptive_time_stepping
+from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_adaptive_time_stepping
 from .kernels import create_abstract_solver_user_declarations_for_adaptive_time_stepping
 from .kernels import create_abstract_solver_user_definitions_for_adaptive_time_stepping
 from .kernels import create_constructor_implementation_for_adaptive_time_stepping
@@ -101,3 +101,7 @@ if (_solverState==SolverState::Secondary) {
     
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
+
+  def create_data_structures(self):
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).create_data_structures()
+    self._optimise_patch_storage_for_global_time_stepping()

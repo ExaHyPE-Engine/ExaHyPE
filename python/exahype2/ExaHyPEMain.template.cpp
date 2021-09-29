@@ -180,7 +180,7 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = true;
   }}
   else {{
-    if ( repositories::getMinTimeStamp()>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime ) {{
+    if ( repositories::getMinTimeStamp(true)>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime ) {{
       nextPlotTimeStamp += TimeInBetweenPlots;
       if ( nextPlotTimeStamp < repositories::getMinTimeStamp() ) {{
         logWarning(

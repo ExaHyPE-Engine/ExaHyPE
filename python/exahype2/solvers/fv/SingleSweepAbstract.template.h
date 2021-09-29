@@ -98,8 +98,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp() const final;
-    double getMaxTimeStamp() const final;
+    double getMinTimeStamp(bool ofLastTimeStepOnly=false) const final;
+    double getMaxTimeStamp(bool ofLastTimeStepOnly=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -255,6 +255,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     double     _minTimeStamp;
     double     _maxTimeStamp;
+
+    double     _minTimeStampThisTimeStep;
+    double     _maxTimeStampThisTimeStep;
 
     double     _minVolumeH;
     double     _maxVolumeH;

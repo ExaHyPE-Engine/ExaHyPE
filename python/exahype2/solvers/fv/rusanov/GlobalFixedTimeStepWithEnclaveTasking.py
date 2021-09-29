@@ -11,8 +11,8 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
-from exahype2.solvers.fv.kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping
 from .kernels import create_fused_compute_Riemann_kernel_for_Rusanov
+from exahype2.solvers.fv.kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
@@ -99,6 +99,9 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping(True)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)
 
-    EnclaveTasking.set_implementation(self, boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
+    super(GlobalFixedTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
 
 
+  def create_data_structures(self):
+    super(GlobalFixedTimeStepWithEnclaveTasking,self).create_data_structures()
+    self._optimise_patch_storage_for_global_time_stepping()

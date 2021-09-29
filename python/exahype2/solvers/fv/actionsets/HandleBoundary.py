@@ -50,6 +50,27 @@ class HandleBoundary(AbstractFVActionSet):
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
       );
+      ::exahype2::fv::applyBoundaryConditions(
+        [&](
+          const double * __restrict__                  Qinside,
+          double * __restrict__                        Qoutside,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> void {
+          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
+        },  
+        marker.x(),
+        marker.h(),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        marker.getSelectedFaceNumber(),
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value
+      );
       
       bool isLeftEntryOutside = marker.getSelectedFaceNumber() < Dimensions;
       double innerTimeStamp;
