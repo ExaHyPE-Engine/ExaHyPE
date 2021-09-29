@@ -62,8 +62,26 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_t
 """
 
 
-def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation):
-  return """
+def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation, avoid_staircase_effect):
+  """
+  
+  :: Zero eigenvalues
+  
+  If you solve non-linear problems, cells can have a zero eigenvalue. It means that 
+  nothing happens within this cell. There are two options on the table: You can take
+  the biggest global eigenvalue and march forward using this value. In ExaHyPE 2, 
+  this yields a staircase effect if you have larger, regular region, then we have 
+  something similar to many stencil codes which then update the cells in the middle
+  again, and then those in the middle again, and so forth.
+  
+  We can avoid this by making a cell march if an only if one neighbour has advanced.
+  In this case large global areas where nothing happens lag behind. 
+  
+  
+  avoid_staircase_effect: Boolean
+  
+  """
+  determine_eigenvalue = """
     double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
       [] (
         const double * __restrict__                  Q,
@@ -85,20 +103,51 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
       targetPatch
     );
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
-    
+"""
+
+  if avoid_staircase_effect:
+    compute_time_step_sizes = """    
     if (tarch::la::equals( maxEigenvalue,0.0) ) {
       maxEigenvalue = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue();
     }
-    
+    double newTimeStepSize;
+    const double maxTimeStepSize = tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(),0.0) ? 0.0 : """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() * 3.0;
+
+    if ( tarch::la::equals( maxEigenvalue,0.0) ) {
+      const double minTimeStampOfNeighbours = ::exahype2::getMinTimeStampOfNeighboursAhead(fineGridCell{{SOLVER_NAME}}CellLabel, fineGridFaces{{SOLVER_NAME}}FaceLabel);
+
+      newTimeStepSize = minTimeStampOfNeighbours - fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+      assertion(newTimeStepSize>=0.0);
+    }
+    else {
+      newTimeStepSize = """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;      
+    }
+"""    
+  else:
+    compute_time_step_sizes = """    
     if (tarch::la::equals( maxEigenvalue,0.0) ) {
+      maxEigenvalue = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue();
+    }
+    const double newTimeStepSize = tarch::la::equals(maxEigenvalue,0.0)                                        ? 0.0 : """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;
+    const double maxTimeStepSize = tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(),0.0) ? 0.0 : """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() * 3.0;
+"""    
+   
+    
+  set_time_step_size = """    
+    if ( tarch::la::equals(newTimeStepSize,0.0) ) {
       logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
     }
+    else if ( newTimeStepSize > maxTimeStepSize ) {
+      logDebug( "touchCellFirstTime(...)", "can't do a time step of size " << newTimeStepSize << " on cell " << marker.toString() << " as max time step size has been computed as " << maxTimeStepSize );
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(maxTimeStepSize);    
+    }
     else {
-      double newTimeStepSize = """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);    
     }
 """
+
+  return determine_eigenvalue + compute_time_step_sizes + set_time_step_size
     
     
 def create_postprocess_updated_patch_for_adaptive_time_stepping():

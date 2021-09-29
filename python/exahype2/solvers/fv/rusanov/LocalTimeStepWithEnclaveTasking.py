@@ -34,7 +34,8 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False,
     interpolate_linearly_in_time=True,
-    use_gpu=False
+    use_gpu=False,
+    avoid_staircase_effect=True
   ):
     """
   
@@ -57,7 +58,7 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._source_term_implementation          = PDETerms.None_Implementation
     
     self._preprocess_reconstructed_patch_throughout_sweep  = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_local_time_stepping( name, time_step_relaxation )
-    self._postprocess_updated_patch_throughout_sweep       = create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation)
+    self._postprocess_updated_patch_throughout_sweep       = create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation,avoid_staircase_effect)
    
     self.set_implementation(flux=flux, 
       ncp=ncp, 

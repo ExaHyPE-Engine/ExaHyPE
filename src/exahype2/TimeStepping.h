@@ -14,6 +14,68 @@
 
 namespace exahype2 {
   /**
+   * Run over all neighbours and analyse their time stamp.
+   *
+   */
+  template <typename FaceLabel>
+  double getMinTimeStampOfNeighbours(
+    const peano4::datamanagement::FaceEnumerator< FaceLabel >& faceLabelEnumerator
+  ) {
+    double result = std::numeric_limits<double>::max();
+
+    for (int d=0; d<Dimensions; d++) {
+      result = std::min(result, faceLabelEnumerator(d).getNewTimeStamp(0) );
+      result = std::min(result, faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1) );
+    }
+
+    return result;
+  }
+
+
+  /**
+   * Similar to getMinTimeStampOfNeighbours(), but we minimise only over those
+   * neighbours that are actually ahead. If no neighbour is ahead or one lags
+   * behind, we return the time stamp of cellLabel.
+   */
+  template <typename CellLabel, typename FaceLabel>
+  double getMinTimeStampOfNeighboursAhead(
+    const CellLabel& cellLabel,
+    const peano4::datamanagement::FaceEnumerator< FaceLabel >& faceLabelEnumerator
+  ) {
+    double result = std::numeric_limits<double>::max();
+    bool   oneIsAhead  = false;
+    bool   oneIsBehind = false;
+
+    for (int d=0; d<Dimensions; d++) {
+      double leftNeighbourTimeStamp = faceLabelEnumerator(d).getNewTimeStamp(0);
+      if ( tarch::la::greater(leftNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
+        result     = std::min(result,leftNeighbourTimeStamp);
+        oneIsAhead = true;
+      }
+      if ( tarch::la::smaller(leftNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
+        oneIsBehind = true;
+      }
+
+      double rightNeighbourTimeStamp = faceLabelEnumerator(d=Dimensions).getNewTimeStamp(1);
+      if ( tarch::la::greater(rightNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
+        result     = std::min(result,rightNeighbourTimeStamp);
+        oneIsAhead = true;
+      }
+      if ( tarch::la::smaller(rightNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
+        oneIsBehind = true;
+      }
+    }
+
+    if (oneIsAhead and not oneIsBehind) {
+      return result;
+    }
+    else {
+      return cellLabel.getTimeStamp();
+    }
+  }
+
+
+  /**
    * Determine whether to run a time step on a cell by analysing the
    * neighbouring cells' timestamp. These timestamps are stored within the
    * face labels. We update a cell if all the neighbours are at the same
@@ -26,24 +88,9 @@ namespace exahype2 {
     const CellLabel& cellLabel,
     const peano4::datamanagement::FaceEnumerator< FaceLabel >& faceLabelEnumerator
   ) {
-    static tarch::logging::Log _log( "exahype2" );
-
     double cellTimeStamp =  cellLabel.getTimeStamp();
 
-    bool updateCell = true;
-
-    for (int d=0; d<Dimensions; d++) {
-      updateCell &= tarch::la::greaterEquals(
-        faceLabelEnumerator(d).getNewTimeStamp(0),
-        cellTimeStamp
-      );
-      updateCell &= tarch::la::greaterEquals(
-        faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1),
-        cellTimeStamp
-      );
-    }
-
-    return updateCell;
+    return tarch::la::greaterEquals( getMinTimeStampOfNeighbours(faceLabelEnumerator), cellTimeStamp );
   }
 
 
