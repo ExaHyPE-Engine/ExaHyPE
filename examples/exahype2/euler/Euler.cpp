@@ -17,8 +17,8 @@ enum class Scenario {
 };
 
 
-//Scenario scenario = Scenario::BreakingDamResolutionStudies;
-Scenario scenario = Scenario::BreakingDam;
+Scenario scenario = Scenario::BreakingDamResolutionStudies;
+// Scenario scenario = Scenario::BreakingDam;
 
 
 
@@ -70,7 +70,7 @@ Scenario scenario = Scenario::BreakingDam;
       break;
     case Scenario::BreakingDam:
       {
-        if ( volumeCentre(1)<0.3 ) {
+        if ( volumeCentre(0)<0.5 ) {
           result = ::exahype2::RefinementCommand::Refine;
         }
       }

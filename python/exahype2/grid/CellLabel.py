@@ -71,6 +71,15 @@ def create_cell_label(solver_name):
 
    Build up the DaStGen2 data structure that we need per cell to maintain
    per-cell data per solver.
+   
+   :: Attributes per cell
+   
+   - SemaphoreNumber is a number that links to a task that has been spawn in the
+     background. Consult the enclave tasking and its bookkeeping for details.
+   - TimeStamp holds the local time stamp of the current cell. Even for global 
+     time stepping, it is important that this time stamp is stored per cell, as 
+     some postprocessing (particles, e.g.) rely on the field.
+   - TimeStepSize (similar to arguments around TimeStamp).
      
    solver_name: string
      Name of the solver
