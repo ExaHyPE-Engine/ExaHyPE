@@ -18,7 +18,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15 
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05
 }
 
 intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0}
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=0.1
+            time_step_relaxation=0.05
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__
@@ -247,8 +247,8 @@ if __name__ == "__main__":
       floatparams.update({k:eval("args.{}".format(k))})
 
     if args.eigen=="exp":
-      floatparams["C_1"]=(1*1e-4)/floatparams["tilde_P_ini"]
-      floatparams["C_2"]=(2*1e-5)/floatparams["tilde_P_ini"]
+      floatparams["C_1"]=(10*1e-4)/floatparams["tilde_P_ini"]
+      floatparams["C_2"]=(10*1e-5)/floatparams["tilde_P_ini"]
       userinfo.append(("Use exponential formula for eigenvalues",None))
     if args.eigen=="none":
       floatparams["C_1"]=0
@@ -256,13 +256,13 @@ if __name__ == "__main__":
       userinfo.append(("Use original formula for eigenvalues",None))
 
     if args.seed=="tophat":
-      floatparams.update({"r_ini":1})
+      floatparams.update({"r_ini":0.1})
       floatparams.update({"delta_rho":0.05})
       userinfo.append(("Tophat overdensity region set",None))
     if args.seed=="point":
       intparams.update({"iseed":1})
       floatparams.update({"delta_m":0.15})
-      userinfo.append(("Point mass seed set",None))
+      userinfo.append(("Point mass in tophat seed set",None))
 
     solverconstants=""
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
@@ -304,8 +304,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [0,0,-0.01]
-    project.add_plot_filter( probe_point,[40.0,40.0,0.02],1 )
+    probe_point = [-20,-20,-0.001]
+    project.add_plot_filter( probe_point,[40.0,40.0,0.002],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
@@ -326,7 +326,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=100,N_y=50,N_z=1)
+        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=300,N_y=50,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
 
       if path=="./": path1="."
@@ -334,7 +334,7 @@ if __name__ == "__main__":
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=my_solver,
-        filename=path1+"/zz"+args.tra_name,
+        filename=path1+"zz"+args.tra_name,
         number_of_entries_between_two_db_flushes=10000,
         output_precision=10,
         position_delta_between_two_snapsots=1e-20,
@@ -355,7 +355,7 @@ if __name__ == "__main__":
     userinfo.append(("output directory: "+path, None))
     print("=========================================================")
     if not args.add_tracer==0:
-        userinfo.append(("tracer output file: "+path1+"/zz"+args.tra_name, None))
+        userinfo.append(("tracer output file: "+path1+"zz"+args.tra_name, None))
     if len(userinfo) >0:
         print("The building infomation:")
         for msg, exception in userinfo:

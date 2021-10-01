@@ -119,7 +119,8 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 		  else { m_in=rho_ini*delta_rho*pow(r_ini,3)/3;}
 		}
 		if (iseed==1){
-		  m_in=delta_m/4/pi;
+		  if (r_coor<r_point){m_in=delta_m*pow(r_coor/r_point,3)/4/pi;}
+		  else {m_in=delta_m/4/pi;}
 		}
   } 
   else {
@@ -127,13 +128,14 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
       m_in=mass_interpolate(r_coor)/4/pi; //remove the overall 4\pi coefficient. 
     }
     if (iseed==1){
-		  m_in=(mass_interpolate(r_coor)+delta_m)/4/pi;
+		  if (r_coor<r_point){m_in=(mass_interpolate(r_coor)+delta_m*pow(r_coor/r_point,3))/4/pi;}
+		  else {m_in=(mass_interpolate(r_coor)+delta_m)/4/pi;}
 		}
   }
 
   double a=0.0287*pow((-t/11.8+5.35695),-2);//when code time t=61.2, a~1
   double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
-  if (force_density_norm>1 and r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
+  //if (r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
 
   //force_density_norm=0;
 
@@ -255,7 +257,7 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   for (int i=0;i<sample_number;i++){
     if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;}
     else if ((r_coor-size/2)>r_s[i]) {m_tot[i]+=0;}
-    else {m_tot[i]+=m*(r_s[i]-r_coor+size/2)/size;}
+    else {m_tot[i]+=m*pow((r_s[i]-r_coor+size/2),3)/pow(size,3);}
   }
 }
 
@@ -266,9 +268,11 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   double m_a,m_b;
   double m_result;
 
+  bool IsCenter=false;
   if (r_coor<r_s[0]) {
     a=0; b=r_s[0];
     m_a=0; m_b=m_tot_copy[0];
+    IsCenter=true;
   }
   if (r_coor>r_s[sample_number-1]) {
     a=r_s[sample_number-2]; b=r_s[sample_number-1];
@@ -283,7 +287,10 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
       }
     }
   }
-  if (true) { //linear interpolation
+  if (IsCenter){
+    m_result=m_b*pow((r_coor),3)/pow(b,3);
+  }
+  else {  //linear interpolation
     m_result=m_a*(b-r_coor)/(b-a)+m_b*(r_coor-a)/(b-a);
   }
 
