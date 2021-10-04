@@ -8,8 +8,9 @@
 
 import os, sys
 import argparse
-import glob
 import peano4.toolbox.particles.postprocessing
+
+import matplotlib.pyplot as plt
 
 
 parser = argparse.ArgumentParser(description='ExaHyPE 2 - Particle toolbox postprocessing')
@@ -19,6 +20,7 @@ parser.add_argument("-o",  "--output",        dest="output",      help="Output n
 parser.add_argument("-t",  "--target",        dest="target",      choices=["seismogram","initial-tracer-location"],   help="Pick output type" )
 parser.add_argument("-v",  "--value",         dest="value",       help="Pick value to go with target" )
 parser.add_argument("-p",  "--pick",          dest="pick",        default="", help="Pick particles. Empty means all particles, otherwise you specify the particles through '(1,4)(7,8)'" )
+parser.add_argument("-l",  "--legend",        dest="legend",      default=None, help="Legend (comma-separated)" )
 args = parser.parse_args()
 
 
@@ -32,18 +34,11 @@ Type in --help to find out about the arguments.
 
 """)
 
-datasets = []
+dataset = []
 for file in args.files:
   if not ".csv" in file:
     print( "filename " + file + " is not complete. Search for files " + file + "*.csv")
-    filtered_files = glob.glob( file + "*.csv" )
-    for filtered_file in filtered_files:
-      new_dataset = peano4.toolbox.particles.postprocessing.Dataset()
-      new_dataset.parse(filtered_file,args.dimensions)
-      if new_dataset.valid:
-        datasets.append( new_dataset )
-      else:
-        print( "ERROR: file " + filtered_file + " was not a valid Peano 4 particle database file" )
+    new_dataset = peano4.toolbox.particles.postprocessing.load_file_sequence(file,args.dimensions)
   else:
       new_dataset = peano4.toolbox.particles.postprocessing.Dataset()
       new_dataset.parse(file,args.dimensions)
@@ -66,7 +61,11 @@ if args.pick!="":
 
 if args.target=="seismogram":
   column = int( args.value )
-  peano4.toolbox.particles.postprocessing.scatter_plot_of_data( flattened_dataset, args.output, column )
+  plt.clf()
+  peano4.toolbox.particles.postprocessing.seismogram( flattened_dataset, column, args.legend )
+  plt.legend()
+  plt.savefig( args.output + ".pdf" )
+  plt.savefig( args.output + ".png" )
 elif args.target=="initial-tracer-location" and args.dimensions==2:
   keys = flattened_dataset.extract_particle_keys()
   for particle in keys:

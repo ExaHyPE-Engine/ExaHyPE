@@ -3,8 +3,30 @@
 
 
 import pandas
+import glob
 
 
+def load_file_sequence(file_prefix,dimensions):
+  """
+  
+  Load all files that start with file_prefix and merge them into one 
+  instance of Dataset.
+  
+  """
+  result = None
+  filtered_files = glob.glob( file_prefix + "*.csv" )
+  for filtered_file in filtered_files:
+    new_dataset = Dataset()
+    new_dataset.parse(filtered_file,dimensions)
+    if new_dataset.valid and result==None:
+      result = new_dataset
+    elif new_dataset.valid:
+      result.append( new_dataset )
+    else:
+      print( "ERROR: file " + filtered_file + " was not a valid Peano 4 particle database file" )
+  return result
+    
+    
 def assert_ascending(data):
   for i in range(0,len(data)-1):
     if data[i]>data[i+1]:
@@ -17,7 +39,6 @@ class Dataset(object):
     self.number_of_data_columns_ = -1
     self.dimensions_             = -1
     self.data_                   = None
-    self.filters_                = []
 
   __Tree_Number_Identifier                = "tree_number"
   __Tree_Local_Particle_Number_Identifier = "particle_number"
@@ -73,14 +94,7 @@ class Dataset(object):
     number. This operation returns a set of thes tuples.
     
     """  
-    raw_data = set(zip(self.data_[self.__Tree_Number_Identifier],self.data_[self.__Tree_Local_Particle_Number_Identifier])) 
-    result = set()
-    
-    for i in raw_data:
-      if self.filters_==[] or i in self.filters_:
-        result.add(i)
-    
-    return result
+    return set(zip(self.data_[self.__Tree_Number_Identifier],self.data_[self.__Tree_Local_Particle_Number_Identifier])) 
 
 
   def get_data(self,particle,column_number):
@@ -127,12 +141,3 @@ class Dataset(object):
     else:
       return list(filtered_data.t), list(filtered_data["x"]), list(filtered_data["y"]), list(filtered_data["z"])
 
-
-  def add_filter(self,filter):
-    """
-    
-    filter: (Int,Int)
-      Set of filters that do apply, i.e. only those particles are kept
-      
-    """
-    self.filters_.append(filter)

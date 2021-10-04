@@ -3,5 +3,11 @@
 
 from .Dataset           import Dataset
 
-from .MatplotlibPlotter import scatter_plot_of_data
+from .Dataset           import load_file_sequence
+from .Dataset           import assert_ascending
+
+from .Filter            import select_tracer_from_subdomain
+from .Filter            import get_initial_position_labels
+
+from .MatplotlibPlotter import seismogram
 
