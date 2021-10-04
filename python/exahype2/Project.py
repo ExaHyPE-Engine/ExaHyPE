@@ -237,7 +237,7 @@ class Project(object):
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
     
       
-  def add_tracer(self,name,attribute_count=0):
+  def add_tracer(self,name,attribute_count=0,plot_particle=True):
     """
     
     name: String
@@ -249,6 +249,12 @@ class Project(object):
       
     h and noise:
       See tracer.InsertParticles
+      
+    plot_particle: Boolean
+      If this flag is set, ExaHyPE dumps the particles as vtu files whenever
+      it writes patch files. You can switch this behaviour off. A lot of codes
+      do so if they dump the tracer data independently into another database
+      anyway.
     
     Returns the particle set that you can use to modify further 
     
@@ -267,7 +273,8 @@ class Project(object):
     self._project.datamodel.add_global_object(particle)
     self._project.datamodel.add_vertex(particles)
 
-    self.plot_solution.use_vertex(particles)
+    if plot_particle:
+      self.plot_solution.use_vertex(particles)
     self.init_grid.use_vertex(particles)
     self.perform_time_step.use_vertex(particles)
     self.create_grid.use_vertex(particles)
