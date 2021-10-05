@@ -209,8 +209,8 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
     }
     MPI_Barrier(MPI_COMM_WORLD);
     validate( testErrors==0 );
-  #endif
   }
+  #endif
 }
 
 
