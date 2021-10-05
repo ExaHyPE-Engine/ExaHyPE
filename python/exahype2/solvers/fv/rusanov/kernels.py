@@ -655,7 +655,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       Offloadable
 ) {
   {% if FLUX_IMPLEMENTATION=="<none>" %}
-  exit(-1);
+  abort();
   {% else %}
   {{FLUX_IMPLEMENTATION}}
   {% endif %}
@@ -681,7 +681,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
       Offloadable
 ) {
   {% if NCP_IMPLEMENTATION=="<none>" %}
-  exit(-1);
+  abort();
   {% else %}
   {{NCP_IMPLEMENTATION}}
   {% endif %}
@@ -706,7 +706,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       Offloadable
 ) {
   {% if SOURCE_TERM_IMPLEMENTATION=="<none>" %}
-  exit(-1);
+  abort();
   {% else %}
   {{SOURCE_TERM_IMPLEMENTATION}}
   {% endif %}
