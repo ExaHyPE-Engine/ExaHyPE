@@ -11,7 +11,7 @@ import dastgen2.attributes.Integer
 
 
 class InsertParticlesbyCoordinates(ActionSet):
-  def __init__(self,particle_set,N=2,coor_s=[[0,0,0],[0,0,0]]):
+  def __init__(self,particle_set,coor_s=[[0,0,0],[0,0,0]]):
     """
 =
 
@@ -28,8 +28,9 @@ class InsertParticlesbyCoordinates(ActionSet):
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
-    self.d[ "N" ]                        = N
-    self._coor_s			 = coor_s
+    self.d[ "N" ]                        = len(coor_s)
+    self._coor_s			             = coor_s
+    
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   for(int i=0;i<{{N}};i++){
