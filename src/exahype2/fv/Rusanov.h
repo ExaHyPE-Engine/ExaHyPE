@@ -221,11 +221,8 @@ namespace exahype2 {
               }
             }
           }
-        }
 
          //////Iterate over other normal
-        for (int shift = 0; shift < 2; shift++)
-        {
 #pragma omp parallel for collapse(2)
           for (int y = shift; y <= numVPAIP; y += 2)
           {
