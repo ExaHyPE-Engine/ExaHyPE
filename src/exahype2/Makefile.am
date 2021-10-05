@@ -10,10 +10,12 @@ endif
 ExaHyPE2Sources = \
   EnclaveBookkeeping.cpp \
   EnclaveTask.cpp \
+  LoadBalancingConfiguration.cpp \
   NonCriticalAssertions.cpp \
   PatchUtils.cpp \
   PlotFilter.cpp \
   RefinementControl.cpp \
+  TimeStepping.cpp \
   UserInterface.cpp \
   UnitTests.cpp \
   aderdg/CorrectorAoS.cpp \

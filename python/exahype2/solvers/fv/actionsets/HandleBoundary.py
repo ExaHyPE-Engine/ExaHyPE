@@ -50,21 +50,57 @@ class HandleBoundary(AbstractFVActionSet):
         marker.getSelectedFaceNumber(),
         fineGridFace{{UNKNOWN_IDENTIFIER}}New.value
       );
+      ::exahype2::fv::applyBoundaryConditions(
+        [&](
+          const double * __restrict__                  Qinside,
+          double * __restrict__                        Qoutside,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> void {
+          repositories::{{SOLVER_INSTANCE}}.boundaryConditions( Qinside, Qoutside, faceCentre, volumeH, t, normal );
+        },  
+        marker.x(),
+        marker.h(),
+        {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp(marker.getSelectedFaceNumber()<Dimensions ? 1 : 0),
+        repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize(),
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+        marker.getSelectedFaceNumber(),
+        fineGridFace{{UNKNOWN_IDENTIFIER}}Old.value
+      );
+      
+      bool isLeftEntryOutside = marker.getSelectedFaceNumber() < Dimensions;
+      double innerTimeStamp;
+      
+      innerTimeStamp = {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp( isLeftEntryOutside ? 1 : 0 );
+      {{FACE_METADATA_ACCESSOR}}.setUpdatedTimeStamp( isLeftEntryOutside ? 0 : 1, innerTimeStamp );
+      
+      innerTimeStamp = {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp( isLeftEntryOutside ? 1 : 0 );
+      {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp( isLeftEntryOutside ? 0 : 1, innerTimeStamp );
+
+      innerTimeStamp = {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp( isLeftEntryOutside ? 1 : 0 );
+      {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp( isLeftEntryOutside ? 0 : 1, innerTimeStamp );
+
       logTraceOut( "touchFaceFirstTime(...)---HandleBoundary" );
     }
 """
-  def __init__(self,solver,predicate):
+
+  def __init__(self,solver,guard):
     AbstractFVActionSet.__init__(self,solver)
-    self.d = {}
-    self.d[ "PREDICATE" ] = predicate      
-    self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + solver._face_label.name
+    self.guard = guard
 
 
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
+      self.d = {}
       self._solver._init_dictionary_with_default_parameters(self.d)
       self._solver.add_entries_to_text_replacement_dictionary(self.d)
+      self.d[ "PREDICATE" ] = self.guard      
+      self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFace"  + self._solver._face_label.name
       result = jinja2.Template(self.TemplateHandleBoundary).render(**self.d)
       pass 
     return result

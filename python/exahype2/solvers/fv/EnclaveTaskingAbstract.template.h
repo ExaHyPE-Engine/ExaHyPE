@@ -21,6 +21,9 @@
 #include "Constants.h"
 
 
+{{SOLVER_INCLUDES}}
+
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 
@@ -96,8 +99,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp() const final;
-    double getMaxTimeStamp() const final;
+    double getMinTimeStamp(bool ofLastTimeStepOnly=false) const final;
+    double getMaxTimeStamp(bool ofLastTimeStepOnly=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -154,8 +157,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     void finishGridConstructionStep() override;
 
-
-
     /**
      * If you hook into this routine, ensure the abstract base class
      * operation is still invoked.
@@ -167,9 +168,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * operation is still invoked.
      */
     void finishGridInitialisationStep() override;
-
-
-
 
     /**
      * If you hook into this routine, ensure the abstract base class
@@ -207,12 +205,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     void finishPlottingStep() override;
 
     /**
+     * @param currentTimeStep If you set this to false, you'll get the
+     *   quantity from the preceding time step. This is important for
+     *   local time stepping with fixed subcycling, as they have to
+     *   know the sizes from the last time step throughout the traversal,
+     *   where the current patch size might just be re-evaluated.
+     *
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxPatchSize() const;
-    double getMinPatchSize() const;
-    double getMaxVolumeSize() const;
-    double getMinVolumeSize() const;
+    double getMaxPatchSize(bool currentTimeStep = true) const;
+    double getMinPatchSize(bool currentTimeStep = true) const;
+    double getMaxVolumeSize(bool currentTimeStep = true) const;
+    double getMinVolumeSize(bool currentTimeStep = true) const;
 
     /**
      * mesh is an aAlias for patch
@@ -249,11 +253,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double     _minTimeStamp;
     double     _maxTimeStamp;
 
+    double     _minTimeStampThisTimeStep;
+    double     _maxTimeStampThisTimeStep;
+
     double     _minVolumeH;
     double     _maxVolumeH;
 
+    double     _minVolumeHFromPreviousTimeStep;
+    double     _maxVolumeHFromPreviousTimeStep;
+
     double     _minTimeStepSize;
     double     _maxTimeStepSize;
+
+    int        _patchUpdates;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 

@@ -24,9 +24,9 @@ class InitialCondition(AbstractFVActionSet):
   } 
 """
   
-  def __init__(self,solver,predicate,grid_is_constructed):
+  def __init__(self,solver,guard,grid_is_constructed):
     AbstractFVActionSet.__init__(self,solver)
-    self.predicate           = predicate
+    self.guard               = guard
     self.grid_is_constructed = grid_is_constructed
 
 
@@ -36,7 +36,7 @@ class InitialCondition(AbstractFVActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]           = self.predicate      
+      d[ "PREDICATE" ]           = self.guard      
       d[ "GRID_IS_CONSTRUCTED" ] = self.grid_is_constructed      
       result = jinja2.Template(self.TemplateInitialCondition).render(**d)
       pass 

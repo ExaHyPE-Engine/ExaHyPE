@@ -42,6 +42,17 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       reconstructedPatch,
       targetPatch
     );
+
+    ::exahype2::fv::validatePatch(
+      targetPatch,
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      0, // halo
+      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    ); // outcome has to be valid
+
+    fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
   }
   else { // is an enclave cell
     assertion( marker.isEnclaveCell() );
@@ -90,30 +101,36 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 #include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_includes()
+""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
 
 
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
-  if ( marker.isEnclaveCell() and not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
-    const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+  if ( 
+    not marker.isRefined() 
+    and 
+    {{GUARD}}
+    and
+    repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
+  ) {
+    if ( marker.isEnclaveCell() ) {
+      const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
 
-    if ( taskNumber>=0 ) {
-      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
-    }
-    fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+      if ( taskNumber>=0 ) {
+        ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+      }
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
       
-    ::exahype2::fv::validatePatch(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      0,
-      std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
-    );
-  }
+      ::exahype2::fv::validatePatch(
+        fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        0,
+        std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
+      );
+    }
 
-  if ( not marker.isRefined() and repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary ) {
     double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
     {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
     
@@ -127,6 +144,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
     self.label_name = exahype2.grid.UpdateCellLabel.get_attribute_name(solver._name)
+    self.guard      = "true"
 
 
   def get_body_of_operation(self,operation_name):
@@ -136,6 +154,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "LABEL_NAME" ] = self.label_name      
+      d[ "GUARD" ]      = self.guard
       result = jinja2.Template(self.Template).render(**d)
       pass 
     return result
@@ -168,9 +187,9 @@ class EnclaveTasking( FV ):
     self._preprocess_reconstructed_patch_in_skeleton_cell      = ""
     self._postprocess_updated_patch_in_skeleton_cell           = ""
     
-    self._source_term_call                = "#error Not yet defined"
-    self._Riemann_solver_call             = "#error Not yet defined"
-    self._fused_Riemann_solver_call       = "#error Not yet defined"
+    self._source_term_call                = "#error Not yet defined. Set self._source_term_call in your Python solver class."
+    self._Riemann_solver_call             = "#error Not yet defined. Set self._Riemann_solver_call in your Python solver class."
+    self._fused_Riemann_solver_call       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
     self._abstract_solver_user_declarations        = ""
     self._abstract_solver_user_definitions         = ""
     self._solver_user_declarations                 = ""
@@ -183,55 +202,55 @@ class EnclaveTasking( FV ):
     
     self._constructor_implementation = ""
     
-    self._initialisation_sweep_predicate = "(" + \
+    self._initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
       
-    self._first_iteration_after_initialisation_predicate = "(" + \
+    self._first_iteration_after_initialisation_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition" + \
     ")"
 
-    self._primary_sweep_predicate = "(" + \
+    self._primary_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
-    self._primary_sweep_or_plot_predicate = "(" + \
+    self._primary_sweep_or_plot_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Plotting " + \
       ")"
 
-    self._primary_or_initialisation_sweep_predicate= "(" + \
+    self._primary_or_initialisation_sweep_guard= "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")"
 
-    self._primary_or_grid_construction_or_initialisation_sweep_predicate= "(" + \
+    self._primary_or_grid_construction_or_initialisation_sweep_guard= "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
       ")"
 
-    self._secondary_sweep_predicate = "(" + \
+    self._secondary_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary" + \
       ")"
 
-    self._secondary_sweep_or_grid_construction_predicate = "(" + \
+    self._secondary_sweep_or_grid_construction_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridConstruction" + \
       ")"
 
-    self._secondary_sweep_or_grid_initialisation_predicate = "(" + \
+    self._secondary_sweep_or_grid_initialisation_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
 
-    self._secondary_sweep_or_grid_initialisation_or_plot_predicate = "(" + \
+    self._secondary_sweep_or_grid_initialisation_or_plot_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingInitialCondition or " + \
@@ -247,23 +266,42 @@ class EnclaveTasking( FV ):
     """
     
     This routine does not really add new data, but it heavily tailors when data are
-    stored, exchanged, ... Each generator has some guard attributes, i.e. some predicates,
+    stored, exchanged, ... Each generator has some guard attributes, i.e. some guards,
     which control when data is stored, sent, received. The routine takes these guards
-    and rewires them to the local predicates of this object. If you alter these predicates
+    and rewires them to the local guards of this object. If you alter these guards
     further, you have to alter them before you invoke this class' create_data_structures().
     
     """
     super(EnclaveTasking, self).create_data_structures()
-    self._patch.generator.store_persistent_condition = self._store_cell_data_default_predicate() + " and (" + \
-      self._secondary_sweep_or_grid_initialisation_or_plot_predicate + " or marker.isSkeletonCell())"
-    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_predicate() + " and (" + \
-      self._primary_sweep_or_plot_predicate + " or marker.isSkeletonCell())"
     
-    self._patch_overlap_new.generator.send_condition               = self._secondary_sweep_or_grid_initialisation_or_plot_predicate
-    self._patch_overlap_new.generator.receive_and_merge_condition  = self._primary_sweep_or_plot_predicate
+    self._patch_overlap_new.generator.send_condition               = self._secondary_sweep_or_grid_initialisation_or_plot_guard
+    self._patch_overlap_new.generator.receive_and_merge_condition  = self._primary_sweep_or_plot_guard
 
-    self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_predicate
-    self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_predicate
+    self._patch_overlap_old.generator.send_condition               = self._initialisation_sweep_guard
+    self._patch_overlap_old.generator.receive_and_merge_condition  = self._first_iteration_after_initialisation_guard
+
+
+  def _optimise_patch_storage_for_global_time_stepping(self):
+    """
+  
+    If you work with global time stepping, you know that each enclave cell will
+    be updated per grid traversal duo. Consequently, every enclave cell's data
+    doesn't have to be stored in-between two grid traversals - we know that it
+    is currently outsourced to a task.
+  
+    Things are different if we use local time stepping, as there will always be
+    cells that are currently processed, and then there are cells which are not 
+    updated and which we consequently should keep.
+    
+    If you want to have this optimisation, you have to call this routine 
+    explicitly in create_data_structures(). By default, we always store the 
+    patches all the time.
+  
+    """
+    self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard() + " and (" + \
+      self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.isSkeletonCell())"
+    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
+      self._primary_sweep_or_plot_guard + " or marker.isSkeletonCell())"
 
 
   def create_action_sets(self):
@@ -288,63 +326,46 @@ class EnclaveTasking( FV ):
     """
     super(EnclaveTasking, self).create_action_sets()
 
-    self._action_set_update_cell     = UpdateCell(self)
-    self._merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
+    self._action_set_update_cell                = UpdateCell(self)
+    self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
 
     #
     # AMR and adjust cell have to be there always, i.e. also throughout 
     # the grid construction.
     #
     
-    self._action_set_initial_conditions.predicate                       = self._action_set_initial_conditions.predicate
-    self._action_set_initial_conditions_for_grid_construction.predicate = self._action_set_initial_conditions_for_grid_construction.predicate
-    self._action_set_AMR.predicate                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
-    self._action_set_AMR_commit_without_further_analysis.predicate = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_predicate
-    self._action_set_handle_boundary.predicate                     = self._store_face_data_default_predicate() + " and " + self._primary_or_initialisation_sweep_predicate
-    self._action_set_project_patch_onto_faces.predicate            = self._store_cell_data_default_predicate() + " and (" + \
+    self._action_set_initial_conditions.guard                       = self._action_set_initial_conditions.guard
+    self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard
+    self._action_set_AMR.guard                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_guard
+    self._action_set_AMR_commit_without_further_analysis.guard = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_guard
+    self._action_set_handle_boundary.guard                     = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
+    self._action_set_project_patch_onto_faces.guard            = self._store_cell_data_default_guard() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
       ")"
-    self._action_set_roll_over_update_of_faces.predicate = self._store_face_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.predicate = self._store_cell_data_default_predicate() + " and " + self._secondary_sweep_or_grid_initialisation_predicate
-
+    self._action_set_roll_over_update_of_faces.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.guard = self._store_cell_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
    
-   # )
-   # #self._action_set_copy_new_patch_overlap_into_overlap = CopyNewPatchOverlapIntoCurrentOverlap(self, 
-    #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = DynamicAMR( 
-    
-    #  patch                       = self._patch,
-    #  patch_overlap_interpolation = self._patch_overlap, 
-    #  patch_overlap_restriction   = self._patch_overlap_new,
-    #  interpolate_guard           = self._primary_sweep_predicate,
-    #  restrict_guard              = self._primary_or_initialisation_sweep_predicate,
-      #clear_guard                 = self._primary_or_initialisation_sweep_predicate,
-      #interpolate_guard           = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
-      #restrict_guard              = "not marker.isRefined() and " + self._secondary_sweep_or_grid_initialisation_predicate,
-      #clear_guard                 = "not fineGridFaceLabel.getBoundary() and " + self._primary_or_initialisation_sweep_predicate,
-    #  clear_guard                 = "not marker.isRefined() and " + self._primary_or_initialisation_sweep_predicate,
-    #  additional_includes         = """
-#include "../repositories/SolverRepository.h"
-#"""      
-    #)
 
-  def get_user_includes(self):
-    return """
+  def get_user_action_set_includes(self):
+    return super(EnclaveTasking, self).get_user_action_set_includes() + """
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 #include "peano4/parallel/Tasks.h"
-#include "../repositories/SolverRepository.h"
+#include "repositories/SolverRepository.h"
 """    
 
     
   def set_implementation(self,
     boundary_conditions, refinement_criterion, initial_conditions,
     memory_location,
-    use_split_loop
+    use_split_loop,
+    additional_action_set_includes,
+    additional_user_includes
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs 
@@ -362,6 +383,9 @@ class EnclaveTasking( FV ):
     if memory_location!=peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete and \
        memory_location!=None:
       raise Exception( "only valid memory mode for enclave tasking is heap without a delete, as enclave tasks delete memory themselves through the tarch. Selected mode=" + str(solver._reconstructed_array_memory_location) )
+
+    self.user_action_set_includes += additional_action_set_includes
+    self.user_solver_includes     += additional_user_includes
 
     self.create_action_sets()
     
@@ -495,8 +519,7 @@ class EnclaveTasking( FV ):
  
     """
     super(EnclaveTasking, self).add_actions_to_perform_time_step(step)
-    #step.add_action_set( exahype2.grid.UpdateCellLabel(self._name) ) 
-    step.add_action_set( self._merge_enclave_task_outcome )
+    step.add_action_set( self._action_set_merge_enclave_task_outcome )
  
 
   def add_implementation_files_to_project(self,namespace,output):
@@ -510,6 +533,10 @@ class EnclaveTasking( FV ):
     implementationDictionary = {}
     self._init_dictionary_with_default_parameters(implementationDictionary)
     self.add_entries_to_text_replacement_dictionary(implementationDictionary)
+    
+    # Some includes might logically belong into the action sets, but now they are 
+    # 'outsourced' into the enclave task. So we manually add it here.
+    implementationDictionary[ "SOLVER_INCLUDES" ] += self.get_user_action_set_includes()
 
     task_name = self._enclave_task_name()
     generated_solver_files = peano4.output.Jinja2TemplatedHeaderImplementationFilePair(

@@ -26,7 +26,7 @@ for (auto& p: localParticles) {
     tarch::la::Vector<Dimensions,double> updatedX = p->getX();
     for (auto& pp: activeParticles) {
       if (p->getNumber()!=pp->getNumber()) {
-        updatedX += repositories::""" + solver.get_name_of_global_instance() + """.getMaxTimeStepSize()
+        updatedX += repositories::""" + solver.get_name_of_global_instance() + """ benutze den Time Stamp vom Cell Marker hier!.getMaxTimeStepSize()
                   * toolbox::particles::potentials::springPotential(p->getX(), pp->getX(), """ + str(particle_spacing) + """ );
       }
     }

@@ -22,6 +22,9 @@
 #include "repositories/SolverRepository.h"
 
 
+{{SOLVER_INCLUDES}}
+
+
 #include <vector>
 
 

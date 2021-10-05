@@ -48,8 +48,18 @@
   extern peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
 
-  double getMinTimeStamp();
-  double getMaxTimeStamp();
+  /**
+   * Return the global min time stamp over all solvers.
+   *
+   * There are two different flavours of a minimal time stamp: On the one hand,
+   * there's a global minimum time stamp over all solvers. This might not
+   * be the min time stamp after the last update. If you have local time
+   * stepping, then some cells might just have done a tiny time step,
+   * whereas the big cells still span a large time span. Hence, no the other
+   * hand, there's also a (time-)local time stamp.
+   */
+  double getMinTimeStamp(bool ofLastTimeStepOnly = false);
+  double getMaxTimeStamp(bool ofLastTimeStepOnly = false);
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
   double getMinMeshSize();

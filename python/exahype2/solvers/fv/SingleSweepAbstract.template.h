@@ -10,6 +10,8 @@
 #define {% for item in NAMESPACE -%}_{{ item }}{%- endfor %}_{{CLASSNAME}}_H_
 
 
+{{SOLVER_INCLUDES}}
+
 #include "exahype2/RefinementControl.h"
 #include "exahype2/Solver.h"
 
@@ -96,8 +98,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp() const final;
-    double getMaxTimeStamp() const final;
+    double getMinTimeStamp(bool ofLastTimeStepOnly=false) const final;
+    double getMaxTimeStamp(bool ofLastTimeStepOnly=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -206,12 +208,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
 
     /**
+     * @param currentTimeStep If you set this to false, you'll get the
+     *   quantity from the preceding time step. This is important for
+     *   local time stepping with fixed subcycling, as they have to
+     *   know the sizes from the last time step throughout the traversal,
+     *   where the current patch size might just be re-evaluated.
+     *
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxPatchSize() const;
-    double getMinPatchSize() const;
-    double getMaxVolumeSize() const;
-    double getMinVolumeSize() const;
+    double getMaxPatchSize(bool currentTimeStep = true) const;
+    double getMinPatchSize(bool currentTimeStep = true) const;
+    double getMaxVolumeSize(bool currentTimeStep = true) const;
+    double getMinVolumeSize(bool currentTimeStep = true) const;
 
     /**
      * Within the FV context, mesh is an alias for patch.
@@ -248,11 +256,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double     _minTimeStamp;
     double     _maxTimeStamp;
 
+    double     _minTimeStampThisTimeStep;
+    double     _maxTimeStampThisTimeStep;
+
     double     _minVolumeH;
     double     _maxVolumeH;
 
+    double     _minVolumeHFromPreviousTimeStep;
+    double     _maxVolumeHFromPreviousTimeStep;
+
     double     _minTimeStepSize;
     double     _maxTimeStepSize;
+
+    int        _patchUpdates;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 

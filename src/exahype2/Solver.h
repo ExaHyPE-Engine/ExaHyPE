@@ -13,8 +13,16 @@ namespace exahype2 {
 
 class exahype2::Solver {
   public:
-    virtual double getMinTimeStamp() const = 0;
-    virtual double getMaxTimeStamp() const = 0;
+    /**
+     * There are two different falvours of a minimal time stamp: On the one hand,
+     * there's a global minimum time stamp over the whole mesh. This might not
+     * be the min time stamp after the last update. If you have local time
+     * stepping, then some cells might just have done a tiny time step,
+     * whereas the big cells still span a large time span. Hence, no the other
+     * hand, there's also a (time-)local time stamp.
+     */
+    virtual double getMinTimeStamp(bool ofLastTimeStepOnly=false) const = 0;
+    virtual double getMaxTimeStamp(bool ofLastTimeStepOnly=false) const = 0;
     virtual double getMinTimeStepSize() const = 0;
     virtual double getMaxTimeStepSize() const = 0;
 

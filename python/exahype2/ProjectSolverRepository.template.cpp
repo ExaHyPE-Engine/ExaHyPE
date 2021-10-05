@@ -5,6 +5,8 @@
 #include "peano4/grid/grid.h"
 #include "peano4/parallel/SpacetreeSet.h"
 
+#include "exahype2/LoadBalancingConfiguration.h"
+
 
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
@@ -33,19 +35,19 @@ toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
 
 
 
-double getMinTimeStamp() {
+double getMinTimeStamp(bool ofLastTimeStepOnly) {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}
-    result = std::min( result, {{ item[1] }}.getMinTimeStamp() );
+    result = std::min( result, {{ item[1] }}.getMinTimeStamp(ofLastTimeStepOnly) );
   {%- endfor %}
   return result;
 }
 
 
-double getMaxTimeStamp() {
+double getMaxTimeStamp(bool ofLastTimeStepOnly) {
   double result = 0.0;
   {% for item in SOLVERS -%}
-    result = std::max( result, {{ item[1] }}.getMaxTimeStamp() );
+    result = std::max( result, {{ item[1] }}.getMaxTimeStamp(ofLastTimeStepOnly) );
   {%- endfor %}
   return result;
 }

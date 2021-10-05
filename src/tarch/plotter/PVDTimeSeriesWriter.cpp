@@ -49,11 +49,13 @@ void tarch::plotter::PVDTimeSeriesWriter::addFileTail( std::vector<std::string>&
 
 
 void tarch::plotter::PVDTimeSeriesWriter::removeFileTail( std::vector<std::string>& lines ) {
-  if (lines.back().find("</VTKFile>")!=std::string::npos) {
-    lines.pop_back();
-  }
-  if (lines.back().find("</Collection>")!=std::string::npos) {
-    lines.pop_back();
+  if (not lines.empty()) {
+    if (lines.back().find("</VTKFile>")!=std::string::npos) {
+      lines.pop_back();
+    }
+    if (lines.back().find("</Collection>")!=std::string::npos) {
+      lines.pop_back();
+    }
   }
 }
 

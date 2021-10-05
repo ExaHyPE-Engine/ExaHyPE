@@ -57,7 +57,7 @@ def parse_file( filename, rank, verbose ):
   y_data_remote = []
   for line in file:
     is_in_line = "toolbox::loadbalancing::dumpStatistics" in line
-    if rank>1:
+    if rank>=0:
       is_in_line = is_in_line and "rank:" + str(rank ) in line
       
     try:
@@ -76,42 +76,15 @@ def parse_file( filename, rank, verbose ):
       print( "assume this is due to a race condition to write to the terminal; continue to parse ..." )
         
   return ( x_data, y_data_local, y_data_remote )
-
-
-def local_optimal_average( x_data, y_data_local, cores ):
-  """
-   
-    x_data: [Float]
-      Series of time stamps.
-      
-    y_data_local: [[FLOAT]]
-      Per tree, it holds a series of cell counts.
-     
-    When I split partitions, I typically get (temporary) subtrees with weight
-    0. I have to be aware that the average thus can fall below 1.
-    
-  """
-  pruned_x_data = []
-  y_data = []
-  for j in range(0,len(y_data_local)):
-    y_data.append( 0.0 )
-    for i in y_data_local[j]:
-      y_data[-1] += i
-    y_data[-1] /= cores
-    if y_data[-1]>16:
-      pruned_x_data.append( x_data[j] )
-    else:
-      y_data = y_data[0:-1]
-  return (pruned_x_data,y_data)
    
    
-def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank ):
+def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank, show_optimum ):
   (ranks,threads) = get_ranks_and_threads( filename )
   #
   # Should be one colour per rank
   #
   Colours = [ "#0000ff", "#00ff00", "#ff0000", "#00ffff", "#ff00ff", "#ffff00", "#aaaaaa" ]
-  Symbols = [ "o",       "s",       "<",       ">",       "^",       "v",       "x"       ]
+  Symbols = [ "o",       "s",       "<",       ">",       "^",       "v"]
 
   Ranks   = range(0,ranks)
   if ranks<=1: 
@@ -119,28 +92,31 @@ def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank ):
   
   symbol_counter = 0
   colour_counter = 0
-  my_alpha       = 0.1
+  line_counter   = 0
+  my_alpha       = 0.1+(1.0-0.1)/len(Ranks)
+  
+  final_number_of_cells = 0
+  
   for rank in Ranks:
     x_data_sum = []
     y_data_sum = []  
     if verbose:
       print( "parse data of rank " + str(rank) )
     ( x_data, y_data_local, y_data_remote ) = parse_file( filename, rank, verbose )
+    
     for i in range(0,len(x_data)):
       x_data_sum.append( x_data[i] )
       y_data_sum.append( 0.0 )
       one_snapshot_x_data = [ x_data[i] for j in y_data_local[i]]
-      if len(y_data_local[i])>0:
-        my_alpha       = 0.1+(1.0-0.1)/len(y_data_local[i])
       for j in y_data_local[i]:
-        y_data_sum[-1] += j
+        y_data_sum[-1]    += j
         
       if verbose:
         print( "plot " + str(one_snapshot_x_data) + " x " + str(y_data_local[i]) + " with symbol/colour/alpha " + str(symbol_counter) + "/" + str(colour_counter) + "/" + str(my_alpha) )
         
-      if i==0 and rank>=0 and not sum_per_rank:
+      if i==0 and rank>=0:
         plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha, label="Rank " + str(rank) )  
-      elif i==0 and not sum_per_rank:
+      elif i==0:
         plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha, label="Load per tree" )  
       else:
         plt.scatter(one_snapshot_x_data, y_data_local[i], marker=Symbols[symbol_counter], color=Colours[colour_counter],  alpha=my_alpha)
@@ -150,35 +126,31 @@ def plot_cells_per_rank( filename, verbose, plot_remote_cells, sum_per_rank ):
       elif plot_remote_cells:
         plt.scatter(one_snapshot_x_data, y_data_remote[i], marker=Symbols[symbol_counter], color=Colours[colour_counter], alpha=my_alpha, facecolors='none')
     
-    sum_symbol = "-"
-    if rank<2*len(Colours):
-      sum_symbol = "--"
-    if rank<len(Colours):
-      sum_symbol = ":"
-    sum_symbol += Symbols[symbol_counter]
+    line_symbol = "-"
+    if line_counter==1:
+      line_symbol = "--"
+    if line_counter==2:
+      line_symbol = ":"
     
-    if sum_per_rank: 
-      plt.plot(x_data_sum, y_data_sum, sum_symbol, color=Colours[colour_counter], markevery=symbol_counter*3+2, label="Rank " + str(rank) )
-      
+    if sum_per_rank and rank==0: 
+      plt.plot(x_data_sum, y_data_sum, line_symbol+Symbols[symbol_counter], color=Colours[colour_counter], markevery=symbol_counter*3+2, label="Rank 0 (sum of cells)" )
+    else:
+      plt.plot(x_data_sum, y_data_sum, line_symbol+Symbols[symbol_counter], color=Colours[colour_counter], markevery=symbol_counter*3+2 )
+        
+    final_number_of_cells += y_data_sum[-1]
+
     symbol_counter += 1
     colour_counter += 1
     if symbol_counter>=len(Symbols):
       symbol_counter = 0
-      colour_counter += 1
-
     if colour_counter>=len(Colours):
       colour_counter = 0
+      line_counter  += 1
 
-  plt.xlabel( "time" )
-  plt.ylabel( "cells per tree" )
-  plt.yscale( "log", base=2 )
-  #bottom, top = plt.ylim()
-  plt.ylim( bottom=9 )
-  #plt.yscale( "log" )
-  plt.legend()
-
-
-
+  if show_optimum:
+    plt.plot([0,x_data_sum[-1]], [final_number_of_cells/len(Ranks),final_number_of_cells/len(Ranks)], "--", color="#000000", label="opt. #cells/rank" )
+      
+      
  
 def plot_trees_per_rank( filename, verbose ):
   (ranks,threads) = get_ranks_and_threads( filename )
@@ -215,25 +187,44 @@ def plot_trees_per_rank( filename, verbose ):
     if colour_counter>=len(Colours):
       colour_counter = 0
 
-  plt.xlabel( "time" )
-  plt.ylabel( "trees per rank" )
-  plt.legend()
 
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Peano 4 load balancing plotter')
   parser.add_argument("file",   help="filename of the file to parse (should be a text file)")
-  parser.add_argument("-v", "--verbose", action="store_true", help="increase output verbosity", default=False)
-  parser.add_argument("-rc", "--remote-cells",  dest="plot_remote_cells", action="store_true", default=False, help="plot remote cells, too")
-  parser.add_argument("-sum", "--sum-per-rank", dest="sum_per_rank",      action="store_true", default=False, help="sum up cells per rank")
+  parser.add_argument("-v",       "--verbose",                                      action="store_true",                                      help="increase output verbosity", default=False)
+  parser.add_argument("-rc",      "--remote-cells",      dest="plot_remote_cells",  action="store_true",                    default=False,    help="plot remote cells, too")
+  parser.add_argument("-sum",     "--sum-per-rank",      dest="sum_per_rank",       action="store_true",                    default=False,    help="sum up cells per rank")
+  parser.add_argument("-opt",     "--show-optimum",      dest="show_optimum",       action="store_false",                   default=True,     help="display optimal number of cells per rank")
+  parser.add_argument("-yscale",  "--yscale",            dest="yscale",             choices=["linear", "log-2", "log-10"],  default="linear", help="select scaling of y-axis" )
+  parser.add_argument("-ncol",    "--columns-in-legend", dest="columns_in_legend",  type=int,                               default=1,        help="number of columns within legend" )
   args = parser.parse_args()
 
   plt.clf()
   plot_trees_per_rank(args.file, args.verbose )
+  plt.xlabel( "time" )
+  plt.ylabel( "trees per rank" )
+  
+  if args.yscale=="log-2":
+    plt.yscale( "log", base=2 )
+  if args.yscale=="log-10":
+    plt.yscale( "log", base=10 )
+
+  plt.legend(ncol=args.columns_in_legend)
   plt.savefig( args.file + "-trees-per-rank.pdf" )
   plt.savefig( args.file + "-trees-per-rank.png" )
   
   plt.clf()
-  plot_cells_per_rank(args.file, args.verbose, args.plot_remote_cells, args.sum_per_rank )
+  plot_cells_per_rank(args.file, args.verbose, args.plot_remote_cells, args.sum_per_rank, args.show_optimum )
+  plt.xlabel( "time" )
+  plt.ylabel( "cells per tree" )
+  
+  if args.yscale=="log-2":
+    plt.yscale( "log", base=2 )
+  if args.yscale=="log-10":
+    plt.yscale( "log", base=10 )
+
+  plt.ylim( bottom=9 )
+  plt.legend(ncol=args.columns_in_legend)
   plt.savefig( args.file + "-cells-per-rank.pdf" )
   plt.savefig( args.file + "-cells-per-rank.png" )

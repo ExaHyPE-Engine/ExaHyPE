@@ -948,27 +948,6 @@ signature as \texttt{mapParticleOntoVoxel} and then pick this new routine
 through the Python API.
 
 
-\section{Finite Volumes with ClawPack (ExaClaw)}
-
-ExaClaw is an add-on to \ExaHyPE\ which makes
-the ClawPack Riemann solvers available within \ExaHyPE.
-Its development has been made possible by EPSRC under the Excalibur
-Phase I call.
-The grant number is EP/V00154X/1.
-
-
-
-To use this solver family, clone the repository from
-\url{https://github.com/clawpack/riemann}.
-Furthermore, please ensure that you have configured a Fortran compiler through
-\texttt{configure}, i.e.~that you have set the variable \texttt{FC}.
-If you have a Fortran compiler in the path by default, everything should work
-out-of-the-box.
-
-\begin{remark}
- This solver family is work-in-progress.
-\end{remark}
-
 
 
 % \section{Ghoddess DG solvers}
@@ -987,9 +966,12 @@ out-of-the-box.
 \section{Introducing a new numerical scheme}
 
 This section discusses how to introduce a totally new numerical solver. 
-It does not discuss how to introduce a new PDE, as new PDEs are built on top of
-\ExaHyPE.
-This section gives you an idea how to extend \ExaHyPE\ instead.
+It does not discuss how to introduce a new PDE, as new PDEs are built using
+\ExaHyPE, i.e.~you pick a solver and then you tweak your PDE terms. 
+That's the thing \ExaHyPE\ is built for and the standard usage model.
+This section gives you an idea how to extend the \ExaHyPE\ core instead,
+i.e.~how to implement a new solver type with different PDE terms, e.g., or a
+type that is more restrictive but particularly optimised.
 
 \begin{remark}
   \ExaHyPE\ is a very high level Python API which generates a \Peano\
@@ -1006,19 +988,21 @@ This section gives you an idea how to extend \ExaHyPE\ instead.
 
 \subsection{A new Finite Volume solver (native \ExaHyPE)}
 
-Introducing a new Finite Volume scheme is reasonably straightforward within
+Introducing a new Finite Volume (FV) scheme is reasonably straightforward within
 \ExaHyPE.
 It relies directly on \Peano's patch-based AMR.
+At the moment, I have two flavours of FV available: A single sweep solver which
+runs over the mesh once per time step and the enclave solver which needs two
+sweeps but offloads the majority of the operations onto dedicated tasks.
 
 
-\begin{itemize}
-  \item Create a new subclass of \texttt{exahype2.solver.FV}.
-  \item If you class is called \texttt{XYZ}, create four text files:
-  \texttt{XYZAbstract.template.h}, \linebreak \texttt{XYZAbstract.template.cpp},
-  \texttt{XYZ.template.h} and \texttt{XYZ.template.cpp}. These are Jinja
-  templates, and they define your solver (abstract variants) and provide a
-  template for routines that a user has to fill in.
-\end{itemize}
+\paragraph{Solver base class}
+
+To start your development, create a new subclass of either \linebreak
+\texttt{exahype2.solver.fv.SingleSweep} or \texttt{exahype2.solver.fv.Enclave}.
+You might want to require the user to specify more constructor arguments, but 
+you need at least those of the superclass.
+
 
 
 \paragraph{The C classes/templates}
@@ -1035,220 +1019,127 @@ holding all functions) and a subclass which is basically empty. This way, we
 are consistent.}.
 
 
-With \Peano, you can create arbitrary abstract superclasses. 
-They have to implement \texttt{exahype2::Solver} though.
+Once you have picked either 
+\texttt{exahype2.solver.fv.SingleSweep} or \linebreak
+\texttt{exahype2.solver.fv.Enclave},
+you'll get the four files (two classes) generated.
+However, you might want to tailor these. 
+After all, they do not contain anything that is particular to your domain: 
+They simply hold routines plugging into the steps. 
+To add further functionality, set the fields
 
-
-\paragraph{The Python code}
-
-
-The core implementation effort clearly has to go into the parts where the actual
-mesh traversal is mapped onto solver calls.
-In \ExaHyPE, this is realised through templates. 
-Any Finite Volume code relies basically on four templates:
-
-\begin{itemize}
-  \item \texttt{AMRTemplate} will be called on solver cells to determine whether
-  to refine or erase.
-  \item \texttt{AdjustCellTemplate} will be called to impose initial conditions
-  or interior ones.
-  \item \texttt{HandleBoundaryTemplate} is invoked for boundary faces.
-  \item \texttt{HandleCellTemplate} is the actual Finite Volumes solver
-  invocation.
-\end{itemize}
-
+\begin{code}
+  self._abstract_solver_user_declarations  = "..."
+  self._abstract_solver_user_definitions   = "..."
+  self._solver_user_declarations           = "..."
+  self._solver_user_definitions            = "..."
+  self._constructor_implementation         = "..."
+\end{code}
 
 \noindent
-These four strings are Jinja templates. The idea is that particular FV
-subclasses ``overwrite'' (set) them and thus inject their solver behaviour.
-Each handle is guarded by an additional expression (some C++ code evaluating to
-boolean) to switch it on/off.
-There's two more things that are automatically done: patch updates are
-automatically projected onto the faces, and the projected face data is
-automatically rolled over.
-While these things are ``hard-coded'', you still have guards to switch it
-on/off.
-
-
-The template mechanism works similar to aspect-oriented programming, i.e.~it
-simply enables Python to plug some code snippets straight into your the
-generated \ExaHyPE\ code. 
-For a list of predefined constants that are available within the templates,
-please consult the routine
-\texttt{\_init\_dictionary\_with\_default\_parameters} which befills a lookup
-table.
-You can, obviously, add more entries within your implementation.
-For this, a solver has to implement
-\texttt{add\_entries\_to\_text\_replacement\_dictionary}.
-Some of the most important preset dictionary entries are:
-
-
-\begin{itemize}
-  \item \texttt{fineGridCell\{UNKNOWN\_IDENTIFIER\}.value} which is a double
-    pointer which points to the whole patch hosted by the cell in the volumetric
-    routines \texttt{CreateCellTemplate}, \texttt{HandleCellTemplate} and
-    \texttt{AMRTemplate}. The array it points to has the size \linebreak
-    \texttt{\{NUMBER\_OF\_VOLUMES\_PER\_AXIS\}}$^d \cdot $
-    \texttt{\{NUMBER\_OF\_UNKNOWNS\}}.
-  \item \texttt{fineGridFace\{UNKNOWN\_IDENTIFIER\}.value} is the face
-    equivalent for the boundary conditions. Again, it is a double pointer,
-    though one dimension is not equal to
-    \texttt{\{NUMBER\_OF\_VOLUMES\_PER\_AXIS\}} but equal to the halo overlap.
-    See the Finite Volumes discussion in
-    Chapter~\ref{section:python-api-examples:finite-volumes}.
-  \item \texttt{reconstructedPatch} and \texttt{originalPatch} are only defined
-    within \texttt{HandleCellTemplate}. The former is an alias for
-    \texttt{fineGridFace\{UNKNOWN\_IDENTIFIER\}.value}, i.e.~points to the same
-    location. \texttt{reconstructedPatch} is another pointer which points to the
-    patch from the previous mesh traversal, i.e.~you can overwrite data
-    within \texttt{originalPatch} and still have the old one available.
-    Furthermore, the underlying patch is bigger: It hosts the actual patch data
-    plus its halo.
-\end{itemize}
+in your constructor. 
+There are more fields like this. 
 
 
 
 
-\begin{remark}
- If you want to see a really simple example of this solver type, change into the 
- directory \texttt{src/exahype2/fv} and have a look into \texttt{Rusanov.cpp}.
- It follows exactly the above recipe.
-\end{remark}
-
-
-\noindent
-I see two different paradigms how to realise a new solver: 
-You can either code your solver directly within the Python templates.
-Alternatively, you can generate some generic glue code within the template and
-forward calls to some C++ which can either stem from a library or be user
-code.
-
-
-Both variants have pros and cons and are valid.
-For my generic Rusanov solver (as well as for ADER-DG), we can realise all
-numerics generically within predefined kernels relying only on few user-defined
-functions injecting flux and eigenvalues.
-Furthermore, these functions have the same signature for all applications.
-For a bespoke Finite Volume scheme where the Riemann solver holds the actual
-numerical wisdom and each Riemann solvers requires a bespoke signature, it is
-maybe better to skip that additional level of abstraction.
-
-
-
-% \subsection{Ghoddess implementation remarks}
+% \paragraph{The Python code}
 % 
-% Ghoddess works on triangles which we embed into the squares or cubes,
-% respectively, of \ExaHyPE.
-% By default, the code employs Gauss-Legendre sample points.
-% The data structure used thus read as follows
-% (Fig.~\ref{figure:60_exahype:degree-of-freedom-layout:Ghoddess}):
+% 
+% The core implementation effort clearly has to go into the parts where the actual
+% mesh traversal is mapped onto solver calls.
+% In \ExaHyPE, this is realised through templates. 
+% Any Finite Volume code relies basically on four templates:
+% 
 % \begin{itemize}
-%   \item The solver embeds a ``patch'' of $N$ polynomial weights into each cell.
-%   For order $p=1, d=2$, we have for example $N=6$, for $p=2, d=2$ we have
-%   $N=12$.
-%   \item Each face carries $2(p+1)^{d-1}$ doubles.
+%   \item \texttt{AMRTemplate} will be called on solver cells to determine whether
+%   to refine or erase.
+%   \item \texttt{AdjustCellTemplate} will be called to impose initial conditions
+%   or interior ones.
+%   \item \texttt{HandleBoundaryTemplate} is invoked for boundary faces.
+%   \item \texttt{HandleCellTemplate} is the actual Finite Volumes solver
+%   invocation.
 % \end{itemize}
 % 
 % 
 % \noindent
-% The face data holds a left and a right representation of the polynomial along
-% the face.
-% So it does not really hold degrees of freedom.
-% Its degree of freedom are mere projections of the cell solution onto the face.
+% These four strings are Jinja templates. The idea is that particular FV
+% subclasses ``overwrite'' (set) them and thus inject their solver behaviour.
+% Each handle is guarded by an additional expression (some C++ code evaluating to
+% boolean) to switch it on/off.
+% There's two more things that are automatically done: patch updates are
+% automatically projected onto the faces, and the projected face data is
+% automatically rolled over.
+% While these things are ``hard-coded'', you still have guards to switch it
+% on/off.
+% 
+% 
+% The template mechanism works similar to aspect-oriented programming, i.e.~it
+% simply enables Python to plug some code snippets straight into your the
+% generated \ExaHyPE\ code. 
+% For a list of predefined constants that are available within the templates,
+% please consult the routine
+% \texttt{\_init\_dictionary\_with\_default\_parameters} which befills a lookup
+% table.
+% You can, obviously, add more entries within your implementation.
+% For this, a solver has to implement
+% \texttt{add\_entries\_to\_text\_replacement\_dictionary}.
+% Some of the most important preset dictionary entries are:
+% 
+% 
+% \begin{itemize}
+%   \item \texttt{fineGridCell\{UNKNOWN\_IDENTIFIER\}.value} which is a double
+%     pointer which points to the whole patch hosted by the cell in the volumetric
+%     routines \texttt{CreateCellTemplate}, \texttt{HandleCellTemplate} and
+%     \texttt{AMRTemplate}. The array it points to has the size \linebreak
+%     \texttt{\{NUMBER\_OF\_VOLUMES\_PER\_AXIS\}}$^d \cdot $
+%     \texttt{\{NUMBER\_OF\_UNKNOWNS\}}.
+%   \item \texttt{fineGridFace\{UNKNOWN\_IDENTIFIER\}.value} is the face
+%     equivalent for the boundary conditions. Again, it is a double pointer,
+%     though one dimension is not equal to
+%     \texttt{\{NUMBER\_OF\_VOLUMES\_PER\_AXIS\}} but equal to the halo overlap.
+%     See the Finite Volumes discussion in
+%     Chapter~\ref{section:python-api-examples:finite-volumes}.
+%   \item \texttt{reconstructedPatch} and \texttt{originalPatch} are only defined
+%     within \texttt{HandleCellTemplate}. The former is an alias for
+%     \texttt{fineGridFace\{UNKNOWN\_IDENTIFIER\}.value}, i.e.~points to the same
+%     location. \texttt{reconstructedPatch} is another pointer which points to the
+%     patch from the previous mesh traversal, i.e.~you can overwrite data
+%     within \texttt{originalPatch} and still have the old one available.
+%     Furthermore, the underlying patch is bigger: It hosts the actual patch data
+%     plus its halo.
+% \end{itemize}
 % 
 % 
 % 
-% \begin{figure}
-%  \begin{center}
-%   \includegraphics[width=0.65\textwidth]{60_exahype/Ghoddess-dof-layout.pdf}
-%  \end{center}
-%  \caption{
-%   Left: Degree of freedom layout in Ghoddess within a cell.
-%   Right: Each face holds additional ``degree of freedoms'' which encode the
-%   projection of the cell polynomial onto the face.
-%   \label{figure:60_exahype:degree-of-freedom-layout:Ghoddess}
-%  }
-% \end{figure}
 % 
-% The Ghoddess solver itself splits up into four computation kernels:
-% 
-% \begin{enumerate}
-%   \item The {\bf projectOntoFace} kernel accepts the $N$ degrees of freedom from
-%   the cell and projects the polynomials of the two triangles within the cell
-%   onto the faces. It consequently writes $2d \cdot (p+1)^{d-1}$ face DoFs. Once
-%   we have traversed the whole mesh, each face ``knows'' its left and right
-%   projection.
-%   \item The {\bf solveRiemann} kernel takes the $2 \cdot (p+1)^{d-1}$ DoFs on
-%   the face, i.e.~the left and right projection, and solves the Riemann problem
-%   on the jump. The result is written back into the $2 \cdot (p+1)^{d-1}$ DoFs.
-%   In principle, this allows us to have a different outgoing flux for the left
-%   and right side of a face.
-%   \item The {\bf solveCell} kernel evolves the solution within the triangle
-%   pair, i.e.~it evaluates the volumetric integrals of the DG formulation. The
-%   name is slightly wrong: Besides the volumetric terms, the kernel also
-%   evaluates the face terms arising between the two triangles embedded into the
-%   cell. So it is a combination of a cell kernel plus one Riemann solve (in 2d).
-%   \item The {\bf projectOntoCell} kernel takes the Riemann solution on the cell
-%   faces, i.e.~the output of projectOntoFace, and adds it to the cell solution,
-%   i.e.~it adds it to the outcome of solveCell.
-% \end{enumerate}
+% \begin{remark}
+%  If you want to see a really simple example of this solver type, change into the 
+%  directory \texttt{src/exahype2/fv} and have a look into \texttt{Rusanov.cpp}.
+%  It follows exactly the above recipe.
+% \end{remark}
 % 
 % 
 % \noindent
-% Ghoddess' vanilla version indeed traverses the mesh four times per time step.
-% This makes it easy/easier to debug the code and to analyse the substeps.
-% The work of Charrier et al then automatically fuses the traversals and thus
-% reduces the memory accesses and homogenises the computational character over the
-% mesh sweeps.
+% I see two different paradigms how to realise a new solver: 
+% You can either code your solver directly within the Python templates.
+% Alternatively, you can generate some generic glue code within the template and
+% forward calls to some C++ which can either stem from a library or be user
+% code.
 % 
 % 
-% The realisation of the four sweeps relies on blockstructured extension of
-% \Peano:
-% Though the data is logically not Cartesian or block-structured, we model all
-% properties as blocks embedded into the mesh.
+% Both variants have pros and cons and are valid.
+% For my generic Rusanov solver (as well as for ADER-DG), we can realise all
+% numerics generically within predefined kernels relying only on few user-defined
+% functions injecting flux and eigenvalues.
+% Furthermore, these functions have the same signature for all applications.
+% For a bespoke Finite Volume scheme where the Riemann solver holds the actual
+% numerical wisdom and each Riemann solvers requires a bespoke signature, it is
+% maybe better to skip that additional level of abstraction.
 % 
 % 
-% All solvers inherit from \texttt{exahype2.ghoddess.Solver} which is our abstract
-% framework.
-% Per solver, the Python API will generate one C++ solver class.
-% This class has a couple of things to do:
-% 
-% \begin{enumerate}
-%   \item It holds all time stepping data. So it knows, for example, what the
-%   minimal time stamp at the moment is.
-%   \item It serves as a state machine which decides at any point which kernels
-%   are to be executed on particular grid entities.
-%   \item It holds the application domain-specific routines such as the actual
-%   kernel implementations, refinement criteria or data initialisation.
-% \end{enumerate}
 
-
-\section{Algorithmic tuning}
-
-\subsection{Grid construction and load balancing time vs.~initialisation}
-
-Both the grid construction/load balancing and the initialisation intensively call
-\texttt{adjustSolution}.
-Both pass in the time $t=0$ when they invoke the routine.
-The grid construction requires properly initialised volumetric data to guide the adaptivity criterion, while the initialisation sets the initial condition.
-
-
-We found it appropriate to distinguish a grid initialisation feeding into the adaptivity from the initialisation if \texttt{adjustSolution} is very expensive.
-Obviously, the initial condition should inform the adaptivity, but it is sometimes sufficient to work with a rough approximation of the initial condition for the AMR.
-To realise such a behaviour, we rely on a context switch:
-We introduce a global variable which controls the accuracy of the initial condition.
-Initially, this accuracy is set to ``very low''.
-By the time we hit the grid initialisation, we toggle it to ``accurate''.
-
-
-\ExaHyPE\ implements a SPMD paradigm, i.e.~all ranks run through the same program phases.
-Hence, we can open the main file in the project directory (the main file is not overwritten if you rerun the Python toolkit), 
-and study the routine \texttt{step()}.
-Within \texttt{step()}, there's one large switch/case-statement which tells \ExaHyPE\ what to do for the individual program phases.
-Ensure that the accuracy is set low within the
-\texttt{repositories::StepRepository::Steps::CreateGrid} branches (there are several nuances of this creational phase).
-Ensure that the accuracy is increased to maximum within \texttt{repositories::StepRepository::Steps::InitGrid}.
-Don't alter it for the plotting of the actual time stepping.
+\section{Datamodel and -semantics}
 
  
 

@@ -21,6 +21,14 @@ namespace toolbox {
 }
 
 
+/**
+ * A simple particle database
+ *
+ * The database can be configured with various thresholds such that we write
+ * out snapshots whenever a certain maximum size is reached.
+ *
+ * The database is thread-safe.
+ */
 class toolbox::particles::TrajectoryDatabase {
   private:
     static tarch::logging::Log _log;
@@ -65,7 +73,11 @@ class toolbox::particles::TrajectoryDatabase {
     };
 
     /**
-     * Can't be const as it locks the semaphore.
+     * Can't be const as it might augment the database with default entries.
+     *
+     * <h2> Thread-safety </h2>
+     *
+     * The routine is not thread-safe, i.e. you have to protect it from outside.
      */
     AddSnapshotAction getAction(
       const std::pair<int, int>&                  number,
@@ -81,7 +93,18 @@ class toolbox::particles::TrajectoryDatabase {
       double*                                      data
     );
 
-    bool dumpDatabaseSnapshot() const;
+    /**
+     *
+     * <h2> Thread-safety </h2>
+     *
+     * The routine is thread-safe, as it locks the database. As it uses the
+     * semaphore, it can't be const.
+     *
+     * @return If the user should write the database into a file. This is the case
+     *   if the total number of entries in the database exceeds
+     *   _thresholdForNextDatabaseFlush.
+     */
+    bool dumpDatabaseSnapshot();
   public:
     /**
      * Trajectory database
@@ -119,7 +142,25 @@ class toolbox::particles::TrajectoryDatabase {
     TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8, bool clearDatabaseAfterFlush=true );
     ~TrajectoryDatabase();
 
-    void clear();
+    /**
+     * <h2> Thread-safety </h2>
+     *
+     * The clear() operation is thread-safe if you set lockSemaphore. In this
+     * case, it first locks the sempahore and then it continues.
+     */
+    void clear(bool lockSemaphore=true);
+
+    /**
+     * <h2> Thread-safety </h2>
+     *
+     * The operation is thread-safe, i.e. it first locks the sempahore and then
+     * it continues. If we are supposed to clear the database once we've dumped the CSV
+     * file, we will call clear(). In this case, it is important that I keep the
+     * lock up and call clear(). If I released the lock and then called clear,
+     * some other thread might squeeze its particle update in-between and we'd
+     * loose the information.
+     *
+     */
     void dumpCSVFile();
 
     void setOutputFileName( const std::string& filename );
@@ -131,6 +172,18 @@ class toolbox::particles::TrajectoryDatabase {
      * A particle is always uniquely identified by two integers (an
      * integer pair). This way, we can initialise (hand out) particle
      * numbers without any semaphore.
+     *
+     *
+     * <h2> Thread-safety </h2>
+     *
+     * The routine is thread-safe. It actually locks the database before it
+     * invokes getAction() and thus will not mess up either the database
+     * analysis or any writes.
+     *
+     * If the database is configured to write snapshots, the routine will
+     * also invoke the dump. However, it si important that we free the lock
+     * before, as I do not use recursive locks and as the dumping itself
+     * is thread-safe.
      */
     void addParticleSnapshot(
       const std::pair<int, int>&                   number,

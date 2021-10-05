@@ -4,12 +4,55 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 
 import jinja2
 
+from exahype2.solvers.fv.kernels import create_empty_source_term_kernel
+from exahype2.solvers.fv.kernels import create_user_defined_source_term_kernel
+    
+    
+def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
+  result = """
+  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
+  // always chosen such that the finest grid does something meaningful.
+  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+    repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
+    0.0;
+  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
+"""  
 
-def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size ):
-  return """
-  cellTimeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.MaxAdmissibleVolumeH * """ + str(time_step_size) + """;
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  if remove_accumulation_errors:
+    result += """
+  cellTimeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, cellTimeStepSize);
 """
+
+  return result
+
+
+def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping_with_subcycling( solver_name, remove_accumulation_errors=True ):
+  result = """
+  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
+  // always chosen such that the finest grid does something meaningful.
+  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+    repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
+    0.0;
+  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
+"""  
+
+  if remove_accumulation_errors:
+    result += """
+  cellTimeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, cellTimeStepSize);
+"""
+
+  return result
+
+
+def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
+  result = """
+  cellTimeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();  
+  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
+
+  cellTimeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, cellTimeStepSize);
+"""
+
+  return result
 
 
 def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping():
@@ -19,6 +62,94 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_t
 """
 
 
+def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation, avoid_staircase_effect):
+  """
+  
+  :: Zero eigenvalues
+  
+  If you solve non-linear problems, cells can have a zero eigenvalue. It means that 
+  nothing happens within this cell. There are two options on the table: You can take
+  the biggest global eigenvalue and march forward using this value. In ExaHyPE 2, 
+  this yields a staircase effect if you have larger, regular region, then we have 
+  something similar to many stencil codes which then update the cells in the middle
+  again, and then those in the middle again, and so forth.
+  
+  We can avoid this by making a cell march if an only if one neighbour has advanced.
+  In this case large global areas where nothing happens lag behind. 
+  
+  
+  avoid_staircase_effect: Boolean
+  
+  """
+  determine_eigenvalue = """
+    double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+      [] (
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  faceCentre,
+        const tarch::la::Vector<Dimensions,double>&  volumeH,
+        double                                       t,
+        double                                       dt,
+        int                                          normal
+      ) -> double {
+        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+      },
+      marker.x(),
+      marker.h(),
+      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+      {{NUMBER_OF_VOLUMES_PER_AXIS}},
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      targetPatch
+    );
+    repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
+"""
+
+  if avoid_staircase_effect:
+    compute_time_step_sizes = """    
+    if (tarch::la::equals( maxEigenvalue,0.0) ) {
+      maxEigenvalue = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue();
+    }
+    double newTimeStepSize;
+    const double maxTimeStepSize = tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(),0.0) ? 0.0 : """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() * 3.0;
+
+    if ( tarch::la::equals( maxEigenvalue,0.0) ) {
+      const double minTimeStampOfNeighbours = ::exahype2::getMinTimeStampOfNeighboursAhead(fineGridCell{{SOLVER_NAME}}CellLabel, fineGridFaces{{SOLVER_NAME}}FaceLabel);
+
+      newTimeStepSize = minTimeStampOfNeighbours - fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+      assertion(newTimeStepSize>=0.0);
+    }
+    else {
+      newTimeStepSize = """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;      
+    }
+"""    
+  else:
+    compute_time_step_sizes = """    
+    if (tarch::la::equals( maxEigenvalue,0.0) ) {
+      maxEigenvalue = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue();
+    }
+    const double newTimeStepSize = tarch::la::equals(maxEigenvalue,0.0)                                        ? 0.0 : """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;
+    const double maxTimeStepSize = tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(),0.0) ? 0.0 : """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() * 3.0;
+"""    
+   
+    
+  set_time_step_size = """    
+    if ( tarch::la::equals(newTimeStepSize,0.0) ) {
+      logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
+    }
+    else if ( newTimeStepSize > maxTimeStepSize ) {
+      logDebug( "touchCellFirstTime(...)", "can't do a time step of size " << newTimeStepSize << " on cell " << marker.toString() << " as max time step size has been computed as " << maxTimeStepSize );
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(maxTimeStepSize);    
+    }
+    else {
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);    
+    }
+"""
+
+  return determine_eigenvalue + compute_time_step_sizes + set_time_step_size
+    
+    
 def create_postprocess_updated_patch_for_adaptive_time_stepping():
   return """
     const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
@@ -48,6 +179,10 @@ def create_postprocess_updated_patch_for_adaptive_time_stepping():
 
 def create_constructor_implementation_for_adaptive_time_stepping():
   return "_admissibleTimeStepSize = 0.0;"
+
+
+def create_constructor_implementation_for_local_time_stepping():
+  return "_maxEigenvalue = std::numeric_limits<double>::max();"
   
 
 def create_abstract_solver_user_declarations_for_adaptive_time_stepping():
@@ -57,7 +192,32 @@ private:
   double _admissibleTimeStepSize;
 public:
   void setMaxEigenvalue( double eigenvalue );  
+  /**
+   * @return Admissible time step size for the current sweep, i.e. 
+   *         return _admissibleTimeStepSize. This value always refers
+   *         to the minimum mesh volume size. If you use subcycling,
+   *         you have to scale it for cells that are not on the finest
+   *         mesh resolution. 
+   */
   double getAdmissibleTimeStepSize() const;  
+    """  
+    
+    
+def create_abstract_solver_user_declarations_for_local_time_stepping():
+  return """
+private:
+  double _maxEigenvalue;
+  double _maxEigenvalueOfPreviousSweep;
+public:
+  /**
+   * @return Minimum non-zero eigenvalue. Keep in mind that the per-cell 
+   *         eigenvalues can become zero for some non-linear problems (if 
+   *         nothing happens), so it is important to neglect those when we
+   *         take the minimum.
+   */
+  double getMaxEigenvalue() const;  
+
+  void setMaxEigenvalue( double eigenvalue );
     """  
     
     
@@ -75,13 +235,43 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getAdmissibleTimeStepSize() 
   return _admissibleTimeStepSize;
 }
     """  
-
-
-def create_start_time_step_implementation_for_adaptive_time_stepping():
+    
+    
+def create_abstract_solver_user_definitions_for_local_time_stepping():
   return """
-  _maxEigenvalue = 0.0;
-"""
+void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::setMaxEigenvalue( double eigenvalue ) {
+  if ( tarch::la::greater( eigenvalue, 0.0 ) ) {
+    tarch::multicore::Lock lock(_semaphore);
+    _maxEigenvalue = std::max(_maxEigenvalue,eigenvalue);
+  }
+}    
 
+
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue() const {
+  return _maxEigenvalueOfPreviousSweep;
+}
+    """  
+
+
+def create_finish_time_step_implementation_for_local_time_stepping():
+  return """
+  #ifdef Parallel
+  double newMaxEigenvalue = _maxEigenvalue;
+  tarch::mpi::Rank::getInstance().allReduce(
+        &newMaxEigenvalue,
+        &_maxEigenvalue,
+        1,
+        MPI_DOUBLE,
+        MPI_MAX, 
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
+  #endif
+  
+  if ( _solverState == SolverState::Secondary ) {
+    _maxEigenvalueOfPreviousSweep = _maxEigenvalue;
+  }
+"""
+    
     
 def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_relaxation):
   return """
@@ -99,7 +289,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
 
   if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
-    _admissibleTimeStepSize = _admissibleTimeStepSize;
+    _admissibleTimeStepSize = _admissibleTimeStepSize; // keep time step size
   }
   else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
     logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
@@ -108,7 +298,7 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
     _maxTimeStamp           = std::numeric_limits<double>::max();
   }
   else {
-    _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * getMinVolumeSize() / _maxEigenvalue / 3.0;
+    _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * getMinVolumeSize() / _maxEigenvalue;
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
     }
@@ -123,20 +313,10 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
 
 
 def create_source_term_kernel_for_Rusanov(source_term_implementation):
-  Template = jinja2.Template( """
-  {% if SOURCE_TERM_IMPLEMENTATION!="<none>" %}
-  repositories::{{SOLVER_INSTANCE}}.sourceTerm(
-    Q,
-    x, dx, t, dt,
-    S
-  );
-  {% else %}
-  std::fill_n(S,{{NUMBER_OF_UNKNOWNS}},0.0);
-  {% endif %}
-""", undefined=jinja2.DebugUndefined)
-  d= {}
-  d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  return Template.render(**d)
+  if source_term_implementation==PDETerms.None_Implementation:
+    return create_empty_source_term_kernel()
+  else:
+    return create_user_defined_source_term_kernel()
   
     
 def create_fused_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation, source_term_implementation):

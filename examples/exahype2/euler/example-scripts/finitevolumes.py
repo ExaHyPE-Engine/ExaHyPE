@@ -45,7 +45,7 @@ parser.add_argument("-pd", "--peano-dir",              dest="peanodir",         
 parser.add_argument("-cd", "--configure-dir",          dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("-o",  "--output",                 dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("-f",  "--force",                  dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-fixed-enclave-gpu", "global-adaptive-enclave-gpu"], default="global-fixed", help="Pick implementation variant" )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-fixed-enclave-gpu", "global-adaptive-enclave-gpu", "subcycling-fixed-no-interpolation", "subcycling-fixed-linear-interpolation", "subcycling-fixed-linear-interpolation-enclave", "subcycling-adaptive-linear-interpolation-enclave", "local-linear-interpolation-enclave"], default="global-fixed", help="Pick implementation variant" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
@@ -82,12 +82,10 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 # Add the Finite Volumes solver
 #
 unknowns       = 5
-time_step_size = 0.000001
+time_step_size = 0.001
 max_h          = args.h / args.patch_size
 min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels) / args.patch_size
 
-
-admissible_time_step_size = min_h/args.patch_size*0.01
 
 #
 # Still the same solver, but this time we use named arguments. This is the way
@@ -104,7 +102,7 @@ if args.type=="global-fixed":
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
-    admissible_time_step_size,
+    time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
@@ -124,7 +122,7 @@ elif args.type=="global-fixed-enclave":
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
-    admissible_time_step_size,
+    time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
@@ -138,13 +136,68 @@ elif args.type=="global-adaptive-enclave":
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.01
   )
+elif args.type=="subcycling-fixed-linear-interpolation":
+  thesolver = exahype2.solvers.fv.rusanov.SubcyclingFixedTimeStep(
+    "Euler",
+    args.patch_size,
+    unknowns, auxiliary_variables,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    interpolate_linearly_in_time=True
+  )
+elif args.type=="subcycling-fixed-no-interpolation":
+  thesolver = exahype2.solvers.fv.rusanov.SubcyclingFixedTimeStep(
+    "Euler",
+    args.patch_size,
+    unknowns, auxiliary_variables,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    interpolate_linearly_in_time=False
+  )
+elif args.type=="subcycling-fixed-linear-interpolation-enclave":
+  thesolver = exahype2.solvers.fv.rusanov.SubcyclingFixedTimeStepWithEnclaveTasking(
+    "Euler",
+    args.patch_size,
+    unknowns, auxiliary_variables,
+    min_h, max_h,
+    time_step_size,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    interpolate_linearly_in_time=True
+  )
+elif args.type=="subcycling-adaptive-linear-interpolation-enclave":
+  thesolver = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking(
+    "Euler",
+    args.patch_size,
+    unknowns, auxiliary_variables,
+    min_h, max_h,
+    time_step_relaxation = 0.01,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    interpolate_linearly_in_time=True
+  )
+elif args.type=="local-linear-interpolation-enclave":
+  thesolver = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking(
+    "Euler",
+    args.patch_size,
+    unknowns, auxiliary_variables,
+    min_h, max_h,
+    time_step_relaxation = 0.01,
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    interpolate_linearly_in_time=True
+  )
 elif args.type=="global-fixed-enclave-gpu":
   thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking(
     "Euler",
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
-    admissible_time_step_size,
+    time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     use_gpu = True
@@ -197,7 +250,7 @@ project.set_global_simulation_parameters(
 # So here's the parallel stuff. This is new compared to the serial
 # prototype we did start off with.
 #
-project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(" + str(args.load_balancing_quality) + ",false)" )
+project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "(new ::exahype2::LoadBalancingConfiguration())" )
 project.set_Peano4_installation( args.peanodir, build_mode )
 peano4_project = project.generate_Peano4_project(args.verbose)
 #peano4_project.output.makefile.parse_configure_script_outcome( args.configuredir )

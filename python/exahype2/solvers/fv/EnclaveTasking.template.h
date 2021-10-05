@@ -12,6 +12,7 @@
 #include "Abstract{{CLASSNAME}}.h"
 #include "tarch/logging/Log.h"
 
+
 {% for item in NAMESPACE -%}
   namespace {{ item }} {
 

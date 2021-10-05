@@ -34,12 +34,14 @@ and illustrates the runtime per time step behaviour.
     plt.yscale( 'log' )
   for dataset in zip( args.file, args.label) :
     performance_data = exahype2.postprocessing.PerformanceData( dataset[0], verbose=args.verbose )
+    if args.verbose:
+      print( "start to postprocess data with " + args.type )
     if args.type == "time-step-size-it":
-      exahype2.postprocessing.plot_time_step_size_per_step( performance_data,dataset[1], exahype2.postprocessing.XAxis.Iterations )
+      exahype2.postprocessing.plot_time_step_size_per_step( performance_data,dataset[1], exahype2.postprocessing.XAxis.Iterations,args.verbose )
     elif args.type == "time-step-size-rt":
-      exahype2.postprocessing.plot_time_step_size_per_step( performance_data,dataset[1], exahype2.postprocessing.XAxis.RealTime )
+      exahype2.postprocessing.plot_time_step_size_per_step( performance_data,dataset[1], exahype2.postprocessing.XAxis.RealTime,args.verbose )
     elif args.type == "time-step-size-st":
-      exahype2.postprocessing.plot_time_step_size_per_step( performance_data,dataset[1], exahype2.postprocessing.XAxis.SimulatedTime )
+      exahype2.postprocessing.plot_time_step_size_per_step( performance_data,dataset[1], exahype2.postprocessing.XAxis.SimulatedTime,args.verbose )
     elif args.type == "runtime-per-step":
       exahype2.postprocessing.plot_runtime_per_time_step( performance_data,dataset[1] )
     elif args.type == "runtime-per-step-sum-2":
@@ -48,9 +50,14 @@ and illustrates the runtime per time step behaviour.
       exahype2.postprocessing.plot_runtime_against_simulated_time( performance_data,dataset[1] )
     else:
       raise Exception( "Type " + args.type + " not supported" )
+    if args.verbose:
+      print( "postprocessing finished" )
 
   if len(args.label)>0:
     plt.legend()
 
+  if args.output=="output":
+    print( "default file names output.pdf and output.png written. Change file name with -o or --output")
+    
   plt.savefig( args.output + ".pdf" )
   plt.savefig( args.output + ".png" )

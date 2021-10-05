@@ -65,9 +65,9 @@ tarch::la::DynamicMatrix& tarch::la::DynamicMatrix::operator=( std::initializer_
   int index = 0;
   for (typename std::initializer_list< std::initializer_list<double> >::const_iterator p  = values.begin(); p!=values.end(); p++)
   for (typename std::initializer_list<double>::const_iterator pp = p->begin(); pp!=p->end(); pp++) {
+    assertion3(index<_cols*_rows, _cols, _rows, index);
     _m[index] = *pp;
     index++;
-    assertion(index<_cols*_rows);
   }
   return *this;
 }
@@ -138,18 +138,30 @@ void tarch::la::DynamicMatrix::multiply( double* result, double* x ) {
 }
 
 
-std::string tarch::la::DynamicMatrix::toString() const {
+std::string tarch::la::DynamicMatrix::toString(bool addLineBreaks) const {
   std::ostringstream msg;
   msg << "(rows=" << _rows << ",cols=" << _cols << ",{";
+  if (addLineBreaks) msg << std::endl;
   for (int row=0; row<_rows; row++) {
-    if (row!=0) msg << ",";
-    msg << "{";
+    if (addLineBreaks)
+      msg << std::endl;
+    else {
+      if (row!=0) msg << ",";
+      msg << "{";
+    }
+
     for (int col=0; col<_cols; col++) {
-      if (col!=0) msg << ",";
+      if (addLineBreaks)
+        msg << " ";
+      else if (col!=0)
+        msg << ",";
       msg << _m[serialise(row,col)];
     }
-    msg << "}";
+
+    if (not addLineBreaks)
+      msg << "}";
   }
+  if (addLineBreaks) msg << std::endl;
   msg << "})";
   return msg.str();
 }

@@ -90,7 +90,17 @@ def create_face_label(solver_name):
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("NewTimeStamp","2") )
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
   
-  #result._peano4_aspect
+  result._peano4_aspect.merge_implementation = """
+  assertionEquals( _Boundary, neighbour._Boundary );
   
+  const int neighbourEntry = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
+  
+  _Updated[ neighbourEntry ]          = neighbour._Updated[ neighbourEntry ];
+  _UpdatedTimeStamp( neighbourEntry ) = neighbour._UpdatedTimeStamp( neighbourEntry );
+  _NewTimeStamp( neighbourEntry )     = neighbour._NewTimeStamp( neighbourEntry );
+  _OldTimeStamp( neighbourEntry )     = neighbour._OldTimeStamp( neighbourEntry );
+  
+"""
+
   return result
 

@@ -9,6 +9,19 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 
 
 
+enum class Scenario {
+  PointExplosion,
+  PointExplosionWithDynamicAMR,
+  BreakingDam,
+  BreakingDamResolutionStudies
+};
+
+
+Scenario scenario = Scenario::BreakingDamResolutionStudies;
+// Scenario scenario = Scenario::BreakingDam;
+
+
+
 ::exahype2::RefinementCommand examples::exahype2::euler::Euler::refinementCriterion(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -17,27 +30,62 @@ tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype
 ) {
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  // This is an example how to implement a priori refinement. If
-  // you only have this thing, then you work with static AMR, as
-  // you never invoke erase.
-  if ( tarch::la::equals(t,0.0) ) {
-    tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-    bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
-    if (isInTheCentre)
-      result = ::exahype2::RefinementCommand::Refine;
-  }
+  switch (scenario) {
+    case Scenario::PointExplosion:
+      {
+        // This is an example how to implement a priori refinement. If
+        // you only have this thing, then you work with static AMR, as
+        // you never invoke erase.
+        if ( tarch::la::equals(t,0.0) ) {
+          tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+          bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
+          if (isInTheCentre)
+            result = ::exahype2::RefinementCommand::Refine;
+        }
+      }
+      break;
+    case Scenario::PointExplosionWithDynamicAMR:
+      {
+        // Same as for static AMR. This is the initial pattern
+        if ( tarch::la::equals(t,0.0) ) {
+          tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+          bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
+          if (isInTheCentre)
+            result = ::exahype2::RefinementCommand::Refine;
+        }
 
-  // This is an example how to implement dynamic AMR, as the
-  // AMR instruction depends on the actual solution (which is
-  // not directly available throughout the grid construction).
-  // If you remove this part, you get static AMR.
-  if ( tarch::la::greater(t,0.0) ) {
-    if ( Q[4]>0.4 ) {
-      result = ::exahype2::RefinementCommand::Refine;
-    }
-    if ( Q[4]<0.2 ) {
-      result = ::exahype2::RefinementCommand::Coarsen;
-    }
+        // This is an example how to implement dynamic AMR, as the
+        // AMR instruction depends on the actual solution (which is
+        // not directly available throughout the grid construction).
+        // If you remove this part, you get static AMR.
+        if ( tarch::la::greater(t,0.0) ) {
+          if ( Q[4]>0.4 ) {
+            result = ::exahype2::RefinementCommand::Refine;
+          }
+          if ( Q[4]<0.2 ) {
+            result = ::exahype2::RefinementCommand::Coarsen;
+          }
+        }
+      }
+      break;
+    case Scenario::BreakingDam:
+      {
+        if ( volumeCentre(0)<0.5 ) {
+          result = ::exahype2::RefinementCommand::Refine;
+        }
+      }
+      break;
+    case Scenario::BreakingDamResolutionStudies:
+      {
+        if (
+          volumeCentre(1)>0.5-0.5*volumeH(1)*NumberOfFiniteVolumesPerAxisPerPatch
+          and
+          volumeCentre(1)<0.5+0.5*volumeH(1)*NumberOfFiniteVolumesPerAxisPerPatch
+        ) {
+          result = ::exahype2::RefinementCommand::Refine;
+        }
+      }
+      break;
   }
 
   return result;
@@ -49,21 +97,38 @@ void examples::exahype2::euler::Euler::initialCondition(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructed
 ) {
-  // Manual offset to make the wave originate slightly to the left of the center --- helps
-  // to detect if wave is moving to the left or right
-  #if Dimensions==2
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
-  #else
-  tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
-  #endif
+  switch (scenario) {
+    case Scenario::PointExplosion:
+    case Scenario::PointExplosionWithDynamicAMR:
+      {
+        // Manual offset to make the wave originate slightly to the left of the center --- helps
+        // to detect if wave is moving to the left or right
+        #if Dimensions==2
+        tarch::la::Vector<Dimensions,double> circleCentre = {0.5,0.3};
+        #else
+        tarch::la::Vector<Dimensions,double> circleCentre = {0.18,0.3,0.6};
+        #endif
 
-  // initial conditions
-  bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
-  Q[0] = 0.1;  // rho
-  Q[1] = 0;    // velocities
-  Q[2] = 0;
-  Q[3] = 0;
-  Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
+        // initial conditions
+        bool isInTheCentre = ( tarch::la::norm2( volumeCentre-circleCentre ) < 0.05 );
+        Q[0] = 0.1;  // rho
+        Q[1] = 0;    // velocities
+        Q[2] = 0;
+        Q[3] = 0;
+        Q[4] = isInTheCentre ? 1.0 : 0.0; // inner energy
+      }
+      break;
+    case Scenario::BreakingDam:
+    case Scenario::BreakingDamResolutionStudies:
+      {
+        Q[0] = 0.1;  // rho
+        Q[1] = 0;    // velocities
+        Q[2] = 0;
+        Q[3] = 0;
+        Q[4] = volumeCentre(0)<0.5 ? 1.0 : 0.0; // inner energy
+      }
+      break;
+  }
 }
 
 
@@ -125,6 +190,7 @@ void examples::exahype2::euler::Euler::flux(
         << ",normal=" << normal
         << ",Q[0]=" << Q[0];
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", msg.str() );
+    assertion(false);
   }
 
   constexpr double gamma = 1.4;
@@ -172,6 +238,7 @@ void examples::exahype2::euler::Euler::boundaryConditions(
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
+  assertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
   Qoutside[0] = Qinside[0];
   Qoutside[1] = Qinside[1];

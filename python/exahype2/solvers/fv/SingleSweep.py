@@ -11,7 +11,6 @@ import jinja2
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
 
-
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   SolveRiemannProblemsOverPatch = jinja2.Template( """
     double cellTimeStepSize = -1.0;
@@ -24,13 +23,22 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
     const double usedTimeStepSize = cellTimeStepSize;
 
+    ::exahype2::fv::validatePatch(
+        reconstructedPatch,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        1, // halo
+        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    ); // previous time step has to be valid
+  
     ::exahype2::fv::copyPatch(
-      reconstructedPatch,
-      targetPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      1 // halo size
+        reconstructedPatch,
+        targetPatch,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        1 // halo size
     );
 
     {% if USE_SPLIT_LOOP %}
@@ -46,53 +54,65 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
     #endif
     {% endif %}
-      [&](
-        const double * __restrict__                  QL,
-        const double * __restrict__                  QR,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        int                                          normal,
-        double                                       FL[],
-        double                                       FR[]
-      ) -> void {
-        {{RIEMANN_SOLVER_CALL}}
-      },
-      [&](
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       dx,
-        double                                       t,
-        double                                       dt,
-        double * __restrict__                        S
-      ) -> void {
-        {{SOURCE_TERM_CALL}}
-      },
-      marker.x(),
-      marker.h(),
-      cellTimeStamp,
-      cellTimeStepSize,
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      reconstructedPatch,
-      targetPatch
+        [&](
+          const double * __restrict__                  QL,
+          const double * __restrict__                  QR,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       dx,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double                                       FL[],
+          double                                       FR[]
+        ) -> void {
+          {{RIEMANN_SOLVER_CALL}}
+        },
+        [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       dx,
+          double                                       t,
+          double                                       dt,
+          double * __restrict__                        S
+        ) -> void {
+          {{SOURCE_TERM_CALL}}
+        },
+        marker.x(),
+        marker.h(),
+        cellTimeStamp,
+        cellTimeStepSize,
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        reconstructedPatch,
+        targetPatch
     );
-
+  
     {{POSTPROCESS_UPDATED_PATCH}}
     
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
     
     repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
+
+    ::exahype2::fv::validatePatch(
+        targetPatch,
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        0, // halo
+        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+    ); // outcome has to be valid
   """ )
 
 
   def __init__(self, solver):
+    """
+    
+    
+    """
     ReconstructPatchAndApplyFunctor.__init__(self,
       patch = solver._patch,
-      # todo hier muessen beide rein, denn ich muss ja interpolieren
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = """
 #error please switch to your Riemann solver of choice
@@ -101,29 +121,43 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       guard = "not marker.isRefined()",
       add_assertions_to_halo_exchange = False
     )
-
     self._solver = solver
-    self.d[ "USE_SPLIT_LOOP" ] = solver._use_split_loop
-    self.update_compute_kernel()
+    
+    self._Template_TouchCellFirstTime_Epilogue += """
+  else if (not marker.isRefined()) {{
+    double cellTimeStepSize = -1.0;
+    double cellTimeStamp    = -1.0;
+     
+    {PREPROCESS_RECONSTRUCTED_PATCH}
+    
+    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
+    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+
+    repositories::{SOLVER_INSTANCE}.update(0.0, cellTimeStamp, marker.h()(0) );
+  }}
+"""
 
 
-  def update_compute_kernel(self):
+  def _add_action_set_entries_to_dictionary(self,d):
     """
     
-     Whenever you change the operators/types of Riemann solvers
-     that you want to use, you have to invoke this routine.
+    This is our plug-in point to alter the underlying dictionary
     
     """
-    self._solver._init_dictionary_with_default_parameters(self.d)
-    self._solver.add_entries_to_text_replacement_dictionary(self.d)
-    self.d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**self.d)
+    super(UpdateCell,self)._add_action_set_entries_to_dictionary(d)
+    
+    self._solver._init_dictionary_with_default_parameters(d)
+    self._solver.add_entries_to_text_replacement_dictionary(d)
+    
+    d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**d)
+    d[ "USE_SPLIT_LOOP" ]              = self._solver._use_split_loop
 
   
   def get_includes(self):
     return """
 #include "exahype2/fv/BoundaryConditions.h"
 #include "exahype2/NonCriticalAssertions.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_includes()
+""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
 
 
 
@@ -182,12 +216,26 @@ class SingleSweep( FV ):
 
 
   def create_data_structures(self):
+    """
+    
+     Call the superclass' create_data_structures() to ensure that all the data
+     structures are in place, i.e. each cell can host a patch, that each face hosts 
+     patch overlaps, and so forth. These quantities are all set to defaults. See
+     FV.create_data_structures().
+     
+     After that, take the patch overlap (that's the data stored within the faces)
+     and ensure that these are sent and received via MPI whenever they are also 
+     stored persistently. The default in FV is that no domain boundary data exchange
+     is active. Finally, ensure that the old data is only exchanged between the 
+     initialisation sweep and the first first grid run-through.
+    
+    """
     super(SingleSweep, self).create_data_structures()
 
-    initialisation_sweep_predicate = "(" + \
+    initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
-    first_iteration_after_initialisation_predicate = "(" + \
+    first_iteration_after_initialisation_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
@@ -195,20 +243,25 @@ class SingleSweep( FV ):
     self._patch_overlap_new.generator.send_condition               = "true"
     self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
-    self._patch_overlap_old.generator.send_condition               = initialisation_sweep_predicate
-    self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_predicate
-      
+    self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
+    self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
+
             
   def create_action_sets(self):
     """
-      Call superclass routine and then reconfigure the update cell call
+
+      Call superclass routine and then reconfigure the update cell call.
+      Only the UpdateCell action set is specific to a single sweep.
+      
+      This operation is implicity called via the superconstructor.
+      
     """
     super(SingleSweep, self).create_action_sets()
     self._action_set_update_cell = UpdateCell(self)
 
 
-  def get_user_includes(self):
-    return """
+  def get_user_action_set_includes(self):
+    return super(SingleSweep, self).get_user_action_set_includes() + """
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 """
@@ -217,7 +270,9 @@ class SingleSweep( FV ):
   def set_implementation(self,
     boundary_conditions, refinement_criterion, initial_conditions,
     memory_location,
-    use_split_loop
+    use_split_loop,
+    additional_action_set_includes,
+    additional_user_includes
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -236,6 +291,9 @@ class SingleSweep( FV ):
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
        self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
       raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+
+    self.user_action_set_includes += additional_action_set_includes
+    self.user_solver_includes     += additional_user_includes
 
     self.create_action_sets()
 

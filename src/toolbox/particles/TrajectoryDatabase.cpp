@@ -41,7 +41,13 @@ toolbox::particles::TrajectoryDatabase::~TrajectoryDatabase() {
 }
 
 
-void toolbox::particles::TrajectoryDatabase::clear() {
+void toolbox::particles::TrajectoryDatabase::clear(bool lockSemaphore) {
+  tarch::multicore::Lock lock(_semaphore, false);
+
+  if (lockSemaphore) {
+	lock.lock();
+  }
+
   for (auto& particle: _data) {
     for (auto& snapshot: particle.second) {
       if (snapshot.data!=nullptr) {
@@ -72,6 +78,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
 
   snapshotFileName << ".csv";
 
+  tarch::multicore::Lock lock(_semaphore);
   if (not _data.empty()) {
     logInfo( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
@@ -123,7 +130,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
   }
 
   if (_clearDatabaseAfterFlush) {
-    clear();
+    clear(false);
   }
 }
 
@@ -153,8 +160,6 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
   const tarch::la::Vector<Dimensions,double>&   x,
   double                                        timestamp
 ) {
-  tarch::multicore::Lock lock(_semaphore);
-
   if (_data.count(number)==0) {
     _data.insert( std::pair<std::pair<int,int>, std::list<Entry>>(number,std::list<Entry>()) );
     return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Append;
@@ -193,7 +198,6 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
   toolbox::particles::TrajectoryDatabase::AddSnapshotAction result = getAction(number,x,timestamp);
 
   if (result == toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Ignore) {
-    tarch::multicore::Lock lock(_semaphore);
     for (int i=0; i<numberOfDataEntries; i++) {
       if (
         std::abs( _data.at(number).front().data[i] - data[i] ) > _dataDelta
@@ -214,7 +218,8 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
 }
 
 
-bool toolbox::particles::TrajectoryDatabase::dumpDatabaseSnapshot() const {
+bool toolbox::particles::TrajectoryDatabase::dumpDatabaseSnapshot() {
+  tarch::multicore::Lock lock(_semaphore);
   int totalSize = 0;
   for (auto p: _data) {
     totalSize += p.second.size();
@@ -232,6 +237,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
     _rank = tarch::mpi::Rank::getInstance().getRank();
   }
 
+  tarch::multicore::Lock lock(_semaphore);
   switch ( getAction(number,x,timestamp) ) {
     case AddSnapshotAction::Ignore:
       break;
@@ -248,6 +254,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
       }
       break;
   }
+  lock.free();
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();
@@ -285,6 +292,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
     _rank = tarch::mpi::Rank::getInstance().getRank();
   }
 
+  tarch::multicore::Lock lock(_semaphore);
   switch ( getAction(number,x,timestamp,numberOfDataEntries,data) ) {
     case AddSnapshotAction::Ignore:
       break;
@@ -301,6 +309,7 @@ void toolbox::particles::TrajectoryDatabase::addParticleSnapshot(
       }
       break;
   }
+  lock.free();
 
   if (dumpDatabaseSnapshot()) {
     dumpCSVFile();

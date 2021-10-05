@@ -13,13 +13,19 @@
  *
  * A noncritical assertion is an assertion which indicates that something went
  * horribly wrong due to a programming error. You should never use an assertion
- * for user errors, as assertions are compiled out from teh code in release
+ * for user errors, as assertions are compiled out from the code in release
  * builds. Usual assertions make the code stop immediately. For many numerical
  * bugs, this is not very useful. Instead, you can trigger a noncritical assertion
  * which informs rank 0 that something went wrong. Rank 0 will now issue a data
  * dump (it ignores whether you have enabled outputs or not, it simply enforces
  * a plot of the grid) and then terminates deterministically. This way, you can
  * inspect the solution just when the assertion had been violated.
+ *
+ * As noncritical assertions rely internally on MPI RMA, you have to call init
+ * and shutdown for the environment. Do so immediately after you've initialised
+ * MPI or just before you shut it down, respectively.
+ *
+ * <h2> Behaviour </h2>
  *
  * As a noncritical assertion does not immediately terminate the code, you might
  * get a whole sequence of these guys in a row. Skip them all and read only the
@@ -28,9 +34,18 @@
  * only filter error messages from one rank. That is, you'll still get up to one
  * error/assertion message per rank.
  *
- * As noncritical assertions rely internally on MPI RMA, you have to call init
- * and shutdown for the environment. Do so immediately after you've initialised
- * MPI or just before you shut it down, respectively.
+ * <h2> Macros and behaviour in release mode </h2>
+ *
+ * In line with the assertions, I offer a set of macros for non-critical
+ * assertions, too. Again, they reduce to nop if you run in release mode, i.e.
+ * I don't check for non-critical assertions anymore.
+ *
+ * However, the environment to handle non-critical assertions is always up, no
+ * matter if you run in release mode or not. Therefore, you can manually trigger
+ * a non-critical assertion through a call to triggerNonCriticalAssertion() and
+ * this call then won't be removed if you compile in release mode.
+ *
+ *
  */
 namespace exahype2 {
   /**

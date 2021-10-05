@@ -74,7 +74,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
   }
   ifs.close();
 
-  assertion1(lines.size()>=2, filename);
+  assertion2(lines.size()>=2, filename, lines.size());
 
   if ( lines[lines.size()-1].find( Token_EndDataSet )==std::string::npos ) {
     logWarning(
@@ -111,7 +111,9 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::create
   if ( !indexFileOut.is_open() ) {
     logError("PeanoTextPatchFileWriter()", "have not been able to open file " << _indexFile );
   }
-  indexFileOut.close();
+  else {
+    indexFileOut.close();
+  }
 }
 
 

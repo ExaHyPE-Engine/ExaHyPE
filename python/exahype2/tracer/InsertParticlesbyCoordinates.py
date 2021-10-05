@@ -10,8 +10,8 @@ import dastgen2.attributes.Integer
 
 
 
-class InsertParticlesbyCoor(ActionSet):
-  def __init__(self,particle_set,N=2,coor_s=[[0,0,0],[0,0,0]]):
+class InsertParticlesbyCoordinates(ActionSet):
+  def __init__(self,particle_set,coor_s=[[0,0,0],[0,0,0]]):
     """
 =
 
@@ -19,32 +19,43 @@ class InsertParticlesbyCoor(ActionSet):
  
     N: number of particles
 
-    coor_s: coordinates for the particle 
+    coor_s: [ [Int,Int,Int] ]
+      Coordinates for the particle. If you work in 2d, the third coordinate
+      is simply ignored. But you always need three coordinates.
 
     """
 
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
-    self.d[ "N" ]                        = N
-    self._coor_s			 = coor_s
+    self.d[ "N" ]                        = len(coor_s)
+    self._coor_s			             = coor_s
+    
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
   for(int i=0;i<{{N}};i++){
-    if ( not marker.isRefined() and 
-    (marker.x()(0)-marker.h()(0)/2.0) < coor_s[i][0] and (marker.x()(0)+marker.h()(0)/2.0) > coor_s[i][0] and
-    (marker.x()(1)-marker.h()(1)/2.0) < coor_s[i][1] and (marker.x()(1)+marker.h()(1)/2.0) > coor_s[i][1] and
-    (marker.x()(2)-marker.h()(2)/2.0) < coor_s[i][2] and (marker.x()(2)+marker.h()(2)/2.0) > coor_s[i][2] 
+    // It is important to have this asymmetric comparisons with <= as we
+    // need to ensure that particles right in the centre are either associated
+    // with the vertex left or right.
+    if (
+      not marker.isRefined() 
+      and 
+      (marker.x()(0)-marker.h()(0)/2.0) <= coor_s[i][0] and (marker.x()(0)+marker.h()(0)/2.0) > coor_s[i][0] 
+      and
+      (marker.x()(1)-marker.h()(1)/2.0) <= coor_s[i][1] and (marker.x()(1)+marker.h()(1)/2.0) > coor_s[i][1] 
+      #if Dimensions==3
+      and
+      (marker.x()(2)-marker.h()(2)/2.0) <= coor_s[i][2] and (marker.x()(2)+marker.h()(2)/2.0) > coor_s[i][2] 
+      #endif
     )
     {
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
       newParticle->setNumber(0, _spacetreeId);
       newParticle->setNumber(1, _particleNumberOnThisTree);
-      //std::cout<<_particleNumberOnThisTree<<std::endl;
       toolbox::particles::init(*newParticle,{coor_s[i][0],coor_s[i][1],coor_s[i][2]},0.0);
       _particleNumberOnThisTree++;
+      logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << newParticle->toString() );
       fineGridVertex{{PARTICLES_CONTAINER}}.push_back( newParticle );
-      //std::cout<<coor_s[i][0]<<std::endl;
     }
   }
 """)
@@ -100,7 +111,3 @@ class InsertParticlesbyCoor(ActionSet):
   int _spacetreeId;
   double coor_s["""+str(self.d["N"])+"""][3];
 """
-#    result = jinja2.Template( """
-#  std::forward_list< globaldata::{{PARTICLE}}* >  _activeParticles;
-#""")
-#    return result.render(**self.d)

@@ -8,8 +8,16 @@ import jinja2
 
 class RollOverUpdatedFace(AbstractFVActionSet):
   """
-  
-    The global periodic boundary conditions are set in the Constants.h. 
+
+    This action set takes the updated data per face and writes it into
+    new. So it takes the outcome from ProjectPatchOntoFaces and writes 
+    it onto the (persistent) face data. Before it does so, the action
+    set also rolls over the new data to the old one.
+    
+    We may not roll over data if no data has been written onto the 
+    face. So we check the updated flag. It is reset by the UpdateFaceLabel
+    action set in the grid subpackage and set again by either the face
+    projection or the dynamic amr handling.
    
   """
   TemplateHandleFace = jinja2.Template( """
@@ -19,6 +27,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
       const int normal = marker.getSelectedFaceNumber() % Dimensions;
       // Left half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)) {
+        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on left face)"  );
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i=0; i<{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
@@ -31,9 +40,20 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             }
           }
         }
+        
+        {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0) );
+        {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(0) );
+        
+        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on left face)"  );
       }
+      else {
+        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip left face)"  );
+        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (skip left face)"  );
+      }
+      
       // Right half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(1)) {
+        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on right face)"  );
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i={{OVERLAP}}; i<2*{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
@@ -46,6 +66,15 @@ class RollOverUpdatedFace(AbstractFVActionSet):
             }
           }
         }
+        
+        {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1) );
+        {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(1) );
+        
+        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated on right face)"  );
+      }
+      else {
+        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip right face)"  );
+        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (skip right face)"  );
       }
       
       int index = 0;

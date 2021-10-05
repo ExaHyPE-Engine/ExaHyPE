@@ -9,17 +9,32 @@ import jinja2
 
 
 class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
-  def __init__(self, particle_set,solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, output_precision=8):
+  def __init__(self, particle_set, solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, output_precision=8):
     """
      
-    delta_between_two_snapshots: Float
-     A particle is dumped if it has switched the domain partition or its position has
-     changed more then delta_between_two_snapshots. You can 
+    data_delta_between_two_snapsots: Float
+     A particle is dumped into the database if it has switched the domain 
+     partition or its position has changed more then delta_between_two_snapshots. 
+     See toolbox::particles::TrajectoryDatabase::getAction() for a description 
+     how the C++ code interprets this threshold, but it is usually the max norm
+     that is used here. If you set it to a very small number, you'll get a lot 
+     of entries in your database. 
+     
+    position_delta_between_two_snapsots: Float
+     Similar to data_delta_between_two_snapsots but this time it is not the
+     difference in the data that triggers a dump into the database, but a change
+     of position. Obviously, these things can be totally independent (and also can
+     be combined), as particles that move with the domain might not change their 
+     value, as theyare tracer, while stationary seismograms usually do not change
+     their position at all.
      
     number_of_entries_between_two_db_flushes: Int
       Number of entries that we dump into the database before it is flushed the next
       time. Set it to max of an integer or zero to disable on-the-fly dumps. In this
-      case, the database is only flushed when the simulation terminates.
+      case, the database is only flushed when the simulation terminates. So, the
+      thresholds data_delta_between_two_snapsots and position_delta_between_two_snapsots
+      determine how often entries and up in the database, and number_of_entries_between_two_db_flushes
+      determines how often this database is written into a file.
      
     """
     self.d = {}
@@ -34,30 +49,32 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
 
     self.number_of_entries_between_two_db_flushes = number_of_entries_between_two_db_flushes
 
-  __Template_TouchVertexFirstTime = jinja2.Template("""
-  auto& localParticles = fineGridVertex{{PARTICLES_CONTAINER}};
-  
-  for (auto& p: localParticles) {
-    if (
-      p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
-    ) {
-      _database.addParticleSnapshot( 
-        p->getNumber(0), 
-        p->getNumber(1),
-        repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),
-        p->getX(),
-        p->getData().size(),
-        p->getData().data()
-      );
+  __Template_TouchCellLastTime = jinja2.Template("""
+  for (int i=0; i<TwoPowerD; i++) {
+    for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
+      if (
+        p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
+        and
+        marker.isContained( p->getX() )
+      ) {
+        _database.addParticleSnapshot( 
+          p->getNumber(0), 
+          p->getNumber(1),
+          fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+          p->getX(),
+          p->getData().size(),
+          p->getData().data()
+        );
+      }
     }
-  };
+  }
 """)
   
 
   def get_body_of_operation(self,operation_name):
     result = ""
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_TouchVertexFirstTime.render(**self.d)
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
+      result = self.__Template_TouchCellLastTime.render(**self.d)
     return result
 
 

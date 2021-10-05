@@ -180,7 +180,7 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = true;
   }}
   else {{
-    if ( repositories::getMinTimeStamp()>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime ) {{
+    if ( repositories::getMinTimeStamp(true)>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime ) {{
       nextPlotTimeStamp += TimeInBetweenPlots;
       if ( nextPlotTimeStamp < repositories::getMinTimeStamp() ) {{
         logWarning(
@@ -373,14 +373,6 @@ void step() {{
         const double minMeshSize     = repositories::getMinMeshSize();
         const double maxMeshSize     = repositories::getMaxMeshSize();
 
-        if ( tarch::mpi::Rank::getInstance().isGlobalMaster() ) {{
-          logInfo( "step()", "t_{{min}}  = " << minTimeStamp );
-          logInfo( "step()", "t_{{max}}  = " << maxTimeStamp );
-          logInfo( "step()", "dt_{{min}} = " << minTimeStepSize );
-          logInfo( "step()", "dt_{{max}} = " << maxTimeStepSize );
-          logInfo( "step()", "h_{{min}}  = " << minMeshSize );
-          logInfo( "step()", "h_{{max}}  = " << maxMeshSize );
-        }}
         repositories::startTimeStep( minTimeStamp, maxTimeStamp, minTimeStepSize, maxTimeStepSize );
         
         observers::TimeStep  observer;
