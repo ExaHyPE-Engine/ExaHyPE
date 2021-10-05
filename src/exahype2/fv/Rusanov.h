@@ -90,20 +90,21 @@ namespace exahype2 {
 #pragma omp distribute 
       for (size_t pidx=0;pidx<NPT;pidx++)
       {
-        double                    t =   T[pidx];
-        double                   dt =  DT[pidx];
-        int                  taskId = TID[pidx];
-        double                   x0 =  X0[pidx];
-        double                   h0 =  H0[pidx];
-        double                   x1 =  X1[pidx];
-        double                   h1 =  H1[pidx];
-        double *reconstructedPatch = RP + sourcePatchSize*pidx;
 
 
+#pragma omp parallel for collapse(2)
         for (int x = 0; x < numVPAIP; x++)
         {
           for (int y = 0; y < numVPAIP; y++)
           {
+            double                    t =   T[pidx];
+            double                   dt =  DT[pidx];
+            int                  taskId = TID[pidx];
+            double                   x0 =  X0[pidx];
+            double                   h0 =  H0[pidx];
+            double                   x1 =  X1[pidx];
+            double                   h1 =  H1[pidx];
+            double *reconstructedPatch = RP + sourcePatchSize*pidx;
 
             // This is copyPatch
             for (int i=0; i<unknowns+auxiliaryVariables; i++)
@@ -113,21 +114,24 @@ namespace exahype2 {
               destinationPatch[pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i] =  reconstructedPatch[sourceIndex*(unknowns+auxiliaryVariables)+i];
             }
             
-            tarch::la::Vector<2,double> patchCentre = {x0,x1};
-            tarch::la::Vector<2,double> patchSize   = {h0,h1};
-
-            tarch::la::Vector<2,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP};
-            tarch::la::Vector<2, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1)};
-            volumeX (0) += (x + 0.5) * volumeH (0);
-            volumeX (1) += (y + 0.5) * volumeH (1);
-            const int voxelInPreImage  = x+1      + (y+1) * (numVPAIP+2);
-            const int voxelInImage     = x            + y * numVPAIP;
-            double sourceTermContributions[unknowns];
-            SOLVER::sourceTerm( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables),  volumeX, volumeH(0), t, dt, sourceTermContributions, SOLVER::Offloadable::Yes);
-
-            for (int unknown = 0; unknown < unknowns; unknown++)
+            if (not skipSourceTerm)
             {
-              destinationPatch[pidx*destPatchSize + voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * sourceTermContributions[unknown];
+              tarch::la::Vector<2,double> patchCentre = {x0,x1};
+              tarch::la::Vector<2,double> patchSize   = {h0,h1};
+
+              tarch::la::Vector<2,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP};
+              tarch::la::Vector<2, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1)};
+              volumeX (0) += (x + 0.5) * volumeH (0);
+              volumeX (1) += (y + 0.5) * volumeH (1);
+              const int voxelInPreImage  = x+1      + (y+1) * (numVPAIP+2);
+              const int voxelInImage     = x            + y * numVPAIP;
+              double sourceTermContributions[unknowns];
+              SOLVER::sourceTerm( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables),  volumeX, volumeH(0), t, dt, sourceTermContributions, SOLVER::Offloadable::Yes);
+
+              for (int unknown = 0; unknown < unknowns; unknown++)
+              {
+                destinationPatch[pidx*destPatchSize + voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * sourceTermContributions[unknown];
+              }
             }
           }
         }
@@ -135,10 +139,19 @@ namespace exahype2 {
         
         for (int shift = 0; shift < 2; shift++)
         {
+#pragma omp parallel for collapse(2)
           for (int x = shift; x <= numVPAIP; x += 2)
           {
             for (int y = 0; y < numVPAIP; y++)
             {
+              double                    t =   T[pidx];
+              double                   dt =  DT[pidx];
+              int                  taskId = TID[pidx];
+              double                   x0 =  X0[pidx];
+              double                   h0 =  H0[pidx];
+              double                   x1 =  X1[pidx];
+              double                   h1 =  H1[pidx];
+              double *reconstructedPatch = RP + sourcePatchSize*pidx;
               tarch::la::Vector<2,double> patchCentre = {x0,x1};
               tarch::la::Vector<2,double> patchSize   = {h0,h1};
 
@@ -213,10 +226,19 @@ namespace exahype2 {
          //////Iterate over other normal
         for (int shift = 0; shift < 2; shift++)
         {
+#pragma omp parallel for collapse(2)
           for (int y = shift; y <= numVPAIP; y += 2)
           {
             for (int x = 0; x < numVPAIP; x++)
             {
+              double                    t =   T[pidx];
+              double                   dt =  DT[pidx];
+              int                  taskId = TID[pidx];
+              double                   x0 =  X0[pidx];
+              double                   h0 =  H0[pidx];
+              double                   x1 =  X1[pidx];
+              double                   h1 =  H1[pidx];
+              double *reconstructedPatch = RP + sourcePatchSize*pidx;
               tarch::la::Vector<2,double> patchCentre = {x0,x1};
               tarch::la::Vector<2,double> patchSize   = {h0,h1};
               const int lowerVoxelInPreimage = x + 1  +       y * (2 + numVPAIP);
