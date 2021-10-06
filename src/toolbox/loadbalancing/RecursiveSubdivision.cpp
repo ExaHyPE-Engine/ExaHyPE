@@ -295,6 +295,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
     and
     _localNumberOfInnerUnrefinedCell < MinOriginalTreeSizeToTriggerThreadSpreadOut
   ) {
+    logInfo( "updateState()", "have to postpone any decision, as local no of inner unrefined cells of " << _localNumberOfInnerUnrefinedCell << " is smaller than " << MinOriginalTreeSizeToTriggerThreadSpreadOut );
     _state = StrategyState::PostponedDecisionDueToLackOfCells;
   }
   else if (
@@ -608,10 +609,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 
   auto step = getStrategyStep();
 
-  #if PeanoDebug>0
-  #else
-  if ( step!=StrategyStep::Wait ) 
-  #endif
+//  #if PeanoDebug>0
+//  #else
+//  if ( step!=StrategyStep::Wait ) 
+//  #endif
   logInfo( "finishStep()", toString( step ) << " in state " << toString() );
 
   switch ( step ) {
