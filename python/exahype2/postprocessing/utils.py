@@ -10,7 +10,7 @@ def next_markevery(size_of_data):
   global internal_symbol_counter
 
   if size_of_data<1:
-    raise( "Too few entries to pick a correct markevery value for matplotlib")
+    raise Exception( "Too few entries to pick a correct markevery value for matplotlib")
 
   default_number_of_markers = 5
   if size_of_data<default_number_of_markers+1:

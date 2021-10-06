@@ -40,7 +40,6 @@ class PerformanceData(object):
 
     self._number_of_time_steps = 0
 
-    self.number_of_grid_sweeps_per_timeStep = 1
     self.adaptive_time_stepping             = False
     
     """
@@ -145,17 +144,14 @@ class PerformanceData(object):
               self.adaptive_time_stepping = True
         elif "dt_{max}" in line and first_dt>=0 and second_dt<0:
             second_dt = float( line.split( "=" )[-1] )
-            if second_dt<1e-8:
-              print( "Second dt equals zero. Assume this is an adaptive time stepping solver which requires two sweeps per time step (reset via number_of_grid_sweeps_per_timeStep)")
-              self.number_of_grid_sweeps_per_timeStep = 2
 
-        if "run" in line and "TimeStep" in line and "rank:0" in line:
+        if "step()" in line and "Solver" in line and "rank:0" in line:
           time_stamp = self.__extract_time_stamp_from_run_call(line)
           if verbose:
             print( "started new time step at " + str(time_stamp) + "s" )
           self._start_time_step_time_stamp.append( time_stamp )
 
-        if "run" in line and "PlotSolution" in line and "rank:0" in line:
+        if "step()" in line and "Solver" in line and "rank:0" in line:
           time_stamp = self.__extract_time_stamp_from_run_call(line)
           if verbose:
             print( "triggered plot at " + str(time_stamp) + "s" )
@@ -167,7 +163,7 @@ class PerformanceData(object):
             print( "terminated simulation at " + str(time_stamp) + "s" )
           self._start_time_step_time_stamp.append( time_stamp )
         
-        if "run" in line and "TimeStep" in line and "rank:0" in line:
+        if "step()" in line and "Solver" in line and "rank:0" in line:
           self._number_of_time_steps += 1
           self._real_time_stamp.append( self.__extract_time_stamp_from_run_call(line) )
 
@@ -180,7 +176,7 @@ class PerformanceData(object):
           self._simulated_time_stamp.append( float( line.split("=")[-1]) )
 
         if "finest mesh resolution of" in line:
-          token = line.split( "finest mesh resolution of " )[1].split("reached")[0]
+          token = line.split( "with mesh size of " )[1].split("reached")[0]
           self._h = float(token)
           print( "h_min=" + str(self._h) )
           
@@ -198,7 +194,6 @@ class PerformanceData(object):
           if match:
             self.total_time_stepping_steps  = int( match[0].split( "=" )[1] )
           print( "time stepping lasts " + str(self.total_time_stepping_time) + " over " + str(self.total_time_stepping_steps) + " steps" )
-          print( "assume we have " + str(self.number_of_grid_sweeps_per_timeStep) + " sweeps per time step" )
           print( "assume time per time step of " + str(self.time_per_time_step()) )
                 
         if "plotting:" in line and not "#measurements=0" in line:
@@ -221,11 +216,9 @@ class PerformanceData(object):
   def get_time_per_time_step(self):
     """
     
-        self.number_of_grid_sweeps_per_timeStep = 1
-
     """
     result = []
-    for i in range(1,len(self._start_time_step_time_stamp),self.number_of_grid_sweeps_per_timeStep):
+    for i in range(1,len(self._start_time_step_time_stamp)):
       result.append( self._start_time_step_time_stamp[i]-self._start_time_step_time_stamp[i-1] )
     return result
 
@@ -272,18 +265,16 @@ class PerformanceData(object):
      Should maybe eliminate the time steps that are not really steps 
      
     """
-    return len(self._time_step_size)/self.number_of_grid_sweeps_per_timeStep    
+    return len(self._time_step_size)    
 
 
   def time_per_time_step(self):
     """
+    
       Time of last time step normalised (multiplied) with h^d 
-      
-      
-      self.number_of_grid_sweeps_per_timeStep
-      
+            
     """
-    raw_data = self.total_time_stepping_time / self.total_time_stepping_steps * self.number_of_grid_sweeps_per_timeStep
+    raw_data = self.total_time_stepping_time / self.total_time_stepping_steps
     #return raw_data * self._h**self._d
     return raw_data
 
