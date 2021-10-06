@@ -180,7 +180,7 @@ class Project (object):
       print( "can not build as code generation has not been successful" )
   
   
-  def run(self, args, prefix=None, pipefile=None, rebuild_if_required=True):
+  def run(self, args=[], prefix=None, pipefile=None, rebuild_if_required=True):
     """
     Runs the code. args should be a list of strings or the empty list.
     prefix is an array, too. A typical invocation looks alike
