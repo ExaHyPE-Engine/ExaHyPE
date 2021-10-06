@@ -17,7 +17,9 @@ enum class Scenario {
 };
 
 
-Scenario scenario = Scenario::BreakingDamResolutionStudies;
+//Scenario scenario = Scenario::BreakingDamResolutionStudies;
+Scenario scenario = Scenario::PointExplosion;
+
 // Scenario scenario = Scenario::BreakingDam;
 
 

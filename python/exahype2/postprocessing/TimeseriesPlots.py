@@ -15,7 +15,12 @@ class XAxis(Enum):
 
 
 
-def plot_runtime_per_time_step(performance_data,label,sum=1):
+def plot_runtime_per_time_step(performance_data,label=None,sum=1):
+  """
+  
+  Label: String or None
+  
+  """    
   x_data = []
   y_data = []
   if sum>1:
