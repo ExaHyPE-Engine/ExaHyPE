@@ -9,19 +9,20 @@ import traceback
 
 
 class PerformanceData(object):
-  def __init__(self,file_name,verbose=False):
+  def __init__(self,file_name,solver_name,verbose=False):
     """
+    
+    file_name: String
         
-    self._start_time_stepping    Is a time stamp
-    self._end_time_stepping      Is a time stamp
+    solver_name: String
     
     """
     self._file_name            = file_name
+    self._solver_name          = solver_name
 
     self._threads              = 1
     self._ranks                = 1
     self._cores_per_node       = 1
-    self._h                    = 1.0
     
     self.total_construction_time  = 0
     self.total_time_stepping_time = 0
@@ -33,15 +34,12 @@ class PerformanceData(object):
 
     self.plotting_time_stamp          = []
     
-    self._start_time_step_time_stamp  = []
+    self._time_step_time_stamp        = []
     self._simulated_time_stamp        = []
-    self._real_time_stamp             = []
     self._time_step_size              = []
 
     self._number_of_time_steps = 0
 
-    self.adaptive_time_stepping             = False
-    
     """
      The code tries to parse the machine format first. This format however is only
      used by the command line logger. If you use the other loggers, they tend to 
@@ -137,21 +135,38 @@ class PerformanceData(object):
           elif "mpi" in line:
             self._ranks = int( line.split( "ranks)" )[0].split( "(")[-1] )
 
-        if "dt_{max}" in line and first_dt<0:
+        if "Abstract"+self._solver_name+"::step()" in line and "rank:0" in line:
+          if "dt_{max}" in line and first_dt<0:
             first_dt = float( line.split( "=" )[-1] )
             if first_dt<1e-8:
               print( "First dt equals zero. Assume this is an adaptive time stepping solver")
               self.adaptive_time_stepping = True
-        elif "dt_{max}" in line and first_dt>=0 and second_dt<0:
-            second_dt = float( line.split( "=" )[-1] )
+          elif "dt_{max}" in line and first_dt>=0 and second_dt<0:
+              second_dt = float( line.split( "=" )[-1] )
+
 
         if "step()" in line and "Solver" in line and "rank:0" in line:
-          time_stamp = self.__extract_time_stamp_from_run_call(line)
-          if verbose:
-            print( "started new time step at " + str(time_stamp) + "s" )
-          self._start_time_step_time_stamp.append( time_stamp )
+          if "Solver " + self._solver_name in line:
+            time_stamp = self.__extract_time_stamp_from_run_call(line)
+            if verbose:
+              print( "started new time step at " + str(time_stamp) + "s" )
+            self._number_of_time_steps += 1
+            self._time_step_time_stamp.append( time_stamp )
+            self._time_step_size.append( -1 )
+            self._simulated_time_stamp.append( -1 )
 
-        if "step()" in line and "Solver" in line and "rank:0" in line:
+        #
+        # Be careful with the order: the first one is more specific
+        #
+            if "dt" in line and "=" in line and self._time_step_size[-1]<0:
+              self._time_step_size.append( float( line.split("=")[-1]) )
+            elif "t" in line and "=" in line and self._simulated_time_stamp[-1]<0:
+              self._simulated_time_stamp.append( float( line.split("=")[-1]) )
+         
+
+
+
+        if "step()" in line and "PlotSolution" in line and "rank:0" in line:
           time_stamp = self.__extract_time_stamp_from_run_call(line)
           if verbose:
             print( "triggered plot at " + str(time_stamp) + "s" )
@@ -161,25 +176,8 @@ class PerformanceData(object):
           time_stamp = self.__extract_time_stamp_from_run_call(line)
           if verbose:
             print( "terminated simulation at " + str(time_stamp) + "s" )
-          self._start_time_step_time_stamp.append( time_stamp )
+          self._time_step_time_stamp.append( time_stamp )
         
-        if "step()" in line and "Solver" in line and "rank:0" in line:
-          self._number_of_time_steps += 1
-          self._real_time_stamp.append( self.__extract_time_stamp_from_run_call(line) )
-
-        #
-        # Be careful with the order: the first one is more specific
-        #
-        if "dt_{min}" in line:
-          self._time_step_size.append( float( line.split("=")[-1]) )
-        elif "t_{min}" in line:
-          self._simulated_time_stamp.append( float( line.split("=")[-1]) )
-
-        if "finest mesh resolution of" in line:
-          token = line.split( "with mesh size of " )[1].split("reached")[0]
-          self._h = float(token)
-          print( "h_min=" + str(self._h) )
-          
 
         if "initial grid construction:" in line and not "#measurements=0" in line:
           self.total_construction_time  = float( line.split("grid construction:")[1].split( "s" )[0] )
@@ -218,8 +216,8 @@ class PerformanceData(object):
     
     """
     result = []
-    for i in range(1,len(self._start_time_step_time_stamp)):
-      result.append( self._start_time_step_time_stamp[i]-self._start_time_step_time_stamp[i-1] )
+    for i in range(1,len(self._time_step_time_stamp)):
+      result.append( self._time_step_time_stamp[i]-self._time_step_time_stamp[i-1] )
     return result
 
 
@@ -234,9 +232,8 @@ class PerformanceData(object):
      of the simulation
      
     """
-    result = [x for x in self._real_time_stamp]
-    #result = result[0:-1]
-    return result
+    shifted_data = [x-self._time_step_time_stamp[0] for x in self._time_step_time_stamp]
+    return shifted_data[1:]
 
 
   def get_time_step_simulated_time_stamps(self):
@@ -275,7 +272,6 @@ class PerformanceData(object):
             
     """
     raw_data = self.total_time_stepping_time / self.total_time_stepping_steps
-    #return raw_data * self._h**self._d
     return raw_data
 
       

@@ -62,7 +62,7 @@ def plot_runtime_against_simulated_time(performance_data,label):
   plt.ylabel( "Simulated time" )
 
 
-def plot_time_step_size_per_step(performance_data,label,xaxis,verbose):
+def plot_time_step_size_per_step(performance_data,label=Null,xaxis=XAxis.RealTime,verbose=False):
   """
   
   use_real_time: Boolean
