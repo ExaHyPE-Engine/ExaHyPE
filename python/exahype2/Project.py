@@ -237,7 +237,7 @@ class Project(object):
     self._project.output.makefile.add_cpp_file( "repositories/SolverRepository.cpp" )
     
       
-  def add_tracer(self,name,attribute_count=0,plot_particle=True):
+  def add_tracer(self,name,attribute_count=0,plot=True):
     """
     
     name: String
@@ -250,7 +250,7 @@ class Project(object):
     h and noise:
       See tracer.InsertParticles
       
-    plot_particle: Boolean
+    plot: Boolean
       If this flag is set, ExaHyPE dumps the particles as vtu files whenever
       it writes patch files. You can switch this behaviour off. A lot of codes
       do so if they dump the tracer data independently into another database
@@ -273,8 +273,7 @@ class Project(object):
     self._project.datamodel.add_global_object(particle)
     self._project.datamodel.add_vertex(particles)
 
-    if plot_particle:
-      self.plot_solution.use_vertex(particles)
+    self.plot_solution.use_vertex(particles)
     self.init_grid.use_vertex(particles)
     self.perform_time_step.use_vertex(particles)
     self.create_grid.use_vertex(particles)
@@ -294,18 +293,20 @@ class Project(object):
     #
     # Plotter
     #
-    particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( 
-      filename=name, 
-      particle_set=particles,
-      time_stamp_evaluation="repositories::getMinTimeStamp()",
-      additional_includes="""  
+    if plot:
+      particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( 
+        filename=name, 
+        particle_set=particles,
+        time_stamp_evaluation="repositories::getMinTimeStamp()",
+        additional_includes="""  
 #include "repositories/SolverRepository.h" 
 """)
-    if attribute_count>0:
-      particle_plotter.add_attribute_to_plot(particle_attr,attribute_count)
-    particle_plotter.add_attribute_to_plot(particle_number,2)
+      if attribute_count>0:
+        particle_plotter.add_attribute_to_plot(particle_attr,attribute_count)
+      particle_plotter.add_attribute_to_plot(particle_number,2)
       
-    self.plot_solution.add_action_set( particle_plotter ) 
+      self.plot_solution.add_action_set( particle_plotter ) 
+      
     self.plot_solution.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
 
     return particles
