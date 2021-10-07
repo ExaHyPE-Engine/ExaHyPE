@@ -1,5 +1,5 @@
 \chapter{Troubleshooting}
-
+\label{chapter:troubleshooting}
 
 \section{Python API}
 
@@ -212,91 +212,20 @@ tarch::logging::LogFilter::getInstance().printFilterListToCout();
   information is not dumped. Please note that the info goes straight to cout,
   i.e.~you can't filter it. That's because the tag allocation usually happens
   before our logging landscape is up and configured properly.
+  \item \textbf{With more and more ranks, I suddenly run into timeouts}. \Peano\
+  has a built-in timeout detection which you can alter by changing the timeout
+  threshold. This is done via the \texttt{--timeout XXX} parameter. The other
+  thing is that \Peano\ subdivides the partition such that each core (!) gets
+  one SFC-fragment. For smallish problems, this can lead to a massive overhead, as
+  the partitions are too small. In this case, you either have to restrict the
+  threads per rank via \texttt{--threads XXX} (this is problematic, as it
+  effectively reduces the code's efficiency) or you instruct your load balancing
+  not to split up that often. See the documentation of your particular load
+  balancing strategy.
   \item To be continued \dots
 \end{itemize}
 
 
-
-% 
-% \begin{itemize}
-%   \item \textbf{ I get tons of warning alike ``warning \#603: ``typeid'' is reserved for future use as a keyword'' }.
-%   Peano's pdt adds a compile flag \texttt{-fno-rtti} to the makefile as the core framework does 
-%   not need type information at runtime and codes thus become smaller and faster. TBB however 
-%   seems to use runtime information, so you have to remove this flag from your makefile if you 
-%   want to get rid of all the warning. 
-% \end{itemize}
-% 
-% \section{MPI troubleshooting}
-% 
-% \begin{itemize}
-%   \item \textbf{ Does Peano support MPI-2?}. Yes, you can switch to MPI-2 if you
-%   add \texttt{-DMPI2}. I have experienced some issues with MPI-2 implementations and
-%   user-defined datatypes and thus decided to make MPI 1.3 the default. If you
-%   switch to MPI-2 and experience problems, you  mgiht want to have a look into
-%   any \texttt{records} directory and search for \texttt{initDatatype} to
-%   understand where issues arise.
-%   \item \textbf{ I've altered my data types and MPI starts to crash}. There are
-%   multiple reasons why user-defined data types start to fail. Here are some
-%   ideas to follow-up:
-%     \begin{enumerate}
-%       \item Compile with \texttt{-DAsserts}. We augment all parts of Peano with
-%       lots and lots of assertions, so they might help you to hunt down bugs.
-%       \item We have seen some compilers fail if you label some attributes of
-%       (vertex) data types with \texttt{expose}. Expose does alter the
-%       visibility, and we came to believe that these visibility modifications
-%       make some compilers reorder class attributes which in turns means that the
-%       MPI data types hold invalid byte offsets.
-%     \end{enumerate}
-%   \item \textbf{ My MPI version complains about a datatype
-%   \texttt{MPI\_CXX\_BOOL}}.
-%     We have seen this with some older MPI versions. A quick fix is to translate
-%     your code with the additional argument
-%     \texttt{-DMPI\_CXX\_BOOL=MPI\_C\_BOOL}.
-%   \item \textbf{ My code deadlocks once I increase the rank count. It seems that
-%     the ranks cannot even register at the global node pool anymore.}
-%     I've seen this bug with Intel MPI and Omnipath recently. It seems that some
-%     MPI implementations struggle to handle many polling non-blocking operations:
-%     If multiple ranks are deployed on one node, $k$ of them register at the node
-%     pool and then eagerly poll the global master for work. As a result, the
-%     $k+1$th rank cannot send out its registration message. The global master in
-%     return does not start the actual computation before all ranks have
-%     registered if you use the corresponding wait call. There are multiple
-%     solutions/things you can try:
-%     \begin{enumerate}
-%       \item Remove the \texttt{waitForAllNodesToBecomeIdle} calls from your
-%       code. Your code might not need it anyway.
-%       \item Deploy only one MPI rank per node/interconnect.
-%       \item Change into the directory \texttt{tarch/compiler} and find the right
-%       compiler-specific header for your system. Change Peano's load balancing
-%       data exchange into a blocking MPI:
-%       \begin{code}
-%       #define SendAndReceiveLoadBalancingMessagesBlocking    -1
-%       \end{code}
-%     \end{enumerate}
-%     However, the best solution is to consult your supercomputer's documentation
-%     and to configure the fabric accordingly. On Durham's supercomputer, e.g., an
-%     additional
-%     \begin{code}
-%     export I_MPI_FABRICS="tmi"
-%     \end{code} 
-%     in the SLURM script fixes the issue.
-%   \item \textbf{ Once I switch to (Intel) MPI, my code seems to receive invalid
-%     data}. We have seen this problem with Intel's MPI (but not with OpenMPI, 
-%     e.g.) and it seems that this one makes very strong assumptions about the
-%     alignment of data within arrays to optimise the MPI message exchange. I
-%     recommend that you write some ping pong tests (one rank sending stuff to
-%     another and then this one sending stuff back where the data is compared to
-%     the original) and that you ping pong both single vertices and arrays of
-%     vertices. This typically uncovers data inconsistencies. One next step then
-%     is to translate your code with \texttt{-DnoPackedRecords}. While switching
-%     the flag on reduces the memory footprint dramatically (if you don't use
-%     lots of double arrays that is), its underlying skipping of the compiler's
-%     padding seems to cause problems for Intel MPI. If you find 
-%     \texttt{-DnoPackedRecords} working, roll back, i.e.~use 
-%     \texttt{-DPackedRecords} (which is the default), and follow Section
-%     \ref{section:advanced-mpi:tailor-data-exchange-format}.
-%   \item To be continued \ldots
-% \end{itemize}
 
 
 
