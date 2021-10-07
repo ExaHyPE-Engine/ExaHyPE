@@ -49,8 +49,8 @@ struct peano4::parallel::TreeEntry {
 
 
 #ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag );
-    static void receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag );
+    static void sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
     
 

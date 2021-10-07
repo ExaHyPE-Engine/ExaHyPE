@@ -86,22 +86,22 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
   else if ( sourceRank==tarch::mpi::Rank::getInstance().getRank() ) {
     // send stuff to the new worker via MPI
     #ifdef Parallel
-    const int tag            = peano4::parallel::Node::getInstance().getGridDataExchangeTag(master, worker, peano4::parallel::Node::ExchangeMode::VerticalData);
+    const Node::GridDataExchangeMetaInformation meta = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(master, worker, peano4::parallel::Node::ExchangeMode::VerticalData);
     const int messageSize    = 
       stackContainer.holdsStack( master, sourceStack ) ?
       stackContainer.getForPop(master,sourceStack)->size() : 0;
 
     logDebug(
       "streamDataFromSplittingTreeToNewTree()",
-      "send stack " << sourceStack << " from tree " << master << " on rank " << sourceRank << " through tag " << tag <<
+      "send stack " << sourceStack << " from tree " << master << " on rank " << sourceRank << " through tag " << meta.first <<
       " to tree " << worker << " on rank " << destinationRank << ". size=" << messageSize
     );
     tarch::mpi::IntegerMessage message( messageSize );
-    tarch::mpi::IntegerMessage::send(message, destinationRank, tag, tarch::mpi::Rank::getInstance().getCommunicator());
+    tarch::mpi::IntegerMessage::send(message, destinationRank, meta.first, meta.second);
 
     if (messageSize>0) {
       stackContainer.getForPush(master,sourceStack)->startSend(
-        destinationRank, tag
+        destinationRank, meta.first, meta.second
       );
     }
     #else
@@ -111,17 +111,17 @@ void peano4::parallel::SpacetreeSet::streamDataFromSplittingTreeToNewTree(
   else if ( destinationRank==tarch::mpi::Rank::getInstance().getRank() ) {
     #ifdef Parallel
     int  destinationStack = peano4::grid::PeanoCurve::getOutputStackNumber( getInstance().getSpacetree(worker)._root );
-    const int tag         = peano4::parallel::Node::getInstance().getGridDataExchangeTag(master, worker, peano4::parallel::Node::ExchangeMode::VerticalData);
+    const Node::GridDataExchangeMetaInformation metaInfo = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(master, worker, peano4::parallel::Node::ExchangeMode::VerticalData);
 
     tarch::mpi::IntegerMessage message;
-    tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(message, sourceRank, tag);
+    tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(message, sourceRank, metaInfo.first, metaInfo.second);
     logDebug(
       "streamDataFromSplittingTreeToNewTree()",
-      "receive " << message.getValue() << " entries from tree " << master << " on rank " << sourceRank << " (used tag " << tag << ")"
+      "receive " << message.getValue() << " entries from tree " << master << " on rank " << sourceRank << " (used tag " << metaInfo.first << ")"
     );
     if (message.getValue()>0) {
       stackContainer.getForPush(worker,destinationStack)->startReceive(
-        sourceRank, tag, message.getValue()
+        sourceRank, metaInfo.first, metaInfo.second, message.getValue()
       );
     }
     #else
@@ -165,19 +165,19 @@ void peano4::parallel::SpacetreeSet::exchangeAllHorizontalDataExchangeStacks( Co
       int count          = stackContainer.getForPush(sourceStackKey)->size();
       int inStack        = Node::getInstance().getInputStackNumberForHorizontalDataExchange(targetId);
 
-      int sendTag       = Node::getInstance().getGridDataExchangeTag( spacetreeId, targetId, Node::ExchangeMode::HorizontalData );
-      logDebug( "exchangeAllHorizontalDataExchangeStacks(...)", "send stack " << sourceStackKey.second << " of tree " << sourceStackKey.first << " to rank " << rank << " with tag " << sendTag << ": " << count << " element(s)");
+      Node::GridDataExchangeMetaInformation sendMetaInfo = Node::getInstance().getGridDataExchangeMetaInformation( spacetreeId, targetId, Node::ExchangeMode::HorizontalData );
+      logDebug( "exchangeAllHorizontalDataExchangeStacks(...)", "send stack " << sourceStackKey.second << " of tree " << sourceStackKey.first << " to rank " << rank << " with tag " << sendMetaInfo.first << ": " << count << " element(s)");
 
-      stackContainer.getForPush(sourceStackKey)->startSend(rank,sendTag);
+      stackContainer.getForPush(sourceStackKey)->startSend(rank,sendMetaInfo.first,sendMetaInfo.second);
 
-      int receiveTag    = Node::getInstance().getGridDataExchangeTag( targetId, spacetreeId, Node::ExchangeMode::HorizontalData );
+      Node::GridDataExchangeMetaInformation receiveMetaInfo = Node::getInstance().getGridDataExchangeMetaInformation( targetId, spacetreeId, Node::ExchangeMode::HorizontalData );
 
-      logDebug( "exchangeAllHorizontalDataExchangeStacks(...)", "in return, receive " << count << " element(s) from rank " << rank << " with tag " << receiveTag << " into stack " << inStack );
+      logDebug( "exchangeAllHorizontalDataExchangeStacks(...)", "in return, receive " << count << " element(s) from rank " << rank << " with tag " << receiveMetaInfo.first << " into stack " << inStack );
       assertion(not Node::getInstance().isHorizontalDataExchangeOutputStackNumber(inStack));
       // This one likely creates new entries in the stackContainer. At this
       // point, we have already copied the set of keys, i.e. we are fine as
       // we have a valid overview.
-      stackContainer.getForPush(spacetreeId,inStack)->startReceive(rank,receiveTag,count);
+      stackContainer.getForPush(spacetreeId,inStack)->startReceive(rank,receiveMetaInfo.first,receiveMetaInfo.second,count);
     }
   }
 

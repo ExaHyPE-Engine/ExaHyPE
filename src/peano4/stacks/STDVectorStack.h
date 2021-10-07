@@ -332,7 +332,7 @@ class peano4::stacks::STDVectorStack {
      * code still might insert additional elements, i.e. starting does not
      * mean all the data that is to be sent out is already in the container.
      */
-    void startSend(int rank, int tag) {
+    void startSend(int rank, int tag, MPI_Comm comm) {
       #ifdef Parallel
       assertion( _ioMode==IOMode::None );
       assertion( _ioMPIRequest==nullptr );
@@ -343,7 +343,7 @@ class peano4::stacks::STDVectorStack {
       logDebug( "startSend(int,int,bool)", toString());
 
       _ioMPIRequest = new MPI_Request;
-      int result = MPI_Isend( _data.data(), _currentElement, T::Datatype, _ioRank, _ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), _ioMPIRequest);
+      int result = MPI_Isend( _data.data(), _currentElement, T::Datatype, _ioRank, _ioTag, comm, _ioMPIRequest);
       if  (result!=MPI_SUCCESS) {
         logError( "startSend(int,int,bool)", "was not able to send to node " << rank << " on tag " << tag
           << ": " << tarch::mpi::MPIReturnValueToString(result)
@@ -355,7 +355,7 @@ class peano4::stacks::STDVectorStack {
     /**
      * @see startSend()
      */
-    void startReceive(int rank, int tag, int numberOfElements) {
+    void startReceive(int rank, int tag, MPI_Comm comm, int numberOfElements) {
       #ifdef Parallel
       assertion3( _ioMode==IOMode::None, rank, tag, numberOfElements );
       assertion3( numberOfElements>0, rank, tag, numberOfElements );
@@ -371,7 +371,7 @@ class peano4::stacks::STDVectorStack {
       assertion( _ioMPIRequest == nullptr );
       _ioMPIRequest = new MPI_Request;
 
-      int result = MPI_Irecv( _data.data(), _data.size(), T::Datatype, _ioRank, _ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), _ioMPIRequest);
+      int result = MPI_Irecv( _data.data(), _data.size(), T::Datatype, _ioRank, _ioTag, comm, _ioMPIRequest);
       if  (result!=MPI_SUCCESS) {
         logError( "startReceive(int,int,int)", "was not able to receive " << numberOfElements << " values from node " << rank << " on tag " << tag
            << ": " << tarch::mpi::MPIReturnValueToString(result)
@@ -462,11 +462,11 @@ tarch::logging::Log peano4::stacks::STDVectorStack<T>::_log( "peano4::stacks::ST
 
 
 template <>
-void peano4::stacks::STDVectorStack<double>::startSend(int rank, int tag);
+void peano4::stacks::STDVectorStack<double>::startSend(int rank, int tag, MPI_Comm comm);
 
 
 template <>
-void peano4::stacks::STDVectorStack<double>::startReceive(int rank, int tag, int numberOfElements);
+void peano4::stacks::STDVectorStack<double>::startReceive(int rank, int tag, MPI_Comm comm, int numberOfElements);
 
 
 #endif
