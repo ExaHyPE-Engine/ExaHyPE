@@ -63,6 +63,10 @@ class peano4::stacks::STDVectorStack {
     #endif
 
   public:
+    #if !defined(Parallel)
+    typedef int         MPI_Comm;
+    #endif
+
     /**
      * Constructor.
      *

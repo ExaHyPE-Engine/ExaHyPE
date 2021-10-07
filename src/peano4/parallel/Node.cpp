@@ -51,6 +51,10 @@ void peano4::parallel::Node::shutdownMPIDatatypes() {
   peano4::grid::GridVertex::shutdownDatatype();
   peano4::grid::GridStatistics::shutdownDatatype();
   logTraceOut( "shutdownMPIDatatypes()" );
+
+  for (int i=0; i<MaxSpacetreesPerRank; i++) {
+    MPI_Comm_free(&(_dataExchangeCommunicators[i]));
+  }
   #endif
 }
 
@@ -78,12 +82,12 @@ void peano4::parallel::Node::init() {
     registerId( 0, -1);
   }
 
+  #ifdef Parallel
   int answerFlag;
   int maxTag;
   MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &maxTag, &answerFlag);
   if (answerFlag and maxTag<ReservedMPITagsForDataExchange) {
-    // @todo Debug
-    logInfo( "init()", "maximum tag value is " << maxTag << " and this is smaller than " << ReservedMPITagsForDataExchange );
+    logDebug( "init()", "maximum tag value is " << maxTag << " and this is smaller than " << ReservedMPITagsForDataExchange );
   }
   else if (answerFlag) {
     logError( "init()", "maximum tag value is " << maxTag << " though we would need " << ReservedMPITagsForDataExchange << " tags. Code will likely crash" );
@@ -92,7 +96,6 @@ void peano4::parallel::Node::init() {
     logError( "init()", "was not able to query what the maximum tag value is" );
   }
 
-  #ifdef Parallel
   for (int i=0; i<MaxSpacetreesPerRank; i++) {
     MPI_Comm_dup(tarch::mpi::Rank::getInstance().getCommunicator(), &(_dataExchangeCommunicators[i]));
   }
