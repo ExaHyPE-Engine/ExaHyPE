@@ -51,10 +51,6 @@ void peano4::parallel::Node::shutdownMPIDatatypes() {
   peano4::grid::GridVertex::shutdownDatatype();
   peano4::grid::GridStatistics::shutdownDatatype();
   logTraceOut( "shutdownMPIDatatypes()" );
-
-  for (int i=0; i<MaxSpacetreesPerRank; i++) {
-    MPI_Comm_free(&(_dataExchangeCommunicators[i]));
-  }
   #endif
 }
 
@@ -414,6 +410,12 @@ void peano4::parallel::Node::shutdown() {
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     }
   );
+
+  #ifdef Parallel
+  for (int i=0; i<MaxSpacetreesPerRank; i++) {
+    MPI_Comm_free(&(_dataExchangeCommunicators[i]));
+  }
+  #endif
 
   logTraceOut( "shutdown()" );
 }
