@@ -133,7 +133,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 		}
   }
 
-  double a=0.0287*pow((-t/11.8+5.35695),-2);//when code time t=61.2, a~1
+  double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
   double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
   //if (r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
 
