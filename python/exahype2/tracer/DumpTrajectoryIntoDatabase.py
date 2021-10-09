@@ -50,6 +50,7 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
     self.number_of_entries_between_two_db_flushes = number_of_entries_between_two_db_flushes
 
   __Template_TouchCellLastTime = jinja2.Template("""
+if ( not marker.isRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
   for (int i=0; i<TwoPowerD; i++) {
     for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
       if (
@@ -68,6 +69,7 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
       }
     }
   }
+}
 """)
   
 

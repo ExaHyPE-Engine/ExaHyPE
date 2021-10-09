@@ -92,6 +92,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     
     repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
 
