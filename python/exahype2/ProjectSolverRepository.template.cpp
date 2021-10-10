@@ -34,6 +34,14 @@ toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
 {%- endfor %}
 
 
+bool mayPlot() {
+  bool result = true;
+  {% for item in SOLVERS -%}
+    result &= {{ item[1] }}.mayPlot();
+  {%- endfor %}
+  return result;
+}
+
 
 double getMinTimeStamp(bool ofLastTimeStepOnly) {
   double result = std::numeric_limits<double>::max();
