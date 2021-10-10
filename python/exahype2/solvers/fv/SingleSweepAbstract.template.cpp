@@ -314,6 +314,9 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
+  return true;
+}
 
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

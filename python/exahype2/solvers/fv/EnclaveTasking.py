@@ -53,6 +53,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     ); // outcome has to be valid
 
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
   }
   else { // is an enclave cell
     assertion( marker.isEnclaveCell() );
@@ -118,6 +119,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
       if ( taskNumber>=0 ) {
         ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+        fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
       }
       fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
       

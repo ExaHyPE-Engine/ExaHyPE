@@ -334,3 +334,15 @@ def extract_times_per_step(performance_data_points, max_cores_per_rank=0):
   return (x_data,y_data)
 
 
+  def remove_first_n_entries(self,count):
+    """
+    
+    Remove the first count entries from the dataset. Usually, count is one and 
+    anticipates that the solver requires one ``warm up'' sweep to determine h 
+    and the eigenvalue, e.g.
+    
+    """
+    self._start_time_step_time_stamp  = self._start_time_step_time_stamp[count:]
+    self._simulated_time_stamp        = self._simulated_time_stamp[count:]
+    self._real_time_stamp             = self._real_time_stamp[count:]
+    self._time_step_size              = self._time_step_size[count:]

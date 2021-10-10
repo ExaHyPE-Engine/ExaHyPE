@@ -18,7 +18,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001
 }
 
 intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0}
@@ -247,8 +247,8 @@ if __name__ == "__main__":
       floatparams.update({k:eval("args.{}".format(k))})
 
     if args.eigen=="exp":
-      floatparams["C_1"]=(10*1e-4)/floatparams["tilde_P_ini"]
-      floatparams["C_2"]=(10*1e-5)/floatparams["tilde_P_ini"]
+      floatparams["C_1"]=(10*1e-4)/floatparams["tilde_P_ini"]*(floatparams["a_i"]/1e-3)**0.5
+      floatparams["C_2"]=(1*1e-5)/floatparams["tilde_P_ini"]
       userinfo.append(("Use exponential formula for eigenvalues",None))
     if args.eigen=="none":
       floatparams["C_1"]=0
@@ -314,7 +314,7 @@ if __name__ == "__main__":
 ########################################################################################
     if not args.add_tracer==0:
       tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
-      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=5 )
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=5, plot=False)
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
       project.add_action_set_to_timestepping(
         exahype2.tracer.FiniteVolumesTracing(
@@ -335,7 +335,7 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=10000,
+        number_of_entries_between_two_db_flushes=20000,
         output_precision=10,
         position_delta_between_two_snapsots=1e-20,
         data_delta_between_two_snapsots=0

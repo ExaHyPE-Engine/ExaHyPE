@@ -125,33 +125,41 @@ def create_start_time_step_implementation_for_adaptive_time_stepping_with_subcyc
   """
   
   if use_enclave_tasking:
-    predicate += """and _solverState == SolverState::Secondary """
+    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
       
   statistics = """
   if (""" + predicate + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t_{min,global}     = " << _minTimeStamp );
-    logInfo( "step()", "t_{max,global}     = " << _maxTimeStamp );
-    logInfo( "step()", "t_{min,this-step}  = " << _minTimeStampThisTimeStep );
-    logInfo( "step()", "t_{max,this-step}  = " << _maxTimeStampThisTimeStep );
+    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "startTimeStep()", "t_{min,global}     = " << _minTimeStamp );
+    logInfo( "startTimeStep()", "t_{max,global}     = " << _maxTimeStamp );
+    logInfo( "startTimeStep()", "t_{min,this-step}  = " << _minTimeStampThisTimeStep );
+    logInfo( "startTimeStep()", "t_{max,this-step}  = " << _maxTimeStampThisTimeStep );
     if (_minTimeStepSize > _maxTimeStepSize ) {
-      logInfo( "step()", "dt_{min} = <not yet known>" );
-      logInfo( "step()", "dt_{max} = <not yet known>" );
+      logInfo( "startTimeStep()", "dt_{min} = <not yet known>" );
+      logInfo( "startTimeStep()", "dt_{max} = <not yet known>" );
     }
     else {
-      logInfo( "step()", "dt_{min,this-step} = " << _minTimeStepSize );
-      logInfo( "step()", "dt_{max,this-step} = " << _maxTimeStepSize );
+      logInfo( "startTimeStep()", "dt_{min,this-step} = " << _minTimeStepSize );
+      logInfo( "startTimeStep()", "dt_{max,this-step} = " << _maxTimeStepSize );
     }
-    logInfo( "step()", "h_{min}      = " << _minVolumeH << " (volume size)");
-    logInfo( "step()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
-    logInfo( "step()", "lambda_{max} = " << _maxEigenvalue );
-    logInfo( "step()", "#updates = " << _patchUpdates << " (no of patches)" );
+    logInfo( "startTimeStep()", "h_{min}      = " << _minVolumeH << " (volume size)");
+    logInfo( "startTimeStep()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
+    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
+    logInfo( "startTimeStep()", "#updates = " << _patchUpdates << " (no of patches)" );
   }
 """
     
-  return statistics + """
+  if use_enclave_tasking:
+    clear_max_eigenvalue = """if (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) {
   _maxEigenvalue = 0.0;
-"""
+}"""
+  else:
+    clear_max_eigenvalue = """if (_solverState == SolverState::TimeStep or _solverState == SolverState::TimeStepAfterGridInitialisation) {
+  _maxEigenvalue = 0.0;
+}"""
+
+  return statistics + clear_max_eigenvalue
+  
 
 def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave_tasking):
   predicate = """
@@ -161,22 +169,29 @@ def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave
   """
   
   if use_enclave_tasking:
-    predicate += """and _solverState == SolverState::Secondary """
+    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
       
   statistics = """
   if (""" + predicate + """) {
-    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t            = " << _minTimeStamp );
-    logInfo( "step()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "step()", "h_{min}      = " << _minVolumeH << " (volume size)");
-    logInfo( "step()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
-    logInfo( "step()", "lambda_{max} = " << _maxEigenvalue );
+    logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "startTimeStep()", "t            = " << _minTimeStamp );
+    logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
+    logInfo( "startTimeStep()", "h_{min}      = " << _minVolumeH << " (volume size)");
+    logInfo( "startTimeStep()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
+    logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
   }
 """
     
-  return statistics + """
+  if use_enclave_tasking:
+    clear_max_eigenvalue = """if (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) {
   _maxEigenvalue = 0.0;
-"""
+}"""
+  else:
+    clear_max_eigenvalue = """if (_solverState == SolverState::TimeStep or _solverState == SolverState::TimeStepAfterGridInitialisation) {
+  _maxEigenvalue = 0.0;
+}"""
+
+  return statistics + clear_max_eigenvalue
 
 
 def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(solver):

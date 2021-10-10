@@ -189,6 +189,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
+  logDebug( "startTimeStep(...)", "old state is " << toString(_solverState) );
+
   {{START_TIME_STEP_IMPLEMENTATION}}
 
   if (
@@ -342,6 +344,9 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
+  return _solverState == SolverState::Secondary;
+}
 
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

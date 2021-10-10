@@ -180,16 +180,23 @@ bool selectNextAlgorithmicStep() {{
     continueToSolve = true;
   }}
   else {{
-    if ( repositories::getMinTimeStamp(true)>=nextPlotTimeStamp  and TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime ) {{
-      nextPlotTimeStamp += TimeInBetweenPlots;
+    if (
+      TimeInBetweenPlots>0.0 and repositories::getMinTimeStamp()<TerminalTime
+      and
+      repositories::getMinTimeStamp()>=nextPlotTimeStamp
+      and
+      repositories::mayPlot()
+    ) {{
       if ( nextPlotTimeStamp < repositories::getMinTimeStamp() ) {{
         logWarning(
           "selectNextAlgorithmicStep()",
-          "code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the minimal time step size of the solvers. Next plot would be due at t=" <<
-          nextPlotTimeStamp << " but we postpone it till t=" << repositories::getMinTimeStamp() + TimeInBetweenPlots
+          "plot as t=" << repositories::getMinTimeStamp() << " and next plot has been due at t=" << nextPlotTimeStamp << ". " <<
+          "Code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the minimal time step size of the solvers. " <<
+          "Postpone next plot"
         );
-        nextPlotTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenPlots;
+        nextPlotTimeStamp = repositories::getMinTimeStamp();
       }}
+      nextPlotTimeStamp += TimeInBetweenPlots;
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::PlotSolution )
       );

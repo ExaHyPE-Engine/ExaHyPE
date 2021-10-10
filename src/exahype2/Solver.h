@@ -50,6 +50,13 @@ class exahype2::Solver {
 
     virtual double getMaxMeshSize() const = 0;
     virtual double getMinMeshSize() const = 0;
+
+    /**
+     * Not all solvers allow you to plot after each grid sweep. If a
+     * solver needs multiple steps, it might want to veto that you
+     * plot intermediate data.
+     */
+    virtual bool mayPlot() const = 0;
 };
 
 
