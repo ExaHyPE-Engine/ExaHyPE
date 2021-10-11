@@ -119,7 +119,16 @@ if __name__ == "__main__":
 #include "exahype2/PatchUtils.h"
 """
 
-        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep or SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_size=1e-2
+          )
+        elif SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
@@ -152,7 +161,6 @@ if __name__ == "__main__":
         )
 
         self.set_postprocess_updated_patch_kernel( """
-
   {
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};

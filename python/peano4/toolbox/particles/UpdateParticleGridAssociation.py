@@ -20,12 +20,13 @@ class UpdateParticleGridAssociation(ActionSet):
      A C++ boolen expression
    
   """
-  def __init__(self,particle_set,eliminate_spatial_duplicates="true"):
+  def __init__(self,particle_set,eliminate_spatial_duplicates="true", guard="true"):
     self._particle_set = particle_set
     self.d = {}
     self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "ELIMINATE_SPATIAL_DUPLICATES" ]     = eliminate_spatial_duplicates
+    self.d[ "GUARD" ]                    = guard
 
 
   __Template_BeginTraversal = jinja2.Template("""
@@ -57,7 +58,7 @@ class UpdateParticleGridAssociation(ActionSet):
 
 
   __Template_TouchCellLastTime = jinja2.Template("""
-  
+if ( {{GUARD}} ) {  
   vertexdata::{{PARTICLES_CONTAINER}} particlesThatMoveOnSameLevel[TwoPowerD];
   vertexdata::{{PARTICLES_CONTAINER}} liftParticles[TwoPowerD];
 
@@ -103,6 +104,7 @@ class UpdateParticleGridAssociation(ActionSet):
     fineGridVertices{{PARTICLES_CONTAINER}}(i).insert(   fineGridVertices{{PARTICLES_CONTAINER}}(i).end(),   particlesThatMoveOnSameLevel[ i ].begin(), particlesThatMoveOnSameLevel[ i ].end() ); 
     coarseGridVertices{{PARTICLES_CONTAINER}}(i).insert( coarseGridVertices{{PARTICLES_CONTAINER}}(i).end(), liftParticles[ i ].begin(),                liftParticles[ i ].end() ); 
   }
+}
 """)
 
 
@@ -115,7 +117,7 @@ class UpdateParticleGridAssociation(ActionSet):
 
 
   __Template_CommmitParallelStatus = jinja2.Template("""
-  if ( {{ELIMINATE_SPATIAL_DUPLICATES}} ) {
+  if ( {{ELIMINATE_SPATIAL_DUPLICATES}} and {{GUARD}} ) {
     auto p = fineGridVertex{{PARTICLES_CONTAINER}}.begin();
     while (p!=fineGridVertex{{PARTICLES_CONTAINER}}.end()) {
       auto pp = p;

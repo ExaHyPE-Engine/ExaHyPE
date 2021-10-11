@@ -284,14 +284,18 @@ class Project(object):
     # Initialisation
     #
     self.init_grid.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
-    
+        
     #
     # Move particles
     #
     self.perform_time_step.add_action_set(peano4.toolbox.particles.UpdateParticleGridAssociation(particles))
     
     #
-    # Plotter
+    # Plotter: The timestamp here is slightly wrong, as I use the min time stamp. It 
+    # really should be the time stamp of the underlying solver. However, tracers are 
+    # not tied to one solver, so I have to find a quantity that makes sense. If the 
+    # user requres the time stamp, they have to add this one as data field to the 
+    # particle
     #
     if plot:
       particle_plotter = peano4.toolbox.particles.PlotParticlesInVTKFormat( 

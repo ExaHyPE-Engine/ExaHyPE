@@ -247,6 +247,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     #pragma omp end declare target
     #endif
 
+    /**
+     * Always holds.
+     */
+    bool mayPlot() const override;
 
   protected:
     static tarch::logging::Log  _log;

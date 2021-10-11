@@ -45,7 +45,13 @@ tarch::plotter::griddata::unstructured::vtk::VTUTextFileWriter::VTUTextFileWrite
         logInfo( "PeanoTextPatchFileWriter(...)", "no index file " << indexFileName << " found. Create new one" );
         tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
       }
-      else if ( tarch::la::smaller( timeStamp, tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName), DefaultTimeStampPrecision ) ) {
+      else if (
+        tarch::la::smaller(
+          timeStamp,
+          tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName),
+          tarch::la::relativeEps( timeStamp, tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName), DefaultTimeStampPrecision )
+        )
+      ) {
         logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << indexFileName << " with data for time stamp " << tarch::plotter::PVDTimeSeriesWriter::getLatestTimeStepInIndexFile(indexFileName) << ". Will be overwritten as we dump data for time " << timeStamp );
         tarch::plotter::PVDTimeSeriesWriter::createEmptyIndexFile(indexFileName);
       }
