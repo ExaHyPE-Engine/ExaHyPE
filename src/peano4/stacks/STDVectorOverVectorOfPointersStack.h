@@ -192,7 +192,7 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
     /**
      * See class documentation.
      */
-    void startSend(int rank, int tag) {
+    void startSend(int rank, int tag, MPI_Comm comm) {
       #ifdef Parallel
       assertion( Base::_ioMode==IOMode::None );
 
@@ -219,12 +219,12 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
       logDebug( "startSend(int,int)", "assembled and flattened meta data encoding entries per stack entry. Total number of entries is " << flattenedDataSize );
 
       _metaDataSizeMPIRequest = new MPI_Request;
-      MPI_Isend( _metaDataSizeBuffer, Base::_currentElement, MPI_INT, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), _metaDataSizeMPIRequest);
+      MPI_Isend( _metaDataSizeBuffer, Base::_currentElement, MPI_INT, Base::_ioRank, Base::_ioTag, comm, _metaDataSizeMPIRequest);
       logDebug( "startSend(int,int)", "sent out size meta data of size " << Base::_currentElement );
 
       #if PeanoDebug>=1
       _metaDataDebugMPIRequest = new MPI_Request;
-      MPI_Isend( _metaDataDebugBuffer, Base::_currentElement*2*Dimensions, MPI_DOUBLE, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), _metaDataDebugMPIRequest);
+      MPI_Isend( _metaDataDebugBuffer, Base::_currentElement*2*Dimensions, MPI_DOUBLE, Base::_ioRank, Base::_ioTag, comm, _metaDataDebugMPIRequest);
       logDebug( "startSend(int,int)", "sent out debug meta data of size " << Base::_currentElement*2*Dimensions );
       #endif
 
@@ -234,7 +234,7 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
         logDebug( "startSend(int,int)", "created deep copy of all " << entry << " entries in the vector of pointers" );
 
         Base::_ioMPIRequest = new MPI_Request;
-        MPI_Isend( _deepCopyDataBuffer, flattenedDataSize, T::DoFType::Datatype, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), Base::_ioMPIRequest);
+        MPI_Isend( _deepCopyDataBuffer, flattenedDataSize, T::DoFType::Datatype, Base::_ioRank, Base::_ioTag, comm, Base::_ioMPIRequest);
       }
       else {
         logDebug( "startSend(int,int)", "there's no actual user data to send out" );
@@ -246,7 +246,7 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
     /**
      * @see startSend()
      */
-    void startReceive(int rank, int tag, int numberOfElements) {
+    void startReceive(int rank, int tag, MPI_Comm comm, int numberOfElements) {
       #ifdef Parallel
       assertion3( Base::_ioMode==IOMode::None, rank, tag, numberOfElements );
       assertion3( numberOfElements>0, rank, tag, numberOfElements );
@@ -272,12 +272,12 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
       _metaDataDebugBuffer = new double[Base::_currentElement * 2 * Dimensions];
       #endif
 
-      MPI_Recv( _metaDataSizeBuffer, numberOfElements, MPI_INT, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
+      MPI_Recv( _metaDataSizeBuffer, numberOfElements, MPI_INT, Base::_ioRank, Base::_ioTag, comm, MPI_STATUS_IGNORE );
       logDebug( "startReceive(int,int,int)", "received all meta data from rank " << rank << " on tag " << tag << " with " << numberOfElements << " entries");
 
       #if PeanoDebug>=1
       _metaDataDebugMPIRequest = new MPI_Request;
-      MPI_Irecv( _metaDataDebugBuffer, numberOfElements*2*Dimensions, MPI_DOUBLE, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), _metaDataDebugMPIRequest);
+      MPI_Irecv( _metaDataDebugBuffer, numberOfElements*2*Dimensions, MPI_DOUBLE, Base::_ioRank, Base::_ioTag, comm, _metaDataDebugMPIRequest);
       logDebug( "startReceive(int,int,int)", "trigger receive of debug data with cardinality " << numberOfElements*2*Dimensions );
       #endif
 
@@ -290,7 +290,7 @@ class peano4::stacks::STDVectorOverVectorOfPointersStack: public peano4::stacks:
       if (flattenedDataSize>0) {
         Base::_ioMPIRequest = new MPI_Request;
         _deepCopyDataBuffer = new typename T::DoFType[ flattenedDataSize ];
-        MPI_Irecv( _deepCopyDataBuffer, flattenedDataSize, T::DoFType::Datatype, Base::_ioRank, Base::_ioTag, tarch::mpi::Rank::getInstance().getCommunicator(), Base::_ioMPIRequest);
+        MPI_Irecv( _deepCopyDataBuffer, flattenedDataSize, T::DoFType::Datatype, Base::_ioRank, Base::_ioTag, comm, Base::_ioMPIRequest);
         logDebug( "startReceive(int,int,int)", "trigger receive of " << flattenedDataSize << " entries of user data in total" );
       }
       else {
