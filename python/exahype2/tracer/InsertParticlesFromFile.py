@@ -32,7 +32,7 @@ class InsertParticlesFromFile(ActionSet):
     self._scale                          = scale_factor
 
 
-  __Template_TouchVertexFirstTime = jinja2.Template("""
+  __Template_TouchCellFirstTime = jinja2.Template("""
   if (not marker.isRefined()) {
     tarch::multicore::Lock lock( _semaphore );
   
@@ -43,7 +43,8 @@ class InsertParticlesFromFile(ActionSet):
       newParticle->setNumber(1, _particleNumberOnThisTree);
       toolbox::particles::init(*newParticle,p,0.0);
       _particleNumberOnThisTree++;
-      fineGridVertex{{PARTICLES_CONTAINER}}.push_back( newParticle );
+      // just insert them; will be re-assigned then anyway
+      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( newParticle );
     }
     
     logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " << marker.toString() << " on tree " << _spacetreeId << ": " << marker.isAdjacentToParallelDomainBoundary() );
@@ -59,8 +60,8 @@ class InsertParticlesFromFile(ActionSet):
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_TouchVertexFirstTime.render(**self.d)
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = self.__Template_TouchCellFirstTime.render(**self.d)
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = self.__Template_EndTraversal.render(**self.d)
     return result
