@@ -69,8 +69,8 @@ struct peano4::grid::GridVertex {
 
 
 #ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag );
-    static void receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag );
+    static void sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
     
 

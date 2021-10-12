@@ -37,7 +37,7 @@ void   tarch::mpi::IntegerMessage::setValue(int value) {
 
 
 #ifdef Parallel
-void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag ) {
+void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::IntegerMessage& message, int destination, int tag, MPI_Comm communicator ) {
   tarch::mpi::IntegerMessage::send(
     message, destination, tag,
     [&]() {
@@ -60,12 +60,12 @@ void tarch::mpi::IntegerMessage::sendAndPollDanglingMessages(const tarch::mpi::I
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 
 
-void tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag ) {
+void tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(tarch::mpi::IntegerMessage& message, int source, int tag, MPI_Comm communicator ) {
   tarch::mpi::IntegerMessage::receive(
     message, source, tag,
     [&]() {
@@ -88,7 +88,7 @@ void tarch::mpi::IntegerMessage::receiveAndPollDanglingMessages(tarch::mpi::Inte
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 #endif

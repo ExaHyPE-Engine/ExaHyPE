@@ -88,8 +88,8 @@ class MPI(object):
   def get_method_declarations(self,full_qualified_name):
     result = """
 #ifdef Parallel
-    static void sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag );
-    static void receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag );
+    static void sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
     """
     
@@ -132,7 +132,7 @@ class MPI(object):
   def get_implementation(self,full_qualified_name):
     result = """
 #ifdef Parallel
-void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag ) {
+void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + full_qualified_name + """& message, int destination, int tag, MPI_Comm communicator ) {
   """ + full_qualified_name + """::send(
     message, destination, tag,
     [&]() {
@@ -155,12 +155,12 @@ void """ + full_qualified_name + """::sendAndPollDanglingMessages(const """ + fu
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 
 
-void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag ) {
+void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_qualified_name + """& message, int source, int tag, MPI_Comm communicator ) {
   """ + full_qualified_name + """::receive(
     message, source, tag,
     [&]() {
@@ -183,7 +183,7 @@ void """ + full_qualified_name + """::receiveAndPollDanglingMessages(""" + full_
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 #endif

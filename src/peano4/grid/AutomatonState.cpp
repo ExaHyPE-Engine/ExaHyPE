@@ -147,7 +147,7 @@ void   peano4::grid::AutomatonState::setAccessNumber(int index, int value) {
 
 
 #ifdef Parallel
-void peano4::grid::AutomatonState::sendAndPollDanglingMessages(const peano4::grid::AutomatonState& message, int destination, int tag ) {
+void peano4::grid::AutomatonState::sendAndPollDanglingMessages(const peano4::grid::AutomatonState& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::grid::AutomatonState::send(
     message, destination, tag,
     [&]() {
@@ -170,12 +170,12 @@ void peano4::grid::AutomatonState::sendAndPollDanglingMessages(const peano4::gri
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 
 
-void peano4::grid::AutomatonState::receiveAndPollDanglingMessages(peano4::grid::AutomatonState& message, int source, int tag ) {
+void peano4::grid::AutomatonState::receiveAndPollDanglingMessages(peano4::grid::AutomatonState& message, int source, int tag, MPI_Comm communicator ) {
   peano4::grid::AutomatonState::receive(
     message, source, tag,
     [&]() {
@@ -198,7 +198,7 @@ void peano4::grid::AutomatonState::receiveAndPollDanglingMessages(peano4::grid::
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 #endif
