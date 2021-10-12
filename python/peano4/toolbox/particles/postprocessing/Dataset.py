@@ -118,7 +118,7 @@ class Dataset(object):
     
     result = list(filtered_data.t), list(filtered_data["Q{}".format(column_number)])
     assert_ascending(result[0])
-    if clean_up!=0.0 and result[0][1]-result[0][0]<=clean_up:
+    if clean_up!=0.0 and len(result[0])>2 and result[0][1]-result[0][0]<=clean_up:
       result = result[0][1:],result[1][1:]
     return result
 
