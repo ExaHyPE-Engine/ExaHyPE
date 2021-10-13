@@ -40,12 +40,12 @@ class InsertParticlesbyCoordinates(ActionSet):
     if (
       not marker.isRefined() 
       and 
-      (marker.x()(0)-marker.getOffset()(0)/2.0) <= coor_s[i][0] and (marker.getOffset()(0)+marker.h()(0)/2.0) > coor_s[i][0] 
+      (marker.getOffset()(0) <= coor_s[i][0] and marker.getOffset()(0)+marker.h()(0) > coor_s[i][0])
       and
-      (marker.x()(1)-marker.getOffset()(1)/2.0) <= coor_s[i][1] and (marker.getOffset()(1)+marker.h()(1)/2.0) > coor_s[i][1] 
+      (marker.getOffset()(1) <= coor_s[i][1] and marker.getOffset()(1)+marker.h()(1) > coor_s[i][1])
       #if Dimensions==3
       and
-      (marker.x()(2)-marker.getOffset()(2)/2.0) <= coor_s[i][2] and (marker.getOffset()(2)+marker.h()(2)/2.0) > coor_s[i][2] 
+      (marker.getOffset()(2) <= coor_s[i][2] and marker.getOffset()(2)+marker.h()(2) > coor_s[i][2])
       #endif
     )
     {

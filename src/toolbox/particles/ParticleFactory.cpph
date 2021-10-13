@@ -32,10 +32,10 @@ void toolbox::particles::init(
 
 
 template <class T>
-std::vector<T*> toolbox::particles::createEquallySpacedParticles(double h, const peano4::datamanagement::VertexMarker& marker, bool roundDown, bool addNoise) {
+std::vector<T*> toolbox::particles::createEquallySpacedParticles(double spacing, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, bool roundDown, bool addNoise) {
   std::vector<T*> result;
 
-  double continuousParticlesPerAxis = marker.h()(0) / h;
+  double continuousParticlesPerAxis = voxelH(0) / spacing;
   int    particlesPerAxis           = static_cast<int>( std::round(continuousParticlesPerAxis) );
   continuousParticlesPerAxis -= particlesPerAxis;
   assertion(continuousParticlesPerAxis>=0.0);
@@ -48,7 +48,7 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(double h, const
   if (particlesPerAxis>0) {
     const double particleSpacing = marker.h()(0)/particlesPerAxis;
 
-    const tarch::la::Vector<Dimensions,double> offset = marker.x() - marker.h()/2.0 + 0.5*tarch::la::Vector<Dimensions,double>(particleSpacing);
+    const tarch::la::Vector<Dimensions,double> offset = voxelX - voxelH/2.0 + 0.5*tarch::la::Vector<Dimensions,double>(particleSpacing);
 
     dfor(k, particlesPerAxis) {
       tarch::la::Vector<Dimensions,double> x = offset + particleSpacing * tarch::la::convertScalar<double>(k);
