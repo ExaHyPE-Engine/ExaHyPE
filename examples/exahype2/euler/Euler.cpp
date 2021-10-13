@@ -17,8 +17,8 @@ enum class Scenario {
 };
 
 
-//Scenario scenario = Scenario::BreakingDamResolutionStudies;
-Scenario scenario = Scenario::PointExplosion;
+Scenario scenario = Scenario::BreakingDamResolutionStudies;
+//Scenario scenario = Scenario::PointExplosion;
 
 // Scenario scenario = Scenario::BreakingDam;
 
@@ -103,6 +103,7 @@ void examples::exahype2::euler::Euler::initialCondition(
     case Scenario::PointExplosion:
     case Scenario::PointExplosionWithDynamicAMR:
       {
+        logDebug( "initialCondition(...)", "set point explosion initial condition" );
         // Manual offset to make the wave originate slightly to the left of the center --- helps
         // to detect if wave is moving to the left or right
         #if Dimensions==2
@@ -123,6 +124,7 @@ void examples::exahype2::euler::Euler::initialCondition(
     case Scenario::BreakingDam:
     case Scenario::BreakingDamResolutionStudies:
       {
+        logDebug( "initialCondition(...)", "set breaking dam initial condition" );
         Q[0] = 0.1;  // rho
         Q[1] = 0;    // velocities
         Q[2] = 0;

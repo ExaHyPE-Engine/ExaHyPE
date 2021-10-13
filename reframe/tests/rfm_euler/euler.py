@@ -15,7 +15,7 @@ GIT_REV = os.environ["GIT_REVISION"]
 
 @rfm.parameterized_test(*([git_rev, type_param, mode_param, pbc_param]
     for git_rev in [GIT_REV]
-    for type_param in ["default", "default-ats", "enclave", "enclave-ats", "enclave-ots"]
+    for type_param in ["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave"]
     for mode_param in ["release", "assert"]
     for pbc_param in ["pbc-on", "pbc-off"]
 ))
@@ -25,7 +25,7 @@ class Euler_CI(rfm.RunOnlyRegressionTest):
         # 4 ranks here means the domain decomposition fails
         common.setup(self, git_rev, num_tasks=1, num_cpus_per_task=4)
 
-        self.time_limit = "5m"
+        self.time_limit = "15m"
 
         self.valid_systems = [
             "hamilton:multi_ranks_multi_node",
@@ -39,12 +39,18 @@ class Euler_CI(rfm.RunOnlyRegressionTest):
             f"{self.test_dir}/exahype.log-filter",
         ]
 
-        peano_core_path = os.path.join(os.environ["OUTPUT_DIR"], self.current_system.name, f"local_launcher/amd/Build_peano_core_{self.git_rev}/Peano")
+        if self.current_system.name == "dine":
+            peano_core_path = os.path.join(os.environ["OUTPUT_DIR"], self.current_system.name, f"local_launcher/amd/Build_peano_core_{self.git_rev}/Peano")
+            configure = "./configure CXX='g++' --enable-blockstructured --enable-exahype --enable-loadbalancing --with-multithreading=omp CXXFLAGS='-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication' --with-mpi=mpicxx"
+        else:
+            peano_core_path = os.path.join(os.environ["OUTPUT_DIR"], self.current_system.name, f"local_launcher/intel/Build_peano_core_{self.git_rev}/Peano")
+            configure = "module unload gcc/8.2.0; ./configure CC=icc CXX=icpc LDFLAGS='-qopenmp' CXXFLAGS='-O3 -xhost -std=c++17 -qopenmp' --with-multithreading=omp --enable-exahype --enable-loadbalancing --enable-blockstructured --with-mpi=mpiicpc"
+
         self.prerun_cmds = [
             f"cp -rf {peano_core_path} .",
             
             "pushd Peano",
-            "./configure CXX='g++' --enable-blockstructured --enable-exahype --enable-loadbalancing --with-multithreading=omp CXXFLAGS='-fopenmp -std=c++17 -DnoMPISupportsSingleSidedCommunication' --with-mpi=mpicxx", # we need to reconfigure (since we are copying the Peano core to a new location the linker info in the Makefiles needs to be updated before we call the python glue code)
+            configure, # we need to reconfigure (since we are copying the Peano core to a new location the linker info in the Makefiles needs to be updated before we call the python glue code)
             "popd",
             
             f"pushd {self.test_dir}",

@@ -3,6 +3,25 @@ import os
 import reframe.utility.sanity as sn
 import reframe as rfm
 
+def build_setup(test, git_rev):
+    test.sourcesdir = None
+    test.git_rev = git_rev
+    test.prebuild_cmds = [
+        'rm -rf Peano',
+        'git clone https://gitlab.lrz.de/hpcsoftware/Peano.git',
+        'pushd Peano',
+        f'git checkout {test.git_rev}',
+        'git clean -x -f -d',
+        'libtoolize; aclocal; autoconf; autoheader',
+        'cp src/config.h.in .',
+        'automake --add-missing',
+    ]
+    test.build_system = 'Autotools'
+    test.sourcepath = './'
+    test.build_system.max_concurrency = 32
+    test.valid_prog_environs = ['intel', 'amd']
+
+
 def setup(test, git_rev, num_tasks, num_cpus_per_task=1):
     test.time_limit = '2d'
     test.num_tasks = num_tasks

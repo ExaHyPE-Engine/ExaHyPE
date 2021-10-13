@@ -42,11 +42,11 @@ document.
 \begin{framed}
 \paragraph*{A first \ExaHyPE\ run}
 \begin{itemize}
-  \item Configure \Peano\ with the flags \texttt{--enable-exahype}
-  \texttt{--enable-loadbalancing}:
+  \item Configure \Peano\ with the flags \texttt{--enable-exahype},
+  \texttt{--enable-loadbalancing}, \texttt{--enable-blockstructured}:
   \begin{code}
 libtoolize; aclocal; autoconf; autoheader; cp src/config.h.in .; automake --add-missing
-./configure --enable-exahype --enable-loadbalancing
+./configure --enable-exahype --enable-loadbalancing --enable-blockstructured
   \end{code}
    These are the two mandatory extensions. You might want to add further options.
   \item Recompile your \Peano\ code. This should give you a couple of
@@ -62,9 +62,12 @@ jupyter-notebook Euler.ipynb
   or---if you don't like Jupyter notebooks---type in
   \begin{code}
 export PYTHONPATH=../../../python/
-python3 example-scripts/finitevolumes-with-ExaHyPE2-benchmark.py --h 0.1
+python3 example-scripts/finitevolumes.py -cs 0.2
 ./peano4
   \end{code}
+  \item Finally, jump straight into Chapter \ref{chapter:postprocessing} and
+  pick one of the pathways there to convert the output files into vtk files
+  which Paraview or VisIt can display.
 \end{itemize}
 \end{framed}
 
@@ -115,13 +118,15 @@ A minimalist \ExaHyPE\ solver resembles:
 \begin{code}
 project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", ".", "myexecname" )
 
-project.add_solver(  exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves(
+project.add_solver(  exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   "Euler",
   patch_size,
   unknowns, 0,
   min_h, max_h,
   time_step_size,
-  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+  eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+  time_step_relaxation = 0.01
 ))
 
 project.set_global_simulation_parameters(
@@ -359,9 +364,25 @@ project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision" )
 \end{code}
 
 \noindent
-on your \ExaHyPE\ project. There are (optional) arguments to this call. Via
+on your \ExaHyPE\ project. There are (optional) arguments to this call that
+configure the load balancing.
+\ExaHyPE\ has its own default configuration. 
+Via
+
 \begin{code}
-project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", "(0.8,200)" )
+project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision", 
+ "new ::exahype2::LoadBalancingConfiguration()" )
+\end{code}
+
+\noindent
+you switch to this default.
+You can tailor it further.
+With
+
+\begin{code}
+project.set_load_balancing(
+ "toolbox::loadbalancing::RecursiveSubdivision", 
+ "new ::exahype2::LoadBalancingConfiguration(0.8,200)" )
 \end{code}
 
 \noindent
@@ -389,18 +410,65 @@ In general, the enclave solvers tend to perform better on massively parallel
 systems.
 
 
-% \paragraph{Task decomposition}
-% \ExaHyPE\ realises an additional task decomposition working on top of the domain
-% decomposition. 
-% This task decomposition is shared memory, only.
-% That is, you can use task decomposition without domain decomposition, but then
-% you won't benefit from multiple nodes.
-% You can however always use domain decomposition without task
-% decomposition---though it should be slower in most cases.
-% 
-% \begin{remark}
-% This section is under construction.
-% \end{remark} 
+
+\paragraph{Load balancing settings}
+
+\begin{remark}
+ Consult the troubleshooting FAQs in Chapter \ref{chapter:troubleshooting}.
+\end{remark}
+
+\noindent
+While \ExaHyPE\ makes it relatively straightforward to parallelise a code, 
+the tuning of a particular experiment is often tricky.
+As \ExaHyPE\ is an engine supporting multiple application (domains) and as the
+``perfect'' load balancing strategy depends strongly on the application type
+plus the chosen experiments plus the machine used, it can only provide vague
+heuristics of settings that work in most of the cases. 
+To get really good performance, you will have to play around with the load
+balancing settings.
+
+
+Here are some recommendations if you use the recursive load balancing.
+The recommendations describe how to tweak the three parameters that the
+\ExaHyPE\ configuration offers:
+
+
+\begin{itemize}
+  \item Do not set the load balancing quality too high. I am usually fine if the
+  balancing between the ranks is about 80\%--90\% accurate. 
+\begin{code}
+project.set_load_balancing(
+ "toolbox::loadbalancing::RecursiveSubdivision", 
+ "new ::exahype2::LoadBalancingConfiguration(0.8)" )
+\end{code}
+  First get something up and running and test it. After that, you might want to
+  increase the quality closer to 100\%. However, the higher this quality
+  threshold the longer your grid setup and balancing time.
+  \item Do not set a minimum tree size initially. Prescribing a number of cells
+  that a subpartition has to have is a powerful tool to ensure that the overhead
+  does not become excessive. However, a threshold massively slows down the grid
+  construction. So it is better to use this parameter as the last one:
+\begin{code}
+project.set_load_balancing(
+ "toolbox::loadbalancing::RecursiveSubdivision", 
+ "new ::exahype2::LoadBalancingConfiguration(0.8,0)" )
+\end{code}
+  \item If your code tends to hang in MPI (consult Chapter
+  \ref{chapter:troubleshooting} please), try to kick the simulation off with
+  only one partition per rank:
+\begin{code}
+project.set_load_balancing(
+ "toolbox::loadbalancing::RecursiveSubdivision", 
+ "new ::exahype2::LoadBalancingConfiguration(0.8,0,1)" )
+\end{code}
+  Once this passes through, increase the last counter to at most the number of
+  cores per rank. As long as you use an enclave-based FV solver, restricting the
+  number of subpartitions per rank does not constrain your shared memory
+  efficiency too much. It simply means that domain decomposition is not used too
+  aggressively to get BSP-type parallelism. Instead, \Peano\ will try to use
+  tasks on a per-patch basis.
+\end{itemize}
+
 
 \section{Adding adaptive mesh refinement}
 
@@ -963,82 +1031,82 @@ through the Python API.
  
 
 
-\section{Introducing a new numerical scheme}
-
-This section discusses how to introduce a totally new numerical solver. 
-It does not discuss how to introduce a new PDE, as new PDEs are built using
-\ExaHyPE, i.e.~you pick a solver and then you tweak your PDE terms. 
-That's the thing \ExaHyPE\ is built for and the standard usage model.
-This section gives you an idea how to extend the \ExaHyPE\ core instead,
-i.e.~how to implement a new solver type with different PDE terms, e.g., or a
-type that is more restrictive but particularly optimised.
-
-\begin{remark}
-  \ExaHyPE\ is a very high level Python API which generates a \Peano\
-   Python project which in turn creates the ``real'' \Peano\ C/C++ code. If you
-   introduce a new numerical scheme/solver to \ExaHyPE, you thus might want to
-   familiarise yourself with \Peano's Python API and how to extend it. This
-   recommendation affects all the gluecode/framework aspects of the software.
-   All the core numerics of \ExaHyPE\ are held as C++ code in the
-   \texttt{src/exahype2} directly and compiled into a separate library. If you
-   introduce new numerical schemes, you might have to extend this library, too.
-\end{remark}
-
-
-
-\subsection{A new Finite Volume solver (native \ExaHyPE)}
-
-Introducing a new Finite Volume (FV) scheme is reasonably straightforward within
-\ExaHyPE.
-It relies directly on \Peano's patch-based AMR.
-At the moment, I have two flavours of FV available: A single sweep solver which
-runs over the mesh once per time step and the enclave solver which needs two
-sweeps but offloads the majority of the operations onto dedicated tasks.
-
-
-\paragraph{Solver base class}
-
-To start your development, create a new subclass of either \linebreak
-\texttt{exahype2.solver.fv.SingleSweep} or \texttt{exahype2.solver.fv.Enclave}.
-You might want to require the user to specify more constructor arguments, but 
-you need at least those of the superclass.
-
-
-
-\paragraph{The C classes/templates}
-
-\ExaHyPE's design concept is that each solver yields two types of classes:
-The actual solver and an abstract superclasses. 
-Abstract superclasses are regenerated every time you rerun the Python script.
-Furthermore, they define the whole signature, i.e.~if you alter the signature
-later on, users simply rerun the toolkit. 
-Finally, the abstract superclasses hold default implementations\footnote{Some
-solvers do not expect the user to write any C/Fortran code at all. In this
-case, the solvers nevertheless should create an abstract superclass (now
-holding all functions) and a subclass which is basically empty. This way, we
-are consistent.}.
-
-
-Once you have picked either 
-\texttt{exahype2.solver.fv.SingleSweep} or \linebreak
-\texttt{exahype2.solver.fv.Enclave},
-you'll get the four files (two classes) generated.
-However, you might want to tailor these. 
-After all, they do not contain anything that is particular to your domain: 
-They simply hold routines plugging into the steps. 
-To add further functionality, set the fields
-
-\begin{code}
-  self._abstract_solver_user_declarations  = "..."
-  self._abstract_solver_user_definitions   = "..."
-  self._solver_user_declarations           = "..."
-  self._solver_user_definitions            = "..."
-  self._constructor_implementation         = "..."
-\end{code}
-
-\noindent
-in your constructor. 
-There are more fields like this. 
+% \section{Introducing a new numerical scheme}
+% 
+% This section discusses how to introduce a totally new numerical solver. 
+% It does not discuss how to introduce a new PDE, as new PDEs are built using
+% \ExaHyPE, i.e.~you pick a solver and then you tweak your PDE terms. 
+% That's the thing \ExaHyPE\ is built for and the standard usage model.
+% This section gives you an idea how to extend the \ExaHyPE\ core instead,
+% i.e.~how to implement a new solver type with different PDE terms, e.g., or a
+% type that is more restrictive but particularly optimised.
+% 
+% \begin{remark}
+%   \ExaHyPE\ is a very high level Python API which generates a \Peano\
+%    Python project which in turn creates the ``real'' \Peano\ C/C++ code. If you
+%    introduce a new numerical scheme/solver to \ExaHyPE, you thus might want to
+%    familiarise yourself with \Peano's Python API and how to extend it. This
+%    recommendation affects all the gluecode/framework aspects of the software.
+%    All the core numerics of \ExaHyPE\ are held as C++ code in the
+%    \texttt{src/exahype2} directly and compiled into a separate library. If you
+%    introduce new numerical schemes, you might have to extend this library, too.
+% \end{remark}
+% 
+% 
+% 
+% \subsection{A new Finite Volume solver (native \ExaHyPE)}
+% 
+% Introducing a new Finite Volume (FV) scheme is reasonably straightforward within
+% \ExaHyPE.
+% It relies directly on \Peano's patch-based AMR.
+% At the moment, I have two flavours of FV available: A single sweep solver which
+% runs over the mesh once per time step and the enclave solver which needs two
+% sweeps but offloads the majority of the operations onto dedicated tasks.
+% 
+% 
+% \paragraph{Solver base class}
+% 
+% To start your development, create a new subclass of either \linebreak
+% \texttt{exahype2.solver.fv.SingleSweep} or \texttt{exahype2.solver.fv.Enclave}.
+% You might want to require the user to specify more constructor arguments, but 
+% you need at least those of the superclass.
+% 
+% 
+% 
+% \paragraph{The C classes/templates}
+% 
+% \ExaHyPE's design concept is that each solver yields two types of classes:
+% The actual solver and an abstract superclasses. 
+% Abstract superclasses are regenerated every time you rerun the Python script.
+% Furthermore, they define the whole signature, i.e.~if you alter the signature
+% later on, users simply rerun the toolkit. 
+% Finally, the abstract superclasses hold default implementations\footnote{Some
+% solvers do not expect the user to write any C/Fortran code at all. In this
+% case, the solvers nevertheless should create an abstract superclass (now
+% holding all functions) and a subclass which is basically empty. This way, we
+% are consistent.}.
+% 
+% 
+% Once you have picked either 
+% \texttt{exahype2.solver.fv.SingleSweep} or \linebreak
+% \texttt{exahype2.solver.fv.Enclave},
+% you'll get the four files (two classes) generated.
+% However, you might want to tailor these. 
+% After all, they do not contain anything that is particular to your domain: 
+% They simply hold routines plugging into the steps. 
+% To add further functionality, set the fields
+% 
+% \begin{code}
+%   self._abstract_solver_user_declarations  = "..."
+%   self._abstract_solver_user_definitions   = "..."
+%   self._solver_user_declarations           = "..."
+%   self._solver_user_definitions            = "..."
+%   self._constructor_implementation         = "..."
+% \end{code}
+% 
+% \noindent
+% in your constructor. 
+% There are more fields like this. 
 
 
 
@@ -1139,7 +1207,7 @@ There are more fields like this.
 % 
 % 
 
-\section{Datamodel and -semantics}
+% \section{Datamodel and -semantics}
 
  
 

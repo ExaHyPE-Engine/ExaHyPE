@@ -41,7 +41,7 @@ class InsertParticlesAlongCartesianMesh(ActionSet):
       self.d[ "ROUND_DOWN" ]                  = "false"
 
 
-  __Template_TouchVertexFirstTime = jinja2.Template("""
+  __Template_TouchCellFirstTime = jinja2.Template("""
   if ( not marker.isRefined() ) {
     auto newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>({{H}},marker,{{ROUND_DOWN}},{{NOISE}});
     for (auto& p: newParticles) {
@@ -49,14 +49,15 @@ class InsertParticlesAlongCartesianMesh(ActionSet):
       p->setNumber(1,_particleNumberOnThisTree);
       _particleNumberOnThisTree++;
     }
-    fineGridVertex{{PARTICLES_CONTAINER}}.insert( fineGridVertex{{PARTICLES_CONTAINER}}.end(), newParticles.begin(), newParticles.end() );
+    // just insert them; will be re-assigned then anyway
+    fineGridVertices{{PARTICLES_CONTAINER}}(0).insert( fineGridVertex{{PARTICLES_CONTAINER}}.end(), newParticles.begin(), newParticles.end() );
   }
 """)
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_TouchVertexFirstTime.render(**self.d)
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = self.__Template_TouchCellFirstTime.render(**self.d)
     return result
 
 

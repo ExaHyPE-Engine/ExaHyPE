@@ -12,7 +12,7 @@ export config=../../config/dine.py
 
 if [ -z ${TESTLIB+x} ]
 then
-    echo "TESTLIB is unset, fall back to ~/Preano/reframe/tests"
+    echo "TESTLIB is unset, fall back to ~/Peano/reframe/tests"
     export PYTHONPATH=$PYTHONPATH:~/Peano/reframe/tests
 else 
     echo "TESTLIB is set to '$TESTLIB'"

@@ -187,7 +187,7 @@ bool selectNextAlgorithmicStep() {{
       and
       repositories::mayPlot()
     ) {{
-      if ( nextPlotTimeStamp < repositories::getMinTimeStamp() ) {{
+      if ( nextPlotTimeStamp+TimeInBetweenPlots < repositories::getMinTimeStamp() ) {{
         logWarning(
           "selectNextAlgorithmicStep()",
           "plot as t=" << repositories::getMinTimeStamp() << " and next plot has been due at t=" << nextPlotTimeStamp << ". " <<
@@ -230,6 +230,10 @@ bool selectNextAlgorithmicStep() {{
 
 
 void step() {{
+  #if defined(UseSmartMPI)
+  smartmpi::registerNewTimeStep();
+  #endif
+
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 

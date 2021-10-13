@@ -55,7 +55,7 @@ class tarch::multicore::SmartScheduler: public smartmpi::scheduler::Scheduler {
     /**
      * Take the task and map it into the native tasking backend of choice.
      */
-    bool schedule(smartmpi::Task* task) override;
+    bool schedule(smartmpi::Task* task, const int rankToWhichTasksDataShouldReturn) override;
 
     /**
      * nop
