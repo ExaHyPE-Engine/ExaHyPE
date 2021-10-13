@@ -49,6 +49,9 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   double z=volumeCentre(2)-center(2);
 
   bool isInTheSphere = ( (x*x+y*y+z*z) < r_ini*r_ini );//overdensity region
+  double r_coor=x*x+y*y+z*z;
+  r_coor=pow(r_coor,0.5);
+
   //double H_i=2/(3*t_ini); //Hubble constant
   //double rho_ini=1/(6*pi*G*t_ini*t_ini);
 
@@ -58,9 +61,18 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
   	{Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;}  // rho
   if (iseed==1)
   	{Q[0] = rho_ini;}
-  Q[1] = 0;    // velocities
-  Q[2] = 0;
-  Q[3] = 0;
+  if (v_scale==0)
+		{Q[1] = 0; Q[2] = 0; Q[3] = 0;} // velocities
+  else
+    {if (r_coor<r_point) 
+       {Q[1]=-v_scale*x*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_point,3);
+        Q[2]=-v_scale*y*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_point,3);
+        Q[3]=-v_scale*z*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_point,3);}
+     else
+       {Q[1]=-v_scale*x*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3);
+        Q[2]=-v_scale*y*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3);
+        Q[3]=-v_scale*z*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3);}
+    }
   Q[4] = (0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini)/(gamma-1); // inner energy
 
   const double irho = 1./Q[0];
@@ -202,7 +214,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   #endif
 
   if ( p<0 ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"]");
+    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure "+std::to_string(p)+" detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
   }
 
   nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
@@ -257,18 +269,20 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   for (int i=0;i<sample_number;i++){
     if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;}
     else if ((r_coor-size/2)>r_s[i]) {m_tot[i]+=0;}
-    else {m_tot[i]+=m*pow((r_s[i]-r_coor+size/2),3)/pow(size,3);}
+    else {m_tot[i]+=m*pow((r_s[i]-r_coor+size/2),3)/pow(size,2);}
   }
 }
 
 double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   const double r_coor
 ) {
+  constexpr double pi = M_PI;
   double a,b;
   double m_a,m_b;
   double m_result;
 
   bool IsCenter=false;
+  bool IsOutSkirt=false;
   if (r_coor<r_s[0]) {
     a=0; b=r_s[0];
     m_a=0; m_b=m_tot_copy[0];
@@ -276,7 +290,8 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   }
   if (r_coor>r_s[sample_number-1]) {
     a=r_s[sample_number-2]; b=r_s[sample_number-1];
-    m_a=m_tot_copy[sample_number-2]; m_b=m_tot_copy[sample_number-1];    
+    m_a=m_tot_copy[sample_number-2]; m_b=m_tot_copy[sample_number-1];
+    IsOutSkirt=true;    
   }
   else{
     for (int i=1;i<sample_number;i++){
@@ -289,6 +304,12 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   }
   if (IsCenter){
     m_result=m_b*pow((r_coor),3)/pow(b,3);
+  }
+  else if (IsOutSkirt){
+    double vol_tem=(4/3)*pi*(pow(b,3)-pow(a,3));
+    double rho_tem=(m_b-m_a)/vol_tem;
+    double vol_out=(4/3)*pi*(pow(r_coor,3)-pow(b,3));
+    m_result=m_b+rho_tem*vol_out;
   }
   else {  //linear interpolation
     m_result=m_a*(b-r_coor)/(b-a)+m_b*(r_coor-a)/(b-a);
