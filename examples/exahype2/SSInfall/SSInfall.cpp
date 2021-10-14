@@ -65,15 +65,15 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
 		{Q[1] = 0; Q[2] = 0; Q[3] = 0;} // velocities
   else
     {if (r_coor<r_point) 
-       {Q[1]=-v_scale*x*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_point,3);
-        Q[2]=-v_scale*y*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_point,3);
-        Q[3]=-v_scale*z*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_point,3);}
+       {Q[1]=-v_scale*x*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_point,3)*Q[0];
+        Q[2]=-v_scale*y*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_point,3)*Q[0];
+        Q[3]=-v_scale*z*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_point,3)*Q[0];}
      else
-       {Q[1]=-v_scale*x*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3);
-        Q[2]=-v_scale*y*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3);
-        Q[3]=-v_scale*z*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3);}
+       {Q[1]=-v_scale*x*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3)*Q[0];
+        Q[2]=-v_scale*y*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3)*Q[0];
+        Q[3]=-v_scale*z*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3)*Q[0];}
     }
-  Q[4] = (0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini)/(gamma-1); // inner energy
+  Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini/(gamma-1); // inner energy
 
   const double irho = 1./Q[0];
   #if Dimensions==3
