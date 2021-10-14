@@ -82,8 +82,8 @@ void peano4::parallel::Node::init() {
   int answerFlag;
   int maxTag;
   MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &maxTag, &answerFlag);
-  if (answerFlag and maxTag<ReservedMPITagsForDataExchange) {
-    logDebug( "init()", "maximum tag value is " << maxTag << " and this is smaller than " << ReservedMPITagsForDataExchange );
+  if (answerFlag and maxTag>=ReservedMPITagsForDataExchange) {
+    logDebug( "init()", "maximum tag value is " << maxTag << " and this is greater than the required " << ReservedMPITagsForDataExchange );
   }
   else if (answerFlag) {
     logError( "init()", "maximum tag value is " << maxTag << " though we would need " << ReservedMPITagsForDataExchange << " tags. Code will likely crash" );
