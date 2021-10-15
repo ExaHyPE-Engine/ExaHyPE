@@ -79,7 +79,7 @@ class Visualiser(object):
     self.identifier      = ""
     self.verbose         = verbose
 
-    self._data           = None
+    self._cell_data           = None
     
     self._dof            = 0
     self._dimensions     = 0
