@@ -30,7 +30,7 @@ class AverageOverCellFilter( Filter ):
     ratio_for_print = 0
     if len(cell_data)>10000:
       delta_for_print = 1
-            
+
     for patch in cell_data:
       average_values = [0] * unknowns
 
@@ -45,8 +45,10 @@ class AverageOverCellFilter( Filter ):
       new_patch = Patch(patch.offset, patch.size, average_values, patch.subdomain_number)
       result_cell_data.append( new_patch )
 
-    if self.verbose:
-      print( "averaged over " + str(len(cell_data)) + " patches")
+    if self.verbose and len(result_cell_data)==0:
+      print( "snapshot has been empty")
+    elif self.verbose:
+      print( "replaced " + str(len(result_cell_data)) + " patches with one voxel with average values")
 
     mapping = []
     if dimension==2:
