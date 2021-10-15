@@ -46,7 +46,7 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(double spacing,
   }
 
   if (particlesPerAxis>0) {
-    const double particleSpacing = marker.h()(0)/particlesPerAxis;
+    const double particleSpacing = voxelH(0)/particlesPerAxis;
 
     const tarch::la::Vector<Dimensions,double> offset = voxelX - voxelH/2.0 + 0.5*tarch::la::Vector<Dimensions,double>(particleSpacing);
 
@@ -60,7 +60,7 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(double spacing,
         }
       }
 
-      init(*newParticle,x,0.9*tarch::la::min(marker.h()));
+      init(*newParticle,x,0.9*tarch::la::min(voxelH));
       result.push_back(newParticle);
     }
   }

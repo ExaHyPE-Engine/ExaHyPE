@@ -1,6 +1,6 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from peano4.visualisation.OutputFileParser import OutputFileParser
+from .Visualiser import Visualiser
 
 try:
     from paraview.simple import *
@@ -14,7 +14,6 @@ except ImportError:
 
 import traceback
 
-import multiprocessing
 
 
 
@@ -273,285 +272,45 @@ def render_single_file(filename, identifier, display_as_tree = True, filter=None
   return grid
 
 
-def validate(parsers):
-  """
-  
-   All the parsers in a data set have to yield the same type of data, i.e.
-   with the same number of unknowns and dofs/patch. I return the crucial
-   data afterwards, i.e. this routine validates and returns the quantities 
-   of interest.
-  
-  """
-  dimensions  = -1
-  unknowns    = -1
-  dof         = -1
-  description = ""
-  is_data_associated_to_cell = True
-  mapping     = ""
-  for parser in parsers:
-    snapshot_cell_data, snapshot_dof, snapshot_dimensions, snapshot_unknowns, description, is_data_associated_to_cell, mapping = parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.description, parser.is_data_associated_to_cell, parser.mapping
 
-    if snapshot_dimensions != 2 and snapshot_dimensions != 3:
-      print("File parsing unsuccessful. Supported dimensions are d=2 and d=3")
-      return 
-    if snapshot_dof == 0:
-      print("File parsing unsuccessful. No dof specified")
-      return 
-    if snapshot_unknowns == 0:
-      print("File parsing unsuccessful. No unknowns specified")
-      return
-       
-    if snapshot_dimensions!=dimensions and dimensions>0:
-      print( "Dimensions not compatible with dimensions from previous files in the snapshot" )
-      return
-    dimensions = snapshot_dimensions
-    if snapshot_dof!=dof and dof>0:
-      print("DoF not compatible with dof from previous files in the snapshot")
-      return 
-    dof=snapshot_dof
-     
-    if snapshot_unknowns!=unknowns and unknowns>0:
-      print("Unknowns not compatible with unknowns from previous files in the snapshot")
-      return
-    unknowns=snapshot_unknowns
-  return dof, dimensions, unknowns, description, is_data_associated_to_cell, mapping
-    
-
-def render_dataset(filename, identifier, dataset_number=0, display_as_tree = True, filter=None, verbose=False):
-  """
-  
-    Peano patch files can either hold data (see render_single_file)
-    or they can serve as meta file linking to other files. In the 
-    latter case, they hold a sequence of data sets and each data
-    set holds multiple files written by multiple threads.
-    
-    This routine picks one dataset (typically, a data set corresponds
-    to one snapshot at one point in time), and loads all files 
-    associated with this data set. It then fuses these individual 
-    files into one big one before it converts the data into vtk.
-    The routine therefore is a natural extension of render_single_file
-    into something that acts on a set of files.
-
-    Parameters:
-    ----------
-    filename: String
-      Path to file to be parsed
-    
-    identifier: String
-      Name of the set of unknowns we want to extract
-    
-    dataset_number: int
-      Number of dataset within file that is to be read
-      
-      
-    Result:
-    -------
-    
-    Returns an instace of TrivialProducer. You can call Interact
-    on this object, e.g.
-       
-  """
-  def __apply_filter(parser,unknowns, dimensions):
-    if filter!=None:
-      snapshot_cell_data, snapshot_dof, snapshot_dimensions, snapshot_unknowns, description, mapping = parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.description, parser.mapping
-      for p in filter:
-        if p.run_on_individual_pieces_of_data:
-          snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions, mapping = p.render(snapshot_cell_data, snapshot_dof, snapshot_unknowns, dimensions, mapping)
-      parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.description, parser.mapping = snapshot_cell_data, snapshot_dof, snapshot_dimensions, snapshot_unknowns, description, mapping
-
-
-  input_file = open( filename, "r" )
-  lines = input_file.readlines()
-  
-  #
-  # Will be decreased by first hit
-  #
-  dataset_number = dataset_number+1
-  include_file_counter = 0
-
-  parsers = []  
-  for line in lines:
-    if "begin dataset" in line:
-      dataset_number = dataset_number-1
-      include_file_counter = 0
-    if "include" in line and dataset_number==0:
-      snapshot_file_name = line.split( "\"" )[1]
-      if verbose:        
-        print( "parse file ", snapshot_file_name )
-
-      parser = OutputFileParser(snapshot_file_name,identifier, include_file_counter)
-      parsers.append( parser )
-      include_file_counter += 1
-
-  if verbose:        
-    print( "Will invoke " + str( len(parsers) ) + " parsers in parallel" )
-    
-  if len(parsers)==0:
-    if verbose:        
-      print( "Snapshot is empty. Return" )
-    return None
-      
-  #
-  # This can be done in parallel
-  #
-  pool = multiprocessing.Pool( len(parsers) ) 
-  for parser in parsers:
-    pool.apply_async( parser.parse_file() )
-    #parser.parse_file()
-  pool.close()
-  pool.join()
-    
-  if verbose:        
-    print( "All individual files are parsed" )
-    print( "Apply filter(s) to individual files (where appropriate)" )
-    
-  for parser in parsers:
-    for p in filter:
-      if p.run_on_individual_pieces_of_data:
-        print( "apply filter " + str(p) + " to snapshot")
-        parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.description, parser.mapping = p.render(parser.cell_data, parser.dof, parser.dimensions, parser.unknowns, parser.description, parser.mapping)
-
-  cell_data  = []
-  dof, dimensions, unknowns, description, is_data_associated_to_cell, mapping = validate(parsers)
-      
-  if verbose:        
-    print( "Concatenate snapshots" )
-
-  for parser in parsers:
-    cell_data =  cell_data + parser.cell_data
-
-  num_patches = len(cell_data)
-  print("Total number of patches:", num_patches)
-
-
-  dof, dimension, unknowns, description, is_data_associated_to_cell, mapping = validate(parsers)
-  print( "Parsing complete. Convert set of " + str(len(cell_data)) + " patches with " + str(unknowns) + " unknowns per " + str(dof) + "^" + str(dimensions) + " patch/cell into VTK data structures" )
-  
-  if filter!=None:
-    if verbose:        
-      print( "Apply " + str(len(filter)) + " filter(s) to concatenated data set" )
-    for p in filter:
-     if p.run_on_concatenated_data:
-       print( "apply filter " + str(p) )
-       cell_data, dof, dimensions, unknowns, description, mapping = p.render(cell_data, dof, dimensions, unknowns, description, mapping)
-
-  if dimensions == 2 and display_as_tree:
-    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description, is_data_associated_to_cell, mapping, verbose ) 
-  elif dimensions == 2 and not display_as_tree:
-    grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description, is_data_associated_to_cell, mapping, verbose) 
-  else: # Tested above that it can only be 2 or 3
-    grid = prepare3Dpatches(cell_data, dof, unknowns, description, is_data_associated_to_cell, mapping, verbose) 
-
-  return grid
+#  if dimensions == 2 and display_as_tree:
+#    grid = prepare2Dpatches(cell_data, dof, unknowns, 1.0, description, is_data_associated_to_cell, mapping, verbose ) 
+#  elif dimensions == 2 and not display_as_tree:
+#    grid = prepare2Dpatches(cell_data, dof, unknowns, 0.0, description, is_data_associated_to_cell, mapping, verbose) 
+#  else: # Tested above that it can only be 2 or 3
+#    grid = prepare3Dpatches(cell_data, dof, unknowns, description, is_data_associated_to_cell, mapping, verbose) 
+#
+#  return grid
       
 
-class Visualiser(object):
+class VTU(Visualiser):
   """
     The visualiser is first and foremost a persistency layer around 
     datasets. It does not work on the command line.
   """
   
-  def __init__(self, file_name, verbose=False ):
-    """
-    
-     file_name: String
-       Name of a Peano patch file. This has to be a meta file, i.e. a file which 
-       does not hold actual data but hosts data sets that in turn link to actual
-       data. 
-        
-    """
-    self.file_name      = file_name
-    self._tp            = None
-    self.dataset_number = 0
-    self.filter         = []
-    self.identifier     = ""
-    self.data           = None
-    self.verbose        = verbose
+  def __init__(self, file_name, output_directory=".", strip_relative_pathes=True, verbose=False ):
+    super(VTU,self).__init__(file_name, verbose)
+    self._tp   = None
+    self._grid = None
+    self.output_directory = output_directory
+    self.display_as_tree = False
+    self._strip_relative_pathes = strip_relative_pathes
     
     
-  def display(self, invoked_on_command_line = False):
+  def display(self):
     """
     
       Should be called only once
       
     """
-    if self._tp==None:
-      self._tp = TrivialProducer()
-      self.reload()
-
-
-  def select_dataset(self, number):
-    """
-      number: int
-    """
-    self.dataset_number = number
-    self.reload()
-  
-  
-  def append_filter(self, filter, reload=True):
-    """
-     
-    """
-    self.filter.append(filter)
-    if reload:
-      self.reload()
-    
-    
-  def remove_filters(self):
-    """
-     
-    """
-    self.filter = []
-    self.reload()
-    
-    
-  def reload(self):
-    """
-     
-     Invokes render_dataset() and then sets the resulting self._data
-     as output of the client side object of the trivial producer. Does
-     not work if self._tp is set to None
-    
-    """
-    self._data = render_dataset( 
-      self.file_name,
-      self.identifier,
-      self.dataset_number,
-      False, # display_as_tree
-      self.filter,
-      self.verbose
-    )
-    if self._tp != None and self._data!=None:
-      self._tp.GetClientSideObject().SetOutput(self._data)
-      Show(self._tp)
-      print( "Please press the play button to update your pipeline" )
-      # 
-      #visualiser._tp.GetClientSideObject().Update()
-      
-
-  def write_vtu(self,file_name):
-    if not file_name.endswith( ".vtu"):
-      print( "Append .vtu extension to " + file_name)
-      file_name += ".vtu"
-    writer = vtk.vtkXMLUnstructuredGridWriter()
-    writer.SetFileName( file_name )
-    writer.SetInputData( self._data )
-    writer.Write()
-    #
-    # explicitly destroy object to speed up things
-    #
-    print( "Wrote file " + file_name )
-    del writer
-
-
-  def write_vtu_time_series(self,strip_relative_pathes):
     pvd_file = """<?xml version="1.0"?>
 <VTKFile type="Collection" version="0.1"
          byte_order="LittleEndian"
          compressor="vtkZLibDataCompressor">
   <Collection>
 """    
-    file_name = self.file_name.replace( ".peano-patch-file", "" )
+    file_name = self._file_name.replace( ".peano-patch-file", "" )
     i = 0;
     try:
       last_file = False
@@ -560,13 +319,13 @@ class Visualiser(object):
         print( "Process snapshot " + str(i) )
         print( "==================================")
         self.select_dataset(i)
-        if self._data==None:
+        if self._grid==None:
           last_file = True
         else:
-          snapshot_file_name = file_name + "-" + str(i) + ".vtu"
-          self.write_vtu( snapshot_file_name )
+          snapshot_file_name = self._file_name + "-" + str(i) + ".vtu"
+          self.write_vtu( self.output_directory + "/" + snapshot_file_name )
           link_file_name = snapshot_file_name
-          if strip_relative_pathes:
+          if self._strip_relative_pathes:
             link_file_name = link_file_name.split( "/" )[-1]
           pvd_file += """
     <DataSet timestep=\"""" + str(i) + """\" group="" part="0" file=\"""" + link_file_name + """\" />
@@ -581,7 +340,7 @@ class Visualiser(object):
   </Collection>
 </VTKFile>
 """
-    meta_file = open( file_name + ".pvd", "w" )
+    meta_file = open( self.output_directory + "/" + file_name + ".pvd", "w" )
     meta_file.write( pvd_file )
     
     if "/" in file_name and not strip_relative_pathes:
@@ -595,3 +354,40 @@ will not be able to locate your actual data files.
 Alternatively, you can rerun the postprocessing and eliminate relative 
 pathes (see documentation/help of your conversion script).
 """ )
+
+    
+  def reload(self):
+    """
+     
+     Invokes superclass' reload, converts data into VTU, and then sets 
+     the resulting self._data as output of the client side object of 
+     the trivial producer. Does not work if self._tp is set to None.
+    
+    """
+    super(VTU,self).reload()
+
+    if self._cell_data!=[]:
+      if self._dimensions == 2 and self.display_as_tree:
+        self._grid = prepare2Dpatches(self._cell_data, self._dof, self._unknowns, 1.0, self._description, self._is_data_associated_to_cell, self._mapping, self.verbose) 
+      elif self._dimensions == 2 and not self.display_as_tree:
+        self._grid = prepare2Dpatches(self._cell_data, self._dof, self._unknowns, 0.0, self._description, self._is_data_associated_to_cell, self._mapping, self.verbose) 
+      else: # Tested above that it can only be 2 or 3
+        self._grid = prepare3Dpatches(self._cell_data, self._dof, self._unknowns, self._description, self._is_data_associated_to_cell, self._mapping, self.verbose) 
+    else:
+      self._grid = None
+  
+
+  def write_vtu(self,file_name):
+    if not file_name.endswith( ".vtu"):
+      print( "Append .vtu extension to " + file_name)
+      file_name += ".vtu"
+    writer = vtk.vtkXMLUnstructuredGridWriter()
+    writer.SetFileName( file_name )
+    writer.SetInputData( self._grid )
+    writer.Write()
+    #
+    # explicitly destroy object to speed up things
+    #
+    print( "Wrote file " + file_name )
+    del writer
+
