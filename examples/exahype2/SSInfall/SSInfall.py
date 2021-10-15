@@ -307,7 +307,7 @@ if __name__ == "__main__":
     probe_point = [-20,-20,-0.001]
     project.add_plot_filter( probe_point,[40.0,40.0,0.002],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+   # project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
 
 ########################################################################################
 #Tracer setting 

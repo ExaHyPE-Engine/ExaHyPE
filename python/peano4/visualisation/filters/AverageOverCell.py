@@ -1,10 +1,10 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from peano4.visualisation.Filter import Filter
+from .Filter import Filter
 from peano4.visualisation.Patch  import Patch
 
 
-class AverageOverCellFilter( Filter ):
+class AverageOverCell( Filter ):
   """
     
     Run over all cells. Each cell holds a patch with dof x dof (2d) or 

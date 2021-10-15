@@ -36,7 +36,7 @@ class InsertParticlesFromFile(ActionSet):
   if (not marker.isRefined()) {
     tarch::multicore::Lock lock( _semaphore );
   
-    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), marker.isAdjacentToParallelDomainBoundary());  
+    std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);  
     for (auto& p: coords) {
       globaldata::{{PARTICLE}}* newParticle = new globaldata::{{PARTICLE}}();
       newParticle->setNumber(0, _spacetreeId);
@@ -47,7 +47,7 @@ class InsertParticlesFromFile(ActionSet):
       fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( newParticle );
     }
     
-    logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " << marker.toString() << " on tree " << _spacetreeId << ": " << marker.isAdjacentToParallelDomainBoundary() );
+    logDebug( "touchVertexFirstTime(...)", "assigned " << coords.size() << " particle(s) to vertex " << marker.toString() << " on tree " << _spacetreeId );
   }
 """)
 

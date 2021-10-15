@@ -1,9 +1,9 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from peano4.visualisation.Filter import Filter
+from .Filter import Filter
 
 
-class ExtractFineGridFilter( Filter ):
+class ExtractFineGrid( Filter ):
   """
     
     Extract the fine grid information
