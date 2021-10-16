@@ -331,6 +331,36 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRan
 }
 
 
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
+
+  logInfo(
+    "forwardTaskOutputToRank(...)",
+    "will start to forward task output (which has already been computed)"
+  );
+
+  ::tarch::mpi::DoubleMessage  tMessage(_t);
+  ::tarch::mpi::DoubleMessage  dtMessage(_dt);
+  ::tarch::mpi::IntegerMessage taskIdMessage(_remoteTaskId);
+
+  ::peano4::datamanagement::CellMarker::send( _marker, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::send( tMessage, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::send( dtMessage, rank, tag, communicator );
+  ::tarch::mpi::IntegerMessage::send( taskIdMessage, rank, tag, communicator );
+
+  MPI_Send( _outputValues, _numberOfResultValues, MPI_DOUBLE, rank, tag, communicator );
+
+  logInfo(
+    "forwardTaskOutputToRank(...)",
+    "sent (" << _marker.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << _numberOfResultValues <<
+    "," << taskIdMessage.toString() << ") to rank " << rank <<
+    " via tag " << tag
+  );
+
+  tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
+}
+
+
+
 smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator) {
   logInfo( "receiveOutcome(...)", "rank=" << rank << ", tag=" << tag );
   peano4::grid::GridTraversalEvent dummyEvent;
