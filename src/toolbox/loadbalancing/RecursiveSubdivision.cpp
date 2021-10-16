@@ -295,7 +295,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateState() {
     and
     _localNumberOfInnerUnrefinedCell < MinOriginalTreeSizeToTriggerThreadSpreadOut
   ) {
-    logInfo( "updateState()", "have to postpone any decision, as local no of inner unrefined cells of " << _localNumberOfInnerUnrefinedCell << " is smaller than " << MinOriginalTreeSizeToTriggerThreadSpreadOut );
+    logInfo( "updateState()", "have to postpone any decision, as local no of inner unrefined cells of " << _localNumberOfInnerUnrefinedCell << " is smaller than " << MinOriginalTreeSizeToTriggerThreadSpreadOut << " (need to give each thread at least around " << _configuration->getMinTreeSize(Configuration::Phase::InitialIntraRankDistribution) << " cells)" );
     _state = StrategyState::PostponedDecisionDueToLackOfCells;
   }
   else if (
@@ -620,8 +620,9 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
       break;
     case StrategyStep::SpreadEquallyOverAllRanks:
       {
-        int cellsPerRank = 
-          std::max( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks())), 1);
+        int cellsPerRank = std::max( 
+          std::min( static_cast<int>(std::round(_globalNumberOfInnerUnrefinedCells / tarch::mpi::Rank::getInstance().getNumberOfRanks())), _configuration->getMaxTreeSize(Configuration::Phase::InitialInterRankDistribution) ),
+          1);
 
         _hasSpreadOutOverAllRanks = true;
 
@@ -641,7 +642,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
        	  int numberOfLocalUnrefinedCellsOfHeaviestSpacetree = getWeightOfHeaviestLocalSpacetree();
        	  // This operation takes care of the max tree count and size
           int numberOfSplits    = getNumberOfSplitsOnLocalRank();
-          int cellsPerCore      = std::max(1,numberOfLocalUnrefinedCellsOfHeaviestSpacetree/(numberOfSplits+1));
+          int cellsPerCore      = std::max(1, std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/(numberOfSplits+1),_configuration->getMaxTreeSize(Configuration::Phase::InitialIntraRankDistribution) ));
 
           logInfo(
             "finishStep()",
@@ -676,7 +677,8 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
             "biggest local tree " << heaviestSpacetree << " is too heavy as it hosts " <<
             numberOfLocalUnrefinedCellsOfHeaviestSpacetree << " cells"
           );
-          int cellsPerCore      = std::max(numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,1);
+          int cellsPerCore      = std::max(1, std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMaxTreeSize(Configuration::Phase::InterRankBalancing) ));
+ 
           logInfo(
             "finishStep()",
             "lightest global rank is rank " << _lightestRank._rank << ", so assign this rank " << cellsPerCore << " cell(s)"
@@ -701,7 +703,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
             "biggest local tree " << heaviestSpacetree << " is too heavy as it hosts " <<
             numberOfLocalUnrefinedCellsOfHeaviestSpacetree << " cells"
           );
-          int cellsPerCore      = std::max(numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,1);
+          int cellsPerCore      = std::max(1, std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMaxTreeSize(Configuration::Phase::InterRankBalancing) ));
           logInfo(
             "finishStep()",
             "lightest global rank is rank " << _lightestRank._rank << ", so assign this rank " << cellsPerCore << " cell(s)"
@@ -719,7 +721,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
           and
           _blacklist.count(heaviestSpacetree)==0
         ) {
-          int cellsPerCore      = std::max(numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,1);
+          int cellsPerCore      = std::max(1, std::min( numberOfLocalUnrefinedCellsOfHeaviestSpacetree/2,_configuration->getMaxTreeSize(Configuration::Phase::InterRankBalancing) ));
           logInfo(
             "finishStep()",
             "split local rank and assign it " << cellsPerCore << " cell(s)"
