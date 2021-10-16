@@ -305,29 +305,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRan
   tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
 
   logInfo(
-    "receiveTask(...)",
+    "runLocallyAndSendTaskOutputToRank(...)",
     "executed remote task on this rank. Will start to send result back"
   );
 
-  ::tarch::mpi::DoubleMessage  tMessage(_t);
-  ::tarch::mpi::DoubleMessage  dtMessage(_dt);
-  ::tarch::mpi::IntegerMessage taskIdMessage(_remoteTaskId);
-
-  ::peano4::datamanagement::CellMarker::send( _marker, rank, tag, communicator );
-  ::tarch::mpi::DoubleMessage::send( tMessage, rank, tag, communicator );
-  ::tarch::mpi::DoubleMessage::send( dtMessage, rank, tag, communicator );
-  ::tarch::mpi::IntegerMessage::send( taskIdMessage, rank, tag, communicator );
-
-  MPI_Send( _outputValues, _numberOfResultValues, MPI_DOUBLE, rank, tag, communicator );
-
-  logInfo(
-    "moveTask(...)",
-    "sent (" << _marker.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << _numberOfResultValues <<
-    "," << taskIdMessage.toString() << ") to rank " << rank <<
-    " via tag " << tag
-  );
-
-  tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
+  forwardTaskOutputToRank(rank, tag, communicator);
 }
 
 
@@ -358,7 +340,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
 
   tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
 }
-
 
 
 smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator) {
@@ -473,7 +454,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     ::tarch::MemoryLocation::Heap
   );
   for (size_t i = 0;i<_destinationPatchSize*otherTasks.size();i++) *(destinationPatchOnCPU + i) =0;
-  
+
   {{FUSED_RIEMANN_SOLVER_CALL}}
   (
     1,
