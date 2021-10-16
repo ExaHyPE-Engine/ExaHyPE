@@ -444,10 +444,12 @@ project.set_load_balancing(
   First get something up and running and test it. After that, you might want to
   increase the quality closer to 100\%. However, the higher this quality
   threshold the longer your grid setup and balancing time.
-  \item Do not set a minimum tree size initially. Prescribing a number of cells
-  that a subpartition has to have is a powerful tool to ensure that the overhead
+  \item Do not set a minimum
+  tree size initially.
+  Prescribing a number of cells that a subpartition has to have is a powerful tool to ensure that the overhead
   does not become excessive. However, a threshold massively slows down the grid
-  construction. So it is better to use this parameter as the last one:
+  construction. So it is better to use this parameter as the last one (see
+  below):
 \begin{code}
 project.set_load_balancing(
  "toolbox::loadbalancing::RecursiveSubdivision", 
@@ -467,6 +469,19 @@ project.set_load_balancing(
   efficiency too much. It simply means that domain decomposition is not used too
   aggressively to get BSP-type parallelism. Instead, \Peano\ will try to use
   tasks on a per-patch basis.
+  \item If you work without periodic boundary conditions, the initial load
+  balancing will likely be poor if the mesh is too shallow: The code cannot
+  deploy cells along the periodic boundary to other ranks. These always have to
+  be handled by rank 0. So it makes sense to set the minimal mesh size (second
+  argument) to at least $3^d+1$. This prolongs the load distribution
+  sufficiently long until enough cells are available. The knock-on problem then
+  is that we have a lot of cells and the load balancing tries to split them up
+  evenly---unaware that all the boundary cells can't be distributed. So you will
+  have to restrict the number of cells per inter-rank balancing. I recommend to
+  to add $3^d$ as fourth argument to \ExaHyPE's load balancing configuration.
+  \item If your code suffers from the fact that the load balancing moves around
+  too large trees between ranks, use the fourth argument to restrict this
+  behaviour.
 \end{itemize}
 
 
