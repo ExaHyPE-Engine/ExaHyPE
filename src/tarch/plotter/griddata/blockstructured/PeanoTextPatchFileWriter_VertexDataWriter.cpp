@@ -26,6 +26,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::VertexDataW
   _writer.writeMapping(getVerticesPerPatch(),mapping);
 
   _writer._snapshotFileOut << "end vertex-metadata" << std::endl << std::endl;
+
+  _out << std::scientific;
 }
 
 

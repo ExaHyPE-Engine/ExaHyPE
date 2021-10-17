@@ -176,6 +176,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
       break;
   }
   logDebug( "PeanoTextPatchFileWriter(...)", "index file is ready" );
+
+  _snapshotFileOut << std::scientific;
 }
 
 

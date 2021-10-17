@@ -26,6 +26,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::CellDataWri
   _writer.writeMapping(getCellsPerPatch(),mapping);
 
   _writer._snapshotFileOut << "end cell-metadata" << std::endl << std::endl;
+  _out << std::scientific;
 }
 
 
