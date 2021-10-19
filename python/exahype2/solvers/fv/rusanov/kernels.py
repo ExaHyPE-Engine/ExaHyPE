@@ -307,8 +307,8 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
     }
   }
    
-  _maxTimeStepSize  = _admissibleTimeStepSize; // for plotting reasons
-  _minTimeStepSize  = std::min( _minTimeStepSize, _admissibleTimeStepSize );
+  // _maxTimeStepSize  = _admissibleTimeStepSize; // for plotting reasons
+  // _minTimeStepSize  = std::min( _minTimeStepSize, _admissibleTimeStepSize );
 """
 
 

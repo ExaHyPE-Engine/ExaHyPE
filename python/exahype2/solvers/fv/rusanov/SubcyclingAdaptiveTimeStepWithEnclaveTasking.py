@@ -132,9 +132,9 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     super(SubcyclingAdaptiveTimeStepWithEnclaveTasking, self).create_action_sets()
 
     update_cell_guard  = "::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel)"
-    updated_cell_guard = "fineGridCell" + self._name + "CellLabel.getSemaphoreNumber()!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber"
+    #updated_cell_guard = "fineGridCell" + self._name + "CellLabel.getSemaphoreNumber()!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber"
     self._action_set_update_cell.guard                += " and " + update_cell_guard
-    self._action_set_merge_enclave_task_outcome.guard  = updated_cell_guard
+    #self._action_set_merge_enclave_task_outcome.guard  = updated_cell_guard
     
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)
