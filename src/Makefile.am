@@ -40,10 +40,10 @@ libPeano4Core2d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_2D_ASSERTS)
 libPeano4Core2d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_2D_DEBUG)
 
 libPeano4Core3d_a_CXXFLAGS          = $(CXXFLAGS_PEANO_3D_RELEASE) 
-libPeano4Core3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_STATS)
-libPeano4Core3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_TRACE)
-libPeano4Core3d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_ASSERTS)
-libPeano4Core3d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_DEBUG)
+libPeano4Core3d_stats_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_STATS)
+libPeano4Core3d_trace_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_TRACE)
+libPeano4Core3d_asserts_a_CXXFLAGS  = $(CXXFLAGS_PEANO_3D_ASSERTS)
+libPeano4Core3d_debug_a_CXXFLAGS    = $(CXXFLAGS_PEANO_3D_DEBUG)
 
 #
 # All sources below
