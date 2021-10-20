@@ -12,6 +12,7 @@ if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Peano 4 - pvserver render script')
   parser.add_argument("--filter-fine-grid",          dest="filter_fine_grid",             action="store_true",  default = False, help="Display only fine grid" )
   parser.add_argument("--average",                   dest="filter_average",               action="store_true",  default = False, help="Average over cell data (reduces resolution/memory)" )
+  parser.add_argument("--norm-calculator",           dest="norm_calculator",              action="store_true",  default = False, help="Compute norm over each point" )
   parser.add_argument("--eliminate-relative-paths",  dest="eliminate_relative_paths",     action="store_true",  default = False, help="If you invoke the script on a different directory than your current working directory, ensure that all meta files written do not hold relative paths" )
   parser.add_argument("--type",                      dest="type",                         choices=["display", "vtu", "patch-file" ],  default="vtu", help="Output format" )
   parser.add_argument("--dir",                       dest="dir",                          default=".", help="Output directory" )
@@ -42,5 +43,11 @@ if __name__ == "__main__":
   if args.filter_fine_grid:
     print( "add fine grid filter" )
     visualiser.append_filter( peano4.visualisation.filters.ExtractFineGrid(False, args.verbose), False )
+  if args.norm_calculator:
+    print( "add norm calculator filter" )
+    visualiser.append_filter( peano4.visualisation.filters.Calculator(verbose=args.verbose), False )
+    
+  
+    
 
   visualiser.display()

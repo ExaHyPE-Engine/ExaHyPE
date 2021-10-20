@@ -236,7 +236,7 @@ def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(so
           for (int j=0; j<{UNKNOWNS}; j++) {{
             reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] 
               = oldNewWeightsLeft.first  * fineGridFaces""" + solver + """QOld(d).value[ sourceCellSerialised*{UNKNOWNS}+j ]
-              + oldNewWeightsLeft.second * fineGridFaces""" + solver + """QNew(d).value[ sourceCellSerialised*{UNKNOWNS}+j ]
+              + oldNewWeightsLeft.second * fineGridFaces""" + solver + """QNew(d).value[ sourceCellSerialised*{UNKNOWNS}+j ];
             {ASSERTION_WITH_7_ARGUMENTS}( 
               {ASSERTION_PREFIX_FOR_HALO} or 
               reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 
@@ -252,7 +252,7 @@ def create_halo_layer_construction_with_interpolation_for_reconstructed_patch(so
           for (int j=0; j<{UNKNOWNS}; j++) {{
             reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ] 
               = oldNewWeightsLeft.first  * fineGridFaces""" + solver + """QOld(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ]
-              + oldNewWeightsLeft.second * fineGridFaces""" + solver + """QNew(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ]
+              + oldNewWeightsLeft.second * fineGridFaces""" + solver + """QNew(d+Dimensions).value[ sourceCellSerialised*{UNKNOWNS}+j ];
             {ASSERTION_WITH_7_ARGUMENTS}( 
               {ASSERTION_PREFIX_FOR_HALO} or 
               reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ]==reconstructedPatch[ destinationCellSerialised*{UNKNOWNS}+j ], 

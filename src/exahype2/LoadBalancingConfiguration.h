@@ -23,18 +23,21 @@ class exahype2::LoadBalancingConfiguration: public toolbox::loadbalancing::Recur
     const double   _loadBalancingQuality;
     const int      _minSizeOfTree;
     const int      _maxNumberOfTrees;
+    const int      _maxSizeOfDeployedRemoteMPITree;
   public:
-    LoadBalancingConfiguration( double loadBalancingQuality=0.9, int minSizeOfTree = 0, int maxNumberOfTrees=std::numeric_limits<int>::max() );
+    LoadBalancingConfiguration( double loadBalancingQuality=0.9, int minSizeOfTree = 0, int maxNumberOfTrees=std::numeric_limits<int>::max(), int maxSizeOfDeployedRemoteMPITree = std::numeric_limits<int>::max() );
 
     virtual ~LoadBalancingConfiguration() = default;
 
     bool makeSplitDependOnMemory(Phase phase) override;
 
-    int getMaxLocalTreesPerRank(Phase phase);
+    int getMaxLocalTreesPerRank(Phase phase) override;
 
-    double getWorstCaseBalancingRatio(Phase phase);
+    double getWorstCaseBalancingRatio(Phase phase) override;
 
-    int getMinTreeSize(Phase phase);
+    int getMinTreeSize(Phase phase) override;
+
+    int getMaxTreeSize(Phase phsae) override;
 };
 
 

@@ -138,6 +138,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   }}
 """
 
+    self._Template_TouchCellFirstTime_Preamble = """
+  fineGridCell""" + solver._name + """CellLabel.setHasUpdated(false);
+""" + self._Template_TouchCellFirstTime_Preamble
+
 
   def _add_action_set_entries_to_dictionary(self,d):
     """

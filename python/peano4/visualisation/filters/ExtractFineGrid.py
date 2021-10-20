@@ -120,7 +120,7 @@ class ExtractFineGrid( Filter ):
 
     if self.verbose:
       print( "extracted " + str( new_num_patches ) + " from the " + str( len(cell_data) ) + " patch(es)" )
-    new_cell_data = new_cell_data[0:new_num_patches-1]
+    new_cell_data = new_cell_data[0:new_num_patches]
 
     return new_cell_data, dof, dimensions, unknowns, description, mapping
   

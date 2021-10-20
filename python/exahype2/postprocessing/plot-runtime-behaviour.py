@@ -1,7 +1,6 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 import argparse
-import tarfile
 import os
 import exahype2.postprocessing
 
@@ -16,7 +15,7 @@ Default plotter for various standard ExaHyPE dumps. The plotter examines
 and illustrates the runtime per time step behaviour.
 
 """)
-  parser.add_argument("file", nargs="+",    help="filename of the file to parse (should be a tar.gz file)")
+  parser.add_argument("file", nargs="+",    help="filename of the file to parse. Can we multiple files")
   parser.add_argument("-v",     "--verbose",     dest="verbose",    help="increase output verbosity",   action="store_true", default=False )
   parser.add_argument("-log-y", "--log-ysaxis",  dest="log_yscale", help="increase output verbosity",   action="store_true", default=False )
   parser.add_argument("-t",     "--type",    dest="type",    help="Pick plot variant", choices=[
@@ -33,7 +32,7 @@ and illustrates the runtime per time step behaviour.
   if args.log_yscale:
     plt.yscale( 'log' )
   for dataset in zip( args.file, args.label) :
-    performance_data = exahype2.postprocessing.PerformanceData( dataset[0], verbose=args.verbose )
+    performance_data = exahype2.postprocessing.PerformanceData( file_name=dataset[0], verbose=args.verbose )
     if args.verbose:
       print( "start to postprocess data with " + args.type )
     if args.type == "time-step-size-it":

@@ -61,10 +61,6 @@ class UpdateCellLabel(ActionSet):
   fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStepSize( coarseGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.getTimeStepSize() );
   fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setHasUpdated( false );
 """
-    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
-      result += """
-  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setHasUpdated( false );
-"""
     return result
 
 
