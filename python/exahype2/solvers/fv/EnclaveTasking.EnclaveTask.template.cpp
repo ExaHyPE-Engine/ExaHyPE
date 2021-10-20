@@ -305,8 +305,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRan
   tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
 
   logInfo(
-    "receiveTask(...)",
+    "runLocallyAndSendTaskOutputToRank(...)",
     "executed remote task on this rank. Will start to send result back"
+  );
+
+  forwardTaskOutputToRank(rank, tag, communicator);
+}
+
+
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
+
+  logInfo(
+    "forwardTaskOutputToRank(...)",
+    "will start to forward task output (which has already been computed)"
   );
 
   ::tarch::mpi::DoubleMessage  tMessage(_t);
@@ -321,7 +332,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRan
   MPI_Send( _outputValues, _numberOfResultValues, MPI_DOUBLE, rank, tag, communicator );
 
   logInfo(
-    "moveTask(...)",
+    "forwardTaskOutputToRank(...)",
     "sent (" << _marker.toString() << "," << tMessage.toString() << "," << dtMessage.toString() << "," << _numberOfResultValues <<
     "," << taskIdMessage.toString() << ") to rank " << rank <<
     " via tag " << tag
@@ -443,7 +454,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     ::tarch::MemoryLocation::Heap
   );
   for (size_t i = 0;i<_destinationPatchSize*otherTasks.size();i++) *(destinationPatchOnCPU + i) =0;
-  
+
   {{FUSED_RIEMANN_SOLVER_CALL}}
   (
     1,
