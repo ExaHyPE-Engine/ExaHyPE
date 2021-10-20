@@ -306,6 +306,25 @@ class PerformanceData(object):
     return raw_data
 
       
+  def remove_first_n_entries(self,count):
+    """
+    
+    Remove the first count entries from the dataset. Usually, count is one and 
+    anticipates that the solver requires one ``warm up'' sweep to determine h 
+    and the eigenvalue, e.g.
+    
+    """
+    #self._start_time_step_time_stamp_max  = self._start_time_step_time_stamp_max[count:]
+    #self._start_time_step_time_stamp_min  = self._start_time_step_time_stamp_min[count:]
+    self._simulated_time_stamp_max        = self._simulated_time_stamp_max[count:]
+    self._simulated_time_stamp_min        = self._simulated_time_stamp_min[count:]
+    self._time_step_size_max              = self._time_step_size_max[count:]
+    self._time_step_size_min              = self._time_step_size_min[count:]
+    self._time_step_time_stamp            = self._time_step_time_stamp[count:]
+
+
+
+
 def extract_grid_construction_times(performance_data_points):
   """
      
@@ -365,15 +384,3 @@ def extract_times_per_step(performance_data_points, max_cores_per_rank=0):
   return (x_data,y_data)
 
 
-  def remove_first_n_entries(self,count):
-    """
-    
-    Remove the first count entries from the dataset. Usually, count is one and 
-    anticipates that the solver requires one ``warm up'' sweep to determine h 
-    and the eigenvalue, e.g.
-    
-    """
-    self._start_time_step_time_stamp  = self._start_time_step_time_stamp[count:]
-    self._simulated_time_stamp        = self._simulated_time_stamp[count:]
-    self._real_time_stamp             = self._real_time_stamp[count:]
-    self._time_step_size              = self._time_step_size[count:]
