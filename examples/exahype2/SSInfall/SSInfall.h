@@ -115,7 +115,8 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     );  
     
     double mass_interpolate(
-      const double r_coor
+      const double r_coor,
+      const int MassCal
     );  
 
     

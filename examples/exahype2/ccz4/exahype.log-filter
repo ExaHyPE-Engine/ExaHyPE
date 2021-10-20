@@ -13,7 +13,7 @@ info  tarch                                -1     black timestep
 info  peano4                               -1     white always-on
 info  examples                             -1     white always-on
 info  exahype2                             -1     white always-on
-info  toolbox                              -1     white  always-on
+info  toolbox                              -1     white always-on
 
 info  ::step                               -1     black always-on
 info  ::step                                0     white always-on

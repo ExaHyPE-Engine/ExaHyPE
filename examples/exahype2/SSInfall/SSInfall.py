@@ -20,7 +20,7 @@ modes = {
 floatparams = {
          "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":0}
 
-intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0}
+intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0, "ReSwi":0, "MassCal":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - SSInfall script')
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["none", "gradient", "AMRadm", "Full"],   default="none",  help="Pick extension, i.e. what should be plotted on top. Default is none" )
+    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["cellcount","rhointer"],   default="cellcount",  help="Pick extension, i.e. the way to calculate the mass. Default is cell counting" )
     #parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         """
         return SuperClass.get_user_action_set_includes(self) + self._my_user_includes
 
-      def add_mass_cal(self):
+      def add_mass_cal_cellcount(self):
         """
 
         """
@@ -134,22 +134,27 @@ if __name__ == "__main__":
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
+          tarch::la::Vector<Dimensions,double> vH=(volumeH,volumeH,volumeH);
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
           double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
           
-          if (std::isnan(reconstructedPatch[cellSerialised*5+0])) {std::abort();}     
-          repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);       
-          //std::cout << coor(0) << " " << coor(1) << " " << coor(2) << std::endl;
-          //if (r_coor<r_s[0]) {std::cout << r_coor << std::endl;         
-          /*double m1=reconstructedPatch[cellSerialised*(5+aux_var)+1];
-          double m2=reconstructedPatch[cellSerialised*(5+aux_var)+2];
-          double m3=reconstructedPatch[cellSerialised*(5+aux_var)+3];
-          double e =reconstructedPatch[cellSerialised*(5+aux_var)+4];
-          reconstructedPatch[cellSerialised*(5+aux_var)+5]=e*1e6; //just incease the E here for illustration
-          reconstructedPatch[cellSerialised*(5+aux_var)+6]=1e6*(5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3))/reconstructedPatch[cellSerialised*(5+aux_var)+0];
+          //if (std::isnan(reconstructedPatch[cellSerialised*5+0])) {std::abort();}     
+          repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
+          
+          /*double sour[5];
+          repositories::{{SOLVER_INSTANCE}}.sourceTerm(reconstructedPatch+cellSerialised*(5+aux_var),coor,vH,t,dt,sour);
+          reconstructedPatch[cellSerialised*(5+aux_var)+5]=sour[1];
+
+          double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
+          double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
+          double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
+          double m3  =  reconstructedPatch[cellSerialised*(5+aux_var)+3];
+          double e   =  reconstructedPatch[cellSerialised*(5+aux_var)+4];
+          reconstructedPatch[cellSerialised*(5+aux_var)+6]=m1/rho; //v_x
+          reconstructedPatch[cellSerialised*(5+aux_var)+7]=(5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3)/rho); //p
           */
           /*if (r_coor<1e-8) {
             reconstructedPatch[cellSerialised*(5+aux_var)+1]=0;
@@ -158,6 +163,57 @@ if __name__ == "__main__":
           }*/
         }
         
+    """)
+
+      def add_mass_cal_rhointer(self):
+        """
+
+        """
+        self._my_user_includes += """
+#include "../SSInfall.h"
+#include <math.h>
+    """
+        self._auxiliary_variables = 0
+
+        self.set_preprocess_reconstructed_patch_kernel( """
+        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        int aux_var=0;
+        int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
+        if ( marker.isContained((0,0,0)) ){
+          tarch::la::Vector<Dimensions,int> centerCell = tarch::la::Vector<Dimensions,int>(1+patchSize/2);
+          const int cellSerialised  = peano4::utils::dLinearised(centerCell, patchSize + 2*1);
+          repositories::{{SOLVER_INSTANCE}}.rho_0=reconstructedPatch[cellSerialised*(5+aux_var)+0];
+          //std::cout << repositories::{{SOLVER_INSTANCE}}.rho_0 << std::endl;
+        }
+        for (int i=0;i<sample;i++){
+          tarch::la::Vector<Dimensions,double> coor; coor(0)=repositories::{{SOLVER_INSTANCE}}.r_s[i];
+          if ( marker.isContained(coor) ){
+            //std::cout << coor << std::endl;
+            for (int xindex=0; xindex<(patchSize+2);xindex++){
+              if ( (marker.getOffset()(0)+(xindex-1)*volumeH)<repositories::{{SOLVER_INSTANCE}}.r_s[i] and (marker.getOffset()(0)+(xindex-0.5)*volumeH)>repositories::{{SOLVER_INSTANCE}}.r_s[i] ){
+                //std::cout <<  (marker.getOffset()(0)+(xindex-1)*volumeH)<<" "<< (marker.getOffset()(0)+(xindex-0.5)*volumeH)<< std::endl;
+                tarch::la::Vector<Dimensions,int> cell1=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell1(0)=xindex;
+                tarch::la::Vector<Dimensions,int> cell2=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell2(0)=xindex-1;
+                //std::cout << cell1 <<cell2<< std::endl;
+                double rho1=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
+                double rho2=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex-1.5)*volumeH;
+                repositories::{{SOLVER_INSTANCE}}.rho_x[i]=rho1*(x2-repositories::{{SOLVER_INSTANCE}}.r_s[i])/(x2-x1)+rho2*(repositories::{{SOLVER_INSTANCE}}.r_s[i]-x1)/(x2-x1);
+                //std::cout<<repositories::{{SOLVER_INSTANCE}}.rho_x[i]<<std::endl;
+              }
+              else if ( (marker.getOffset()(0)+(xindex-0.5)*volumeH)<repositories::{{SOLVER_INSTANCE}}.r_s[i] and (marker.getOffset()(0)+(xindex)*volumeH)>repositories::{{SOLVER_INSTANCE}}.r_s[i] ){
+                //std::cout <<  (marker.getOffset()(0)+(xindex-0.5)*volumeH)<<" "<< (marker.getOffset()(0)+(xindex)*volumeH)<< std::endl;
+                tarch::la::Vector<Dimensions,int> cell1=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell1(0)=xindex;
+                tarch::la::Vector<Dimensions,int> cell2=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell2(0)=xindex+1;
+                //std::cout << cell1 <<cell2 <<std::endl;
+                double rho1=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
+                double rho2=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex+0.5)*volumeH;
+                repositories::{{SOLVER_INSTANCE}}.rho_x[i]=rho1*(x2-repositories::{{SOLVER_INSTANCE}}.r_s[i])/(x2-x1)+rho2*(repositories::{{SOLVER_INSTANCE}}.r_s[i]-x1)/(x2-x1);
+                //std::cout<<repositories::{{SOLVER_INSTANCE}}.rho_x[i]<<std::endl;
+              }
+            }
+          }                   
+        }
     """)
 
         self.create_data_structures()
@@ -215,17 +271,26 @@ if __name__ == "__main__":
       my_solver = SSInfallSolver(solver_name, args.patch_size, min_h, args.max_h,args.cfl)
       userinfo.append(("CFL ratio set as "+str(args.cfl), None))
       
-    my_solver.add_mass_cal()
-    
+    if args.extension=="cellcount":  
+      my_solver.add_mass_cal_cellcount()
+      userinfo.append(("mass calculation schme: cell counting",None))
+    elif args.extension=="rhointer":
+      my_solver.add_mass_cal_rhointer()
+      userinfo.append(("mass calculation schme: rho interpolation",None))
+         
 ########################################################################################
 #Domain settings
 ########################################################################################
-    if True:
-      #offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      offset=[-0.75, -0.75, -0.75]; domain_size=[1.5, 1.5, 1.5]
-      msg = "domain set as "+str(offset)+" and "+str(domain_size)
-      print(msg)
-      userinfo.append((msg,None))
+    if args.ReSwi==0:
+      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      #offset=[-0.75, -0.75, -0.75]; domain_size=[1.5, 1.5, 1.5]
+      #offset=[-1, -1, -1]; domain_size=[2, 2, 2]
+    elif args.ReSwi==2:
+      offset=[-4.5, -4.5, -4.5]; domain_size=[9, 9, 9]
+
+    msg = "domain set as "+str(offset)+" and "+str(domain_size)
+    print(msg)
+    userinfo.append((msg,None))
       
 ########################################################################################
 #parameter setting according to scenarios
@@ -246,6 +311,13 @@ if __name__ == "__main__":
     for k, v in floatparams.items():
       floatparams.update({k:eval("args.{}".format(k))})
 
+    if args.seed=="tophat":
+      intparams.update({"iseed":0})
+      userinfo.append(("Tophat overdensity region set",None))
+    if args.seed=="point":
+      intparams.update({"iseed":1})
+      userinfo.append(("Point mass in tophat seed set",None))
+
     if args.eigen=="exp":
       floatparams["C_1"]=(1*1e-4)/floatparams["tilde_P_ini"]*(floatparams["a_i"]/1e-3)**0.5
       floatparams["C_2"]=(10*1e-5)/floatparams["tilde_P_ini"]
@@ -255,20 +327,16 @@ if __name__ == "__main__":
       floatparams["C_2"]=0
       userinfo.append(("Use original formula for eigenvalues",None))
 
-    if args.seed=="tophat":
-      floatparams.update({"r_ini":0.1})
-      floatparams.update({"delta_rho":0.05})
-      userinfo.append(("Tophat overdensity region set",None))
-    if args.seed=="point":
-      intparams.update({"iseed":1})
-      floatparams.update({"delta_m":0.15})
-      userinfo.append(("Point mass in tophat seed set",None))
-
     solverconstants=""
-    for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
-    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)
+    #if args.extension=="cellcount": 
+    solverconstants+= "int cell_tot[{}]={};\n".format(args.sample_number,"{0}")
     solverconstants+= "double m_tot[{}]={};\n".format(args.sample_number,"{0}")
     solverconstants+= "double m_tot_copy[{}]={};\n".format(args.sample_number,"{0}")
+    #elif args.extension=="rhointer":
+    solverconstants+= "double rho_0=0, rho_x[{}]={};\n".format(args.sample_number,"{0}")
+    solverconstants+= "double rho_x_copy[{}]={};\n".format(args.sample_number,"{0}")    
+    intparams.update({"MassCal":1})
+      
     r_list=np.linspace(0,(domain_size[0]+offset[0]),(args.sample_number+1))[1:]
     solverconstants+= "double r_s[{}]={}".format(args.sample_number,"{")
     for r in r_list:
@@ -276,6 +344,9 @@ if __name__ == "__main__":
     solverconstants=solverconstants[:-2]
     solverconstants+= "};\n"
     
+    for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
+    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)  
+     
     my_solver.set_solver_constants(solverconstants)
 
     project.add_solver(my_solver)
@@ -290,7 +361,7 @@ if __name__ == "__main__":
       args.end_time,                 # end time
       0.0, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
-      8  # plotter precision
+      12  # plotter precision
     )
 
     project.set_Peano4_installation("../../..", build_mode)
@@ -326,7 +397,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=300,N_y=50,N_z=1)
+        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=400,N_y=50,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
 
       if path=="./": path1="."

@@ -13,12 +13,28 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
   double globalMaxTimeStepSize
 ){
   AbstractSSInfall::startTimeStep(globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize);
+  constexpr double pi = M_PI;
   for (int i=0;i<sample_number;i++) {
     m_tot_copy[i]=m_tot[i];
-    //std::cout << std::setprecision (4) << m_tot[i] << " ";
-    m_tot[i]=0;
+    //m_tot[i]-=(4/3)*M_PI*pow(r_s[i],3);
+    //std::cout << std::setprecision (4) << m_tot[i] << " " <<cell_tot[i] <<" "<< r_s[i] << std::endl;
+    m_tot[i]=0; cell_tot[i]=0;
+    //std::cout << rho_x[i] <<" "<< r_s[i] << std::endl;
   }
-  //std::cout << std::endl;
+  //std::cout << rho_0 << std::endl;
+  if (MassCal==1){
+    for(int i=0;i<sample_number;i++){
+      m_tot_copy[i]=std::max(0.0,(4/3)*pi*pow(r_s[0],3)*((rho_0+rho_x[0])/2-1));
+    }
+    for(int i=1;i<sample_number;i++){
+      double m_layer=(4/3)*pi*(pow(r_s[i],3)-pow(r_s[i-1],3))*((rho_x[i]+rho_x[i-1])/2-1);
+      //std::cout << rho_x[i] <<" "<< rho_x[i-1]<<" " << m_layer << std::endl;
+      for(int j=i;j<sample_number;j++){
+        m_tot_copy[j]+=std::max(0.0,m_layer);
+      }
+    }
+  }
+  //for (int i=0;i<sample_number;i++) {std::cout << m_tot_copy[i] <<" "<< (4/3)*pi*pow(r_s[i],3) << std::endl;}
 }
 
 
@@ -30,7 +46,20 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
 ) {
 
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
-
+  double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
+  if (ReSwi==1){ //radius based
+    if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
+  }
+  if (ReSwi==2){ //radius based
+    constexpr int NumberOfRefinementLayers = 2;
+    double Radius[NumberOfRefinementLayers] = {1.5,0.5};
+    double MaxH[NumberOfRefinementLayers]   = {0.03,0.008};
+    for (int i=0; i<NumberOfRefinementLayers; i++) {
+      if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+        result=::exahype2::RefinementCommand::Refine;
+      }
+    }
+  }
   return result;
 }
 
@@ -137,11 +166,11 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   } 
   else {
     if (iseed==0){
-      m_in=mass_interpolate(r_coor)/4/pi; //remove the overall 4\pi coefficient. 
+      m_in=mass_interpolate(r_coor,MassCal)/4/pi; //remove the overall 4\pi coefficient. 
     }
     if (iseed==1){
-		  if (r_coor<r_point){m_in=(mass_interpolate(r_coor)+delta_m*pow(r_coor/r_point,3))/4/pi;}
-		  else {m_in=(mass_interpolate(r_coor)+delta_m)/4/pi;}
+		  if (r_coor<r_point){m_in=(mass_interpolate(r_coor, MassCal)+delta_m*pow(r_coor/r_point,3))/4/pi;}
+		  else {m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4/pi;}
 		}
   }
 
@@ -264,23 +293,33 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   const double rho,
   const double size
 ) {
-  double m=(rho-1)*pow(size,3); //notice here we use overdensity
+  //double m=(rho-1)*pow(size,3); //notice here we use overdensity
+  double m=(rho-1)*pow(size,3);
+  //m=1e-14;
+  if (m<0){m=0.0;}
+  //std::cout << m << std::endl;
 
-  for (int i=0;i<sample_number;i++){
-    if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;}
+  /*for (int i=0;i<sample_number;i++){
+    if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;cell_tot[i]+=1;}
     else if ((r_coor-size/2)>r_s[i]) {m_tot[i]+=0;}
-    else {m_tot[i]+=m*pow((r_s[i]-r_coor+size/2),3)/pow(size,2);}
+    else {m_tot[i]+=m*std::max(0.0,pow((r_s[i]-r_coor+size/2),3))/pow(size,3);cell_tot[i]+=1;}
+  }*/
+  for (int i=0;i<sample_number;i++){
+    if (r_coor<r_s[i]) {m_tot[i]+=m; cell_tot[i]+=1;}
+    else {m_tot[i]+=0;}
   }
 }
 
 double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
-  const double r_coor
+  const double r_coor,
+  const int MassCal
 ) {
   constexpr double pi = M_PI;
   double a,b;
   double m_a,m_b;
   double m_result;
 
+if (MassCal==0){ //which means we use cell counting
   bool IsCenter=false;
   bool IsOutSkirt=false;
   if (r_coor<r_s[0]) {
@@ -288,7 +327,7 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
     m_a=0; m_b=m_tot_copy[0];
     IsCenter=true;
   }
-  if (r_coor>r_s[sample_number-1]) {
+  else if (r_coor>r_s[sample_number-1]) {
     a=r_s[sample_number-2]; b=r_s[sample_number-1];
     m_a=m_tot_copy[sample_number-2]; m_b=m_tot_copy[sample_number-1];
     IsOutSkirt=true;    
@@ -298,7 +337,7 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
       if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])){
         a=r_s[i-1]; b=r_s[i];
         m_a=m_tot_copy[i-1]; m_b=m_tot_copy[i];
-        //std::cout << m_tot_copy << std::endl;
+        //std::cout << m_tot_copy[i] << std::endl;
       }
     }
   }
@@ -313,7 +352,40 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   }
   else {  //linear interpolation
     m_result=m_a*(b-r_coor)/(b-a)+m_b*(r_coor-a)/(b-a);
+    //try to use a more precise mass calculation scheme here
+    //double vol_tem=(4/3)*pi*(pow(b,3)-pow(a,3));
+    //double rho_tem=(m_b-m_a)/vol_tem;
+    //double vol_in=(4/3)*pi*(pow(r_coor,3)-pow(a,3));
+    //m_result=m_a+rho_tem*vol_in;    
+    //std::cout << m_b <<" "<< m_a << std::endl;
+    //std::cout << m_result <<" "<< vol_tem << " "<<rho_tem<<" "<<vol_in << std::endl;
   }
+}  
+else if (MassCal==1){ //which means we use rho interpolation
+  if (r_coor<r_s[0]){
+    double rho_currentpos=rho_0+(rho_x[0]-rho_0)*r_coor/r_s[0];
+    m_result=(4/3)*pi*pow(r_coor,3)*((rho_0+rho_currentpos)/2-1);
+  }
+  else{
+    for (int i=1;i<sample_number;i++){
+      if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])){
+        double rho_currentpos=rho_x[i-1]*(r_s[i]-r_coor)/(r_s[i]-r_s[i-1])+rho_x[i]*(r_coor-r_s[i-1])/(r_s[i]-r_s[i-1]);
+        m_result=(4/3)*pi*(pow(r_coor,3)-pow(r_s[i-1],3))*((rho_x[i-1]+rho_currentpos)/2-1);
+        m_result+=m_tot_copy[i-1];
+      }
+    }
+  }
+  if (r_coor>r_s[sample_number-1]){
+    m_result=(4/3)*pi*(pow(r_coor,3)-pow(r_s[sample_number-1],3))*(rho_x[sample_number-1]-1);
+    m_result+=m_tot_copy[sample_number-1];
+  }
+
+
+//m_result=0.0;
+
+}  
+  
+  
 
   return m_result;
 }
