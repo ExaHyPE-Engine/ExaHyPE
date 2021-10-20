@@ -22,7 +22,7 @@ peano4::grid::GridStatistics   gridStatisticsAfterGridConstruction;
 
 
 {% if LOAD_BALANCER!="" -%}
-{{LOAD_BALANCER}}              loadBalancer{{LOAD_BALANCER_ARGUMENTS}};
+{{LOAD_BALANCER}}              loadBalancer({{LOAD_BALANCER_ARGUMENTS}});
 {% else -%}
 toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
 {% endif -%}
@@ -33,6 +33,14 @@ toolbox::loadbalancing::NoLoadBalancing  loadBalancer;
 {{ item[0] }} {{ item[1] }};
 {%- endfor %}
 
+
+bool mayPlot() {
+  bool result = true;
+  {% for item in SOLVERS -%}
+    result &= {{ item[1] }}.mayPlot();
+  {%- endfor %}
+  return result;
+}
 
 
 double getMinTimeStamp(bool ofLastTimeStepOnly) {

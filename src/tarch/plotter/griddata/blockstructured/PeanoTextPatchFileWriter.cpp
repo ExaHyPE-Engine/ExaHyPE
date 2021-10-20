@@ -158,7 +158,12 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
         logInfo( "PeanoTextPatchFileWriter(...)", "no index file " << _indexFile << " found. Create new one" );
         createEmptyIndexFile();
       }
-      else if ( tarch::la::smaller( timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision ) ) {
+      else if (
+        tarch::la::smaller(
+          timeStamp, getLatestTimeStepInIndexFile(),
+          tarch::la::relativeEps( timeStamp, getLatestTimeStepInIndexFile(), DefaultTimeStampPrecision )
+        )
+      ) {
         logWarning( "PeanoTextPatchFileWriter(...)", "there is an index file " << _indexFile << " with data for time stamp " << getLatestTimeStepInIndexFile() << ". Will be overwritten as we dump data for time " << timeStamp );
         createEmptyIndexFile();
       }
@@ -171,6 +176,8 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
       break;
   }
   logDebug( "PeanoTextPatchFileWriter(...)", "index file is ready" );
+
+  _snapshotFileOut << std::scientific;
 }
 
 

@@ -11,7 +11,7 @@ import dastgen2.attributes.Integer
 
 
 class ParticleParticleInteraction(ActionSet):
-  def __init__(self,particle_set,cell_compute_kernel,touch_vertex_first_time_compute_kernel="",additional_includes=""):
+  def __init__(self,particle_set,cell_compute_kernel,touch_vertex_first_time_compute_kernel="",additional_includes="", guard="true"):
     """
 
     This code snippet creates a tree walker, i.e. an action set that runs
@@ -83,6 +83,7 @@ class ParticleParticleInteraction(ActionSet):
     self.d[ "CELL_COMPUTE_KERNEL" ]      = cell_compute_kernel
     self.d[ "VERTEX_COMPUTE_KERNEL" ]    = touch_vertex_first_time_compute_kernel
     self.d[ "ADDITIONAL_INCLUDES" ]      = additional_includes
+    self.d[ "GUARD" ]                    = guard
     
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
@@ -92,19 +93,21 @@ class ParticleParticleInteraction(ActionSet):
 
 
   __Template_TouchCellFirstTime = jinja2.Template("""
-  std::forward_list< globaldata::{{PARTICLE}}* >  localParticles;
-  for (int i=0; i<TwoPowerD; i++) {
-    for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
-      bool append = marker.isContained( p->getX() );
-      if (append) {
-        localParticles.push_front( p );
+  if ( {{GUARD}} ) {
+    std::forward_list< globaldata::{{PARTICLE}}* >  localParticles;
+    for (int i=0; i<TwoPowerD; i++) {
+      for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
+        bool append = marker.isContained( p->getX() );
+        if (append) {
+          localParticles.push_front( p );
+        }
+        _activeParticles.push_front( p );
       }
-      _activeParticles.push_front( p );
     }
-  }
 
-  std::forward_list< globaldata::{{PARTICLE}}* >&  activeParticles = _activeParticles;
-  {{CELL_COMPUTE_KERNEL}};
+    std::forward_list< globaldata::{{PARTICLE}}* >&  activeParticles = _activeParticles;
+    {{CELL_COMPUTE_KERNEL}};
+  }
 """)
 
 

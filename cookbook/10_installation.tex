@@ -112,22 +112,6 @@ summarise some key options below:
   build environment however which compile command to use. Please note that
   we need a C++ MPI wrapper. So \texttt{--with-mpi=mpcxx} is a typical call. Currently, you also need \texttt{--with-multithreading} if you want to use MPI. 
    \\
-  \texttt{--with-vtk} & Inform \Peano\  that VTK is available on the system.
-  \Peano\ mainly
-  relies on its own IO data format. Even some VTK dump routines (used usually
-  only for debugging) are written by hand, i.e.~do not rely on the VTK
-  libraries.
-  However, \Peano\ comes along with some command line conversion tools that can convert its tailored data
-  dumps into VTK, and they do rely on the VTK libraries. With this flag, you
-  tell \Peano\ to build these tools.
-  The VTK installation is sometimes not easy (and you might have to provide additional parameters depending on your installation). I dedicate Chapter \ref{chapter:postprocessing} on VTK.
-   \\
-  \texttt{--with-hdf5} & Make \Peano\  support HDF5 output. Not stable at the
-  moment.
-   \\
-  \texttt{--with-delta} & Configure \Peano\  such that the geometry library
-  $\Delta $ is used. Not stable at the moment.
-   \\
   \texttt{--with-toolchain} & Build against a particular vendor toolchain.
   Currently, I have dedicated support for the NVIDIA NVTX SDK
   (\texttt{--with-toolchain=nvidia}) providing NVIDIA-specific logging/tracing
@@ -147,13 +131,8 @@ summarise some key options below:
   work only with OpenMP.
    \\
   \texttt{--enable-exahype} & Includes the \ExaHyPE\ core into your build.
-   Requires the load balancing toolbox, too. 
-   \\
-  \texttt{--enable-xxx-toolbox} & \Peano\ is shipped with a couple of toolboxes
-   for various purposes. These are C++ libraries which offer a lot of features.
-   You have to enable/activate them manually. Please note: Not all toolboxes are
-   compatible with all targets. We have experienced issues with the
-   FEM toolbox and some GPGPU systems for example.
+   Requires the load balancing toolbox and the blockstructured, too. The
+   configure script should inform you about further extensions.
  \end{longtable}
 \end{center}
 

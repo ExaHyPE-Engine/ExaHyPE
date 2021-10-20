@@ -32,7 +32,7 @@ class InsertParticlesbyCoordinates(ActionSet):
     self._coor_s			             = coor_s
     
 
-  __Template_TouchVertexFirstTime = jinja2.Template("""
+  __Template_TouchCellFirstTime = jinja2.Template("""
   for(int i=0;i<{{N}};i++){
     // It is important to have this asymmetric comparisons with <= as we
     // need to ensure that particles right in the centre are either associated
@@ -40,12 +40,12 @@ class InsertParticlesbyCoordinates(ActionSet):
     if (
       not marker.isRefined() 
       and 
-      (marker.x()(0)-marker.h()(0)/2.0) <= coor_s[i][0] and (marker.x()(0)+marker.h()(0)/2.0) > coor_s[i][0] 
+      (marker.getOffset()(0) <= coor_s[i][0] and marker.getOffset()(0)+marker.h()(0) > coor_s[i][0])
       and
-      (marker.x()(1)-marker.h()(1)/2.0) <= coor_s[i][1] and (marker.x()(1)+marker.h()(1)/2.0) > coor_s[i][1] 
+      (marker.getOffset()(1) <= coor_s[i][1] and marker.getOffset()(1)+marker.h()(1) > coor_s[i][1])
       #if Dimensions==3
       and
-      (marker.x()(2)-marker.h()(2)/2.0) <= coor_s[i][2] and (marker.x()(2)+marker.h()(2)/2.0) > coor_s[i][2] 
+      (marker.getOffset()(2) <= coor_s[i][2] and marker.getOffset()(2)+marker.h()(2) > coor_s[i][2])
       #endif
     )
     {
@@ -55,15 +55,16 @@ class InsertParticlesbyCoordinates(ActionSet):
       toolbox::particles::init(*newParticle,{coor_s[i][0],coor_s[i][1],coor_s[i][2]},0.0);
       _particleNumberOnThisTree++;
       logInfo( "touchVertexFirstTime(...)", "insert " << _particleNumberOnThisTree << "th particle at " << newParticle->toString() );
-      fineGridVertex{{PARTICLES_CONTAINER}}.push_back( newParticle );
+      // just insert them; will be re-assigned then anyway
+      fineGridVertices{{PARTICLES_CONTAINER}}(0).push_back( newParticle );
     }
   }
 """)
 
   def get_body_of_operation(self,operation_name):
     result = "\n"
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
-      result = self.__Template_TouchVertexFirstTime.render(**self.d)
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = self.__Template_TouchCellFirstTime.render(**self.d)
     return result
 
 

@@ -244,6 +244,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     //#pragma omp end declare target
     //#endif
 
+    /**
+     * It is important that we only plot after the secondary sweep.
+     * All the switching happens in startTimeStep(), so it is fine if
+     * we test against secondary. If an outer routine (the main) calls
+     * this function, this means that the secondary traversal just has
+     * terminated.
+     */
+    bool mayPlot() const override;
 
   protected:
     static tarch::logging::Log  _log;

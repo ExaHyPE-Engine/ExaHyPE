@@ -50,7 +50,7 @@ void   peano4::parallel::TreeEntry::setMaster(int value) {
 
 
 #ifdef Parallel
-void peano4::parallel::TreeEntry::sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag ) {
+void peano4::parallel::TreeEntry::sendAndPollDanglingMessages(const peano4::parallel::TreeEntry& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::parallel::TreeEntry::send(
     message, destination, tag,
     [&]() {
@@ -73,12 +73,12 @@ void peano4::parallel::TreeEntry::sendAndPollDanglingMessages(const peano4::para
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 
 
-void peano4::parallel::TreeEntry::receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag ) {
+void peano4::parallel::TreeEntry::receiveAndPollDanglingMessages(peano4::parallel::TreeEntry& message, int source, int tag, MPI_Comm communicator ) {
   peano4::parallel::TreeEntry::receive(
     message, source, tag,
     [&]() {
@@ -101,7 +101,7 @@ void peano4::parallel::TreeEntry::receiveAndPollDanglingMessages(peano4::paralle
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 #endif

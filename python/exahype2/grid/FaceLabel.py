@@ -93,7 +93,8 @@ def create_face_label(solver_name):
   result._peano4_aspect.merge_implementation = """
   assertionEquals( _Boundary, neighbour._Boundary );
   
-  const int neighbourEntry = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
+  const int normal         = marker.getSelectedFaceNumber() % Dimensions;
+  const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;
   
   _Updated[ neighbourEntry ]          = neighbour._Updated[ neighbourEntry ];
   _UpdatedTimeStamp( neighbourEntry ) = neighbour._UpdatedTimeStamp( neighbourEntry );

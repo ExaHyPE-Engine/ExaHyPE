@@ -92,6 +92,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
     
     repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
 
@@ -136,6 +137,10 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     repositories::{SOLVER_INSTANCE}.update(0.0, cellTimeStamp, marker.h()(0) );
   }}
 """
+
+    self._Template_TouchCellFirstTime_Preamble = """
+  fineGridCell""" + solver._name + """CellLabel.setHasUpdated(false);
+""" + self._Template_TouchCellFirstTime_Preamble
 
 
   def _add_action_set_entries_to_dictionary(self,d):

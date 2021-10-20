@@ -38,7 +38,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       cellTimeStamp,
-      cellTimeStepSize,
+      usedTimeStepSize,
       reconstructedPatch,
       targetPatch
     );
@@ -53,13 +53,16 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     ); // outcome has to be valid
 
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(usedTimeStepSize);
   }
   else { // is an enclave cell
     assertion( marker.isEnclaveCell() );
     auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       cellTimeStamp,
-      cellTimeStepSize,
+      usedTimeStepSize,
       reconstructedPatch
     );
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
@@ -72,7 +75,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   }
   
   fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
+  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(usedTimeStepSize);
   """)
 
   def __init__(self,solver):
@@ -92,6 +95,15 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ")",
       add_assertions_to_halo_exchange = True
     )
+
+    self._Template_TouchCellFirstTime_Preamble = """
+  if (
+    repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()==""" + solver._name + """::SolverState::Primary or 
+    repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()==""" + solver._name + """::SolverState::PrimaryAfterGridInitialisation
+  ) {{
+    fineGridCell""" + solver._name + """CellLabel.setHasUpdated(false);
+  }}
+""" + self._Template_TouchCellFirstTime_Preamble
 
     self._solver    = solver
 
@@ -118,6 +130,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
       if ( taskNumber>=0 ) {
         ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
+        fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
       }
       fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
       
@@ -130,15 +143,25 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
         std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
       );
     }
-
-    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-    {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
     
-    repositories::{{SOLVER_INSTANCE}}.update(
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize() + fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
-      marker.h()(0)
-    );
+    if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+      double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+      
+      {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
+      
+      repositories::{{SOLVER_INSTANCE}}.update(
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+        marker.h()(0)
+      );
+    }
+    else {
+      repositories::{{SOLVER_INSTANCE}}.update(
+        0.0,
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+        marker.h()(0)
+      );
+    }
   }
 """
   def __init__(self,solver):

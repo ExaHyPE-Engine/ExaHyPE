@@ -106,7 +106,7 @@ void   peano4::grid::GridControlEvent::setH(int index, double value) {
 
 
 #ifdef Parallel
-void peano4::grid::GridControlEvent::sendAndPollDanglingMessages(const peano4::grid::GridControlEvent& message, int destination, int tag ) {
+void peano4::grid::GridControlEvent::sendAndPollDanglingMessages(const peano4::grid::GridControlEvent& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::grid::GridControlEvent::send(
     message, destination, tag,
     [&]() {
@@ -129,12 +129,12 @@ void peano4::grid::GridControlEvent::sendAndPollDanglingMessages(const peano4::g
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 
 
-void peano4::grid::GridControlEvent::receiveAndPollDanglingMessages(peano4::grid::GridControlEvent& message, int source, int tag ) {
+void peano4::grid::GridControlEvent::receiveAndPollDanglingMessages(peano4::grid::GridControlEvent& message, int source, int tag, MPI_Comm communicator ) {
   peano4::grid::GridControlEvent::receive(
     message, source, tag,
     [&]() {
@@ -157,7 +157,7 @@ void peano4::grid::GridControlEvent::receiveAndPollDanglingMessages(peano4::grid
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 #endif

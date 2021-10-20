@@ -7,6 +7,16 @@ import peano4.datamodel.DaStGen2
 
 
 class UpdateCellLabel(ActionSet):
+  """
+  
+  Update the cell label initialises cell labels correctly when a cell is 
+  created, and it also resets the update flag.
+  
+  It is important that this label update happens before the actual cell
+  update. This is ensured via a correct invocation order in 
+  FV.add_actions_to_perform_time_step(). 
+  
+  """
   def get_attribute_name(solver_name):
     return solver_name + "CellLabel"
 
@@ -47,8 +57,9 @@ class UpdateCellLabel(ActionSet):
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
       result += """
   fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setSemaphoreNumber(  ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStamp(  0.0 );
-  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStepSize( 0.0 );
+  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStamp(  coarseGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.getTimeStamp() );
+  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStepSize( coarseGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.getTimeStepSize() );
+  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setHasUpdated( false );
 """
     return result
 
@@ -89,4 +100,5 @@ def create_cell_label(solver_name):
   result.data.add_attribute( dastgen2.attributes.Integer("SemaphoreNumber") )
   result.data.add_attribute( dastgen2.attributes.Double("TimeStamp") )
   result.data.add_attribute( dastgen2.attributes.Double("TimeStepSize") )
+  result.data.add_attribute( dastgen2.attributes.Boolean("HasUpdated") )
   return result

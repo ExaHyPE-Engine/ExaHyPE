@@ -93,6 +93,8 @@
   void startSimulation();
   void finishSimulation();
 
+  bool mayPlot();
+
 {% for item in NAMESPACE -%}
   }
 {%- endfor %}

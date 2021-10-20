@@ -22,12 +22,12 @@ modes = {
 floatparams = {
         "GLMc0":1.5, "GLMc":1.2, "GLMd":2.0, "GLMepsA":1.0, "GLMepsP":1.0,
         "GLMepsD":1.0, 
-	#"itau":1.0, "k1":0.0, "k2":0.0, "k3":0.0, "eta":0.0,
-        #"f":0.0, "g":0.0, "xi":0.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
-        #"sk":0.0, "bs":0.0#, \
 	"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
-        "f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
+        "f":0.75, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
         "sk":1.0, "bs":1.0#, \
+	#"itau":1.0, "k1":0.1, "k2":0.0, "k3":0.5, "eta":1.0,
+        #"f":1.0, "g":0.0, "xi":1.0, "e":1.0, "c":1.0, "mu":0.2, "ds":1.0,
+        #"sk":1.0, "bs":1.0#, \
 	#"par_b":666.0, "center_offset_x":-1.0, "center_offset_y":0.0, "center_offset_z":0.0, \
 	#"target_m_plus":1.0, "par_p_plus_x":0.0, "par_p_plus_y":0.0, "par_p_plus_z":0.0, \
 	#"par_s_plus_x":0.0, "par_s_plus_y":0.0, "par_s_plus_z":0.0, \
@@ -36,7 +36,7 @@ floatparams = {
 	#"tp_epsilon":1e-6
 }
 
-intparams = {"LapseType":0, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
+intparams = {"LapseType":1, "tp_grid_setup":0, "swi":99, "ReSwi":0, "source":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - CCZ4 script')
@@ -119,7 +119,16 @@ if __name__ == "__main__":
 #include "exahype2/PatchUtils.h"
 """
 
-        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep or SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_size=1e-2
+          )
+        elif SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
@@ -152,7 +161,6 @@ if __name__ == "__main__":
         )
 
         self.set_postprocess_updated_patch_kernel( """
-
   {
     #if Dimensions==2
     constexpr int itmax = {{NUMBER_OF_VOLUMES_PER_AXIS}} * {{NUMBER_OF_VOLUMES_PER_AXIS}};
@@ -231,7 +239,7 @@ if __name__ == "__main__":
          side.
 
         """
-        self._auxiliary_variables = 6+59
+        self._auxiliary_variables = 6
 
         self._my_user_includes += """
 	#include "../CCZ4Kernels.h"
@@ -290,11 +298,11 @@ if __name__ == "__main__":
             reconstructedPatch[cellSerialised*(59+n_a_v)+59+i] = constraints[i];
           }
           
-          double sour[59]={ 0 };
+          /*double sour[59]={ 0 };
           examples::exahype2::ccz4::source(sour,reconstructedPatch+cellSerialised*(59+n_a_v),0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.1, 0, 0.5);
           for(int i=0;i<59;i++){
             reconstructedPatch[cellSerialised*(59+n_a_v)+59+6+i] = sour[i];
-          }
+          }*/
 
           /*
           //here we calculate the norm of conformal factor phi as the refinement condition

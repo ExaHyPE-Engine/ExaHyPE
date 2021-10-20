@@ -74,10 +74,28 @@ peano4::parallel::Node::~Node() {
 void peano4::parallel::Node::init() {
   _currentProgramStep   = UndefProgramStep;
   _rankOrchestrationTag = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::Node - rank orchestration");
-  _dataExchangeBaseTag  = tarch::mpi::Rank::reserveFreeTag("peano4::parallel::Node - data management", ReservedMPITagsForDataExchange);
   if (tarch::mpi::Rank::getInstance().isGlobalMaster()) {
     registerId( 0, -1);
   }
+
+  #ifdef Parallel
+  int answerFlag;
+  int maxTag;
+  MPI_Comm_get_attr(MPI_COMM_WORLD, MPI_TAG_UB, &maxTag, &answerFlag);
+  if (answerFlag and maxTag>=ReservedMPITagsForDataExchange) {
+    logDebug( "init()", "maximum tag value is " << maxTag << " and this is greater than the required " << ReservedMPITagsForDataExchange );
+  }
+  else if (answerFlag) {
+    logError( "init()", "maximum tag value is " << maxTag << " though we would need " << ReservedMPITagsForDataExchange << " tags. Code will likely crash" );
+  }
+  else {
+    logError( "init()", "was not able to query what the maximum tag value is" );
+  }
+
+  for (int i=0; i<MaxSpacetreesPerRank; i++) {
+    MPI_Comm_dup(tarch::mpi::Rank::getInstance().getCommunicator(), &(_dataExchangeCommunicators[i]));
+  }
+  #endif
 }
 
 
@@ -393,27 +411,35 @@ void peano4::parallel::Node::shutdown() {
     }
   );
 
+  #ifdef Parallel
+  for (int i=0; i<MaxSpacetreesPerRank; i++) {
+    MPI_Comm_free(&(_dataExchangeCommunicators[i]));
+  }
+  #endif
+
   logTraceOut( "shutdown()" );
 }
 
 
 
-int peano4::parallel::Node::getGridDataExchangeTag( int sendingTreeId, int receivingTreeId, ExchangeMode exchange ) const {
+peano4::parallel::Node::GridDataExchangeMetaInformation peano4::parallel::Node::getGridDataExchangeMetaInformation( int sendingTreeId, int receivingTreeId, ExchangeMode exchange ) const {
   logTraceInWith3Arguments( "getGridDataExchangeTag(int,int,ExchangeMode)", sendingTreeId, receivingTreeId, toString(exchange) );
 
-  int result  = _dataExchangeBaseTag;
-  result     += StacksPerCommunicationPartner/2 * (getLocalTreeId(sendingTreeId) * MaxSpacetreesPerRank + getLocalTreeId(receivingTreeId));
+  assertion(sendingTreeId>=0);
+  assertion(sendingTreeId<MaxSpacetreesPerRank);
+
+  int tag = StacksPerCommunicationPartner/2 * getLocalTreeId(receivingTreeId);
   switch (exchange) {
     case ExchangeMode::HorizontalData:
-      result += 0;
+      tag += 0;
       break;
     case ExchangeMode::VerticalData:
-      result += 1;
+      tag += 1;
       break;
   }
 
-  logTraceOutWith1Argument( "getGridDataExchangeTag(int,int,ExchangeMode)", result );
-  return result;
+  logTraceOutWith1Argument( "getGridDataExchangeTag(int,int,ExchangeMode)", tag );
+  return peano4::parallel::Node::GridDataExchangeMetaInformation(tag,_dataExchangeCommunicators[getLocalTreeId(sendingTreeId)]);
 }
 
 
@@ -422,17 +448,15 @@ std::string peano4::parallel::Node::getSemanticsForTag( int tag ) {
     return "rank orchestration tag";
   }
 
-  if (tag>=getInstance()._dataExchangeBaseTag and tag<ReservedMPITagsForDataExchange) {
-    std::string result = "data exchange tag for ";
+  assertion(tag>=0);
 
-    switch ( (tag-getInstance()._dataExchangeBaseTag) % (StacksPerCommunicationPartner/2)) {
-      case 0: result += "horizontal data"; break;
-      case 1: result += "vertical data"; break;
-    }
+  std::string result = "data exchange tag for ";
 
-    return result;
+  switch ( tag % (StacksPerCommunicationPartner/2)) {
+    case 0: result += "horizontal data"; break;
+    case 1: result += "vertical data"; break;
   }
 
-  return "tag semantics not known to peano4::parallel::Node";
+  return result;
 }
 

@@ -7,7 +7,8 @@ import os
 class Convert(object):
   """
     Convert is a file which wraps around one Peano block file output. Output can 
-    be a whole data set or simply one data file.
+    be a whole data set or simply one data file. This script set works if and only
+    if you have compiled Peano with native C++ vtk support.
     
     file_name: String
       String of input file. Please do not add .peano-patch-file here.

@@ -1,9 +1,9 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
-from peano4.visualisation.Filter import Filter
+from .Filter import Filter
 
 
-class ExtractMeshResolutionFilter( Filter ):
+class ExtractMeshResolution( Filter ):
   def __init__(self, min_h, max_h, run_on_individual_pieces_of_data=True, verbose=False):
     Filter.__init__(self, run_on_individual_pieces_of_data, not run_on_individual_pieces_of_data, verbose)
     self.min_h = min_h
