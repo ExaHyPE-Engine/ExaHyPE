@@ -420,24 +420,56 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
 
   assertion( not otherTasks.empty() );
 
-  // @todo Holger: This patch container also has to store the timestamp and time step size per patch
+
   #if Dimensions==2
-  ::exahype2::fv::PatchContainer2d patchkeeper;
-  patchkeeper.reserve(otherTasks.size());
-  for (auto p: otherTasks) {
-    {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
-    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], _t, _dt});
-  }
+  ::exahype2::fv::patchData2d pD;
+  #endif
+  #if Dimensions==3
+  ::exahype2::fv::patchData3d pD;
   #endif
 
+  const int NPT =otherTasks.size();
+  const int LR = _sourcePatchSize*NPT;
+  const int LTOT = _destinationPatchSize*NPT;
+  pD.npatches=NPT;
+
+  pD.reco     = new double[LR];
+  pD.id       = new    int[NPT];
+  pD.x0       = new double[NPT];
+  pD.h0       = new double[NPT];
+  pD.x1       = new double[NPT];
+  pD.h1       = new double[NPT];
   #if Dimensions==3
-  ::exahype2::fv::PatchContainer3d patchkeeper;
-  patchkeeper.reserve(otherTasks.size());
+  pD.x2       = new double[NPT];
+  pD.h2       = new double[NPT];
+  #endif
+  pD.t        = new double[NPT];
+  pD.dt       = new double[NPT];
+  pD.result   = new double[LTOT];
+  memset(pD.result, 0, LTOT*sizeof(double));
+
+
+  int i=0;
   for (auto p: otherTasks) {
     {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
-    patchkeeper.push_back({currentTask->_reconstructedValues, currentTask->getTaskId(), currentTask->_marker.x()[0], currentTask->_marker.h()[0], currentTask->_marker.x()[1], currentTask->_marker.h()[1], currentTask->_marker.x()[2] , currentTask->_marker.h()[2], _t, _dt});
-  }
+    for (size_t j=0;j<_sourcePatchSize;j++) 
+    {
+      pD.reco[i*_sourcePatchSize + j] = currentTask->_reconstructedValues[j];
+    }
+    pD.id[i]  = currentTask->getTaskId();
+    pD.x0[i]  = currentTask->_marker.x()[0];
+    pD.h0[i]  = currentTask->_marker.h()[0];
+    pD.x1[i]  = currentTask->_marker.x()[1];
+    pD.h1[i]  = currentTask->_marker.h()[1];
+  #if Dimensions==3
+    pD.x2[i]  = currentTask->_marker.x()[2];
+    pD.h2[i]  = currentTask->_marker.h()[2];
   #endif
+    pD.t[i]   = _t;
+    pD.dt[i]  = _dt;
+    i++;
+  }
+  
 
   //
   // If the user specifies some pre-processing, it is inserted here. If
@@ -449,32 +481,30 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     // PREPROCESS_RECONSTRUCTED_PATCH has to go in here, but the marker can't be copied yet
   //}
 
-  double* destinationPatchOnCPU = ::tarch::allocateMemory(
-    _destinationPatchSize*otherTasks.size(),
-    ::tarch::MemoryLocation::Heap
-  );
-  for (size_t i = 0;i<_destinationPatchSize*otherTasks.size();i++) *(destinationPatchOnCPU + i) =0;
-
+  //double* destinationPatchOnCPU = ::tarch::allocateMemory(
+    //_destinationPatchSize*otherTasks.size(),
+    //::tarch::MemoryLocation::Heap
+  //);
+  //for (size_t i = 0;i<_destinationPatchSize*otherTasks.size();i++) *(destinationPatchOnCPU + i) =0;
+  
   {{FUSED_RIEMANN_SOLVER_CALL}}
   (
     1,
-    patchkeeper,
-    destinationPatchOnCPU,
+    pD,
     _sourcePatchSize,
     _destinationPatchSize
   );
-
-  for (int i=0;i<static_cast<int>(patchkeeper.size());i++) {
-    const int taskid = std::get<1>(patchkeeper[i]);
+  for (int i=0;i<pD.npatches;i++) {
+    const int taskid = pD.id[i];
     double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-    //std::copy(destinationPatchOnCPU + i*_destinationPatchSize, destinationPatchOnCPU + (i+1) * _destinationPatchSize, targetPatch);
-    for (int j=0;j<_destinationPatchSize;j++) targetPatch[j] = *(destinationPatchOnCPU +j + i*_destinationPatchSize);
-    // @todo Holg: Please check
-    //{{POSTPROCESS_UPDATED_PATCH}}
+    //for (int j=0;j<_destinationPatchSize;j++)
+    //{
+       //targetPatch[j] = pD.result[j + i*_destinationPatchSize];
+    //}
+    for (int j=0;j<_destinationPatchSize;j++) targetPatch[j] = *(pD.result + j + i*_destinationPatchSize);
+    //{{ POSTPROCESS_UPDATED_PATCH }}
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
-    ::tarch::freeMemory(std::get<0>(patchkeeper[i]), ::tarch::MemoryLocation::Heap);
   }
-  ::tarch::freeMemory(destinationPatchOnCPU, ::tarch::MemoryLocation::Heap);
 
   return true;
 }
