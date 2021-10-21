@@ -174,20 +174,52 @@ namespace exahype2 {
   std::pair<double,double> getInterpolationWeights( double oldTimeStampOnFace, double newTimeStampOnFace, double cellTimeStamp );
 
   /**
-   * Discretise (bucket) time step sizes
+   * Discretise (bucket) time step sizes and truncate it
    *
    * We expect a min time step size that we use globally. We find the biggest
    * @f$ discretisationSteps^k \cdot minGlobalTimeStepSize < cellTimeStepSize @f$
    * value through k which still meets the stability of cellTimeStepSize. We
    * then return this value.
    *
+   * ## Truncation
+   *
+   * If the eigenvalues become very small within a cell, we end up with huge
+   * time step sizes. This should not happen. So I expect the global time step
+   * size (largest value) and truncate the time step size in any case by this one.
+   *
+   * ## Decreasing time step sizes
+   *
+   * I use the global minimal time step size to kick off the analysis. This fails
+   * if the admissible global time step size shrinks over time. Therefore, the
+   * cell's time step size can be smaller than the globally admissible time step
+   * size. It simply means that the global time step size is shrinking and that
+   * the argument we get is lagging behind as we haven't finished the current
+   * time step yet.
+   *
+   *
+   *
    * @param discretisationSteps Pass in zero or something negative to switch
    *   discretisation off.
+   *
+   * @param minGlobalTimeStepSize Minimal global time step size (of previous
+   *   time step). I use this as a starting point to identify appropriate
+   *   multitudes of time step sizes.
+   *
+   * @param maxGlobalTimeStepSize Maximum global time step size (of previous
+   *   time step). I use this one to truncate too big time step sizes. Overall,
+   *   I expect the time step size not to grow by more than 10 percent.
+   *
+   * @param discretisationSteps Discretisation step size. This one determines the
+   *   time step buckets. So we have a bucket with
+   *   @f$ (minGlobalTimeStepSize,minGlobalTimeStepSize*discretisationStepsSize) @f$, then
+   *   one with @f$(minGlobalTimeStepSize*discretisationStepsSize,minGlobalTimeStepSize*discretisationStepsSize^2)@f$,
+   *   and so forth.
    */
-  double discretiseTimeStepSizes(
+  double discretiseAndTruncateTimeStepSizes(
     double cellTimeStepSize,
     double minGlobalTimeStepSize,
-    double discretisationSteps
+    double maxGlobalTimeStepSize,
+    double discretisationStepsSize
   );
 }
 

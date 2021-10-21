@@ -25,6 +25,9 @@ from exahype2.solvers.fv.kernels import create_start_time_step_implementation_fo
 from .kernels import create_constructor_implementation_for_local_time_stepping
 from .kernels import create_finish_time_step_implementation_for_local_time_stepping
 
+import math
+
+
 class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
   def __init__(self, 
     name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
@@ -36,7 +39,7 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     interpolate_linearly_in_time=True,
     use_gpu=False,
     avoid_staircase_effect=True,
-    discretisation_steps=3.0
+    discretisation_steps=math.sqrt(3.0)
   ):
     """
   

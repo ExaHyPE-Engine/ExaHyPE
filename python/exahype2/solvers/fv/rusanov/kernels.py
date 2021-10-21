@@ -108,11 +108,14 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
   if avoid_staircase_effect:
     compute_time_step_sizes = """    
     double newTimeStepSize = 0.0;
+    //const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMinVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
+    const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize()<std::numeric_limits<double>::max() ? repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize() : 0.0;
+    const double maxGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
     if ( tarch::la::greater( maxEigenvalue,0.0) ) {
-      const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
-      newTimeStepSize = ::exahype2::discretiseTimeStepSizes(
+      newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
         """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
         minGlobalTimeStepSize,
+        maxGlobalTimeStepSize,
         """ + str(discretisation_steps) + """
       );
     }
@@ -125,16 +128,19 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
   else:
     compute_time_step_sizes = """    
     double       newTimeStepSize       = 0.0;
+    //const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMinVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
+    const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize()<std::numeric_limits<double>::max() ? repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize() : 0.0;
+    const double maxGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
     if ( tarch::la::greater( maxEigenvalue,0.0) ) {
-      const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
-      newTimeStepSize = ::exahype2::discretiseTimeStepSizes(
+      newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
         """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
         minGlobalTimeStepSize,
+        maxGlobalTimeStepSize,
         """ + str(discretisation_steps) + """
       );
     }
     else if ( tarch::la::greater( repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(),0.0) ) {
-      newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
+      newTimeStepSize = minGlobalTimeStepSize;
     }
 """    
    
@@ -256,6 +262,12 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getMaxEigenvalue() const {
 
 
 def create_finish_time_step_implementation_for_local_time_stepping():
+  """
+  
+  This routine is inserted after we have reduced all global quantities. These
+  are the quantities with the postfix ThisTimeStep.
+  
+  """ 
   return """
   #ifdef Parallel
   double newMaxEigenvalue = _maxEigenvalue;
@@ -276,6 +288,12 @@ def create_finish_time_step_implementation_for_local_time_stepping():
     
     
 def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_relaxation):
+  """
+  
+  This routine is inserted after we have reduced all global quantities. These
+  are the quantities with the postfix ThisTimeStep.
+  
+  """ 
   return """
   #ifdef Parallel
   double newMaxEigenvalue = _maxEigenvalue;
@@ -296,21 +314,17 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
   else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
     logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 
     _admissibleTimeStepSize = 0.0;
-    _minTimeStamp           = std::numeric_limits<double>::max();
-    _maxTimeStamp           = std::numeric_limits<double>::max();
   }
   else {
-    _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * getMinVolumeSize() / _maxEigenvalue;
+    const double minVolumeSize = _minVolumeHThisTimeStep;
+    _admissibleTimeStepSize = """ + str(time_step_relaxation) + """ * minVolumeSize / _maxEigenvalue;
     if ( std::isnan(_admissibleTimeStepSize) or std::isinf(_admissibleTimeStepSize) ) {
       ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_admissibleTimeStepSize>0", "invalid (NaN of inf) time step size: " + std::to_string(_admissibleTimeStepSize) );
     }
     if (tarch::la::smallerEquals(_admissibleTimeStepSize,0.0,1e-10) ) {
-      logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug" );
+      logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );
     }
   }
-   
-  // _maxTimeStepSize  = _admissibleTimeStepSize; // for plotting reasons
-  // _minTimeStepSize  = std::min( _minTimeStepSize, _admissibleTimeStepSize );
 """
 
 
