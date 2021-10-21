@@ -44,6 +44,7 @@ class PerformanceData(object):
     self._simulated_time_stamp_min    = []
     self._time_step_size_max          = []
     self._time_step_size_min          = []
+    self._updates                     = []
 
     self._number_of_time_steps        = 0
     
@@ -151,16 +152,17 @@ class PerformanceData(object):
             self._time_step_size_max.append( -1 )
             self._simulated_time_stamp_min.append( -1 )
             self._simulated_time_stamp_max.append( -1 )
+            self._updates.append( -1 )
 
         #
         # Be careful with the order: the first one is more specific
         #
+        if predicate and re.search( r"#updates\s*=", line)!=None and self._updates[-1]<0:
+          self._updates[-1] = float( line.split("=")[-1].split( "(")[0] )
         if predicate and re.search( r"dt_{min,this-step}\s*=", line)!=None and self._time_step_size_min[-1]<0:
           self._time_step_size_min[-1] = float( line.split("=")[-1] )
-          #print( "dt_min,this-step found" + line)
         elif predicate and re.search( r"dt_{max,this-step}\s*=", line)!=None and self._time_step_size_max[-1]<0:
           self._time_step_size_max[-1] = float( line.split("=")[-1] )
-          #print( "dt_max,this-step found" + line)
         elif predicate and re.search( r"dt\s*=", line)!=None and self._time_step_size_max[-1]<0:
           if "not yet known" in line:
             self._time_step_size_max[-1] = 0.0
@@ -168,7 +170,6 @@ class PerformanceData(object):
           else:
             self._time_step_size_max[-1] = float( line.split("=")[-1] )
             self._time_step_size_min[-1] = float( line.split("=")[-1] )
-          #print( "generic dt found" + line)
         elif predicate and re.search( r"t_{max,global}\s*=", line)!=None and self._simulated_time_stamp_max[-1]<0:
           self._simulated_time_stamp_max[-1] = float( line.split("=")[-1] )         
         elif predicate and re.search( r"t_{min,global}\s*=", line)!=None and self._simulated_time_stamp_min[-1]<0:
@@ -231,6 +232,10 @@ class PerformanceData(object):
     return result
 
 
+  def get_updates(self):
+    return [x for x in self._updates]
+
+
   def get_time_step_real_time_stamps(self):
     """
     
@@ -246,7 +251,8 @@ class PerformanceData(object):
     """
     shifted_data = [x-self._time_step_time_stamp[0] for x in self._time_step_time_stamp]
     #shifted_data.pop()
-    return shifted_data[1:]
+    #return shifted_data[1:]
+    return shifted_data
 
 
   def get_time_step_simulated_time_stamps(self):
