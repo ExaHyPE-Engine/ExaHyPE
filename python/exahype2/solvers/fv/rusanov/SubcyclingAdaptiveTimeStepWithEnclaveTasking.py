@@ -11,7 +11,7 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
-from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping_with_subcycling
+from .kernels import create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling
 from .kernels import create_fused_compute_Riemann_kernel_for_Rusanov
 
 from .kernels import create_postprocess_updated_patch_for_adaptive_time_stepping
@@ -56,7 +56,7 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch_throughout_sweep  = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping_with_subcycling( name )
+    self._compute_time_step_size  = create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling( name )
     self._postprocess_updated_patch_throughout_sweep      = """
   const double cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
   const double cellTimeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();

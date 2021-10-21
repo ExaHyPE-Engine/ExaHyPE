@@ -11,7 +11,7 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
-from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_local_time_stepping
+from .kernels import create_compute_time_step_size_kernel_for_local_time_stepping
 from .kernels import create_postprocess_updated_patch_for_local_time_stepping
 from .kernels import create_fused_compute_Riemann_kernel_for_Rusanov
 from .kernels import create_abstract_solver_user_declarations_for_local_time_stepping
@@ -25,6 +25,9 @@ from exahype2.solvers.fv.kernels import create_start_time_step_implementation_fo
 from .kernels import create_constructor_implementation_for_local_time_stepping
 from .kernels import create_finish_time_step_implementation_for_local_time_stepping
 
+import math
+
+
 class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
   def __init__(self, 
     name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
@@ -35,7 +38,8 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     plot_grid_properties=False,
     interpolate_linearly_in_time=True,
     use_gpu=False,
-    avoid_staircase_effect=True
+    avoid_staircase_effect=True,
+    discretisation_steps=math.sqrt(3.0)
   ):
     """
   
@@ -44,6 +48,14 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
       the code employs AMR on top of it and refines further, it will automatically 
       downscale the time step size accordingly. So hand in a valid time step size w.r.t.
       to max_volume_h.
+      
+    avoid_staircase_effect: Boolean
+      Please consult create_postprocess_updated_patch_for_local_time_stepping() for a 
+      discussion of this flag.
+      
+    discretisation_steps: Float
+      This routine discretises (buckets) the time step sizes. You find more information
+      in the C++ code in exahype2::TimeStepping.
   
     """
     self._interpolate_linearly_in_time        = interpolate_linearly_in_time
@@ -57,8 +69,8 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch_throughout_sweep  = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_local_time_stepping( name, time_step_relaxation )
-    self._postprocess_updated_patch_throughout_sweep       = create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation,avoid_staircase_effect)
+    self._compute_time_step_size  = create_compute_time_step_size_kernel_for_local_time_stepping( name, time_step_relaxation )
+    self._postprocess_updated_patch_throughout_sweep       = create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation,avoid_staircase_effect,discretisation_steps)
    
     self.set_implementation(flux=flux, 
       ncp=ncp, 

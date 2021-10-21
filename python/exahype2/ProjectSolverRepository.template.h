@@ -58,8 +58,8 @@
    * whereas the big cells still span a large time span. Hence, no the other
    * hand, there's also a (time-)local time stamp.
    */
-  double getMinTimeStamp(bool ofLastTimeStepOnly = false);
-  double getMaxTimeStamp(bool ofLastTimeStepOnly = false);
+  double getMinTimeStamp(bool ofCurrentlyRunningGridSweep = false);
+  double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep = false);
   double getMinTimeStepSize();
   double getMaxTimeStepSize();
   double getMinMeshSize();

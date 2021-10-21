@@ -99,8 +99,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp(bool ofLastTimeStepOnly=false) const final;
-    double getMaxTimeStamp(bool ofLastTimeStepOnly=false) const final;
+    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
+    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -213,10 +213,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxPatchSize(bool currentTimeStep = true) const;
-    double getMinPatchSize(bool currentTimeStep = true) const;
-    double getMaxVolumeSize(bool currentTimeStep = true) const;
-    double getMinVolumeSize(bool currentTimeStep = true) const;
+    double getMaxPatchSize(bool ofCurrentlyRunningGridSweep = true) const;
+    double getMinPatchSize(bool ofCurrentlyRunningGridSweep = true) const;
+    double getMaxVolumeSize(bool ofCurrentlyRunningGridSweep = true) const;
+    double getMinVolumeSize(bool ofCurrentlyRunningGridSweep = true) const;
 
     /**
      * mesh is an aAlias for patch
@@ -264,14 +264,20 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double     _minTimeStampThisTimeStep;
     double     _maxTimeStampThisTimeStep;
 
+    double     _localMinTimeStampThisTimeStep;
+    double     _localMaxTimeStampThisTimeStep;
+
     double     _minVolumeH;
     double     _maxVolumeH;
 
-    double     _minVolumeHFromPreviousTimeStep;
-    double     _maxVolumeHFromPreviousTimeStep;
+    double     _minVolumeHThisTimeStep;
+    double     _maxVolumeHThisTimeStep;
 
     double     _minTimeStepSize;
     double     _maxTimeStepSize;
+
+    double     _minTimeStepSizeThisTimeStep;
+    double     _maxTimeStepSizeThisTimeStep;
 
     int        _patchUpdates;
 

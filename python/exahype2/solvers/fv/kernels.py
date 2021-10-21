@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 
-def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size ):
+def create_compute_time_step_size_for_fixed_time_stepping( time_step_size ):
   return """
   cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
   cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -61,6 +61,12 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
 
 
 def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
+  """
+  
+  The outcome is used before we actually roll over the accumulation variables
+  and other stuff.
+  
+  """
   predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
@@ -73,10 +79,10 @@ def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_ta
   return """
   if (""" + predicate + """) {
     logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t       = " << _minTimeStamp );
+    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
     logInfo( "step()", "dt      = " << getTimeStepSize() );
-    logInfo( "step()", "h_{min} = " << _minVolumeH << " (volume size)");
-    logInfo( "step()", "h_{max} = " << _maxVolumeH << " (volume size)" );
+    logInfo( "step()", "h_{min} = " << _minVolumeHThisTimeStep << " (volume size)");
+    logInfo( "step()", "h_{max} = " << _maxVolumeHThisTimeStep << " (volume size)" );
   }
 """
 
@@ -86,6 +92,12 @@ def create_start_time_step_implementation_for_local_time_stepping(use_enclave_ta
   
 
 def create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(use_enclave_tasking):
+  """
+  
+  The outcome is used before we actually roll over the accumulation variables
+  and other stuff.
+  
+  """
   predicate = """
     tarch::mpi::Rank::getInstance().isGlobalMaster() 
     and
@@ -98,17 +110,17 @@ def create_start_time_step_implementation_for_fixed_time_stepping_with_subcyclin
   return """
   if (""" + predicate + """) {
     logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "step()", "t_{min,global}     = " << _minTimeStamp );
-    logInfo( "step()", "t_{max,global}     = " << _maxTimeStamp );
-    logInfo( "step()", "t_{min,this-step}  = " << _minTimeStampThisTimeStep );
-    logInfo( "step()", "t_{max,this-step}  = " << _maxTimeStampThisTimeStep );
+    logInfo( "step()", "t_{min,global}     = " << _minTimeStampThisTimeStep  );
+    logInfo( "step()", "t_{max,global}     = " << _maxTimeStampThisTimeStep  );
+    logInfo( "step()", "t_{min,this-step}  = " << _localMinTimeStampThisTimeStep );
+    logInfo( "step()", "t_{max,this-step}  = " << _localMaxTimeStampThisTimeStep );
     if (_minTimeStepSize > _maxTimeStepSize ) {
       logInfo( "step()", "dt_{min} = <not yet known>" );
       logInfo( "step()", "dt_{max} = <not yet known>" );
     }
     else {
-      logInfo( "step()", "dt_{min,this-step} = " << _minTimeStepSize );
-      logInfo( "step()", "dt_{max,this-step} = " << _maxTimeStepSize );
+      logInfo( "step()", "dt_{min}     = " << _minTimeStepSizeThisTimeStep );
+      logInfo( "step()", "dt_{max}     = " << _maxTimeStepSizeThisTimeStep );
     }
     logInfo( "step()", "h_{min}  = " << _minVolumeH << " (volume size)");
     logInfo( "step()", "h_{max}  = " << _maxVolumeH << " (volume size)" );
@@ -174,10 +186,10 @@ def create_start_time_step_implementation_for_adaptive_time_stepping(use_enclave
   statistics = """
   if (""" + predicate + """) {
     logInfo( "startTimeStep()", "Solver {{SOLVER_NAME}}:" );
-    logInfo( "startTimeStep()", "t            = " << _minTimeStamp );
+    logInfo( "startTimeStep()", "t            = " << _minTimeStampThisTimeStep );
     logInfo( "startTimeStep()", "dt           = " << getAdmissibleTimeStepSize() );
-    logInfo( "startTimeStep()", "h_{min}      = " << _minVolumeH << " (volume size)");
-    logInfo( "startTimeStep()", "h_{max}      = " << _maxVolumeH << " (volume size)" );
+    logInfo( "startTimeStep()", "h_{min}      = " << _minVolumeHThisTimeStep << " (volume size)");
+    logInfo( "startTimeStep()", "h_{max}      = " << _maxVolumeHThisTimeStep << " (volume size)" );
     logInfo( "startTimeStep()", "lambda_{max} = " << _maxEigenvalue );
   }
 """
