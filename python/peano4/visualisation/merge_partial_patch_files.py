@@ -28,16 +28,17 @@ def merge_partial_files(partial_files, merged_file_path):
             merged_patch_file.write(line)
 
 def read_meta_file(path_to_metafile):
-  merged_files = [] # stores names of merged files
+  merged_files = []  # stores names of merged files
   partial_files = [] # stores partial files that need to be merged
                      # into the same file
+  timestamps = []
   merged_file_number = 0
   with open(path_to_metafile, 'r') as metafile:
     for line in metafile.readlines():
       if 'end dataset' in line:
         # merged files will be put in the same dir as the original meta-file
         merged_file_name = 'merged_patch_file_' + str(merged_file_number) + '.peano-patch-file'
-        
+
         if os.path.isabs(path_to_metafile):
             merged_file_name = os.path.join(os.path.dirname(path_to_metafile), merged_file_name)
 
@@ -47,17 +48,20 @@ def read_meta_file(path_to_metafile):
         partial_files.clear()
         merged_file_number += 1
 
+      if 'timestamp' in line:
+        timestamps.append(line)
+
       words = line.split()
-      
+
       if 'include' in words:
         file_path = words[1].strip('"') # this is input path
-          
+
         # Where the filepath listed in the meta-file is not
         # an absolute path with assume the file lives in the
         # same directory as the meta-file itself:
         if not os.path.isabs(file_path):
           file_path = os.path.join(os.path.dirname(path_to_metafile), file_path)
-        
+
         partial_files.append(file_path)
 
   # write a meta file out of the merged_files
@@ -71,8 +75,9 @@ def read_meta_file(path_to_metafile):
                         "# \n"
                         "format ASCII \n"
                         "\n")
-    for merged_file in merged_files:
-      new_meta_file.write("begin dataset\n"
+    for merged_file, timestamp in zip(merged_files, timestamps):
+      new_meta_file.write("begin dataset\n" +
+                          timestamp +
                           "\n"
                           f'  include "{merged_file}"\n'
                           "end dataset\n"
@@ -94,6 +99,6 @@ if __name__ == "__main__":
     print("Error, specified input file '{}' does not exist, exiting...".format(
             args.metafile))
     sys.exit(1)
-  
+
   read_meta_file(args.metafile)
 
