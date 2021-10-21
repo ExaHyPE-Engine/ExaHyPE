@@ -62,7 +62,7 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_t
 """
 
 
-def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation, avoid_staircase_effect):
+def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation, avoid_staircase_effect, discretisation_steps):
   """
   
   :: Zero eigenvalues
@@ -107,29 +107,35 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
 
   if avoid_staircase_effect:
     compute_time_step_sizes = """    
-    if (tarch::la::equals( maxEigenvalue,0.0) ) {
-      maxEigenvalue = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue();
+    double newTimeStepSize = 0.0;
+    if ( tarch::la::greater( maxEigenvalue,0.0) ) {
+      const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
+      newTimeStepSize = ::exahype2::discretiseTimeStepSizes(
+        """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
+        minGlobalTimeStepSize,
+        """ + str(discretisation_steps) + """
+      );
     }
-    double newTimeStepSize;
-    const double maxTimeStepSize = tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(),0.0) ? 0.0 : """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() * 3.0;
-
-    if ( tarch::la::equals( maxEigenvalue,0.0) ) {
+    else {
       const double minTimeStampOfNeighbours = ::exahype2::getMinTimeStampOfNeighboursAhead(fineGridCell{{SOLVER_NAME}}CellLabel, fineGridFaces{{SOLVER_NAME}}FaceLabel);
 
       newTimeStepSize = minTimeStampOfNeighbours - fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-      assertion(newTimeStepSize>=0.0);
-    }
-    else {
-      newTimeStepSize = """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;      
     }
 """    
   else:
     compute_time_step_sizes = """    
-    if (tarch::la::equals( maxEigenvalue,0.0) ) {
-      maxEigenvalue = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue();
+    double       newTimeStepSize       = 0.0;
+    if ( tarch::la::greater( maxEigenvalue,0.0) ) {
+      const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
+      newTimeStepSize = ::exahype2::discretiseTimeStepSizes(
+        """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
+        minGlobalTimeStepSize,
+        """ + str(discretisation_steps) + """
+      );
     }
-    const double newTimeStepSize = tarch::la::equals(maxEigenvalue,0.0)                                        ? 0.0 : """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue;
-    const double maxTimeStepSize = tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(),0.0) ? 0.0 : """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() * 3.0;
+    else if ( tarch::la::greater( repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue(),0.0) ) {
+      newTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
+    }
 """    
    
     
@@ -137,10 +143,6 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
     if ( tarch::la::equals(newTimeStepSize,0.0) ) {
       logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
-    }
-    else if ( newTimeStepSize > maxTimeStepSize ) {
-      logDebug( "touchCellFirstTime(...)", "can't do a time step of size " << newTimeStepSize << " on cell " << marker.toString() << " as max time step size has been computed as " << maxTimeStepSize );
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(maxTimeStepSize);    
     }
     else {
       fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);    

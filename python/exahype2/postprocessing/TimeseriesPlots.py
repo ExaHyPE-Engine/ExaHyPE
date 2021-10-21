@@ -70,10 +70,19 @@ def plot_time_step_size_per_step(performance_data,label=None,xaxis=XAxis.RealTim
     real simulation time. 
      
   """
-  if xaxis==XAxis.RealTime:
+  if xaxis==XAxis.RealTime and not performance_data.uses_local_timestepping():
     if len(performance_data.get_time_step_real_time_stamps()) != len(performance_data.get_time_step_time_step_size()):
       raise Exception( "Size of fields do not match: " + str(len(performance_data.get_time_step_real_time_stamps())) + " vs. " + str(len(performance_data.get_time_step_time_step_size())))
     plt.plot( performance_data.get_time_step_real_time_stamps(), performance_data.get_time_step_time_step_size(), next_symbol(), markevery=next_markevery(performance_data.timesteps()), label=label  )
+    plt.xlabel( "Real time [t]=s" )
+  elif xaxis==XAxis.RealTime and performance_data.uses_local_timestepping():
+    x_data = performance_data.get_time_step_real_time_stamps()
+    y_data = performance_data.get_time_step_time_step_size()[0]
+    symbol = next_symbol()
+    if len(x_data)>len(y_data):
+      print( "WARNING: too many time stamps (does not fit to data points). Remove first entry")
+      x_data = x_data[1:]
+    plt.plot( x_data, y_data, symbol, markevery=next_markevery(len(y_data)), label=label  )
     plt.xlabel( "Real time [t]=s" )
   elif xaxis==XAxis.Iterations and not performance_data.uses_local_timestepping():
     y_data = performance_data.get_time_step_time_step_size()

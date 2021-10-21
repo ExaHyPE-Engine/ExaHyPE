@@ -13,29 +13,46 @@
 
 
 namespace exahype2 {
-  /**
-   * Run over all neighbours and analyse their time stamp.
-   *
-   */
-  template <typename FaceLabel>
-  double getMinTimeStampOfNeighbours(
-    const peano4::datamanagement::FaceEnumerator< FaceLabel >& faceLabelEnumerator
-  ) {
-    double result = std::numeric_limits<double>::max();
+  namespace internal {
+    /**
+     * Run over all neighbours and analyse their time stamp.
+     *
+     */
+    template <typename FaceLabel>
+    double getMinTimeStampOfNeighbours(
+      const peano4::datamanagement::FaceEnumerator< FaceLabel >& faceLabelEnumerator
+    ) {
+      double result = std::numeric_limits<double>::max();
 
-    for (int d=0; d<Dimensions; d++) {
-      result = std::min(result, faceLabelEnumerator(d).getNewTimeStamp(0) );
-      result = std::min(result, faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1) );
+      for (int d=0; d<Dimensions; d++) {
+        result = std::min(result, faceLabelEnumerator(d).getNewTimeStamp(0) );
+        result = std::min(result, faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1) );
+      }
+
+      return result;
     }
-
-    return result;
   }
-
 
   /**
    * Similar to getMinTimeStampOfNeighbours(), but we minimise only over those
    * neighbours that are actually ahead. If no neighbour is ahead or one lags
    * behind, we return the time stamp of cellLabel.
+   *
+   * ## Using code/algorithms
+   *
+   * Local timestepping codes can run into situations where the eigenvalue per
+   * cell is zero. This means that nothing happens in such cell. Therefore, the
+   * cell cannot advance in time. We don't know how far we can/should march. In
+   * this case, ExaHyPE offers two strategies: We can use the global admissible
+   * time step size, i.e. the global maximum eigenvalue, to determine a time
+   * step size; or we can see whether one of the neighbours is ahead and catch
+   * up.
+   *
+   * The former method leads to a staircase pattern, as some cells where
+   * nothing happens race forward in time. A description of this behaviour is
+   * found in the Python routine referenced below.
+   *
+   * @see exahype2.solvers.fv.kernels.create_postprocess_updated_patch_for_local_time_stepping
    */
   template <typename CellLabel, typename FaceLabel>
   double getMinTimeStampOfNeighboursAhead(
@@ -53,7 +70,7 @@ namespace exahype2 {
         oneIsAhead = true;
       }
       if ( tarch::la::smaller(leftNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
-        oneIsBehind = true;
+         oneIsBehind = true;
       }
 
       double rightNeighbourTimeStamp = faceLabelEnumerator(d=Dimensions).getNewTimeStamp(1);
@@ -62,8 +79,8 @@ namespace exahype2 {
         oneIsAhead = true;
       }
       if ( tarch::la::smaller(rightNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
-        oneIsBehind = true;
-      }
+       oneIsBehind = true;
+       }
     }
 
     if (oneIsAhead and not oneIsBehind) {
@@ -73,7 +90,6 @@ namespace exahype2 {
       return cellLabel.getTimeStamp();
     }
   }
-
 
   /**
    * Determine whether to run a time step on a cell by analysing the
@@ -90,7 +106,7 @@ namespace exahype2 {
   ) {
     double cellTimeStamp =  cellLabel.getTimeStamp();
 
-    return tarch::la::greaterEquals( getMinTimeStampOfNeighbours(faceLabelEnumerator), cellTimeStamp );
+    return tarch::la::greaterEquals( ::exahype2::internal::getMinTimeStampOfNeighbours(faceLabelEnumerator), cellTimeStamp );
   }
 
 
@@ -156,6 +172,23 @@ namespace exahype2 {
    * @return Weight of (old,new) data.
    */
   std::pair<double,double> getInterpolationWeights( double oldTimeStampOnFace, double newTimeStampOnFace, double cellTimeStamp );
+
+  /**
+   * Discretise (bucket) time step sizes
+   *
+   * We expect a min time step size that we use globally. We find the biggest
+   * @f$ discretisationSteps^k \cdot minGlobalTimeStepSize < cellTimeStepSize @f$
+   * value through k which still meets the stability of cellTimeStepSize. We
+   * then return this value.
+   *
+   * @param discretisationSteps Pass in zero or something negative to switch
+   *   discretisation off.
+   */
+  double discretiseTimeStepSizes(
+    double cellTimeStepSize,
+    double minGlobalTimeStepSize,
+    double discretisationSteps
+  );
 }
 
 #endif

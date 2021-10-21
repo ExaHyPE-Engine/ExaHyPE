@@ -239,10 +239,13 @@ class PerformanceData(object):
      
      
      This is not a mere copy, as the last entry in the local set is the end
-     of the simulation
+     of the simulation. So we remove this one. At the same time, the very 
+     first entry is the start of the simulation or first time step where 
+     nothing happens yet (if we have to analyse the eigenvalue first).
      
     """
     shifted_data = [x-self._time_step_time_stamp[0] for x in self._time_step_time_stamp]
+    #shifted_data.pop()
     return shifted_data[1:]
 
 
