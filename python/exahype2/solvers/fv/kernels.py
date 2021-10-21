@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 
 
-def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size ):
+def create_compute_time_step_size_for_fixed_time_stepping( time_step_size ):
   return """
   cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
   cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();

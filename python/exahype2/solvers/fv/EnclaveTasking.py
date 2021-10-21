@@ -19,6 +19,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   double cellTimeStamp    = -1.0;
      
   {{PREPROCESS_RECONSTRUCTED_PATCH_THROUGHOUT_SWEEP}}
+  {{COMPUTE_TIME_STEPSIZE}}
     
   assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
   assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
@@ -203,6 +204,8 @@ class EnclaveTasking( FV ):
 
     self._use_split_loop                      = False
     
+    self._compute_time_step_size              = "#error Not yet defined"
+
     self._preprocess_reconstructed_patch_throughout_sweep      = ""
     self._postprocess_updated_patch_throughout_sweep           = ""
     self._preprocess_reconstructed_patch_in_enclave_task       = ""
@@ -427,6 +430,7 @@ class EnclaveTasking( FV ):
     d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "FUSED_RIEMANN_SOLVER_CALL"]           = jinja2.Template(self._fused_Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     
+    d[ "COMPUTE_TIME_STEPSIZE" ]                               = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
     d[ "PREPROCESS_RECONSTRUCTED_PATCH_THROUGHOUT_SWEEP" ]     = jinja2.Template(self._preprocess_reconstructed_patch_throughout_sweep, undefined=jinja2.DebugUndefined).render( **d )
     d[ "POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP" ]          = jinja2.Template(self._postprocess_updated_patch_throughout_sweep,      undefined=jinja2.DebugUndefined).render( **d )
     d[ "PREPROCESS_RECONSTRUCTED_PATCH_IN_ENCLAVE_TASK" ]      = jinja2.Template(self._preprocess_reconstructed_patch_in_enclave_task,  undefined=jinja2.DebugUndefined).render( **d )

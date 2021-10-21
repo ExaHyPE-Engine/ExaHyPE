@@ -17,6 +17,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     double cellTimeStamp    = -1.0;
      
     {{PREPROCESS_RECONSTRUCTED_PATCH}}
+    {{COMPUTE_TIME_STEPSIZE}}
     
     assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
     assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
@@ -129,7 +130,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     double cellTimeStepSize = -1.0;
     double cellTimeStamp    = -1.0;
      
-    {PREPROCESS_RECONSTRUCTED_PATCH}
+    {COMPUTE_TIME_STEPSIZE}
     
     assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
     assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
@@ -199,6 +200,8 @@ class SingleSweep( FV ):
 
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
+    
+    self._compute_time_step_size              = "#error Not yet defined"
     
     self._preprocess_reconstructed_patch      = ""
     self._postprocess_updated_patch           = ""
@@ -312,6 +315,8 @@ class SingleSweep( FV ):
     d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
     d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
     
+    d[ "COMPUTE_TIME_STEPSIZE" ]              = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
+
     d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )

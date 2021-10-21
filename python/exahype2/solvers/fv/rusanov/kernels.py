@@ -8,7 +8,7 @@ from exahype2.solvers.fv.kernels import create_empty_source_term_kernel
 from exahype2.solvers.fv.kernels import create_user_defined_source_term_kernel
     
     
-def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
+def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
   result = """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
@@ -26,7 +26,7 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time
   return result
 
 
-def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping_with_subcycling( solver_name, remove_accumulation_errors=True ):
+def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling( solver_name, remove_accumulation_errors=True ):
   result = """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
@@ -44,7 +44,7 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_t
   return result
 
 
-def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
+def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
   result = """
   cellTimeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();  
   cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
@@ -55,7 +55,7 @@ def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_local_time
   return result
 
 
-def create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping():
+def create_compute_time_step_size_kernel_for_adaptive_time_stepping():
   return """
   cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
   cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();

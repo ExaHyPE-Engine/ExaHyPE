@@ -11,7 +11,7 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
-from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling
+from .kernels import create_compute_time_step_size_for_fixed_time_stepping_with_subcycling
 
 from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
@@ -50,7 +50,7 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch      = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping_with_subcycling( time_step_size, name )
+    self._compute_time_step_size      = create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, name )
     self._postprocess_updated_patch           = ""
     
     self.set_implementation(flux=flux, 
