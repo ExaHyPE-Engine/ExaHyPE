@@ -77,13 +77,11 @@ namespace exahype2 {
            #pragma omp parallel for collapse(3)
           for (int x = 0; x < numVPAIP; x++)
           for (int y = 0; y < numVPAIP; y++)
+          for (int i=0; i<unknowns+auxiliaryVariables; i++)
           {
             int sourceIndex      = (y+1)*(numVPAIP+ 3*haloSize) + x - y;
             int destinationIndex = y*numVPAIP + x;
-            for (int i=0; i<unknowns+auxiliaryVariables; i++)
-            {
-              pV.result[pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i] =  reconstructedPatch[sourceIndex*(unknowns+auxiliaryVariables)+i];
-            }
+            pV.result[pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i] =  reconstructedPatch[sourceIndex*(unknowns+auxiliaryVariables)+i];
           }
 
           if (not skipSourceTerm)
@@ -305,13 +303,11 @@ namespace exahype2 {
           for (int z = 0; z < numVPAIP; z++)
           for (int y = 0; y < numVPAIP; y++)
           for (int x = 0; x < numVPAIP; x++)
+          for (int i = 0; i < unknowns + auxiliaryVariables; i++)
           {
              const int mydest = z*numVPAIP*numVPAIP + y*numVPAIP + x;
              const int mysrc  = z*helper*helper + y*helper + x + sourceSerialised;
-             for (int i = 0; i < unknowns + auxiliaryVariables; i++)
-             {
-                 pV.result[pidx*destPatchSize + mydest * (unknowns + auxiliaryVariables) + i] =reconstructedPatch[mysrc * (unknowns + auxiliaryVariables) + i];
-             }
+             pV.result[pidx*destPatchSize + mydest * (unknowns + auxiliaryVariables) + i] =reconstructedPatch[mysrc * (unknowns + auxiliaryVariables) + i];
           }
 
          if (not skipSourceTerm)
