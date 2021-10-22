@@ -245,7 +245,7 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
   #ifdef UseSmartMPI
   tarch::timing::Watch dataExchangeTime("peano4::parallel::SpacetreeSet", "traverse", false );
   #endif
-
+  
   while (not allSendReceivesFinished) {
     allSendReceivesFinished = true;
     for (auto& sourceStackKey: keys) {
@@ -274,11 +274,23 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
         "finishAllOutstandingSendsAndReceives(...)", spacetreeId, -1, -1
       );
       triggeredTimeoutWarning = true;
+
+      for (auto& pp: keys) {
+        if ( pp.first==spacetreeId and not stackContainer.getForPush(pp)->tryToFinishSendOrReceive()) {
+          logWarning( "finishAllOutstandingSendsAndReceives(...)", "exchange with " << pp.second << " is still not complete" );
+        }
+      }
     }
     if (
       tarch::mpi::Rank::getInstance().isTimeOutDeadlockEnabled() &&
       (std::chrono::system_clock::now()>timeOutShutdown)
     ) {
+      for (auto& pp: keys) {
+        if ( pp.first==spacetreeId and not stackContainer.getForPush(pp)->tryToFinishSendOrReceive()) {
+          logError( "finishAllOutstandingSendsAndReceives(...)", "exchange with " << pp.second << " is still not complete" );
+        }
+      }
+
       tarch::mpi::Rank::getInstance().triggerDeadlockTimeOut(
         "peano4::parallel::SpacetreeSet",
         "finishAllOutstandingSendsAndReceives(...)", spacetreeId, -1, -1
