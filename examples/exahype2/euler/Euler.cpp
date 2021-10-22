@@ -305,6 +305,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
 #pragma omp end declare target
 
 
+#pragma omp declare target
 void examples::exahype2::euler::Euler::flux(
  const double * __restrict__ Q, // Q[5+0],
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -337,8 +338,6 @@ void examples::exahype2::euler::Euler::flux(
   F[normal+1] += p;
   F[4]        += coeff*p;
 }
-
-
+#pragma omp end declare target
 
 #endif
-
