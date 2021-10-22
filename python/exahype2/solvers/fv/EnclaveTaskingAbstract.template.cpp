@@ -22,10 +22,12 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _maxTimeStampThisTimeStep(0.0),
   _minVolumeH(0.0),
   _maxVolumeH(0.0),
-  _minVolumeHFromPreviousTimeStep(0.0),
-  _maxVolumeHFromPreviousTimeStep(0.0),
+  _minVolumeHThisTimeStep(0.0),
+  _maxVolumeHThisTimeStep(0.0),
   _minTimeStepSize(0.0),
   _maxTimeStepSize(0.0),
+  _minTimeStepSizeThisTimeStep(0.0),
+  _maxTimeStepSizeThisTimeStep(0.0),
   _patchUpdates(0) {
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
@@ -41,33 +43,33 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool currentTimeStep) const {
-  return getMinVolumeSize(currentTimeStep) * NumberOfFiniteVolumesPerAxisPerPatch;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool ofCurrentlyRunningGridSweep) const {
+  return getMinVolumeSize(ofCurrentlyRunningGridSweep) * NumberOfFiniteVolumesPerAxisPerPatch;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize(bool currentTimeStep) const {
-  return getMaxVolumeSize(currentTimeStep) * NumberOfFiniteVolumesPerAxisPerPatch;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize(bool ofCurrentlyRunningGridSweep) const {
+  return getMaxVolumeSize(ofCurrentlyRunningGridSweep) * NumberOfFiniteVolumesPerAxisPerPatch;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinVolumeSize(bool currentTimeStep) const {
-  return currentTimeStep ? _minVolumeH : _minVolumeHFromPreviousTimeStep;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinVolumeSize(bool ofCurrentlyRunningGridSweep) const {
+  return ofCurrentlyRunningGridSweep ? _minVolumeHThisTimeStep : _minVolumeH;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxVolumeSize(bool currentTimeStep) const {
-  return currentTimeStep ? _maxVolumeH : _maxVolumeHFromPreviousTimeStep;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxVolumeSize(bool ofCurrentlyRunningGridSweep) const {
+  return ofCurrentlyRunningGridSweep ? _maxVolumeHThisTimeStep : _maxVolumeH;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofLastTimeStepOnly) const {
-  return ofLastTimeStepOnly ? _minTimeStampThisTimeStep : _minTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinTimeStamp(bool ofCurrentlyRunningGridSweep) const {
+  return ofCurrentlyRunningGridSweep ? _minTimeStampThisTimeStep : _minTimeStamp;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofLastTimeStepOnly) const {
-  return ofLastTimeStepOnly ? _maxTimeStampThisTimeStep : _maxTimeStamp;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStamp(bool ofCurrentlyRunningGridSweep) const {
+  return ofCurrentlyRunningGridSweep ? _maxTimeStampThisTimeStep : _maxTimeStamp;
 }
 
 
@@ -87,26 +89,26 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   if ( tarch::la::greater(timeStepSize,0.0) ) {
     assertion1(timeStepSize<std::numeric_limits<double>::max()/10.0,timeStepSize);
     assertion1(timeStepSize>=0.0,timeStepSize);
-    _minTimeStepSize = std::min(timeStepSize,_minTimeStepSize);
-    _maxTimeStepSize = std::max(timeStepSize,_maxTimeStepSize);
-    assertion2(_minTimeStepSize<=_maxTimeStepSize, _minTimeStepSize, _maxTimeStepSize );
+    _minTimeStepSizeThisTimeStep = std::min(timeStepSize,_minTimeStepSizeThisTimeStep);
+    _maxTimeStepSizeThisTimeStep = std::max(timeStepSize,_maxTimeStepSizeThisTimeStep);
+    assertion2(_minTimeStepSizeThisTimeStep<=_maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep );
 
-    _minTimeStampThisTimeStep = std::min( _minTimeStampThisTimeStep, timeStamp );
-    _maxTimeStampThisTimeStep = std::max( _maxTimeStampThisTimeStep, timeStamp );
+    _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
+    _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
 
     _patchUpdates++;
   }
 
   assertion1(timeStamp<std::numeric_limits<double>::max()/10.0,timeStamp);
   assertion1(timeStamp>=0.0,timeStamp);
-  _maxTimeStamp = std::max(timeStamp,_maxTimeStamp);
-  _minTimeStamp = std::min(timeStamp,_minTimeStamp);
-  assertion2(_minTimeStamp<=_maxTimeStamp, _minTimeStamp, _maxTimeStamp );
+  _maxTimeStampThisTimeStep = std::max(_maxTimeStampThisTimeStep,timeStamp);
+  _minTimeStampThisTimeStep = std::min(_minTimeStampThisTimeStep,timeStamp);
+  assertion2(_minTimeStampThisTimeStep<=_maxTimeStampThisTimeStep, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep );
 
   assertion1(patchSize<std::numeric_limits<double>::max()/10.0,patchSize);
   assertion1(patchSize>0.0,patchSize);
-  _maxVolumeH = std::max(_maxVolumeH,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
-  _minVolumeH = std::min(_minVolumeH,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
+  _maxVolumeHThisTimeStep = std::max(_maxVolumeHThisTimeStep,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
+  _minVolumeHThisTimeStep = std::min(_minVolumeHThisTimeStep,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
 }
 
 
@@ -204,22 +206,31 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     _solverState == SolverState::PrimaryAfterGridInitialisation
   ) {
     logDebug( "startTimeStep(...)", "reset t and dt as state had been " << toString(_solverState) );
-    _minTimeStamp    = std::numeric_limits<double>::max();
-    _maxTimeStamp    = std::numeric_limits<double>::min();
-    _minTimeStepSize = std::numeric_limits<double>::max();
-    _maxTimeStepSize = std::numeric_limits<double>::min();
 
-    _minVolumeHFromPreviousTimeStep = _minVolumeH;
-    _maxVolumeHFromPreviousTimeStep = _maxVolumeH;
+    _minTimeStamp = _minTimeStampThisTimeStep;
+    _maxTimeStamp = _maxTimeStampThisTimeStep;
 
     _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
     _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-    _maxVolumeH      = 0.0;
-    _minVolumeH      = std::numeric_limits<double>::max();
+    _minTimeStepSize = _minTimeStepSizeThisTimeStep;
+    _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+
+    _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
+    _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
+
+    _minVolumeH = _minVolumeHThisTimeStep;
+    _maxVolumeH = _maxVolumeHThisTimeStep;
+
+    _maxVolumeHThisTimeStep      = 0.0;
+    _minVolumeHThisTimeStep      = std::numeric_limits<double>::max();
+
     _patchUpdates    = 0;
 
     _solverState = SolverState::Secondary;
+
+    _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
+    _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
   }
   else { // plot initial condition, e.g.
     _solverState = SolverState::Primary;
@@ -231,24 +242,26 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   #ifdef Parallel
-  double newMinTimeStamp = _minTimeStamp;
-  double newMaxTimeStamp = _maxTimeStamp;
-  double newMinVolumeH   = _minVolumeH;
-  double newMaxVolumeH   = _maxVolumeH;
-  double newMinTimeStepSize = _minTimeStepSize;
-  double newMaxTimeStepSize = _maxTimeStepSize;
-  int    newPatchUpdates    = _patchUpdates;
+  double newMinTimeStamp = _minTimeStampThisTimeStep;
+  double newMaxTimeStamp = _maxTimeStampThisTimeStep;
+  double newMinVolumeH   = _minVolumeHThisTimeStep;
+  double newMaxVolumeH   = _maxVolumeHThisTimeStep;
+  double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
+  double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+
+  double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
+  double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
 
   tarch::mpi::Rank::getInstance().allReduce(
       &newMinTimeStamp,
-      &_minTimeStamp,
+      &_minTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   tarch::mpi::Rank::getInstance().allReduce(
       &newMaxTimeStamp,
-      &_maxTimeStamp,
+      &_maxTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
@@ -256,14 +269,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
   tarch::mpi::Rank::getInstance().allReduce(
       &newMinVolumeH,
-      &_minVolumeH,
+      &_minVolumeHThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   tarch::mpi::Rank::getInstance().allReduce(
       &newMaxVolumeH,
-      &_maxVolumeH,
+      &_maxVolumeHThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
@@ -271,32 +284,48 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
 
   tarch::mpi::Rank::getInstance().allReduce(
       &newMinTimeStepSize,
-      &_minTimeStepSize,
+      &_minTimeStepSizeThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   tarch::mpi::Rank::getInstance().allReduce(
       &newMaxTimeStepSize,
-      &_maxTimeStepSize,
+      &_maxTimeStepSizeThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MAX,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+
+
+  tarch::mpi::Rank::getInstance().allReduce(
+      &newMaxTimeStepSize,
+      &_maxTimeStepSizeThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &newPatchUpdates,
-      &_patchUpdates,
-      1, MPI_INT,
-      MPI_SUM,
+      &newLocalMinTimeStamp,
+      &_localMinTimeStampThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MIN,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+  tarch::mpi::Rank::getInstance().allReduce(
+      &newLocalMaxTimeStamp,
+      &_localMaxTimeStampThisTimeStep,
+      1, MPI_DOUBLE,
+      MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   #endif
 
-  if (_minTimeStampThisTimeStep == std::numeric_limits<double>::max() ) {
-    _minTimeStampThisTimeStep = _minTimeStamp; // no update has happened, i.e. very first time step
+  if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
+    _minTimeStampThisTimeStep = 0.0;
   }
-  if (_maxTimeStampThisTimeStep <= 0 ) {
+  if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
     _maxTimeStampThisTimeStep = 0.0;
   }
 

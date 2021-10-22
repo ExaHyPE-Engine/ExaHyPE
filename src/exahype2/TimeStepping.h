@@ -13,29 +13,46 @@
 
 
 namespace exahype2 {
-  /**
-   * Run over all neighbours and analyse their time stamp.
-   *
-   */
-  template <typename FaceLabel>
-  double getMinTimeStampOfNeighbours(
-    const peano4::datamanagement::FaceEnumerator< FaceLabel >& faceLabelEnumerator
-  ) {
-    double result = std::numeric_limits<double>::max();
+  namespace internal {
+    /**
+     * Run over all neighbours and analyse their time stamp.
+     *
+     */
+    template <typename FaceLabel>
+    double getMinTimeStampOfNeighbours(
+      const peano4::datamanagement::FaceEnumerator< FaceLabel >& faceLabelEnumerator
+    ) {
+      double result = std::numeric_limits<double>::max();
 
-    for (int d=0; d<Dimensions; d++) {
-      result = std::min(result, faceLabelEnumerator(d).getNewTimeStamp(0) );
-      result = std::min(result, faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1) );
+      for (int d=0; d<Dimensions; d++) {
+        result = std::min(result, faceLabelEnumerator(d).getNewTimeStamp(0) );
+        result = std::min(result, faceLabelEnumerator(d+Dimensions).getNewTimeStamp(1) );
+      }
+
+      return result;
     }
-
-    return result;
   }
-
 
   /**
    * Similar to getMinTimeStampOfNeighbours(), but we minimise only over those
    * neighbours that are actually ahead. If no neighbour is ahead or one lags
    * behind, we return the time stamp of cellLabel.
+   *
+   * ## Using code/algorithms
+   *
+   * Local timestepping codes can run into situations where the eigenvalue per
+   * cell is zero. This means that nothing happens in such cell. Therefore, the
+   * cell cannot advance in time. We don't know how far we can/should march. In
+   * this case, ExaHyPE offers two strategies: We can use the global admissible
+   * time step size, i.e. the global maximum eigenvalue, to determine a time
+   * step size; or we can see whether one of the neighbours is ahead and catch
+   * up.
+   *
+   * The former method leads to a staircase pattern, as some cells where
+   * nothing happens race forward in time. A description of this behaviour is
+   * found in the Python routine referenced below.
+   *
+   * @see exahype2.solvers.fv.kernels.create_postprocess_updated_patch_for_local_time_stepping
    */
   template <typename CellLabel, typename FaceLabel>
   double getMinTimeStampOfNeighboursAhead(
@@ -53,7 +70,7 @@ namespace exahype2 {
         oneIsAhead = true;
       }
       if ( tarch::la::smaller(leftNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
-        oneIsBehind = true;
+         oneIsBehind = true;
       }
 
       double rightNeighbourTimeStamp = faceLabelEnumerator(d=Dimensions).getNewTimeStamp(1);
@@ -62,8 +79,8 @@ namespace exahype2 {
         oneIsAhead = true;
       }
       if ( tarch::la::smaller(rightNeighbourTimeStamp,cellLabel.getTimeStamp()) ) {
-        oneIsBehind = true;
-      }
+       oneIsBehind = true;
+       }
     }
 
     if (oneIsAhead and not oneIsBehind) {
@@ -73,7 +90,6 @@ namespace exahype2 {
       return cellLabel.getTimeStamp();
     }
   }
-
 
   /**
    * Determine whether to run a time step on a cell by analysing the
@@ -90,7 +106,7 @@ namespace exahype2 {
   ) {
     double cellTimeStamp =  cellLabel.getTimeStamp();
 
-    return tarch::la::greaterEquals( getMinTimeStampOfNeighbours(faceLabelEnumerator), cellTimeStamp );
+    return tarch::la::greaterEquals( ::exahype2::internal::getMinTimeStampOfNeighbours(faceLabelEnumerator), cellTimeStamp );
   }
 
 
@@ -156,6 +172,55 @@ namespace exahype2 {
    * @return Weight of (old,new) data.
    */
   std::pair<double,double> getInterpolationWeights( double oldTimeStampOnFace, double newTimeStampOnFace, double cellTimeStamp );
+
+  /**
+   * Discretise (bucket) time step sizes and truncate it
+   *
+   * We expect a min time step size that we use globally. We find the biggest
+   * @f$ discretisationSteps^k \cdot minGlobalTimeStepSize < cellTimeStepSize @f$
+   * value through k which still meets the stability of cellTimeStepSize. We
+   * then return this value.
+   *
+   * ## Truncation
+   *
+   * If the eigenvalues become very small within a cell, we end up with huge
+   * time step sizes. This should not happen. So I expect the global time step
+   * size (largest value) and truncate the time step size in any case by this one.
+   *
+   * ## Decreasing time step sizes
+   *
+   * I use the global minimal time step size to kick off the analysis. This fails
+   * if the admissible global time step size shrinks over time. Therefore, the
+   * cell's time step size can be smaller than the globally admissible time step
+   * size. It simply means that the global time step size is shrinking and that
+   * the argument we get is lagging behind as we haven't finished the current
+   * time step yet.
+   *
+   *
+   *
+   * @param discretisationSteps Pass in zero or something negative to switch
+   *   discretisation off.
+   *
+   * @param minGlobalTimeStepSize Minimal global time step size (of previous
+   *   time step). I use this as a starting point to identify appropriate
+   *   multitudes of time step sizes.
+   *
+   * @param maxGlobalTimeStepSize Maximum global time step size (of previous
+   *   time step). I use this one to truncate too big time step sizes. Overall,
+   *   I expect the time step size not to grow by more than 10 percent.
+   *
+   * @param discretisationSteps Discretisation step size. This one determines the
+   *   time step buckets. So we have a bucket with
+   *   @f$ (minGlobalTimeStepSize,minGlobalTimeStepSize*discretisationStepsSize) @f$, then
+   *   one with @f$(minGlobalTimeStepSize*discretisationStepsSize,minGlobalTimeStepSize*discretisationStepsSize^2)@f$,
+   *   and so forth.
+   */
+  double discretiseAndTruncateTimeStepSizes(
+    double cellTimeStepSize,
+    double minGlobalTimeStepSize,
+    double maxGlobalTimeStepSize,
+    double discretisationStepsSize
+  );
 }
 
 #endif

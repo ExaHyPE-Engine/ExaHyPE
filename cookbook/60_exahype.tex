@@ -485,6 +485,72 @@ project.set_load_balancing(
 \end{itemize}
 
 
+\paragraph{Writing your own parallel extensions}
+
+Most users that write extensions to \ExaHyPE\ which need some global data
+exchange are users which add new fields to their solver. Examples are global
+statistics that they want to track over the solution or global variables that
+they control.
+
+\begin{definition}
+ Each MPI rank holds one instance of the solver. 
+ All threads per MPI rank share the same instance of the solver.
+\end{definition}
+
+
+\noindent
+\Peano\ splits up the domain into chunks along the space-filling curve. 
+If you use an enclave solver, it then splits up these chunks further into tasks.
+That is, operations per cell such as the Riemann solves and the patch
+postprocessing can run in parallel on each thread.
+
+If you add new attributes to your solver, this attribute exists on each solver
+on each rank. 
+You therefore have to 
+\begin{itemize}
+  \item ensure that no two threads access the attribute at the same time;
+  \item ensure that the attributes of the individual solver instances per rank
+  remain consistent.
+\end{itemize}
+
+\noindent
+The first item is relatively simple: You might, for example, decide to protect
+all accesses to your own variables via a semaphore. 
+These techniques are discussed in Section
+\ref{section:parallel-programming:shared-mem:protect}.
+There is no specific place to take care of the protection: 
+Just protect the actual data access.
+
+
+The second item requires slightly more work, as you have to globally reduce the
+attribute: After each time step, you have to ensure that all ranks exchange
+their attributes with each other, and you then have to merge these data.
+I recommend not to use MPI's data exchange routine directly, but to use \Peano's 
+wrappers around these routines. 
+These wrappers are discussed in Section
+\ref{section:parallel-programming:shared-mem:reductions}.
+The actual data exchange should be done at the end of a each time step. 
+For this, you add
+\begin{code}
+  void finishTimeStep() override;
+\end{code}
+to your solver. The implementation should first invoke the superclass
+and then add the additional data exchange.
+\begin{code}
+void mynamespace::MyFancySolver::finishTimeStep() {
+  MyFancyAbstractSolver::finishTimeStep();
+  #ifdef Parallel
+  // additional data exchange
+  #endif
+}
+\end{code}
+
+
+
+\ExaHyPE\ internally realises these two steps for all of its solver attributes
+such as the maximum mesh size or the admissible time step sizes.
+
+
 \section{Adding adaptive mesh refinement}
 
 By default, \ExaHyPE\ solvers operate on a regular grid.

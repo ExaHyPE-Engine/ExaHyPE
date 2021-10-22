@@ -609,10 +609,10 @@ void toolbox::loadbalancing::RecursiveSubdivision::finishStep() {
 
   auto step = getStrategyStep();
 
-//  #if PeanoDebug>0
-//  #else
-//  if ( step!=StrategyStep::Wait ) 
-//  #endif
+  #if PeanoDebug>0
+  #else
+  if ( step!=StrategyStep::Wait ) 
+  #endif
   logInfo( "finishStep()", toString( step ) << " in state " << toString() );
 
   switch ( step ) {
