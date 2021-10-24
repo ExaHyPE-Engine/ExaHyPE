@@ -66,29 +66,3 @@ Its entry along the 1-dimension is fixed to the default value specified in the
 macro.
 
 
-\section{Synchronisation}
-
-\subsection{Shared memory synchronisation}
-
-In the tradition of Intel's original TBB version, I offer an abstraction over
-critical sections aka exclusive code blocks.
-That is blocks that can only be executed by one thread at a time.
-
-To use it, you define a \texttt{BooleanSemaphore} object.
-It should be global (or static) and is an abstraction around C++/TBB/OpenMP.
-To lock it, you can do so manually, but actually I offer a \texttt{Lock} object
-which locks the semaphore and automatically frees it once the object is
-destroyed.
-
-\subsection{Distributed memory synchronisation}
-
-I also offer a boolean semaphore accross all MPI ranks. This one is quite
-expensive, as it has to lock both all threads and all ranks and thus send
-quite some messages forth and back. 
-
-The usage is similar to the shared memory lock, but you have to give the
-semaphore a unique name (you might construct a string using the
-\texttt{\_\_LINE\_\_} and \texttt{\_\_FILE\_\_} macro). 
-It is the name that \Peano\ uses to ensure that the semaphore is unique accross
-all ranks.
-In this way, the semaphore is similar to an OpenMP named critical section.

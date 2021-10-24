@@ -19,6 +19,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   double cellTimeStamp    = -1.0;
      
   {{PREPROCESS_RECONSTRUCTED_PATCH_THROUGHOUT_SWEEP}}
+  {{COMPUTE_TIME_STEPSIZE}}
     
   assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
   assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
@@ -38,7 +39,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       cellTimeStamp,
-      cellTimeStepSize,
+      usedTimeStepSize,
       reconstructedPatch,
       targetPatch
     );
@@ -54,13 +55,15 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(usedTimeStepSize);
   }
   else { // is an enclave cell
     assertion( marker.isEnclaveCell() );
     auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       cellTimeStamp,
-      cellTimeStepSize,
+      usedTimeStepSize,
       reconstructedPatch
     );
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
@@ -73,7 +76,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   }
   
   fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
+  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(usedTimeStepSize);
   """)
 
   def __init__(self,solver):
@@ -93,6 +96,15 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       ")",
       add_assertions_to_halo_exchange = True
     )
+
+    self._Template_TouchCellFirstTime_Preamble = """
+  if (
+    repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()==""" + solver._name + """::SolverState::Primary or 
+    repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()==""" + solver._name + """::SolverState::PrimaryAfterGridInitialisation
+  ) {{
+    fineGridCell""" + solver._name + """CellLabel.setHasUpdated(false);
+  }}
+""" + self._Template_TouchCellFirstTime_Preamble
 
     self._solver    = solver
 
@@ -132,15 +144,25 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
         std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
       );
     }
-
-    double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-    {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
     
-    repositories::{{SOLVER_INSTANCE}}.update(
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize() + fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
-      marker.h()(0)
-    );
+    if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+      double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
+      
+      {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
+      
+      repositories::{{SOLVER_INSTANCE}}.update(
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+        marker.h()(0)
+      );
+    }
+    else {
+      repositories::{{SOLVER_INSTANCE}}.update(
+        0.0,
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
+        marker.h()(0)
+      );
+    }
   }
 """
   def __init__(self,solver):
@@ -182,6 +204,8 @@ class EnclaveTasking( FV ):
 
     self._use_split_loop                      = False
     
+    self._compute_time_step_size              = "#error Not yet defined"
+
     self._preprocess_reconstructed_patch_throughout_sweep      = ""
     self._postprocess_updated_patch_throughout_sweep           = ""
     self._preprocess_reconstructed_patch_in_enclave_task       = ""
@@ -406,6 +430,7 @@ class EnclaveTasking( FV ):
     d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "FUSED_RIEMANN_SOLVER_CALL"]           = jinja2.Template(self._fused_Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     
+    d[ "COMPUTE_TIME_STEPSIZE" ]                               = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
     d[ "PREPROCESS_RECONSTRUCTED_PATCH_THROUGHOUT_SWEEP" ]     = jinja2.Template(self._preprocess_reconstructed_patch_throughout_sweep, undefined=jinja2.DebugUndefined).render( **d )
     d[ "POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP" ]          = jinja2.Template(self._postprocess_updated_patch_throughout_sweep,      undefined=jinja2.DebugUndefined).render( **d )
     d[ "PREPROCESS_RECONSTRUCTED_PATCH_IN_ENCLAVE_TASK" ]      = jinja2.Template(self._preprocess_reconstructed_patch_in_enclave_task,  undefined=jinja2.DebugUndefined).render( **d )

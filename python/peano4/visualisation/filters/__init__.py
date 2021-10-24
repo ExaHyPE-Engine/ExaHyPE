@@ -3,3 +3,4 @@
 from .ExtractFineGrid              import ExtractFineGrid
 from .ExtractMeshResolution        import ExtractMeshResolution
 from .AverageOverCell              import AverageOverCell
+from .Calculator                   import Calculator

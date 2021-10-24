@@ -11,7 +11,7 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
-from exahype2.solvers.fv.kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_compute_time_step_size_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
@@ -45,7 +45,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch      = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size )
+    self._compute_time_step_size      = create_compute_time_step_size_for_fixed_time_stepping( time_step_size )
     self._postprocess_updated_patch           = ""
 
     self.set_implementation(flux=flux, 

@@ -11,7 +11,7 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
-from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping
+from .kernels import create_compute_time_step_size_kernel_for_adaptive_time_stepping
 from .kernels import create_postprocess_updated_patch_for_adaptive_time_stepping
 from .kernels import create_finish_time_step_implementation_for_adaptive_time_stepping
 from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_adaptive_time_stepping
@@ -40,7 +40,7 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch_throughout_sweep = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping()
+    self._compute_time_step_size = create_compute_time_step_size_kernel_for_adaptive_time_stepping()
     self._postprocess_updated_patch_throughout_sweep      = """
   const double cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
   const double cellTimeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();

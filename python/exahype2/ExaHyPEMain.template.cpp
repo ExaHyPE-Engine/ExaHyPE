@@ -187,7 +187,7 @@ bool selectNextAlgorithmicStep() {{
       and
       repositories::mayPlot()
     ) {{
-      if ( nextPlotTimeStamp < repositories::getMinTimeStamp() ) {{
+      if ( nextPlotTimeStamp+TimeInBetweenPlots < repositories::getMinTimeStamp() ) {{
         logWarning(
           "selectNextAlgorithmicStep()",
           "plot as t=" << repositories::getMinTimeStamp() << " and next plot has been due at t=" << nextPlotTimeStamp << ". " <<

@@ -82,6 +82,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
   if (not _data.empty()) {
     logInfo( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
+    file << std::scientific;
     #if Dimensions==2
     file << "number(0), number(1), t, x(0), x(1), data " << std::endl;
     #else

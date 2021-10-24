@@ -1,0 +1,80 @@
+\chapter{Parallel programming}
+\label{section:parallel-programming}
+
+Peano has originally been written for MPI+X on CPU-based architectures.
+On the MPI side, I provide some wrappers around mainstream MPI routines which
+augment the MPI things with deadlock detection, explicit buffering of unexpected
+messages or global synchronisation.
+On the X-side, \Peano\ has its own 
+
+
+\section{Shared memory}
+
+\subsection{Protecting shared memory access}
+\label{section:parallel-programming:shared-mem:protect}
+
+In the tradition of Intel's original TBB version, I offer an abstraction over
+critical sections aka exclusive code blocks.
+That is blocks that can only be executed by one thread at a time.
+
+To use it, you define a \texttt{BooleanSemaphore} object.
+It should be global (or static) and is an abstraction around C++/TBB/OpenMP.
+To lock it, you can do so manually, but actually I offer a \texttt{Lock} object
+which locks the semaphore and automatically frees it once the object is
+destroyed.
+
+For details, please consult the documentation of the class \linebreak
+\texttt{tarch::multicore::BooleanSemaphore}. The \texttt{multicore} namespace
+also hosts variants to support recursive semaphores.
+
+\begin{remark}
+ It might be faster to use atomics if you want to protect the access to a single
+ native variable. In this case, I recommend to stick to C++ atomics. The
+ semaphore is a wrapper around C++ and OpenMP (so your code will work with
+ both). If you use only C++ atomic, you should still be fine when you switch to
+ OpenMP.
+\end{remark}
+
+
+\section{Distributed memory}
+
+\subsection{Synchronisation}
+
+I also offer a boolean semaphore accross all MPI ranks. This one is quite
+expensive, as it has to lock both all threads and all ranks and thus send
+quite some messages forth and back. 
+
+The usage is similar to the shared memory lock, but you have to give the
+semaphore a unique name (you might construct a string using the
+\texttt{\_\_LINE\_\_} and \texttt{\_\_FILE\_\_} macro). 
+It is the name that \Peano\ uses to ensure that the semaphore is unique accross
+all ranks.
+In this way, the semaphore is similar to an OpenMP named critical section.
+I recommend to avoid MPI barrier whenever possible.
+Details can be found in \texttt{tarch::mpi::Rank::barrier()}.
+
+
+
+\subsection{Exchange global data between ranks (reduction)}
+\label{section:parallel-programming:shared-mem:reductions}
+
+If you reduce data betwen the ranks, I recommend that you use \Peano's wrappers.
+They have two advantages: 
+They automatically provide deadlock tracking, and they poll the MPI queues,
+i.e.~if the code stalls as too many other messages for other purposes (global
+load balancing, plotting, \ldots) drop in, and remove these messages from the
+buffers such that MPI can make progress. The usage is detailed in
+\texttt{tarch::mpi::Rank::allReduce}, but the code usually resembles:
+
+\begin{code}
+double myBuffer = _myVariable;
+
+tarch::mpi::Rank::getInstance().allReduce(
+  &myBuffer,
+  &_myVariable,
+  1, MPI_DOUBLE,
+  MPI_MIN,
+  [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+);
+\end{code}
+      

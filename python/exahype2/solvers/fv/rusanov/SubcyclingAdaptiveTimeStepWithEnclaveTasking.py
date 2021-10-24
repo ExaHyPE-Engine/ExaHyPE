@@ -11,7 +11,7 @@ from .kernels import create_abstract_solver_declarations
 from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
-from .kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping_with_subcycling
+from .kernels import create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling
 from .kernels import create_fused_compute_Riemann_kernel_for_Rusanov
 
 from .kernels import create_postprocess_updated_patch_for_adaptive_time_stepping
@@ -56,7 +56,7 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._preprocess_reconstructed_patch_throughout_sweep  = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_adaptive_time_stepping_with_subcycling( name )
+    self._compute_time_step_size  = create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling( name )
     self._postprocess_updated_patch_throughout_sweep      = """
   const double cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
   const double cellTimeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
@@ -132,9 +132,9 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     super(SubcyclingAdaptiveTimeStepWithEnclaveTasking, self).create_action_sets()
 
     update_cell_guard  = "::exahype2::runTimeStepOnCell( fineGridCell" + self._name + "CellLabel, fineGridFaces" + self._name + "FaceLabel)"
-    updated_cell_guard = "fineGridCell" + self._name + "CellLabel.getSemaphoreNumber()!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber"
+    #updated_cell_guard = "fineGridCell" + self._name + "CellLabel.getSemaphoreNumber()!=::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber"
     self._action_set_update_cell.guard                += " and " + update_cell_guard
-    self._action_set_merge_enclave_task_outcome.guard  = updated_cell_guard
+    #self._action_set_merge_enclave_task_outcome.guard  = updated_cell_guard
     
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)

@@ -99,8 +99,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp(bool ofLastTimeStepOnly=false) const final;
-    double getMaxTimeStamp(bool ofLastTimeStepOnly=false) const final;
+    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
+    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -213,10 +213,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxPatchSize(bool currentTimeStep = true) const;
-    double getMinPatchSize(bool currentTimeStep = true) const;
-    double getMaxVolumeSize(bool currentTimeStep = true) const;
-    double getMinVolumeSize(bool currentTimeStep = true) const;
+    double getMaxPatchSize(bool ofCurrentlyRunningGridSweep = true) const;
+    double getMinPatchSize(bool ofCurrentlyRunningGridSweep = true) const;
+    double getMaxVolumeSize(bool ofCurrentlyRunningGridSweep = true) const;
+    double getMinVolumeSize(bool ofCurrentlyRunningGridSweep = true) const;
 
     /**
      * mesh is an aAlias for patch
@@ -234,15 +234,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState  getSolverState() const;
 
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
+    //#if defined(OpenMPGPUOffloading) // HS: note there is a compiler bug in llvm until that is resolved 
+    //#pragma omp declare target       // we need to keep these declarations outside the declare target construct and instead
+    //#endif                           // map them explicitly in Rusanov.h
     static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     {{SOLVER_CONSTANTS}}
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
+    //#if defined(OpenMPGPUOffloading)
+    //#pragma omp end declare target
+    //#endif
 
     /**
      * It is important that we only plot after the secondary sweep.
@@ -264,14 +264,20 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double     _minTimeStampThisTimeStep;
     double     _maxTimeStampThisTimeStep;
 
+    double     _localMinTimeStampThisTimeStep;
+    double     _localMaxTimeStampThisTimeStep;
+
     double     _minVolumeH;
     double     _maxVolumeH;
 
-    double     _minVolumeHFromPreviousTimeStep;
-    double     _maxVolumeHFromPreviousTimeStep;
+    double     _minVolumeHThisTimeStep;
+    double     _maxVolumeHThisTimeStep;
 
     double     _minTimeStepSize;
     double     _maxTimeStepSize;
+
+    double     _minTimeStepSizeThisTimeStep;
+    double     _maxTimeStepSizeThisTimeStep;
 
     int        _patchUpdates;
 
