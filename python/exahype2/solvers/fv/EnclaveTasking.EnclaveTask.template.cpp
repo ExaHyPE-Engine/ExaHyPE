@@ -248,7 +248,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_
   ::tarch::mpi::DoubleMessage::send( dtMessage, rank, tag, communicator );
   ::tarch::mpi::IntegerMessage::send( taskIdMessage, rank, tag, communicator );
 
-  MPI_Send( _inputValues, _numberOfInputValues, MPI_DOUBLE, rank, tag, communicator );
+  MPI_Request request;
+  MPI_Isend( _inputValues, _numberOfInputValues, MPI_DOUBLE, rank, tag, communicator, &request );
 
   logInfo(
     "moveTask(...)",
@@ -288,7 +289,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
   MPI_Recv( inputValues, NumberOfInputValues, MPI_DOUBLE, rank, tag, communicator,
     MPI_STATUS_IGNORE
   );
-
 
   {{CLASSNAME}}* result = new {{CLASSNAME}}(
     markerMessage,
@@ -331,7 +331,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
   ::tarch::mpi::DoubleMessage::send( dtMessage, rank, tag, communicator );
   ::tarch::mpi::IntegerMessage::send( taskIdMessage, rank, tag, communicator );
 
-  MPI_Send( _outputValues, _numberOfResultValues, MPI_DOUBLE, rank, tag, communicator );
+  MPI_Request request;
+  MPI_Isend( _outputValues, _numberOfResultValues, MPI_DOUBLE, rank, tag, communicator, &request );
 
   logInfo(
     "forwardTaskOutputToRank(...)",
