@@ -31,7 +31,7 @@ void tarch::multicore::initSmartMPI() {
   );
   smartmpi::init( smartMPITopology );
 
-  smartmpi::appendToSchedulerChain( "DeviceScheduler" );
+  smartmpi::appendToSchedulerChain( "SwapBetweenDevicesScheduler" );
   smartmpi::appendToSchedulerChain( new SmartScheduler() );
 
   tarch::mpi::Rank::getInstance().setCommunicator( smartMPITopology->computeNodeOrSmartServerCommunicator );
