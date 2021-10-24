@@ -27,9 +27,13 @@ int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_e
     [](smartmpi::ReceiverCallType type, int rank, int tag, MPI_Comm communicator) -> smartmpi::Task* {
       if (type==smartmpi::ReceiverCallType::ReceiveTask) {
         return receiveTask( rank, tag, communicator );
-      }
-      else {
-        return receiveOutcome( rank, tag, communicator );
+      } else if (type==smartmpi::ReceiverCallType::ReceivedTaskOutcomeForFowarding) {
+        static constexpr bool isForwarding = true;
+        return receiveOutcome( rank, tag, communicator, isForwarding);
+      } else {
+        assert(type==smartmpi::ReceiverCallType::ReceiveOutcome);
+        static constexpr bool isForwarding = false;
+        return receiveOutcome( rank, tag, communicator, isForwarding );
       }
     }
   )
@@ -286,7 +290,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
   );
 
 
-
   {{CLASSNAME}}* result = new {{CLASSNAME}}(
     markerMessage,
     tMessage.getValue(),
@@ -314,7 +317,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRan
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
-
   logInfo(
     "forwardTaskOutputToRank(...)",
     "will start to forward task output (which has already been computed)"
@@ -342,7 +344,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
 }
 
 
-smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator) {
+smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward) {
   logInfo( "receiveOutcome(...)", "rank=" << rank << ", tag=" << tag );
   peano4::grid::GridTraversalEvent dummyEvent;
   const int NumberOfResultValues =
@@ -373,13 +375,30 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
     MPI_STATUS_IGNORE
   );
 
+  /**
+   * Having received the output there are two further options:
+   * we may need to forward it yet again to another rank - in this case
+   * we need a pointer to the task which contains the output;
+   * alternatively we bookmark the output and return a nullptr
+   */
+  if(intentionToForward) {
+    double* inputValues = nullptr; // no input as already computed
+
+    {{CLASSNAME}}* result = new {{CLASSNAME}}(
+      markerMessage,
+      tMessage.getValue(),
+      dtMessage.getValue(),
+      inputValues
+    );
+    result->_remoteTaskId = taskIdMessage.getValue();
+    result->_outputValues = outputValues;
+    return result;
+  }
   logInfo(
     "receiveOutcome(...)",
     "bookmark outcome of task " << taskIdMessage.getValue()
   );
-
   ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues);
-
   return nullptr;
 }
 #endif

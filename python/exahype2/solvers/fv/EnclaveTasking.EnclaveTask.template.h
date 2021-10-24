@@ -114,7 +114,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     void forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
 
     static smartmpi::Task* receiveTask(int rank, int tag, MPI_Comm communicator);
-    static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator);
+    static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward);
     #endif
 
 
