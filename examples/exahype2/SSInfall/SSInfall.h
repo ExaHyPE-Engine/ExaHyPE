@@ -42,6 +42,8 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double globalMaxTimeStepSize
     ) override;
 
+    void finishTimeStep() override;
+
     ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,

@@ -3,6 +3,7 @@
 
 #include "Constants.h"
 #include "exahype2/NonCriticalAssertions.h"
+#include "tarch/multicore/Lock.h"
 
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
@@ -15,10 +16,10 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
   AbstractSSInfall::startTimeStep(globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize);
   constexpr double pi = M_PI;
   for (int i=0;i<sample_number;i++) {
-    m_tot_copy[i]=m_tot[i];
+    m_tot_copy[i]=global_m_tot[i];
     //m_tot[i]-=(4/3)*M_PI*pow(r_s[i],3);
-    //std::cout << std::setprecision (4) << m_tot[i] << " " <<cell_tot[i] <<" "<< r_s[i] << std::endl;
-    m_tot[i]=0; cell_tot[i]=0;
+    //if (MassCal==0) {std::cout << std::setprecision (4) << m_tot_copy[i] << " " <<global_cell_tot[i] <<" "<< r_s[i] << std::endl;}
+    global_m_tot[i]=0; m_tot[i]=0; cell_tot[i]=0;
     //std::cout << rho_x[i] <<" "<< r_s[i] << std::endl;
   }
   //std::cout << rho_0 << std::endl;
@@ -33,10 +34,31 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
         m_tot_copy[j]+=std::max(0.0,m_layer);
       }
     }
+    //for (int i=0;i<sample_number;i++) {std::cout << m_tot_copy[i] <<" "<< (4/3)*pi*pow(r_s[i],3) <<" "<< r_s[i] << std::endl;}
   }
-  //for (int i=0;i<sample_number;i++) {std::cout << m_tot_copy[i] <<" "<< (4/3)*pi*pow(r_s[i],3) << std::endl;}
+
 }
 
+void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
+  AbstractSSInfall::finishTimeStep();
+  //std::cout << "add mass together here!" << std::endl;
+  #ifdef Parallel
+  tarch::mpi::Rank::getInstance().allReduce(
+      m_tot,
+      global_m_tot,
+      sample_number, MPI_DOUBLE,
+      MPI_SUM,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+  tarch::mpi::Rank::getInstance().allReduce(
+      cell_tot,
+      global_cell_tot,
+      sample_number, MPI_DOUBLE,
+      MPI_SUM,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
+  #endif
+}
 
 ::exahype2::RefinementCommand examples::exahype2::SSInfall::SSInfall::refinementCriterion(
   const double * __restrict__ Q, // Q[5+0]
@@ -293,21 +315,23 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   const double rho,
   const double size
 ) {
+  static tarch::multicore::BooleanSemaphore _mySemaphore;
+
   //double m=(rho-1)*pow(size,3); //notice here we use overdensity
   double m=(rho-1)*pow(size,3);
-  //m=1e-14;
   if (m<0){m=0.0;}
-  //std::cout << m << std::endl;
-
-  /*for (int i=0;i<sample_number;i++){
+  //m=1e-14;
+  //std::cout << m <<std::endl;
+  tarch::multicore::Lock myLock( _mySemaphore );
+  for (int i=0;i<sample_number;i++){
     if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;cell_tot[i]+=1;}
     else if ((r_coor-size/2)>r_s[i]) {m_tot[i]+=0;}
     else {m_tot[i]+=m*std::max(0.0,pow((r_s[i]-r_coor+size/2),3))/pow(size,3);cell_tot[i]+=1;}
-  }*/
-  for (int i=0;i<sample_number;i++){
+  }
+  /*for (int i=0;i<sample_number;i++){
     if (r_coor<r_s[i]) {m_tot[i]+=m; cell_tot[i]+=1;}
     else {m_tot[i]+=0;}
-  }
+  }*/
 }
 
 double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
@@ -318,10 +342,12 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   double a,b;
   double m_a,m_b;
   double m_result;
-
+  //for (int i=0;i<sample_number;i++) {std::cout << m_tot_copy[i] << " ";}
+  //if (r_coor>0.85) {std::cout << "use it" << std::endl;}
 if (MassCal==0){ //which means we use cell counting
   bool IsCenter=false;
   bool IsOutSkirt=false;
+
   if (r_coor<r_s[0]) {
     a=0; b=r_s[0];
     m_a=0; m_b=m_tot_copy[0];
@@ -341,6 +367,7 @@ if (MassCal==0){ //which means we use cell counting
       }
     }
   }
+
   if (IsCenter){
     m_result=m_b*pow((r_coor),3)/pow(b,3);
   }
@@ -353,11 +380,12 @@ if (MassCal==0){ //which means we use cell counting
   else {  //linear interpolation
     m_result=m_a*(b-r_coor)/(b-a)+m_b*(r_coor-a)/(b-a);
     //try to use a more precise mass calculation scheme here
-    //double vol_tem=(4/3)*pi*(pow(b,3)-pow(a,3));
-    //double rho_tem=(m_b-m_a)/vol_tem;
-    //double vol_in=(4/3)*pi*(pow(r_coor,3)-pow(a,3));
-    //m_result=m_a+rho_tem*vol_in;    
-    //std::cout << m_b <<" "<< m_a << std::endl;
+    /*double vol_tem=(4/3)*pi*(pow(b,3)-pow(a,3));
+    double rho_tem=(m_b-m_a)/vol_tem;
+    double vol_in=(4/3)*pi*(pow(r_coor,3)-pow(a,3));
+    m_result=m_a+rho_tem*vol_in;*/
+    //if (not m_b==0){    
+    //std::cout << m_b <<" "<< m_a << std::endl;}
     //std::cout << m_result <<" "<< vol_tem << " "<<rho_tem<<" "<<vol_in << std::endl;
   }
 }  
@@ -385,7 +413,7 @@ else if (MassCal==1){ //which means we use rho interpolation
 
 }  
   
-  
+  //m_result=0.0;
 
   return m_result;
 }

@@ -140,7 +140,8 @@ if __name__ == "__main__":
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
           double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
-          
+          //if (r_coor>0.85) {std::cout << "add it" << std::endl;}
+
           //if (std::isnan(reconstructedPatch[cellSerialised*5+0])) {std::abort();}     
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
           
@@ -284,7 +285,7 @@ if __name__ == "__main__":
     if args.ReSwi==0:
       offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
       #offset=[-0.75, -0.75, -0.75]; domain_size=[1.5, 1.5, 1.5]
-      #offset=[-1, -1, -1]; domain_size=[2, 2, 2]
+      #offset=[-1.5, -1.5, -1.5]; domain_size=[3, 3, 3]
     elif args.ReSwi==2:
       offset=[-4.5, -4.5, -4.5]; domain_size=[9, 9, 9]
 
@@ -329,13 +330,16 @@ if __name__ == "__main__":
 
     solverconstants=""
     #if args.extension=="cellcount": 
+    solverconstants+= "int global_cell_tot[{}]={};\n".format(args.sample_number,"{0}")
+    solverconstants+= "double global_m_tot[{}]={};\n".format(args.sample_number,"{0}")
     solverconstants+= "int cell_tot[{}]={};\n".format(args.sample_number,"{0}")
     solverconstants+= "double m_tot[{}]={};\n".format(args.sample_number,"{0}")
     solverconstants+= "double m_tot_copy[{}]={};\n".format(args.sample_number,"{0}")
     #elif args.extension=="rhointer":
     solverconstants+= "double rho_0=0, rho_x[{}]={};\n".format(args.sample_number,"{0}")
-    solverconstants+= "double rho_x_copy[{}]={};\n".format(args.sample_number,"{0}")    
-    intparams.update({"MassCal":1})
+    solverconstants+= "double rho_x_copy[{}]={};\n".format(args.sample_number,"{0}") 
+    if args.extension=="rhointer":    
+      intparams.update({"MassCal":1})
       
     r_list=np.linspace(0,(domain_size[0]+offset[0]),(args.sample_number+1))[1:]
     solverconstants+= "double r_s[{}]={}".format(args.sample_number,"{")
