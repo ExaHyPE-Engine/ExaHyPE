@@ -12,55 +12,28 @@ void examples::exahype2::euler2D::euler2D::initialCondition(
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   bool                                         gridIsConstructred
 ) {
-  logTraceInWith3Arguments( "initialCondition(...)", volumeCentre, volumeH, gridIsConstructred );
 
-  Q[0] = 0.1;  // rho
-  Q[1] = 0;    // momentum in x direction
-  Q[2] = 0;    // momentum in y direction
+	Q[0] = 0.1;  // rho
+	Q[1] = 0;    // momentum in x direction
+	Q[2] = 0;    // momentum in y direction
   
-  tarch::la::Vector<Dimensions,double> centre = {0.5, 0.5, 0.5};
-  bool isInTheCenter = ( tarch::la::norm2( volumeCentre-centre ) <= 0.15 );
-  
-  Q[3] = (isInTheCenter ? 1 : 0);     // energy
-
-  logTraceOut( "initialCondition(...)" );
+	bool isLeft = (volumeCentre[0] < 0.5);
+	Q[3] = (isLeft ? 1 : 0);
+//	tarch::la::Vector<Dimensions,double> centre = {0.5, 0.5, 0.5};
+//	bool isInTheCenter = ( tarch::la::norm2( volumeCentre-centre ) <= 0.15 );
+//	Q[3] = (isInTheCenter ? 1 : 0);     // energy
+	
 }
-
-
-
-
-
-void examples::exahype2::euler2D::euler2D::boundaryConditions(
-  const double * __restrict__                  Qinside, // Qinside[4+0]
-  double * __restrict__                        Qoutside, // Qoutside[4+0]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
-  double                                       t,
-  int                                          normal
-) {
-  logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
-  
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = 0;
-  Qoutside[2] = 0;
-  Qoutside[3] = 0;
-  
-  logTraceOut( "boundaryConditions(...)" );
-}
-
-
-
-
 
 double ::examples::exahype2::euler2D::euler2D::maxEigenvalue(
-  const double * __restrict__ Q, // Q[4+0],
+  const double * __restrict__ Q, // Qma[4+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
   int                                          normal
 )  {
 	
-	  const double irho = 1./Q[0];
+	  const double irho = 1.0/Q[0];
 	  
 	  // based on the assumption that the fluid is an ideal gas, gamma chosen for dry air
 	  const double gamma = 1.4;  
@@ -77,16 +50,10 @@ double ::examples::exahype2::euler2D::euler2D::maxEigenvalue(
 		  result = std::max( std::abs(Q[2] * irho - c), std::abs(Q[2] * irho + c) );
 		  break;
 	  }
-
-	  
-	  logTraceOut( "maxEigenvalue(...)" );
 	  
 	  return result;
 
 }
-
-
-
 
 void ::examples::exahype2::euler2D::euler2D::flux(
   const double * __restrict__ Q, // Q[4+0],
@@ -104,8 +71,7 @@ void ::examples::exahype2::euler2D::euler2D::flux(
   const double gamma = 1.4;
   const double p = (gamma-1) * (Q[3] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   
-  switch(normal){
-  
+  switch(normal){  
   case 0: //in x direction
 	  F[0] = Q[1]; //rho
 	  F[1] = irho * Q[1] * Q[1] + p; 
@@ -120,14 +86,23 @@ void ::examples::exahype2::euler2D::euler2D::flux(
 	  break;
   }  
 
-  logTraceOut( "flux(...)" );
 }
 
-
-
-
-
-
+void examples::exahype2::euler2D::euler2D::boundaryConditions(
+  const double * __restrict__                  Qinside, // Qinside[4+0]
+  double * __restrict__                        Qoutside, // Qoutside[4+0]
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal
+) {
+  
+  Qoutside[0] = Qinside[0]; //density
+  Qoutside[1] = 0;			//velocity in x direction
+  Qoutside[2] = 0;			//velocity in y direction
+  Qoutside[3] = 0;			//Energy
+  
+}
 
 
 
