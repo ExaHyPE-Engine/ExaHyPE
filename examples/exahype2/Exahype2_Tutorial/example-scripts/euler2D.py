@@ -13,13 +13,13 @@
 # We import Peano4 as project. If this step fails, ensure that your environment
 # variable PYTHONPATH points to Peano4's python directory.
 #
-import os, sys
+
 import peano4
 import exahype2
-import argparse
 
 
-project = exahype2.Project( ["examples", "exahype2", "euler2D"], "euler2D", ".", executable="Euler2D" )
+project = exahype2.Project( ["examples", "exahype2", "euler2D"],
+                             "euler2D", ".", executable="Euler2D" )
 
 
 #
@@ -27,9 +27,8 @@ project = exahype2.Project( ["examples", "exahype2", "euler2D"], "euler2D", ".",
 #
 unknowns       = 4
 time_step_size = 0.001
-max_h          = 0.1
-min_h          = 0.1
-
+max_h          = 0.01
+min_h          = 0.01
 
 #
 # Still the same solver, but this time we use named arguments. This is the way
@@ -40,41 +39,28 @@ min_h          = 0.1
 auxiliary_variables = 0
 
 thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
-  "euler2D",
-  3,
-  unknowns, auxiliary_variables,
-  min_h, max_h,
-  time_step_size,
-  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-  eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  name="euler2D",
+  patch_size=3,
+  unknowns=4, auxiliary_variables=0,
+  min_volume_h=0, max_volume_h=0.01,
+  time_step_size=0.001,
+  flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
 )
 
-
-#thesolver.set_implementation( refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation )
-
-
 project.add_solver( thesolver )
-
-
-dimensions = 2
-build_mode = peano4.output.CompileMode.Release
-
-
 
 #
 # Lets configure some global parameters
 #
+build_mode = peano4.output.CompileMode.Release
 project.set_global_simulation_parameters(
   dimensions = 2,
   offset = [0.0,0.0],
   size = [1.0,1.0],
-  end_time = 0.01,
+  end_time = 0.1,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.001,      # snapshots
-  periodic_BC = [False, False, False]
+  time_in_between_plots = 0.001
 )
-
-
 
 #
 # So here's the parallel stuff. This is new compared to the serial
@@ -83,7 +69,6 @@ project.set_global_simulation_parameters(
 project.set_load_balancing( "toolbox::loadbalancing::RecursiveSubdivision", "new ::exahype2::LoadBalancingConfiguration()" )
 project.set_Peano4_installation( "../../../", build_mode )
 peano4_project = project.generate_Peano4_project(False)
-
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=4)
 
 print("Done. Executable is: Euler2D")

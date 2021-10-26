@@ -14,11 +14,10 @@ project = exahype2.Project( ["examples", "exahype2", "swe"], "swe", ".", executa
 #
 # Add the Finite Volumes solver
 #
-unknowns       = 4
+unknowns       = 3
 time_step_size = 0.001
 max_h          = 0.1
-min_h          = 0.1
-
+min_h          = 0.01
 
 #
 # Still the same solver, but this time we use named arguments. This is the way
@@ -26,7 +25,7 @@ min_h          = 0.1
 #
 #
 
-auxiliary_variables = 0
+auxiliary_variables = 1
 
 thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   "swe",
@@ -38,6 +37,8 @@ thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
   ncp = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
   time_step_relaxation = 0.01
 )
+
+thesolver.set_implementation(refinement_criterion=exahype2.solvers.fv.PDETerms.User_Defined_Implementation)
 
 project.add_solver( thesolver )
 
@@ -52,9 +53,9 @@ project.set_global_simulation_parameters(
   dimensions = 2,
   offset = [0.0,0.0],
   size = [1.0,1.0],
-  end_time = 0.01,
+  end_time = 0.20,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.001,      # snapshots
+  time_in_between_plots = 0.005,      # snapshots
   periodic_BC = [False, False, False]
 )
 

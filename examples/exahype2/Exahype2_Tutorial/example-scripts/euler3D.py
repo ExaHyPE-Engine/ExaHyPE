@@ -27,8 +27,8 @@ project = exahype2.Project( ["examples", "exahype2", "euler3D"], "euler3D", ".",
 #
 unknowns       = 5
 time_step_size = 0.001
-max_h          = 0.1
-min_h          = 0.1
+max_h          = 0.03
+min_h          = 0.0
 
 
 #
@@ -68,9 +68,9 @@ project.set_global_simulation_parameters(
   dimensions = 3,
   offset = [0.0,0.0,0.0],
   size = [1.0,1.0,1.0],
-  end_time = 0.01,
+  end_time = 0.1,
   first_plot_time_stamp = 0.0,
-  time_in_between_plots = 0.001,      # snapshots
+  time_in_between_plots = 0.005,      # snapshots
   periodic_BC = [False, False, False]
 )
 
