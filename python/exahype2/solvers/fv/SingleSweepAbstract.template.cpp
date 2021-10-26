@@ -125,9 +125,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::greater(volumeH,MaxVolumeH ) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
 
   return result;
   {% else %}
