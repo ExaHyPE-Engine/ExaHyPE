@@ -67,7 +67,7 @@ build_mode = peano4.output.CompileMode.Release
 project.set_global_simulation_parameters(
   dimensions = 3,
   offset = [0.0,0.0,0.0],
-  size = [1.0,1.0,1.0],
+  size = [1.0, 1.0, 1.0],
   end_time = 0.1,
   first_plot_time_stamp = 0.0,
   time_in_between_plots = 0.005,      # snapshots

@@ -14,11 +14,11 @@ void examples::exahype2::euler2D::euler2D::initialCondition(
 ) {
 
 	Q[0] = 0.1;  // rho
-	Q[1] = 0;    // momentum in x direction
-	Q[2] = 0;    // momentum in y direction
+	Q[1] = 0.0;    // momentum in x direction
+	Q[2] = 0.0;    // momentum in y direction
   
 	bool isLeft = (volumeCentre[0] < 0.5);
-	Q[3] = (isLeft ? 1 : 0);
+	Q[3] = (isLeft ? 1.0 : 0.0);
 //	tarch::la::Vector<Dimensions,double> centre = {0.5, 0.5, 0.5};
 //	bool isInTheCenter = ( tarch::la::norm2( volumeCentre-centre ) <= 0.15 );
 //	Q[3] = (isInTheCenter ? 1 : 0);     // energy
