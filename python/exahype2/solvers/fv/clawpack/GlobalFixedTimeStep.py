@@ -6,7 +6,7 @@ from exahype2.solvers.fv.PDETerms    import PDETerms
 import jinja2
 import peano4
 
-from exahype2.solvers.fv.kernels import create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_compute_time_step_size_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_fixed_time_stepping
@@ -90,7 +90,7 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
     self._use_split_loop                      = False
 
-    self._preprocess_reconstructed_patch      = create_preprocess_reconstructed_patch_throughout_sweep_kernel_for_fixed_time_stepping( time_step_size )
+    self._preprocess_reconstructed_patch      = create_compute_time_step_size_for_fixed_time_stepping( time_step_size )
     self._postprocess_updated_patch           = ""
 
     self._Riemann_solver_implementation_files = clawpack_files

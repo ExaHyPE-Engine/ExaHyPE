@@ -213,6 +213,7 @@ AC_ARG_ENABLE(gpu,
     case "${enableval}" in
       no)        AC_MSG_RESULT(no);                             gpu=false ;;
       nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support);  gpu=nvidia ;;
+      intel)     AC_MSG_RESULT(build with intel GPU support);   gpu=intel ;;
       amd)       AC_MSG_RESULT(build with AMD GPU support);     gpu=amd ;;
       *)         AC_MSG_FAILURE([default=no (no gpu)]); gpu=false ;;
     esac 
@@ -220,28 +221,37 @@ AC_ARG_ENABLE(gpu,
   [ AC_MSG_CHECKING(for gpu); AC_MSG_RESULT(no); gpu=false ]
 )
 
+
 if test "$gpu" == amd; then
   #AC_DEFINE([UseAMD], [1], [UseAMD])
   #AC_CHECK_HEADERS([hip/hip_runtime.h],[],[AC_MSG_ERROR([header <hip/hip_runtime.h> not found])])
   if test "$multithreading" == omp; then
     AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
+    AC_DEFINE([needandhaveomp], [1], [needandhaveomp])
   else
     AC_MSG_FAILURE([AMD GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
 fi
 
 if test "$gpu" == nvidia; then
-  #if test "$multithreading" == omp; then
-  if test "$multithreading" == omp-layered; then
+  if test "$multithreading" == omp; then
     AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-  elif test "$multithreading" == omp; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
+    AC_DEFINE([needandhaveomp], [1], [needandhaveomp])
   else
     AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
 fi
-AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$gpu" = xnvidia ])
 
+if test "$gpu" == intel; then
+  if test "$multithreading" == omp; then
+    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
+    AC_DEFINE([needandhaveomp], [1], [needandhaveomp])
+  else
+    AC_MSG_FAILURE([INTEL GPU support requires OpenMP; reconfigure with omp multithreading]);
+  fi
+fi
+AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$needandhaveomp" = x1 ])
+# https://autotools.io/automake/conditional.html
 
 #
 # ===============================================================

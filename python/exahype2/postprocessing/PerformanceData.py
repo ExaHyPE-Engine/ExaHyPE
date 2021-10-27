@@ -9,12 +9,17 @@ import traceback
 
 
 class PerformanceData(object):
-  def __init__(self,file_name,solver_name,verbose=False):
+  def __init__(self,file_name,solver_name="",verbose=False):
     """
     
     file_name: String
+      This is a mandatory field, as it tells us which file to parse.
         
     solver_name: String
+      In theory, you could live without this one if you have only one
+      solver. However, ExaHyPE2 supports multiple solvers within one
+      grid and therefore needs a dedicated solver name to know where
+      to look in the file. Leave it empty if there's only one solver.
     
     """
     self._file_name            = file_name
@@ -35,11 +40,14 @@ class PerformanceData(object):
     self.plotting_time_stamp          = []
     
     self._time_step_time_stamp        = []
-    self._simulated_time_stamp        = []
-    self._time_step_size              = []
+    self._simulated_time_stamp_max    = []
+    self._simulated_time_stamp_min    = []
+    self._time_step_size_max          = []
+    self._time_step_size_min          = []
+    self._updates                     = []
 
-    self._number_of_time_steps = 0
-
+    self._number_of_time_steps        = 0
+    
     """
      The code tries to parse the machine format first. This format however is only
      used by the command line logger. If you use the other loggers, they tend to 
@@ -105,12 +113,9 @@ class PerformanceData(object):
 
 
   def parse(self,verbose):
-    file       = open(self._file_name, "r")
+    file       = open(self._file_name, "r", encoding="unicode_escape")
     self.valid = True
     
-    first_dt   = -1
-    second_dt  = -1
-
     print( "parse " + self._file_name )
 
     try:
@@ -135,36 +140,43 @@ class PerformanceData(object):
           elif "mpi" in line:
             self._ranks = int( line.split( "ranks)" )[0].split( "(")[-1] )
 
-        if "Abstract"+self._solver_name+"::step()" in line and "rank:0" in line:
-          if "dt_{max}" in line and first_dt<0:
-            first_dt = float( line.split( "=" )[-1] )
-            if first_dt<1e-8:
-              print( "First dt equals zero. Assume this is an adaptive time stepping solver")
-              self.adaptive_time_stepping = True
-          elif "dt_{max}" in line and first_dt>=0 and second_dt<0:
-              second_dt = float( line.split( "=" )[-1] )
+        predicate = "rank:0" in line and "Abstract" + self._solver_name in line
 
-
-        if "step()" in line and "Solver" in line and "rank:0" in line:
-          if "Solver " + self._solver_name in line:
+        if predicate and "Solver " + self._solver_name in line:
             time_stamp = self.__extract_time_stamp_from_run_call(line)
             if verbose:
               print( "started new time step at " + str(time_stamp) + "s" )
             self._number_of_time_steps += 1
             self._time_step_time_stamp.append( time_stamp )
-            self._time_step_size.append( -1 )
-            self._simulated_time_stamp.append( -1 )
+            self._time_step_size_min.append( -1 )
+            self._time_step_size_max.append( -1 )
+            self._simulated_time_stamp_min.append( -1 )
+            self._simulated_time_stamp_max.append( -1 )
+            self._updates.append( -1 )
 
         #
         # Be careful with the order: the first one is more specific
         #
-            if "dt" in line and "=" in line and self._time_step_size[-1]<0:
-              self._time_step_size.append( float( line.split("=")[-1]) )
-            elif "t" in line and "=" in line and self._simulated_time_stamp[-1]<0:
-              self._simulated_time_stamp.append( float( line.split("=")[-1]) )
-         
-
-
+        if predicate and re.search( r"#updates\s*=", line)!=None and self._updates[-1]<0:
+          self._updates[-1] = float( line.split("=")[-1].split( "(")[0] )
+        if predicate and re.search( r"dt_{min,this-step}\s*=", line)!=None and self._time_step_size_min[-1]<0:
+          self._time_step_size_min[-1] = float( line.split("=")[-1] )
+        elif predicate and re.search( r"dt_{max,this-step}\s*=", line)!=None and self._time_step_size_max[-1]<0:
+          self._time_step_size_max[-1] = float( line.split("=")[-1] )
+        elif predicate and re.search( r"dt\s*=", line)!=None and self._time_step_size_max[-1]<0:
+          if "not yet known" in line:
+            self._time_step_size_max[-1] = 0.0
+            self._time_step_size_min[-1] = 0.0
+          else:
+            self._time_step_size_max[-1] = float( line.split("=")[-1] )
+            self._time_step_size_min[-1] = float( line.split("=")[-1] )
+        elif predicate and re.search( r"t_{max,global}\s*=", line)!=None and self._simulated_time_stamp_max[-1]<0:
+          self._simulated_time_stamp_max[-1] = float( line.split("=")[-1] )         
+        elif predicate and re.search( r"t_{min,global}\s*=", line)!=None and self._simulated_time_stamp_min[-1]<0:
+          self._simulated_time_stamp_min[-1] = float( line.split("=")[-1] )         
+        elif predicate and re.search( r"t\s*=", line)!=None and self._simulated_time_stamp_max[-1]<0:
+          self._simulated_time_stamp_max[-1] = float( line.split("=")[-1] )         
+          self._simulated_time_stamp_min[-1] = float( line.split("=")[-1] )         
 
         if "step()" in line and "PlotSolution" in line and "rank:0" in line:
           time_stamp = self.__extract_time_stamp_from_run_call(line)
@@ -177,9 +189,8 @@ class PerformanceData(object):
           if verbose:
             print( "terminated simulation at " + str(time_stamp) + "s" )
           self._time_step_time_stamp.append( time_stamp )
-        
 
-        if "initial grid construction:" in line and not "#measurements=0" in line:
+        if "initial grid construction:" in line:
           self.total_construction_time  = float( line.split("grid construction:")[1].split( "s" )[0] )
           match = re.findall( r"measurements=\d+", line)
           self.total_construction_steps  = int( match[0].split( "=" )[1] )
@@ -221,6 +232,10 @@ class PerformanceData(object):
     return result
 
 
+  def get_updates(self):
+    return [x for x in self._updates]
+
+
   def get_time_step_real_time_stamps(self):
     """
     
@@ -229,11 +244,15 @@ class PerformanceData(object):
      
      
      This is not a mere copy, as the last entry in the local set is the end
-     of the simulation
+     of the simulation. So we remove this one. At the same time, the very 
+     first entry is the start of the simulation or first time step where 
+     nothing happens yet (if we have to analyse the eigenvalue first).
      
     """
     shifted_data = [x-self._time_step_time_stamp[0] for x in self._time_step_time_stamp]
-    return shifted_data[1:]
+    #shifted_data.pop()
+    #return shifted_data[1:]
+    return shifted_data
 
 
   def get_time_step_simulated_time_stamps(self):
@@ -247,14 +266,33 @@ class PerformanceData(object):
      of the simulation
      
     """
-    result = [x for x in self._simulated_time_stamp]
-    #result = result[0:-1]
-    return result
+    if self.uses_local_timestepping():
+      result = [x for x in self._simulated_time_stamp_min], [x for x in self._simulated_time_stamp_max]
+      if result[0][0]<0.0:
+        result = result[0][1:], result[1][1:]
+      return result
+    else:
+      return [x for x in self._simulated_time_stamp_min]
 
 
   def get_time_step_time_step_size(self):
-    return [x for x in self._time_step_size]
+    if self.uses_local_timestepping():
+      result = [x for x in self._time_step_size_min], [x for x in self._time_step_size_max]
+      if result[0][0]<=0.0:
+        result = result[0][1:], result[1][1:]
+      return result
+    else:
+      return [x for x in self._time_step_size_min]
+
   
+  def uses_local_timestepping(self):
+    result = False
+    if len(self._time_step_size_min)!=len(self._time_step_size_max):
+      raise Exception( "incompatible time step sizes" )
+    for lr in zip(self._time_step_size_min,self._time_step_size_max):
+      result |= (lr[0]!=lr[1])
+    return result
+
   
   def timesteps(self):
     """
@@ -262,7 +300,9 @@ class PerformanceData(object):
      Should maybe eliminate the time steps that are not really steps 
      
     """
-    return len(self._time_step_size)    
+    if len(self._time_step_size_min)!=len(self._time_step_size_max):
+      raise Exception( "incompatible time step sizes" )
+    return len(self._time_step_size_min)    
 
 
   def time_per_time_step(self):
@@ -275,6 +315,25 @@ class PerformanceData(object):
     return raw_data
 
       
+  def remove_first_n_entries(self,count):
+    """
+    
+    Remove the first count entries from the dataset. Usually, count is one and 
+    anticipates that the solver requires one ``warm up'' sweep to determine h 
+    and the eigenvalue, e.g.
+    
+    """
+    #self._start_time_step_time_stamp_max  = self._start_time_step_time_stamp_max[count:]
+    #self._start_time_step_time_stamp_min  = self._start_time_step_time_stamp_min[count:]
+    self._simulated_time_stamp_max        = self._simulated_time_stamp_max[count:]
+    self._simulated_time_stamp_min        = self._simulated_time_stamp_min[count:]
+    self._time_step_size_max              = self._time_step_size_max[count:]
+    self._time_step_size_min              = self._time_step_size_min[count:]
+    self._time_step_time_stamp            = self._time_step_time_stamp[count:]
+
+
+
+
 def extract_grid_construction_times(performance_data_points):
   """
      

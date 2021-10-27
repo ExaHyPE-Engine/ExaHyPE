@@ -97,7 +97,7 @@ class Dataset(object):
     return set(zip(self.data_[self.__Tree_Number_Identifier],self.data_[self.__Tree_Local_Particle_Number_Identifier])) 
 
 
-  def get_data(self,particle,column_number):
+  def get_data(self,particle,column_number,clean_up=1e-3):
     """
     
     particle: (Int,Int)
@@ -118,6 +118,8 @@ class Dataset(object):
     
     result = list(filtered_data.t), list(filtered_data["Q{}".format(column_number)])
     assert_ascending(result[0])
+    if clean_up!=0.0 and len(result[0])>2 and result[0][1]-result[0][0]<=clean_up:
+      result = result[0][1:],result[1][1:]
     return result
 
 
@@ -140,4 +142,3 @@ class Dataset(object):
       return list(filtered_data.t), list(filtered_data["x"]), list(filtered_data["y"])
     else:
       return list(filtered_data.t), list(filtered_data["x"]), list(filtered_data["y"]), list(filtered_data["z"])
-

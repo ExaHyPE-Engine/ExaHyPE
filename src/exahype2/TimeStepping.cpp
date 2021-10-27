@@ -26,3 +26,26 @@ std::pair<double,double> exahype2::getInterpolationWeights( double oldTimeStampO
   }
 }
 
+
+double exahype2::discretiseAndTruncateTimeStepSizes(
+  double cellTimeStepSize,
+  double minGlobalTimeStepSize,
+  double maxGlobalTimeStepSize,
+  double discretisation
+) {
+  cellTimeStepSize = std::min(cellTimeStepSize,maxGlobalTimeStepSize*1.1);
+  if ( tarch::la::smallerEquals(discretisation,1.0) or tarch::la::smallerEquals(minGlobalTimeStepSize,0.0) ) {
+    return cellTimeStepSize;
+  }
+  else if ( tarch::la::smallerEquals(cellTimeStepSize, minGlobalTimeStepSize) ) {
+    return cellTimeStepSize;
+  }
+  else {
+    double result = minGlobalTimeStepSize;
+    while ( tarch::la::smallerEquals(result,cellTimeStepSize) ) {
+      result *= discretisation;
+    }
+    result /= discretisation;
+    return result;
+  }
+}

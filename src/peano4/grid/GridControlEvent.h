@@ -61,8 +61,8 @@ struct peano4::grid::GridControlEvent {
 
 
 #ifdef Parallel
-    static void sendAndPollDanglingMessages(const peano4::grid::GridControlEvent& message, int destination, int tag );
-    static void receiveAndPollDanglingMessages(peano4::grid::GridControlEvent& message, int source, int tag );
+    static void sendAndPollDanglingMessages(const peano4::grid::GridControlEvent& message, int destination, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator());
+    static void receiveAndPollDanglingMessages(peano4::grid::GridControlEvent& message, int source, int tag, MPI_Comm communicator=tarch::mpi::Rank::getInstance().getCommunicator() );
 #endif
     
 

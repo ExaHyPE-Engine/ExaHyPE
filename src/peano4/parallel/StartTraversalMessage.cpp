@@ -37,7 +37,7 @@ void   peano4::parallel::StartTraversalMessage::setStepIdentifier(int value) {
 
 
 #ifdef Parallel
-void peano4::parallel::StartTraversalMessage::sendAndPollDanglingMessages(const peano4::parallel::StartTraversalMessage& message, int destination, int tag ) {
+void peano4::parallel::StartTraversalMessage::sendAndPollDanglingMessages(const peano4::parallel::StartTraversalMessage& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::parallel::StartTraversalMessage::send(
     message, destination, tag,
     [&]() {
@@ -60,12 +60,12 @@ void peano4::parallel::StartTraversalMessage::sendAndPollDanglingMessages(const 
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 
 
-void peano4::parallel::StartTraversalMessage::receiveAndPollDanglingMessages(peano4::parallel::StartTraversalMessage& message, int source, int tag ) {
+void peano4::parallel::StartTraversalMessage::receiveAndPollDanglingMessages(peano4::parallel::StartTraversalMessage& message, int source, int tag, MPI_Comm communicator ) {
   peano4::parallel::StartTraversalMessage::receive(
     message, source, tag,
     [&]() {
@@ -88,7 +88,7 @@ void peano4::parallel::StartTraversalMessage::receiveAndPollDanglingMessages(pea
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 #endif

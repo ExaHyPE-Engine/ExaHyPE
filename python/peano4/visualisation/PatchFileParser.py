@@ -6,7 +6,7 @@ import sys
 from peano4.visualisation.Patch import Patch
 
 
-class OutputFileParser(object):
+class PatchFileParser(object):
   """
     Parser for Peano block file output. 
     
@@ -14,7 +14,7 @@ class OutputFileParser(object):
     ----------
      
       file_path: String
-      String of input file path (including filename and extension)
+        String of input file path (including filename and extension)
 
       cell_data: list of patches
         List of Patches with file data
@@ -30,10 +30,16 @@ class OutputFileParser(object):
         
       mapping: series of d-dimensional duples
         Distorts the domain
-    
+
+      set_identifier: String
+        Can be empty to parse everything.
+        
   """
   
   def __init__(self,file_path, set_identifier, subdomain_number ):
+    """
+    
+    """
     self.file_path = file_path
     self.dof = 0
     self.unknowns = 0

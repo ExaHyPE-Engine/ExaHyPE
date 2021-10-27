@@ -82,6 +82,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
   if (not _data.empty()) {
     logInfo( "dumpCSVFile()", "dump particle trajectory database " << snapshotFileName.str() );
     std::ofstream file( snapshotFileName.str() );
+    file << std::scientific;
     #if Dimensions==2
     file << "number(0), number(1), t, x(0), x(1), data " << std::endl;
     #else
@@ -170,11 +171,17 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
   else {
     tarch::la::Vector<Dimensions,double> oldX = _data.at(number).front().x;
     if (
-      tarch::la::normMax(oldX-x)>=_positionDelta
+      tarch::la::equals( _data.at(number).front().timestamp, timestamp )
       and
+      not tarch::la::equals(oldX,x)
+    ) {
+      logWarning( "getAction(...)", "particle " << number.first << "x" << number.second << " has two locations " << x << " and " << oldX << " for same time stamp " << timestamp << ". This is inconsistent");
+      return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Replace;
+    }
+    else if (
       tarch::la::equals( _data.at(number).front().timestamp, timestamp )
     ) {
-      return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Replace;
+      return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Ignore;
     }
     else if (
       tarch::la::normMax(oldX-x)>=_positionDelta
@@ -204,6 +211,7 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
         and
         tarch::la::equals( _data.at(number).front().timestamp, timestamp )
       ) {
+        logWarning( "getAction(...)", "particle " << number.first << "x" << number.second << " at " << x << " has different values for same time stamp " << timestamp << ". This is inconsistent");
         return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Replace;
       }
       else if (

@@ -1,8 +1,7 @@
 from paraview.simple import *
-from peano4.visualisation.Visualiser import render_single_file 
-from peano4.visualisation.Visualiser import render_dataset
 
 import peano4.visualisation
+import peano4.visualisation.filters
 
 import sys
 import os
@@ -11,12 +10,13 @@ import argparse
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser(description='Peano 4 - pvserver render script')
-  parser.add_argument("--no-convert",                dest="convert",                  action="store_false", default = True,  help="Convert into native vtk files" )
-  parser.add_argument("--render",                    dest="render",                   action="store_true",  default = False, help="Skip interactive rendering" )
-  parser.add_argument("--filter-fine-grid",          dest="filter_fine_grid",         action="store_true",  default = False, help="Display only fine grid" )
-  parser.add_argument("--average",                   dest="filter_average",           action="store_true",  default = False, help="Average over cell data (reduces resolution/memory)" )
-  parser.add_argument("--eliminate-relative-paths",  dest="eliminate_relative_paths", action="store_true",  default = False, help="If you invoke the script on a different directory than your current working directory, ensure that all meta files written do not hold relative paths" )
-  parser.add_argument("-v", "--verbose",             dest="verbose",                  action="store_true",  default = False, help="Run in a chatty mode" )
+  parser.add_argument("--filter-fine-grid",          dest="filter_fine_grid",             action="store_true",  default = False, help="Display only fine grid" )
+  parser.add_argument("--average",                   dest="filter_average",               action="store_true",  default = False, help="Average over cell data (reduces resolution/memory)" )
+  parser.add_argument("--norm-calculator",           dest="norm_calculator",              action="store_true",  default = False, help="Compute norm over each point" )
+  parser.add_argument("--eliminate-relative-paths",  dest="eliminate_relative_paths",     action="store_true",  default = False, help="If you invoke the script on a different directory than your current working directory, ensure that all meta files written do not hold relative paths" )
+  parser.add_argument("--type",                      dest="type",                         choices=["display", "vtu", "patch-file" ],  default="vtu", help="Output format" )
+  parser.add_argument("--dir",                       dest="dir",                          default=".", help="Output directory" )
+  parser.add_argument("-v", "--verbose",             dest="verbose",                      action="store_true",  default = False, help="Run in a chatty mode" )
     
   parser.add_argument(dest="filename", help="Input file name" )
   args = parser.parse_args()
@@ -25,7 +25,13 @@ if __name__ == "__main__":
     print("Error, specified input file '{}' does not exist, exiting...". format(args.filename))
     sys.exit(1)
 
-  visualiser = peano4.visualisation.Visualiser( args.filename, args.verbose )
+  visualiser = None
+  if args.type=="display":
+    visualiser = peano4.visualisation.output.Interactive( args.filename, args.verbose )
+  if args.type=="vtu":
+    visualiser = peano4.visualisation.output.VTU( file_name=args.filename, output_directory=args.dir, verbose=args.verbose )
+  if args.type=="patch-file":
+    visualiser = peano4.visualisation.output.PatchFile( file_name=args.filename, output_directory=args.dir, verbose=args.verbose )
 
   filter = []
   #
@@ -33,15 +39,15 @@ if __name__ == "__main__":
   #
   if args.filter_average:
     print( "add averaging filter" )
-    visualiser.append_filter( peano4.visualisation.AverageOverCellFilter(args.verbose), False )
+    visualiser.append_filter( peano4.visualisation.filters.AverageOverCell(args.verbose), False )
   if args.filter_fine_grid:
     print( "add fine grid filter" )
-    visualiser.append_filter( peano4.visualisation.ExtractFineGridFilter(False, args.verbose), False )
-
-  if args.render:
-    visualiser.display()
-    Show(tp)
-    Interact() #Needed if running from command line
+    visualiser.append_filter( peano4.visualisation.filters.ExtractFineGrid(False, args.verbose), False )
+  if args.norm_calculator:
+    print( "add norm calculator filter" )
+    visualiser.append_filter( peano4.visualisation.filters.Calculator(verbose=args.verbose), False )
     
-  if args.convert:
-    visualiser.write_vtu_time_series(args.eliminate_relative_paths)
+  
+    
+
+  visualiser.display()

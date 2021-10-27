@@ -98,8 +98,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static std::bitset<Dimensions> PeriodicBC;
 
-    double getMinTimeStamp(bool ofLastTimeStepOnly=false) const final;
-    double getMaxTimeStamp(bool ofLastTimeStepOnly=false) const final;
+    double getMinTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
+    double getMaxTimeStamp(bool ofCurrentlyRunningGridSweep=false) const final;
     double getMinTimeStepSize() const final;
     double getMaxTimeStepSize() const final;
 
@@ -247,6 +247,10 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     #pragma omp end declare target
     #endif
 
+    /**
+     * Always holds.
+     */
+    bool mayPlot() const override;
 
   protected:
     static tarch::logging::Log  _log;
@@ -259,14 +263,20 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double     _minTimeStampThisTimeStep;
     double     _maxTimeStampThisTimeStep;
 
+    double     _localMinTimeStampThisTimeStep;
+    double     _localMaxTimeStampThisTimeStep;
+
     double     _minVolumeH;
     double     _maxVolumeH;
 
-    double     _minVolumeHFromPreviousTimeStep;
-    double     _maxVolumeHFromPreviousTimeStep;
+    double     _minVolumeHThisTimeStep;
+    double     _maxVolumeHThisTimeStep;
 
     double     _minTimeStepSize;
     double     _maxTimeStepSize;
+
+    double     _minTimeStepSizeThisTimeStep;
+    double     _maxTimeStepSizeThisTimeStep;
 
     int        _patchUpdates;
 

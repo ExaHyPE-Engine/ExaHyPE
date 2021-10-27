@@ -1,10 +1,11 @@
 #include "LoadBalancingConfiguration.h"
 
 
-exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration( double loadBalancingQuality, int minSizeOfTree, int maxNumberOfTrees ):
+exahype2::LoadBalancingConfiguration::LoadBalancingConfiguration( double loadBalancingQuality, int minSizeOfTree, int maxNumberOfTrees, int maxSizeOfDeployedRemoteMPITree ):
   _loadBalancingQuality(loadBalancingQuality),
   _minSizeOfTree(minSizeOfTree),
-  _maxNumberOfTrees(maxNumberOfTrees) {
+  _maxNumberOfTrees(maxNumberOfTrees),
+  _maxSizeOfDeployedRemoteMPITree(maxSizeOfDeployedRemoteMPITree) {
 }
 
 
@@ -42,6 +43,21 @@ int exahype2::LoadBalancingConfiguration::getMinTreeSize(toolbox::loadbalancing:
   }
   else {
     return _minSizeOfTree;
+  }
+}
+
+
+
+int exahype2::LoadBalancingConfiguration::getMaxTreeSize(toolbox::loadbalancing::RecursiveSubdivision::Configuration::Phase phase) {
+  if (
+    phase==Configuration::Phase::InitialInterRankDistribution
+    or
+    phase==Configuration::Phase::InitialIntraRankDistribution
+  ) {
+    return _maxSizeOfDeployedRemoteMPITree;
+  }
+  else {
+    return std::numeric_limits<int>::max();
   }
 }
 

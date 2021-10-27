@@ -23,13 +23,12 @@ peano4::parallel::tests::NodeTest::NodeTest():
 void peano4::parallel::tests::NodeTest::testTagCalculation() {
   logTraceIn( "testTagCalculation()" );
   if (tarch::mpi::Rank::getInstance().getNumberOfRanks()<5) {
-    int tagA = peano4::parallel::Node::getInstance().getGridDataExchangeTag(0,5,peano4::parallel::Node::ExchangeMode::HorizontalData);
-    int tagB = peano4::parallel::Node::getInstance().getGridDataExchangeTag(5,0,peano4::parallel::Node::ExchangeMode::HorizontalData);
-    validateWithParams7(tagA!=tagB,
-      tagA, tagB,
+    Node::GridDataExchangeMetaInformation metaInfoA = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(0,5,peano4::parallel::Node::ExchangeMode::HorizontalData);
+    Node::GridDataExchangeMetaInformation metaInfoB = peano4::parallel::Node::getInstance().getGridDataExchangeMetaInformation(5,0,peano4::parallel::Node::ExchangeMode::HorizontalData);
+    validateWithParams6(metaInfoA.first!=metaInfoB.first,
+      metaInfoA.first, metaInfoB.first,
       Node::StacksPerCommunicationPartner, peano4::parallel::Node::getInstance().getLocalTreeId(0),
-      peano4::parallel::Node::getInstance().getLocalTreeId(5), Node::MaxSpacetreesPerRank,
-      peano4::parallel::Node::getInstance()._dataExchangeBaseTag
+      peano4::parallel::Node::getInstance().getLocalTreeId(5), Node::MaxSpacetreesPerRank
     );
   }
   logTraceOut( "testTagCalculation()" );

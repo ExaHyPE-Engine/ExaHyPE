@@ -18,8 +18,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05
-}
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":0}
 
 intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0}
 
@@ -41,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
     parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
     parser.add_argument("-eigen", "--eigenvalue-control",    dest="eigen", choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
-
+    parser.add_argument("-cfl",  "--CFL-ratio",  dest="cfl",  type=float, default=0.05, help="Set CFL ratio" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -63,7 +62,7 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
 
     class SSInfallSolver( SuperClass ):
-      def __init__(self, name, patch_size, min_volume_h, max_volume_h ):
+      def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl):
         unknowns = {
           "rho":1,
           "j":3,
@@ -93,7 +92,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=0.05
+            time_step_relaxation=cfl
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__
@@ -152,11 +151,11 @@ if __name__ == "__main__":
           reconstructedPatch[cellSerialised*(5+aux_var)+5]=e*1e6; //just incease the E here for illustration
           reconstructedPatch[cellSerialised*(5+aux_var)+6]=1e6*(5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3))/reconstructedPatch[cellSerialised*(5+aux_var)+0];
           */
-          if (r_coor<1e-8) {
+          /*if (r_coor<1e-8) {
             reconstructedPatch[cellSerialised*(5+aux_var)+1]=0;
             reconstructedPatch[cellSerialised*(5+aux_var)+2]=0;
             reconstructedPatch[cellSerialised*(5+aux_var)+3]=0;
-          }
+          }*/
         }
         
     """)
@@ -213,7 +212,8 @@ if __name__ == "__main__":
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = SSInfallSolver(solver_name, args.patch_size, min_h, args.max_h)
+      my_solver = SSInfallSolver(solver_name, args.patch_size, min_h, args.max_h,args.cfl)
+      userinfo.append(("CFL ratio set as "+str(args.cfl), None))
       
     my_solver.add_mass_cal()
     
@@ -221,8 +221,8 @@ if __name__ == "__main__":
 #Domain settings
 ########################################################################################
     if True:
-      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
-      #offset=[-5, -5, -5]; domain_size=[10, 10, 10]
+      #offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+      offset=[-0.75, -0.75, -0.75]; domain_size=[1.5, 1.5, 1.5]
       msg = "domain set as "+str(offset)+" and "+str(domain_size)
       print(msg)
       userinfo.append((msg,None))
@@ -247,7 +247,7 @@ if __name__ == "__main__":
       floatparams.update({k:eval("args.{}".format(k))})
 
     if args.eigen=="exp":
-      floatparams["C_1"]=(10*1e-4)/floatparams["tilde_P_ini"]
+      floatparams["C_1"]=(1*1e-4)/floatparams["tilde_P_ini"]*(floatparams["a_i"]/1e-3)**0.5
       floatparams["C_2"]=(10*1e-5)/floatparams["tilde_P_ini"]
       userinfo.append(("Use exponential formula for eigenvalues",None))
     if args.eigen=="none":
@@ -307,14 +307,14 @@ if __name__ == "__main__":
     probe_point = [-20,-20,-0.001]
     project.add_plot_filter( probe_point,[40.0,40.0,0.002],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision")
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,16))" )
 
 ########################################################################################
 #Tracer setting 
 ########################################################################################
     if not args.add_tracer==0:
       tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
-      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=5 )
+      tracer_particles = project.add_tracer( name="MyTracer",attribute_count=5, plot=False)
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
       project.add_action_set_to_timestepping(
         exahype2.tracer.FiniteVolumesTracing(
@@ -335,7 +335,7 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=10000,
+        number_of_entries_between_two_db_flushes=20000,
         output_precision=10,
         position_delta_between_two_snapsots=1e-20,
         data_delta_between_two_snapsots=0

@@ -37,7 +37,7 @@ namespace peano4 {
 class peano4::parallel::Node {
   public:
     static constexpr int        Terminate = -2;
-    static constexpr int        MaxSpacetreesPerRank = 32; 
+    static constexpr int        MaxSpacetreesPerRank = 1024;
 
     /**
      * Value for _currentProgramStep.
@@ -65,17 +65,16 @@ class peano4::parallel::Node {
     /**
      * The MPI standard specifies that the tag upper bound must be at least 32767.
      */
-    static constexpr int ReservedMPITagsForDataExchange = MaxSpacetreesPerRank * MaxSpacetreesPerRank * StacksPerCommunicationPartner;
+    static constexpr int ReservedMPITagsForDataExchange = MaxSpacetreesPerRank * StacksPerCommunicationPartner;
+
+    #if !defined(Parallel)
+    typedef int MPI_Comm;
+    #endif
+    MPI_Comm                    _dataExchangeCommunicators[MaxSpacetreesPerRank];
 
     int                         _currentProgramStep;
 
     int                         _rankOrchestrationTag;
-
-    /**
-     * We do actually reserve ReservedMPITagsForDataExchange tags in one rush,
-     * but this one is the smallest one
-     */
-    int                         _dataExchangeBaseTag;
 
     std::map< int, TreeEntry >  _treeEntries;
 
@@ -330,6 +329,8 @@ class peano4::parallel::Node {
 
     static std::string toString( ExchangeMode mode );
 
+    typedef std::pair<int, MPI_Comm>  GridDataExchangeMetaInformation;
+
     /**
      * I use two tags per spacetree per rank: one for boundary data
      * (horizontal) and one for up-down and synchronous (forks) data
@@ -341,7 +342,7 @@ class peano4::parallel::Node {
      * So we effectively do not need that many tags even though we need
      * different tags per tree pair.
      */
-    int getGridDataExchangeTag( int sendingTreeId, int receivingTreeId, ExchangeMode exchange ) const;
+    GridDataExchangeMetaInformation getGridDataExchangeMetaInformation( int sendingTreeId, int receivingTreeId, ExchangeMode exchange ) const;
 
     /**
      * I use this for debugging. When I have a tag, I can ask the node whether

@@ -158,7 +158,7 @@ void   peano4::grid::GridVertex::setLevel(int value) {
 
 
 #ifdef Parallel
-void peano4::grid::GridVertex::sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag ) {
+void peano4::grid::GridVertex::sendAndPollDanglingMessages(const peano4::grid::GridVertex& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::grid::GridVertex::send(
     message, destination, tag,
     [&]() {
@@ -181,12 +181,12 @@ void peano4::grid::GridVertex::sendAndPollDanglingMessages(const peano4::grid::G
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 
 
-void peano4::grid::GridVertex::receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag ) {
+void peano4::grid::GridVertex::receiveAndPollDanglingMessages(peano4::grid::GridVertex& message, int source, int tag, MPI_Comm communicator ) {
   peano4::grid::GridVertex::receive(
     message, source, tag,
     [&]() {
@@ -209,7 +209,7 @@ void peano4::grid::GridVertex::receiveAndPollDanglingMessages(peano4::grid::Grid
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 #endif

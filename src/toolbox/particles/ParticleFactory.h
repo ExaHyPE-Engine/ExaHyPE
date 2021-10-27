@@ -7,6 +7,9 @@
 #include <vector>
 #include "peano4/utils/Globals.h"
 
+#include "peano4/datamanagement/VertexMarker.h"
+#include "peano4/datamanagement/CellMarker.h"
+
 
 namespace toolbox {
   namespace particles {
@@ -43,13 +46,14 @@ if ( not marker.isRefined() ) {
   fineGridVertex{{PARTICLES_CONTAINER}}.insert( fineGridVertex{{PARTICLES_CONTAINER}}.end(), newParticles.begin(), newParticles.end() );
 }
 </pre>
-     * @param h Spacing of particles. Pick it smaller or equal to 0 and we'll always
+     * @param spacingH Spacing of particles. Pick it smaller or equal to 0 and we'll always
      *   create one particle in the center.
      * @param roundDown Always round down. In this case, you get a totally equal-spaced
      *   initial particle layout, but it will not match h globally.
      */
     template <class T>
-    std::vector<T*> createEquallySpacedParticles(double h, const peano4::datamanagement::VertexMarker& marker, bool roundDown, bool addNoise);
+    std::vector<T*> createEquallySpacedParticles(double spacingH, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, bool roundDown, bool addNoise);
+
   }
 }
 

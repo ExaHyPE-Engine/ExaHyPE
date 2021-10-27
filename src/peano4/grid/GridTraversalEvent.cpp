@@ -377,7 +377,7 @@ void   peano4::grid::GridTraversalEvent::setInvokingSpacetreeIsNotInvolvedInAnyD
 
 
 #ifdef Parallel
-void peano4::grid::GridTraversalEvent::sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag ) {
+void peano4::grid::GridTraversalEvent::sendAndPollDanglingMessages(const peano4::grid::GridTraversalEvent& message, int destination, int tag, MPI_Comm communicator ) {
   peano4::grid::GridTraversalEvent::send(
     message, destination, tag,
     [&]() {
@@ -400,12 +400,12 @@ void peano4::grid::GridTraversalEvent::sendAndPollDanglingMessages(const peano4:
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 
 
-void peano4::grid::GridTraversalEvent::receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag ) {
+void peano4::grid::GridTraversalEvent::receiveAndPollDanglingMessages(peano4::grid::GridTraversalEvent& message, int source, int tag, MPI_Comm communicator ) {
   peano4::grid::GridTraversalEvent::receive(
     message, source, tag,
     [&]() {
@@ -428,7 +428,7 @@ void peano4::grid::GridTraversalEvent::receiveAndPollDanglingMessages(peano4::gr
       }
       tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
     },
-    tarch::mpi::Rank::getInstance().getCommunicator()
+    communicator
   );
 }
 #endif
