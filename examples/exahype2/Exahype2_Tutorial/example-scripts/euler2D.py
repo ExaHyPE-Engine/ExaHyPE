@@ -72,4 +72,8 @@ peano4_project = project.generate_Peano4_project(False)
 peano4_project.build(make_clean_first=True, number_of_parallel_builds=4)
 
 print("Done. Executable is: Euler2D")
+
 print( "Convert any output via pvpython ~/git/Peano/python/peano4/visualisation/render.py solution-euler2D.peano-patch-file")
+
+print("If you have not done so already, compile the Tutorial instructions by navigating to the folder Tutorial_instructions and using the command \"pdflatex tutorial.tex\" to generate a pdf that will explain these tutorials.")
+
