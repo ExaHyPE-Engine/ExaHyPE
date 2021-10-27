@@ -18,7 +18,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":0}
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5}
 
 intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0, "ReSwi":0, "MassCal":0}
 
@@ -40,7 +40,9 @@ if __name__ == "__main__":
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
     parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
     parser.add_argument("-eigen", "--eigenvalue-control",    dest="eigen", choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
-    parser.add_argument("-cfl",  "--CFL-ratio",  dest="cfl",  type=float, default=0.05, help="Set CFL ratio" )
+    parser.add_argument("-cfl",  "--CFL-ratio",  dest="cfl",  type=float, default=0.1, help="Set CFL ratio" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear", "outflow" ], default="constant",  help="interpolation scheme for AMR" )
+    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -110,6 +112,33 @@ if __name__ == "__main__":
         self.set_postprocess_updated_patch_kernel( """
 
 """ )
+      def create_action_sets(self):
+        SuperClass.create_action_sets(self)
+
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+        self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+
+        if args.interpolation=="constant":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "piecewise_constant" )
+          print( "Interpolation rule: piecewise_constant" )
+        if args.interpolation=="linear-slow":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
+          print( "Interpolation rule: linear interpolation without optimisation" )
+        if args.interpolation=="linear":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
+          print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
+        if args.interpolation=="outflow":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "outflow" )
+          print( "Interpolation rule: outflow (from fine grid into coarse grid)" )
+
+        if args.restriction=="average":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "averaging" )
+          print( "Restiction rule: averaging" )
+        if args.restriction=="inject":
+          self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_restriction_scheme( "inject" )
+          print( "Restiction rule: injection" )
+
+
       def get_user_action_set_includes(self):
         """
          We take this routine to add a few additional include statements.
@@ -282,13 +311,16 @@ if __name__ == "__main__":
 ########################################################################################
 #Domain settings
 ########################################################################################
-    if args.ReSwi==0:
-      offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
+    floatparams.update({"domain_r":args.domain_r})
+    #if args.ReSwi==0:
+      #offset=[-0.5, -0.5, -0.5]; domain_size=[1.0, 1.0, 1.0]
       #offset=[-0.75, -0.75, -0.75]; domain_size=[1.5, 1.5, 1.5]
       #offset=[-1.5, -1.5, -1.5]; domain_size=[3, 3, 3]
-    elif args.ReSwi==2:
-      offset=[-4.5, -4.5, -4.5]; domain_size=[9, 9, 9]
-
+    #elif args.ReSwi==2:
+      #offset=[-3, -3, -3]; domain_size=[6, 6, 6]
+      #offset=[-4.5, -4.5, -4.5]; domain_size=[9, 9, 9]
+    dr=floatparams["domain_r"]
+    offset=[-dr, -dr, -dr]; domain_size=[2*dr, 2*dr, 2*dr]
     msg = "domain set as "+str(offset)+" and "+str(domain_size)
     print(msg)
     userinfo.append((msg,None))

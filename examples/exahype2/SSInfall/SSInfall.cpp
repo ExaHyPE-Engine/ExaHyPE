@@ -73,9 +73,11 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
     if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
   }
   if (ReSwi==2){ //radius based
-    constexpr int NumberOfRefinementLayers = 2;
-    double Radius[NumberOfRefinementLayers] = {1.5,0.5};
-    double MaxH[NumberOfRefinementLayers]   = {0.03,0.008};
+    constexpr int NumberOfRefinementLayers = 5;
+    //double Radius[NumberOfRefinementLayers] = {1.5,0.5};
+    //double MaxH[NumberOfRefinementLayers]   = {0.03,0.008};
+    double Radius[NumberOfRefinementLayers] = {1.5,0.5,0.3,0.1,0.05};
+    double MaxH[NumberOfRefinementLayers]   = {0.05,0.02,0.006,0.002,0.0007};
     for (int i=0; i<NumberOfRefinementLayers; i++) {
       if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
         result=::exahype2::RefinementCommand::Refine;
