@@ -14,6 +14,10 @@
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 
+#if defined(UseSmartMPI)
+#include "communication/Tags.h"
+#endif
+
 #include <string.h>
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
@@ -242,7 +246,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_Comm communicator) {
   ::tarch::mpi::DoubleMessage  tMessage(_t);
   ::tarch::mpi::DoubleMessage  dtMessage(_dt);
-  ::tarch::mpi::IntegerMessage taskIdMessage(getTaskId());
+  ::tarch::mpi::IntegerMessage taskIdMessage;
+
+  if ( tag != smartmpi::communication::MoveTaskToMyServerForEvaluationTag ) {
+    taskIdMessage.setValue(_remoteTaskId);
+  } else {
+    taskIdMessage.setValue(getTaskId());
+  }
 
   ::peano4::datamanagement::CellMarker::send( _marker, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::send( tMessage, rank, tag, communicator );
@@ -342,7 +352,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
     " via tag " << tag
   );
 
-  tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
+  // tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
 }
 
 

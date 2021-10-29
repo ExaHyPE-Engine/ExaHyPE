@@ -68,6 +68,23 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 
 
     #ifdef UseSmartMPI
+    /*
+     * This uniquely identifies an enclave task. Unlike _enclaveTaskTypeId it
+     * differentiates between tasks within a task type, not between task types.
+     *
+     * Crucially, the value of this ID is not necessarily the same as that of
+     * tarch::multicore::Task::_id . That is because _id is reset each time
+     * we move a task to another rank and reconstitute it there (see the constructor
+     * of tarch::multicore::Task). Instead, _remoteTaskId tracks the ID of
+     * the original task object (i.e. the task originally spawned and
+     * only then moved). In smartmpi we need to keep track of the task's
+     * ID so that it can be bookmarked correctly after being moved around.
+     *
+     * As such moveTask(...), sends _id if the task has not yet been
+     * moved and _remoteTaskId if it has already been moved. Similarly,
+     * _remoteTaskId is always sent when forwarding task outcomes since the
+     * task will already have been moved.
+     */
     int          _remoteTaskId;
     #endif
 {% if USE_GPU %}
