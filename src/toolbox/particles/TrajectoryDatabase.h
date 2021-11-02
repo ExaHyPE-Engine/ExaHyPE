@@ -36,6 +36,8 @@ class toolbox::particles::TrajectoryDatabase {
     std::string _fileName;
     double      _dataDelta;
     double      _positionDelta;
+    double      _maxDataDelta;
+    double      _maxPositionDelta;
     int         _numberOfDataPointsPerParticle;
 
     const int   _deltaBetweenTwoDatabaseFlushes;
@@ -45,6 +47,10 @@ class toolbox::particles::TrajectoryDatabase {
      * @see TrajectoryDatabase()
      */
     const bool  _clearDatabaseAfterFlush;
+
+    const bool  _deltasAreRelative;
+
+    static constexpr double _deltaCutOffThreshold = 1e-6;
 
     /**
      * This is a hack: Usually, I'd just ask the rank what its number is.
@@ -138,8 +144,18 @@ class toolbox::particles::TrajectoryDatabase {
      *   than growthBetweenTwoDatabaseFlushes entries, we dump a snapshot. This can be
      *   growthBetweenTwoDatabaseFlushes different particles, or growthBetweenTwoDatabaseFlushes
      *   updates for only one single particle. In both cases, we flush.
+     * @param positionDelta The code dumps a new particle if and only if it is not in
+     *   the database or if its position differs from the last positon tracked by more
+     *   than positionDelta.
+     * @param dataDelta See positionDelta, but this time we analyse the data held by
+     *   the particle.
+     * @param deltasAreRelative By default (flag is false), we take the absolute deltas
+     *   of the position or data to make a decision if to dump a particle or not. If
+     *   this flag is set however, we track the maximum of the deltas, and we dump
+     *   data if and only if it exceeds positionDelta times this maximum. So we use a
+     *   relative quantity.
      */
-    TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8, bool clearDatabaseAfterFlush=true );
+    TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8, bool clearDatabaseAfterFlush=true, bool deltasAreRelative=false );
     ~TrajectoryDatabase();
 
     /**
