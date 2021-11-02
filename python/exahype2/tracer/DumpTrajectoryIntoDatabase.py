@@ -9,7 +9,7 @@ import jinja2
 
 
 class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
-  def __init__(self, particle_set, solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, output_precision=8):
+  def __init__(self, particle_set, solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, output_precision=8, use_relative_deltas=False):
     """
      
     data_delta_between_two_snapsots: Float
@@ -35,6 +35,9 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
       thresholds data_delta_between_two_snapsots and position_delta_between_two_snapsots
       determine how often entries and up in the database, and number_of_entries_between_two_db_flushes
       determines how often this database is written into a file.
+      
+    use_relative_deltas: Boolean
+      See description of C++ class in toolbox::particles::TrajectoryDatabase
      
     """
     self.d = {}
@@ -46,6 +49,11 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
     self.d[ "FILENAME" ]                 = filename
     self.d[ "SOLVER_NAME" ]              = solver._name
     self.d[ "SOLVER_INSTANCE" ]          = solver.get_name_of_global_instance()
+    if use_relative_deltas:
+      self.d[ "USE_RELATIVE_DELTAS" ]    = "true"
+    else:
+      self.d[ "USE_RELATIVE_DELTAS" ]    = "false"
+        
 
     self.number_of_entries_between_two_db_flushes = number_of_entries_between_two_db_flushes
 
@@ -92,8 +100,8 @@ if ( not marker.isRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdat
     template = jinja2.Template("""
   _database.setOutputFileName( "{{FILENAME}}" );
   _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
-  _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}} );
-  _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}} );
+  _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
+  _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );
 """)
     return template.render(**self.d)
 

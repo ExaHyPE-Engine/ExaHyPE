@@ -48,7 +48,7 @@ class toolbox::particles::TrajectoryDatabase {
      */
     const bool  _clearDatabaseAfterFlush;
 
-    const bool  _deltasAreRelative;
+    bool        _deltasAreRelative;
 
     static constexpr double _deltaCutOffThreshold = 1e-6;
 
@@ -181,8 +181,8 @@ class toolbox::particles::TrajectoryDatabase {
 
     void setOutputFileName( const std::string& filename );
     void setOutputPrecision( int precision );
-    void setDataDeltaBetweenTwoSnapshots( double value );
-    void setPositionDeltaBetweenTwoSnapshots( double value );
+    void setDataDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative = false );
+    void setPositionDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative = false );
 
     /**
      * A particle is always uniquely identified by two integers (an

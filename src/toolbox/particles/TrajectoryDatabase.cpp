@@ -147,15 +147,19 @@ void toolbox::particles::TrajectoryDatabase::setOutputPrecision( int precision )
   _precision = precision;
 }
 
-void toolbox::particles::TrajectoryDatabase::setDataDeltaBetweenTwoSnapshots( double value ) {
+void toolbox::particles::TrajectoryDatabase::setDataDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative ) {
   assertion(value>=0.0);
   _dataDelta = value;
+  _maxDataDelta = 0.0;
+  _deltasAreRelative = deltasAreRelative;
 }
 
 
-void toolbox::particles::TrajectoryDatabase::setPositionDeltaBetweenTwoSnapshots( double value ) {
+void toolbox::particles::TrajectoryDatabase::setPositionDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative ) {
   assertion(value>=0.0);
   _positionDelta = value;
+  _maxPositionDelta = 0.0;
+  _deltasAreRelative = deltasAreRelative;
 }
 
 
