@@ -396,6 +396,8 @@ class peano4::stacks::STDVectorStack {
      * the network. After that, it releases the underlying stack, i.e.
      * clears it. Once this operation has terminated, the stack's state will
      * be IOMode::None.
+     *
+     * @return finished send/receive already.
      */
     bool tryToFinishSendOrReceive() {
       #ifdef Parallel
