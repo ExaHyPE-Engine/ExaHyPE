@@ -13,12 +13,13 @@ enum class Scenario {
   PointExplosion,
   PointExplosionWithDynamicAMR,
   BreakingDam,
+  BreakingDamWithDynamicAMR,
   BreakingDamResolutionStudies
 };
 
 
-Scenario scenario = Scenario::BreakingDamResolutionStudies;
-//Scenario scenario = Scenario::PointExplosion;
+//Scenario scenario = Scenario::BreakingDamResolutionStudies;
+Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
 
 // Scenario scenario = Scenario::BreakingDam;
 
@@ -77,6 +78,19 @@ Scenario scenario = Scenario::BreakingDamResolutionStudies;
         }
       }
       break;
+    case Scenario::BreakingDamWithDynamicAMR:
+      {
+        if ( tarch::la::equals(t,0.0) and tarch::la::equals(volumeCentre(0),1.0/3.0) ) {
+          result = ::exahype2::RefinementCommand::Refine;
+        }
+        else if (t>0.0 and Q[4]>0.4) {
+          result = ::exahype2::RefinementCommand::Refine;
+        }
+        else if (t>0.0 and Q[4]<0.2) {
+          result = ::exahype2::RefinementCommand::Coarsen;
+        }
+      }
+      break;
     case Scenario::BreakingDamResolutionStudies:
       {
         if (
@@ -122,6 +136,7 @@ void examples::exahype2::euler::Euler::initialCondition(
       }
       break;
     case Scenario::BreakingDam:
+    case Scenario::BreakingDamWithDynamicAMR:
     case Scenario::BreakingDamResolutionStudies:
       {
         logDebug( "initialCondition(...)", "set breaking dam initial condition" );

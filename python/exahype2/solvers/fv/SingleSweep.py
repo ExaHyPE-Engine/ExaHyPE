@@ -120,13 +120,13 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 #error please switch to your Riemann solver of choice
 """,
       reconstructed_array_memory_location = solver._reconstructed_array_memory_location,
-      guard = "not marker.isRefined()",
+      guard = "not marker.willBeRefined()",
       add_assertions_to_halo_exchange = False
     )
     self._solver = solver
     
     self._Template_TouchCellFirstTime_Epilogue += """
-  else if (not marker.isRefined()) {{
+  else if (not marker.willBeRefined()) {{
     double cellTimeStepSize = -1.0;
     double cellTimeStamp    = -1.0;
      

@@ -14,9 +14,10 @@ peano4::datamanagement::VertexMarker::VertexMarker(
   _cellCentre(event.getX()),
   _h(event.getH()),
   _select(select) {
-  _isRefined                              = event.getIsRefined();
+  _hasBeenRefined                         = event.getHasBeenRefined();
+  _willBeRefined                          = event.getWillBeRefined();
   _isLocal                                = event.getIsVertexLocal();
-  _isAdjacentToParallelDomainBoundary     = event.getIsRefined();
+  //_isAdjacentToParallelDomainBoundary     = event.getIsRefined();
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
 }
 
@@ -77,13 +78,23 @@ int peano4::datamanagement::VertexMarker::getSelectedVertexNumber() const {
 }
 
 
-bool peano4::datamanagement::VertexMarker::isRefined() const {
-  return isRefined(_select);
+bool peano4::datamanagement::VertexMarker::hasBeenRefined() const {
+  return hasBeenRefined(_select);
 }
 
 
-bool peano4::datamanagement::VertexMarker::isRefined(int i) const {
-  return _isRefined[i];
+bool peano4::datamanagement::VertexMarker::hasBeenRefined(int i) const {
+  return _hasBeenRefined[i];
+}
+
+
+bool peano4::datamanagement::VertexMarker::willBeRefined() const {
+  return willBeRefined(_select);
+}
+
+
+bool peano4::datamanagement::VertexMarker::willBeRefined(int i) const {
+  return _willBeRefined[i];
 }
 
 
@@ -97,6 +108,7 @@ bool peano4::datamanagement::VertexMarker::isLocal(int i) const {
 }
 
 
+/*
 bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary() const {
   return isAdjacentToParallelDomainBoundary(_select);
 }
@@ -105,4 +117,5 @@ bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary() 
 bool peano4::datamanagement::VertexMarker::isAdjacentToParallelDomainBoundary(int i) const {
   return _isAdjacentToParallelDomainBoundary[i];
 }
+*/
 

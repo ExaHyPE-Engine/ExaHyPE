@@ -37,7 +37,7 @@ class AMROnPatch(AbstractFVActionSet):
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
   if ( 
-    not marker.isRefined() 
+    not marker.willBeRefined() 
     and
     tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
   ) {
@@ -64,7 +64,7 @@ class AMROnPatch(AbstractFVActionSet):
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
   }
-  else if ( not marker.isRefined() and tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)  ) { 
+  else if ( not marker.willBeRefined() and tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)  ) { 
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
         refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(

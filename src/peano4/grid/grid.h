@@ -143,7 +143,17 @@ namespace peano4 {
      */
     bool isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]);
 
-    bool isVertexRefined(GridVertex  vertex);
+    /**
+     * A vertex will be refined if it is already refined or currently refining.
+     * It also will be refined if the erase is only triggered.
+     */
+    bool willVertexBeRefined(const GridVertex&  vertex);
+
+    /**
+     * A vertex has been refined if it is (already) refined or is erasing or
+     * the erase has been triggered.
+     */
+    bool hasVertexBeenRefined(const GridVertex&  vertex);
 
     /**
      * A vertex is unrefined if it is hanging.
@@ -152,7 +162,8 @@ namespace peano4 {
      *   find out whether a cell is refined, you can compare the result to zero.
      *   You can also use isSpacetreeNodeRefined() instead.
      */
-    std::bitset<TwoPowerD> areVerticesRefined(GridVertex  vertices[TwoPowerD]);
+    std::bitset<TwoPowerD> willVerticesBeRefined(GridVertex  vertices[TwoPowerD]);
+    std::bitset<TwoPowerD> haveVerticesBeenRefined(GridVertex  vertices[TwoPowerD]);
 
 
     /**

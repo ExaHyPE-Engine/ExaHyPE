@@ -24,7 +24,7 @@ class HandleBoundary(AbstractFVActionSet):
       and
       not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
       and
-      not marker.isRefined() 
+      not marker.hasBeenRefined() 
       and 
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
     ) {

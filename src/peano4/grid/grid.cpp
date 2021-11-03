@@ -166,25 +166,42 @@ void peano4::grid::clear( GridStatistics& statistics, bool isGlobalMasterTree ) 
 bool peano4::grid::isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]) {
   bool result = false;
   dfor2(k)
-    result |= isVertexRefined( vertices[kScalar] );
+    result |= willVertexBeRefined( vertices[kScalar] );
+    result |= hasVertexBeenRefined( vertices[kScalar] );
   enddforx
   return result;
 }
 
 
-bool peano4::grid::isVertexRefined(GridVertex  vertex) {
+bool peano4::grid::willVertexBeRefined(const GridVertex&  vertex) {
   return vertex.getState() == GridVertex::State::Refining
       or vertex.getState() == GridVertex::State::Refined
+      or vertex.getState() == GridVertex::State::EraseTriggered;
+}
+
+
+bool peano4::grid::hasVertexBeenRefined(const GridVertex&  vertex) {
+  return vertex.getState() == GridVertex::State::Refined
       or vertex.getState() == GridVertex::State::EraseTriggered
       or vertex.getState() == GridVertex::State::Erasing;
 }
 
 
-std::bitset<TwoPowerD> peano4::grid::areVerticesRefined(GridVertex  vertices[TwoPowerD]) {
+std::bitset<TwoPowerD> peano4::grid::willVerticesBeRefined(GridVertex  vertices[TwoPowerD]) {
   std::bitset<TwoPowerD> bitset;
   for (int i=0; i<TwoPowerD; i++) {
-     assertion( not isVertexRefined(vertices[i]) or vertices[i].getState()!=GridVertex::State::HangingVertex );
-     bitset.set(i,isVertexRefined(vertices[i]));
+     assertion( not willVertexBeRefined(vertices[i]) or vertices[i].getState()!=GridVertex::State::HangingVertex );
+     bitset.set(i,willVertexBeRefined(vertices[i]));
+  }
+  return bitset;
+}
+
+
+std::bitset<TwoPowerD> peano4::grid::haveVerticesBeenRefined(GridVertex  vertices[TwoPowerD]) {
+  std::bitset<TwoPowerD> bitset;
+  for (int i=0; i<TwoPowerD; i++) {
+     assertion( not hasVertexBeenRefined(vertices[i]) or vertices[i].getState()!=GridVertex::State::HangingVertex );
+     bitset.set(i,hasVertexBeenRefined(vertices[i]));
   }
   return bitset;
 }

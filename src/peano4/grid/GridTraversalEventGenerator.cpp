@@ -233,7 +233,8 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   event.setX( state.getX() + state.getH()*0.5 );
   event.setH( state.getH() );
 
-  event.setIsRefined( areVerticesRefined(fineGridVertices) );
+  event.setHasBeenRefined( haveVerticesBeenRefined(fineGridVertices) );
+  event.setWillBeRefined( willVerticesBeRefined(fineGridVertices) );
   event.setRelativePositionToFather( relativePositionToFather );
 
   event.setIsCellLocal(   isSpacetreeNodeLocal( fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true, true) );

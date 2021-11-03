@@ -35,7 +35,8 @@ struct peano4::datamanagement::CellMarker {
 
     tarch::la::Vector<Dimensions,double>  _h;
 
-    bool _isRefined;
+    bool _hasBeenRefined;
+    bool _willBeRefined;
     bool _isLocal;
     bool _areAllVerticesRefined;
     bool _isOneVertexHanging;
@@ -53,7 +54,8 @@ struct peano4::datamanagement::CellMarker {
   public:
     CellMarker(const peano4::grid::GridTraversalEvent& event);
 
-    bool isRefined() const;
+    bool hasBeenRefined() const;
+    bool willBeRefined() const;
 
     /**
      * @return x coordinate of a cell is its centre.
@@ -79,13 +81,6 @@ struct peano4::datamanagement::CellMarker {
     std::string toString() const;
 
     bool isLocal() const;
-
-    /*
-    bool areAllVerticesRefined() const;
-    bool isOneVertexHanging() const;
-    bool isAdjacentToDomainBoundary() const;
-     */
-
 
     /**
      * A enclave cell in the definition of Charrier, Hazelwood, Weinzierl is a

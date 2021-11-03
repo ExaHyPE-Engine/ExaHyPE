@@ -16,9 +16,10 @@ peano4::datamanagement::CellMarker::CellMarker(
 ):
   _centre(event.getX()),
   _h(event.getH()),
-  _isRefined(event.getIsRefined()!=0),
+  _hasBeenRefined(event.getHasBeenRefined()!=0),
+  _willBeRefined(event.getWillBeRefined()!=0),
   _isLocal(event.getIsCellLocal()),
-  _areAllVerticesRefined( event.getIsRefined().all() ),
+  _areAllVerticesRefined( event.getWillBeRefined().all() and event.getHasBeenRefined().all() ),
   _isOneVertexHanging( false ),
   _areAllVerticesInsideDomain( event.getIsVertexAdjacentToParallelDomainBoundary().none() ),
   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() )
@@ -58,8 +59,13 @@ bool peano4::datamanagement::CellMarker::overlaps( const tarch::la::Vector<Dimen
 }
 
 
-bool peano4::datamanagement::CellMarker::isRefined() const {
-  return _isRefined;
+bool peano4::datamanagement::CellMarker::willBeRefined() const {
+  return _willBeRefined;
+}
+
+
+bool peano4::datamanagement::CellMarker::hasBeenRefined() const {
+  return _hasBeenRefined;
 }
 
 
@@ -85,37 +91,22 @@ tarch::la::Vector<Dimensions,double>  peano4::datamanagement::CellMarker::getOff
 
 std::string peano4::datamanagement::CellMarker::toString() const {
   std::ostringstream msg;
-  msg << "(x=" << _centre << ",h=" << _h << ",refined=" << _isRefined << ")";
+  msg << "(x=" << _centre << ",h=" << _h << ",has-been-refined=" << _hasBeenRefined << ",will-be-refined=" << _willBeRefined << ")";
   return msg.str();
 }
 
 
-/*
-bool peano4::datamanagement::CellMarker::areAllVerticesRefined() const {
-  return _areAllVerticesRefined;
-}
-
-
-bool peano4::datamanagement::CellMarker::isOneVertexHanging() const {
-  return _isOneVertexHanging;
-}
-
-
-bool peano4::datamanagement::CellMarker::isAdjacentToDomainBoundary() const {
-  return _isAdjacentToDomainBoundary;
-}
-*/
-
-
-
 bool peano4::datamanagement::CellMarker::isEnclaveCell() const {
-  bool result = not isSkeletonCell();
-  return result;
+  bool isRefined = _hasBeenRefined and _willBeRefined;
+  return _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
+     and _areAllVerticesInsideDomain
+     and not _isOneVertexHanging
+     and (not isRefined or _areAllVerticesRefined);
 }
 
 
 bool peano4::datamanagement::CellMarker::isSkeletonCell() const {
-  return not _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing or not _areAllVerticesInsideDomain or _isOneVertexHanging or not (_areAllVerticesRefined or not _isRefined);
+  return not isEnclaveCell();
 }
 
 
@@ -186,7 +177,7 @@ void peano4::datamanagement::CellMarker::initDatatype() {
 
   peano4::datamanagement::CellMarker  instances[] = { peano4::datamanagement::CellMarker(dummyEvent), peano4::datamanagement::CellMarker(dummyEvent) };
 
-  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_INT };
+  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_BYTE, MPI_INT };
 
   int blocklen[] = { Dimensions, Dimensions, 1, 1, 1, 1, 1, 1, Dimensions };
 
@@ -202,7 +193,9 @@ void peano4::datamanagement::CellMarker::initDatatype() {
   currentAddress++;
   MPI_Get_address( &(instances[0]._h), &disp[currentAddress] );
   currentAddress++;
-  MPI_Get_address( &(instances[0]._isRefined), &disp[currentAddress] );
+  MPI_Get_address( &(instances[0]._hasBeenRefined), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._willBeRefined), &disp[currentAddress] );
   currentAddress++;
   MPI_Get_address( &(instances[0]._isLocal), &disp[currentAddress] );
   currentAddress++;
