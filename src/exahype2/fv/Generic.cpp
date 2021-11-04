@@ -97,11 +97,11 @@ void exahype2::fv::validatePatch (
     // It is a diagonal entry if this counter is bigger than 1. If it equals
     // 0, it is interior. If it equals 1, then this is a face-connected halo
     // entry.
-    int isDiagonal = tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1);
+    bool isDiagonal = (tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1))>1;
 
     for (int i=0; i<unknowns+auxiliaryVariables; i++) {
       const int entry = index+i;
-      if (haloSize==0 or isDiagonal==0) {
+      if (haloSize==0 or isDiagonal) {
         if (triggerNonCriticalAssertion) {
           nonCriticalAssertion9(
             Q[entry]==Q[entry] and std::isfinite(Q[entry]),
