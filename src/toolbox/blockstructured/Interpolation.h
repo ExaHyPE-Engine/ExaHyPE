@@ -52,27 +52,12 @@ namespace toolbox {
      * talking about from a fine
      *
      *
-     */
-    void interpolateOntoOuterHalfOfHaloLayer_AoS_piecewise_constant(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
-    );
-
-
-    /**
-     * Interpolate whole halo layer
-     *
      * I originally thought I could work with interpolating only half of the
      * halo layer. Indeed, we only have to interpolate half of the halo layer
      * along a hanging face: the outer part. This outer data will be used to
      * construct a halo around the adjacent fine grid patch. However, I need
      * the interpolation of all data whenever I creat a new persistent face.
-     * Threfore, there are two interpolation routines.
+     *
      */
     void interpolateHaloLayer_AoS_piecewise_constant(
       const peano4::datamanagement::FaceMarker& marker,
@@ -222,16 +207,6 @@ namespace toolbox {
      *
      */
     template <int NumberOfDoFsPerAxisInPatch>
-    void interpolateOntoOuterHalfOfHaloLayer_AoS_linear_precomputed_operators(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
-    );
-    template <int NumberOfDoFsPerAxisInPatch>
     void interpolateHaloLayer_AoS_linear_precomputed_operators(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -250,15 +225,6 @@ namespace toolbox {
     );
 
 
-    void interpolateOntoOuterHalfOfHaloLayer_AoS_linear(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
-    );
     void interpolateHaloLayer_AoS_linear(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -298,22 +264,6 @@ namespace toolbox {
      * interpolated data set. With this approximation, I can now impose Neumann
      * conditions.
      */
-    void interpolateOntoOuterHalfOfHaloLayer_AoS_outflow(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues,
-      bool                                      swapInsideOutside=false
-    );
-    /**
-     *  Interpolate whole edge
-     *
-     *  This is usually called if we create a new face, e.g. It is important
-     *  that we use linear here, as outflow makes no sense if we set both
-     *  layer halves.
-     */
     void interpolateHaloLayer_AoS_outflow(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
@@ -339,11 +289,17 @@ namespace toolbox {
        * sense, but in that the columns and row insertions always have to match.
        *
        *
-       * @param number How many additional zero lines and columns are required?
-       *              Set to -1 to disable any row/column insertion.
+       * @param pattern What shift/replication pattern do you want. 1 means that
+       *  each row/column is repeated immediately (subject to a shift of 1).
+       *  14 means that each block of 14 entries is repeated. Typically it is
+       *  numberOfDoFsPerAxisInPatch^k with k ranging from 0 to Dimensions-1.
+       *
+       *  Feel free to pass in -1 to switch this feature off. I currently use the
+       *  argument -1 for testing only.
+       *
        * @see tarch::la::DynamicMatrix::insertColumns()
        */
-      tarch::la::DynamicMatrix  create1dLinearInterpolation(int numberOfDoFsPerAxisInPatch, int number, int where, int repeat);
+      tarch::la::DynamicMatrix  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal);
 
       /**
        * Clear half of a halo layer
@@ -418,9 +374,15 @@ namespace toolbox {
 
       /**
        * Helper function
+       *
+       * This function runs through all fine grid/coarse grid cell combinations which
+       * are identified via fineGridCellMarker. So we call the functor once per fine
+       * grid cell, but @f$ 3^d @f$ times or not at all for any coarse grid cell. This
+       * routine is used as a helper function for piece-wise constant interpolation.
+       * It is not that useful for d-linear interpolation.
        */
       void projectCells_AoS(
-        const peano4::datamanagement::CellMarker& marker,
+        const peano4::datamanagement::CellMarker& fineGridCellMarker,
         int                                       numberOfDoFsPerAxisInPatch,
         std::function<void(
           tarch::la::Vector<Dimensions,int> coarseVolume,
