@@ -340,8 +340,8 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     """
     self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
     self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
-    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
-    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
     self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_guard())
     self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())

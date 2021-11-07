@@ -183,9 +183,12 @@ class DynamicAMR(ActionSet):
 """
 
 
-  __Template_CreatePersistentFace = """
-  logTraceIn( "createPersistentFace(...)---DynamicAMR" );
+  __Template_CreatePersistentFace_Prologue = """
+  logTraceInWith1Argument( "createPersistentFace(...)---DynamicAMR", marker.toString() );
+"""
 
+
+  __Template_CreatePersistentFace_Core = """
   ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -194,8 +197,11 @@ class DynamicAMR(ActionSet):
       {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value,
       {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value
   );
+"""
+
     
-  logTraceOut( "createPersistentFace(...)---DynamicAMR" );
+  __Template_CreatePersistentFace_Epilogue = """
+  logTraceOutWith1Argument( "createPersistentFace(...)---DynamicAMR", marker.toString() );
 """
   
 
@@ -215,9 +221,12 @@ class DynamicAMR(ActionSet):
 """
 
 
-  __Template_CreateCell = """
+  __Template_CreateCell_Prologue = """
   logTraceIn( "createCell(...)---DynamicAMR" );
+"""
 
+  
+  __Template_CreateCell_Core = """
   ::toolbox::blockstructured::interpolateCell_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -225,7 +234,10 @@ class DynamicAMR(ActionSet):
       {{FINE_GRID_CELL}}.value,
       {{COARSE_GRID_CELL}}.value
   );
-    
+"""
+
+
+  __Template_CreateCell_Epilogue = """   
   logTraceOut( "createCell(...)---DynamicAMR" );
 """
 
@@ -252,7 +264,9 @@ class DynamicAMR(ActionSet):
       result += jinja2.Template(self.__Template_CreateHangingFace_Epilogue).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE:
-      result = jinja2.Template(self.__Template_CreatePersistentFace).render(**self.d)
+      result =  jinja2.Template(self.__Template_CreatePersistentFace_Prologue).render(**self.d)
+      result += jinja2.Template(self.__Template_CreatePersistentFace_Core).render(**self.d)
+      result += jinja2.Template(self.__Template_CreatePersistentFace_Epilogue).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_HANGING_FACE:
       result  = jinja2.Template(self.__Template_DestroyHangingFace_Prologue).render(**self.d)
@@ -263,7 +277,9 @@ class DynamicAMR(ActionSet):
       result = jinja2.Template(self.__Template_DestroyPersistentFace).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
-      result = jinja2.Template(self.__Template_CreateCell).render(**self.d)
+      result  = jinja2.Template(self.__Template_CreateCell_Prologue).render(**self.d)
+      result += jinja2.Template(self.__Template_CreateCell_Core).render(**self.d)
+      result += jinja2.Template(self.__Template_CreateCell_Epilogue).render(**self.d)
       pass 
     if operation_name==ActionSet.OPERATION_DESTROY_CELL:
       result = jinja2.Template(self.__Template_DestroyCell).render(**self.d)

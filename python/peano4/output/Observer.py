@@ -336,7 +336,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         or
         not {full_qualified_type}::loadPersistently(marker)
       ) {{
-        logDebug( "loadCell(...)", "initialise data of vertex {name} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << ": load persistent data=" << {full_qualified_type}::loadPersistently(marker) );
+        logDebug( "loadCell(...)", "initialise meta data of vertex {name} with " << marker.x(outVertexStackPosition) << " x " << marker.h() << ": load persistent data=" << {full_qualified_type}::loadPersistently(marker) << " (" << marker.toString() << ")" );
         data.setDebugX( marker.x(outVertexStackPosition) );
         data.setDebugH( marker.h() );
       }}
@@ -446,7 +446,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
         or
         not {full_qualified_type}::loadPersistently(marker)
       ) {{
-        logDebug( "loadCell(...)", "initialise data of face {name} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << ": load persistent data=" << {full_qualified_type}::loadPersistently(marker) );
+        logDebug( "loadCell(...)", "initialise meta data of face {name} with " << marker.x(outFaceStackPosition) << " x " << marker.h() << ": load persistent data=" << {full_qualified_type}::loadPersistently(marker)  << " (" << marker.toString() << ")" );
         data.setDebugX( marker.x(outFaceStackPosition) );
         data.setDebugH( marker.h() );
       }}
@@ -554,7 +554,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
       or
       not {full_qualified_type}::loadPersistently(marker)
     ) {{
-      logDebug( "loadCell(...)", "initialise data of cell {name} with " << marker.x() << " x " << marker.h() );
+      logDebug( "loadCell(...)", "initialise meta data of cell {name} with " << marker.x() << " x " << marker.h()  << " (" << marker.toString() << ")");
       data.setDebugX( marker.x() );
       data.setDebugH( marker.h() );
     }}

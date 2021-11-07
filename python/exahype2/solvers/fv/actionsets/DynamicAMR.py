@@ -38,6 +38,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
 """,
       additional_includes         = """
 #include "../repositories/SolverRepository.h"
+#include "exahype2/fv/Generic.h"
 """      
 )
     self.__Template_DestroyHangingFace_Core += """
@@ -47,8 +48,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1,newTimeStamp);
 """
 
-    self.__Template_CreateHangingFace_Core = """
-    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
+    initialise_face_function_calls  = """
+    ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
@@ -56,7 +57,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       fineGridFace""" + solver._name + """QOld.value,
       coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value
     );
-    ::toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
+    ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},
@@ -67,6 +68,23 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     const int leftRightEntry = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
     fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp(leftRightEntry));
     fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(leftRightEntry));
+"""
+
+    self.__Template_CreateHangingFace_Core    = initialise_face_function_calls
+    self.__Template_CreatePersistentFace_Core = initialise_face_function_calls + """    
+    fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp());
+    fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp());
+"""
+
+    self.__Template_CreateCell_Core += """    
+::exahype2::fv::validatePatch(
+    {{FINE_GRID_CELL}}.value,
+    {{UNKNOWNS}},
+    0, // auxiliary values. Not known here
+    {{DOFS_PER_AXIS}},
+    0, // no halo
+    std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+  ); 
 """
 
     
