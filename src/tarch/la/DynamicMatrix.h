@@ -102,6 +102,10 @@ class tarch::la::DynamicMatrix {
     bool operator==(const DynamicMatrix& matrix) const;
 
     std::string toString(bool addLineBreaks=false) const;
+    /**
+     * I often need this in combination with the toString() operation above
+     */
+    static std::string vectorToString( double* values, int entries, bool addLineBreaks=false );
 
     double& operator()(int row, int col);
     double  operator()(int row, int col) const;
@@ -128,8 +132,22 @@ class tarch::la::DynamicMatrix {
      */
     void batchedMultiplyAoS( double* result, double* x, int batchSize, int resultSize, int firstRow );
 
-    void replicateRows( int numberOfReplications, int shiftAfterEveryReplication );
     /**
+     * Split the matrix into blocks of rows of size blockSize. The number of
+     * rows now is creased by a factor of numberOfReplications. Each block is
+     * replicated numberOfReplications in the final output. For the replicated
+     * blocks, we shift each column by shiftAfterEveryReplication. So this
+     * entry can be zero if you want no shifts. Due to the shifts, it might
+     * happen that we access additional columns. If
+     * extendColumnsToAccommodateShifts is set, the operation appends columns
+     * as required. If extendColumnsToAccommodateShifts, it simply truncates
+     * the shifts.
+     */
+    void replicateRows( int blockSize, int numberOfReplications, int shiftAfterEveryReplication, bool extendColumnsToAccommodateShifts );
+
+    /**
+     * Insert zero columns
+     *
      * @param number How many columns shall be inserted. Has to be at least one.
      * @param where  Number of the first column to be inserted. Put in 0 to insert
      *               one to the left of the matrix.
@@ -138,8 +156,8 @@ class tarch::la::DynamicMatrix {
      *               repeatEveryKColumns starting from where. So if you pass in
      *               one, then every other column, we'll insert number of columns.
      */
-    void insertColumns( int number, int where, int repeatEveryKColumns=0 );
-    void insertRows( int number, int where, int repeatEveryKColumns=0 );
+    void insertEmptyColumns( int number, int where, int repeatEveryKColumns=0 );
+    void insertEmptyRows( int number, int where, int repeatEveryKColumns=0 );
 
     void removeColumn( int number );
 
