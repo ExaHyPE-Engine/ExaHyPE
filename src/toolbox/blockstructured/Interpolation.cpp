@@ -37,25 +37,6 @@ tarch::la::DynamicMatrix  toolbox::blockstructured::internal::createLinearInterp
 
   logDebug( "createLinearInterpolationMatrix(...)", "1d matrix: " << P1d.toString() );
 
-/*
-    if (pattern!=-1 and insertZerosInsteadOfRepeatLeftColumn) {
-      #if Dimensions==3
-      tarch::la::DynamicMatrix P( P1d, P1d, false);
-      P.insertEmptyColumns(pattern-1,1,pattern);
-      P.insertEmptyRows(pattern,1,pattern);
-      logTraceOutWith2Arguments( "createLinearInterpolationMatrix(...)", P1d.toString(), P.toString() );
-      return P;
-      #else
-      P1d.insertEmptyColumns(pattern,1,pattern);
-      P1d.insertEmptyRows(pattern,1,pattern);
-      logTraceOutWith1Argument( "createLinearInterpolationMatrix(...)", P1d.toString() );
-      return P1d;
-      #endif
-    }
-*/
-    // @todo Jack abzeichnen, James treffen
-
-
   int pattern = 0;
   switch (normal) {
     case 0:
@@ -293,8 +274,6 @@ void toolbox::blockstructured::internal::projectCells_AoS(
   tarch::la::Vector<Dimensions,double> leftBottomOfCoarseCell = marker.getOffset() - tarch::la::multiplyComponents( marker.h(), tarch::la::convertScalar<double>(marker.getRelativePositionWithinFatherCell()) );
 
   dfor(kFine,numberOfDoFsPerAxisInPatch) {
-//    tarch::la::Vector<Dimensions,int> kCoarse = kFine / 3 + numberOfDoFsPerAxisInPatch * marker.getRelativePositionWithinFatherCell();
-
     tarch::la::Vector<Dimensions,int> kCoarse = (kFine + numberOfDoFsPerAxisInPatch * marker.getRelativePositionWithinFatherCell()) / 3;
 
     tarch::la::Vector<Dimensions,double> volumeXCoarse = leftBottomOfCoarseCell
@@ -340,9 +319,9 @@ void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
       int coarseVolumeLinearised = peano4::utils::dLinearised( coarseVolume, numberOfDoFsPerAxisInPatch );
       int fineVolumeLinearised   = peano4::utils::dLinearised( fineVolume, numberOfDoFsPerAxisInPatch );
       for (int j=0; j<unknowns; j++) {
-        fineGridValues[fineVolumeLinearised*unknowns+j] = coarseGridValues[fineVolumeLinearised*unknowns+j];
+        fineGridValues[fineVolumeLinearised*unknowns+j] = coarseGridValues[coarseVolumeLinearised*unknowns+j];
       }
-      logInfo( "interpolateCell_AoS_piecewise_constant(...)", coarseVolume << "->" << fineVolume << " (" << fineGridValues[coarseVolumeLinearised*unknowns] << ")");
+      logInfo( "interpolateCell_AoS_piecewise_constant(...)", coarseVolume << "->" << fineVolume << " (" << fineGridValues[coarseVolumeLinearised*unknowns] << ", " << fineGridValues[coarseVolumeLinearised*unknowns+4] << ")");
     }
   );
   logTraceOut("interpolateCell_AoS_piecewise_constant(...)");
@@ -546,7 +525,6 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  std::cout << std::endl << "@@@@@@@@@@@@";
   // @todo falsch. Ist konstant
   toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
     marker,
@@ -558,16 +536,12 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
 
   dfor(cell,numberOfDoFsPerAxisInPatch) {
     int cellSerialised = peano4::utils::dLinearised(cell,numberOfDoFsPerAxisInPatch);
-    assertion5(
-      fineGridValues[cellSerialised*unknowns]>0,
-      cellSerialised, unknowns, numberOfDoFsPerAxisInPatch, cell, marker.toString()
-    );
-/*
     for (int j=0; j<5; j++) {
-      reconstructedPatch[destinationCellSerialised*5+j] = fineGridCellEulerQ.value[ sourceCellSerialised*5+j ];
-      nonCriticalAssertion4( reconstructedPatch[destinationCellSerialised*5+j]==reconstructedPatch[destinationCellSerialised*5+j], sourceCell, j, _treeNumber, marker.toString() );
+      assertion6(
+        fineGridValues[cellSerialised*unknowns+j]==fineGridValues[cellSerialised*unknowns+j],
+        cellSerialised, j, unknowns, numberOfDoFsPerAxisInPatch, cell, marker.toString()
+      );
     }
-*/
   }
 }
 

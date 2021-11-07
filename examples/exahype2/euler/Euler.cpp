@@ -61,7 +61,7 @@ Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
         // AMR instruction depends on the actual solution (which is
         // not directly available throughout the grid construction).
         // If you remove this part, you get static AMR.
-        if ( tarch::la::greater(t,0.0) ) {
+        if ( tarch::la::greater(t,0.0) and t<0.0001 ) {
           if ( Q[4]>0.4 ) {
             result = ::exahype2::RefinementCommand::Refine;
           }
@@ -162,8 +162,10 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   assertion(normal<Dimensions);
   //assertion( Q[0]>0.0 );
 
-  if (Q[0]<=0.0 or Q[0]!=Q[0])
+  if (Q[0]<=0.0 or Q[0]!=Q[0]) {
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative" );
+    assertion(false);
+  }
 
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
