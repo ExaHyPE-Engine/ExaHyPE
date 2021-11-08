@@ -20,7 +20,7 @@ modes = {
 floatparams = {
          "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5}
 
-intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0, "ReSwi":0, "MassCal":0}
+intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0, "ReSwi":0, "MassCal":0, "extrapolate_bc":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - SSInfall script')
@@ -30,9 +30,9 @@ if __name__ == "__main__":
     parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
     parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["cellcount","rhointer"],   default="cellcount",  help="Pick extension, i.e. the way to calculate the mass. Default is cell counting" )
-    #parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["ader-fixed", "fv-fixed", "fv-fixed-enclave", "fv-adaptive" ,"fv-adaptive-enclave", "fv-optimistic-enclave", "fv-fixed-gpu"], required="True",  help="Pick solver type" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave"], required="True",  help="Pick solver type" )
-    parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
+    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
+    #parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
+    parser.add_argument("-bc", "--boundary-condition",  dest="boundary",  choices=["periodic","neumann","extrapolate"], default="neumann",  help="Pick the type of Boundary condtion" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
     parser.add_argument("-eigen", "--eigenvalue-control",    dest="eigen", choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
     parser.add_argument("-cfl",  "--CFL-ratio",  dest="cfl",  type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear", "outflow" ], default="constant",  help="interpolation scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -62,6 +62,10 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking
     if args.implementation=="fv-global-adaptive-enclave":
        SuperClass = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking
+    if args.implementation=="fv-subcyling-adaptive-enclave":
+       SuperClass = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking
+    if args.implementation=="fv-local-enclave":
+       SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
 
     class SSInfallSolver( SuperClass ):
       def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl):
@@ -153,44 +157,52 @@ if __name__ == "__main__":
 #include "../SSInfall.h"
 #include <math.h>
     """
-        self._auxiliary_variables = 0
+        self._auxiliary_variables = 5*3
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        int aux_var=0;
+        int aux_var=""" + str( self._auxiliary_variables ) + """;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
           tarch::la::Vector<Dimensions,double> vH=(volumeH,volumeH,volumeH);
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
+          
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
           const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+          
           double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
-          //if (r_coor>0.85) {std::cout << "add it" << std::endl;}
-
-          //if (std::isnan(reconstructedPatch[cellSerialised*5+0])) {std::abort();}     
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
           
-          /*double sour[5];
-          repositories::{{SOLVER_INSTANCE}}.sourceTerm(reconstructedPatch+cellSerialised*(5+aux_var),coor,vH,t,dt,sour);
-          reconstructedPatch[cellSerialised*(5+aux_var)+5]=sour[1];
-
           double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
           double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
           double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
           double m3  =  reconstructedPatch[cellSerialised*(5+aux_var)+3];
           double e   =  reconstructedPatch[cellSerialised*(5+aux_var)+4];
-          reconstructedPatch[cellSerialised*(5+aux_var)+6]=m1/rho; //v_x
-          reconstructedPatch[cellSerialised*(5+aux_var)+7]=(5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3)/rho); //p
-          */
-          /*if (r_coor<1e-8) {
-            reconstructedPatch[cellSerialised*(5+aux_var)+1]=0;
-            reconstructedPatch[cellSerialised*(5+aux_var)+2]=0;
-            reconstructedPatch[cellSerialised*(5+aux_var)+3]=0;
-          }*/
+          
+          double p   =  (5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3)/rho);
+          if (p<0) {
+            reconstructedPatch[cellSerialised*(5+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
+          }
+           
+					for (int d=0; d<3; d++) {
+            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+            leftCell(d)  -= 1;
+            rightCell(d) += 1;
+            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+            for (int i=0; i<5; i++){
+            	if (cell(d)==0) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[cellSerialised*(5+aux_var)+i] )/ volumeH;}
+            	else if (cell(d)==(patchSize-1)) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[cellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ volumeH;}
+            	else {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ 2.0 / volumeH;}
+            }
+          }
+
+
         }
         
     """)
@@ -328,22 +340,28 @@ if __name__ == "__main__":
 ########################################################################################
 #parameter setting according to scenarios
 ########################################################################################
-    if args.periodic_bc=="True":
-      msg = "Periodic BC set"
-      print(msg)
-      periodic_boundary_conditions = [True,True,True]          # Periodic BC
-      userinfo.append((msg,None))
-    else:
-      msg = "WARNING: Periodic BC deactivated by hand"
-      print(msg)
-      periodic_boundary_conditions = [False,False,False]
-      userinfo.append((msg,None))
-
     for k, v in intparams.items():
       intparams.update({k:eval("args.{}".format(k))})
     for k, v in floatparams.items():
       floatparams.update({k:eval("args.{}".format(k))})
-
+      
+    if args.boundary=="periodic":
+      msg = "Periodic BC set"
+      print(msg)
+      periodic_boundary_conditions = [True,True,True]          # Periodic BC
+      userinfo.append((msg,None))
+    elif args.boundary=="extrapolate":
+      msg = "Extrapolate BC set"
+      print(msg)
+      periodic_boundary_conditions = [False,False,False]
+      intparams.update({"extrapolate_bc":1})
+      userinfo.append((msg,None))
+    elif args.boundary=="neumann":
+      msg = "Neumann BC set"
+      print(msg)
+      periodic_boundary_conditions = [False,False,False]
+      userinfo.append((msg,None))
+     
     if args.seed=="tophat":
       intparams.update({"iseed":0})
       userinfo.append(("Tophat overdensity region set",None))
@@ -352,8 +370,10 @@ if __name__ == "__main__":
       userinfo.append(("Point mass in tophat seed set",None))
 
     if args.eigen=="exp":
-      floatparams["C_1"]=(1*1e-4)/floatparams["tilde_P_ini"]*(floatparams["a_i"]/1e-3)**0.5
-      floatparams["C_2"]=(10*1e-5)/floatparams["tilde_P_ini"]
+      #floatparams["C_1"]=(1*1e-4)/floatparams["tilde_P_ini"]*(floatparams["a_i"]/1e-3)**0.5
+      #floatparams["C_2"]=(10*1e-5)/floatparams["tilde_P_ini"]
+      floatparams["C_1"]=20
+      floatparams["C_2"]=50
       userinfo.append(("Use exponential formula for eigenvalues",None))
     if args.eigen=="none":
       floatparams["C_1"]=0
@@ -411,10 +431,10 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-20,-20,-0.001]
-    project.add_plot_filter( probe_point,[40.0,40.0,0.002],1 )
+    #probe_point = [-0,-0,-1e-6]
+    #project.add_plot_filter( probe_point,[40.0,40.0,2e-6],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,16))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,28))" )
 
 ########################################################################################
 #Tracer setting 

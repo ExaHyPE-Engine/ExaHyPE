@@ -70,12 +70,17 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
   double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
   if (ReSwi==1){ //radius based
-    if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
+    constexpr int NumberOfRefinementLayers = 2;
+    double Radius[NumberOfRefinementLayers] = {1.4,0.4};
+    double MaxH[NumberOfRefinementLayers]   = {0.03,0.008};
+    for (int i=0; i<NumberOfRefinementLayers; i++) {
+      if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
+        result=::exahype2::RefinementCommand::Refine;
+      }
+    }
   }
   if (ReSwi==2){ //radius based
     constexpr int NumberOfRefinementLayers = 5;
-    //double Radius[NumberOfRefinementLayers] = {1.5,0.5};
-    //double MaxH[NumberOfRefinementLayers]   = {0.03,0.008};
     double Radius[NumberOfRefinementLayers] = {1.5,0.5,0.3,0.1,0.05};
     double MaxH[NumberOfRefinementLayers]   = {0.05,0.02,0.006,0.002,0.0007};
     for (int i=0; i<NumberOfRefinementLayers; i++) {
@@ -83,6 +88,9 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
         result=::exahype2::RefinementCommand::Refine;
       }
     }
+  }
+  if (ReSwi==3){ //radius based
+    if (radius<0.3) {result=::exahype2::RefinementCommand::Refine;}
   }
   return result;
 }
@@ -236,13 +244,23 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   //nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
-
-  Qoutside[0] = Qinside[0];
-  Qoutside[1] = Qinside[1];
-  Qoutside[2] = Qinside[2];
-  Qoutside[3] = Qinside[3];
-  Qoutside[4] = Qinside[4];
-
+  if (extrapolate_bc==0 and t==0)
+    {Qoutside[0] = Qinside[0];
+    Qoutside[1] = Qinside[1];
+    Qoutside[2] = Qinside[2];
+    Qoutside[3] = Qinside[3];
+    Qoutside[4] = Qinside[4];}
+  else if (extrapolate_bc==1)
+    {
+    	//std::cout <<  Qinside[0] << " " << Qinside[5+normal] << std::endl;
+      for (int i=0; i<5; i++){
+        if (faceCentre(normal)<0) {
+          Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal]*(-volumeH(normal));
+          //if ( isnan(Qoutside[i]) and i==0) {std::cout << Qoutside[i] << " "<< Qinside[i] << " " << Qinside[5+i*3+normal] << " "<<normal<< std::endl;}
+        }
+        else if (faceCentre(normal)>0) {Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal]*(volumeH(normal));}
+      }
+    }
   logTraceOut( "boundaryConditions(...)" );
 }
 
@@ -261,13 +279,15 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
-  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+  double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
   #else
-  const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+  double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
   if ( p<0 ) {
-    ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure "+std::to_string(p)+" detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
+    //std::cout << "what this function saw is " << p << std::endl;
+    p=0;
+    //::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure "+std::to_string(p)+" detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
   }
 
   nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
@@ -276,7 +296,10 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c)); //result=1;
   nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  //if (t>0.2 and result>1){
   result=result*(1+C_1*exp(-C_2*t));
+    //std::cout <<" u_n "<<u_n<<" c "<< c <<" eigenvale " << result << std::endl;
+  //}
   return result;
 }
 
