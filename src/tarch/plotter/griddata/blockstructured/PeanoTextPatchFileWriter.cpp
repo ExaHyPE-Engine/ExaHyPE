@@ -60,7 +60,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
   std::ofstream     indexFileOut;
   indexFileOut.open( _indexFile, std::ios::app );
   indexFileOut << std::endl << Token_BeginDataSet << std::endl;
-  indexFileOut << std::setprecision(12) << std::scientific;
+  indexFileOut << std::setprecision(24) << std::scientific;
   indexFileOut << "  " << Token_TimeStamp << "  " << timestamp << std::endl;
   indexFileOut << std::endl << Token_EndDataSet << std::endl;
 }
