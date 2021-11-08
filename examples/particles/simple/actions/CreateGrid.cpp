@@ -56,7 +56,6 @@ void examples::particles::actions::CreateGrid::createPersistentVertex(
 ) {
   tarch::la::Vector<Dimensions,double>  debugX = marker.x();
   tarch::la::Vector<Dimensions,double>  debugH = marker.h();
-  examples::particles::globaldata::Particle::MoveState  moveState( examples::particles::globaldata::Particle::MoveState::New );
 
   #if Dimensions==2
   const double ParticleDensity = 100 * tarch::la::norm2(marker.x());
@@ -78,7 +77,15 @@ void examples::particles::actions::CreateGrid::createPersistentVertex(
 
     double h = static_cast<double>(rand())/static_cast<double>(RAND_MAX) * (MaxH-MinH) + MinH;
 
-    fineGridVertexParticleSet.push_back( new examples::particles::globaldata::Particle(debugX,debugH,x,moveState,h,v) );
+    fineGridVertexParticleSet.push_back( new examples::particles::globaldata::Particle(
+      debugX,debugH, // Those are properties of the associated vertex (for debugging mainly)
+      x,             // Position of particle
+      examples::particles::globaldata::Particle::MoveState::New,           // Particle is a new one
+      examples::particles::globaldata::Particle::ParallelState::Local,     // It has been a local particle (we ignore parallelisation so far)
+      examples::particles::globaldata::Particle::NewParallelState::Local,  // It is and will be a local particle (we ignore parallelisation so far)
+      h,             // Cut off/interaction radius
+      v              // Velocity
+    ) );
   }
 }
 
