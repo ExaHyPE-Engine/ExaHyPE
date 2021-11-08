@@ -94,7 +94,8 @@ class ParticleParticleInteraction(ActionSet):
 
   __Template_TouchCellFirstTime = jinja2.Template("""
   if ( {{GUARD}} ) {
-    std::forward_list< globaldata::{{PARTICLE}}* >  localParticles;
+    std::list< globaldata::{{PARTICLE}}* >  localParticles;
+    _numberOfActiveParticlesAdded.push_back(0);
     for (int i=0; i<TwoPowerD; i++) {
       for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
         bool append = marker.isContained( p->getX() );
@@ -102,26 +103,26 @@ class ParticleParticleInteraction(ActionSet):
           localParticles.push_front( p );
         }
         _activeParticles.push_front( p );
+        _numberOfActiveParticlesAdded.back()++;
       }
     }
 
-    std::forward_list< globaldata::{{PARTICLE}}* >&  activeParticles = _activeParticles;
+    std::list< globaldata::{{PARTICLE}}* >&  activeParticles = _activeParticles;
     {{CELL_COMPUTE_KERNEL}};
   }
 """)
 
 
   __Template_TouchCellLastTime = jinja2.Template("""
-  for (int i=0; i<TwoPowerD; i++) {
-    for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
-      _activeParticles.remove( p );
-    }
+  for (int i=0; i<_numberOfActiveParticlesAdded.back(); i++) {
+    _activeParticles.pop_back();
   }
+  _numberOfActiveParticlesAdded.pop_back();
 """)
 
 
   __Template_EndTraversal = jinja2.Template("""
-  assertion( _activeParticles.empty() );
+  assertion1( _activeParticles.empty(), (*_activeParticles.begin())->toString() );
 """)
 
 
@@ -160,13 +161,15 @@ class ParticleParticleInteraction(ActionSet):
 
 {{ADDITIONAL_INCLUDES}}
 
-#include <forward_list>
+#include <list>
+#include <vector>
 """ )
     return result.render(**self.d)
 
 
   def get_attributes(self):
     result = jinja2.Template( """
-  std::forward_list< globaldata::{{PARTICLE}}* >  _activeParticles;
+  std::list< globaldata::{{PARTICLE}}* >  _activeParticles;
+  std::vector< int >                      _numberOfActiveParticlesAdded;
 """)
     return result.render(**self.d)
