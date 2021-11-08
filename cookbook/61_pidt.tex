@@ -67,19 +67,41 @@ It implements a very simple gravity $N$-body problem.
 
 \section{Data model}
 
-A particle in \Peano\ has at least two properties:
+Any particle in \Peano\ has a few basic properties:
 
 \begin{itemize}
+  \item The position of the vertex it belongs to plus the size of this vertex's
+  surrounding mesh elements. This is debug information that you won't keep and
+  maintain in release mode.
   \item A position in space;
+  \item A move state. This can be \texttt{new}, \texttt{NotMovedYet} or
+  \texttt{Moved}. I call it move state but it really is a marker that indicates
+  if a particle is new or, otherwise, if it as been updated already. If
+  particles run through the domain and if I run through this domain cell by
+  cell, then I quickly loose overview which particles have been updated already
+  and which haven't. The flag makes my live easier.
+  \item A parallelisation state. Particles can be \texttt{Local}, they can be
+  \texttt{Halo}, i.e.~belong to a different core/rank and thus are just mirrored
+  locally, or they can be \texttt{Virtual}. Particles can reside on
+  a coarser mesh level (see discussion below) and the virtual particle in this
+  case is just a link to the real particle on the coarser mesh.
+  \item As particles move through the domain (and change their cut-off
+  radius---see below), they can also move between ranks or up and down in the
+  mesh hierarchy. Therefore, there are two parallelisation states: The current
+  one (old) from the previous grid sweep and a new one which is used to derive
+  the state for the next sweep.
   \item A cut-off radius, i.e.~an environment of particles witch which it
   interacts.
 \end{itemize}
 
+
 \noindent
-There are two ways to create particles: 
+There are two ways to create the C++ code for particles: 
 We can go through Peano's Python-DaStGen interface, or we can model data
 directly via DaStGen 2.
 For speed reasons, the latter variant is the better one.
+
+
 
 \subsection{Python API}
 
