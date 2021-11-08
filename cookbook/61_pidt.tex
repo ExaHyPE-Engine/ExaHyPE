@@ -252,6 +252,18 @@ There's thus a second set that I call active set.
 The active set is the local set plus all local sets that have been active on
 coarser levels within the tree.
 
+\begin{definition}
+ The active set is built up top-down while we run through the
+ tree.
+ So it is a data structure that grows and shrinks while you run through the
+ meshes.
+ The local set \texttt{localParticles} is created on-the-fly every time you hit
+ a cell or a vertex.
+ Do not alter the active set: You can modify the values of the particles within
+ an active set, but you should not add or remove entries from it.
+ The local set can be modified.
+\end{definition}
+
 
 If you use the \texttt{toolbox.particles.ParticleParticleInteraction} action
 set, you pass it some C source code that works with the particles.
