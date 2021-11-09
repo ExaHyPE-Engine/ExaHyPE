@@ -91,7 +91,17 @@ tarch::la::Vector<Dimensions,double>  peano4::datamanagement::CellMarker::getOff
 
 std::string peano4::datamanagement::CellMarker::toString() const {
   std::ostringstream msg;
-  msg << "(x=" << _centre << ",h=" << _h << ",has-been-refined=" << _hasBeenRefined << ",will-be-refined=" << _willBeRefined << ")";
+  msg << "(x=" << _centre
+      << ",h=" << _h
+      << ",has-been-refined=" << _hasBeenRefined
+      << ",will-be-refined=" << _willBeRefined
+      << ",is-local=" << _isLocal
+      << ",all-vertices-refined=" << _areAllVerticesRefined
+      << ",one-vertex-hanging=" << _isOneVertexHanging
+      << ",all-vertices-inside-domain=" << _areAllVerticesInsideDomain
+      << ",no-lb=" << _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
+      << ",rel-pos=" << _relativePositionOfCellWithinFatherCell
+      << ")";
   return msg.str();
 }
 
