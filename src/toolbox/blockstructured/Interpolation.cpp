@@ -126,6 +126,62 @@ void toolbox::blockstructured::clearHaloLayerAoS(
 }
 
 
+void toolbox::blockstructured::internal::projectCellsOnHaloLayer_AoS(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  std::function<void(
+    tarch::la::Vector<Dimensions,int> coarseVolume,
+    tarch::la::Vector<Dimensions,int> fineVolume,
+/*
+    tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+    tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+*/
+    double coarseVolumeH,
+    double fineVolumeH
+  )> update
+) {
+  logTraceInWith3Arguments( "projectHaloLayers_AoS(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
+
+  const int    normal        = marker.getSelectedFaceNumber() % Dimensions;
+  const double volumeHCoarse = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch) * 3.0;
+  const double volumeHFine   = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch);
+
+  tarch::la::Vector<Dimensions,double> leftBottomCornerOfHaloFine   = marker.x();
+  for (int d=0; d<Dimensions; d++) {
+    if (d==normal) {
+      leftBottomCornerOfHaloFine(d)   -= static_cast<double>(overlap) * volumeHFine;
+    }
+    else {
+      leftBottomCornerOfHaloFine(d)   = marker.x()(d)-marker.h()(d)/2.0;
+    }
+  }
+
+  dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
+    for (int iFine=0;   iFine<overlap*2;   iFine++) {
+      tarch::la::Vector<Dimensions,int> fineVolume   = kFine;
+      fineVolume(normal)                            += iFine;
+
+      tarch::la::Vector<Dimensions,int> coarseVolume = marker.getRelativePositionWithinFatherCell() * numberOfDoFsPerAxisInPatch;
+      coarseVolume(normal) -= overlap;
+      coarseVolume         += fineVolume;
+      coarseVolume          = coarseVolume / 3;
+
+      update(
+        coarseVolume,
+        fineVolume,
+//        volumeXCoarse,
+//        volumeXFine,
+        volumeHCoarse,
+        volumeHFine
+      );
+    }
+  }
+
+  logTraceOut( "projectHaloLayers_AoS(...)" );
+}
+
+
 void toolbox::blockstructured::internal::projectHaloLayers_AoS(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
@@ -248,6 +304,56 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
     },
     swapInsideOutside==0
   );
+
+  logTraceOut( "interpolateHaloLayer_AoS_piecewise_constant(...)" );
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridFaceValues,
+  double*                                   coarseGridFaceValues,
+  double*                                   coarseGridCellValues
+) {
+  logTraceInWith4Arguments( "interpolateHaloLayer_AoS_piecewise_constant(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns );
+
+  int normal = marker.getSelectedFaceNumber() % Dimensions;
+  if (
+    marker.getRelativePositionWithinFatherCell()(normal)==0
+    or
+    marker.getRelativePositionWithinFatherCell()(normal)==3
+  ) {
+    interpolateHaloLayer_AoS_piecewise_constant(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      unknowns,
+      fineGridFaceValues,
+      coarseGridFaceValues
+    );
+  }
+  else {
+    internal::projectCellsOnHaloLayer_AoS(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      [&](
+        tarch::la::Vector<Dimensions,int> coarseVolume,
+        tarch::la::Vector<Dimensions,int> fineVolume,
+/*
+        tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+        tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+*/
+        double coarseVolumeH,
+        double fineVolumeH
+      )->void {
+        logInfo( "interpolateHaloLayer_AoS_piecewise_constant(...)", coarseVolume << " -> " << fineVolume );
+      }
+    );
+  }
 
   logTraceOut( "interpolateHaloLayer_AoS_piecewise_constant(...)" );
 }

@@ -18,7 +18,7 @@ class DynamicAMR(ActionSet):
   patch_overlap_restriction: peano4.datamodel.Patch
                  
   """
-  
+
   
   def __init__(self, patch, patch_overlap_interpolation, patch_overlap_restriction, interpolation_scheme="linear", restriction_scheme="averaging", clear_guard="true", restrict_guard="true", interpolate_guard="true", additional_includes="", point_wise_postprocessing_of_interpolation="" , point_wise_postprocessing_of_restriction="" ):
     """
@@ -195,7 +195,8 @@ class DynamicAMR(ActionSet):
       {{OVERLAP}},
       {{UNKNOWNS}},
       {{FINE_GRID_FACE_ACCESSOR_INTERPOLATION}}.value,
-      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value
+      {{COARSE_GRID_FACE_ACCESSOR_INTERPOLATION}}(marker.getSelectedFaceNumber()).value,
+      {{COARSE_GRID_CELL}}.value
   );
 """
 

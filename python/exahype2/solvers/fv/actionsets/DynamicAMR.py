@@ -48,7 +48,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1,newTimeStamp);
 """
 
-    initialise_face_function_calls  = """
+    self.__Template_CreateHangingFace_Core  = """
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
@@ -70,11 +70,31 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(leftRightEntry));
 """
 
-    self.__Template_CreateHangingFace_Core    = initialise_face_function_calls
-    self.__Template_CreatePersistentFace_Core = initialise_face_function_calls + """    
-    fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp());
-    fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp());
+
+    self.__Template_CreatePersistentFace_Core = """
+    ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
+      marker,
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      fineGridFace""" + solver._name + """QOld.value,
+      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value,
+      coarseGridCell""" + solver._name + """Q.value
+    );
+    ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
+      marker,
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      fineGridFace""" + solver._name + """QNew.value,
+      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value,
+      coarseGridCell""" + solver._name + """Q.value
+    );
+    const int leftRightEntry = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
+    fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(coarseGridCell""" + solver._cell_label.name + """.getTimeStamp());
+    fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(coarseGridCell""" + solver._cell_label.name + """.getTimeStamp());
 """
+
 
     self.__Template_CreateCell_Core += """    
 ::exahype2::fv::validatePatch(
