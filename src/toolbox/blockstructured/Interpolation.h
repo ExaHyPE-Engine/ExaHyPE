@@ -364,6 +364,13 @@ namespace toolbox {
        */
       tarch::la::DynamicMatrix  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch, int normal);
 
+
+      /**
+       * This is a volumetric version of the interpolation.
+       */
+      tarch::la::DynamicMatrix  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch);
+
+
       /**
        * Clear half of a halo layer
        *

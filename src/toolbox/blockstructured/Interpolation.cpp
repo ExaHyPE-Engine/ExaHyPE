@@ -17,7 +17,7 @@ tarch::la::DynamicMatrix  toolbox::blockstructured::internal::createLinearInterp
       {    0.0, 3.0/3.0,     0.0},
       {    0.0, 2.0/3.0, 1.0/3.0}
   });
-  P1d.replicateRows( 1, numberOfDoFsPerAxisInPatch, 1, true );
+  P1d.replicateRows( 3, numberOfDoFsPerAxisInPatch, 1, true );
   P1d.removeColumn(0);
   P1d.removeColumn(numberOfDoFsPerAxisInPatch);
 
@@ -62,6 +62,35 @@ tarch::la::DynamicMatrix  toolbox::blockstructured::internal::createLinearInterp
     P1d.replicateRows( pattern, 2, pattern, false );
     logTraceOutWith1Argument( "createLinearInterpolationMatrix(...)", P1d.toString() );
     return P1d;
+  #endif
+}
+
+
+tarch::la::DynamicMatrix  toolbox::blockstructured::internal::createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch) {
+  logTraceInWith1Argument( "createLinearInterpolationMatrix(...)", numberOfDoFsPerAxisInPatch );
+  tarch::la::DynamicMatrix P1d(3,3,{
+      {1.0/3.0, 2.0/3.0,     0.0},
+      {    0.0, 3.0/3.0,     0.0},
+      {    0.0, 2.0/3.0, 1.0/3.0}
+  });
+  P1d.replicateRows( 3, numberOfDoFsPerAxisInPatch, 1, true );
+  P1d.removeColumn(0);
+  P1d.removeColumn(numberOfDoFsPerAxisInPatch);
+
+  P1d(0,0) =  1.0;
+  P1d(0,1) =  0.0;
+  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-1) =  1.0;
+  P1d(numberOfDoFsPerAxisInPatch*3-1,numberOfDoFsPerAxisInPatch-2) =  0.0;
+
+  logDebug( "createLinearInterpolationMatrix(...)", "1d interpolation matrix: " << P1d.toString(true) );
+
+  tarch::la::DynamicMatrix P2d( P1d, P1d, false);
+  logDebug( "createLinearInterpolationMatrix(...)", "2d interpolation matrix: " << P2d.toString(true) );
+
+  #if Dimensions==3
+  return tarch::la::DynamicMatrix( P2d, P1d, false);
+  #else
+  return P2d;
   #endif
 }
 
@@ -350,7 +379,26 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
         double coarseVolumeH,
         double fineVolumeH
       )->void {
-        logInfo( "interpolateHaloLayer_AoS_piecewise_constant(...)", coarseVolume << " -> " << fineVolume );
+        int coarseVolumeLinearised = peano4::utils::dLinearised(
+          coarseVolume,
+          numberOfDoFsPerAxisInPatch
+          );
+        int fineVolumeLinearised = serialisePatchIndexInOverlap(
+          fineVolume,
+          numberOfDoFsPerAxisInPatch, overlap, normal
+          );
+
+        // @todo Debug
+        logInfo( "interpolateHaloLayer_AoS_piecewise_constant(...)", coarseVolume << " -> " << fineVolume << " (" << coarseVolumeLinearised << "->" << fineVolumeLinearised << ")");
+
+        // @todo raus
+        logInfo( "interpolateHaloLayer_AoS_piecewise_constant(...)", "(" << fineGridFaceValues[fineVolumeLinearised*unknowns] << ")");
+
+        for (int j=0; j<unknowns; j++) {
+          fineGridFaceValues[fineVolumeLinearised*unknowns+j] = coarseGridCellValues[coarseVolumeLinearised*unknowns+j];
+        }
+        // @todo raus
+        assertion(fineGridFaceValues[fineVolumeLinearised*unknowns]>0.0);
       }
     );
   }
@@ -631,17 +679,64 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  // @todo falsch. Ist konstant
-  toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
-    marker,
-    numberOfDoFsPerAxisInPatch,
-    unknowns,
-    fineGridValues,
-    coarseGridValues
+  tarch::la::DynamicMatrix Project = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch);
+
+  #if Dimensions==3
+  tarch::la::DynamicMatrix Pick = tarch::la::DynamicMatrix::id( numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
+  int interleaveX =2*numberOfDoFsPerAxisInPatch;
+  Pick.insertEmptyColumns( interleaveX, numberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch);
+  int interleaveY =2*numberOfDoFsPerAxisInPatch*3*numberOfDoFsPerAxisInPatch;
+  Pick.insertEmptyColumns( interleaveY, 3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, 3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
+  int interleaveZ =2*numberOfDoFsPerAxisInPatch*3*numberOfDoFsPerAxisInPatch*3*numberOfDoFsPerAxisInPatch;
+  Pick.insertEmptyColumns( interleaveZ, 9*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, 9*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch );
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(2)*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
+  #else
+  tarch::la::DynamicMatrix Pick = tarch::la::DynamicMatrix::id( numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
+  int interleaveX = 2*numberOfDoFsPerAxisInPatch;
+  Pick.insertEmptyColumns( interleaveX, numberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch);
+  int interleaveY =2*numberOfDoFsPerAxisInPatch*3*numberOfDoFsPerAxisInPatch;
+  Pick.insertEmptyColumns( interleaveY, 3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, 3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch );
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
+  #endif
+
+  tarch::la::DynamicMatrix PickTimesProject = Pick * Project;
+
+/*
+  std::cout << "marker=" << marker.toString() << std::endl;
+  std::cout << "Pick=" << Pick.toString(true) << std::endl;
+  std::cout << "Project=" << Project.toString(true) << std::endl;
+  std::cout << "PickTimesProject=" << PickTimesProject.toString(true) << std::endl;
+*/
+
+  #if Dimensions==2
+  PickTimesProject.batchedMultiplyAoS(
+    fineGridValues, // image
+    coarseGridValues,  // preimage
+    unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+    numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, // result size, i.e. size of image
+    0
   );
+  #else
+  PickTimesProject.batchedMultiplyAoS(
+    fineGridValues, // image
+    coarseGridValues,  // preimage
+    unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+    numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, // result size, i.e. size of image
+    0
+  );
+  #endif
 
   dfor(cell,numberOfDoFsPerAxisInPatch) {
     int cellSerialised = peano4::utils::dLinearised(cell,numberOfDoFsPerAxisInPatch);
+    // @todo raus
+    assertion6(
+      fineGridValues[cellSerialised*unknowns]>0.0,
+      cellSerialised, unknowns, numberOfDoFsPerAxisInPatch, cell, marker.toString(),
+      PickTimesProject.toString()
+    );
     for (int j=0; j<5; j++) {
       assertion6(
         fineGridValues[cellSerialised*unknowns+j]==fineGridValues[cellSerialised*unknowns+j],
@@ -649,6 +744,91 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
       );
     }
   }
+}
+
+
+void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  int                                       unknowns,
+  double*                                   fineGridFaceValues,
+  double*                                   coarseGridFaceValues,
+  double*                                   coarseGridCellValues
+) {
+  logTraceInWith4Arguments( "interpolateHaloLayer_AoS_linear(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns );
+
+  int normal = marker.getSelectedFaceNumber() % Dimensions;
+  if (
+    marker.getRelativePositionWithinFatherCell()(normal)==0
+    or
+    marker.getRelativePositionWithinFatherCell()(normal)==3
+  ) {
+    interpolateHaloLayer_AoS_linear(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      unknowns,
+      fineGridFaceValues,
+      coarseGridFaceValues
+    );
+  }
+  else {
+    tarch::la::DynamicMatrix Project = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch);
+
+    #if Dimensions==2
+    double* interpolatedValues = tarch::allocateMemory(numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*unknowns,tarch::MemoryLocation::Heap);
+    Project.batchedMultiplyAoS(
+      interpolatedValues, // image
+      coarseGridCellValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, // result size, i.e. size of image
+      0
+    );
+    #else
+    double* interpolatedValues = tarch::allocateMemory(numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*unknowns,tarch::MemoryLocation::Heap);
+    Project.batchedMultiplyAoS(
+      interpolatedValues, // image
+      coarseGridCellValues,  // preimage
+      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, // result size, i.e. size of image
+      0
+    );
+    internal::projectCellsOnHaloLayer_AoS(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      [&](
+        tarch::la::Vector<Dimensions,int> coarseVolume,
+        tarch::la::Vector<Dimensions,int> fineVolume,
+/*
+        tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+        tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+*/
+        double coarseVolumeH,
+        double fineVolumeH
+      )->void {
+        logDebug( "interpolateHaloLayer_AoS_linear(...)", coarseVolume << " -> " << fineVolume );
+
+        int coarseVolumeLinearised = peano4::utils::dLinearised(
+          coarseVolume,
+          numberOfDoFsPerAxisInPatch
+        );
+        int fineVolumeLinearised = serialisePatchIndexInOverlap(
+          fineVolume,
+          numberOfDoFsPerAxisInPatch, overlap, normal
+        );
+        for (int j=0; j<unknowns; j++) {
+          fineGridFaceValues[fineVolumeLinearised*unknowns+j] = interpolatedValues[coarseVolumeLinearised*unknowns+j];
+        }
+      }
+    );
+    #endif
+
+    tarch::freeMemory(interpolatedValues,tarch::MemoryLocation::Heap);
+  }
+
+  logTraceOut( "interpolateHaloLayer_AoS_linear(...)" );
 }
 
 
