@@ -6,6 +6,12 @@
 #include <cstring>
 
 
+
+tarch::la::DynamicMatrix kroneckerProduct( const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs ) {
+  return tarch::la::DynamicMatrix(lhs,rhs,false);
+}
+
+
 tarch::la::DynamicMatrix::DynamicMatrix(const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs, bool innerProduct) {
   if (innerProduct) {
     assertionMsg(false, "not implemented yet");
@@ -125,6 +131,15 @@ double  tarch::la::DynamicMatrix::operator()(int row, int col) const {
   assertion(row<_rows);
   assertion(col<_cols);
   return _m[ serialise(row,col) ];
+}
+
+
+tarch::la::DynamicMatrix tarch::la::DynamicMatrix::id( int rows ) {
+  tarch::la::DynamicMatrix result(rows,rows);
+  for (int i=0; i<rows; i++) {
+    result(i,i) = 1.0;
+  }
+  return result;
 }
 
 
@@ -287,6 +302,52 @@ void tarch::la::DynamicMatrix::removeColumn( int number ) {
 }
 
 
+void tarch::la::DynamicMatrix::shiftRowsDown(int shift,bool wrap) {
+  double* oldData = _m;
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
+  std::fill_n(_m,_rows*_cols,0.0);
+
+  for (int col=0; col<_cols; col++)
+  for (int row=0; row<_rows; row++) {
+    int imageRow = row + shift;
+    if (wrap) imageRow %= _rows;
+    if (imageRow>=0 and imageRow<_rows) {
+      _m[ serialise(imageRow,col) ] = oldData[ serialise(row,col) ];
+    }
+  }
+
+  tarch::freeMemory(oldData,tarch::MemoryLocation::Heap);
+}
+
+
+void tarch::la::DynamicMatrix::shiftColumnsRight(int shift,bool wrap) {
+  double* oldData = _m;
+  _m = tarch::allocateMemory(_rows*_cols,tarch::MemoryLocation::Heap);
+  std::fill_n(_m,_rows*_cols,0.0);
+
+  for (int col=0; col<_cols; col++)
+  for (int row=0; row<_rows; row++) {
+    int imageCol = col+ shift;
+    if (wrap) imageCol %= _cols;
+    if (imageCol>=0 and imageCol<_cols) {
+      _m[ serialise(row,imageCol) ] = oldData[ serialise(row,col) ];
+    }
+  }
+
+  tarch::freeMemory(oldData,tarch::MemoryLocation::Heap);
+}
+
+
+int tarch::la::DynamicMatrix::rows() const {
+  return _rows;
+}
+
+
+int tarch::la::DynamicMatrix::cols() const {
+  return _cols;
+}
+
+
 void tarch::la::DynamicMatrix::replicateRows( int blockSize, int numberOfReplications, int shiftAfterEveryReplication, bool extendColumnsToAccommodateShifts ) {
   assertion3( blockSize>=1, blockSize, numberOfReplications, shiftAfterEveryReplication );
   assertion3( _rows%blockSize==0, blockSize, numberOfReplications, shiftAfterEveryReplication );
@@ -325,4 +386,19 @@ void tarch::la::DynamicMatrix::replicateRows( int blockSize, int numberOfReplica
   }
 
   tarch::freeMemory(oldData,tarch::MemoryLocation::Heap);
+}
+
+
+tarch::la::DynamicMatrix operator*(const tarch::la::DynamicMatrix& A, const tarch::la::DynamicMatrix& B) {
+  tarch::la::DynamicMatrix result(A.rows(),B.cols());
+
+  assertionEquals( A.cols(), B.rows() );
+
+  for (int row=0; row<A.rows(); row++)
+  for (int col=0; col<B.cols(); col++)
+  for (int i=0; i<A.cols(); i++) {
+    result(row,col) += A(row,i) * B(i,col);
+  }
+
+  return result;
 }

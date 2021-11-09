@@ -39,6 +39,9 @@ class tarch::la::DynamicMatrix {
     }
 
   public:
+    /**
+     * Create empty matrix
+     */
     DynamicMatrix(int rows, int cols);
 
     /**
@@ -53,6 +56,11 @@ class tarch::la::DynamicMatrix {
     DynamicMatrix(const DynamicMatrix&);
     DynamicMatrix(DynamicMatrix&&);
 
+    /**
+     * @param innerProduct If this flag is set, I use the inner product between the
+     *   two matrices. If it is not set, I use the generalised outer product, i.e.
+     *   the Kronecker product to construct the new matrix.
+     */
     DynamicMatrix(const DynamicMatrix& lhs, const DynamicMatrix& rhs, bool innerProduct);
 
     DynamicMatrix& operator=(const DynamicMatrix&) = delete;
@@ -159,9 +167,21 @@ class tarch::la::DynamicMatrix {
     void insertEmptyColumns( int number, int where, int repeatEveryKColumns=0 );
     void insertEmptyRows( int number, int where, int repeatEveryKColumns=0 );
 
+    /**
+     * Shift the rows to the right.
+     */
+    void shiftRowsDown(int shift, bool wrap=false);
+    void shiftColumnsRight(int shift, bool wrap=false);
+
     void removeColumn( int number );
 
-    static tarch::la::DynamicMatrix kroneckerProduct( const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs );
+    /**
+     * Create (square) identify matrix with rows rows and column.
+     */
+    static tarch::la::DynamicMatrix id( int rows );
+
+    int rows() const;
+    int cols() const;
 };
 
 
@@ -169,6 +189,11 @@ class tarch::la::DynamicMatrix {
  * Wrapper around static routine, so I don't have to use full-qualified name.
  */
 tarch::la::DynamicMatrix kroneckerProduct( const tarch::la::DynamicMatrix& lhs, const tarch::la::DynamicMatrix& rhs );
+
+
+tarch::la::DynamicMatrix operator*(const tarch::la::DynamicMatrix& A, const tarch::la::DynamicMatrix& B);
+
+//void multiply( double* result, double* x );
 
 
 #endif
