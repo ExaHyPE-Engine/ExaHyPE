@@ -48,6 +48,37 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1,newTimeStamp);
 """
 
+    self.__Template_DestroyPersistentFace_Core += """ 
+  // have to copy over manually. This stuff is not cleared, so there will be rubbish
+  // in there, but I need it for the boundary data
+  #if Dimensions==2
+  for (int i=0; i<{{DOFS_PER_AXIS}}*2*{{OVERLAP}}; i++) {
+  #else
+  for (int i=0; i<{{DOFS_PER_AXIS}}*{{DOFS_PER_AXIS}}*2*{{OVERLAP}}; i++) {
+  #endif
+    for (int unknown=0; unknown<{{UNKNOWNS}}; unknown++) {
+      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown] = coarseGridFaces""" + solver._name + """QUpdate(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown];
+      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown] = coarseGridFaces""" + solver._name + """QUpdate(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown];
+    }
+  }
+
+  double newTimeStamp = 0.0;
+  newTimeStamp = std::max( newTimeStamp,
+    coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getUpdatedTimeStamp(0)
+  ); 
+  newTimeStamp = std::max( newTimeStamp,
+    coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getUpdatedTimeStamp(1)
+  );
+  newTimeStamp = std::max( newTimeStamp,
+    fineGridFace""" + solver._face_label.name + """.getUpdatedTimeStamp(0)
+  );
+  newTimeStamp = std::max( newTimeStamp,
+    fineGridFace""" + solver._face_label.name + """.getUpdatedTimeStamp(1)
+  );
+  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdated(true);
+  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp(newTimeStamp);
+"""
+
     self.__Template_CreateHangingFace_Core  = """
     ::toolbox::blockstructured::interpolateHaloLayer_AoS_{{INTERPOLATION_SCHEME}}(
       marker,

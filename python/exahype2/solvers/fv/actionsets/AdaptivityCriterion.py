@@ -34,6 +34,8 @@ class AdaptivityCriterion(AbstractFVActionSet):
   
   
   TemplateAMR = """  
+  logTraceInWith2Arguments( "touchCellFirstTime(...)", marker.willBeRefined(), marker.hasBeenRefined() );
+
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
   if ( 
@@ -84,8 +86,12 @@ class AdaptivityCriterion(AbstractFVActionSet):
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
   }
+  else {
+    refinementCriterion = ::exahype2::RefinementCommand::Keep;
+  }
     
   _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion );
+  logTraceOutWith1Argument( "touchCellFirstTime(...)", toString(refinementCriterion) );
   """
   
     
@@ -143,7 +149,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver._patch.name
-      d[ "PREDICATE" ]          = self.guard
+      d[ "PREDICATE" ]          = "not marker.willBeRefined() and not marker.hasBeenRefined() and " + self.guard
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)      
       result = jinja2.Template( self.TemplateAMR ).render(**d)

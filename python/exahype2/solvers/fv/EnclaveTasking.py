@@ -90,7 +90,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = self.TemplateUpdateCell.render(**d),
       reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
-      guard  = "not marker.isRefined() and (" + \
+      guard  = "not marker.isRefined() and not marker.hasBeenRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")",

@@ -308,7 +308,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
     for (int i=0; i<TwoPowerD; i++) {{
       int inVertexStack          = event.getVertexDataFrom(i);
       int outVertexStackPosition = event.getVertexDataTo(i);
-      logDebug("enterCell(...)", "vertex stack " << inVertexStack << "->pos-" << outVertexStackPosition );
+      logDebug("loadCell(...)", "vertex stack " << inVertexStack << "->pos-" << outVertexStackPosition );
 
       peano4::datamanagement::VertexMarker  marker(event,outVertexStackPosition);
 
@@ -532,7 +532,7 @@ void {FULL_QUALIFIED_CLASSNAME}::enterCell( const peano4::grid::GridTraversalEve
 
     const int inCellStack  = event.getCellData();
     const int outCellStack = peano4::grid::PeanoCurve::CallStack;
-    logDebug("enterCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack << "(" << {full_qualified_type}::loadPersistently(marker) << ")" );
+    logDebug("loadCell(...)", "cell stack " << inCellStack << "->pos-" << outCellStack << "(" << {full_qualified_type}::loadPersistently(marker) << ")" );
 
     {full_qualified_type}& data = view.get(0);
     if (

@@ -120,7 +120,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 #error please switch to your Riemann solver of choice
 """,
       reconstructed_array_memory_location = solver._reconstructed_array_memory_location,
-      guard = "not marker.willBeRefined()",
+      guard = "not marker.willBeRefined() and not marker.hasBeenRefined()",
       add_assertions_to_halo_exchange = False
     )
     self._solver = solver

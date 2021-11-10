@@ -101,7 +101,8 @@ void exahype2::RefinementControl::addCommand(
         assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
         assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
         _newEvents.push_back( newEvent );
-        logDebug( "addCommend()", "added erase for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
+        // @todo Debug
+        logInfo( "addCommend()", "added erase for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
       }
       break;
   }
