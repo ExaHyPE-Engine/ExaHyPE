@@ -101,7 +101,7 @@ void exahype2::RefinementControl::addCommand(
         assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
         assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
         _newEvents.push_back( newEvent );
-        logDebug( "addCommend()", "added coarsening for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
+        logDebug( "addCommend()", "added erase for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
       }
       break;
   }
@@ -111,10 +111,10 @@ void exahype2::RefinementControl::addCommand(
 
 void exahype2::RefinementControl::finishStep() {
   if (_newEvents.size()==1) {
-    logInfo( "finishStep()", "activate refinement/coarsening instruction " << _newEvents.begin()->toString() << " (can be taken into account in next grid sweep)" );
+    logInfo( "finishStep()", "activate refinement/erase instruction " << _newEvents.begin()->toString() << " (can be taken into account in next grid sweep)" );
   }
   else if (not _newEvents.empty()) {
-    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/coarsening instructions (can be taken into account in next grid sweep)" );
+    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep)" );
   }
   _committedEvents.clear();
   _committedEvents.insert( _committedEvents.end(), _newEvents.begin(), _newEvents.end() );
