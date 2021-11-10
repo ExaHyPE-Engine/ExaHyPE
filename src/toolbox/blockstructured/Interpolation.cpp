@@ -87,6 +87,7 @@ tarch::la::DynamicMatrix  toolbox::blockstructured::internal::createLinearInterp
   tarch::la::DynamicMatrix P2d( P1d, P1d, false);
   logDebug( "createLinearInterpolationMatrix(...)", "2d interpolation matrix: " << P2d.toString(true) );
 
+  logTraceOut( "createLinearInterpolationMatrix(...)" );
   #if Dimensions==3
   return tarch::la::DynamicMatrix( P2d, P1d, false);
   #else
@@ -240,8 +241,8 @@ void toolbox::blockstructured::internal::projectCoarseCellsOnHaloLayer_AoS(
       double coarseVolumeH,
       double fineVolumeH
     )->void {
-	  coarseVolume /= 3;
-	  update(coarseVolume, fineVolume, coarseVolumeH, fineVolumeH);
+      coarseVolume /= 3;
+      update(coarseVolume, fineVolume, coarseVolumeH, fineVolumeH);
     }
   );
 
