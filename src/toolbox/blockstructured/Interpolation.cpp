@@ -388,17 +388,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
           numberOfDoFsPerAxisInPatch, overlap, normal
           );
 
-        // @todo Debug
-        logInfo( "interpolateHaloLayer_AoS_piecewise_constant(...)", coarseVolume << " -> " << fineVolume << " (" << coarseVolumeLinearised << "->" << fineVolumeLinearised << ")");
-
-        // @todo raus
-        logInfo( "interpolateHaloLayer_AoS_piecewise_constant(...)", "(" << fineGridFaceValues[fineVolumeLinearised*unknowns] << ")");
-
         for (int j=0; j<unknowns; j++) {
           fineGridFaceValues[fineVolumeLinearised*unknowns+j] = coarseGridCellValues[coarseVolumeLinearised*unknowns+j];
         }
-        // @todo raus
-        assertion(fineGridFaceValues[fineVolumeLinearised*unknowns]>0.0);
       }
     );
   }
@@ -689,17 +681,17 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
   Pick.insertEmptyColumns( interleaveY, 3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, 3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
   int interleaveZ =2*numberOfDoFsPerAxisInPatch*3*numberOfDoFsPerAxisInPatch*3*numberOfDoFsPerAxisInPatch;
   Pick.insertEmptyColumns( interleaveZ, 9*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, 9*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
-  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch );
-  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
-  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(2)*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(0)*1*numberOfDoFsPerAxisInPatch );
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(1)*3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(2)*9*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
   #else
   tarch::la::DynamicMatrix Pick = tarch::la::DynamicMatrix::id( numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
   int interleaveX = 2*numberOfDoFsPerAxisInPatch;
   Pick.insertEmptyColumns( interleaveX, numberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch);
   int interleaveY =2*numberOfDoFsPerAxisInPatch*3*numberOfDoFsPerAxisInPatch;
   Pick.insertEmptyColumns( interleaveY, 3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, 3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch);
-  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(0)*numberOfDoFsPerAxisInPatch );
-  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(1)*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(0)*1*numberOfDoFsPerAxisInPatch );
+  Pick.shiftColumnsRight( marker.getRelativePositionWithinFatherCell()(1)*3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch );
   #endif
 
   tarch::la::DynamicMatrix PickTimesProject = Pick * Project;
@@ -731,12 +723,6 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
 
   dfor(cell,numberOfDoFsPerAxisInPatch) {
     int cellSerialised = peano4::utils::dLinearised(cell,numberOfDoFsPerAxisInPatch);
-    // @todo raus
-    assertion6(
-      fineGridValues[cellSerialised*unknowns]>0.0,
-      cellSerialised, unknowns, numberOfDoFsPerAxisInPatch, cell, marker.toString(),
-      PickTimesProject.toString()
-    );
     for (int j=0; j<5; j++) {
       assertion6(
         fineGridValues[cellSerialised*unknowns+j]==fineGridValues[cellSerialised*unknowns+j],
@@ -794,6 +780,12 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
       numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, // result size, i.e. size of image
       0
     );
+    #endif
+
+Das macht doch jetzt irgendwie ueberhaupt keinen Sinn. Ich will ja
+genau net ein 4x4 Gitter auf (4x3)x(4x3) abbilden. Sonst braeuchte i
+ich ja gar keine d-lineare Interpolation
+
     internal::projectCellsOnHaloLayer_AoS(
       marker,
       numberOfDoFsPerAxisInPatch,
@@ -808,7 +800,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
         double coarseVolumeH,
         double fineVolumeH
       )->void {
-        logDebug( "interpolateHaloLayer_AoS_linear(...)", coarseVolume << " -> " << fineVolume );
+        logInfo( "interpolateHaloLayer_AoS_linear(...)", "hey ho " << coarseVolume << " -> " << fineVolume );
 
         int coarseVolumeLinearised = peano4::utils::dLinearised(
           coarseVolume,
@@ -823,7 +815,6 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
         }
       }
     );
-    #endif
 
     tarch::freeMemory(interpolatedValues,tarch::MemoryLocation::Heap);
   }
