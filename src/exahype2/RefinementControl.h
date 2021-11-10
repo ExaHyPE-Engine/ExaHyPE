@@ -13,7 +13,7 @@
 
 namespace exahype2 {
   enum class RefinementCommand {
-    Keep, Refine, Coarsen
+    Keep, Refine, Erase
   };
 
   /**

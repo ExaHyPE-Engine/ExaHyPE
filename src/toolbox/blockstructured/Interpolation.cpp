@@ -842,7 +842,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
           fineGridFaceValues[fineVolumeLinearised*unknowns+j] = interpolatedValues[coarseVolumeLinearised*unknowns+j];
         }
         assertion10(
-          fineGridFaceValues[fineVolumeLinearised*unknowns]!=fineGridFaceValues[fineVolumeLinearised*unknowns],
+          fineGridFaceValues[fineVolumeLinearised*unknowns]==fineGridFaceValues[fineVolumeLinearised*unknowns],
 		  fineGridFaceValues[fineVolumeLinearised*unknowns],
 		  coarseVolume, fineVolume, coarseVolumeLinearised, fineVolumeLinearised,
 		  marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns,

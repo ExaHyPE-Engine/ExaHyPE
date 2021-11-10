@@ -66,7 +66,7 @@ Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
             result = ::exahype2::RefinementCommand::Refine;
           }
           if ( Q[4]<0.2 ) {
-            result = ::exahype2::RefinementCommand::Coarsen;
+            result = ::exahype2::RefinementCommand::Erase;
           }
         }
       }
@@ -87,7 +87,7 @@ Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
           result = ::exahype2::RefinementCommand::Refine;
         }
         else if (t>0.0 and Q[4]<0.2) {
-          result = ::exahype2::RefinementCommand::Coarsen;
+          result = ::exahype2::RefinementCommand::Erase;
         }
       }
       break;

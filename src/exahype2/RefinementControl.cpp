@@ -3,7 +3,7 @@
 
 
 exahype2::RefinementCommand exahype2::getDefaultRefinementCommand() {
-  return RefinementCommand::Coarsen;
+  return RefinementCommand::Erase;
 }
 
 
@@ -19,7 +19,7 @@ exahype2::RefinementCommand operator&&( exahype2::RefinementCommand lhs, exahype
     return exahype2::RefinementCommand::Keep;
   }
   else {
-    return exahype2::RefinementCommand::Coarsen;
+    return exahype2::RefinementCommand::Erase;
   }
 }
 
@@ -28,7 +28,7 @@ std::string toString( exahype2::RefinementCommand value ) {
   switch (value) {
     case exahype2::RefinementCommand::Refine:  return "refine";
     case exahype2::RefinementCommand::Keep:    return "keep";
-    case exahype2::RefinementCommand::Coarsen: return "coarsen";
+    case exahype2::RefinementCommand::Erase:   return "erase";
   }
   return "<undef>";
 }
@@ -85,8 +85,24 @@ void exahype2::RefinementControl::addCommand(
       break;
     case ::exahype2::RefinementCommand::Keep:
       break;
-    case ::exahype2::RefinementCommand::Coarsen:
-      logDebug( "addCommend()", "not implemented yet" );
+    case ::exahype2::RefinementCommand::Erase:
+      {
+        tarch::la::Vector<Dimensions,double> expandedWidth   = (1.0+_Tolerance) * h;
+        tarch::la::Vector<Dimensions,double> shift           = 0.5 * (expandedWidth - h);
+        tarch::la::Vector<Dimensions,double> refinedMeshSize = 3.1 * h;
+
+        peano4::grid::GridControlEvent newEvent(
+          peano4::grid::GridControlEvent::RefinementControl::Erase,
+          x-0.5 * h - shift,
+          expandedWidth,
+          refinedMeshSize
+        );
+
+        assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
+        assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
+        _newEvents.push_back( newEvent );
+        logDebug( "addCommend()", "added coarsening for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
+      }
       break;
   }
   logTraceOutWith1Argument( "addCommand()", _newEvents.size() );

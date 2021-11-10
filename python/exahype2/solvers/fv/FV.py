@@ -504,10 +504,15 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
      Consult the discussion in add_actions_to_init_grid() around the order
      of the individual action sets.
      
+     It is important that we have the coupling/dynamic AMR part in here, as 
+     there might be pending AMR refinement requests that now are realised.
+     
     """
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
+
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
 
     # There should be none of these actually, as we don't roll over any updates in this step.    
     # step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )

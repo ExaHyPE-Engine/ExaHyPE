@@ -60,7 +60,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
     if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
-    else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
+    else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
   }
@@ -79,7 +79,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
     if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
-    else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen ) {
+    else if (refinementCriterion==::exahype2::RefinementCommand::Erase ) {
       logDebug( "touchCellFirstTime(...)", "drop coarsen instructions, as we are in initial grid setup phase" );
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
