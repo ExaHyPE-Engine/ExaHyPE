@@ -198,6 +198,16 @@ std::string tarch::la::DynamicMatrix::vectorToString( double* values, int entrie
 }
 
 
+void tarch::la::DynamicMatrix::batchedMultiplyAoS( double* result, double* x, int batchCount ) {
+  batchedMultiplyAoS(
+    result, x,
+	batchCount,
+	_rows,
+	0
+  );
+}
+
+
 void tarch::la::DynamicMatrix::batchedMultiplyAoS( double* result, double* x, int batchSize, int resultSize, int firstRow  ) {
   assertion3( batchSize>0,  batchSize, resultSize, firstRow );
   assertion3( resultSize>0, batchSize, resultSize, firstRow );

@@ -136,9 +136,15 @@ class tarch::la::DynamicMatrix {
      * @param firstRow First row to pick from matrix. If the resultSize is equal to
      *                 the number of rows of the matrix, then this entry should be
      *                 0. Otherwise, you can pick only a few rows from the matrix
-     *                 through this offset.
+     *                 through this offset. The fact that I can use a subset of the
+     *                 matrix requires me to pass in resultSize explicitly.
      */
-    void batchedMultiplyAoS( double* result, double* x, int batchSize, int resultSize, int firstRow );
+    void batchedMultiplyAoS( double* result, double* x, int batchCount, int resultSize, int firstRow );
+
+    /**
+     * Wrapper around other batch operation. The whole matrix is used.
+     */
+    void batchedMultiplyAoS( double* result, double* x, int batchCount );
 
     /**
      * Split the matrix into blocks of rows of size blockSize. The number of

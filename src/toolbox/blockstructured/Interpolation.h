@@ -464,13 +464,40 @@ namespace toolbox {
         )> update
       );
 
-      void projectCellsOnHaloLayer_AoS(
+      /**
+       * This routine identifies fine grid halo layer volumes and finds out which coarse grid
+       * volumes do overlap. It then triggers the callback for these combinations of fine
+       * volume - coarse volume.
+       */
+      void projectCoarseCellsOnHaloLayer_AoS(
         const peano4::datamanagement::FaceMarker& marker,
         int                                       numberOfDoFsPerAxisInPatch,
         int                                       overlap,
         std::function<void(
           tarch::la::Vector<Dimensions,int> coarseVolume,
           tarch::la::Vector<Dimensions,int> fineVolume,
+/*
+          tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+          tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+*/
+          double coarseVolumeH,
+          double fineVolumeH
+        )> update
+      );
+
+      /**
+       * This routine assumes that you have a whole array of fine grid volumes available.
+       * With a patch size of N, this array has the size NxN or NxNxN, respectively.
+       * We identify the overlap with the fine halo layer and invoke the callback for all
+       * pairs of fine halo layer volume - large interpolated array.
+       */
+      void projectInterpolatedFineCellsOnHaloLayer_AoS(
+        const peano4::datamanagement::FaceMarker& marker,
+        int                                       numberOfDoFsPerAxisInPatch,
+        int                                       overlap,
+        std::function<void(
+          tarch::la::Vector<Dimensions,int> volumeWithinCoarseInterpolatedPatch,
+          tarch::la::Vector<Dimensions,int> fineVolumeWithinHaloLayer,
 /*
           tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
           tarch::la::Vector<Dimensions,double> fineVolumeCentre,

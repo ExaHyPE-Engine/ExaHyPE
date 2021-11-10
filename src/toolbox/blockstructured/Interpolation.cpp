@@ -155,7 +155,7 @@ void toolbox::blockstructured::clearHaloLayerAoS(
 }
 
 
-void toolbox::blockstructured::internal::projectCellsOnHaloLayer_AoS(
+void toolbox::blockstructured::internal::projectInterpolatedFineCellsOnHaloLayer_AoS(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
@@ -170,7 +170,7 @@ void toolbox::blockstructured::internal::projectCellsOnHaloLayer_AoS(
     double fineVolumeH
   )> update
 ) {
-  logTraceInWith3Arguments( "projectHaloLayers_AoS(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
+  logTraceInWith3Arguments( "projectInterpolatedFineCellsOnHaloLayer_AoS(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
 
   const int    normal        = marker.getSelectedFaceNumber() % Dimensions;
   const double volumeHCoarse = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch) * 3.0;
@@ -194,7 +194,7 @@ void toolbox::blockstructured::internal::projectCellsOnHaloLayer_AoS(
       tarch::la::Vector<Dimensions,int> coarseVolume = marker.getRelativePositionWithinFatherCell() * numberOfDoFsPerAxisInPatch;
       coarseVolume(normal) -= overlap;
       coarseVolume         += fineVolume;
-      coarseVolume          = coarseVolume / 3;
+      // coarseVolume          = coarseVolume / 3;
 
       update(
         coarseVolume,
@@ -207,7 +207,45 @@ void toolbox::blockstructured::internal::projectCellsOnHaloLayer_AoS(
     }
   }
 
-  logTraceOut( "projectHaloLayers_AoS(...)" );
+  logTraceOut( "projectInterpolatedFineCellsOnHaloLayer_AoS(...)" );
+}
+
+
+void toolbox::blockstructured::internal::projectCoarseCellsOnHaloLayer_AoS(
+  const peano4::datamanagement::FaceMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       overlap,
+  std::function<void(
+    tarch::la::Vector<Dimensions,int> coarseVolume,
+    tarch::la::Vector<Dimensions,int> fineVolume,
+/*
+    tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+    tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+*/
+    double coarseVolumeH,
+    double fineVolumeH
+  )> update
+) {
+  logTraceInWith3Arguments( "projectCoarseCellsOnHaloLayer_AoS(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap );
+
+  projectInterpolatedFineCellsOnHaloLayer_AoS(
+    marker,
+	numberOfDoFsPerAxisInPatch,
+	overlap,
+	[&](
+      tarch::la::Vector<Dimensions,int> coarseVolume,
+      tarch::la::Vector<Dimensions,int> fineVolume,
+//		    tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+//		    tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+      double coarseVolumeH,
+      double fineVolumeH
+    )->void {
+	  coarseVolume /= 3;
+	  update(coarseVolume, fineVolume, coarseVolumeH, fineVolumeH);
+    }
+  );
+
+  logTraceOut( "projectCoarseCellsOnHaloLayer_AoS(...)" );
 }
 
 
@@ -365,7 +403,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
     );
   }
   else {
-    internal::projectCellsOnHaloLayer_AoS(
+    internal::projectCoarseCellsOnHaloLayer_AoS(
       marker,
       numberOfDoFsPerAxisInPatch,
       overlap,
@@ -467,7 +505,7 @@ void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
       for (int j=0; j<unknowns; j++) {
         fineGridValues[fineVolumeLinearised*unknowns+j] = coarseGridValues[coarseVolumeLinearised*unknowns+j];
       }
-      logInfo( "interpolateCell_AoS_piecewise_constant(...)", coarseVolume << "->" << fineVolume << " (" << fineGridValues[coarseVolumeLinearised*unknowns] << ", " << fineGridValues[coarseVolumeLinearised*unknowns+4] << ")");
+      logDebug( "interpolateCell_AoS_piecewise_constant(...)", coarseVolume << "->" << fineVolume << " (" << fineGridValues[coarseVolumeLinearised*unknowns] << ", " << fineGridValues[coarseVolumeLinearised*unknowns+4] << ")");
     }
   );
   logTraceOut("interpolateCell_AoS_piecewise_constant(...)");
@@ -763,30 +801,22 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
     tarch::la::DynamicMatrix Project = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch);
 
     #if Dimensions==2
-    double* interpolatedValues = tarch::allocateMemory(numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*unknowns,tarch::MemoryLocation::Heap);
+    double* interpolatedValues = tarch::allocateMemory(3*3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*unknowns,tarch::MemoryLocation::Heap);
     Project.batchedMultiplyAoS(
       interpolatedValues, // image
       coarseGridCellValues,  // preimage
-      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
-      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, // result size, i.e. size of image
-      0
+      unknowns
     );
     #else
-    double* interpolatedValues = tarch::allocateMemory(numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*unknowns,tarch::MemoryLocation::Heap);
+    double* interpolatedValues = tarch::allocateMemory(3*3*3*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*unknowns,tarch::MemoryLocation::Heap);
     Project.batchedMultiplyAoS(
       interpolatedValues, // image
       coarseGridCellValues,  // preimage
-      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
-      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, // result size, i.e. size of image
-      0
+      unknowns
     );
     #endif
 
-Das macht doch jetzt irgendwie ueberhaupt keinen Sinn. Ich will ja
-genau net ein 4x4 Gitter auf (4x3)x(4x3) abbilden. Sonst braeuchte i
-ich ja gar keine d-lineare Interpolation
-
-    internal::projectCellsOnHaloLayer_AoS(
+    internal::projectInterpolatedFineCellsOnHaloLayer_AoS(
       marker,
       numberOfDoFsPerAxisInPatch,
       overlap,
@@ -800,11 +830,9 @@ ich ja gar keine d-lineare Interpolation
         double coarseVolumeH,
         double fineVolumeH
       )->void {
-        logInfo( "interpolateHaloLayer_AoS_linear(...)", "hey ho " << coarseVolume << " -> " << fineVolume );
-
         int coarseVolumeLinearised = peano4::utils::dLinearised(
           coarseVolume,
-          numberOfDoFsPerAxisInPatch
+          numberOfDoFsPerAxisInPatch*3
         );
         int fineVolumeLinearised = serialisePatchIndexInOverlap(
           fineVolume,
@@ -813,6 +841,13 @@ ich ja gar keine d-lineare Interpolation
         for (int j=0; j<unknowns; j++) {
           fineGridFaceValues[fineVolumeLinearised*unknowns+j] = interpolatedValues[coarseVolumeLinearised*unknowns+j];
         }
+        assertion10(
+          fineGridFaceValues[fineVolumeLinearised*unknowns]!=fineGridFaceValues[fineVolumeLinearised*unknowns],
+		  fineGridFaceValues[fineVolumeLinearised*unknowns],
+		  coarseVolume, fineVolume, coarseVolumeLinearised, fineVolumeLinearised,
+		  marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns,
+		  Project.toString(true)
+		);
       }
     );
 
