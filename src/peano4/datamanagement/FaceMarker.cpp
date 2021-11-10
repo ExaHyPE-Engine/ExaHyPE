@@ -82,6 +82,7 @@ std::string peano4::datamanagement::FaceMarker::toString() const {
       << ",is-face-local=" << isLocal()
       << ",has-face-been-refined=" << hasBeenRefined()
       << ",will-face-be-refined=" << willBeRefined()
+	  << ",rel-pos=" << _relativePositionOfCellWithinFatherCell
       << ")";
   return msg.str();
 }
