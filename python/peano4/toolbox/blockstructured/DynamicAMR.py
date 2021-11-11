@@ -98,6 +98,22 @@ class DynamicAMR(ActionSet):
 """
 
 
+  __Template_TouchCellFirstTime = """
+  if ( marker.hasBeenRefined() and not marker.willBeRefined() ) {
+    logTraceInWith2Arguments( "touchCellFirstTime(...)", marker.toString(), "clear cell {{FINE_GRID_CELL}}" );
+    
+    ::toolbox::blockstructured::clearCell(
+      marker,
+      {{DOFS_PER_AXIS}},
+      {{UNKNOWNS}},
+      {{FINE_GRID_CELL}}.value
+    );
+
+    logTraceOut( "touchCellFirstTime(...)" );
+  }
+"""
+
+
   __Template_CreateHangingFace_Prologue = """
   if ( {{INTERPOLATE_GUARD}} ) {
     logTraceInWith1Argument( "createHangingFace(...)", marker.toString() );
@@ -309,6 +325,9 @@ class DynamicAMR(ActionSet):
       pass 
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = jinja2.Template(self.__Template_TouchFaceFirstTime).render(**self.d)
+      pass 
+    if operation_name==ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+      result = jinja2.Template(self.__Template_TouchCellFirstTime).render(**self.d)
       pass 
     return result
 

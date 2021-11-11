@@ -20,6 +20,12 @@ namespace toolbox {
       double*                                   values
     );
 
+    void clearCell(
+      const peano4::datamanagement::CellMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       unknowns,
+      double*                                   values
+    );
 
     /**
      * Take the coarse grid values and interpolate them onto the fine grid

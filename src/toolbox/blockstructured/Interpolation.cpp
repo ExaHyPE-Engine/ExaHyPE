@@ -127,6 +127,22 @@ void toolbox::blockstructured::internal::clearHalfOfHaloLayerAoS(
 }
 
 
+void toolbox::blockstructured::clearCell(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       unknowns,
+  double*                                   values
+) {
+  #if Dimensions==3
+  for (int i=0; i<numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*unknowns; i++) {
+  #else
+  for (int i=0; i<numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*unknowns; i++) {
+  #endif
+    values[i] = 0.0;
+  }
+}
+
+
 void toolbox::blockstructured::clearHaloLayerAoS(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
