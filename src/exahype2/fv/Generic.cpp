@@ -56,7 +56,7 @@ std::string exahype2::fv::plotPatch(
     // It is a diagonal entry if this counter is bigger than 1. If it equals
     // 0, it is interior. If it equals 1, then this is a face-connected halo
     // entry.
-    int isDiagonal = tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1);
+    bool isDiagonal = (tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1))>1;
 
     result << "(";
     for (int i=0; i<unknowns+auxiliaryVariables; i++) {
@@ -67,7 +67,7 @@ std::string exahype2::fv::plotPatch(
       else
         result << ",d[" << entry << "]=";
 
-      if (haloSize==0 or isDiagonal==0)
+      if (haloSize==0 or not isDiagonal)
         result << Q[entry];
       else
         result << "x";
@@ -112,19 +112,19 @@ void exahype2::fv::validatePatch (
           dataValid = false;
         }
         if (triggerNonCriticalAssertion) {
-          nonCriticalAssertion9(
+          nonCriticalAssertion11(
             Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid,
-            unknowns,
+            Q[entry], unknowns,
             auxiliaryVariables,
-            isDiagonal, haloSize,
+            isDiagonal, haloSize, i,
             numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
         }
         else {
-          assertion10(
+          assertion12(
             Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid,
-            unknowns,
+            Q[entry], unknowns,
             auxiliaryVariables,
-            isDiagonal, haloSize,
+            isDiagonal, haloSize, i,
             numberOfVolumesPerAxisInPatch, haloSize, k, i, location,
             plotPatch(Q,unknowns,auxiliaryVariables,numberOfVolumesPerAxisInPatch,haloSize)
           );
