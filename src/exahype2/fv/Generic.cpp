@@ -85,7 +85,9 @@ void exahype2::fv::validatePatch (
   int auxiliaryVariables,
   int numberOfVolumesPerAxisInPatch, int haloSize,
   const std::string &location,
-  bool   triggerNonCriticalAssertion
+  bool   triggerNonCriticalAssertion,
+  double* minValues,
+  double* maxValues
 ) {
   #if PeanoDebug>1 && !defined(OpenMPGPUOffloading)
   static tarch::logging::Log _log( "exahype2::fv" );
@@ -102,9 +104,16 @@ void exahype2::fv::validatePatch (
     if (haloSize==0 or not isDiagonal) {
       for (int i=0; i<unknowns+auxiliaryVariables; i++) {
         const int entry = index+i;
+        bool dataValid = true;
+        if (minValues!=nullptr and minValues[i]>Q[entry]) {
+          dataValid = false;
+        }
+        if (maxValues!=nullptr and maxValues[i]<Q[entry]) {
+          dataValid = false;
+        }
         if (triggerNonCriticalAssertion) {
           nonCriticalAssertion9(
-            Q[entry]==Q[entry] and std::isfinite(Q[entry]),
+            Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid,
             unknowns,
             auxiliaryVariables,
             isDiagonal, haloSize,
@@ -112,7 +121,7 @@ void exahype2::fv::validatePatch (
         }
         else {
           assertion10(
-            Q[entry]==Q[entry] and std::isfinite(Q[entry]),
+            Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid,
             unknowns,
             auxiliaryVariables,
             isDiagonal, haloSize,

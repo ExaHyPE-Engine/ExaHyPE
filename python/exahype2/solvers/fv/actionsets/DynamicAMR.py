@@ -135,6 +135,9 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     0, // no halo
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); 
+
+  fineGridCell""" + solver._cell_label.name + """.setTimeStamp( coarseGridCell""" + solver._cell_label.name + """.getTimeStamp() );
+  fineGridCell""" + solver._cell_label.name + """.setTimeStepSize( coarseGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
 """
 
     self.__Template_DestroyCell_Core += """    
