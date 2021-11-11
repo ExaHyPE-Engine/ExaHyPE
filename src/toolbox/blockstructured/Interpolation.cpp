@@ -388,12 +388,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
 ) {
   logTraceInWith4Arguments( "interpolateHaloLayer_AoS_piecewise_constant(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns );
 
-  int normal = marker.getSelectedFaceNumber() % Dimensions;
-  if (
-    marker.getRelativePositionWithinFatherCell()(normal)==0
-    or
-    marker.getRelativePositionWithinFatherCell()(normal)==3
-  ) {
+  if ( marker.isInteriorFaceWithinPatch() ) {
     interpolateHaloLayer_AoS_piecewise_constant(
       marker,
       numberOfDoFsPerAxisInPatch,
@@ -404,6 +399,7 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
     );
   }
   else {
+    const int normal = marker.getSelectedFaceNumber() % Dimensions;
     internal::projectCoarseCellsOnHaloLayer_AoS(
       marker,
       numberOfDoFsPerAxisInPatch,

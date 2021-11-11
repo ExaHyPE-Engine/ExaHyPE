@@ -126,7 +126,6 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(coarseGridCell""" + solver._cell_label.name + """.getTimeStamp());
 """
 
-
     self.__Template_CreateCell_Core += """    
 ::exahype2::fv::validatePatch(
     {{FINE_GRID_CELL}}.value,
@@ -137,6 +136,22 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); 
 """
+
+    self.__Template_DestroyCell_Core += """    
+  ::exahype2::fv::validatePatch(
+    {{FINE_GRID_CELL}}.value,
+    {{UNKNOWNS}},
+    0, // auxiliary values. Not known here
+    {{DOFS_PER_AXIS}},
+    0, // no halo
+    std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+  ); 
+  
+  coarseGridCell""" + solver._cell_label.name + """.setTimeStamp( fineGridCell""" + solver._cell_label.name + """.getTimeStamp() );
+  coarseGridCell""" + solver._cell_label.name + """.setTimeStepSize( fineGridCell""" + solver._cell_label.name + """.getTimeStepSize() );
+"""
+
+
 
     
   def get_action_set_name(self):

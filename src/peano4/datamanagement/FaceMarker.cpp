@@ -146,3 +146,11 @@ tarch::la::Vector<Dimensions,int>  peano4::datamanagement::FaceMarker::getRelati
   return result;
 }
 
+
+bool peano4::datamanagement::FaceMarker::isInteriorFaceWithinPatch() const {
+  int normal             = getSelectedFaceNumber() % Dimensions;
+  return
+    getRelativePositionWithinFatherCell()(normal)==1
+    or
+    getRelativePositionWithinFatherCell()(normal)==2;
+}

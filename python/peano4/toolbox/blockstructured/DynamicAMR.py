@@ -210,6 +210,8 @@ class DynamicAMR(ActionSet):
 
   __Template_DestroyPersistentFace_Prologue = """
   logTraceIn( "destroyPersistentFace(...)" );
+  
+  if ( not marker.isInteriorFaceWithinPatch() ) {
 """
 
 
@@ -226,6 +228,7 @@ class DynamicAMR(ActionSet):
 
   
   __Template_DestroyPersistentFace_Epilogue = """
+  }
   logTraceOut( "destroyPersistentFace(...)" );
 """
 
@@ -252,7 +255,7 @@ class DynamicAMR(ActionSet):
 
 
   __Template_DestroyCell_Prologue = """
-  logTraceIn( "destroyCell(...)" );
+  logTraceInWith1Argument( "destroyCell(...)", marker.toString() );
 """
 
 

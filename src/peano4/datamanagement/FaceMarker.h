@@ -124,6 +124,12 @@ struct peano4::datamanagement::FaceMarker {
      */
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
+
+    /**
+     * The term patch here refers to a 3x3 or 3x3x3 refinement. The routine
+     * determines whether the face is on the boundary of this patch of not.
+     */
+    bool isInteriorFaceWithinPatch() const;
 };
 
 
