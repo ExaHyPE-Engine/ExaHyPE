@@ -4,6 +4,7 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 import peano4
+import exahype2
 import jinja2
 
 
@@ -60,6 +61,18 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown] = coarseGridFaces""" + solver._name + """QUpdate(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown];
       coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown] = coarseGridFaces""" + solver._name + """QUpdate(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown];
     }
+
+    // A coarse face might have been non-persistent before. So it might
+    // not carry a valid boundary flag, and we have to re-analyse it and
+    // set it accordingly.    
+    tarch::la::Vector<Dimensions, double> offset(DomainOffset);
+    tarch::la::Vector<Dimensions, double> size(DomainSize);
+    bool isBoundary = false;
+    for (int d=0; d<Dimensions; d++) {
+      isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
+      isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
+    }
+    coarseGridFaces""" + exahype2.grid.UpdateFaceLabel.get_attribute_name(solver._name) + """(marker.getSelectedFaceNumber()).setBoundary( isBoundary );
   }
 
   double newTimeStamp = 0.0;

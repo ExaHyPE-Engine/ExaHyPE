@@ -120,7 +120,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
   if ( 
-    not marker.isRefined() 
+    not marker.willBeRefined() and not marker.hasBeenRefined()
     and 
     {{GUARD}}
     and

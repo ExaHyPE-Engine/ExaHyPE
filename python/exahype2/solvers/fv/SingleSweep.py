@@ -126,7 +126,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     self._solver = solver
     
     self._Template_TouchCellFirstTime_Epilogue += """
-  else if (not marker.willBeRefined()) {{
+  else if (not marker.willBeRefined() and not marker.hasBeenRefined()) {{
     double cellTimeStepSize = -1.0;
     double cellTimeStamp    = -1.0;
      

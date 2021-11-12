@@ -91,7 +91,7 @@ def create_face_label(solver_name):
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
   
   result._peano4_aspect.merge_implementation = """
-  assertionEquals( _Boundary, neighbour._Boundary );
+  _Boundary = _Boundary or neighbour._Boundary;
   
   const int normal         = marker.getSelectedFaceNumber() % Dimensions;
   const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;
