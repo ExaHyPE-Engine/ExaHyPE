@@ -506,6 +506,12 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
      
      It is important that we have the coupling/dynamic AMR part in here, as 
      there might be pending AMR refinement requests that now are realised.
+     For the same reason, we need the update of the face label and the update
+     of the cell label in here: The AMR might just propagate over into the
+     plotting, i.e. we might create new grid entities throughout the plot.
+     These entities (faces and cells) have to be initialised properly. 
+     Otherwise, their un-initialised data will propagate through to the next
+     time step.
      
     """
     d = {}
@@ -542,6 +548,9 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 #include "../repositories/SolverRepository.h"
 """
       ))
+      
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
     pass
    
  

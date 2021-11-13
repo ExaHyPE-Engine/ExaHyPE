@@ -45,6 +45,8 @@ class UpdateFaceLabel(ActionSet):
     result = "\n"
     if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE or operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
       result += """
+  logTraceInWith1Argument( "createPersistentFace(...)", marker.toString() );
+      
   tarch::la::Vector<Dimensions, double> offset(DomainOffset);
   tarch::la::Vector<Dimensions, double> size(DomainSize);
   bool isBoundary = false;
@@ -53,6 +55,7 @@ class UpdateFaceLabel(ActionSet):
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
   }}
   fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setBoundary( isBoundary );
+  logTraceOutWith1Argument( "createPersistentFace(...)", fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.toString() );
 """
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = """
