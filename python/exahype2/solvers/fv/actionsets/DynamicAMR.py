@@ -30,11 +30,19 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
     # at all.
     #
   def __init__(self,solver):
+# I'm really not sure if I should guard the interpolation and restriction
+# with yet another guard:
+#      
+#  and
+#  repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::Plotting
     peano4.toolbox.blockstructured.DynamicAMR.__init__(self,      
       patch = solver._patch,
       patch_overlap_interpolation = solver._patch_overlap_old,
       patch_overlap_restriction   = solver._patch_overlap_update,
       interpolate_guard           = """
+  repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::GridInitialisation
+""",
+      restrict_guard           = """
   repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::GridInitialisation
 """,
       additional_includes         = """
@@ -61,19 +69,19 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown] = coarseGridFaces""" + solver._name + """QUpdate(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown];
       coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown] = coarseGridFaces""" + solver._name + """QUpdate(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown];
     }
-
-    // A coarse face might have been non-persistent before. So it might
-    // not carry a valid boundary flag, and we have to re-analyse it and
-    // set it accordingly.    
-    tarch::la::Vector<Dimensions, double> offset(DomainOffset);
-    tarch::la::Vector<Dimensions, double> size(DomainSize);
-    bool isBoundary = false;
-    for (int d=0; d<Dimensions; d++) {
-      isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
-      isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
-    }
-    coarseGridFaces""" + exahype2.grid.UpdateFaceLabel.get_attribute_name(solver._name) + """(marker.getSelectedFaceNumber()).setBoundary( isBoundary );
   }
+
+  // A coarse face might have been non-persistent before. So it might
+  // not carry a valid boundary flag, and we have to re-analyse it and
+  // set it accordingly.    
+  tarch::la::Vector<Dimensions, double> offset(DomainOffset);
+  tarch::la::Vector<Dimensions, double> size(DomainSize);
+  bool isBoundary = false;
+  for (int d=0; d<Dimensions; d++) {
+    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) );
+    isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
+  }
+  coarseGridFaces""" + exahype2.grid.UpdateFaceLabel.get_attribute_name(solver._name) + """(marker.getSelectedFaceNumber()).setBoundary( isBoundary );
 
   double newTimeStamp = 0.0;
   newTimeStamp = std::max( newTimeStamp,
@@ -109,6 +117,16 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       fineGridFace""" + solver._name + """QNew.value,
       coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value
     );
+    // It is important that we clear the halo layer. If we have two layers of 
+    // AMR, the finest one will restrict into QUpdate (so it has to be properly
+    // initialised as 0).
+    ::toolbox::blockstructured::clearHaloLayerAoS(
+      marker,
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      fineGridFace""" + solver._name + """QUpdate.value
+    );
     const int leftRightEntry = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
     fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp(leftRightEntry));
     fineGridFace""" + solver._face_label.name + """.setOldTimeStamp(leftRightEntry,coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(leftRightEntry));
@@ -133,6 +151,16 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       fineGridFace""" + solver._name + """QNew.value,
       coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value,
       coarseGridCell""" + solver._name + """Q.value
+    );
+    // It is important that we clear the halo layer. If we have two layers of 
+    // AMR, the finest one will restrict into QUpdate (so it has to be properly
+    // initialised as 0).
+    ::toolbox::blockstructured::clearHaloLayerAoS(
+      marker,
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      fineGridFace""" + solver._name + """QUpdate.value
     );
     const int leftRightEntry = marker.getSelectedFaceNumber()<Dimensions ? 0 : 1;
     fineGridFace""" + solver._face_label.name + """.setNewTimeStamp(coarseGridCell""" + solver._cell_label.name + """.getTimeStamp());

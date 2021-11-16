@@ -166,7 +166,7 @@ class DynamicAMR(ActionSet):
 
 
   __Template_DestroyHangingFace_Core = """
-    ::toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
+    ::toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
       marker,
       {{DOFS_PER_AXIS}},
       {{OVERLAP}},

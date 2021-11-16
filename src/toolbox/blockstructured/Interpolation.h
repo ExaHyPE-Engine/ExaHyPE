@@ -1,7 +1,7 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _PEANO4_TOOLBOX_BLOCKSTRUCTURED_INTERPOLATION_H_
-#define _PEANO4_TOOLBOX_BLOCKSTRUCTURED_INTERPOLATION_H_
+#ifndef _TOOLBOX_BLOCKSTRUCTURED_INTERPOLATION_H_
+#define _TOOLBOX_BLOCKSTRUCTURED_INTERPOLATION_H_
 
 
 #include "peano4/datamanagement/CellMarker.h"
@@ -116,7 +116,7 @@ namespace toolbox {
     );
 
 
-    void restrictOntoOuterHalfOfHaloLayer_AoS_averaging(
+    void restrictInnerHalfOfHaloLayer_AoS_averaging(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
@@ -154,7 +154,7 @@ namespace toolbox {
     );
 
 
-    void restrictOntoOuterHalfOfHaloLayer_AoS_inject(
+    void restrictInnerHalfOfHaloLayer_AoS_inject(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
@@ -414,20 +414,12 @@ namespace toolbox {
       /**
        * Helper routine - usually not invoked by user code
        *
-       * Maps two halo layers onto each other, i.e. runs through both
-       * layers through all NxMxM voxels, computes their centres, and
-       * invokes the callback.
-       *
-       * Halo layers are associated with faces, and each face action is
-       * called from within a cell, i.e. we run through the cells of the
-       * spacetree and call touchFace.... or touchVertex... from the
-       * cell's point of view. Each face has a number, and we can find
-       * out via the selected face whether this is a left or right
-       * face of a cell along a coordinate axis.
+       * Maps two halo layers onto each other. We only invoke the functor
+       * for those combinations of volumes which overlap.
        *
        * @param marker Marker identifying which face it is from the
        *   corresponding cell's point of view.
-       * @param mapInnerHalfOfHalo Take the inner half of the respective
+       * @param mapFromInnerHalfOfHalo Take the inner half of the respective
        *   face's halo and map it up or down. If we pick the right half
        *   on the fine level, we also have to use the right half on the
        *   next coarser level.
@@ -444,7 +436,7 @@ namespace toolbox {
           double coarseVolumeH,
           double fineVolumeH
         )> update,
-        bool mapInnerHalfOfHalo
+        bool mapFromInnerHalfOfHalo
       );
 
 

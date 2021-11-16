@@ -278,12 +278,12 @@ void toolbox::blockstructured::internal::projectHaloLayers_AoS(
       double courseVolumeH,
       double fineVolumeH
   )> update,
-  bool mapInnerHalfOfHalo
+  bool mapFromInnerHalfOfHalo
 ) {
-  logTraceInWith4Arguments( "projectHaloLayers_AoS(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, mapInnerHalfOfHalo );
+  logTraceInWith4Arguments( "projectHaloLayers_AoS(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, mapFromInnerHalfOfHalo );
 
   const int  normal              = marker.getSelectedFaceNumber() % Dimensions;
-  const bool pickLeftHalfOfHalo  = (marker.getSelectedFaceNumber() < Dimensions) xor mapInnerHalfOfHalo;
+  const bool pickLeftHalfOfHalo  = (marker.getSelectedFaceNumber() < Dimensions) xor mapFromInnerHalfOfHalo;
 
   const double volumeHCoarse = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch) * 3.0;
   const double volumeHFine   = marker.h()(0) / static_cast<double>(numberOfDoFsPerAxisInPatch);
@@ -301,31 +301,37 @@ void toolbox::blockstructured::internal::projectHaloLayers_AoS(
     }
   }
 
-  dfore(kCoarse,numberOfDoFsPerAxisInPatch,normal,0) {
-    dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
-      for (int iCoarse=0; iCoarse<overlap; iCoarse++)
-      for (int iFine=0;   iFine<overlap;   iFine++) {
-        tarch::la::Vector<Dimensions,int> coarseVolume = kCoarse;
-        tarch::la::Vector<Dimensions,int> fineVolume   = kFine;
-        coarseVolume(normal) += pickLeftHalfOfHalo ? iCoarse : iCoarse+overlap;
-        fineVolume(normal)   += pickLeftHalfOfHalo ? iFine   : iFine+overlap;
+  dfore(kFine,numberOfDoFsPerAxisInPatch,normal,0) {
+    for (int iFine=0;   iFine<overlap;   iFine++) {
+      tarch::la::Vector<Dimensions,int> fineVolume   = kFine;
+      fineVolume(normal) += pickLeftHalfOfHalo ? iFine : iFine + overlap;
 
-        tarch::la::Vector<Dimensions,double> volumeXCoarse = leftBottomCornerOfHaloCoarse
+      tarch::la::Vector<Dimensions,int> coarseVolume = fineVolume;
+      for (int d=0; d<Dimensions; d++) {
+        if (d!=normal) {
+          coarseVolume(d) += marker.getRelativePositionWithinFatherCell()(d) * numberOfDoFsPerAxisInPatch;
+        }
+        else {
+          coarseVolume(d) = pickLeftHalfOfHalo ? fineVolume(d) : fineVolume(d) + overlap * 3;
+        }
+      }
+      coarseVolume /= 3;
+
+      tarch::la::Vector<Dimensions,double> volumeXCoarse = leftBottomCornerOfHaloCoarse
           + volumeHCoarse * tarch::la::convertScalar<double>(coarseVolume)
           + 0.5 * tarch::la::Vector<Dimensions,double>(volumeHCoarse);
-        tarch::la::Vector<Dimensions,double> volumeXFine = leftBottomCornerOfHaloFine
+      tarch::la::Vector<Dimensions,double> volumeXFine = leftBottomCornerOfHaloFine
           + volumeHFine * tarch::la::convertScalar<double>(fineVolume)
           + 0.5 * tarch::la::Vector<Dimensions,double>(volumeHFine);
 
-        update(
-          coarseVolume,
-          fineVolume,
-          volumeXCoarse,
-          volumeXFine,
-          volumeHCoarse,
-          volumeHFine
-        );
-      }
+      update(
+        coarseVolume,
+        fineVolume,
+        volumeXCoarse,
+        volumeXFine,
+        volumeHCoarse,
+        volumeHFine
+      );
     }
   }
 
@@ -346,35 +352,30 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
   const int  normal              = marker.getSelectedFaceNumber() % Dimensions;
 
   for (int swapInsideOutside=0; swapInsideOutside<2; swapInsideOutside++)
-  internal::projectHaloLayers_AoS(
-    marker,
-    numberOfDoFsPerAxisInPatch,
-    overlap,
-    [&](
-      tarch::la::Vector<Dimensions,int>    coarseVolume,
-      tarch::la::Vector<Dimensions,int>    fineVolume,
-      tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
-      tarch::la::Vector<Dimensions,double> fineVolumeCentre,
-      double coarseVolumeH,
-      double fineVolumeH
-    ) -> void {
-      // This is where the magic happens
-      bool fineGridXIsWithinSupportOfCoarseVolume = tarch::la::normMax(
-        coarseVolumeCentre - fineVolumeCentre
-      ) < coarseVolumeH/2.0;
-      if (fineGridXIsWithinSupportOfCoarseVolume) {
+    internal::projectHaloLayers_AoS(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      [&](
+        tarch::la::Vector<Dimensions,int>    coarseVolume,
+        tarch::la::Vector<Dimensions,int>    fineVolume,
+        tarch::la::Vector<Dimensions,double> coarseVolumeCentre,
+        tarch::la::Vector<Dimensions,double> fineVolumeCentre,
+        double coarseVolumeH,
+        double fineVolumeH
+      ) -> void {
         int coarseVolumeLinearised = serialisePatchIndexInOverlap(
           coarseVolume,
           numberOfDoFsPerAxisInPatch, overlap, normal
-          );
+        );
         int fineVolumeLinearised = serialisePatchIndexInOverlap(
           fineVolume,
           numberOfDoFsPerAxisInPatch, overlap, normal
-          );
+        );
         logDebug(
           "interpolateHaloLayer_AoS_piecewise_constant(...)",
           coarseVolume << "->" << fineVolume << " i.e. " << coarseVolumeLinearised << "->" << fineVolumeLinearised <<
-          " (normal=" << normal << ",restrict=" << fineGridXIsWithinSupportOfCoarseVolume <<
+          " (normal=" << normal <<
           ",fine-x=" << fineVolumeCentre << ",coarse-x=" << coarseVolumeCentre <<
           ",coarse-h=" << coarseVolumeH << ",fine-h=" << fineVolumeH <<
           ",first-value-fine=" << fineGridValues[fineVolumeLinearised*unknowns] <<
@@ -384,10 +385,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_piecewise_constant(
         for (int j=0; j<unknowns; j++) {
           fineGridValues[fineVolumeLinearised*unknowns+j] = coarseGridValues[coarseVolumeLinearised*unknowns+j];
         }
-      }
-    },
-    swapInsideOutside==0
-  );
+      },
+      swapInsideOutside==0
+    );
 
   logTraceOut( "interpolateHaloLayer_AoS_piecewise_constant(...)" );
 }
@@ -525,7 +525,7 @@ void toolbox::blockstructured::interpolateCell_AoS_piecewise_constant(
 }
 
 
-void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_averaging(
+void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_averaging(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
@@ -534,12 +534,11 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_averaging(
   double*                                   coarseGridValues,
   bool                                      swapInsideOutside
 ) {
-  logTraceInWith6Arguments( "restrictOntoOuterHalfOfHaloLayer_AoS_averaging(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues );
+  logTraceInWith4Arguments( "restrictInnerHalfOfHaloLayer_AoS_averaging(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns );
 
   const int  normal          = marker.getSelectedFaceNumber() % Dimensions;
   double scaleFineGridVolume = std::pow(3.0,-static_cast<double>(Dimensions-1));
 
-  logDebug( "restrictOntoOuterHalfOfHaloLayer_AoS_averaging(...)", "fineGridValues=" << fineGridValues << ",coarseGridValues=" << coarseGridValues );
   internal::projectHaloLayers_AoS(
     marker,
     numberOfDoFsPerAxisInPatch,
@@ -552,41 +551,36 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_averaging(
       double coarseVolumeH,
       double fineVolumeH
     ) -> void {
-      // This is where the magic happens
-      double distance = tarch::la::normMax( coarseVolumeCentre - fineVolumeCentre );
-      bool fineGridXIsWithinSupportOfCoarseVolume = distance < coarseVolumeH/2.0;
-      if (fineGridXIsWithinSupportOfCoarseVolume) {
-        int coarseVolumeLinearised = serialisePatchIndexInOverlap(
+      int coarseVolumeLinearised = serialisePatchIndexInOverlap(
           coarseVolume,
           numberOfDoFsPerAxisInPatch, overlap, normal
           );
-        int fineVolumeLinearised = serialisePatchIndexInOverlap(
+      int fineVolumeLinearised = serialisePatchIndexInOverlap(
           fineVolume,
           numberOfDoFsPerAxisInPatch, overlap, normal
           );
-        for (int j=0; j<unknowns; j++) {
-          assertion5(coarseGridValues[coarseVolumeLinearised*unknowns+j]==coarseGridValues[coarseVolumeLinearised*unknowns+j], coarseVolume, fineVolume, coarseVolumeCentre, fineVolumeCentre, marker.toString());
-          assertion5(fineGridValues[fineVolumeLinearised*unknowns+j]==fineGridValues[fineVolumeLinearised*unknowns+j],         coarseVolume, fineVolume, coarseVolumeCentre, fineVolumeCentre, marker.toString());
-          coarseGridValues[coarseVolumeLinearised*unknowns+j] += scaleFineGridVolume * fineGridValues[fineVolumeLinearised*unknowns+j];
-        }
-        logDebug(
-          "restrictOntoOuterHalfOfHaloLayer_AoS_averaging(...)",
+      for (int j=0; j<unknowns; j++) {
+        assertion5(coarseGridValues[coarseVolumeLinearised*unknowns+j]==coarseGridValues[coarseVolumeLinearised*unknowns+j], coarseVolume, fineVolume, coarseVolumeCentre, fineVolumeCentre, marker.toString());
+        assertion5(fineGridValues[fineVolumeLinearised*unknowns+j]==fineGridValues[fineVolumeLinearised*unknowns+j],         coarseVolume, fineVolume, coarseVolumeCentre, fineVolumeCentre, marker.toString());
+        coarseGridValues[coarseVolumeLinearised*unknowns+j] += scaleFineGridVolume * fineGridValues[fineVolumeLinearised*unknowns+j];
+      }
+      logDebug(
+          "restrictInnerHalfOfHaloLayer_AoS_averaging(...)",
           fineVolume << "->" << coarseVolume << " i.e. " << fineVolumeLinearised << "->" << coarseVolumeLinearised <<
-          " (normal=" << normal << ",restrict=" << fineGridXIsWithinSupportOfCoarseVolume <<
+          " (normal=" << normal <<
           ",fine-x=" << fineVolumeCentre << ",coarse-x=" << coarseVolumeCentre <<
-          ",coarse-h=" << coarseVolumeH << ",fine-h=" << fineVolumeH << ",d=" << distance <<
+          ",coarse-h=" << coarseVolumeH << ",fine-h=" << fineVolumeH <<
           ",first-value-fine=" << fineGridValues[fineVolumeLinearised*unknowns] <<
           ",first-value-coarse=" << coarseGridValues[coarseVolumeLinearised*unknowns] <<
           ",fine-add=" << (&fineGridValues[fineVolumeLinearised*unknowns]) <<
           ",coarse-add=" << (&coarseGridValues[coarseVolumeLinearised*unknowns]) <<
           ")"
-        );
-      }
+      );
     },
     not swapInsideOutside // mapOuterCoarseGridHaloOntoInnerFineGridHalo
   );
 
-  logTraceOut( "restrictOntoOuterHalfOfHaloLayer_AoS_averaging(...)" );
+  logTraceOut( "restrictInnerHalfOfHaloLayer_AoS_averaging(...)" );
 }
 
 
@@ -598,8 +592,8 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_averaging(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  restrictOntoOuterHalfOfHaloLayer_AoS_averaging( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, false );
-  restrictOntoOuterHalfOfHaloLayer_AoS_averaging( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, true );
+  restrictInnerHalfOfHaloLayer_AoS_averaging( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, false );
+  restrictInnerHalfOfHaloLayer_AoS_averaging( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, true );
 }
 
 
@@ -610,7 +604,7 @@ void toolbox::blockstructured::restrictCell_AoS_averaging(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  double scaleFineGridVolume = std::pow(3.0,-static_cast<double>(Dimensions-1));
+  double scaleFineGridVolume = std::pow(3.0,-static_cast<double>(Dimensions));
   internal::projectCells_AoS(
     marker,
     numberOfDoFsPerAxisInPatch,
@@ -925,7 +919,7 @@ void toolbox::blockstructured::interpolateCell_AoS_outflow(
 }
 
 
-void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_inject(
+void toolbox::blockstructured::restrictInnerHalfOfHaloLayer_AoS_inject(
   const peano4::datamanagement::FaceMarker& marker,
   int                                       numberOfDoFsPerAxisInPatch,
   int                                       overlap,
@@ -934,7 +928,7 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_inject(
   double*                                   coarseGridValues,
   bool                                      swapInsideOutside
 ) {
-  logTraceInWith6Arguments( "restrictOntoOuterHalfOfHaloLayer_AoS_inject(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues );
+  logTraceInWith6Arguments( "restrictInnerHalfOfHaloLayer_AoS_inject(...)", marker.toString(), numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues );
 
   const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
   const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() >= Dimensions) xor swapInsideOutside;
@@ -977,7 +971,7 @@ void toolbox::blockstructured::restrictOntoOuterHalfOfHaloLayer_AoS_inject(
     }
   }
 
-  logTraceOut( "restrictOntoOuterHalfOfHaloLayer_AoS_restrict(...)" );
+  logTraceOut( "restrictInnerHalfOfHaloLayer_AoS_restrict(...)" );
 }
 
 
@@ -989,8 +983,8 @@ void toolbox::blockstructured::restrictHaloLayer_AoS_inject(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  restrictOntoOuterHalfOfHaloLayer_AoS_inject( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, false );
-  restrictOntoOuterHalfOfHaloLayer_AoS_inject( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, true );
+  restrictInnerHalfOfHaloLayer_AoS_inject( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, false );
+  restrictInnerHalfOfHaloLayer_AoS_inject( marker, numberOfDoFsPerAxisInPatch, overlap, unknowns, fineGridValues, coarseGridValues, true );
 }
 
 
