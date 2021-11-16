@@ -13,31 +13,15 @@ namespace exahype2 {
 }
 
 
-class exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest : public tarch::tests::TestCase
-{
-private:
+class exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest : public tarch::tests::TestCase {
+  private:
+    void testMe();
+    void testBreakingDam();
 
-  void testMe();
+  public:
+    applySplit1DRiemannToPatch_Overlap1AoSTest();
 
-public:
+    virtual ~applySplit1DRiemannToPatch_Overlap1AoSTest() = default;
 
-  /**
-   * Constructor.
-   */
-  applySplit1DRiemannToPatch_Overlap1AoSTest();
-
-  /**
-   * Destructor, empty.
-   */
-  virtual ~applySplit1DRiemannToPatch_Overlap1AoSTest() {}
-
-  /**
-   * This routine is triggered by the TestCaseCollection
-   */
-  virtual void run();
-
-  /**
-   * Setup your test case.
-   */
-  virtual void setUp() {}
+    void run() override;
 };

@@ -9,6 +9,7 @@
 #include "tarch/multicore/Core.h"
 #include "tarch/timing/Watch.h"
 #include "tarch/timing/Measurement.h"
+#include "tarch/tests/TreeTestCaseCollection.h"
 
 #include "peano4/peano.h"
 #include "peano4/grid/Spacetree.h"
@@ -28,8 +29,11 @@
 
 #include "toolbox/loadbalancing/loadbalancing.h"
 
+#include "toolbox/blockstructured/UnitTests.h"
+
 #include "exahype2/NonCriticalAssertions.h"
 #include "exahype2/UserInterface.h"
+#include "exahype2/UnitTests.h"
 
 
 #if defined(UseSmartMPI)
@@ -427,21 +431,17 @@ int main(int argc, char** argv) {{
   {FULL_NAMESPACE}::repositories::DataRepository::initDatatypes();
   
   #if PeanoDebug>=2
-  tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();
-  peanoCoreTests->run();
-  if (peanoCoreTests->getNumberOfErrors() != 0) {{
-    logError("main()", "Peano4 core unit tests failed. Quit.");
+  tarch::tests::TreeTestCaseCollection* unitTests = new tarch::tests::TreeTestCaseCollection("");
+  unitTests->addTestCase( peano4::getUnitTests() );
+  unitTests->addTestCase( tarch::getUnitTests() );
+  unitTests->addTestCase( toolbox::blockstructured::getUnitTests() );
+  unitTests->addTestCase( exahype2::getUnitTests() );
+  unitTests->run();
+  if (unitTests->getNumberOfErrors() != 0) {{
+    logError("main()", "unit tests failed. Quit.");
     tarch::mpi::Rank::abort( ExitCodeUnitTestsFailed );
   }}
-  delete peanoCoreTests;
-
-  tarch::tests::TestCase* peanoTarchTests = tarch::getUnitTests();
-  peanoTarchTests->run();
-  if (peanoTarchTests->getNumberOfErrors() != 0) {{
-    logError("main()", "technical architecture (tarch) unit tests failed. Quit.");
-    tarch::mpi::Rank::abort( ExitCodeUnitTestsFailed );
-  }}
-  delete peanoTarchTests;
+  delete unitTests;
   #endif
 
   repositories::startSimulation();
