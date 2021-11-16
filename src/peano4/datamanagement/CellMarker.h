@@ -111,6 +111,13 @@ struct peano4::datamanagement::CellMarker {
 
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
 
+    #if PeanoDebug>0
+    /**
+     * Used for debuggin
+     */
+    void setRelativePositionWithinFatherCell( int axis, int value );
+    #endif
+
     #ifdef Parallel
     /**
      * To be called prior to any MPI usage of this class.

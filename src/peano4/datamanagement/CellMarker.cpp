@@ -37,6 +37,13 @@ tarch::la::Vector<Dimensions,int>  peano4::datamanagement::CellMarker::getRelati
 }
 
 
+#if PeanoDebug>0
+void peano4::datamanagement::CellMarker::setRelativePositionWithinFatherCell( int axis, int value ) {
+  _relativePositionOfCellWithinFatherCell(axis) = value;
+}
+#endif
+
+
 bool peano4::datamanagement::CellMarker::isContained( const tarch::la::Vector<Dimensions,double>& x ) const {
   bool result = true;
   for (int d=0; d<Dimensions; d++) {
