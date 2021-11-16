@@ -8,10 +8,17 @@
 
 
 
-bool peano4::grid::overlaps( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event ) {
+bool peano4::grid::isContained( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event ) {
   return tarch::la::allGreaterEquals( state.getX(), event.getOffset() )
     and
     tarch::la::allSmallerEquals( state.getX() + state.getH(), event.getOffset()+event.getWidth() );
+}
+
+
+bool peano4::grid::overlaps( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event ) {
+  return tarch::la::allGreaterEquals( state.getX()+ state.getH(), event.getOffset() )
+    and
+    tarch::la::allSmallerEquals( state.getX(), event.getOffset()+event.getWidth() );
 }
 
 

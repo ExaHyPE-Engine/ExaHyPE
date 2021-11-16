@@ -246,6 +246,8 @@ namespace peano4 {
 
     bool overlaps( const tarch::la::Vector<Dimensions,double>& x, const GridControlEvent& event );
     bool overlaps( const AutomatonState& x, const GridControlEvent& event );
+
+    bool isContained( const AutomatonState& x, const GridControlEvent& event );
   }
 }
 
