@@ -83,21 +83,14 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   }
   coarseGridFaces""" + exahype2.grid.UpdateFaceLabel.get_attribute_name(solver._name) + """(marker.getSelectedFaceNumber()).setBoundary( isBoundary );
 
-  double newTimeStamp = 0.0;
-  newTimeStamp = std::max( newTimeStamp,
-    coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getUpdatedTimeStamp(0)
-  ); 
-  newTimeStamp = std::max( newTimeStamp,
-    coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getUpdatedTimeStamp(1)
-  );
-  newTimeStamp = std::max( newTimeStamp,
-    fineGridFace""" + solver._face_label.name + """.getUpdatedTimeStamp(0)
-  );
-  newTimeStamp = std::max( newTimeStamp,
-    fineGridFace""" + solver._face_label.name + """.getUpdatedTimeStamp(1)
-  );
-  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdated(true);
-  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp(newTimeStamp);
+  bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= Dimensions;
+  double newTimeStamp     = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp(     isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), fineGridFace""" + solver._face_label.name + """.getNewTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ));
+  double oldTimeStamp     = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(     isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), fineGridFace""" + solver._face_label.name + """.getOldTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ));
+  double updatedTimeStamp = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), fineGridFace""" + solver._face_label.name + """.getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ));
+  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
+  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setNewTimeStamp(     isLeftEntryOnCoarseFaceLabel ? 0 : 1,newTimeStamp);
+  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setOldTimeStamp(     isLeftEntryOnCoarseFaceLabel ? 0 : 1,oldTimeStamp);
+  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1,updatedTimeStamp);
 """
 
     self.__Template_CreateHangingFace_Core  = """
