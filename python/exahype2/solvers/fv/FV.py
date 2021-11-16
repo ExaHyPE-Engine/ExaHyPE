@@ -513,15 +513,19 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
      Otherwise, their un-initialised data will propagate through to the next
      time step.
      
+     To make the restriction work, we have to project the solutions onto the 
+     faces.
+     
     """
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
     step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-
-    # There should be none of these actually, as we don't roll over any updates in this step.    
-    # step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_roll_over_update_of_faces )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
@@ -549,8 +553,6 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 """
       ))
       
-    step.add_action_set( self._action_set_update_face_label )
-    step.add_action_set( self._action_set_update_cell_label )
     pass
    
  
