@@ -24,17 +24,42 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
    also enriches the toolbox version by this marker aspect.
   
   """
-    #
-    # Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
-    # boundary data has not been received yet and your face data thus is not initialised 
-    # at all.
-    #
+    
+    
   def __init__(self,solver):
-# I'm really not sure if I should guard the interpolation and restriction
-# with yet another guard:
-#      
-#  and
-#  repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::Plotting
+    """
+    
+     # Interpolation
+     
+     Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
+     boundary data has not been received yet and your face data thus is not initialised 
+     at all.
+     
+     # Restriction of destructed faces
+     
+     A destructed face has to restrict its data: We've already restricted the cells,
+     but now we also have to restrict the faces, as faces span time spans. The cell
+     is only a snapshot, so we have to manually restrict.
+     
+     It is important to also disable the projection in return. The projection onto the
+     faces happens in leaveCell. However, if you have a face in-between two 3x3 patches,
+     then you will have a destruction of the left patch (and a corresponding cell restriction),
+     the coarse cell will then project its data onto the face, you go down on the other
+     side and now the face will be destroyed. If you restrict now, you overwrite the 
+     projected data with some (old) data, and you will get an inconsistent face data.
+     However, you always have to restrict both sides of persistent face when it is 
+     destroyed. If you only restricted the inner part, you'd run into situations where
+     a 3x3 patch is coarsened, but its neighbour remains refined. That is, logically the
+     face transitions from a persistent one to a hanging face. When yo go through the 
+     mesh next time, you'll need, on the coarse level, some valid data. So we have to 
+     restrict both sides.
+     
+     There's still a inconsistency here. To have really consistent data, we'd have to 
+     average 3^{d-1} cells when we project them onto the face, such that the cell-restricted
+     data followed by a (single cell) projection gives the same result as a projection 
+     first and then a face restriction. I neglect this fact here.
+          
+    """
     peano4.toolbox.blockstructured.DynamicAMR.__init__(self,      
       patch = solver._patch,
       patch_overlap_interpolation = solver._patch_overlap_old,
@@ -83,14 +108,16 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   }
   coarseGridFaces""" + exahype2.grid.UpdateFaceLabel.get_attribute_name(solver._name) + """(marker.getSelectedFaceNumber()).setBoundary( isBoundary );
 
-  bool isLeftEntryOnCoarseFaceLabel = marker.getSelectedFaceNumber() >= Dimensions;
-  double newTimeStamp     = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp(     isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), fineGridFace""" + solver._face_label.name + """.getNewTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ));
-  double oldTimeStamp     = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(     isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), fineGridFace""" + solver._face_label.name + """.getOldTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ));
-  double updatedTimeStamp = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ), fineGridFace""" + solver._face_label.name + """.getUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1 ));
-  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdated( isLeftEntryOnCoarseFaceLabel ? 0 : 1,true);
-  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setNewTimeStamp(     isLeftEntryOnCoarseFaceLabel ? 0 : 1,newTimeStamp);
-  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setOldTimeStamp(     isLeftEntryOnCoarseFaceLabel ? 0 : 1,oldTimeStamp);
-  coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp( isLeftEntryOnCoarseFaceLabel ? 0 : 1,updatedTimeStamp);
+  // left and right
+  for (int i=0; i<2; i++) {
+    double newTimeStamp     = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getNewTimeStamp(     i ), fineGridFace""" + solver._face_label.name + """.getNewTimeStamp( i ));
+    double oldTimeStamp     = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getOldTimeStamp(     i ), fineGridFace""" + solver._face_label.name + """.getOldTimeStamp( i ));
+    double updatedTimeStamp = std::max( coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).getUpdatedTimeStamp( i ), fineGridFace""" + solver._face_label.name + """.getUpdatedTimeStamp( i ));
+    coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdated(         i,true);
+    coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setNewTimeStamp(    i,newTimeStamp);
+    coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setOldTimeStamp(    i,oldTimeStamp);
+    coarseGridFaces""" + solver._face_label.name + """(marker.getSelectedFaceNumber()).setUpdatedTimeStamp(i,updatedTimeStamp);
+  }
 """
 
     self.__Template_CreateHangingFace_Core  = """

@@ -14,6 +14,77 @@ toolbox::blockstructured::tests::InterpolationTest::InterpolationTest():
 
 void toolbox::blockstructured::tests::InterpolationTest::run() {
   testMethod(testRestrictHaloLayer_AoS_averaging);
+  testMethod(testRestrictCellForBreakingDam);
+}
+
+
+void toolbox::blockstructured::tests::InterpolationTest::testRestrictCellForBreakingDam() {
+  #if Dimensions==2 and PeanoDebug>0
+  peano4::grid::GridTraversalEvent    dummyEvent;
+  peano4::datamanagement::CellMarker  cellMarker(dummyEvent);
+  cellMarker.setRelativePositionWithinFatherCell( 0,0 );
+  cellMarker.setRelativePositionWithinFatherCell( 1,0 );
+  double fineGridValues[] =
+      {
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.0, 0.0, 0.0, 0.0, 0.0,
+
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.0, 0.0, 0.0, 0.0, 0.0,
+
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.0, 0.0, 0.0, 0.0, 0.0,
+
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.1, 0.2, 0.3, 0.4, 0.5,
+        0.0, 0.0, 0.0, 0.0, 0.0
+      };
+
+  double coarseGridValues[4*4*5];
+
+  std::fill_n(coarseGridValues,4*4*5,0.0);
+
+  ::toolbox::blockstructured::restrictCell_AoS_averaging(
+      cellMarker,
+      4,
+      5,
+      fineGridValues,
+      coarseGridValues
+  );
+
+  validateNumericalEquals( coarseGridValues[0*5+0], 0.1 );
+  validateNumericalEquals( coarseGridValues[0*5+1], 0.2 );
+  validateNumericalEquals( coarseGridValues[0*5+2], 0.3 );
+  validateNumericalEquals( coarseGridValues[0*5+3], 0.4 );
+  validateNumericalEquals( coarseGridValues[0*5+4], 0.5 );
+
+  validateNumericalEquals( coarseGridValues[1*5+0], 0.0 );
+  validateNumericalEquals( coarseGridValues[1*5+1], 0.0 );
+  validateNumericalEquals( coarseGridValues[1*5+2], 0.0 );
+  validateNumericalEquals( coarseGridValues[1*5+3], 0.0 );
+  validateNumericalEquals( coarseGridValues[1*5+4], 0.0 );
+
+  validateNumericalEquals( coarseGridValues[2*5+0], 0.0 );
+  validateNumericalEquals( coarseGridValues[2*5+1], 0.0 );
+  validateNumericalEquals( coarseGridValues[2*5+2], 0.0 );
+  validateNumericalEquals( coarseGridValues[2*5+3], 0.0 );
+  validateNumericalEquals( coarseGridValues[2*5+4], 0.0 );
+
+  validateNumericalEquals( coarseGridValues[4*5+0], 0.1/3.0 );
+  validateNumericalEquals( coarseGridValues[4*5+1], 0.2/3.0 );
+  validateNumericalEquals( coarseGridValues[4*5+2], 0.3/3.0 );
+  validateNumericalEquals( coarseGridValues[4*5+3], 0.4/3.0 );
+  validateNumericalEquals( coarseGridValues[4*5+4], 0.5/3.0 );
+
+
+  #endif
 }
 
 

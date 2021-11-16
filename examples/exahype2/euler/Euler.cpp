@@ -39,6 +39,15 @@ parameter plotPatch(Q,unknowns,auxiliaryVariables,numberOfVolumesPerAxisInPatch,
 
 
 
+Loesche
+      fineGridFaceEulerQNew.value
+      fineGridFaceEulerQOld.value
+wenn ich ne Face treffe, die verfeinert war, aber nimmer verfeinert sein wird
+
+
+Muss beide Seiten restringieren, weil ein Nachbar ja verfeinert bleiben koennte, d.h. von dem gibt es kein Project
+
+
 */
 
 

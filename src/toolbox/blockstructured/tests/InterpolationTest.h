@@ -43,6 +43,8 @@ parameter tarch::la::DynamicMatrix::vectorToString(fineGridFaceEulerQUpdate.valu
      */
     void testRestrictHaloLayer_AoS_averaging();
 
+    void testRestrictCellForBreakingDam();
+
   public:
 
     /**

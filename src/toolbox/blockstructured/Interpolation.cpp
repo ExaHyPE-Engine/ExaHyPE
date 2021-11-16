@@ -618,6 +618,7 @@ void toolbox::blockstructured::restrictCell_AoS_averaging(
     ) -> void {
       int coarseVolumeLinearised = peano4::utils::dLinearised( coarseVolume, numberOfDoFsPerAxisInPatch );
       int fineVolumeLinearised   = peano4::utils::dLinearised( fineVolume, numberOfDoFsPerAxisInPatch );
+      logDebug( "restrictCell_AoS_averaging(...)", fineVolume << " -> " << coarseVolume );
       for (int j=0; j<unknowns; j++) {
         coarseGridValues[coarseVolumeLinearised*unknowns+j] += scaleFineGridVolume * fineGridValues[fineVolumeLinearised*unknowns+j];
       }
