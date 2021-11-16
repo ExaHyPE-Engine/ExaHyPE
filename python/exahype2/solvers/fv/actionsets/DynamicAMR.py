@@ -83,30 +83,25 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
 """
 
     self.__Template_DestroyPersistentFace_Core += """ 
-  // Clear as restriction is an accumulation process
+  // Copy over updated data. This is inaccurate, as we should restrict the updated
+  // and the old value separatedly. But the restriction accumulates data in the 
+  // coarse level, so we'd have to clear it beforehand. However, we cannot clear
+  // it as we need for the BCs and an interpolation. So I accept that I introduce
+  // an error here.
   #if Dimensions==2
-  std::fill_n( coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value, {{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}, 0.0 );
-  std::fill_n( coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value, {{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}, 0.0 );
+  constexpr int NumberOfBytes = {{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}*sizeof(double);
   #else
-  std::fill_n( coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value, {{DOFS_PER_AXIS}}*{{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}, 0.0 );
-  std::fill_n( coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value, {{DOFS_PER_AXIS}}*{{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}, 0.0 );
+  constexpr int NumberOfBytes = {{DOFS_PER_AXIS}}*{{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}*sizeof(double);
   #endif
-
-  ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
-      marker,
-      {{DOFS_PER_AXIS}},
-      {{OVERLAP}},
-      {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QNew.value,
-      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value
+  std::memcpy( 
+    coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value, 
+    fineGridFace""" + solver._name + """QNew.value,
+    NumberOfBytes
   );
-  ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
-      marker,
-      {{DOFS_PER_AXIS}},
-      {{OVERLAP}},
-      {{UNKNOWNS}},
-      fineGridFace""" + solver._name + """QOld.value,
-      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value
+  std::memcpy( 
+    coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value, 
+    fineGridFace""" + solver._name + """QOld.value,
+    NumberOfBytes
   );
 
   // A coarse face might have been non-persistent before. So it might
@@ -234,3 +229,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   def get_action_set_name(self):
     return __name__.replace(".py", "").replace(".", "_")
 
+
+  def get_includes(self):
+    return super(DynamicAMR,self).get_includes() + """
+#include <cstring>
+"""    

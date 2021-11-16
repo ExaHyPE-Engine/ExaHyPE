@@ -1159,7 +1159,7 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
       enddforx
 
       if (not haveTriggeredRefinementForAtLeastOneVertex) {
-        logWarning( "evaluate...", "wanted to refine cell " << state.toString() << " but no vertex is refinable" );
+        logDebug( "evaluate...", "wanted to refine cell " << state.toString() << " but no vertex is refinable" );
       }
     }
     else if (erase) {
