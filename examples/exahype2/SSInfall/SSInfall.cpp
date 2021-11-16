@@ -244,24 +244,60 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   //nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
-  if (extrapolate_bc==0 and t==0)
-    {Qoutside[0] = Qinside[0];
+  if (extrapolate_bc==0){
+    Qoutside[0] = Qinside[0];
     Qoutside[1] = Qinside[1];
     Qoutside[2] = Qinside[2];
     Qoutside[3] = Qinside[3];
-    Qoutside[4] = Qinside[4];}
-  else if (extrapolate_bc==1)
-    {
-    	//std::cout <<  Qinside[0] << " " << Qinside[5+normal] << std::endl;
-      for (int i=0; i<5; i++){
-        if (faceCentre(normal)<0) {
-          Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal]*(-volumeH(normal));
-          //if ( isnan(Qoutside[i]) and i==0) {std::cout << Qoutside[i] << " "<< Qinside[i] << " " << Qinside[5+i*3+normal] << " "<<normal<< std::endl;}
-        }
-        else if (faceCentre(normal)>0) {Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal]*(volumeH(normal));}
-      }
+    Qoutside[4] = Qinside[4];
+    for (int i=5; i<20; i++){
+    	Qoutside[i]=0;
     }
+  }
+  else if (extrapolate_bc==1)
+  {
+      //std::cout <<  normal << " " << faceCentre(0) << " "<<faceCentre(1)<<" "<<faceCentre(2) << std::endl;
+    Qoutside[0] = Qinside[0];
+    Qoutside[4] = Qinside[4];
+    for (int i=0; i<5; i++){
+      if (normal<3) {
+        Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal]*(-volumeH(normal));
+      }
+      else if (normal>=3) {
+        Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal-3]*(volumeH(normal-3));
+      } 
+    }
+    for (int i=5; i<20; i++){
+    	Qoutside[i]=0;
+    }
+  }    
+  else if (extrapolate_bc==2)
+  {
+    if (isnan(Qinside[0])) {std::cout << "before "<< normal << " " << faceCentre(0) << " "<<faceCentre(1)<<" "<<faceCentre(2) <<" "<< Qinside[0]<< " "<< Qinside[1]<<" "<< Qinside[2]<<" "<< Qinside[3]<<" "<< Qinside[4]<<std::endl; std::abort();}
+    for (int i=5; i<20; i++){
+    	Qoutside[i]=0;
+    }  
+    for (int i=0; i<5; i++){
+      if (normal<3) {
+        Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal]*(-volumeH(normal));
+      }
+      else if (normal>=3) {
+        Qoutside[i]=Qinside[i]+Qinside[5+i*3+normal-3]*(volumeH(normal-3));
+      } 
+    }  
+    if (Qinside[0]<tilde_rho_ini){
+      for (int i=0; i<5; i++){Qoutside[i] = Qinside[i];}
+    }
+  }  
+  //add more constraints here
+  //if (Qoutside[0]<tilde_rho_ini) {Qoutside[0]=tilde_rho_ini;std::cout << "reset density" << std::endl;}
+  //for (int j=1; j<=3; j++){
+  //  if (Qoutside[j]*Qinside[j]<0) {Qoutside[j]=0;}
+  //}
+  const double p = (gamma-1) * (Qoutside[4] - 0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]); 
+  if (p<0){Qoutside[4]=0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]+1e-10;}   
   logTraceOut( "boundaryConditions(...)" );
+  if (isnan(Qinside[0])) {std::cout << "after "<< normal << " " << faceCentre(0) << " "<<faceCentre(1)<<" "<<faceCentre(2) <<" "<< Qinside[0]<< " "<< Qinside[1]<<" "<< Qinside[2]<<" "<< Qinside[3]<<" "<< Qinside[4]<<std::endl; std::abort();}
 }
 
 

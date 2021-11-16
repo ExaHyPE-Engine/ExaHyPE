@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["cellcount","rhointer"],   default="cellcount",  help="Pick extension, i.e. the way to calculate the mass. Default is cell counting" )
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
     #parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
-    parser.add_argument("-bc", "--boundary-condition",  dest="boundary",  choices=["periodic","neumann","extrapolate"], default="neumann",  help="Pick the type of Boundary condtion" )
+    parser.add_argument("-bc", "--boundary-condition",  dest="boundary",  choices=["periodic","neumann","extrapolate", "hybrid"], default="neumann",  help="Pick the type of Boundary condtion" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
     parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
     parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
@@ -148,6 +148,53 @@ if __name__ == "__main__":
          We take this routine to add a few additional include statements.
         """
         return SuperClass.get_user_action_set_includes(self) + self._my_user_includes
+        
+
+      def add_derivative_calculation(self):
+        """
+
+         Add the constraint verification code
+
+         We introduce new auxiliary variables. Prior to each time step, I
+         compute the Laplacian and store it in the auxiliary variable. This
+         is kind of a material parameter F(Q) which does not feed back into
+         the solution.
+
+         Changing the number of unknowns a posteriori is a delicate update
+         to the solver, so we invoke the constructor again to be on the safe
+         side.
+
+        """
+        self._auxiliary_variables = 5*3
+
+        self.set_preprocess_reconstructed_patch_kernel( """
+        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        int aux_var=""" + str( self._auxiliary_variables ) + """;
+        int real_var=5;
+        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        dfor(cell,patchSize) {
+          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+          const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+
+          // Lets look left vs right and compute the gradient. Then, lets
+          // loop up and down. So we look three times for the respective
+          // directional gradients
+          for (int d=0; d<3; d++) {
+            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+            leftCell(d)  -= 1;
+            rightCell(d) += 1;
+            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+            for (int i=0; i<real_var; i++) {
+              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d] =
+                ( reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] ) / 2.0 / volumeH;
+              if (isnan(reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d])) {std::cout <<reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i]<<" "<< reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] << std::endl;}
+            }
+
+          }
+        }
+    """)
 
       def add_mass_cal_cellcount(self):
         """
@@ -177,6 +224,7 @@ if __name__ == "__main__":
           r_coor=pow(r_coor,0.5);
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
           
+
           double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
           double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
           double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
@@ -187,7 +235,8 @@ if __name__ == "__main__":
           if (p<0) {
             reconstructedPatch[cellSerialised*(5+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
           }
-           
+          
+          //int test=0; 
 					for (int d=0; d<3; d++) {
             tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
             tarch::la::Vector<Dimensions,int> rightCell = currentCell;
@@ -201,6 +250,12 @@ if __name__ == "__main__":
             	else {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ 2.0 / volumeH;}
             }
           }
+          
+          /*for (int d=0; d<15; d++) {
+            if (isnan(reconstructedPatch[cellSerialised*(5+aux_var)+5+d])){
+              std::cout << reconstructedPatch[cellSerialised*(5+aux_var)+5+d] <<" "<< test <<" "<<d<< std::endl;
+            }
+          }*/
 
 
         }
@@ -319,7 +374,8 @@ if __name__ == "__main__":
     elif args.extension=="rhointer":
       my_solver.add_mass_cal_rhointer()
       userinfo.append(("mass calculation schme: rho interpolation",None))
-         
+    
+    #my_solver.add_derivative_calculation()     
 ########################################################################################
 #Domain settings
 ########################################################################################
@@ -355,6 +411,12 @@ if __name__ == "__main__":
       print(msg)
       periodic_boundary_conditions = [False,False,False]
       intparams.update({"extrapolate_bc":1})
+      userinfo.append((msg,None))
+    elif args.boundary=="hybrid":
+      msg = "hybrid BC set"
+      print(msg)
+      periodic_boundary_conditions = [False,False,False]
+      intparams.update({"extrapolate_bc":2})
       userinfo.append((msg,None))
     elif args.boundary=="neumann":
       msg = "Neumann BC set"
@@ -431,8 +493,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/SSInfall1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    #probe_point = [-0,-0,-1e-6]
-    #project.add_plot_filter( probe_point,[40.0,40.0,2e-6],1 )
+    probe_point = [-0,-0,-1e-6]
+    project.add_plot_filter( probe_point,[40.0,40.0,2e-6],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,28))" )
 
