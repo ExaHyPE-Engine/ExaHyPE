@@ -1122,19 +1122,17 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
           and
           tarch::la::allGreaterEquals( state.getH(), p.getH() )
         ) {
-          erase  = false;
           refine = true;
         }
 
         if (
-          overlaps(state,p)
+          isContained(state,p)
           and
           p.getRefinementControl()==GridControlEvent::RefinementControl::Erase
           and
           tarch::la::allSmaller( state.getH(), p.getH() )
         ) {
           erase  = true;
-          refine = false;
         }
       }
     }
@@ -1154,26 +1152,15 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
           and
           fineGridVertices[iScalar].getState()==GridVertex::State::Unrefined
         ) {
-          for (auto p: _gridControlEvents) {
-            if (
-              overlaps(x,p)
-              and
-              p.getRefinementControl()==GridControlEvent::RefinementControl::Refine
-              and
-              tarch::la::allGreaterEquals( state.getH(), p.getH() )
-              and
-              fineGridVertices[iScalar].getState()==GridVertex::State::Unrefined
-            ) {
-              logDebug( "evaluateGridControlEvents(...)", "refine vertex " << fineGridVertices[iScalar].toString() << " at " << x << " as it overlaps " << p.toString() );
-              fineGridVertices[iScalar].setState( GridVertex::State::RefinementTriggered );
-              haveTriggeredRefinementForAtLeastOneVertex = true;
-            }
-          }
-        }
-        if (not haveTriggeredRefinementForAtLeastOneVertex) {
-          logDebug( "evaluate...", "wanted to refine cell " << state.toString() << " but no vertex is refinable" );
+          logDebug( "evaluateGridControlEvents(...)", "refine vertex " << fineGridVertices[iScalar].toString() << " at " << x );
+          fineGridVertices[iScalar].setState( GridVertex::State::RefinementTriggered );
+          haveTriggeredRefinementForAtLeastOneVertex = true;
         }
       enddforx
+
+      if (not haveTriggeredRefinementForAtLeastOneVertex) {
+        logWarning( "evaluate...", "wanted to refine cell " << state.toString() << " but no vertex is refinable" );
+      }
     }
     else if (erase) {
       for (int i=0; i<TwoPowerD; i++) {

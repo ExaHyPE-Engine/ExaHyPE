@@ -9,7 +9,9 @@ endif
 
 ToolboxBlockstructured_SOURCES = \
   Enumeration.cpp \
-  Interpolation.cpp
+  Interpolation.cpp \
+  UnitTests.cpp \
+  tests/InterpolationTest.cpp 
   
 
 libToolboxBlockstructured2d_a_CXXFLAGS         = $(CXXFLAGS_PEANO_2D_RELEASE) 
