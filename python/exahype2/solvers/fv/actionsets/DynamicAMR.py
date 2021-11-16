@@ -83,18 +83,31 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
 """
 
     self.__Template_DestroyPersistentFace_Core += """ 
-  // have to copy over manually. This stuff is not cleared, so there will be rubbish
-  // in there, but I need it for the boundary data
+  // Clear as restriction is an accumulation process
   #if Dimensions==2
-  for (int i=0; i<{{DOFS_PER_AXIS}}*2*{{OVERLAP}}; i++) {
+  std::fill_n( coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value, {{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}, 0.0 );
+  std::fill_n( coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value, {{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}, 0.0 );
   #else
-  for (int i=0; i<{{DOFS_PER_AXIS}}*{{DOFS_PER_AXIS}}*2*{{OVERLAP}}; i++) {
+  std::fill_n( coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value, {{DOFS_PER_AXIS}}*{{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}, 0.0 );
+  std::fill_n( coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value, {{DOFS_PER_AXIS}}*{{DOFS_PER_AXIS}}*2*{{OVERLAP}}*{{UNKNOWNS}}, 0.0 );
   #endif
-    for (int unknown=0; unknown<{{UNKNOWNS}}; unknown++) {
-      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown] = coarseGridFaces""" + solver._name + """QUpdate(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown];
-      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown] = coarseGridFaces""" + solver._name + """QUpdate(marker.getSelectedFaceNumber()).value[i*{{UNKNOWNS}}+unknown];
-    }
-  }
+
+  ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
+      marker,
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      fineGridFace""" + solver._name + """QNew.value,
+      coarseGridFaces""" + solver._name + """QNew(marker.getSelectedFaceNumber()).value
+  );
+  ::toolbox::blockstructured::restrictHaloLayer_AoS_{{RESTRICTION_SCHEME}}(
+      marker,
+      {{DOFS_PER_AXIS}},
+      {{OVERLAP}},
+      {{UNKNOWNS}},
+      fineGridFace""" + solver._name + """QOld.value,
+      coarseGridFaces""" + solver._name + """QOld(marker.getSelectedFaceNumber()).value
+  );
 
   // A coarse face might have been non-persistent before. So it might
   // not carry a valid boundary flag, and we have to re-analyse it and

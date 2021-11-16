@@ -17,6 +17,13 @@ class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFace
    UpdatedTimeStamp(). As the projection writes to these two updated records, it is
    important that you roll it over afterwards. This is done via the mapping
    RollOverUpdatedFace.
+   
+   It is important to study this action set in combination with DynamicAMR. In the
+   documentation of the latter I explain why we need the guard 
+   
+   not marker.hasBeenRefined()
+   
+   if we want to support dynamic coarsening.
       
   """
   def __init__(self,solver, guard):
