@@ -18,7 +18,7 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
   for (int i=0;i<sample_number;i++) {
     m_tot_copy[i]=global_m_tot[i];
     //m_tot_copy[i]=m_tot[i];
-    if (MassCal==0) {std::cout << std::setprecision (16) << m_tot_copy[i] << " " <<global_cell_tot[i] <<" "<< r_s[i] << std::endl;}
+    //if (MassCal==0) {std::cout << std::setprecision (16) << m_tot_copy[i] << " " <<global_cell_tot[i] <<" "<< r_s[i] << std::endl;}
     global_m_tot[i]=0; global_cell_tot[i]=0; m_tot[i]=0; cell_tot[i]=0;
     //std::cout << rho_x[i] <<" "<< r_s[i] << std::endl;
   }
