@@ -348,4 +348,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 }
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
+  return true;
+}
+
+
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

@@ -40,6 +40,9 @@ struct peano4::datamanagement::CellMarker {
     bool _isLocal;
     bool _areAllVerticesRefined;
     bool _isOneVertexHanging;
+    bool _isOneVertexCreatedOrDestroyed;
+
+    bool _parentIsFlaggedAsChanging;
 
     /**
      * This flag is used to identify enclave cells.

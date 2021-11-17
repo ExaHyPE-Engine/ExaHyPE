@@ -215,6 +215,7 @@ std::bitset<TwoTimesD> peano4::grid::GridTraversalEventGenerator::areFacesAdjace
 }
 
 peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::createGenericCellTraversalEvent(
+  GridVertex                                coarseGridVertices[TwoPowerD],
   GridVertex                                fineGridVertices[TwoPowerD],
   const AutomatonState&                     state,
   const SplitSpecification&                 splitTriggered,
@@ -250,6 +251,21 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
         splitting.empty()
   );
 
+  event.setParentCellIsAdjacentToChangingOrHangingVertex(false);
+  dfor2(k)
+    if (
+      coarseGridVertices[kScalar].getState()!=GridVertex::State::New
+      or
+      coarseGridVertices[kScalar].getState()!=GridVertex::State::Refining
+      or
+      coarseGridVertices[kScalar].getState()!=GridVertex::State::Erasing
+      or
+      coarseGridVertices[kScalar].getState()!=GridVertex::State::Hanging
+    ) {
+      event.setParentCellIsAdjacentToChangingOrHangingVertex( true );
+    }
+  enddforx
+
   logTraceOutWith2Arguments( "createGenericCellTraversalEvent(...)", event.toString(), _id );
   return event;
 }
@@ -268,7 +284,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   bool                                      spacetreeStateIsRunning
 ) const {
   logTraceInWith3Arguments( "createLeaveCellTraversalEvent(...)", state.toString(), _id, relativePositionToFather );
-  GridTraversalEvent  event = createGenericCellTraversalEvent(fineGridVertices, state, splitTriggered, splitting, joinTriggered, joining, relativePositionToFather, spacetreeStateIsRunning);
+  GridTraversalEvent  event = createGenericCellTraversalEvent(coarseGridVertices, fineGridVertices, state, splitTriggered, splitting, joinTriggered, joining, relativePositionToFather, spacetreeStateIsRunning);
 
   event.setIsVertexAdjacentToParallelDomainBoundary( areVerticesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true) );
   event.setIsFaceAdjacentToParallelDomainBoundary( areFacesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, true));
@@ -460,7 +476,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   bool                                      spacetreeStateIsRunning
 ) const {
   logTraceInWith7Arguments( "createEnterCellTraversalEvent(...)", state.toString(), _id, relativePositionToFather, coarseGridVertices[0].toString(), coarseGridVertices[1].toString(), coarseGridVertices[2].toString(), coarseGridVertices[3].toString() );
-  GridTraversalEvent  event = createGenericCellTraversalEvent(fineGridVertices, state, splitTriggered, splitting, joinTriggered, joining, relativePositionToFather, spacetreeStateIsRunning);
+  GridTraversalEvent  event = createGenericCellTraversalEvent(coarseGridVertices, fineGridVertices, state, splitTriggered, splitting, joinTriggered, joining, relativePositionToFather, spacetreeStateIsRunning);
 
   event.setIsVertexAdjacentToParallelDomainBoundary( areVerticesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, false) );
   event.setIsFaceAdjacentToParallelDomainBoundary( areFacesAdjacentToParallelDomainBoundary(fineGridVertices, splitTriggered, splitting, joinTriggered, joining, false));

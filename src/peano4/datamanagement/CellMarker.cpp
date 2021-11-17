@@ -21,12 +21,17 @@ peano4::datamanagement::CellMarker::CellMarker(
   _isLocal(event.getIsCellLocal()),
   _areAllVerticesRefined( event.getWillBeRefined().all() and event.getHasBeenRefined().all() ),
   _isOneVertexHanging( false ),
+  _isOneVertexCreatedOrDestroyed( false ),
+  _parentIsFlaggedAsChanging( event.getParentCellIsAdjacentToChangingOrHangingVertex() ),
   _areAllVerticesInsideDomain( event.getIsVertexAdjacentToParallelDomainBoundary().none() ),
   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() )
 {
   for (int i=0; i<TwoPowerD; i++) {
     _isOneVertexHanging |= event.getVertexDataTo(i)  ==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
     _isOneVertexHanging |= event.getVertexDataFrom(i)==peano4::grid::TraversalObserver::CreateOrDestroyHangingGridEntity;
+
+    _isOneVertexCreatedOrDestroyed |= event.getVertexDataTo(i)  ==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity;
+    _isOneVertexCreatedOrDestroyed |= event.getVertexDataFrom(i)==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity;
   }
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
 }
@@ -105,6 +110,8 @@ std::string peano4::datamanagement::CellMarker::toString() const {
       << ",is-local=" << _isLocal
       << ",all-vertices-refined=" << _areAllVerticesRefined
       << ",one-vertex-hanging=" << _isOneVertexHanging
+      << ",one-vertex-destroyed/created=" << _isOneVertexCreatedOrDestroyed
+      << ",parent-flagged=" << _parentIsFlaggedAsChanging
       << ",all-vertices-inside-domain=" << _areAllVerticesInsideDomain
       << ",no-lb=" << _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
       << ",rel-pos=" << _relativePositionOfCellWithinFatherCell
@@ -118,6 +125,8 @@ bool peano4::datamanagement::CellMarker::isEnclaveCell() const {
   return _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
      and _areAllVerticesInsideDomain
      and not _isOneVertexHanging
+     and not _isOneVertexCreatedOrDestroyed
+     and not _parentIsFlaggedAsChanging
      and (not isRefined or _areAllVerticesRefined);
 }
 

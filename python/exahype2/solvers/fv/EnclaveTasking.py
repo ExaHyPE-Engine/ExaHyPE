@@ -372,6 +372,7 @@ class EnclaveTasking( FV ):
     #self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_or_grid_construction_guard
     self._action_set_AMR.guard                                      = self._primary_sweep_guard
     self._action_set_AMR_commit_without_further_analysis.guard      = self._primary_sweep_guard
+    
     self._action_set_handle_boundary.guard                          = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
     self._action_set_project_patch_onto_faces.guard                 = self._store_cell_data_default_guard() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \

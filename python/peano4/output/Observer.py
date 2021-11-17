@@ -791,7 +791,14 @@ void {FULL_QUALIFIED_CLASSNAME}::leaveCell( const peano4::grid::GridTraversalEve
       repositories::DataRepository::_{logical_type_name}Stack.getForPush( repositories::DataRepository::DataKey(_spacetreeId,outCellStack))->push( view.get(0) );
     }}
     else {{
-      logDebug( "storeCell(...)", "do not store cell {name} with " << marker.x() << " x " << marker.h() );
+      logDebug( 
+        "storeCell(...)", 
+        "do not store cell {name} with " << marker.x() << " x " << marker.h() << ":" << 
+        "  destroy=" << (outCellStack==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity) <<
+        ", no-data=" << (outCellStack==peano4::grid::TraversalObserver::NoData) <<
+        ", is-in/out=" << peano4::grid::PeanoCurve::isInOutStack(outCellStack) <<
+        ", store-persistently=" << {full_qualified_type}::storePersistently(marker)
+      );
     }}
   }}
 """
