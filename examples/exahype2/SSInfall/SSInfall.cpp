@@ -17,9 +17,9 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
   constexpr double pi = M_PI;
   for (int i=0;i<sample_number;i++) {
     m_tot_copy[i]=global_m_tot[i];
-    //m_tot[i]-=(4/3)*M_PI*pow(r_s[i],3);
-    //if (MassCal==0) {std::cout << std::setprecision (4) << m_tot_copy[i] << " " <<global_cell_tot[i] <<" "<< r_s[i] << std::endl;}
-    global_m_tot[i]=0; m_tot[i]=0; cell_tot[i]=0;
+    //m_tot_copy[i]=m_tot[i];
+    if (MassCal==0) {std::cout << std::setprecision (16) << m_tot_copy[i] << " " <<global_cell_tot[i] <<" "<< r_s[i] << std::endl;}
+    global_m_tot[i]=0; global_cell_tot[i]=0; m_tot[i]=0; cell_tot[i]=0;
     //std::cout << rho_x[i] <<" "<< r_s[i] << std::endl;
   }
   //std::cout << rho_0 << std::endl;
@@ -41,7 +41,7 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
 
 void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
   AbstractSSInfall::finishTimeStep();
-  //std::cout << "add mass together here!" << std::endl;
+  std::cout << "add mass together here!" << std::endl;
   #ifdef Parallel
   tarch::mpi::Rank::getInstance().allReduce(
       m_tot,
@@ -57,6 +57,12 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
       MPI_SUM,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
+  #else
+  for (int i=0;i<sample_number;i++) {
+    global_m_tot[i]=m_tot[i];
+    global_cell_tot[i]=cell_tot[i];
+    std::cout << global_m_tot[i] <<" "<< m_tot[i] << std::endl;
+  }
   #endif
 }
 
@@ -381,14 +387,18 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   //double m=(rho-1)*pow(size,3); //notice here we use overdensity
   double m=(rho-1)*pow(size,3);
   if (m<0){m=0.0;}
-  //m=1e-14;
+  //m=1;
   //std::cout << m <<std::endl;
   tarch::multicore::Lock myLock( _mySemaphore );
   for (int i=0;i<sample_number;i++){
-    if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;cell_tot[i]+=1;}
+    if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;cell_tot[i]+=1; global_m_tot[i]+=m; global_cell_tot[i]+=1;}
     else if ((r_coor-size/2)>r_s[i]) {m_tot[i]+=0;}
-    else {m_tot[i]+=m*std::max(0.0,pow((r_s[i]-r_coor+size/2),3))/pow(size,3);cell_tot[i]+=1;}
+    else {
+      m_tot[i]+=m*std::max(0.0,pow((r_s[i]-r_coor+size/2),3))/pow(size,3);cell_tot[i]+=1;
+      global_m_tot[i]+=m*std::max(0.0,pow((r_s[i]-r_coor+size/2),3))/pow(size,3); global_cell_tot[i]+=1;
+    }
   }
+  //std::cout << m_tot[7] <<std::endl;
   /*for (int i=0;i<sample_number;i++){
     if (r_coor<r_s[i]) {m_tot[i]+=m; cell_tot[i]+=1;}
     else {m_tot[i]+=0;}
