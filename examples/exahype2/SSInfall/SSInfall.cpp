@@ -15,6 +15,7 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
 ){
   AbstractSSInfall::startTimeStep(globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize);
   constexpr double pi = M_PI;
+  if (_solverState == SolverState::Primary){
   for (int i=0;i<sample_number;i++) {
     m_tot_copy[i]=global_m_tot[i];
     //m_tot_copy[i]=m_tot[i];
@@ -36,12 +37,12 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
     }
     //for (int i=0;i<sample_number;i++) {std::cout << m_tot_copy[i] <<" "<< (4/3)*pi*pow(r_s[i],3) <<" "<< r_s[i] << std::endl;}
   }
-
+  }
 }
 
 void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
   AbstractSSInfall::finishTimeStep();
-  std::cout << "add mass together here!" << std::endl;
+  //std::cout << "add mass together here!" << std::endl;
   #ifdef Parallel
   tarch::mpi::Rank::getInstance().allReduce(
       m_tot,
@@ -414,7 +415,7 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   double m_a,m_b;
   double m_result;
   //for (int i=0;i<sample_number;i++) {std::cout << m_tot_copy[i] << " ";}
-  //if (r_coor>0.85) {std::cout << "use it" << std::endl;}
+  //if (r_coor>0.84) {std::cout << "use it" << std::endl;}
 if (MassCal==0){ //which means we use cell counting
   bool IsCenter=false;
   bool IsOutSkirt=false;
@@ -478,12 +479,10 @@ else if (MassCal==1){ //which means we use rho interpolation
     m_result=(4/3)*pi*(pow(r_coor,3)-pow(r_s[sample_number-1],3))*(rho_x[sample_number-1]-1);
     m_result+=m_tot_copy[sample_number-1];
   }
-
-
 //m_result=0.0;
 
 }  
-  
+  //if (r_coor>0.84) {std::cout << m_result << std::endl;} 
   //m_result=0.0;
 
   return m_result;
