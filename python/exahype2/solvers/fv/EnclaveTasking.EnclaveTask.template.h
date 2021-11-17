@@ -85,7 +85,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      * _remoteTaskId is always sent when forwarding task outcomes since the
      * task will already have been moved.
      */
-    int          _remoteTaskId;
+    int          _remoteTaskId = -1;
     #endif
 {% if USE_GPU %}
     static int                                _gpuEnclaveTaskId;
