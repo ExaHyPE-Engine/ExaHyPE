@@ -38,7 +38,9 @@ double_message.write_implementation_file("../src/tarch/mpi/DoubleMessage.cpp")
 # peano4::parallel::TreeManagementMessage
 #
 tree_management_message = dastgen2.DataModel( "peano4::parallel::TreeManagementMessage" )
+# >= -1
 tree_management_message.add_attribute( dastgen2.attributes.Integer( "masterSpacetreeId" ) )
+# >=0
 tree_management_message.add_attribute( dastgen2.attributes.Integer( "workerSpacetreeId" ) )
 tree_management_message.add_attribute( dastgen2.attributes.Enumeration( "action", [ "RequestNewRemoteTree", "CreateNewRemoteTree", "RemoveChildTreeFromBooksAsChildBecameEmpty", "JoinWithWorker", "Acknowledgement" ]))
 
@@ -55,7 +57,9 @@ tree_management_message.write_implementation_file("../src/peano4/parallel/TreeMa
 # peano4::parallel::TreeEntry
 #
 tree_management_message = dastgen2.DataModel( "peano4::parallel::TreeEntry" )
+# >= 0
 tree_management_message.add_attribute( dastgen2.attributes.Integer( "id" ) )
+# >= -1
 tree_management_message.add_attribute( dastgen2.attributes.Integer( "master" ) )
 
 tree_management_message.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
@@ -71,6 +75,7 @@ tree_management_message.write_implementation_file("../src/peano4/parallel/TreeEn
 # peano4::parallel::StartTraversalMessage
 #
 start_traversal_message = dastgen2.DataModel( "peano4::parallel::StartTraversalMessage" )
+# positive number
 start_traversal_message.add_attribute( dastgen2.attributes.Integer( "stepIdentifier" ) )
 
 start_traversal_message.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
@@ -89,6 +94,7 @@ start_traversal_message.write_implementation_file("../src/peano4/parallel/StartT
 grid_control_event = dastgen2.DataModel( "peano4::grid::GridControlEvent" )
 
 grid_control_event.add_attribute( dastgen2.attributes.Enumeration( "refinementControl", [ "Refine", "Erase" ] ))
+# I know that Dimensions usually is 2 or 3 (though I support higher dimensions). Guess this is not relevant
 grid_control_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "offset", "Dimensions" ))
 grid_control_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "width", "Dimensions" ))
 grid_control_event.add_attribute( peano4.dastgen2.Peano4DoubleArray( "h", "Dimensions" ))
@@ -108,6 +114,7 @@ grid_control_event.write_implementation_file("../src/peano4/grid/GridControlEven
 #
 grid_statistics = dastgen2.DataModel( "peano4::grid::GridStatistics" )
 
+# all the five integer values are >=0
 grid_statistics.add_attribute( dastgen2.attributes.Integer( "numberOfLocalUnrefinedCells" ) )
 grid_statistics.add_attribute( dastgen2.attributes.Integer( "numberOfRemoteUnrefinedCells" ) )
 grid_statistics.add_attribute( dastgen2.attributes.Integer( "numberOfLocalRefinedCells" ) )
@@ -134,6 +141,7 @@ grid_statistics.write_implementation_file("../src/peano4/grid/GridStatistics.cpp
 #
 automaton_state = dastgen2.DataModel( "peano4::grid::AutomatonState" )
 
+# >= 0
 automaton_state.add_attribute( dastgen2.attributes.Integer( "level" ) )
 automaton_state.add_attribute( peano4.dastgen2.Peano4DoubleArray( "x", "Dimensions" ))
 automaton_state.add_attribute( peano4.dastgen2.Peano4DoubleArray( "h", "Dimensions" ))
@@ -174,7 +182,7 @@ grid_traversal_event.add_attribute( dastgen2.attributes.Boolean(      "isCellLoc
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isVertexAdjacentToParallelDomainBoundary", "TwoPowerD" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.BooleanArray( "isFaceAdjacentToParallelDomainBoundary", "TwoTimesD" ) )
 
-# @todo Should be char array likely with -4 to 9
+# @todo Should be char array likely with -4 to 9 per entry
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "vertexDataFrom", "TwoPowerD" ) )
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "vertexDataTo", "TwoPowerD" ) )
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "faceDataFrom", "TwoTimesD" ) )
@@ -184,8 +192,11 @@ grid_traversal_event.add_attribute( dastgen2.attributes.Integer( "cellData" ) )
 
 grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "relativePositionToFather", "Dimensions" ) )
 
+# >= -1 and smaller than mpi ranks. Not sure if this is of any help
 grid_traversal_event.add_attribute( dastgen2.attributes.Integer( "invokingSpacetree" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.Integer( "invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing" ) )
+
+grid_traversal_event.add_attribute( dastgen2.attributes.Boolean( "parentCellIsAdjacentToChangingOrHangingVertex" ) )
 
 grid_traversal_event.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
 grid_traversal_event.add_aspect( dastgen2.aspects.MPI() )
@@ -202,12 +213,14 @@ grid_vertex = dastgen2.DataModel( "peano4::grid::GridVertex" )
 
 grid_vertex.add_attribute( dastgen2.attributes.Enumeration( "state", [ "HangingVertex", "New", "Unrefined", "Refined", "RefinementTriggered", "Refining", "EraseTriggered", "Erasing", "Delete" ] ) )
 
+# >= -1 and smaller than ranks
 grid_vertex.add_attribute( peano4.dastgen2.Peano4IntegerArray( "adjacentRanks", "TwoPowerD" ) )
 grid_vertex.add_attribute( peano4.dastgen2.Peano4IntegerArray( "backupOfAdjacentRanks", "TwoPowerD" ) )
 
 grid_vertex.add_attribute( dastgen2.attributes.Boolean( "hasBeenAntecessorOfRefinedVertexInPreviousTreeSweep" ) )
 grid_vertex.add_attribute( dastgen2.attributes.Boolean( "isAntecessorOfRefinedVertexInCurrentTreeSweep" ) )
 
+# 0 <= value <= 2^d
 grid_vertex.add_attribute( dastgen2.attributes.Integer( "numberOfAdjacentRefinedLocalCells" ) )
 
 # Brauch ich nur im Debug mode. Das wird bisher net unterstuetzt
