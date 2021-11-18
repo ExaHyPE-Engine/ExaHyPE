@@ -57,7 +57,21 @@ struct peano4::datamanagement::CellMarker {
   public:
     CellMarker(const peano4::grid::GridTraversalEvent& event);
 
+    /**
+     * Has the cell been refined when we kicked off this mesh traversal?
+     * This implies that the cell is refined in this sweep, as cells do
+     * not change their state throughout the traversal.
+     *
+     * @see willBeRefined()
+     */
     bool hasBeenRefined() const;
+
+    /**
+     * Will the cell be refined in the subsequent iteration? If hasBeenRefined()
+     * returns false but willBeRefined() holds, we have a cell which Peano 4
+     * will refine between the current and the next grid sweep. If it is the
+     * other way round, Peano 4 coarsens.
+     */
     bool willBeRefined() const;
 
     /**
