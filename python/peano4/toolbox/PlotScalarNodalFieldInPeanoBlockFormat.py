@@ -5,6 +5,9 @@ from peano4.solversteps.ActionSet import ActionSet
 
 
 class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
+  NoMetaFile     = "no-meta-file"
+  CountTimeSteps = "count-time-steps"
+
   def __init__(self,filename,vertex_unknown,getter,description,time_stamp_evaluation):
     """
       Plot only the grid structure
@@ -102,11 +105,27 @@ class PlotScalarNodalFieldInPeanoBlockFormat(ActionSet):
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }}
 
+  {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
-    Dimensions, snapshotFileName.str(), "{FILENAME}",
+    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::NoIndexFile,
+    0.0
+  );
+  {% elif TIMESTAMP==\"""" + CountTimeSteps + """\" %}
+  static int timeStep = -1;
+  timeStep++;
+  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
-    {TIMESTAMP}
+    timeStep
+  );
+  {% else %}
+  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+    {{TIMESTAMP}}
   );    
+  {% endif %}
     
   _dataWriter = _writer->createVertexDataWriter( "{VERTEX_UNKNOWN_NAME}", 2, 1, "{DESCRIPTION}" );
 """
