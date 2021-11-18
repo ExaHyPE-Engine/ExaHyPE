@@ -14,6 +14,10 @@
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 
+#if defined(UseSmartMPI)
+#include "communication/Tags.h"
+#endif
+
 #include <string.h>
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
@@ -28,9 +32,13 @@ int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_e
     [](smartmpi::ReceiverCallType type, int rank, int tag, MPI_Comm communicator) -> smartmpi::Task* {
       if (type==smartmpi::ReceiverCallType::ReceiveTask) {
         return receiveTask( rank, tag, communicator );
-      }
-      else {
-        return receiveOutcome( rank, tag, communicator );
+      } else if (type==smartmpi::ReceiverCallType::ReceivedTaskOutcomeForFowarding) {
+        static constexpr bool isForwarding = true;
+        return receiveOutcome( rank, tag, communicator, isForwarding);
+      } else {
+        assert(type==smartmpi::ReceiverCallType::ReceiveOutcome);
+        static constexpr bool isForwarding = false;
+        return receiveOutcome( rank, tag, communicator, isForwarding );
       }
     }
   )
@@ -232,20 +240,32 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
 #ifdef UseSmartMPI
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
   run();
+  if (_remoteTaskId != -1) {
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(_remoteTaskId,_numberOfResultValues,_outputValues);
+  } else {
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues);
+  }
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_Comm communicator) {
   ::tarch::mpi::DoubleMessage  tMessage(_t);
   ::tarch::mpi::DoubleMessage  dtMessage(_dt);
-  ::tarch::mpi::IntegerMessage taskIdMessage(getTaskId());
+  ::tarch::mpi::IntegerMessage taskIdMessage;
+
+  if ( tag != smartmpi::communication::MoveTaskToMyServerForEvaluationTag ) {
+    taskIdMessage.setValue(_remoteTaskId);
+  } else {
+    taskIdMessage.setValue(getTaskId());
+  }
 
   ::peano4::datamanagement::CellMarker::send( _marker, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::send( tMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::send( dtMessage, rank, tag, communicator );
   ::tarch::mpi::IntegerMessage::send( taskIdMessage, rank, tag, communicator );
 
-  MPI_Send( _inputValues, _numberOfInputValues, MPI_DOUBLE, rank, tag, communicator );
+  MPI_Request request;
+  MPI_Isend( _inputValues, _numberOfInputValues, MPI_DOUBLE, rank, tag, communicator, &request );
 
   logInfo(
     "moveTask(...)",
@@ -286,8 +306,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
     MPI_STATUS_IGNORE
   );
 
-
-
   {{CLASSNAME}}* result = new {{CLASSNAME}}(
     markerMessage,
     tMessage.getValue(),
@@ -315,7 +333,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRan
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
-
   logInfo(
     "forwardTaskOutputToRank(...)",
     "will start to forward task output (which has already been computed)"
@@ -330,7 +347,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
   ::tarch::mpi::DoubleMessage::send( dtMessage, rank, tag, communicator );
   ::tarch::mpi::IntegerMessage::send( taskIdMessage, rank, tag, communicator );
 
-  MPI_Send( _outputValues, _numberOfResultValues, MPI_DOUBLE, rank, tag, communicator );
+  MPI_Request request;
+  MPI_Isend( _outputValues, _numberOfResultValues, MPI_DOUBLE, rank, tag, communicator, &request );
 
   logInfo(
     "forwardTaskOutputToRank(...)",
@@ -339,11 +357,11 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
     " via tag " << tag
   );
 
-  tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
+  // tarch::freeMemory(_outputValues,tarch::MemoryLocation::Heap );
 }
 
 
-smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator) {
+smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward) {
   logInfo( "receiveOutcome(...)", "rank=" << rank << ", tag=" << tag );
   peano4::grid::GridTraversalEvent dummyEvent;
   const int NumberOfResultValues =
@@ -374,13 +392,30 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
     MPI_STATUS_IGNORE
   );
 
+  /**
+   * Having received the output there are two further options:
+   * we may need to forward it yet again to another rank - in this case
+   * we need a pointer to the task which contains the output;
+   * alternatively we bookmark the output and return a nullptr
+   */
+  if(intentionToForward) {
+    double* inputValues = nullptr; // no input as already computed
+
+    {{CLASSNAME}}* result = new {{CLASSNAME}}(
+      markerMessage,
+      tMessage.getValue(),
+      dtMessage.getValue(),
+      inputValues
+    );
+    result->_remoteTaskId = taskIdMessage.getValue();
+    result->_outputValues = outputValues;
+    return result;
+  }
   logInfo(
     "receiveOutcome(...)",
     "bookmark outcome of task " << taskIdMessage.getValue()
   );
-
   ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues);
-
   return nullptr;
 }
 #endif
