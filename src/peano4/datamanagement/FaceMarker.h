@@ -34,7 +34,8 @@ struct peano4::datamanagement::FaceMarker {
      */
     tarch::la::Vector<Dimensions,double>  _h;
 
-    std::bitset<2*Dimensions>             _isRefined;
+    std::bitset<2*Dimensions>             _hasBeenRefined;
+    std::bitset<2*Dimensions>             _willBeRefined;
     std::bitset<2*Dimensions>             _isLocal;
 
     bool                                  _cellIsLocal;
@@ -107,8 +108,11 @@ struct peano4::datamanagement::FaceMarker {
 
     std::string toString() const;
 
-    bool isRefined() const;
-    bool isRefined(int i) const;
+    bool hasBeenRefined() const;
+    bool hasBeenRefined(int i) const;
+
+    bool willBeRefined() const;
+    bool willBeRefined(int i) const;
 
     bool isLocal() const;
     bool isLocal(int i) const;
@@ -120,6 +124,12 @@ struct peano4::datamanagement::FaceMarker {
      */
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell(int i) const;
+
+    /**
+     * The term patch here refers to a 3x3 or 3x3x3 refinement. The routine
+     * determines whether the face is on the boundary of this patch of not.
+     */
+    bool isInteriorFaceWithinPatch() const;
 };
 
 

@@ -17,10 +17,21 @@ class ProjectPatchOntoFaces( peano4.toolbox.blockstructured.ProjectPatchOntoFace
    UpdatedTimeStamp(). As the projection writes to these two updated records, it is
    important that you roll it over afterwards. This is done via the mapping
    RollOverUpdatedFace.
+   
+   It is important to study this action set in combination with DynamicAMR. In the
+   documentation of the latter I explain why we need the guard 
+   
+   not marker.hasBeenRefined()
+   
+   if we want to support dynamic coarsening.
       
   """
   def __init__(self,solver, guard):
-    peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(self,solver._patch,solver._patch_overlap_update,guard,solver._get_default_includes() + solver.get_user_action_set_includes(), True)
+    peano4.toolbox.blockstructured.ProjectPatchOntoFaces.__init__(
+      self,
+      solver._patch,solver._patch_overlap_update,
+      "not marker.hasBeenRefined() and " + guard,
+      solver._get_default_includes() + solver.get_user_action_set_includes(), True)
 
     self.d[ "FACE_METADATA_ACCESSOR" ] = "fineGridFaces"  + solver._face_label.name
     self.d[ "CELL_METADATA_ACCESSOR" ] = "fineGridCell""" + solver._cell_label.name

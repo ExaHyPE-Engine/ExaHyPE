@@ -5,6 +5,27 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 
+/*
+
+    double minValues[] =
+        {0.01,-std::numeric_limits<double>::max(),-1e-8,-1e-8,-std::numeric_limits<double>::max()};
+
+    double maxValues[] =
+        {1.0, std::numeric_limits<double>::max(),  1e-8, 1e-8, std::numeric_limits<double>::max()};
+
+    ::exahype2::fv::validatePatch(
+        reconstructedPatch,
+        5,
+        0,
+        4,
+        1, // halo
+        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString(),
+        false, minValues, maxValues
+    ); // previous time step has to be valid
+
+*/
+
+
 tarch::logging::Log   examples::exahype2::euler::Euler::_log( "examples::exahype2::euler::Euler" );
 
 
@@ -13,14 +34,15 @@ enum class Scenario {
   PointExplosion,
   PointExplosionWithDynamicAMR,
   BreakingDam,
+  BreakingDamWithDynamicAMR,
   BreakingDamResolutionStudies
 };
 
 
-Scenario scenario = Scenario::BreakingDamResolutionStudies;
-//Scenario scenario = Scenario::PointExplosion;
+//Scenario scenario = Scenario::BreakingDamResolutionStudies;
+Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
 
-// Scenario scenario = Scenario::BreakingDam;
+//Scenario scenario = Scenario::BreakingDam;
 
 
 
@@ -60,12 +82,12 @@ Scenario scenario = Scenario::BreakingDamResolutionStudies;
         // AMR instruction depends on the actual solution (which is
         // not directly available throughout the grid construction).
         // If you remove this part, you get static AMR.
-        if ( tarch::la::greater(t,0.0) ) {
+        if ( tarch::la::greater(t,0.0) and t<0.0001 ) {
           if ( Q[4]>0.4 ) {
             result = ::exahype2::RefinementCommand::Refine;
           }
           if ( Q[4]<0.2 ) {
-            result = ::exahype2::RefinementCommand::Coarsen;
+            result = ::exahype2::RefinementCommand::Erase;
           }
         }
       }
@@ -74,6 +96,19 @@ Scenario scenario = Scenario::BreakingDamResolutionStudies;
       {
         if ( volumeCentre(0)<0.5 ) {
           result = ::exahype2::RefinementCommand::Refine;
+        }
+      }
+      break;
+    case Scenario::BreakingDamWithDynamicAMR:
+      {
+        if ( tarch::la::equals(t,0.0) and tarch::la::equals(volumeCentre(0),1.0/3.0) ) {
+          result = ::exahype2::RefinementCommand::Refine;
+        }
+        else if (t>0.0 and Q[4]>0.4) {
+          result = ::exahype2::RefinementCommand::Refine;
+        }
+        else if (t>0.0 and Q[4]<0.2) {
+          result = ::exahype2::RefinementCommand::Erase;
         }
       }
       break;
@@ -122,6 +157,7 @@ void examples::exahype2::euler::Euler::initialCondition(
       }
       break;
     case Scenario::BreakingDam:
+    case Scenario::BreakingDamWithDynamicAMR:
     case Scenario::BreakingDamResolutionStudies:
       {
         logDebug( "initialCondition(...)", "set breaking dam initial condition" );
@@ -147,8 +183,10 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   assertion(normal<Dimensions);
   //assertion( Q[0]>0.0 );
 
-  if (Q[0]<=0.0 or Q[0]!=Q[0])
+  if (Q[0]<=0.0 or Q[0]!=Q[0]) {
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "Q[0]>0", "density negative" );
+    assertion(false);
+  }
 
   constexpr double gamma = 1.4;
   const double irho = 1./Q[0];
@@ -305,6 +343,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
 #pragma omp end declare target
 
 
+#pragma omp declare target
 void examples::exahype2::euler::Euler::flux(
  const double * __restrict__ Q, // Q[5+0],
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -337,8 +376,6 @@ void examples::exahype2::euler::Euler::flux(
   F[normal+1] += p;
   F[4]        += coeff*p;
 }
-
-
+#pragma omp end declare target
 
 #endif
-

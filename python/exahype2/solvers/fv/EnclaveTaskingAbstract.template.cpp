@@ -127,10 +127,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::greater(volumeH,MaxVolumeH ) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
-
   return result;
   {% else %}
   {{REFINEMENT_CRITERION_IMPLEMENTATION}}
@@ -370,6 +366,11 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "plotting";
   }
   return "<undef>";
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
+  return _solverState != SolverState::Secondary;
 }
 
 

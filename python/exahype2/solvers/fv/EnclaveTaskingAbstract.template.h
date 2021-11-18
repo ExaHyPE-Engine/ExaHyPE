@@ -234,15 +234,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState  getSolverState() const;
 
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
+    //#if defined(OpenMPGPUOffloading) // HS: note there is a compiler bug in llvm until that is resolved 
+    //#pragma omp declare target       // we need to keep these declarations outside the declare target construct and instead
+    //#endif                           // map them explicitly in Rusanov.h
     static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     {{SOLVER_CONSTANTS}}
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
+    //#if defined(OpenMPGPUOffloading)
+    //#pragma omp end declare target
+    //#endif
 
     /**
      * It is important that we only plot after the secondary sweep.
@@ -255,6 +255,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
   protected:
     static tarch::logging::Log  _log;
+
+    /**
+     * As we work with enclave tasking, we have to run multiple grid sweeps
+     * per time step. With this routine, you can find out if the current
+     * sweep (in beginIteration(), e.g.) is the first one.
+     *
+     * Throughout the traversal, this field is correct. If you query it in
+     * startTimeStep(), you have to be aware that the abstract solver's
+     * implementations switches the state. After you've called the abstract
+     * solver's implementation, the predicate is correct. Before, you have
+     * to negate it.
+     */
+    bool isFirstGridSweepOfTimeStep() const;
 
     SolverState  _solverState;
 

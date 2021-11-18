@@ -139,6 +139,7 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     if self._interpolate_linearly_in_time:
       self._action_set_update_cell._Template_TouchCellFirstTime_Fill_Halos = create_halo_layer_construction_with_interpolation_for_reconstructed_patch(self._name)
       
+    self._action_set_AMR.set_event_lifetime( 2*int(self._max_volume_h/self._min_volume_h+1) )
     
 
   def get_user_action_set_includes(self):

@@ -103,7 +103,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   assertion1(timeStamp>=0.0,timeStamp);
   _maxTimeStampThisTimeStep = std::max(timeStamp,_maxTimeStampThisTimeStep);
   _minTimeStampThisTimeStep = std::min(timeStamp,_minTimeStampThisTimeStep);
-  assertion2(_minTimeStamp<=_maxTimeStampThisTimeStep, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep );
+  assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, patchSize );
 
   assertion1(patchSize<std::numeric_limits<double>::max()/10.0,patchSize);
   assertion1(patchSize>0.0,patchSize);
@@ -127,9 +127,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
-  if ( tarch::la::greater(volumeH,MaxVolumeH ) {
-    result = ::exahype2::RefinementCommand::Refine;
-  }
 
   return result;
   {% else %}
@@ -337,12 +334,21 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "time-step";
     case SolverState::Plotting:
       return "plotting";
+    case SolverState::TimeStepAfterGridInitialisation:
+      return "time-step-after-grid-initialisation";
+    case SolverState::PlottingAfterGridInitialisation:
+      return "plotting-after-grid-initialisation";
   }
   return "<undef>";
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
+  return true;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
   return true;
 }
 
