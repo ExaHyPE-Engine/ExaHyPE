@@ -3,7 +3,7 @@
 
 
 exahype2::RefinementCommand exahype2::getDefaultRefinementCommand() {
-  return RefinementCommand::Coarsen;
+  return RefinementCommand::Erase;
 }
 
 
@@ -19,7 +19,7 @@ exahype2::RefinementCommand operator&&( exahype2::RefinementCommand lhs, exahype
     return exahype2::RefinementCommand::Keep;
   }
   else {
-    return exahype2::RefinementCommand::Coarsen;
+    return exahype2::RefinementCommand::Erase;
   }
 }
 
@@ -28,7 +28,7 @@ std::string toString( exahype2::RefinementCommand value ) {
   switch (value) {
     case exahype2::RefinementCommand::Refine:  return "refine";
     case exahype2::RefinementCommand::Keep:    return "keep";
-    case exahype2::RefinementCommand::Coarsen: return "coarsen";
+    case exahype2::RefinementCommand::Erase:   return "erase";
   }
   return "<undef>";
 }
@@ -60,7 +60,8 @@ std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControl::getG
 void exahype2::RefinementControl::addCommand(
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
-  exahype2::RefinementCommand                  command
+  exahype2::RefinementCommand                  command,
+  int                                          lifetime
 ) {
   logTraceInWith3Arguments( "addCommand()", x, h, ::toString(command) );
   switch (command) {
@@ -79,14 +80,30 @@ void exahype2::RefinementControl::addCommand(
 
         assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
         assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
-        _newEvents.push_back( newEvent );
+        _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(newEvent, lifetime) );
         logDebug( "addCommend()", "added refinement for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
       }
       break;
     case ::exahype2::RefinementCommand::Keep:
       break;
-    case ::exahype2::RefinementCommand::Coarsen:
-      logDebug( "addCommend()", "not implemented yet" );
+    case ::exahype2::RefinementCommand::Erase:
+      {
+        tarch::la::Vector<Dimensions,double> expandedWidth   = (1.0+_Tolerance) * h;
+        tarch::la::Vector<Dimensions,double> shift           = 0.5 * (expandedWidth - h);
+        tarch::la::Vector<Dimensions,double> refinedMeshSize = 3.1 * h;
+
+        peano4::grid::GridControlEvent newEvent(
+          peano4::grid::GridControlEvent::RefinementControl::Erase,
+          x-0.5 * h - shift,
+          expandedWidth,
+          refinedMeshSize
+        );
+
+        assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
+        assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
+        _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(newEvent, lifetime) );
+        logDebug( "addCommend()", "added erase for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
+      }
       break;
   }
   logTraceOutWith1Argument( "addCommand()", _newEvents.size() );
@@ -94,14 +111,22 @@ void exahype2::RefinementControl::addCommand(
 
 
 void exahype2::RefinementControl::finishStep() {
-  if (_newEvents.size()==1) {
-    logInfo( "finishStep()", "activate refinement/coarsening instruction " << _newEvents.begin()->toString() << " (can be taken into account in next grid sweep)" );
-  }
-  else if (not _newEvents.empty()) {
-    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/coarsening instructions (can be taken into account in next grid sweep)" );
+  if (not _newEvents.empty()) {
+    logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep)" );
   }
   _committedEvents.clear();
-  _committedEvents.insert( _committedEvents.end(), _newEvents.begin(), _newEvents.end() );
+
+  NewEvents::iterator p = _newEvents.begin();
+  while (p!=_newEvents.end()) {
+    _committedEvents.push_back( p->first );
+    p->second--;
+    if (p->second<=0) {
+      p = _newEvents.erase(p);
+    }
+    else {
+      p++;
+    }
+  }
   _newEvents.clear();
 }
 

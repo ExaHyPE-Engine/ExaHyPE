@@ -16,14 +16,16 @@ peano4::datamanagement::FaceMarker::FaceMarker(
   _cellIsLocal(event.getIsCellLocal()),
   _select(select) {
   for (int faceNumber=0; faceNumber<2*Dimensions; faceNumber++) {
-    _isRefined[faceNumber] = false;
-    _isLocal[faceNumber]   = event.getIsFaceLocal(faceNumber);
+    _hasBeenRefined[faceNumber] = false;
+    _willBeRefined[faceNumber]  = false;
+    _isLocal[faceNumber]        = event.getIsFaceLocal(faceNumber);
 
     const int normal = faceNumber % Dimensions;
     for (int i=0; i<TwoPowerD; i++) {
       std::bitset<Dimensions> studiedVertex = i;
       studiedVertex.set(normal,faceNumber>=Dimensions);
-      _isRefined.set( faceNumber, _isRefined[faceNumber] or event.getIsRefined(studiedVertex.to_ulong()) );
+      _hasBeenRefined.set( faceNumber, _hasBeenRefined[faceNumber] or event.getHasBeenRefined(studiedVertex.to_ulong()) );
+      _willBeRefined.set(  faceNumber, _willBeRefined[faceNumber]  or event.getWillBeRefined(studiedVertex.to_ulong()) );
     }
   }
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
@@ -78,7 +80,9 @@ std::string peano4::datamanagement::FaceMarker::toString() const {
       << ",select=" << _select
       << ",is-cell-local=" << _cellIsLocal
       << ",is-face-local=" << isLocal()
-      << ",is-face-refined=" << isRefined()
+      << ",has-face-been-refined=" << hasBeenRefined()
+      << ",will-face-be-refined=" << willBeRefined()
+	  << ",rel-pos=" << _relativePositionOfCellWithinFatherCell
       << ")";
   return msg.str();
 }
@@ -100,13 +104,23 @@ int peano4::datamanagement::FaceMarker::getSelectedFaceNumber() const {
 }
 
 
-bool peano4::datamanagement::FaceMarker::isRefined(int i) const {
-  return _isRefined[i];
+bool peano4::datamanagement::FaceMarker::hasBeenRefined(int i) const {
+  return _hasBeenRefined[i];
 }
 
 
-bool peano4::datamanagement::FaceMarker::isRefined() const {
-  return isRefined(_select);
+bool peano4::datamanagement::FaceMarker::hasBeenRefined() const {
+  return hasBeenRefined(_select);
+}
+
+
+bool peano4::datamanagement::FaceMarker::willBeRefined(int i) const {
+  return _willBeRefined[i];
+}
+
+
+bool peano4::datamanagement::FaceMarker::willBeRefined() const {
+  return willBeRefined(_select);
 }
 
 
@@ -132,3 +146,11 @@ tarch::la::Vector<Dimensions,int>  peano4::datamanagement::FaceMarker::getRelati
   return result;
 }
 
+
+bool peano4::datamanagement::FaceMarker::isInteriorFaceWithinPatch() const {
+  int normal             = getSelectedFaceNumber() % Dimensions;
+  return
+    getRelativePositionWithinFatherCell()(normal)==1
+    or
+    getRelativePositionWithinFatherCell()(normal)==2;
+}

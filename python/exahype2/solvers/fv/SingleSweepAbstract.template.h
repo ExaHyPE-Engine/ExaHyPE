@@ -255,6 +255,12 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   protected:
     static tarch::logging::Log  _log;
 
+    /**
+     * This predicate is always true, as we work with a single-sweep
+     * implementation, i.e. each grid sweep realises one time step.
+     */
+    bool isFirstGridSweepOfTimeStep() const;
+
     SolverState  _solverState;
 
     double     _minTimeStamp;

@@ -90,7 +90,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = self.TemplateUpdateCell.render(**d),
       reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
-      guard  = "not marker.isRefined() and (" + \
+      guard  = "not marker.willBeRefined() and not marker.hasBeenRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")",
@@ -120,7 +120,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
   if ( 
-    not marker.isRefined() 
+    not marker.willBeRefined() and not marker.hasBeenRefined()
     and 
     {{GUARD}}
     and
@@ -357,15 +357,24 @@ class EnclaveTasking( FV ):
 
     #
     # AMR and adjust cell have to be there always, i.e. also throughout 
-    # the grid construction.
+    # the grid construction. But the criterion is something that we only
+    # evaluate in the primary sweep. If we come to the conclusion that we
+    # want to refine or coarsen, we find this out in the primary sweep.
+    # So the actual trigger will then we done in the secondary sweep. At
+    # this point, Peano 4 won't change anything. We only trigger mesh 
+    # alteration. The real mesh adoption then is due in the subsequent
+    # primary sweep or plotting.
     #
     
     self._action_set_initial_conditions.guard                       = self._action_set_initial_conditions.guard
     self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard
-    self._action_set_AMR.guard                                 = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_guard
-    self._action_set_AMR_commit_without_further_analysis.guard = "not marker.isRefined() and " + self._secondary_sweep_or_grid_construction_guard
-    self._action_set_handle_boundary.guard                     = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
-    self._action_set_project_patch_onto_faces.guard            = self._store_cell_data_default_guard() + " and (" + \
+    #self._action_set_AMR.guard                                      = self._secondary_sweep_or_grid_construction_guard
+    #self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_or_grid_construction_guard
+    self._action_set_AMR.guard                                      = self._primary_sweep_guard
+    self._action_set_AMR_commit_without_further_analysis.guard      = self._primary_sweep_guard
+    
+    self._action_set_handle_boundary.guard                          = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
+    self._action_set_project_patch_onto_faces.guard                 = self._store_cell_data_default_guard() + " and (" + \
          "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \

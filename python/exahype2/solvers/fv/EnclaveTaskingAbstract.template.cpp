@@ -369,6 +369,11 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
 }
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
+  return _solverState != SolverState::Secondary;
+}
+
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return _solverState == SolverState::Secondary;
 }

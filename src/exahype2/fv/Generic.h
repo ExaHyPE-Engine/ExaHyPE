@@ -33,6 +33,8 @@ namespace exahype2 {
      * this into account when it validates the entries.
      *
      * @param location String that tells system from where this routine got called
+     * @param minValues Is either a nullptr or it points to a double array with
+     *   exactly unknowns+auxiliaryVariables entries
      */
     void validatePatch(
       const double* __restrict__ Q,
@@ -41,7 +43,9 @@ namespace exahype2 {
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize,
       const std::string& location = "",
-      bool   triggerNonCriticalAssertion = true
+      bool   triggerNonCriticalAssertion = true,
+      double* minValues = nullptr,
+      double* maxValues = nullptr
     );
 
     /**

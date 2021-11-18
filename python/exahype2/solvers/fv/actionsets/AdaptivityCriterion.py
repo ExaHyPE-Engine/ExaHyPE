@@ -6,7 +6,7 @@ from .AbstractFVActionSet import AbstractFVActionSet
 import peano4
 import jinja2
 
-class AMROnPatch(AbstractFVActionSet):
+class AdaptivityCriterion(AbstractFVActionSet):
   """
   
   The action set to realise AMR
@@ -34,10 +34,14 @@ class AMROnPatch(AbstractFVActionSet):
   
   
   TemplateAMR = """  
+  logTraceInWith2Arguments( "touchCellFirstTime(...)", marker.willBeRefined(), marker.hasBeenRefined() );
+
   ::exahype2::RefinementCommand refinementCriterion = ::exahype2::getDefaultRefinementCommand();
 
   if ( 
-    not marker.isRefined() 
+    not marker.willBeRefined() 
+    and
+    tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)  
     and
     tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
   ) {
@@ -45,6 +49,37 @@ class AMROnPatch(AbstractFVActionSet):
   } 
   else if ( 
     {{PREDICATE}}
+    and
+    not marker.willBeRefined() 
+    and
+    tarch::la::greater( tarch::la::max( marker.h() ), repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH) 
+  ) {
+    refinementCriterion = ::exahype2::RefinementCommand::Refine;
+  } 
+  else if ( not marker.willBeRefined() and tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)  ) { 
+    int index = 0;
+    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
+        refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
+          fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
+          ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
+          ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+          0.0
+        );
+        index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+    }
+     
+    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
+      refinementCriterion = ::exahype2::RefinementCommand::Keep;
+    } 
+    else if (refinementCriterion==::exahype2::RefinementCommand::Erase ) {
+      logDebug( "touchCellFirstTime(...)", "drop coarsen instructions, as we are in initial grid setup phase" );
+      refinementCriterion = ::exahype2::RefinementCommand::Keep;
+    } 
+  }
+  else if ( 
+    {{PREDICATE}}
+    and
+    fineGridCell{{CELL_LABEL_NAME}}.getHasUpdated()
   ) { 
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
@@ -60,36 +95,20 @@ class AMROnPatch(AbstractFVActionSet):
     if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
-    else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
+    else if (refinementCriterion==::exahype2::RefinementCommand::Erase and 3.0* tarch::la::max( marker.h() ) > repositories::{{SOLVER_INSTANCE}}.MaxAdmissiblePatchH ) {
       refinementCriterion = ::exahype2::RefinementCommand::Keep;
     } 
   }
-  else if ( not marker.isRefined() and tarch::la::equals(repositories::{{SOLVER_INSTANCE}}.getMinTimeStamp(),0.0)  ) { 
-    int index = 0;
-    dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
-        refinementCriterion = refinementCriterion and repositories::{{SOLVER_INSTANCE}}.refinementCriterion(
-          fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-          ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
-          ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
-          0.0
-        );
-        index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    }
-     
-    if (refinementCriterion==::exahype2::RefinementCommand::Refine and tarch::la::max( marker.h() ) < repositories::{{SOLVER_INSTANCE}}.MinAdmissiblePatchH ) {
-      refinementCriterion = ::exahype2::RefinementCommand::Keep;
-    } 
-    else if (refinementCriterion==::exahype2::RefinementCommand::Coarsen ) {
-      logDebug( "touchCellFirstTime(...)", "drop coarsen instructions, as we are in initial grid setup phase" );
-      refinementCriterion = ::exahype2::RefinementCommand::Keep;
-    } 
+  else {
+    refinementCriterion = ::exahype2::RefinementCommand::Keep;
   }
     
-  _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion );
+  _localRefinementControl.addCommand( marker.x(), marker.h(), refinementCriterion, {{EVENT_LIFETIME}} );
+  logTraceOutWith1Argument( "touchCellFirstTime(...)", toString(refinementCriterion) );
   """
   
     
-  def __init__(self, solver, guard, build_up_new_refinement_instructions, implement_previous_refinement_instructions):
+  def __init__(self, solver, guard, build_up_new_refinement_instructions, implement_previous_refinement_instructions, event_lifetime=1):
     """
     
     guard: C++ expression which evaluates to true or false
@@ -102,12 +121,16 @@ class AMROnPatch(AbstractFVActionSet):
     implement_previous_refinement_instructions: Boolean
       See remarks on multistep realisation of AMR in C++ class 
       exahype2::RefinementControl.
+      
+    event_lifetime: Int
+      See setter below
     
     """
     AbstractFVActionSet.__init__(self,solver)
     self.guard                                       = guard
     self._build_up_new_refinement_instructions       = build_up_new_refinement_instructions
     self._implement_previous_refinement_instructions = implement_previous_refinement_instructions
+    self._event_lifetime                             = event_lifetime
 
   
   def get_body_of_getGridControlEvents(self):
@@ -138,18 +161,32 @@ class AMROnPatch(AbstractFVActionSet):
       if self._solver._patch.dim[0] != self._solver._patch.dim[1]:
         raise Exception( "Error: Can only handle square patches." )
       
+      d[ "CELL_LABEL_NAME" ]    = self._solver._cell_label.name
       d[ "UNKNOWNS" ]           = str(self._solver._patch.no_of_unknowns)
       d[ "DOFS_PER_AXIS" ]      = str(self._solver._patch.dim[0])
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_2D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "NUMBER_OF_DOUBLE_VALUES_IN_ORIGINAL_PATCH_3D" ] = str(self._solver._patch.no_of_unknowns * self._solver._patch.dim[0] * self._solver._patch.dim[0] * self._solver._patch.dim[0])
       d[ "CELL_ACCESSOR" ]                                = "fineGridCell" + self._solver._patch.name
-      d[ "PREDICATE" ]          = self.guard
+      d[ "PREDICATE" ]          = "not marker.willBeRefined() and not marker.hasBeenRefined() and " + self.guard
+      d[ "EVENT_LIFETIME"]      = self._event_lifetime
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)      
       result = jinja2.Template( self.TemplateAMR ).render(**d)
 
     return result
 
+  
+  def set_event_lifetime(self,value):
+    """
+    
+     By default, a refinement/coarsening event is only alive for one grid sweep. 
+     After that one, the set of refine/coarsen commands is reset and we start
+     again. If you work with local time stepping, subcycling, multiphysics codes,
+     you might want to keep an event for more steps. In this case, you have to 
+     invoke this setter.
+     
+    """
+    self._event_lifetime = value
 
   def get_attributes(self):
     return """

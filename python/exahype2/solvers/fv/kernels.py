@@ -13,7 +13,7 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_ti
   return """
   assertion( _minVolumeH >= 0.0 );
   assertion( MaxAdmissibleVolumeH > 0.0 );
-  assertion( _minVolumeH <= MaxAdmissibleVolumeH );
+  assertion2( _minVolumeH <= MaxAdmissibleVolumeH, _minVolumeH, MaxAdmissibleVolumeH );
   _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minVolumeH / MaxAdmissibleVolumeH;
 """
 
@@ -22,7 +22,7 @@ def create_finish_time_step_implementation_for_local_time_stepping():
   return """
   assertion( _minVolumeH >= 0.0 );
   assertion( MaxAdmissibleVolumeH > 0.0 );
-  assertion( _minVolumeH <= MaxAdmissibleVolumeH );
+  assertion2( _minVolumeH <= MaxAdmissibleVolumeH, _minVolumeH, MaxAdmissibleVolumeH );
 """
 
 

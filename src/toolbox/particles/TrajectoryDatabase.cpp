@@ -21,14 +21,17 @@ toolbox::particles::TrajectoryDatabase::Entry::Entry( const TrajectoryDatabase& 
 }
 
 
-toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta, double dataDelta, bool clearDatabaseAfterFlush ):
+toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta, double dataDelta, bool clearDatabaseAfterFlush, bool deltasAreRelative ):
   _fileName(""),
   _dataDelta(dataDelta),
   _positionDelta(positionDelta),
+  _maxDataDelta(0.0),
+  _maxPositionDelta(0.0),
   _numberOfDataPointsPerParticle(0),
   _deltaBetweenTwoDatabaseFlushes(growthBetweenTwoDatabaseFlushes),
   _thresholdForNextDatabaseFlush(growthBetweenTwoDatabaseFlushes==0 ? std::numeric_limits<int>::max() : _deltaBetweenTwoDatabaseFlushes),
   _clearDatabaseAfterFlush(clearDatabaseAfterFlush),
+  _deltasAreRelative(deltasAreRelative),
   _rank(-1) {
 }
 
@@ -144,15 +147,19 @@ void toolbox::particles::TrajectoryDatabase::setOutputPrecision( int precision )
   _precision = precision;
 }
 
-void toolbox::particles::TrajectoryDatabase::setDataDeltaBetweenTwoSnapshots( double value ) {
+void toolbox::particles::TrajectoryDatabase::setDataDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative ) {
   assertion(value>=0.0);
   _dataDelta = value;
+  _maxDataDelta = 0.0;
+  _deltasAreRelative = deltasAreRelative;
 }
 
 
-void toolbox::particles::TrajectoryDatabase::setPositionDeltaBetweenTwoSnapshots( double value ) {
+void toolbox::particles::TrajectoryDatabase::setPositionDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative ) {
   assertion(value>=0.0);
   _positionDelta = value;
+  _maxPositionDelta = 0.0;
+  _deltasAreRelative = deltasAreRelative;
 }
 
 
@@ -170,6 +177,8 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
   }
   else {
     tarch::la::Vector<Dimensions,double> oldX = _data.at(number).front().x;
+    double delta = tarch::la::norm2(oldX-x);
+    _maxPositionDelta = std::max(delta,_maxPositionDelta);
     if (
       tarch::la::equals( _data.at(number).front().timestamp, timestamp )
       and
@@ -183,10 +192,11 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
     ) {
       return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Ignore;
     }
-    else if (
-      tarch::la::normMax(oldX-x)>=_positionDelta
-    ) {
-      return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Replace;
+    else if ( _deltasAreRelative and _maxPositionDelta>=_deltaCutOffThreshold and delta/_maxPositionDelta>=_positionDelta ) {
+      return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Append;
+    }
+    else if ( not _deltasAreRelative and delta>=_positionDelta ) {
+      return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Append;
     }
     else {
       return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Ignore;
@@ -206,6 +216,8 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
 
   if (result == toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Ignore) {
     for (int i=0; i<numberOfDataEntries; i++) {
+      const double delta = std::abs( _data.at(number).front().data[i] - data[i] );
+      _maxDataDelta = std::max( _maxDataDelta, delta );
       if (
         std::abs( _data.at(number).front().data[i] - data[i] ) > _dataDelta
         and
@@ -214,9 +226,10 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
         logWarning( "getAction(...)", "particle " << number.first << "x" << number.second << " at " << x << " has different values for same time stamp " << timestamp << ". This is inconsistent");
         return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Replace;
       }
-      else if (
-        std::abs( _data.at(number).front().data[i] - data[i] ) > _dataDelta
-      ) {
+      else if ( _deltasAreRelative and _maxDataDelta>=_deltaCutOffThreshold and delta/_deltaCutOffThreshold >= _dataDelta ) {
+        return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Append;
+      }
+      else if ( not _deltasAreRelative and delta >= _dataDelta ) {
         return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Append;
       }
     }

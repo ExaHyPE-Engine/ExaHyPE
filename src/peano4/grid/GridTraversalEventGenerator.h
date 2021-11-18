@@ -56,6 +56,7 @@ class peano4::grid::GridTraversalEventGenerator {
      * @param spacetreeStateIsRunning  spacetreeState == SpacetreeState::Running
      */
     GridTraversalEvent createGenericCellTraversalEvent(
+      GridVertex                                coarseGridVertices[TwoPowerD],
       GridVertex                                fineGridVertices[TwoPowerD],
       const AutomatonState&                     state,
       const SplitSpecification&                 splitTriggered,
