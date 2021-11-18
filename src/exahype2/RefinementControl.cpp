@@ -60,7 +60,8 @@ std::vector< peano4::grid::GridControlEvent >  exahype2::RefinementControl::getG
 void exahype2::RefinementControl::addCommand(
   const tarch::la::Vector<Dimensions,double>&  x,
   const tarch::la::Vector<Dimensions,double>&  h,
-  exahype2::RefinementCommand                  command
+  exahype2::RefinementCommand                  command,
+  int                                          lifetime
 ) {
   logTraceInWith3Arguments( "addCommand()", x, h, ::toString(command) );
   switch (command) {
@@ -79,7 +80,7 @@ void exahype2::RefinementControl::addCommand(
 
         assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
         assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
-        _newEvents.push_back( newEvent );
+        _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(newEvent, lifetime) );
         logDebug( "addCommend()", "added refinement for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
       }
       break;
@@ -100,7 +101,7 @@ void exahype2::RefinementControl::addCommand(
 
         assertionNumericalEquals1( newEvent.getWidth(0), newEvent.getWidth(1), newEvent.toString() );
         assertionNumericalEquals1( newEvent.getH(0), newEvent.getH(1), newEvent.toString() );
-        _newEvents.push_back( newEvent );
+        _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(newEvent, lifetime) );
         logDebug( "addCommend()", "added erase for x=" << x << ", h=" << h << ": " << newEvent.toString() << " (total of " << _newEvents.size() << " instructions)" );
       }
       break;
@@ -110,14 +111,22 @@ void exahype2::RefinementControl::addCommand(
 
 
 void exahype2::RefinementControl::finishStep() {
-  if (_newEvents.size()==1) {
-    logInfo( "finishStep()", "activate refinement/erase instruction " << _newEvents.begin()->toString() << " (can be taken into account in next grid sweep)" );
-  }
-  else if (not _newEvents.empty()) {
+  if (not _newEvents.empty()) {
     logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep)" );
   }
   _committedEvents.clear();
-  _committedEvents.insert( _committedEvents.end(), _newEvents.begin(), _newEvents.end() );
+
+  NewEvents::iterator p = _newEvents.begin();
+  while (p!=_newEvents.end()) {
+    _committedEvents.push_back( p->first );
+    p->second--;
+    if (p->second<=0) {
+      p = _newEvents.erase(p);
+    }
+    else {
+      p++;
+    }
+  }
   _newEvents.clear();
 }
 

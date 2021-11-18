@@ -119,7 +119,8 @@ class exahype2::RefinementControl {
     void addCommand(
       const tarch::la::Vector<Dimensions,double>&  x,
       const tarch::la::Vector<Dimensions,double>&  h,
-      exahype2::RefinementCommand                  command
+      exahype2::RefinementCommand                  command,
+      int                                          lifetime
     );
 
     void merge( const RefinementControl& control );
@@ -130,28 +131,31 @@ class exahype2::RefinementControl {
     void finishStep();
 
     std::string toString() const;
+
   private:
-	  static tarch::logging::Log  _log;
+    static tarch::logging::Log  _log;
 
-	  static tarch::multicore::BooleanSemaphore  _semaphore;
+    static tarch::multicore::BooleanSemaphore  _semaphore;
 
-	  /**
-	   * We blow up the region around refinement criterion slightly.
-	   */
-	  const double _Tolerance;
+    /**
+     * We blow up the region around refinement criterion slightly.
+     */
+    const double _Tolerance;
 
-	  /**
-	   * Container to accumulate new events. This is a list as we may assume
-	   * that a lot of inserts are done per iteration.
-	   */
-	  std::list< peano4::grid::GridControlEvent >    _newEvents;
+    typedef std::list< std::pair<peano4::grid::GridControlEvent,int> >  NewEvents;
 
-	  /**
-	   * Container with all the valid events. This is a vector as it changes
-	   * infrequently and as the classes that request the events expect a
-	   * vector.
-	   */
-	  std::vector< peano4::grid::GridControlEvent >  _committedEvents;
+    /**
+     * Container to accumulate new events. This is a list as we may assume
+     * that a lot of inserts are done per iteration.
+     */
+    NewEvents    _newEvents;
+
+    /**
+     * Container with all the valid events. Is an extract from _newEvents
+     * which is built up in finishStep() and then handed out to Peano once
+     * it asks.
+     */
+    std::vector< peano4::grid::GridControlEvent >  _committedEvents;
 };
 
 #endif
