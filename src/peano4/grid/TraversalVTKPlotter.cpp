@@ -112,7 +112,7 @@ void peano4::grid::TraversalVTKPlotter::storeCell(
 void peano4::grid::TraversalVTKPlotter::enterCell(
   const GridTraversalEvent&  event
 ) {
-  bool plot = event.getIsRefined()==0 and event.getIsCellLocal();
+  bool plot = event.getWillBeRefined()==0 and event.getIsCellLocal();
   if (plot) {
     plotCell(event);
   }

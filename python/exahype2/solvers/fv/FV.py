@@ -340,8 +340,8 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     """
     self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
     self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
-    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
-    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AMROnPatch(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True, implement_previous_refinement_instructions=True )
     self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_guard())
     self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
@@ -356,23 +356,23 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 
 
   def _store_cell_data_default_guard(self):
-    return "not marker.isRefined() " + \
+    return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_cell_data_default_guard(self):
-    return "not marker.isRefined() " + \
+    return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
 
 
   def _store_face_data_default_guard(self):
-    return "not marker.isRefined() " + \
+    return "not marker.willBeRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction"
   
   
   def _load_face_data_default_guard(self):
-    return "not marker.isRefined() " + \
+    return "not marker.hasBeenRefined() " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridConstruction " + \
            "and repositories::" + self.get_name_of_global_instance() + ".getSolverState()!=" + self._name + "::SolverState::GridInitialisation"
   
@@ -504,13 +504,28 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
      Consult the discussion in add_actions_to_init_grid() around the order
      of the individual action sets.
      
+     It is important that we have the coupling/dynamic AMR part in here, as 
+     there might be pending AMR refinement requests that now are realised.
+     For the same reason, we need the update of the face label and the update
+     of the cell label in here: The AMR might just propagate over into the
+     plotting, i.e. we might create new grid entities throughout the plot.
+     These entities (faces and cells) have to be initialised properly. 
+     Otherwise, their un-initialised data will propagate through to the next
+     time step.
+     
+     To make the restriction work, we have to project the solutions onto the 
+     faces.
+     
     """
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
-    # There should be none of these actually, as we don't roll over any updates in this step.    
-    # step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_roll_over_update_of_faces )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
 
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
@@ -537,6 +552,7 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 #include "../repositories/SolverRepository.h"
 """
       ))
+      
     pass
    
  

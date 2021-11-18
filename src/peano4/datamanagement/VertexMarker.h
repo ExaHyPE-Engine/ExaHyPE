@@ -33,9 +33,10 @@ struct peano4::datamanagement::VertexMarker {
 
     int _select;
 
-    std::bitset<TwoPowerD>  _isRefined;
+    std::bitset<TwoPowerD>  _hasBeenRefined;
+    std::bitset<TwoPowerD>  _willBeRefined;
     std::bitset<TwoPowerD>  _isLocal;
-    std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
+    //std::bitset<TwoPowerD>  _isAdjacentToParallelDomainBoundary;
 
     /**
      * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
@@ -69,8 +70,11 @@ struct peano4::datamanagement::VertexMarker {
      * A vertex is refined iff it is surrounded by @f$ 2^d @f$ cells which are
      * refined.
      */
-    bool isRefined() const;
-    bool isRefined(int i) const;
+    bool hasBeenRefined() const;
+    bool hasBeenRefined(int i) const;
+
+    bool willBeRefined() const;
+    bool willBeRefined(int i) const;
 
     /**
      * @see isLocal(int) for currently selected/represented vertex
@@ -82,8 +86,8 @@ struct peano4::datamanagement::VertexMarker {
      */
     bool isLocal(int i) const;
 
-    bool isAdjacentToParallelDomainBoundary() const;
-    bool isAdjacentToParallelDomainBoundary(int i) const;
+    //bool isAdjacentToParallelDomainBoundary() const;
+    //bool isAdjacentToParallelDomainBoundary(int i) const;
 
     /**
      * Return relative position within father cell. The result is from

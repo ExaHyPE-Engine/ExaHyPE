@@ -1,24 +1,22 @@
 
 
 template <int NumberOfDoFsPerAxisInPatch>
-void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear_precomputed_operators(
+void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_precomputed_operators(
       const peano4::datamanagement::FaceMarker& marker,
       int                                       numberOfDoFsPerAxisInPatch,
       int                                       overlap,
       int                                       unknowns,
       double*                                   fineGridValues,
-      double*                                   coarseGridValues,
-      bool                                      swapInsideOutside
+      double*                                   coarseGridValues
 ) {
   assertionEquals( NumberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch );
   assertion(overlap==1);
 
   const int  normal                        = marker.getSelectedFaceNumber() % Dimensions;
-  const bool pickLeftHalfOfHaloOnFineGrid  = (marker.getSelectedFaceNumber() < Dimensions) xor swapInsideOutside;
 
   #if Dimensions==2
-  if ( normal==0 and pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,1,1) );
+  if ( normal==0 ) {
+    static tarch::la::DynamicMatrix P( internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,0) );
     int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
     P.batchedMultiplyAoS(
       fineGridValues, // image
@@ -28,30 +26,8 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear_pr
       matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
     );
   }
-  else if ( normal==0 and not pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,0,1) );
-    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
-    P.batchedMultiplyAoS(
-      fineGridValues, // image
-      coarseGridValues,  // preimage
-      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
-      numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-      matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
-    );
-  }
-  else if (normal==1 and pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch) );
-    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0);
-    P.batchedMultiplyAoS(
-      fineGridValues, // image
-      coarseGridValues,  // preimage
-      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
-      numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-      matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
-    );
-  }
-  else if (normal==1 and not pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch) );
+  else if ( normal==1 ) {
+    static tarch::la::DynamicMatrix P( internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,1) );
     int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0);
     P.batchedMultiplyAoS(
       fineGridValues, // image
@@ -62,8 +38,8 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear_pr
     );
   }
   #elif Dimensions==3
-  if ( normal==0 and pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,1,1) );
+  if ( normal==0 ) {
+    static tarch::la::DynamicMatrix P( internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,0) );
     int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1) + marker.getRelativePositionWithinFatherCell()(2)*3;
     P.batchedMultiplyAoS(
       fineGridValues, // image
@@ -73,19 +49,8 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear_pr
       matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
     );
   }
-  else if ( normal==0 and not pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,1,0,1) );
-    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1) + marker.getRelativePositionWithinFatherCell()(2)*3;
-    P.batchedMultiplyAoS(
-      fineGridValues, // image
-      coarseGridValues,  // preimage
-      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
-      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-      matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
-    );
-  }
-  else if (normal==1 and pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch) );
+  else if ( normal==1 ) {
+    static tarch::la::DynamicMatrix P( internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,1) );
     int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(2)*3;
     P.batchedMultiplyAoS(
       fineGridValues, // image
@@ -95,30 +60,8 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear_pr
       matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
     );
   }
-  else if (normal==1 and not pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch) );
-    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(2)*3;
-    P.batchedMultiplyAoS(
-      fineGridValues, // image
-      coarseGridValues,  // preimage
-      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
-      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-      matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
-    );
-  }
-  else if (normal==2 and pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch) );
-    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(1)*3;
-    P.batchedMultiplyAoS(
-      fineGridValues, // image
-      coarseGridValues,  // preimage
-      unknowns,          // batch size, i.e. how often to apply it in one AoS rush
-      numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-      matrixRowBlock * numberOfDoFsPerAxisInPatch * numberOfDoFsPerAxisInPatch * 2
-    );
-  }
-  else if (normal==2 and not pickLeftHalfOfHaloOnFineGrid ) {
-    static tarch::la::DynamicMatrix P( internal::create1dLinearInterpolation(numberOfDoFsPerAxisInPatch,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch,0,numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch) );
+  else if (normal==2) {
+    static tarch::la::DynamicMatrix P( internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,2) );
     int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0) + marker.getRelativePositionWithinFatherCell()(1)*3;
     P.batchedMultiplyAoS(
       fineGridValues, // image
@@ -129,21 +72,6 @@ void toolbox::blockstructured::interpolateOntoOuterHalfOfHaloLayer_AoS_linear_pr
     );
   }
   #endif
-}
-
-
-template <int NumberOfDoFsPerAxisInPatch>
-void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_precomputed_operators(
-      const peano4::datamanagement::FaceMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       overlap,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
-) {
-  assertionEquals( NumberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch );
-  interpolateOntoOuterHalfOfHaloLayer_AoS_linear_precomputed_operators<NumberOfDoFsPerAxisInPatch>(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,false);
-  interpolateOntoOuterHalfOfHaloLayer_AoS_linear_precomputed_operators<NumberOfDoFsPerAxisInPatch>(marker,numberOfDoFsPerAxisInPatch,overlap,unknowns,fineGridValues,coarseGridValues,true);
 }
 
 

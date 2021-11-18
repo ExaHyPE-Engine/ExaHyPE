@@ -256,6 +256,19 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
   protected:
     static tarch::logging::Log  _log;
 
+    /**
+     * As we work with enclave tasking, we have to run multiple grid sweeps
+     * per time step. With this routine, you can find out if the current
+     * sweep (in beginIteration(), e.g.) is the first one.
+     *
+     * Throughout the traversal, this field is correct. If you query it in
+     * startTimeStep(), you have to be aware that the abstract solver's
+     * implementations switches the state. After you've called the abstract
+     * solver's implementation, the predicate is correct. Before, you have
+     * to negate it.
+     */
+    bool isFirstGridSweepOfTimeStep() const;
+
     SolverState  _solverState;
 
     double     _minTimeStamp;
