@@ -132,6 +132,7 @@ int main(int argc, char** argv) {
 
     for (int i=0; i<100; i++) {
       for (int j=0; j<10; j++) {
+        logInfo( "main()", "run timestep" )
         examples::particles::observers::Move moveObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(moveObserver);
       }
