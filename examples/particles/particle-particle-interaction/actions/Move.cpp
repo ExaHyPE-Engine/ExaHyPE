@@ -64,6 +64,9 @@ void examples::particles::actions::Move::touchVertexFirstTime(
       examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+  for (auto& p: fineGridVertexParticleSet) {
+    p->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
+  }
 }
 
 
@@ -72,12 +75,12 @@ void examples::particles::actions::Move::touchVertexLastTime(
       examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-  const double timeStepSize = 0.001;
+  const double timeStepSize = 0.0001;
   for (auto& p: fineGridVertexParticleSet) {
     if (
       p->getMoveState()!=globaldata::Particle::MoveState::Moved
       and
-      p->getParallelState()!=globaldata::Particle::ParallelState::Local
+      p->getParallelState()==globaldata::Particle::ParallelState::Local
     ) {
       p->setX( p->getX() + timeStepSize * p->getV() );
       for (int d=0; d<Dimensions; d++) {
@@ -91,7 +94,6 @@ void examples::particles::actions::Move::touchVertexLastTime(
     }
     p->setMoveState( globaldata::Particle::MoveState::Moved );
   }
-
 }
 
 
@@ -110,13 +112,6 @@ void examples::particles::actions::Move::destroyCell(
       examples::particles::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "destroyCell()" );
-// @todo Please implement
-// logTraceOut( "destroyCell()" );
-
 }
 
 
@@ -145,7 +140,7 @@ void examples::particles::actions::Move::touchCellFirstTime(
           const double mass2 = pp->getCutOffRadius();
           double forceQuantity = mass1 * mass2 / tarch::la::norm2(dist) / tarch::la::norm2(dist);
           p->setV(
-            p->getV() + 0.0001 * forceQuantity / tarch::la::norm2(dist) * dist
+            p->getV() + 0.001 * forceQuantity / tarch::la::norm2(dist) * dist
           );
         }
       }
@@ -160,13 +155,6 @@ void examples::particles::actions::Move::touchCellLastTime(
       examples::particles::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "touchCellLastTime()" );
-// @todo Please implement
-// logTraceOut( "touchCellLastTime()" );
-
 }
 
 
