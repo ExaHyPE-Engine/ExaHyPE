@@ -102,7 +102,7 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
         hasInserted = true;
       }
       else if ( refinementEventOverrulesCoarsening(currentEvent,*i) ) {
-        logInfo( "merge(...)", "replace event " << i->toString() << " with " << currentEvent.toString() );
+        logDebug( "merge(...)", "replace event " << i->toString() << " with " << currentEvent.toString() );
         *i = currentEvent;
         i = result.end();
         hasInserted = true;

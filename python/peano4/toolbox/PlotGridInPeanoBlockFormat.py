@@ -7,9 +7,10 @@ import jinja2
 
 
 class PlotGridInPeanoBlockFormat(ActionSet):
-  NoMetaFile = "no-meta-file"
+  NoMetaFile     = "no-meta-file"
+  CountTimeSteps = "count-time-steps"
   
-  def __init__(self, filename, cell_unknown, time_stamp_evaluation=NoMetaFile, guard_predicate="true", additional_includes=""):
+  def __init__(self, filename, cell_unknown=None, time_stamp_evaluation=NoMetaFile, guard_predicate="true", additional_includes=""):
     """
       Plot only the grid structure
       
@@ -24,8 +25,9 @@ class PlotGridInPeanoBlockFormat(ActionSet):
          one you choose. If you don't have cell unknowns at all, pass in 
          None.
          
-      time_stamp_evaluation String
-                       C++ expression returning a double                       
+      time_stamp_evaluation: String
+         C++ expression returning a double. You can also hand in NoMetaFile
+         or CountTimeSteps.         
           
     """
     self.d = {}
@@ -95,7 +97,8 @@ class PlotGridInPeanoBlockFormat(ActionSet):
   assertion( _dataWriter!=nullptr );
   
   double markerData[] = {
-    marker.isRefined() ? 1.0 : 0.0,
+    marker.hasBeenRefined() ? 1.0 : 0.0,
+    marker.willBeRefined() ? 1.0 : 0.0,
     marker.isLocal() ? 1.0 : 0.0,
     marker.isEnclaveCell() ? 1.0 : 0.0
   };
@@ -117,18 +120,29 @@ class PlotGridInPeanoBlockFormat(ActionSet):
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
 
+  {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
   _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
     Dimensions, snapshotFileName.str(), "{{FILENAME}}",
-    {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::NoIndexFile,
     0.0
-    {% else %}
+  );
+  {% elif TIMESTAMP==\"""" + CountTimeSteps + """\" %}
+  static int timeStep = -1;
+  timeStep++;
+  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
+    tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
+    timeStep
+  );
+  {% else %}
+  _writer = new tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter(
+    Dimensions, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::IndexFileMode::AppendNewData,
     {{TIMESTAMP}}
-    {% endif %}
   );    
+  {% endif %}
       
-  _dataWriter = _writer->createCellDataWriter( "cell-marker", 1, 3, "refined,local,enclave" );
+  _dataWriter = _writer->createCellDataWriter( "cell-marker", 1, 4, "is-refined,has-been-refined,local,enclave" );
 """)
 
 

@@ -36,16 +36,10 @@
 #include "exahype2/UnitTests.h"
 
 
-#if defined(UseSmartMPI)
-#endif
-
-
 using namespace {FULL_NAMESPACE};
 
 
-
 tarch::logging::Log _log("::");
-
 
 
 tarch::timing::Measurement   gridConstructionMeasurement;
@@ -234,10 +228,6 @@ bool selectNextAlgorithmicStep() {{
 
 
 void step() {{
-  #if defined(UseSmartMPI)
-  smartmpi::registerNewTimeStep();
-  #endif
-
   int  stepIdentifier = peano4::parallel::Node::getInstance().getCurrentProgramStep();
   auto stepName       = repositories::StepRepository::toStepEnum(stepIdentifier);
 

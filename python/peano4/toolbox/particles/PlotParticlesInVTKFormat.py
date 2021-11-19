@@ -8,7 +8,8 @@ import jinja2
 
 class PlotParticlesInVTKFormat(ActionSet):
   NoMetaFile = "no-meta-file"
-  
+  CountTimeSteps = "count-time-steps"
+
   """
 
    By default, I plot the point particles (obviously) and drop their
@@ -136,16 +137,27 @@ class PlotParticlesInVTKFormat(ActionSet):
     snapshotFileName << "-rank-" << tarch::mpi::Rank::getInstance().getRank();
   }
   
+  {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
   _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
     false, snapshotFileName.str(), "{{FILENAME}}",
-    {% if TIMESTAMP==\"""" + NoMetaFile + """\" %}
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::NoIndexFile,
     0.0
-    {% else %}
+  );
+  {% elif TIMESTAMP==\"""" + CountTimeSteps + """\" %}
+  static int timeStep = -1;
+  timeStep++;
+  _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
+    false, snapshotFileName.str(), "{{FILENAME}}",
+    tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
+    timeStep
+  );
+  {% else %}
+  _writer = new tarch::plotter::pointdata::vtk::VTKWriter(
+    false, snapshotFileName.str(), "{{FILENAME}}",
     tarch::plotter::PVDTimeSeriesWriter::IndexFileMode::AppendNewData,
     {{TIMESTAMP}}
-    {% endif %}
   );    
+  {% endif %}
       
   _positionWriter    = _writer->createPointDataWriter( "x", 3 );
   _cutOffWriter      = _writer->createPointDataWriter( "cut-off-radius", 1 );
@@ -182,7 +194,6 @@ class PlotParticlesInVTKFormat(ActionSet):
     if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
       result = self.__Template_TouchVertexFirstTime.render(**self.d)
     if operation_name==ActionSet.OPERATION_BEGIN_TRAVERSAL:
-      print( self.d )
       result = self.__Template_BeginTraversal.render(**self.d)
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = self.__Template_EndTraversal.render(**self.d)
