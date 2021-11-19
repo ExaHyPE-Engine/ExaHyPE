@@ -11,7 +11,7 @@ import dastgen2.attributes.Integer
 
 
 class ParticleParticleInteraction(ActionSet):
-  def __init__(self,particle_set,cell_compute_kernel,touch_vertex_first_time_compute_kernel="",additional_includes="", guard="true"):
+  def __init__(self, particle_set, cell_compute_kernel, touch_vertex_first_time_compute_kernel=None, touch_vertex_last_time_compute_kernel=None, additional_includes="", guard="true", active_particle_set=None ):
     """
 
     This code snippet creates a tree walker, i.e. an action set that runs
@@ -72,43 +72,78 @@ class ParticleParticleInteraction(ActionSet):
       a list of particles called activeParticles, there's a list of particles
       called localParticles, and there's the cell marker. See the guidebook
       for further info.
-
-    cell_compute_kernel: String holding C++ code
+      
+    active_particle_set: ParticleSet or None
+      You can compare different particles species with this argument. It
+      allows you to make the active particles stem from another species than
+      the local ones that you actually update. Pick None if both sets are of
+      the same type.
+      
+    touch_vertex_first_time_compute_kernel: String or None
+      Can be empty, but if you wanna move particles, then a minimal example
+      string passed equals
+        
+          localParticle->setMoveState( globaldata::Particle::MoveState::NotMovedYet );
+   
+      i.e. you will have a variable localParticle available in this kernel
+      and it is a pointer.
 
     """
     self._particle_set = particle_set
     self.d = {}
-    self.d[ "PARTICLE" ]                 = particle_set.particle_model.name
-    self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
-    self.d[ "CELL_COMPUTE_KERNEL" ]      = cell_compute_kernel
-    self.d[ "VERTEX_COMPUTE_KERNEL" ]    = touch_vertex_first_time_compute_kernel
-    self.d[ "ADDITIONAL_INCLUDES" ]      = additional_includes
-    self.d[ "GUARD" ]                    = guard
+    self.d[ "LOCAL_PARTICLE" ]                    = particle_set.particle_model.name
+    self.d[ "LOCAL_PARTICLES_CONTAINER" ]         = particle_set.name
+    if active_particle_set==None:
+      self.d[ "ACTIVE_PARTICLE" ]                 = particle_set.particle_model.name
+      self.d[ "ACTIVE_PARTICLES_CONTAINER" ]      = particle_set.name
+    else:
+      self.d[ "ACTIVE_PARTICLE" ]                 = active_particle_set.particle_model.name
+      self.d[ "ACTIVE_PARTICLES_CONTAINER" ]      = active_particle_set.name
+    self.d[ "CELL_COMPUTE_KERNEL" ]               = cell_compute_kernel
+    self.d[ "TOUCH_VERTEX_FIRST_COMPUTE_KERNEL" ] = touch_vertex_first_time_compute_kernel
+    self.d[ "TOUCH_VERTEX_LAST_COMPUTE_KERNEL" ]  = touch_vertex_last_time_compute_kernel
+    self.d[ "ADDITIONAL_INCLUDES" ]               = additional_includes
+    self.d[ "GUARD" ]                             = guard
     
 
   __Template_TouchVertexFirstTime = jinja2.Template("""
-  auto& localParticles = fineGridVertex{{PARTICLES_CONTAINER}};
-  {{VERTEX_COMPUTE_KERNEL}};
+  auto& localParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  for (auto& localParticle: localParticles ) {
+    {{TOUCH_VERTEX_FIRST_COMPUTE_KERNEL}}
+  }
+""")
+
+
+  __Template_TouchVertexLastTime = jinja2.Template("""
+  auto& localParticles = fineGridVertex{{LOCAL_PARTICLES_CONTAINER}};
+  for (auto& localParticle: localParticles ) {
+    {{TOUCH_VERTEX_LAST_COMPUTE_KERNEL}}
+  }
 """)
 
 
   __Template_TouchCellFirstTime = jinja2.Template("""
   if ( {{GUARD}} ) {
-    std::list< globaldata::{{PARTICLE}}* >  localParticles;
+    std::list< globaldata::{{LOCAL_PARTICLE}}* >  localParticles;
     _numberOfActiveParticlesAdded.push_back(0);
     for (int i=0; i<TwoPowerD; i++) {
-      for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
+      for (auto& p: fineGridVertices{{ACTIVE_PARTICLES_CONTAINER}}(i) ) {
+        _activeParticles.push_front( p );
+        _numberOfActiveParticlesAdded.back()++;
+      }
+      for (auto& p: fineGridVertices{{LOCAL_PARTICLES_CONTAINER}}(i) ) {
         bool append = marker.isContained( p->getX() );
         if (append) {
           localParticles.push_front( p );
         }
-        _activeParticles.push_front( p );
-        _numberOfActiveParticlesAdded.back()++;
       }
     }
 
-    std::list< globaldata::{{PARTICLE}}* >&  activeParticles = _activeParticles;
-    {{CELL_COMPUTE_KERNEL}};
+    std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
+    for (auto& localParticle: localParticles )
+    for (auto& activeParticle: activeParticles ) {
+      {{CELL_COMPUTE_KERNEL}}
+    }
   }
 """)
 
@@ -134,8 +169,10 @@ class ParticleParticleInteraction(ActionSet):
       result = self.__Template_TouchCellFirstTime.render(**self.d)
     if operation_name==ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       result = self.__Template_TouchCellLastTime.render(**self.d)
-    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME:
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_FIRST_TIME and self.d[ "TOUCH_VERTEX_FIRST_COMPUTE_KERNEL" ]!=None:
       result = self.__Template_TouchVertexFirstTime.render(**self.d)
+    if operation_name==ActionSet.OPERATION_TOUCH_VERTEX_LAST_TIME and self.d[ "TOUCH_VERTEX_LAST_COMPUTE_KERNEL" ]!=None:
+      result = self.__Template_TouchVertexLastTime.render(**self.d)
     if operation_name==ActionSet.OPERATION_END_TRAVERSAL:
       result = self.__Template_EndTraversal.render(**self.d)
     return result
@@ -156,8 +193,10 @@ class ParticleParticleInteraction(ActionSet):
   def get_includes(self):
     result = jinja2.Template( """
 #include "tarch/multicore/Lock.h"
-#include "vertexdata/{{PARTICLES_CONTAINER}}.h"
-#include "globaldata/{{PARTICLE}}.h"
+#include "vertexdata/{{LOCAL_PARTICLES_CONTAINER}}.h"
+#include "globaldata/{{LOCAL_PARTICLE}}.h"
+#include "vertexdata/{{ACTIVE_PARTICLES_CONTAINER}}.h"
+#include "globaldata/{{ACTIVE_PARTICLE}}.h"
 
 {{ADDITIONAL_INCLUDES}}
 
@@ -169,7 +208,7 @@ class ParticleParticleInteraction(ActionSet):
 
   def get_attributes(self):
     result = jinja2.Template( """
-  std::list< globaldata::{{PARTICLE}}* >  _activeParticles;
-  std::vector< int >                      _numberOfActiveParticlesAdded;
+  std::list< globaldata::{{ACTIVE_PARTICLE}}* >  _activeParticles;
+  std::vector< int >                             _numberOfActiveParticlesAdded;
 """)
     return result.render(**self.d)
