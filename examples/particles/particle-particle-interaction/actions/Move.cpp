@@ -1,49 +1,29 @@
 #include "Move.h"
+#include "globaldata/Particle.h"
+#include "peano4/utils/Loop.h"
 
 
 tarch::logging::Log examples::particles::actions::Move::_log( "examples::particles::actions::Move");
 
 
-
-
-
 examples::particles::actions::Move::Move(int treeNumber) {
-// @todo Please implement
 }
 
 
 examples::particles::actions::Move::~Move() {
-// @todo Please implement
 }
 
 
 std::vector< peano4::grid::GridControlEvent > examples::particles::actions::Move::getGridControlEvents() const {
-// @todo Please implement
 return std::vector< peano4::grid::GridControlEvent >();
 }
 
 
-void examples::particles::actions::Move::beginTraversal(
-      ) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "beginTraversal()" );
-// @todo Please implement
-// logTraceOut( "beginTraversal()" );
-
+void examples::particles::actions::Move::beginTraversal() {
 }
 
 
-void examples::particles::actions::Move::endTraversal(
-      ) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "endTraversal()" );
-// @todo Please implement
-// logTraceOut( "endTraversal()" );
-
+void examples::particles::actions::Move::endTraversal() {
 }
 
 
@@ -52,13 +32,6 @@ void examples::particles::actions::Move::createPersistentVertex(
       examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "createPersistentVertex()" );
-// @todo Please implement
-// logTraceOut( "createPersistentVertex()" );
-
 }
 
 
@@ -67,13 +40,6 @@ void examples::particles::actions::Move::destroyPersistentVertex(
       examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "destroyPersistentVertex()" );
-// @todo Please implement
-// logTraceOut( "destroyPersistentVertex()" );
-
 }
 
 
@@ -82,13 +48,6 @@ void examples::particles::actions::Move::createHangingVertex(
       examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "createHangingVertex()" );
-// @todo Please implement
-// logTraceOut( "createHangingVertex()" );
-
 }
 
 
@@ -97,13 +56,6 @@ void examples::particles::actions::Move::destroyHangingVertex(
       examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "destroyHangingVertex()" );
-// @todo Please implement
-// logTraceOut( "destroyHangingVertex()" );
-
 }
 
 
@@ -112,13 +64,6 @@ void examples::particles::actions::Move::touchVertexFirstTime(
       examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "touchVertexFirstTime()" );
-// @todo Please implement
-// logTraceOut( "touchVertexFirstTime()" );
-
 }
 
 
@@ -127,14 +72,6 @@ void examples::particles::actions::Move::touchVertexLastTime(
       examples::particles::vertexdata::ParticleSet& fineGridVertexParticleSet,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "touchVertexLastTime()" );
-// @todo Please implement
-// logTraceOut( "touchVertexLastTime()" );
-
-
   const double timeStepSize = 0.001;
   for (auto& p: fineGridVertexParticleSet) {
     if (
@@ -164,13 +101,6 @@ void examples::particles::actions::Move::createCell(
       examples::particles::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
-
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "createCell()" );
-// @todo Please implement
-// logTraceOut( "createCell()" );
-
 }
 
 
@@ -196,13 +126,31 @@ void examples::particles::actions::Move::touchCellFirstTime(
       examples::particles::celldata::ParticleSetCellStatistics& fineGridCellParticleSetCellStatistics,
       peano4::datamanagement::VertexEnumerator<examples::particles::vertexdata::ParticleSet> coarseGridVerticesParticleSet,
       examples::particles::celldata::ParticleSetCellStatistics& coarseGridCellParticleSetCellStatistics) {
+  // We collect all the particles associated to the 2^d adjacent
+  // vertices to a local set. Likely not the most efficient way
+  // to do things, but it works.
+  examples::particles::vertexdata::ParticleSet particlesInAndAroundCell;
+  for (int k=0; k<TwoPowerD; k++) {
+    particlesInAndAroundCell.insert(particlesInAndAroundCell.begin(),fineGridVerticesParticleSet(k).begin(),fineGridVerticesParticleSet(k).end());
+  }
 
-// Feel free to comment in and to add arguments if you want to trace them.
-// Ensure the logTraceOut is activated, too, if you switch on traceIn.     
-// logTraceIn( "touchCellFirstTime()" );
-// @todo Please implement
-// logTraceOut( "touchCellFirstTime()" );
-
+  // Loop over all particles. If a particle is contained within the
+  // cell, loop over all others again and compute "forces".
+  for (auto& p: particlesInAndAroundCell) {
+    if ( marker.isContained( p->getX() ) ) {
+      for (auto& pp: particlesInAndAroundCell) {
+        tarch::la::Vector<Dimensions,double> dist = pp->getX() - p->getX();
+        if ( tarch::la::greater( tarch::la::norm2(dist),0.0 ) ) {
+          const double mass1 = p->getCutOffRadius();   // made-up hack, no real physics. But illustrates principle
+          const double mass2 = pp->getCutOffRadius();
+          double forceQuantity = mass1 * mass2 / tarch::la::norm2(dist) / tarch::la::norm2(dist);
+          p->setV(
+            p->getV() + 0.0001 * forceQuantity / tarch::la::norm2(dist) * dist
+          );
+        }
+      }
+    }
+  }
 }
 
 

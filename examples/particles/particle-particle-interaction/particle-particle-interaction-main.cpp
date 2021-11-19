@@ -138,8 +138,6 @@ int main(int argc, char** argv) {
       logInfo( "main()", "plot" )
       examples::particles::observers::Plot plotTimeStepObserver;
       peano4::parallel::SpacetreeSet::getInstance().traverse(plotTimeStepObserver);
-
-      tarch::logging::CommandLineLogger::getInstance().closeOutputStreamAndReopenNewOne();
     }
 
     logInfo( "main()", "terminated successfully" )
