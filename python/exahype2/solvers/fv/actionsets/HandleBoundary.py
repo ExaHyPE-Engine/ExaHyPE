@@ -24,11 +24,11 @@ class HandleBoundary(AbstractFVActionSet):
       and
       not repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]
       and
-      not marker.isRefined() 
+      not marker.hasBeenRefined() 
       and 
       fineGridFace{{SOLVER_NAME}}FaceLabel.getBoundary()
     ) {
-      logTraceInWith3Arguments( "touchFaceFirstTime(...)---HandleBoundary", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
+      logTraceInWith3Arguments( "touchFaceFirstTime(...)", fineGridFace{{SOLVER_NAME}}FaceLabel.toString(), (repositories::{{SOLVER_INSTANCE}}.PeriodicBC[marker.getSelectedFaceNumber()%Dimensions]), marker.toString() );
       ::exahype2::fv::applyBoundaryConditions(
         [&](
           const double * __restrict__                  Qinside,
@@ -84,7 +84,10 @@ class HandleBoundary(AbstractFVActionSet):
       innerTimeStamp = {{FACE_METADATA_ACCESSOR}}.getOldTimeStamp( isLeftEntryOutside ? 1 : 0 );
       {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp( isLeftEntryOutside ? 0 : 1, innerTimeStamp );
 
-      logTraceOut( "touchFaceFirstTime(...)---HandleBoundary" );
+      logTraceOut( "touchFaceFirstTime(...)" );
+    }
+    else {
+      logDebug( "touchFaceFirstTime(...)", "skip face " << marker.toString() );
     }
 """
 

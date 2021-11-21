@@ -7,10 +7,11 @@
 
 
 
-peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __isRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing):
+peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing, bool  __parentCellIsAdjacentToChangingOrHangingVertex):
     _x(__x)
   , _h(__h)
-  , _isRefined(__isRefined)
+  , _hasBeenRefined(__hasBeenRefined)
+  , _willBeRefined(__willBeRefined)
   , _isVertexLocal(__isVertexLocal)
   , _isFaceLocal(__isFaceLocal)
   , _isCellLocal(__isCellLocal)
@@ -24,6 +25,7 @@ peano4::grid::GridTraversalEvent::GridTraversalEvent(tarch::la::Vector<Dimension
   , _relativePositionToFather(__relativePositionToFather)
   , _invokingSpacetree(__invokingSpacetree)
   , _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(__invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing)
+  , _parentCellIsAdjacentToChangingOrHangingVertex(__parentCellIsAdjacentToChangingOrHangingVertex)
   {}
 
 
@@ -35,7 +37,9 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << ","; 
   out << "h=" << _h;
   out << ","; 
-  out << "isRefined=" << _isRefined;
+  out << "hasBeenRefined=" << _hasBeenRefined;
+  out << ","; 
+  out << "willBeRefined=" << _willBeRefined;
   out << ","; 
   out << "isVertexLocal=" << _isVertexLocal;
   out << ","; 
@@ -62,6 +66,8 @@ std::string peano4::grid::GridTraversalEvent::toString() const {
   out << "invokingSpacetree=" << _invokingSpacetree;
   out << ","; 
   out << "invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing=" << _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
+  out << ","; 
+  out << "parentCellIsAdjacentToChangingOrHangingVertex=" << _parentCellIsAdjacentToChangingOrHangingVertex;
   out << ")";
   return out.str();
 }
@@ -107,28 +113,53 @@ void   peano4::grid::GridTraversalEvent::setH(int index, double value) {
 }
 
 
-std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getIsRefined() const {
-  return _isRefined;
+std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getHasBeenRefined() const {
+  return _hasBeenRefined;
 }
 
 
-void   peano4::grid::GridTraversalEvent::setIsRefined(const std::bitset<TwoPowerD>&  value) {
-  _isRefined = value;
+void   peano4::grid::GridTraversalEvent::setHasBeenRefined(const std::bitset<TwoPowerD>&  value) {
+  _hasBeenRefined = value;
 }
 
 
-bool   peano4::grid::GridTraversalEvent::getIsRefined(int index) const {
-  return _isRefined[index];
+bool   peano4::grid::GridTraversalEvent::getHasBeenRefined(int index) const {
+  return _hasBeenRefined[index];
 }
 
 
-void   peano4::grid::GridTraversalEvent::setIsRefined(int index, bool value) {
-  _isRefined[index] = value;
+void   peano4::grid::GridTraversalEvent::setHasBeenRefined(int index, bool value) {
+  _hasBeenRefined[index] = value;
 }
 
 
-void   peano4::grid::GridTraversalEvent::flipIsRefined(int index) {
-  _isRefined.flip(index);
+void   peano4::grid::GridTraversalEvent::flipHasBeenRefined(int index) {
+  _hasBeenRefined.flip(index);
+}
+
+
+std::bitset<TwoPowerD>   peano4::grid::GridTraversalEvent::getWillBeRefined() const {
+  return _willBeRefined;
+}
+
+
+void   peano4::grid::GridTraversalEvent::setWillBeRefined(const std::bitset<TwoPowerD>&  value) {
+  _willBeRefined = value;
+}
+
+
+bool   peano4::grid::GridTraversalEvent::getWillBeRefined(int index) const {
+  return _willBeRefined[index];
+}
+
+
+void   peano4::grid::GridTraversalEvent::setWillBeRefined(int index, bool value) {
+  _willBeRefined[index] = value;
+}
+
+
+void   peano4::grid::GridTraversalEvent::flipWillBeRefined(int index) {
+  _willBeRefined.flip(index);
 }
 
 
@@ -372,6 +403,16 @@ void   peano4::grid::GridTraversalEvent::setInvokingSpacetreeIsNotInvolvedInAnyD
 }
 
 
+bool   peano4::grid::GridTraversalEvent::getParentCellIsAdjacentToChangingOrHangingVertex() const {
+  return _parentCellIsAdjacentToChangingOrHangingVertex;
+}
+
+
+void   peano4::grid::GridTraversalEvent::setParentCellIsAdjacentToChangingOrHangingVertex(bool value) {
+  _parentCellIsAdjacentToChangingOrHangingVertex = value;
+}
+
+
 
 
 
@@ -445,11 +486,11 @@ int peano4::grid::GridTraversalEvent::getSenderRank() const {
 void peano4::grid::GridTraversalEvent::initDatatype() {
   peano4::grid::GridTraversalEvent  instances[2];
     
-  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_BYTE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT };
+  MPI_Datatype subtypes[] = { MPI_DOUBLE, MPI_DOUBLE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_BYTE, MPI_UNSIGNED_LONG, MPI_UNSIGNED_LONG, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_INT, MPI_BYTE };
     
-  int blocklen[] = { Dimensions, Dimensions, 1, 1, 1, 1, 1, 1, TwoPowerD, TwoPowerD, TwoTimesD, TwoTimesD, 1, Dimensions, 1, 1 };
+  int blocklen[] = { Dimensions, Dimensions, 1, 1, 1, 1, 1, 1, 1, TwoPowerD, TwoPowerD, TwoTimesD, TwoTimesD, 1, Dimensions, 1, 1, 1 };
 
-  const int NumberOfAttributes = 16;
+  const int NumberOfAttributes = 18;
     
   MPI_Aint  baseFirstInstance;
   MPI_Aint  baseSecondInstance;
@@ -461,7 +502,9 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   currentAddress++;
   MPI_Get_address( &(instances[0]._h.data()[0]), &disp[currentAddress] );
   currentAddress++;
-  MPI_Get_address( &(instances[0]._isRefined), &disp[currentAddress] );
+  MPI_Get_address( &(instances[0]._hasBeenRefined), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._willBeRefined), &disp[currentAddress] );
   currentAddress++;
   MPI_Get_address( &(instances[0]._isVertexLocal), &disp[currentAddress] );
   currentAddress++;
@@ -488,6 +531,8 @@ void peano4::grid::GridTraversalEvent::initDatatype() {
   MPI_Get_address( &(instances[0]._invokingSpacetree), &disp[currentAddress] );
   currentAddress++;
   MPI_Get_address( &(instances[0]._invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing), &disp[currentAddress] );
+  currentAddress++;
+  MPI_Get_address( &(instances[0]._parentCellIsAdjacentToChangingOrHangingVertex), &disp[currentAddress] );
   currentAddress++;
 
   MPI_Aint offset = disp[0] - baseFirstInstance;

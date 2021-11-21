@@ -35,10 +35,14 @@ struct peano4::datamanagement::CellMarker {
 
     tarch::la::Vector<Dimensions,double>  _h;
 
-    bool _isRefined;
+    bool _hasBeenRefined;
+    bool _willBeRefined;
     bool _isLocal;
     bool _areAllVerticesRefined;
     bool _isOneVertexHanging;
+    bool _isOneVertexCreatedOrDestroyed;
+
+    bool _parentIsFlaggedAsChanging;
 
     /**
      * This flag is used to identify enclave cells.
@@ -53,7 +57,22 @@ struct peano4::datamanagement::CellMarker {
   public:
     CellMarker(const peano4::grid::GridTraversalEvent& event);
 
-    bool isRefined() const;
+    /**
+     * Has the cell been refined when we kicked off this mesh traversal?
+     * This implies that the cell is refined in this sweep, as cells do
+     * not change their state throughout the traversal.
+     *
+     * @see willBeRefined()
+     */
+    bool hasBeenRefined() const;
+
+    /**
+     * Will the cell be refined in the subsequent iteration? If hasBeenRefined()
+     * returns false but willBeRefined() holds, we have a cell which Peano 4
+     * will refine between the current and the next grid sweep. If it is the
+     * other way round, Peano 4 coarsens.
+     */
+    bool willBeRefined() const;
 
     /**
      * @return x coordinate of a cell is its centre.
@@ -79,13 +98,6 @@ struct peano4::datamanagement::CellMarker {
     std::string toString() const;
 
     bool isLocal() const;
-
-    /*
-    bool areAllVerticesRefined() const;
-    bool isOneVertexHanging() const;
-    bool isAdjacentToDomainBoundary() const;
-     */
-
 
     /**
      * A enclave cell in the definition of Charrier, Hazelwood, Weinzierl is a
@@ -115,6 +127,13 @@ struct peano4::datamanagement::CellMarker {
     bool isSkeletonCell() const;
 
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
+
+    #if PeanoDebug>0
+    /**
+     * Used for debuggin
+     */
+    void setRelativePositionWithinFatherCell( int axis, int value );
+    #endif
 
     #ifdef Parallel
     /**

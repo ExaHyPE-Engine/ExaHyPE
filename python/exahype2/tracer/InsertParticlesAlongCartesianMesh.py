@@ -42,15 +42,21 @@ class InsertParticlesAlongCartesianMesh(ActionSet):
 
 
   __Template_TouchCellFirstTime = jinja2.Template("""
-  if ( not marker.isRefined() ) {
-    auto newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>({{H}},marker,{{ROUND_DOWN}},{{NOISE}});
+  if ( not marker.willBeRefined() ) {
+    auto newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>(
+      {{H}},
+      marker.x(),
+      marker.h(),
+      {{ROUND_DOWN}},
+      {{NOISE}}
+    );
     for (auto& p: newParticles) {
       p->setNumber(0,_spacetreeId);
       p->setNumber(1,_particleNumberOnThisTree);
       _particleNumberOnThisTree++;
     }
     // just insert them; will be re-assigned then anyway
-    fineGridVertices{{PARTICLES_CONTAINER}}(0).insert( fineGridVertex{{PARTICLES_CONTAINER}}.end(), newParticles.begin(), newParticles.end() );
+    fineGridVertices{{PARTICLES_CONTAINER}}(0).insert( fineGridVertices{{PARTICLES_CONTAINER}}(0).end(), newParticles.begin(), newParticles.end() );
   }
 """)
 
@@ -95,7 +101,4 @@ class InsertParticlesAlongCartesianMesh(ActionSet):
   int _particleNumberOnThisTree;
   int _spacetreeId;
 """
-#    result = jinja2.Template( """
-#  std::forward_list< globaldata::{{PARTICLE}}* >  _activeParticles;
-#""")
-#    return result.render(**self.d)
+

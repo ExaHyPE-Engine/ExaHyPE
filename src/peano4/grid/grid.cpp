@@ -8,10 +8,17 @@
 
 
 
-bool peano4::grid::overlaps( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event ) {
+bool peano4::grid::isContained( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event ) {
   return tarch::la::allGreaterEquals( state.getX(), event.getOffset() )
     and
     tarch::la::allSmallerEquals( state.getX() + state.getH(), event.getOffset()+event.getWidth() );
+}
+
+
+bool peano4::grid::overlaps( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event ) {
+  return tarch::la::allGreaterEquals( state.getX()+ state.getH(), event.getOffset() )
+    and
+    tarch::la::allSmallerEquals( state.getX(), event.getOffset()+event.getWidth() );
 }
 
 
@@ -95,7 +102,7 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
         hasInserted = true;
       }
       else if ( refinementEventOverrulesCoarsening(currentEvent,*i) ) {
-        logInfo( "merge(...)", "replace event " << i->toString() << " with " << currentEvent.toString() );
+        logDebug( "merge(...)", "replace event " << i->toString() << " with " << currentEvent.toString() );
         *i = currentEvent;
         i = result.end();
         hasInserted = true;
@@ -166,25 +173,42 @@ void peano4::grid::clear( GridStatistics& statistics, bool isGlobalMasterTree ) 
 bool peano4::grid::isSpacetreeNodeRefined(GridVertex  vertices[TwoPowerD]) {
   bool result = false;
   dfor2(k)
-    result |= isVertexRefined( vertices[kScalar] );
+    result |= willVertexBeRefined( vertices[kScalar] );
+    result |= hasVertexBeenRefined( vertices[kScalar] );
   enddforx
   return result;
 }
 
 
-bool peano4::grid::isVertexRefined(GridVertex  vertex) {
+bool peano4::grid::willVertexBeRefined(const GridVertex&  vertex) {
   return vertex.getState() == GridVertex::State::Refining
       or vertex.getState() == GridVertex::State::Refined
+      or vertex.getState() == GridVertex::State::EraseTriggered;
+}
+
+
+bool peano4::grid::hasVertexBeenRefined(const GridVertex&  vertex) {
+  return vertex.getState() == GridVertex::State::Refined
       or vertex.getState() == GridVertex::State::EraseTriggered
       or vertex.getState() == GridVertex::State::Erasing;
 }
 
 
-std::bitset<TwoPowerD> peano4::grid::areVerticesRefined(GridVertex  vertices[TwoPowerD]) {
+std::bitset<TwoPowerD> peano4::grid::willVerticesBeRefined(GridVertex  vertices[TwoPowerD]) {
   std::bitset<TwoPowerD> bitset;
   for (int i=0; i<TwoPowerD; i++) {
-     assertion( not isVertexRefined(vertices[i]) or vertices[i].getState()!=GridVertex::State::HangingVertex );
-     bitset.set(i,isVertexRefined(vertices[i]));
+     assertion( not willVertexBeRefined(vertices[i]) or vertices[i].getState()!=GridVertex::State::HangingVertex );
+     bitset.set(i,willVertexBeRefined(vertices[i]));
+  }
+  return bitset;
+}
+
+
+std::bitset<TwoPowerD> peano4::grid::haveVerticesBeenRefined(GridVertex  vertices[TwoPowerD]) {
+  std::bitset<TwoPowerD> bitset;
+  for (int i=0; i<TwoPowerD; i++) {
+     assertion( not hasVertexBeenRefined(vertices[i]) or vertices[i].getState()!=GridVertex::State::HangingVertex );
+     bitset.set(i,hasVertexBeenRefined(vertices[i]));
   }
   return bitset;
 }

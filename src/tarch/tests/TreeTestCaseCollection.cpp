@@ -12,7 +12,7 @@ tarch::tests::TreeTestCaseCollection::TreeTestCaseCollection(const std::string& 
   TestCase::TestCase( treeTestCaseCollectionName ),
   _writeToLog(writeToLog),
   _deleteTestCases(deleteTestCases) {
-  assertion( isNameWithoutHierarchy( treeTestCaseCollectionName ));
+  assertion3( isNameWithoutHierarchy( treeTestCaseCollectionName ), treeTestCaseCollectionName, deleteTestCases, writeToLog);
 }
 
 

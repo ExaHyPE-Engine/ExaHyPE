@@ -45,6 +45,8 @@ class UpdateFaceLabel(ActionSet):
     result = "\n"
     if operation_name==ActionSet.OPERATION_CREATE_PERSISTENT_FACE or operation_name==ActionSet.OPERATION_CREATE_HANGING_FACE:
       result += """
+  logTraceInWith1Argument( "createPersistent/HangingFace(...)", marker.toString() );
+      
   tarch::la::Vector<Dimensions, double> offset(DomainOffset);
   tarch::la::Vector<Dimensions, double> size(DomainSize);
   bool isBoundary = false;
@@ -53,6 +55,7 @@ class UpdateFaceLabel(ActionSet):
     isBoundary |= tarch::la::equals( marker.x()(d), offset(d) + size(d) );
   }}
   fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.setBoundary( isBoundary );
+  logTraceOutWith1Argument( "createPersistent/HangingFace(...)", fineGridFace""" + UpdateFaceLabel.get_attribute_name(self._solver_name) + """.toString() );
 """
     if operation_name==ActionSet.OPERATION_TOUCH_FACE_FIRST_TIME:
       result = """
@@ -91,7 +94,7 @@ def create_face_label(solver_name):
   result.data.add_attribute( peano4.dastgen2.Peano4DoubleArray("OldTimeStamp","2") )
   
   result._peano4_aspect.merge_implementation = """
-  assertionEquals( _Boundary, neighbour._Boundary );
+  _Boundary = _Boundary or neighbour._Boundary;
   
   const int normal         = marker.getSelectedFaceNumber() % Dimensions;
   const int neighbourEntry = marker.outerNormal()(normal)<0.0 ? 0 : 1;

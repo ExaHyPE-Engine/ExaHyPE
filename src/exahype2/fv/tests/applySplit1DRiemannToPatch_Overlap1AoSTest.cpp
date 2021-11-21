@@ -1,18 +1,24 @@
-
-// This file is part of the Peano project. For conditions of distribution and
-// use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/multicore.h"
 #include "tarch/la/Vector.h"
 #include "applySplit1DRiemannToPatch_Overlap1AoSTest.h"
 #include "exahype2/fv/Rusanov.h"
 
+
 exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::applySplit1DRiemannToPatch_Overlap1AoSTest():
   TestCase ("exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest") {
 }
 
+
 void exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::run() {
-  testMethod (testMe);
+  testMethod(testMe);
+  testMethod(testBreakingDam);
 }
+
+
+void exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::testBreakingDam() {
+
+}
+
 
 void exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::testMe() {
 

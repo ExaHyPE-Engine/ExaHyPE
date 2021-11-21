@@ -36,10 +36,10 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(double spacing,
   std::vector<T*> result;
 
   double continuousParticlesPerAxis = voxelH(0) / spacing;
-  int    particlesPerAxis           = static_cast<int>( std::round(continuousParticlesPerAxis) );
+  int    particlesPerAxis           = static_cast<int>( std::floor(continuousParticlesPerAxis) );
   continuousParticlesPerAxis -= particlesPerAxis;
-  assertion(continuousParticlesPerAxis>=0.0);
-  assertion(continuousParticlesPerAxis<=1.0);
+  assertion4(continuousParticlesPerAxis>=0.0,continuousParticlesPerAxis,particlesPerAxis,voxelH(0), spacing);
+  assertion4(continuousParticlesPerAxis<=1.0,continuousParticlesPerAxis,particlesPerAxis,voxelH(0), spacing);
   double randomDraw = randomDist(e2);
   if (not roundDown and randomDraw<continuousParticlesPerAxis) {
     particlesPerAxis++;

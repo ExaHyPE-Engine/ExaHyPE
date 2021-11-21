@@ -83,7 +83,7 @@ class ParticleTreeAnalysis(ActionSet):
 
              
   __Template_TouchCellLastTime = jinja2.Template("""
-  if (marker.isRefined()) {
+  if (marker.hasBeenRefined()) {
     coarseGridCell{{CELL_DATA_NAME}}.setParentOfRefinedCell(true);
   }
   else {
