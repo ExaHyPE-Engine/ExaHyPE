@@ -111,6 +111,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     void runLocally() override;
     void moveTask(int rank, int tag, MPI_Comm communicator) override;
     void runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
+    void forwardTaskOutputToRank(int rank, int tag, MPI_Comm communicator) override;
 
     static smartmpi::Task* receiveTask(int rank, int tag, MPI_Comm communicator);
     static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator);

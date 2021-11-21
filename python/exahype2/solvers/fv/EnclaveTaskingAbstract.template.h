@@ -234,15 +234,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
 
     SolverState  getSolverState() const;
 
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
+    //#if defined(OpenMPGPUOffloading) // HS: note there is a compiler bug in llvm until that is resolved 
+    //#pragma omp declare target       // we need to keep these declarations outside the declare target construct and instead
+    //#endif                           // map them explicitly in Rusanov.h
     static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
     static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
     {{SOLVER_CONSTANTS}}
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
+    //#if defined(OpenMPGPUOffloading)
+    //#pragma omp end declare target
+    //#endif
 
     /**
      * It is important that we only plot after the secondary sweep.
