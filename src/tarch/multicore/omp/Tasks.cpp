@@ -9,7 +9,6 @@
 #include "tarch/logging/Statistics.h"
 
 
-
 #if defined(SharedOMP)
 
 namespace {
@@ -57,7 +56,6 @@ namespace {
     const std::vector< tarch::multicore::Task* >&  tasks
   ) {
     assertion( not tasks.empty() );
-    assertion( tarch::multicore::getRealisation()!=tarch::multicore::Realisation::MapOntoNativeTasks );
 
     const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
     int       busyThreads     = NumberOfThreads;
@@ -86,11 +84,8 @@ namespace {
           // than cores. As the first p trees on p cores will finish and then
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
-          and
-          tarch::multicore::getRealisation()!=tarch::multicore::Realisation::HoldTasksBackInLocalQueue
         ) {
-          const int threadsToGrab = tarch::multicore::getNumberOfPendingTasks() / (NumberOfThreads-busyThreads+1) / 2;
-          bool gotATask = tarch::multicore::processPendingTasks( std::max(1,threadsToGrab) );
+          bool gotATask = tarch::multicore::processPendingTasks( 1 );
           if (not gotATask) {
             #pragma omp taskyield
             #if defined(Parallel)
@@ -136,19 +131,9 @@ void tarch::multicore::native::spawnTask(Task*  job) {
 void tarch::multicore::native::spawnAndWait(
   const std::vector< Task* >&  tasks
 ) {
-  switch (tarch::multicore::getRealisation()) {
-    case Realisation::MapOntoNativeTasks:
-      spawnAndWaitAsTaskLoop(tasks);
-      break;
-    case Realisation::HoldTasksBackInLocalQueue:
-    case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-    case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
-    case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
-    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
-      spawnAndWaitAsExplicitTasksWithPolling(tasks);
-      break;
-  }
+  // @todo not used yet
+  //    spawnAndWaitAsTaskLoop(tasks);
+  spawnAndWaitAsExplicitTasksWithPolling(tasks);
 }
 
 

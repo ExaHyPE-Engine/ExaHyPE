@@ -13,6 +13,8 @@
 #include "Tasks.h"
 #include "multicore.h"
 
+#include "tarch/multicore/orchestration/StrategyFactory.h"
+
 
 #ifdef UseSmartMPI
 #include "smartmpi.h"
@@ -31,77 +33,21 @@ namespace {
   NonblockingTasks                     nonblockingTasks;
   tarch::multicore::BooleanSemaphore   nonblockingTasksSemaphore;
 
-  tarch::multicore::Realisation realisation = tarch::multicore::Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
+  tarch::multicore::orchestration::Strategy* orchestrationStrategy = tarch::multicore::orchestration::createDefaultStrategy();
 
   tarch::logging::Log _log( "tarch::multicore" );
 
-  /**
-   * Determines how to handle the tasks dumped into nonblockingTasks.
-   *
-   * @see tarch::multicore::spawnAndWait()
-   */
-  enum class TaskProgressionStrategy {
-    /**
-     * Put stuff into queue if it is spawned. If we progress, grab the first one and
-     * handle it.
-     */
-    BufferInQueue,
-    /**
-     * Immediately spawn as a new task
-     */
-    MapOntoNativeTask,
-    /**
-     * If we spawn a task, put it into a queue and return. If we progress, look at
-     * the queue. If it is big enough, fuse the tasks. Otherwise, process the first
-     * task from the queue.
-     */
-    MergeTasks
-  };
-
-  /**
-   * This flag/strategy is toggled by tarch::multicore::spawnAndWait(). The
-   * flag determines how
-   * tarch::multicore::processPendingTasks(int) processes the tasks, and it
-   * also controls how spawnTask() works.
-   *
-   * @see tarch::multicore::spawnAndWait()
-   * @see tarch::multicore::processPendingTasks(int)
-   */
-  TaskProgressionStrategy  taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
-
   const std::string PendingTasksStatisticsIdentifier( "tarch::multicore::pending-tasks" );
-  const std::string MergeTasksStatisticsIdentifier( "tarch::multicore::merge-tasks");
+  const std::string FuseTasksStatisticsIdentifier( "tarch::multicore::fuse-tasks");
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
 
   /**
-   * Upper limit on number of tasks that are fused into one (meta-)task
+   * This routine processes one pending tasks.
    *
-   * By default, there is no upper limit on this count.
+   * It has no hidden logic, i.e. it will always take one task
+   * if possible. The routine calling it is reponsible to make
+   * the decision whether this is appropriate.
    *
-   * @see configureTaskFusion(int,int)
-   */
-  int numberOfTasksThatShouldBeFused  = 20;
-
-
-  /**
-   * Maximum number of large meta tasks that are created
-   *
-   * If this number is exceeded, the code will not fuse any tasks anymore
-   * even though there would be fuse-able tasks around. This threshold plus
-   * numberOfTasksThatShouldBeFused constrain the task fusion behaviour:
-   * One limits the max number of fused (large) tasks, one limits the number
-   * of tasks that feed into one meta task.
-   *
-   * @see numberOfTasksThatShouldBeFused
-   */
-  int maxNumberOfFusedTasksAssemblies = std::numeric_limits<int>::max();
-
-  /**
-   * Statistics counter
-   */
-  int numberOfFusedTasksAssemblies    = 0;
-
-  /**
    * @return -1 if nothing found, otherwise task id
    */
   bool processOnePendingTaskLIFO() {
@@ -271,7 +217,7 @@ namespace {
     }
     lock.free();
 
-    ::tarch::logging::Statistics::getInstance().log( MergeTasksStatisticsIdentifier, tasksOfSameType.size() );
+    ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
 
     if (myTask!=nullptr) {
       bool stillExecuteLocally;
@@ -279,8 +225,8 @@ namespace {
         stillExecuteLocally = true;
       }
       else {
+        // @todo Hier muss welches Device rein
         stillExecuteLocally = myTask->fuse(tasksOfSameType);
-        numberOfFusedTasksAssemblies++;
       }
       if (stillExecuteLocally) {
         tarch::multicore::native::spawnTask(myTask);
@@ -292,88 +238,12 @@ namespace {
 }
 
 
-std::string tarch::multicore::getListOfRealisations() {
-  return toString(Realisation::MapOntoNativeTasks)
-       + ","
-       + toString(Realisation::HoldTasksBackInLocalQueue)
-       + ","
-       + toString(Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask)
-       + ","
-       + toString(Realisation::HoldTasksBackInLocalQueueAndBackfill)
-       + ","
-       + toString(Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask)
-       + ","
-       + toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill)
-       + ","
-       + toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask);
-}
+void tarch::multicore::setOrchestration( tarch::multicore::orchestration::Strategy* realisation ) {
+  assertion(orchestrationStrategy!=nullptr);
+  assertion(realisation!=nullptr);
 
-
-std::string tarch::multicore::toString( Realisation realisation ) {
-  switch (realisation) {
-    case Realisation::MapOntoNativeTasks:
-      return "map-onto-native-tasks";
-    case Realisation::HoldTasksBackInLocalQueue:
-      return "hold-tasks-back-in-local-queue";
-    case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
-      return "hold-tasks-back-in-local-queue-and-eventually-map-onto-native-task";
-    case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-      return "hold-tasks-back-in-local-queue-and-backfill";
-    case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
-      return "hold-tasks-back-in-local-queue-and-backfill-and-eventually-map-onto-native-task";
-    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-      return "hold-tasks-back-in-local-queue-merge-and-backfill";
-    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
-      return "hold-tasks-back-in-local-queue-merge-and-backfill-and-eventually-map-onto-native-task";
-  }
-  return "<undef>";
-}
-
-
-bool tarch::multicore::parseRealisation( const std::string& realisationString ) {
-  if ( realisationString.compare( toString(Realisation::MapOntoNativeTasks) )==0 ) {
-    realisation = Realisation::MapOntoNativeTasks;
-  }
-  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueue) )==0 ) {
-    realisation = Realisation::HoldTasksBackInLocalQueue;
-  }
-  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask) )==0 ) {
-    realisation = Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask;
-  }
-  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndBackfill) )==0 ) {
-    realisation = Realisation::HoldTasksBackInLocalQueueAndBackfill;
-  }
-  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask) )==0 ) {
-    realisation = Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask;
-  }
-  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfill) )==0 ) {
-    realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfill;
-  }
-  else if (realisationString.compare( toString(Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask) )==0 ) {
-    realisation = Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask;
-  }
-  else {
-    tarch::logging::Log _log( "tarch::multicore" );
-    logError( "parseRealisation(std::string)", "realisation variant " << realisationString << " not known" );
-    return false;
-  }
-  return true;
-}
-
-
-void tarch::multicore::configureTaskFusion( int maxNumberOfFusedAssemblies, int maxSizeOfFusedTaskSet ) {
-  numberOfTasksThatShouldBeFused  = maxSizeOfFusedTaskSet;
-  maxNumberOfFusedTasksAssemblies = maxNumberOfFusedAssemblies;
-}
-
-
-void tarch::multicore::setRealisation( Realisation realisation_ ) {
-  realisation = realisation_;
-}
-
-
-tarch::multicore::Realisation tarch::multicore::getRealisation() {
-  return realisation;
+  delete orchestrationStrategy;
+  orchestrationStrategy = realisation;
 }
 
 
@@ -505,48 +375,18 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
 
   bool  result        = false;
   while (maxTasks>0) {
-    int handledTasks = 0;
-    switch (taskProgressionStrategy) {
-      case TaskProgressionStrategy::MapOntoNativeTask:
-        handledTasks = mapPendingTasksOntoNativeTasks(maxTasks);
-        break;
-      case TaskProgressionStrategy::BufferInQueue:
-        assertion(fifo or maxTasks==1);
-        if (fifo and maxTasks==1) {
-          handledTasks = processOnePendingTaskFIFO();
-        }
-        else if (fifo) {
-          handledTasks = processPendingTasksFIFO(maxTasks);
-        }
-        else {
-          handledTasks = processOnePendingTaskLIFO() ? 1 : 0;
-        } 
-        break;
-      case TaskProgressionStrategy::MergeTasks:
-        assertion(fifo or maxTasks==1);
-        if (
-          numberOfFusedTasksAssemblies < maxNumberOfFusedTasksAssemblies
-          and
-          nonblockingTasks.size()>numberOfTasksThatShouldBeFused
-        ) {
-          handledTasks = fusePendingTasks(numberOfTasksThatShouldBeFused);
-        }
-        else if (numberOfFusedTasksAssemblies >= maxNumberOfFusedTasksAssemblies) {
-          handledTasks = processPendingTasksFIFO(maxTasks);
-        }
-        else {
-          // we do only one, so there is a chance that more and more tasks
-          // drop in and we eventually can merge
-          handledTasks = processOnePendingTaskFIFO() ? 1 : 0;
-        }
-        break;
-    }
-
-    if (handledTasks>0) {
-      maxTasks -= handledTasks;
+    if (fifo and processOnePendingTaskFIFO() ) {
+      maxTasks--;
       result = true;
     }
-    else maxTasks=0;
+    if (not fifo and processOnePendingTaskLIFO() ) {
+      maxTasks--;
+      result = true;
+    }
+  }
+
+  if (not result) {
+    native::yield();
   }
 
   return result;
@@ -562,17 +402,16 @@ void tarch::multicore::spawnTask(Task*  task) {
   }
   #endif
 
-  switch (taskProgressionStrategy) {
-    case TaskProgressionStrategy::MapOntoNativeTask:
-      native::spawnTask(task);
-      break;
-    case TaskProgressionStrategy::BufferInQueue:
-    case TaskProgressionStrategy::MergeTasks:
-    {
-      tarch::multicore::Lock lock(nonblockingTasksSemaphore);
-      nonblockingTasks.push_back(task);
+  if ( nonblockingTasks.size()>=orchestrationStrategy->getNumberOfTasksToHoldBack() ) {
+    native::spawnTask(task);
+  }
+  else {
+    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
+    nonblockingTasks.push_back(task);
+
+    if ( nonblockingTasks.size()>=orchestrationStrategy->getNumberOfTasksToFuse() ) {
+      fusePendingTasks(orchestrationStrategy->getNumberOfTasksToFuse());
     }
-    break;
   }
 
   ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
@@ -582,6 +421,8 @@ void tarch::multicore::spawnTask(Task*  task) {
 
 /**
 * Process a set of tasks and wait for their completion
+*
+* @todo stimmt so nimmer
 *
 * Run over a set of task and wait until they are complete. Each of these tasks
 * can spawn further tasks. We do not have to wait for these guys.
@@ -654,70 +495,13 @@ const std::vector< Task* >&  tasks
   static tarch::logging::Log _log( "tarch::multicore" );
 
   if (not tasks.empty()) {
-    if (
-      tarch::multicore::Core::getInstance().getNumberOfThreads()<=1
-      and
-      realisation!=Realisation::HoldTasksBackInLocalQueue
-    ) {
-      logWarning(
-        "spawnAndWait()",
-        "threading model is not set to " << toString(Realisation::HoldTasksBackInLocalQueue) <<
-        ". However, as we have only one core, any other threading model will deadlock. Switch model therefore"
-      );
-      realisation = Realisation::HoldTasksBackInLocalQueue;
-    }
-
-    switch (realisation) {
-      case Realisation::MapOntoNativeTasks:
-        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
-        break;
-      case Realisation::HoldTasksBackInLocalQueue:
-      case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
-      case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-      case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
-        taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
-        break;
-      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
-        numberOfFusedTasksAssemblies = 0;
-        taskProgressionStrategy      = TaskProgressionStrategy::MergeTasks;
-        break;
-    }
-
+    orchestrationStrategy->startBSPSection();
     native::spawnAndWait(tasks);
+    orchestrationStrategy->endBSPSection();
 
-    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()<=1 ) {
-      taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
-      tarch::multicore::processPendingTasks();
-    }
-
-    switch (realisation) {
-      case Realisation::MapOntoNativeTasks:
-        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
-        assertion(nonblockingTasks.empty());
-        break;
-      case Realisation::HoldTasksBackInLocalQueue:
-      case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-        taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
-        ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
-        break;
-      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-        taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
-        tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );
-        taskProgressionStrategy = TaskProgressionStrategy::BufferInQueue;
-        ::tarch::logging::Statistics::getInstance().log( PendingTasksStatisticsIdentifier, tarch::multicore::getNumberOfPendingTasks() );
-        break;
-      case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
-      case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
-        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
-        tarch::multicore::processPendingTasks();
-        break;
-      case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
-        taskProgressionStrategy = TaskProgressionStrategy::MergeTasks;
-        tarch::multicore::processPendingTasks( maxNumberOfFusedTasksAssemblies-numberOfFusedTasksAssemblies );
-        taskProgressionStrategy = TaskProgressionStrategy::MapOntoNativeTask;
-        tarch::multicore::processPendingTasks();
-        break;
+    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()>1 ) {
+      int numberOfTasksToProcessNow = std::max(0,static_cast<int>(nonblockingTasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());
+      mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
     }
   }
 }

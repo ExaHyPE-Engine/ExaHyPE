@@ -5,6 +5,7 @@
 
 
 #include "multicore.h"
+#include "tarch/multicore/orchestration/Strategy.h"
 
 
 #include <functional>
@@ -16,30 +17,7 @@
 
 namespace tarch {
   namespace multicore {
-    enum class Realisation {
-      MapOntoNativeTasks,
-      HoldTasksBackInLocalQueue,
-      HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask,
-      HoldTasksBackInLocalQueueAndBackfill,
-      HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask,
-      HoldTasksBackInLocalQueueMergeAndBackfill,
-      HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask
-    };
-
-    std::string toString( Realisation realisation );
-
-    /**
-     * Use toString() to see valid options
-     */
-    bool parseRealisation( const std::string& realisation );
-    std::string getListOfRealisations();
-    void setRealisation( Realisation realisation );
-    Realisation getRealisation();
-
-    /**
-     * Constrain the fusion.
-     */
-    void configureTaskFusion( int maxNumberOfFusedAssemblies, int maxSizeOfFusedTaskSet );
+    void setOrchestration( tarch::multicore::orchestration::Strategy* realisation );
 
     /**
      * Tells task/thread to yield, i.e. to allow other tasks/threads to run.
