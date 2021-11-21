@@ -77,6 +77,7 @@ namespace {
         #pragma omp atomic
         busyThreads--;
 
+        bool gotATask = true;
         while (
           busyThreads>0
           and
@@ -84,9 +85,12 @@ namespace {
           // than cores. As the first p trees on p cores will finish and then
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
+          and
+          // without this, the code deadlocks
+          gotATask
         ) {
-          bool gotATask = tarch::multicore::processPendingTasks( 1 );
-          if (not gotATask) {
+          gotATask = tarch::multicore::processPendingTasks( 1 );
+          if (gotATask) {
             #pragma omp taskyield
             #if defined(Parallel)
             // Allow MPI to make progress. We otherwise might starve MPI
@@ -129,11 +133,15 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  * produced by the loop. Therefore, I have to add a manual taskwait.
  */
 void tarch::multicore::native::spawnAndWait(
-  const std::vector< Task* >&  tasks
+  const std::vector< Task* >&  tasks,
+  tarch::multicore::orchestration::Strategy& activeRealisation
 ) {
-  // @todo not used yet
-  //    spawnAndWaitAsTaskLoop(tasks);
-  spawnAndWaitAsExplicitTasksWithPolling(tasks);
+  if (activeRealisation.getNumberOfTasksToHoldBack()>0) {
+    spawnAndWaitAsExplicitTasksWithPolling(tasks);
+  }
+  else {
+    spawnAndWaitAsTaskLoop(tasks);
+  }
 }
 
 

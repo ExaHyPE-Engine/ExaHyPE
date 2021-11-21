@@ -237,7 +237,12 @@ namespace tarch {
     void spawnTask(Task*  job);
 
     /**
-     * The routine deletes all the passed arguments.
+     * - Tell the orchestration that a BSP section starts
+     * - Invoke the native implementation (and tell it what orchestration
+     *   strategy is to be used)
+     * - Tell the orchestration that the BSP section has terminated
+     * - If there are task pending and the orchestration restricts the
+     *   number of tasks to hold back, map them onto native tasks.
      */
     void spawnAndWait(
       const std::vector< Task* >&  tasks
@@ -245,7 +250,10 @@ namespace tarch {
 
     namespace native {
       void spawnTask(Task*  job);
-      void spawnAndWait( const std::vector< Task* >&  tasks );
+      void spawnAndWait(
+        const std::vector< Task* >&  tasks,
+        tarch::multicore::orchestration::Strategy& activeRealisation
+      );
       void yield();
       int getNumberOfPendingTasks();
     }

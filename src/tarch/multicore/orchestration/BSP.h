@@ -17,7 +17,13 @@ namespace tarch {
 
 
 /**
- * Interface
+ * BSP strategy to use solely BSP
+ *
+ * If you want to use sole BSP, you effectively switch off the tasking.
+ * Technically, this is realised by a strategy which enqueues all tasks
+ * that are spawned into the pending task queue. No tasks are handed
+ * over to the actual back-end. Therefore, the tasks will be done
+ * lazily upon demand within processPendingTasks().
  */
 class tarch::multicore::orchestration::BSP: public tarch::multicore::orchestration::Strategy {
   public:

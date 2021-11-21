@@ -22,6 +22,9 @@ namespace tarch {
 
       std::string getListOfRealisations();
 
+      /**
+       * My default strategy is native.
+       */
       Strategy* createDefaultStrategy();
     }
   }

@@ -1,6 +1,7 @@
 #include "StrategyFactory.h"
 
 #include "NativeTasks.h"
+#include "BSP.h"
 
 #include "tarch/logging/Log.h"
 
@@ -8,6 +9,9 @@
 tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::parseRealisation( const std::string& realisationString ) {
   if ( realisationString.compare( "native" )==0 ) {
     return new NativeTasks();
+  }
+  if ( realisationString.compare( "bsp" )==0 ) {
+    return new BSP();
   }
   if ( realisationString.compare( "default" )==0 ) {
     return createDefaultStrategy();
@@ -19,7 +23,7 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
 
 
 std::string tarch::multicore::orchestration::getListOfRealisations() {
-  return "native,default";
+  return "bsp,native,default";
 }
 
 

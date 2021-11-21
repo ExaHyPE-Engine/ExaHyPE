@@ -490,16 +490,16 @@ void tarch::multicore::spawnTask(Task*  task) {
 * @see  processPendingTasks(int)
 */
 void tarch::multicore::spawnAndWait(
-const std::vector< Task* >&  tasks
+  const std::vector< Task* >&  tasks
 ) {
   static tarch::logging::Log _log( "tarch::multicore" );
 
   if (not tasks.empty()) {
     orchestrationStrategy->startBSPSection();
-    native::spawnAndWait(tasks);
+    native::spawnAndWait(tasks,*orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
 
-    if ( tarch::multicore::Core::getInstance().getNumberOfThreads()>1 ) {
+    if ( not nonblockingTasks.empty() ) {
       int numberOfTasksToProcessNow = std::max(0,static_cast<int>(nonblockingTasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());
       mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
     }
@@ -534,7 +534,8 @@ void tarch::multicore::native::spawnTask(Task*  job) {
 
 
 void tarch::multicore::native::spawnAndWait(
-  const std::vector< Task* >&  tasks
+  const std::vector< Task* >&  tasks,
+  tarch::multicore::orchestration::Strategy& activeRealisation
 ) {
   for (auto& p: tasks) {
     while (p->run()) {}
