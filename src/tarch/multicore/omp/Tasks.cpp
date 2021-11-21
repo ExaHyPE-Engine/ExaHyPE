@@ -9,7 +9,6 @@
 #include "tarch/logging/Statistics.h"
 
 
-
 #if defined(SharedOMP)
 
 namespace {
@@ -57,7 +56,6 @@ namespace {
     const std::vector< tarch::multicore::Task* >&  tasks
   ) {
     assertion( not tasks.empty() );
-    assertion( tarch::multicore::getRealisation()!=tarch::multicore::Realisation::MapOntoNativeTasks );
 
     const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
     int       busyThreads     = NumberOfThreads;
@@ -79,6 +77,7 @@ namespace {
         #pragma omp atomic
         busyThreads--;
 
+        bool gotATask = true;
         while (
           busyThreads>0
           and
@@ -87,11 +86,11 @@ namespace {
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
           and
-          tarch::multicore::getRealisation()!=tarch::multicore::Realisation::HoldTasksBackInLocalQueue
+          // without this, the code deadlocks
+          gotATask
         ) {
-          const int threadsToGrab = tarch::multicore::getNumberOfPendingTasks() / (NumberOfThreads-busyThreads+1) / 2;
-          bool gotATask = tarch::multicore::processPendingTasks( std::max(1,threadsToGrab) );
-          if (not gotATask) {
+          gotATask = tarch::multicore::processPendingTasks( 1 );
+          if (gotATask) {
             #pragma omp taskyield
             #if defined(Parallel)
             // Allow MPI to make progress. We otherwise might starve MPI
@@ -134,20 +133,14 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  * produced by the loop. Therefore, I have to add a manual taskwait.
  */
 void tarch::multicore::native::spawnAndWait(
-  const std::vector< Task* >&  tasks
+  const std::vector< Task* >&  tasks,
+  tarch::multicore::orchestration::Strategy& activeRealisation
 ) {
-  switch (tarch::multicore::getRealisation()) {
-    case Realisation::MapOntoNativeTasks:
-      spawnAndWaitAsTaskLoop(tasks);
-      break;
-    case Realisation::HoldTasksBackInLocalQueue:
-    case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-    case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
-    case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
-    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
-      spawnAndWaitAsExplicitTasksWithPolling(tasks);
-      break;
+  if (activeRealisation.getNumberOfTasksToHoldBack()>0) {
+    spawnAndWaitAsExplicitTasksWithPolling(tasks);
+  }
+  else {
+    spawnAndWaitAsTaskLoop(tasks);
   }
 }
 

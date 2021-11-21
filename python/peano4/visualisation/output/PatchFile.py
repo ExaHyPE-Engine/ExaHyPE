@@ -48,6 +48,8 @@ format ASCII
           link_file_name = snapshot_file_name
           meta_file_content += """
 begin dataset
+  timestamp  \"""" + self._timestamp + """\"
+
   include \"""" + snapshot_file_name + """\"
 end dataset
 

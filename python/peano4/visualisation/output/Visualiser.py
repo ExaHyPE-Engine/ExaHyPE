@@ -87,6 +87,7 @@ class Visualiser(object):
     self._description    = ""
     self._is_data_associated_to_cell = False
     self._mapping        = None
+    self._timestamp      = -1.0
 
     
   def display(self):
@@ -147,6 +148,8 @@ class Visualiser(object):
       if "begin dataset" in line:
         dataset_number = dataset_number-1
         include_file_counter = 0
+      if "timestamp" in line and dataset_number==0:
+        self._timestamp = float(list(line.split( "  " ))[2][:-1])
       if "include" in line and dataset_number==0:
         snapshot_file_name = line.split( "\"" )[1]
         if self.verbose:        

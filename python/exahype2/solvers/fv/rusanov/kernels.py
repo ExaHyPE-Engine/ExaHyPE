@@ -309,8 +309,8 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
 
   if ( tarch::la::smaller(_maxEigenvalue, 0.0 ) ) {
     ::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "_maxEigenvalue>=0", "invalid max eigenvalue: " + std::to_string(_maxEigenvalue) );
-    // keep time step size
-    // _admissibleTimeStepSize = _admissibleTimeStepSize; 
+    // keep time step size invariant
+    // _admissibleTimeStepSize = _admissibleTimeStepSize;
   }
   else if ( tarch::la::equals(_maxEigenvalue, 0.0 ) ) {
     logWarning( "finishTimeStep(...)", "maximum eigenvalue approaches 0.0. For nonlinear PDEs, this often means the PDE becomes stationary. It could also be a bug however" ); 

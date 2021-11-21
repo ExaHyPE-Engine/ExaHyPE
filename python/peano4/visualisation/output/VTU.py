@@ -319,6 +319,7 @@ class VTU(Visualiser):
         print( "Process snapshot " + str(i) )
         print( "==================================")
         self.select_dataset(i)
+        print("Timestamp for current snapshot:",self._timestamp)
         if self._grid==None:
           last_file = True
         else:
@@ -328,7 +329,7 @@ class VTU(Visualiser):
           if self._strip_relative_pathes:
             link_file_name = link_file_name.split( "/" )[-1]
           pvd_file += """
-    <DataSet timestep=\"""" + str(i) + """\" group="" part="0" file=\"""" + link_file_name + """\" />
+    <DataSet timestep=\"""" + str(self._timestamp) + """\" group="" part="0" file=\"""" + link_file_name + """\" />
 """
           i+=1
     except Exception as e:
