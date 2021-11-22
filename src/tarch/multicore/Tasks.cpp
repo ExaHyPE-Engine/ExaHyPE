@@ -323,7 +323,7 @@ int tarch::multicore::Task::getTaskType() const {
 }
 
 
-bool tarch::multicore::Task::fuse( const std::list<Task*>& otherTasks ) {
+bool tarch::multicore::Task::fuse( const std::list<Task*>& otherTasks, int device ) {
   for (auto pp: otherTasks) {
     tarch::multicore::Task* currentTask = pp;
     while (currentTask->run()) {}

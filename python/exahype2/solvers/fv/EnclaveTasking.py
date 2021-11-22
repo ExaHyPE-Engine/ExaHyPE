@@ -189,7 +189,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
 class EnclaveTasking( FV ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, use_gpu):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, stateless_pde_terms):
     """
     
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
@@ -224,7 +224,7 @@ class EnclaveTasking( FV ):
     self._start_time_step_implementation           = ""
     self._finish_time_step_implementation          = ""
     
-    self._use_gpu = use_gpu
+    self._stateless_pde_terms = stateless_pde_terms
     
     self._constructor_implementation = ""
     
@@ -462,7 +462,7 @@ class EnclaveTasking( FV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D" ] = (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
-    d[ "USE_GPU" ] = self._use_gpu
+    d[ "STATELESS_PDE_TERMS" ]  = self._stateless_pde_terms
     
     
   def set_preprocess_reconstructed_patch_kernel(self,kernel, can_offload_into_enclave_task = True ):
@@ -587,7 +587,7 @@ class EnclaveTasking( FV ):
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
 
-    if self._use_gpu:
+    if self._stateless_pde_terms:
         # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
         # this hack has to suffice
         peanodir = templatefile_prefix.split("python/exahype2",1)[0]

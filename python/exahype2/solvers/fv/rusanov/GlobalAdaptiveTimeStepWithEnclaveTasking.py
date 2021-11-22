@@ -29,9 +29,9 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False,
-    use_gpu=False
+    stateless_pde_terms=False
   ):
-    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, use_gpu) 
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, stateless_pde_terms) 
     
     self._time_step_relaxation = time_step_relaxation
 
@@ -84,10 +84,10 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
     self._fused_Riemann_solver_call         = create_fused_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation, self._source_term_implementation)
 
-    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._use_gpu)
-    self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._use_gpu)
-    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._use_gpu)
-    self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._use_gpu)
+    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._stateless_pde_terms)
+    self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._stateless_pde_terms)
+    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._stateless_pde_terms)
+    self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._stateless_pde_terms)
     self._constructor_implementation         = create_constructor_implementation_for_adaptive_time_stepping()
     self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
     self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_adaptive_time_stepping()

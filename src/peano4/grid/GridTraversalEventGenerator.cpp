@@ -252,7 +252,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   );
 
   event.setParentCellIsAdjacentToChangingOrHangingVertex(false);
-  if (state.getLevel()>1) {
+  if (state.getLevel()>0) {
     dfor2(k)
       if (
         coarseGridVertices[kScalar].getState()==GridVertex::State::New

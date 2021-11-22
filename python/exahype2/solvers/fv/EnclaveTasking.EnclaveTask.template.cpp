@@ -21,7 +21,7 @@
 #include <string.h>
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
-{% if USE_GPU %}
+{% if STATELESS_PDE_TERMS %}
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}", false) );
 {% endif %}
 
@@ -121,7 +121,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 }
 
 
-{% if USE_GPU %}
+{% if STATELESS_PDE_TERMS %}
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker&    marker,
   double                                         t,
@@ -420,7 +420,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 }
 #endif
 
-{% if USE_GPU %}
+{% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
   logTraceIn( "run()" );
 
@@ -450,7 +450,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
 }
 
 
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks ) {
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
   // @todo Debug
   logInfo( "fuse(...)", "asked to fuse " << otherTasks.size() << " tasks into one large GPU task" );
 

@@ -45,7 +45,8 @@ parser.add_argument("-pd", "--peano-dir",              dest="peanodir",         
 parser.add_argument("-cd", "--configure-dir",          dest="configuredir",             default="../../../", help="Location of configure" )
 parser.add_argument("-o",  "--output",                 dest="out",                      default="peano4", help="Executable name" )
 parser.add_argument("-f",  "--force",                  dest="force",                    default=False, action="store_true", help="Allow overwriting of output file" )
-parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-fixed-enclave-gpu", "global-adaptive-enclave-gpu", "subcycling-fixed-no-interpolation", "subcycling-fixed-linear-interpolation", "subcycling-fixed-linear-interpolation-enclave", "subcycling-adaptive-linear-interpolation-enclave", "local-linear-interpolation-enclave"], default="global-fixed", help="Pick implementation variant" )
+parser.add_argument("-gpu", "--gpu",                   dest="gpu",                      default=False, action="store_true", help="GPU support (stateless PDE terms)" )
+parser.add_argument("-t",   "--type",                  dest="type",                     choices=["global-fixed", "global-adaptive", "global-fixed-enclave", "global-adaptive-enclave", "global-fixed-enclave", "global-adaptive-enclave", "subcycling-fixed-no-interpolation", "subcycling-fixed-linear-interpolation", "subcycling-fixed-linear-interpolation-enclave", "subcycling-adaptive-linear-interpolation-enclave", "local-linear-interpolation-enclave"], default="global-fixed", help="Pick implementation variant" )
 parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-v",   "--verbose",               dest="verbose",          action="store_true", default=False, help="Verbose")
 parser.add_argument("-ps",  "--patch-size",            dest="patch_size",       type=int, default=17, help="Dimensions" )
@@ -124,7 +125,8 @@ elif args.type=="global-fixed-enclave":
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
+    stateless_pde_terms = args.gpu
   )
 elif args.type=="global-adaptive-enclave":
   thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
@@ -134,7 +136,8 @@ elif args.type=="global-adaptive-enclave":
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    time_step_relaxation = 0.01
+    time_step_relaxation = 0.01,
+    stateless_pde_terms = args.gpu
   )
 elif args.type=="subcycling-fixed-linear-interpolation":
   thesolver = exahype2.solvers.fv.rusanov.SubcyclingFixedTimeStep(
@@ -167,7 +170,8 @@ elif args.type=="subcycling-fixed-linear-interpolation-enclave":
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    interpolate_linearly_in_time=True
+    interpolate_linearly_in_time=True,
+    stateless_pde_terms = args.gpu
   )
 elif args.type=="subcycling-adaptive-linear-interpolation-enclave":
   thesolver = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking(
@@ -178,7 +182,8 @@ elif args.type=="subcycling-adaptive-linear-interpolation-enclave":
     time_step_relaxation = 0.01,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    interpolate_linearly_in_time=True
+    interpolate_linearly_in_time=True,
+    stateless_pde_terms = args.gpu
   )
 elif args.type=="local-linear-interpolation-enclave":
   thesolver = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking(
@@ -189,29 +194,8 @@ elif args.type=="local-linear-interpolation-enclave":
     time_step_relaxation = 0.01,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    interpolate_linearly_in_time=True
-  )
-elif args.type=="global-fixed-enclave-gpu":
-  thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking(
-    "Euler",
-    args.patch_size,
-    unknowns, auxiliary_variables,
-    min_h, max_h,
-    time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    use_gpu = True
-  )
-elif args.type=="global-adaptive-enclave-gpu":
-  thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
-    "Euler",
-    args.patch_size,
-    unknowns, auxiliary_variables,
-    min_h, max_h,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    time_step_relaxation = 0.01,
-    use_gpu = True
+    interpolate_linearly_in_time=True,
+    stateless_pde_terms = args.gpu
   )
 
 
