@@ -53,7 +53,8 @@ namespace {
    * IWOMP paper by H. Schulz et al.
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
-    const std::vector< tarch::multicore::Task* >&  tasks
+    const std::vector< tarch::multicore::Task* >&  tasks,
+    int                                            numberOfTasksToHoldBack
   ) {
     assertion( not tasks.empty() );
 
@@ -77,7 +78,6 @@ namespace {
         #pragma omp atomic
         busyThreads--;
 
-        bool gotATask = true;
         while (
           busyThreads>0
           and
@@ -85,18 +85,19 @@ namespace {
           // than cores. As the first p trees on p cores will finish and then
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
-          and
-          // without this, the code deadlocks
-          gotATask
         ) {
-          gotATask = tarch::multicore::processPendingTasks( 1 );
-          if (gotATask) {
-            #pragma omp taskyield
-            #if defined(Parallel)
-            // Allow MPI to make progress. We otherwise might starve MPI
-            int flag;
-            MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, MPI_STATUS_IGNORE );
-            #endif
+          int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
+
+          if ( numberOfPendingTasks>=numberOfTasksToHoldBack ) {
+            bool gotATask = tarch::multicore::processPendingTasks( std::max(1,numberOfPendingTasks/2) );
+            if (not gotATask) {
+              #pragma omp taskyield
+              #if defined(Parallel)
+              // Allow MPI to make progress. We otherwise might starve MPI
+              int flag;
+              MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, MPI_STATUS_IGNORE );
+              #endif
+            }
           }
         }
       }
@@ -134,10 +135,10 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  */
 void tarch::multicore::native::spawnAndWait(
   const std::vector< Task* >&  tasks,
-  tarch::multicore::orchestration::Strategy& activeRealisation
+  int                          numberOfTasksToHoldBack
 ) {
-  if (activeRealisation.getNumberOfTasksToHoldBack()>0) {
-    spawnAndWaitAsExplicitTasksWithPolling(tasks);
+  if (numberOfTasksToHoldBack>0) {
+    spawnAndWaitAsExplicitTasksWithPolling(tasks,numberOfTasksToHoldBack);
   }
   else {
     spawnAndWaitAsTaskLoop(tasks);
