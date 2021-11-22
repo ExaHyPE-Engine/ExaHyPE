@@ -173,7 +173,7 @@ namespace {
 
 
   /**
-   * Algorithm:
+   * ## Algorithm:
    *
    * - Lock queue and pop first task from queue.
    * - If there is a task and task's canFuse() returns true:
@@ -186,19 +186,26 @@ namespace {
    * - If there has been a task and merged task list is empty:
    *   - Execute the one task extracted from task queue
    *
+   * ## Thread safety
+   *
+   * I assume that this routine is only called within an environment which has already
+   * locked the queues. So I do not care about any thread safety here myself.
+   *
+   *
    * @return Number of merged/processed tasks
    */
   bool fusePendingTasks(int maxTasks) {
+    logDebug( "fusePendingTasks(int)", "fuse over " << nonblockingTasks.size() << " tasks (max=" << maxTasks << ")" );
+
     tarch::multicore::Task* myTask = nullptr;
     std::list< tarch::multicore::Task* > tasksOfSameType;
 
-    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
     if (not nonblockingTasks.empty()) {
       myTask = nonblockingTasks.front();
       nonblockingTasks.pop_front();
     }
 
-    logDebug( "fusePendingTasks(int)", "got " << nonblockingTasks.size() << " (max=" << maxTasks << ")" );
+    logDebug( "fusePendingTasks(int)", "got one task out of queue, now look how many tasks next in the queue are of the same time" );
 
     auto pp = nonblockingTasks.begin();
     while (
@@ -215,7 +222,6 @@ namespace {
       tasksOfSameType.push_back( *pp );
       pp = nonblockingTasks.erase(pp);
     }
-    lock.free();
 
     ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
 
@@ -225,7 +231,7 @@ namespace {
         stillExecuteLocally = true;
       }
       else {
-        // @todo Hier muss welches Device rein
+        logDebug( "fusePendingTasks(int)", "fused " << tasksOfSameType.size() << " tasks (max=" << maxTasks << ",remaining=" << nonblockingTasks.size() << ")" );
         stillExecuteLocally = myTask->fuse(tasksOfSameType);
       }
       if (stillExecuteLocally) {
@@ -379,9 +385,12 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
       maxTasks--;
       result = true;
     }
-    if (not fifo and processOnePendingTaskLIFO() ) {
+    else if (not fifo and processOnePendingTaskLIFO() ) {
       maxTasks--;
       result = true;
+    }
+    else {
+      maxTasks=0;
     }
   }
 
@@ -409,7 +418,7 @@ void tarch::multicore::spawnTask(Task*  task) {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
     nonblockingTasks.push_back(task);
 
-    if ( nonblockingTasks.size()>=orchestrationStrategy->getNumberOfTasksToFuse() ) {
+    if ( orchestrationStrategy->getNumberOfTasksToFuse()>0 and nonblockingTasks.size()>=orchestrationStrategy->getNumberOfTasksToFuse() ) {
       fusePendingTasks(orchestrationStrategy->getNumberOfTasksToFuse());
     }
   }
@@ -496,7 +505,7 @@ void tarch::multicore::spawnAndWait(
 
   if (not tasks.empty()) {
     orchestrationStrategy->startBSPSection();
-    native::spawnAndWait(tasks,*orchestrationStrategy);
+    native::spawnAndWait(tasks,orchestrationStrategy->getNumberOfTasksToHoldBack());
     orchestrationStrategy->endBSPSection();
 
     if ( not nonblockingTasks.empty() ) {
@@ -535,7 +544,7 @@ void tarch::multicore::native::spawnTask(Task*  job) {
 
 void tarch::multicore::native::spawnAndWait(
   const std::vector< Task* >&  tasks,
-  tarch::multicore::orchestration::Strategy& activeRealisation
+  int                          numberOfTasksToHoldBack
 ) {
   for (auto& p: tasks) {
     while (p->run()) {}

@@ -252,7 +252,7 @@ namespace tarch {
       void spawnTask(Task*  job);
       void spawnAndWait(
         const std::vector< Task* >&  tasks,
-        tarch::multicore::orchestration::Strategy& activeRealisation
+        int                          numberOfTasksToHoldBack
       );
       void yield();
       int getNumberOfPendingTasks();
