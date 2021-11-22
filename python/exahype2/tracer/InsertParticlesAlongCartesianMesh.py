@@ -42,7 +42,7 @@ class InsertParticlesAlongCartesianMesh(ActionSet):
 
 
   __Template_TouchCellFirstTime = jinja2.Template("""
-  if ( not marker.isRefined() ) {
+  if ( not marker.willBeRefined() ) {
     auto newParticles = toolbox::particles::createEquallySpacedParticles<globaldata::{{PARTICLE}}>({{H}},marker,{{ROUND_DOWN}},{{NOISE}});
     for (auto& p: newParticles) {
       p->setNumber(0,_spacetreeId);

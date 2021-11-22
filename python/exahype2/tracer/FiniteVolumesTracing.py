@@ -60,7 +60,7 @@ class FiniteVolumesTracing(peano4.toolbox.particles.ParticleParticleInteraction)
     
     cell_compute_kernel = """
 //Run over local set
-if ( not marker.isRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+if ( not marker.willBeRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
   for (auto& p: localParticles) {
     if ( 
       p->getMoveState()==globaldata::{{PARTICLE}}::MoveState::NotMovedYet

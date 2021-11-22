@@ -496,7 +496,7 @@ if __name__ == "__main__":
     probe_point = [-0,-0,-1e-6]
     project.add_plot_filter( probe_point,[40.0,40.0,2e-6],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,28))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,16))" )
 
 ########################################################################################
 #Tracer setting 
@@ -516,7 +516,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=100,N_y=50,N_z=1)
+        tracer_seeds_generate(Type=args.add_tracer, a=0.0, b=(offset[0]+domain_size[0]), N_x=130,N_y=50,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
 
       if path=="./": path1="."
@@ -528,7 +528,8 @@ if __name__ == "__main__":
         number_of_entries_between_two_db_flushes=20000,
         output_precision=10,
         position_delta_between_two_snapsots=1e-20,
-        data_delta_between_two_snapsots=0
+        data_delta_between_two_snapsots=1e-20,
+        use_relative_deltas=False
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
       #,,-1,"zz",1000))

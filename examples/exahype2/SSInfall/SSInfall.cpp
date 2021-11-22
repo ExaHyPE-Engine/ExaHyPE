@@ -15,7 +15,7 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
 ){
   AbstractSSInfall::startTimeStep(globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize);
   constexpr double pi = M_PI;
-  if (_solverState == SolverState::Primary){
+  if (AbstractSSInfall::isFirstGridSweepOfTimeStep()){
   for (int i=0;i<sample_number;i++) {
     m_tot_copy[i]=global_m_tot[i];
     //m_tot_copy[i]=m_tot[i];
@@ -343,6 +343,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   result=result*(1+C_1*exp(-C_2*t));
     //std::cout <<" u_n "<<u_n<<" c "<< c <<" eigenvale " << result << std::endl;
   //}
+  if (result>10000) {std::cout << "eigen too big: " << result << std::endl; std::abort();}
   return result;
 }
 

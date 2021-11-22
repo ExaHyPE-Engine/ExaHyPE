@@ -33,7 +33,7 @@ class InsertParticlesFromFile(ActionSet):
 
 
   __Template_TouchCellFirstTime = jinja2.Template("""
-  if (not marker.isRefined()) {
+  if (not marker.willBeRefined()) {
     tarch::multicore::Lock lock( _semaphore );
   
     std::list< tarch::la::Vector<Dimensions,double> > coords = _fileReader.getParticlesWithinVoxel(marker.x(), marker.h(), true);  

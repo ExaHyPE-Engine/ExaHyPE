@@ -150,7 +150,7 @@ void toolbox::particles::TrajectoryDatabase::setOutputPrecision( int precision )
 void toolbox::particles::TrajectoryDatabase::setDataDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative ) {
   assertion(value>=0.0);
   _dataDelta = value;
-  _maxDataDelta = 0.0;
+  _maxDataDelta = 1e-20;
   _deltasAreRelative = deltasAreRelative;
 }
 
@@ -158,7 +158,7 @@ void toolbox::particles::TrajectoryDatabase::setDataDeltaBetweenTwoSnapshots( do
 void toolbox::particles::TrajectoryDatabase::setPositionDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative ) {
   assertion(value>=0.0);
   _positionDelta = value;
-  _maxPositionDelta = 0.0;
+  _maxPositionDelta = 1e-20;
   _deltasAreRelative = deltasAreRelative;
 }
 
@@ -223,10 +223,10 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
         and
         tarch::la::equals( _data.at(number).front().timestamp, timestamp )
       ) {
-        logWarning( "getAction(...)", "particle " << number.first << "x" << number.second << " at " << x << " has different values for same time stamp " << timestamp << ". This is inconsistent");
+        //logWarning( "getAction(...)", "particle " << number.first << "x" << number.second << " at " << x << " has different values for same time stamp " << timestamp << ". This is inconsistent");
         return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Replace;
       }
-      else if ( _deltasAreRelative and _maxDataDelta>=_deltaCutOffThreshold and delta/_deltaCutOffThreshold >= _dataDelta ) {
+      else if ( _deltasAreRelative and _maxDataDelta>=_deltaCutOffThreshold and delta/_maxDataDelta >= _dataDelta ) {
         return toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Append;
       }
       else if ( not _deltasAreRelative and delta >= _dataDelta ) {
