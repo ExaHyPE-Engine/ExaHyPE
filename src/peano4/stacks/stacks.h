@@ -5,6 +5,7 @@
 
 
 #include <string>
+#include "config.h"
 
 
 namespace peano4 {
@@ -14,6 +15,13 @@ namespace peano4 {
       MPISend,
       MPIReceive
     };
+
+    #if !defined(Parallel)
+    /**
+     * My stacks need send and receive signature.
+     */
+    typedef int         MPI_Comm;
+    #endif
   }
 }
 

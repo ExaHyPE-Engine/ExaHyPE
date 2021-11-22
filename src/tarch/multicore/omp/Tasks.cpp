@@ -9,7 +9,6 @@
 #include "tarch/logging/Statistics.h"
 
 
-
 #if defined(SharedOMP)
 
 namespace {
@@ -54,10 +53,10 @@ namespace {
    * IWOMP paper by H. Schulz et al.
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
-    const std::vector< tarch::multicore::Task* >&  tasks
+    const std::vector< tarch::multicore::Task* >&  tasks,
+    int                                            numberOfTasksToHoldBack
   ) {
     assertion( not tasks.empty() );
-    assertion( tarch::multicore::getRealisation()!=tarch::multicore::Realisation::MapOntoNativeTasks );
 
     const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
     int       busyThreads     = NumberOfThreads;
@@ -86,18 +85,19 @@ namespace {
           // than cores. As the first p trees on p cores will finish and then
           // poll. The other >p trees/tasks will starve
           busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
-          and
-          tarch::multicore::getRealisation()!=tarch::multicore::Realisation::HoldTasksBackInLocalQueue
         ) {
-          const int threadsToGrab = tarch::multicore::getNumberOfPendingTasks() / (NumberOfThreads-busyThreads+1) / 2;
-          bool gotATask = tarch::multicore::processPendingTasks( std::max(1,threadsToGrab) );
-          if (not gotATask) {
-            #pragma omp taskyield
-            #if defined(Parallel)
-            // Allow MPI to make progress. We otherwise might starve MPI
-            int flag;
-            MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, MPI_STATUS_IGNORE );
-            #endif
+          int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
+
+          if ( numberOfPendingTasks>=numberOfTasksToHoldBack ) {
+            bool gotATask = tarch::multicore::processPendingTasks( std::max(1,numberOfPendingTasks/2) );
+            if (not gotATask) {
+              #pragma omp taskyield
+              #if defined(Parallel)
+              // Allow MPI to make progress. We otherwise might starve MPI
+              int flag;
+              MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, MPI_STATUS_IGNORE );
+              #endif
+            }
           }
         }
       }
@@ -134,20 +134,14 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  * produced by the loop. Therefore, I have to add a manual taskwait.
  */
 void tarch::multicore::native::spawnAndWait(
-  const std::vector< Task* >&  tasks
+  const std::vector< Task* >&  tasks,
+  int                          numberOfTasksToHoldBack
 ) {
-  switch (tarch::multicore::getRealisation()) {
-    case Realisation::MapOntoNativeTasks:
-      spawnAndWaitAsTaskLoop(tasks);
-      break;
-    case Realisation::HoldTasksBackInLocalQueue:
-    case Realisation::HoldTasksBackInLocalQueueAndBackfill:
-    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfill:
-    case Realisation::HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask:
-    case Realisation::HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask:
-    case Realisation::HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask:
-      spawnAndWaitAsExplicitTasksWithPolling(tasks);
-      break;
+  if (numberOfTasksToHoldBack>0) {
+    spawnAndWaitAsExplicitTasksWithPolling(tasks,numberOfTasksToHoldBack);
+  }
+  else {
+    spawnAndWaitAsTaskLoop(tasks);
   }
 }
 

@@ -95,6 +95,7 @@ int main(int argc, char** argv) {
     //
     int gridConstructionSteps = 0;
     while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
+      logInfo( "main()", "run a grid construction step and insert particles" );
       examples::particles::observers::CreateGrid observer;
       peano4::parallel::SpacetreeSet::getInstance().traverse(observer);
       gridConstructionSteps++;

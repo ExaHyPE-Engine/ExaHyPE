@@ -252,19 +252,21 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
   );
 
   event.setParentCellIsAdjacentToChangingOrHangingVertex(false);
-  dfor2(k)
-    if (
-      coarseGridVertices[kScalar].getState()!=GridVertex::State::New
-      or
-      coarseGridVertices[kScalar].getState()!=GridVertex::State::Refining
-      or
-      coarseGridVertices[kScalar].getState()!=GridVertex::State::Erasing
-      or
-      coarseGridVertices[kScalar].getState()!=GridVertex::State::HangingVertex
-    ) {
-      event.setParentCellIsAdjacentToChangingOrHangingVertex( true );
-    }
-  enddforx
+  if (state.getLevel()>1) {
+    dfor2(k)
+      if (
+        coarseGridVertices[kScalar].getState()==GridVertex::State::New
+        or
+        coarseGridVertices[kScalar].getState()==GridVertex::State::Refining
+        or
+        coarseGridVertices[kScalar].getState()==GridVertex::State::Erasing
+        or
+        coarseGridVertices[kScalar].getState()==GridVertex::State::HangingVertex
+      ) {
+        event.setParentCellIsAdjacentToChangingOrHangingVertex( true );
+      }
+    enddforx
+  }
 
   logTraceOutWith2Arguments( "createGenericCellTraversalEvent(...)", event.toString(), _id );
   return event;

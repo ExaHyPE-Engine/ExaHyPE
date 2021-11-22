@@ -280,7 +280,10 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   }    
   else if (extrapolate_bc==2)
   {
-    if (isnan(Qinside[0])) {std::cout << "before "<< normal << " " << faceCentre(0) << " "<<faceCentre(1)<<" "<<faceCentre(2) <<" "<< Qinside[0]<< " "<< Qinside[1]<<" "<< Qinside[2]<<" "<< Qinside[3]<<" "<< Qinside[4]<<std::endl; std::abort();}
+    nonCriticalAssertion7(
+      not std::isnan(Qinside[0]),
+      normal, faceCentre, Qinside[0], Qinside[1], Qinside[2], Qinside[3], Qinside[4]
+    );
     for (int i=5; i<20; i++){
     	Qoutside[i]=0;
     }  
@@ -304,7 +307,10 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   const double p = (gamma-1) * (Qoutside[4] - 0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]); 
   if (p<0){Qoutside[4]=0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]+1e-10;}   
   logTraceOut( "boundaryConditions(...)" );
-  if (isnan(Qinside[0])) {std::cout << "after "<< normal << " " << faceCentre(0) << " "<<faceCentre(1)<<" "<<faceCentre(2) <<" "<< Qinside[0]<< " "<< Qinside[1]<<" "<< Qinside[2]<<" "<< Qinside[3]<<" "<< Qinside[4]<<std::endl; std::abort();}
+  nonCriticalAssertion7(
+    not std::isnan(Qinside[0]),
+    normal, faceCentre, Qinside[0], Qinside[1], Qinside[2], Qinside[3], Qinside[4]
+  );
 }
 
 
