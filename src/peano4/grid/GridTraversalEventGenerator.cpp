@@ -251,28 +251,6 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
         splitting.empty()
   );
 
-  event.setParentCellIsAdjacentToChangingOrHangingVertex(false);
-  if (state.getLevel()>0) {
-    dfor2(k)
-      if (
-        coarseGridVertices[kScalar].getState()!=GridVertex::State::Refined
-        and
-        coarseGridVertices[kScalar].getState()!=GridVertex::State::Unrefined
-      ) {
-        // @todo Der Name ist net gut. Soll ja aktueller Vertex auch seins
-        event.setParentCellIsAdjacentToChangingOrHangingVertex( true );
-      }
-      if (
-        fineGridVertices[kScalar].getState()!=GridVertex::State::Refined
-        and
-        fineGridVertices[kScalar].getState()!=GridVertex::State::Unrefined
-      ) {
-        // @todo Der Name ist net gut. Soll ja aktueller Vertex auch seins
-        event.setParentCellIsAdjacentToChangingOrHangingVertex( true );
-      }
-    enddforx
-  }
-
   logTraceOutWith2Arguments( "createGenericCellTraversalEvent(...)", event.toString(), _id );
   return event;
 }

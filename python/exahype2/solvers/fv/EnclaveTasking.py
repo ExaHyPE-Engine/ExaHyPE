@@ -35,7 +35,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
 
-  if (marker.isSkeletonCell()) {
+  if (marker.willBeSkeletonCell()) {
     tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       cellTimeStamp,
@@ -59,7 +59,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(usedTimeStepSize);
   }
   else { // is an enclave cell
-    assertion( marker.isEnclaveCell() );
+    assertion( marker.willBeEnclaveCell() );
+    assertion( not marker.willBeRefined() );
     auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       cellTimeStamp,
@@ -86,11 +87,12 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
     ReconstructPatchAndApplyFunctor.__init__(self,
       patch = solver._patch,
-      # todo hier muessen beide rein, denn ich muss ja interpolieren
+      # todo hier muessen beide rein, denn ich muss ja interpolieren -> machen die anderen Codes dann
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = self.TemplateUpdateCell.render(**d),
       reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
-      guard  = "not marker.willBeRefined() and not marker.hasBeenRefined() and (" + \
+      # todo Dokumentieren, dass net willBeRefined(), weil wir ja das brauchen wenn wir runtergehen
+      guard  = "not marker.hasBeenRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")",
@@ -120,13 +122,13 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
   if ( 
-    not marker.willBeRefined() and not marker.hasBeenRefined()
+    not marker.hasBeenRefined()
     and 
     {{GUARD}}
     and
     repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
   ) {
-    if ( marker.isEnclaveCell() ) {
+    if ( marker.hasBeenEnclaveCell() ) {
       const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
 
       if ( taskNumber>=0 ) {
@@ -325,9 +327,9 @@ class EnclaveTasking( FV ):
   
     """
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard() + " and (" + \
-      self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.isSkeletonCell())"
+      self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.willBeSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
-      self._primary_sweep_or_plot_guard + " or marker.isSkeletonCell())"
+      self._primary_sweep_or_plot_guard + " or marker.hasBeenSkeletonCell())"
 
 
   def create_action_sets(self):
@@ -377,9 +379,9 @@ class EnclaveTasking( FV ):
     
     self._action_set_handle_boundary.guard                          = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
     self._action_set_project_patch_onto_faces.guard                 = self._store_cell_data_default_guard() + " and (" + \
-         "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
-      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
-      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
+         "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.willBeSkeletonCell() ) " + \
+      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.willBeSkeletonCell() ) " + \
+      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.willBeEnclaveCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
       ")"
     self._action_set_roll_over_update_of_faces.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard

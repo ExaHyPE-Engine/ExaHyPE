@@ -39,7 +39,7 @@ struct peano4::grid::GridTraversalEvent {
 
 
     GridTraversalEvent() {}
-    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing, bool  __parentCellIsAdjacentToChangingOrHangingVertex);
+    GridTraversalEvent(tarch::la::Vector<Dimensions,double>  __x, tarch::la::Vector<Dimensions,double>  __h, std::bitset<TwoPowerD>  __hasBeenRefined, std::bitset<TwoPowerD>  __willBeRefined, std::bitset<TwoPowerD>  __isVertexLocal, std::bitset<TwoTimesD>  __isFaceLocal, bool  __isCellLocal, std::bitset<TwoPowerD>  __isVertexAdjacentToParallelDomainBoundary, std::bitset<TwoTimesD>  __isFaceAdjacentToParallelDomainBoundary, tarch::la::Vector<TwoPowerD,int>  __vertexDataFrom, tarch::la::Vector<TwoPowerD,int>  __vertexDataTo, tarch::la::Vector<TwoTimesD,int>  __faceDataFrom, tarch::la::Vector<TwoTimesD,int>  __faceDataTo, int  __cellData, tarch::la::Vector<Dimensions,int>  __relativePositionToFather, int  __invokingSpacetree, int  __invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing);
 
     tarch::la::Vector<Dimensions,double>   getX() const;
     void   setX(const tarch::la::Vector<Dimensions,double>& value);
@@ -107,8 +107,6 @@ struct peano4::grid::GridTraversalEvent {
     void   setInvokingSpacetree(int value);
     int   getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() const;
     void   setInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing(int value);
-    bool   getParentCellIsAdjacentToChangingOrHangingVertex() const;
-    void   setParentCellIsAdjacentToChangingOrHangingVertex(bool value);
 
 
 
@@ -173,7 +171,6 @@ struct peano4::grid::GridTraversalEvent {
     tarch::la::Vector<Dimensions,int>   _relativePositionToFather;
     int   _invokingSpacetree;
     int   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
-    bool   _parentCellIsAdjacentToChangingOrHangingVertex;
 
 
 
