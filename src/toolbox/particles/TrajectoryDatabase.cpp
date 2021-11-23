@@ -21,7 +21,7 @@ toolbox::particles::TrajectoryDatabase::Entry::Entry( const TrajectoryDatabase& 
 }
 
 
-toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta, double dataDelta, bool clearDatabaseAfterFlush, bool deltasAreRelative ):
+toolbox::particles::TrajectoryDatabase::TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta, double dataDelta, double timeDelta, bool clearDatabaseAfterFlush, bool deltasAreRelative ):
   _fileName(""),
   _timeDelta(0.0),
   _dataDelta(dataDelta),
