@@ -194,8 +194,8 @@ namespace {
    *
    * @return Number of merged/processed tasks
    */
-  bool fusePendingTasks(int maxTasks) {
-    logDebug( "fusePendingTasks(int)", "fuse over " << nonblockingTasks.size() << " tasks (max=" << maxTasks << ")" );
+  bool fusePendingTasks(std::pair<int,int> maxTasksAndDevice) {
+    logDebug( "fusePendingTasks(int)", "fuse over " << nonblockingTasks.size() << " tasks (max=" << maxTasksAndDevice.first << ")" );
 
     tarch::multicore::Task* myTask = nullptr;
     std::list< tarch::multicore::Task* > tasksOfSameType;
@@ -217,7 +217,7 @@ namespace {
       and
       (*pp)->getTaskType()==myTask->getTaskType()
       and
-      tasksOfSameType.size()<maxTasks
+      tasksOfSameType.size()<maxTasksAndDevice.first
     ) {
       tasksOfSameType.push_back( *pp );
       pp = nonblockingTasks.erase(pp);
@@ -231,8 +231,9 @@ namespace {
         stillExecuteLocally = true;
       }
       else {
-        logDebug( "fusePendingTasks(int)", "fused " << tasksOfSameType.size() << " tasks (max=" << maxTasks << ",remaining=" << nonblockingTasks.size() << ")" );
-        stillExecuteLocally = myTask->fuse(tasksOfSameType);
+        // @todo Debug
+        logInfo( "fusePendingTasks(int)", "fused " << tasksOfSameType.size() << " tasks (max=" << maxTasksAndDevice.first << ",remaining=" << nonblockingTasks.size() << ")" );
+        stillExecuteLocally = myTask->fuse(tasksOfSameType,maxTasksAndDevice.second);
       }
       if (stillExecuteLocally) {
         tarch::multicore::native::spawnTask(myTask);
@@ -250,6 +251,16 @@ void tarch::multicore::setOrchestration( tarch::multicore::orchestration::Strate
 
   delete orchestrationStrategy;
   orchestrationStrategy = realisation;
+}
+
+
+tarch::multicore::orchestration::Strategy* tarch::multicore::swapOrchestration( tarch::multicore::orchestration::Strategy* realisation ) {
+  assertion(orchestrationStrategy!=nullptr);
+  assertion(realisation!=nullptr);
+
+  tarch::multicore::orchestration::Strategy* result = orchestrationStrategy;
+  orchestrationStrategy = realisation;
+  return result;
 }
 
 
@@ -419,8 +430,9 @@ void tarch::multicore::spawnTask(Task*  task) {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
     nonblockingTasks.push_back(task);
 
-    if ( orchestrationStrategy->getNumberOfTasksToFuse()>0 and nonblockingTasks.size()>=orchestrationStrategy->getNumberOfTasksToFuse() ) {
-      fusePendingTasks(orchestrationStrategy->getNumberOfTasksToFuse());
+    auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
+    if ( fusionCommand.first>0 and nonblockingTasks.size()>=fusionCommand.first ) {
+      fusePendingTasks(fusionCommand);
     }
   }
 

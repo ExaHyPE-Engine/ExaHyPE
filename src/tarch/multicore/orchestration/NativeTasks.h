@@ -35,7 +35,7 @@ class tarch::multicore::orchestration::NativeTasks: public tarch::multicore::orc
     void startBSPSection() override;
     void endBSPSection()   override;
     int getNumberOfTasksToHoldBack() override;
-    int getNumberOfTasksToFuse()     override;
+    std::pair<int,int> getNumberOfTasksToFuseAndTargetDevice() override;
 };
 
 #endif

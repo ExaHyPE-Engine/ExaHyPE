@@ -12,7 +12,7 @@ int tarch::multicore::orchestration::NativeTasks::getNumberOfTasksToHoldBack() {
 }
 
 
-int tarch::multicore::orchestration::NativeTasks::getNumberOfTasksToFuse() {
-  return 0;
+std::pair<int,int> tarch::multicore::orchestration::NativeTasks::getNumberOfTasksToFuseAndTargetDevice() {
+  return std::pair<int,int>(0,0);
 }
 

@@ -20,6 +20,13 @@ namespace tarch {
     void setOrchestration( tarch::multicore::orchestration::Strategy* realisation );
 
     /**
+     * Different to setOrchestration(), this operation does not delete
+     * the current orchestration. It swaps them, so you can use setOrchestration()
+     * with the result afterwards and re-obtain the original strategy.
+     */
+    tarch::multicore::orchestration::Strategy* swapOrchestration( tarch::multicore::orchestration::Strategy* realisation );
+
+    /**
      * Tells task/thread to yield, i.e. to allow other tasks/threads to run.
      * Typically to be used within busy-waiting/polling loops.
      *

@@ -1,7 +1,7 @@
 #include "StrategyFactory.h"
 
 #include "BSP.h"
-#include "FuseAll.h"
+#include "Fuse.h"
 #include "NativeTasks.h"
 
 #include "tarch/logging/Log.h"
@@ -11,8 +11,11 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
   if ( realisationString.compare( "bsp" )==0 ) {
     return new BSP();
   }
-  if ( realisationString.compare( "fuse-all" )==0 ) {
-    return new FuseAll();
+  if ( realisationString.compare( "fuse-" )==0 ) {
+    std::string argument = realisationString.substr( std::string("fuse-").size() );
+    std::cout << std::endl << "parameter: " << argument << std::endl;
+
+    return new Fuse(15);
   }
   if ( realisationString.compare( "native" )==0 ) {
     return new NativeTasks();
@@ -27,7 +30,7 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
 
 
 std::string tarch::multicore::orchestration::getListOfRealisations() {
-  return "bsp,fuse-all,native,default";
+  return "bsp,fuse-[1,2,3...],native,default";
 }
 
 

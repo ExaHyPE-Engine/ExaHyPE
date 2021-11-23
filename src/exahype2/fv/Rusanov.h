@@ -31,6 +31,27 @@ namespace exahype2 {
     } ;
 
 
+/*
+    namespace internal {
+      template<
+        int                                          numVPAIP, // numberofVolumesPerAxisInPatch
+        int                                          unknowns,
+        int                                          auxiliaryVariables,
+        typename SOLVER,
+        bool                                         skipFluxEvaluation,
+        bool                                         skipNCPEvaluation,
+        bool                                         skipSourceTerm
+        >
+      void Fusanov_2D(
+        const int       haloSize,
+        patchData2d     pV,
+        const int       sourcePatchSize,
+        const int       destPatchSize
+      )
+      {
+    }
+*/
+
     template<
       int                                          numVPAIP, // numberofVolumesPerAxisInPatch
       int                                          unknowns,
@@ -41,18 +62,16 @@ namespace exahype2 {
       bool                                         skipSourceTerm
       >
     void Fusanov_2D(
-      const int                                          haloSize,
-      patchData2d                            pV,
-      const int                                          sourcePatchSize,
-      const int                                          destPatchSize
+      const int       haloSize,
+      patchData2d     pV,
+      const int       sourcePatchSize,
+      const int       destPatchSize
     )
     {
       const size_t NPT  = pV.npatches;
       const size_t LTOT = NPT*destPatchSize;
       const size_t LR   = NPT*sourcePatchSize;
       printf("2D target to %lu and %lu and  %lu\n", NPT, LR, LTOT);
-
-
 
 #if defined(CCZ4EINSTEIN)
 #pragma omp target enter data map(to:SOLVER::CCZ4GLMc0) map(to:SOLVER::CCZ4GLMc) map(to:SOLVER::CCZ4GLMd) map(to:SOLVER::CCZ4GLMepsA) map(to:SOLVER::CCZ4GLMepsP) map(to:SOLVER::CCZ4GLMepsD) map(to:SOLVER::CCZ4itau) map(to:SOLVER::CCZ4k1) map(to:SOLVER::CCZ4k2) map(to:SOLVER::CCZ4k3) map(to:SOLVER::CCZ4eta)  map(to:SOLVER::CCZ4f) map(to:SOLVER::CCZ4g) map(to:SOLVER::CCZ4xi) map(to:SOLVER::CCZ4e) map(to:SOLVER::CCZ4c) map(to:SOLVER::CCZ4mu) map(to:SOLVER::CCZ4ds) map(to:SOLVER::CCZ4sk) map(to:SOLVER::CCZ4bs) map(to:SOLVER::CCZ4LapseType) map(to:SOLVER::CCZ4tp_grid_setup) map(to:SOLVER::CCZ4swi) map(to:SOLVER::CCZ4ReSwi) map(to:SOLVER::CCZ4source) map(to:SOLVER::Scenario)
