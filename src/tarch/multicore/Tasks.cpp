@@ -404,6 +404,7 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
 
 void tarch::multicore::spawnTask(Task*  task) {
   assertion( task!=nullptr );
+
   #ifdef UseSmartMPI
   if ( task->isSmartMPITask() ) {
     smartmpi::spawn( dynamic_cast<smartmpi::Task*>(task) );

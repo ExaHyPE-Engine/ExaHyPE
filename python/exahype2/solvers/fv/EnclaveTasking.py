@@ -348,30 +348,32 @@ class EnclaveTasking( FV ):
     again as they are non-persistent. The projection onto the (hanging) faces is also 
     happening directly in the primary sweep, as the cells adjacent to the hanging 
     face are skeleton cells.
+
+    AMR and adjust cell have to be there always, i.e. also throughout 
+    the grid construction. But the criterion is something that we only
+    evaluate in the secondary sweep. That's when we have an updated/changed time step.
+    If we identify coarsening and refinement instructions in the secondary sweep, the 
+    next primary one will actually see them and trigger the update. That is, the 
+    subsequent secondary switch will actually implement the grid changes, and we can 
+    evaluate the criteria again.
+    
+    For dynamic AMR, this implies that we have to ensure that all changed grid parts
+    are labelled as skeleton cells. This way, we can implement the AMR properly, we 
+    ensure that all the enclaves run in parallel, and we know that all data is held
+    persistently on the stacks.
         
     """
     super(EnclaveTasking, self).create_action_sets()
 
     self._action_set_update_cell                = UpdateCell(self)
     self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
-
-    #
-    # AMR and adjust cell have to be there always, i.e. also throughout 
-    # the grid construction. But the criterion is something that we only
-    # evaluate in the primary sweep. If we come to the conclusion that we
-    # want to refine or coarsen, we find this out in the primary sweep.
-    # So the actual trigger will then we done in the secondary sweep. At
-    # this point, Peano 4 won't change anything. We only trigger mesh 
-    # alteration. The real mesh adoption then is due in the subsequent
-    # primary sweep or plotting.
-    #
     
     self._action_set_initial_conditions.guard                       = self._action_set_initial_conditions.guard
     self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard
     #self._action_set_AMR.guard                                      = self._secondary_sweep_or_grid_construction_guard
     #self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_or_grid_construction_guard
-    self._action_set_AMR.guard                                      = self._primary_sweep_guard
-    self._action_set_AMR_commit_without_further_analysis.guard      = self._primary_sweep_guard
+    self._action_set_AMR.guard                                      = self._secondary_sweep_guard
+    self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_guard
     
     self._action_set_handle_boundary.guard                          = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
     self._action_set_project_patch_onto_faces.guard                 = self._store_cell_data_default_guard() + " and (" + \
