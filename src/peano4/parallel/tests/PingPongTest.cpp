@@ -113,7 +113,7 @@ namespace {
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingReceives() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
+  //if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
     int out;
     testErrors = 0;
     if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -131,14 +131,14 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
     }
     MPI_Barrier(MPI_COMM_WORLD);
     validate( testErrors==0 );
-  }
+  //}
   #endif
 }
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingReceives() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
+  //if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
     int out;
     testErrors = 0;
     if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -156,7 +156,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
     }
     MPI_Barrier(MPI_COMM_WORLD);
     validate( testErrors==0 );
-  }
+  //}
   #endif
 }
 
@@ -164,7 +164,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
+  //if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
     int out = 23;
     testErrors = 0;
     if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -183,14 +183,14 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
     }
     MPI_Barrier(MPI_COMM_WORLD);
     validate( testErrors==0 );
-  }
+  //}
   #endif
 }
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSends() {
     #if defined(Parallel) and not defined(UseSmartMPI)
-  if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
+ // if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
     int out = 23;
     testErrors = 0;
     if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -209,14 +209,14 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
     }
     MPI_Barrier(MPI_COMM_WORLD);
     validate( testErrors==0 );
-  }
+  //}
   #endif
 }
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingSendsAndReceives() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
+  //if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
     int out = 23;
     testErrors = 0;
     if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -235,14 +235,14 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
     }
     MPI_Barrier(MPI_COMM_WORLD);
     validate( testErrors==0 );
-  }
+  //}
   #endif
 }
 
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSendsAndReceives() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
+  //if ( tarch::multicore::getRealisation() == tarch::multicore::Realisation::MapOntoNativeTasks ) {
     int out = 23;
     testErrors = 0;
     if ( tarch::mpi::Rank::getInstance().getNumberOfRanks()>=2 and tarch::mpi::Rank::getInstance().getRank()==0) {
@@ -261,7 +261,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
     }
     MPI_Barrier(MPI_COMM_WORLD);
     validate( testErrors==0 );
-  }
+  //}
   #endif
 }
 

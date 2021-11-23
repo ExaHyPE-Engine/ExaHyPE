@@ -307,6 +307,7 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   const double p = (gamma-1) * (Qoutside[4] - 0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]); 
   if (p<0){Qoutside[4]=0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]+1e-10;}   
   logTraceOut( "boundaryConditions(...)" );
+  if (std::isnan(Qinside[0])){std::cout << "NaN at boundary" << std::endl; std::abort();}
   nonCriticalAssertion7(
     not std::isnan(Qinside[0]),
     normal, faceCentre, Qinside[0], Qinside[1], Qinside[2], Qinside[3], Qinside[4]
@@ -350,6 +351,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
     //std::cout <<" u_n "<<u_n<<" c "<< c <<" eigenvale " << result << std::endl;
   //}
   if (result>10000) {std::cout << "eigen too big: " << result << std::endl; std::abort();}
+  if (result<1e-8 and t>0.5) {std::cout << "eigen too small: " << result << std::endl; std::abort();}
   return result;
 }
 

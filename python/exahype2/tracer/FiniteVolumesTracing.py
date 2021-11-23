@@ -175,7 +175,7 @@ if ( not marker.willBeRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasU
 #include "toolbox/particles/Tracer.h"
 #include "repositories/SolverRepository.h"
 """ )
-    return peano4.toolbox.particles.ParticleParticleInteraction.get_includes(self) + "\n" + result.render(**self.d)
+    return peano4.toolbox.particles.ParticleParticleInteraction.get_includes(self) + "\n" + result.render(**self.tracerDict)
 
 
   def get_attributes(self):
