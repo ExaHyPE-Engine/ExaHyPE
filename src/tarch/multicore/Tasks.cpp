@@ -195,7 +195,7 @@ namespace {
    * @return Number of merged/processed tasks
    */
   bool fusePendingTasks(std::pair<int,int> maxTasksAndDevice) {
-    logDebug( "fusePendingTasks(int)", "fuse over " << nonblockingTasks.size() << " tasks (max=" << maxTasksAndDevice.first << ")" );
+    logDebug( "fusePendingTasks(int)", "fuse up to " << nonblockingTasks.size() << " tasks (max=" << maxTasksAndDevice.first << ")" );
 
     tarch::multicore::Task* myTask = nullptr;
     std::list< tarch::multicore::Task* > tasksOfSameType;
@@ -205,7 +205,6 @@ namespace {
       nonblockingTasks.pop_front();
     }
 
-    logDebug( "fusePendingTasks(int)", "got one task out of queue, now look how many tasks next in the queue are of the same time" );
 
     auto pp = nonblockingTasks.begin();
     while (
@@ -231,8 +230,6 @@ namespace {
         stillExecuteLocally = true;
       }
       else {
-        // @todo Debug
-        logInfo( "fusePendingTasks(int)", "fused " << tasksOfSameType.size() << " tasks (max=" << maxTasksAndDevice.first << ",remaining=" << nonblockingTasks.size() << ")" );
         stillExecuteLocally = myTask->fuse(tasksOfSameType,maxTasksAndDevice.second);
       }
       if (stillExecuteLocally) {
@@ -429,6 +426,8 @@ void tarch::multicore::spawnTask(Task*  task) {
   else {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
     nonblockingTasks.push_back(task);
+
+    logDebug( "spawnTask(...)", "enqueued task (#tasks=" << nonblockingTasks.size() << ")" );
 
     auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
     if ( fusionCommand.first>0 and nonblockingTasks.size()>=fusionCommand.first ) {

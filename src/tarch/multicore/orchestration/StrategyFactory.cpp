@@ -11,16 +11,16 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
   if ( realisationString.compare( "bsp" )==0 ) {
     return new BSP();
   }
-  if ( realisationString.compare( "fuse-" )==0 ) {
+  else if ( realisationString.compare( "fuse-" )>0 ) {
     std::string argument = realisationString.substr( std::string("fuse-").size() );
-    std::cout << std::endl << "parameter: " << argument << std::endl;
-
-    return new Fuse(15);
+    std::cerr << std::endl << "parameter: " << argument << std::endl;
+    int maxFusion = atoi( argument.c_str() );
+    return new Fuse(maxFusion);
   }
-  if ( realisationString.compare( "native" )==0 ) {
+  else if ( realisationString.compare( "native" )==0 ) {
     return new NativeTasks();
   }
-  if ( realisationString.compare( "default" )==0 ) {
+  else if ( realisationString.compare( "default" )==0 ) {
     return createDefaultStrategy();
   }
   else {
