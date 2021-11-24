@@ -62,6 +62,22 @@ void toolbox::particles::TrajectoryDatabase::clear(bool lockSemaphore) {
   _data.clear();
 }
 
+void toolbox::particles::TrajectoryDatabase::clearHistory(bool lockSemaphore) {
+  tarch::multicore::Lock lock(_semaphore, false);
+
+  if (lockSemaphore) {
+	lock.lock();
+  }
+
+  for (auto& particle: _data) {
+    for (auto& snapshot: particle.second) {
+      if (snapshot.data!=nullptr) {
+        delete[] snapshot.data;
+      }
+    }
+  }
+
+}
 
 void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
   std::ostringstream snapshotFileName;
