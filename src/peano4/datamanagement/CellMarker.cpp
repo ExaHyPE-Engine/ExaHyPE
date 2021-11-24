@@ -19,10 +19,8 @@ peano4::datamanagement::CellMarker::CellMarker(
   _hasBeenRefined(event.getHasBeenRefined()!=0),
   _willBeRefined(event.getWillBeRefined()!=0),
   _isLocal(event.getIsCellLocal()),
-  _areAllVerticesRefined( event.getWillBeRefined().all() and event.getHasBeenRefined().all() ),
   _isOneVertexHanging( false ),
   _isOneVertexCreatedOrDestroyed( false ),
-  _parentIsFlaggedAsChanging( event.getParentCellIsAdjacentToChangingOrHangingVertex() ),
   _areAllVerticesInsideDomain( event.getIsVertexAdjacentToParallelDomainBoundary().none() ),
   _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing( event.getInvokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing() )
 {
@@ -34,6 +32,31 @@ peano4::datamanagement::CellMarker::CellMarker(
     _isOneVertexCreatedOrDestroyed |= event.getVertexDataFrom(i)==peano4::grid::TraversalObserver::CreateOrDestroyPersistentGridEntity;
   }
   _relativePositionOfCellWithinFatherCell = event.getRelativePositionToFather();
+
+  bool couldBeEnclave = _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
+                    and _areAllVerticesInsideDomain
+                    and not _isOneVertexHanging;
+
+  // @tood Bin mir net sicher
+
+  _willBeEnclave  = couldBeEnclave and not _willBeRefined  and not _isOneVertexCreatedOrDestroyed;
+  _hasBeenEnclave = couldBeEnclave and not _hasBeenRefined and not _isOneVertexCreatedOrDestroyed;
+
+
+/*
+  return
+     // @todo Docu
+     // Das ist ja in dem Moment noch wurscht
+     // D Fall dass ein Vertex hanging war und jetzt auf new geht, dann gilt
+     // areAllVerticesRefined net, weil dass ja refined davor und jetzt gesetzt haben muss
+// neu darf er net sein.
+// delete darf er schon sein, weil dann war er zuvor halt persistent
+     and not _isOneVertexCreated
+//     and not _isOneVertexCreatedOrDestroyed
+//     and not _subtreeIsChanging
+     and (not isRefined or _areAllVerticesRefined);
+*/
+
 }
 
 
@@ -108,33 +131,36 @@ std::string peano4::datamanagement::CellMarker::toString() const {
       << ",has-been-refined=" << _hasBeenRefined
       << ",will-be-refined=" << _willBeRefined
       << ",is-local=" << _isLocal
-      << ",all-vertices-refined=" << _areAllVerticesRefined
       << ",one-vertex-hanging=" << _isOneVertexHanging
       << ",one-vertex-destroyed/created=" << _isOneVertexCreatedOrDestroyed
-      << ",parent-flagged=" << _parentIsFlaggedAsChanging
       << ",all-vertices-inside-domain=" << _areAllVerticesInsideDomain
       << ",no-lb=" << _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
       << ",rel-pos=" << _relativePositionOfCellWithinFatherCell
+      << ",has-been-enclave=" << _hasBeenEnclave
+      << ",will-be-enclave=" << _willBeEnclave
       << ")";
   return msg.str();
 }
 
 
-bool peano4::datamanagement::CellMarker::isEnclaveCell() const {
-  bool isRefined = _hasBeenRefined and _willBeRefined;
-  return _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing
-     and _areAllVerticesInsideDomain
-     and not _isOneVertexHanging
-     and not _isOneVertexCreatedOrDestroyed
-     and not _parentIsFlaggedAsChanging
-     and (not isRefined or _areAllVerticesRefined);
+bool peano4::datamanagement::CellMarker::willBeEnclaveCell() const {
+  return _willBeEnclave;
 }
 
 
-bool peano4::datamanagement::CellMarker::isSkeletonCell() const {
-  return not isEnclaveCell();
+bool peano4::datamanagement::CellMarker::willBeSkeletonCell() const {
+  return not _willBeEnclave;
 }
 
+
+bool peano4::datamanagement::CellMarker::hasBeenEnclaveCell() const {
+  return _hasBeenEnclave;
+}
+
+
+bool peano4::datamanagement::CellMarker::hasBeenSkeletonCell() const {
+  return not _hasBeenEnclave;
+}
 
 
 #ifdef Parallel

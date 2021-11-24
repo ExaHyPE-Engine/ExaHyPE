@@ -49,7 +49,7 @@ void toolbox::particles::TrajectoryDatabase::clear(bool lockSemaphore) {
   tarch::multicore::Lock lock(_semaphore, false);
 
   if (lockSemaphore) {
-	lock.lock();
+    lock.lock();
   }
 
   for (auto& particle: _data) {
@@ -62,22 +62,28 @@ void toolbox::particles::TrajectoryDatabase::clear(bool lockSemaphore) {
   _data.clear();
 }
 
+
 void toolbox::particles::TrajectoryDatabase::clearHistory(bool lockSemaphore) {
   tarch::multicore::Lock lock(_semaphore, false);
 
   if (lockSemaphore) {
-	lock.lock();
+    lock.lock();
   }
 
   for (auto& particle: _data) {
-    for (auto& snapshot: particle.second) {
-      if (snapshot.data!=nullptr) {
-        delete[] snapshot.data;
-      }
+    std::list<Entry>::iterator snapshot = particle.second.begin();
+    snapshot++; // keep first entry
+    while (snapshot!=particle.second.end()) {
+      delete[] snapshot->data;
+      snapshot++;
     }
-  }
 
+    snapshot = particle.second.begin();
+    snapshot++;
+    particle.second.erase(snapshot, particle.second.end());
+  }
 }
+
 
 void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
   std::ostringstream snapshotFileName;
@@ -221,7 +227,7 @@ toolbox::particles::TrajectoryDatabase::AddSnapshotAction toolbox::particles::Tr
     else if ( not _deltasAreRelative and delta>=_positionDelta ) {
       result=toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Append;
     }
-    else if ( (timestamp-_data.at(number).front().timestamp)>=_timeDelta and (not _timeDelta==0.0)) {
+    else if ( (timestamp-_data.at(number).front().timestamp)>=_timeDelta and _timeDelta>0.0 ) {
       result=toolbox::particles::TrajectoryDatabase::AddSnapshotAction::Append;
     }
     else {

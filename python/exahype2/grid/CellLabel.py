@@ -57,8 +57,14 @@ class UpdateCellLabel(ActionSet):
     if operation_name==ActionSet.OPERATION_CREATE_CELL:
       result += """
   fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setSemaphoreNumber(  ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStamp(  coarseGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.getTimeStamp() );
-  fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStepSize( coarseGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.getTimeStepSize() );
+  if ( tarch::la::equals(repositories::getMinTimeStamp(),0.0) ) {
+    fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStamp(  0.0 );
+    fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStepSize( 0.0 );
+  }
+  else {
+    fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStamp(  coarseGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.getTimeStamp() );
+    fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setTimeStepSize( coarseGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.getTimeStepSize() );
+  }
   fineGridCell""" + UpdateCellLabel.get_attribute_name(self._solver_name) + """.setHasUpdated( false );
 """
     return result
@@ -72,6 +78,7 @@ class UpdateCellLabel(ActionSet):
     return """
 #include "Constants.h"
 #include "exahype2/EnclaveBookkeeping.h"
+#include "repositories/SolverRepository.h"
 """    
 
 

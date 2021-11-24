@@ -173,6 +173,12 @@ class toolbox::particles::TrajectoryDatabase {
     void clear(bool lockSemaphore=true);
 
     /**
+     * This call does not throw away all particles, but it throws away all the history
+     * behind the particles.
+     */
+    void clearHistory(bool lockSemaphore=true);
+
+    /**
      * <h2> Thread-safety </h2>
      *
      * The operation is thread-safe, i.e. it first locks the sempahore and then
