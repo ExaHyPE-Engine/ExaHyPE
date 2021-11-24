@@ -97,9 +97,12 @@ min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels) / args.patch_size
 auxiliary_variables = 0
 
 thesolver = None
+solver_name = "Euler"
+if args.gpu:
+  solver_name += "OnGPU" 
 if args.type=="global-fixed":
   thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStep(
-    "Euler",
+    solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
@@ -109,7 +112,7 @@ if args.type=="global-fixed":
   )
 elif args.type=="global-adaptive":
   thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
-    "Euler",
+    solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
@@ -119,7 +122,7 @@ elif args.type=="global-adaptive":
   )
 elif args.type=="global-fixed-enclave":
   thesolver = exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking(
-    "Euler",
+    solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
@@ -130,7 +133,7 @@ elif args.type=="global-fixed-enclave":
   )
 elif args.type=="global-adaptive-enclave":
   thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
-    "Euler",
+    solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
@@ -141,7 +144,7 @@ elif args.type=="global-adaptive-enclave":
   )
 elif args.type=="subcycling-fixed-linear-interpolation":
   thesolver = exahype2.solvers.fv.rusanov.SubcyclingFixedTimeStep(
-    "Euler",
+    solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
@@ -152,7 +155,7 @@ elif args.type=="subcycling-fixed-linear-interpolation":
   )
 elif args.type=="subcycling-fixed-no-interpolation":
   thesolver = exahype2.solvers.fv.rusanov.SubcyclingFixedTimeStep(
-    "Euler",
+    solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
@@ -163,7 +166,7 @@ elif args.type=="subcycling-fixed-no-interpolation":
   )
 elif args.type=="subcycling-fixed-linear-interpolation-enclave":
   thesolver = exahype2.solvers.fv.rusanov.SubcyclingFixedTimeStepWithEnclaveTasking(
-    "Euler",
+    solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
@@ -175,7 +178,7 @@ elif args.type=="subcycling-fixed-linear-interpolation-enclave":
   )
 elif args.type=="subcycling-adaptive-linear-interpolation-enclave":
   thesolver = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking(
-    "Euler",
+    solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,
@@ -187,7 +190,7 @@ elif args.type=="subcycling-adaptive-linear-interpolation-enclave":
   )
 elif args.type=="local-linear-interpolation-enclave":
   thesolver = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking(
-    "Euler",
+    solver_name,
     args.patch_size,
     unknowns, auxiliary_variables,
     min_h, max_h,

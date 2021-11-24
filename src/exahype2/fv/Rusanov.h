@@ -45,7 +45,8 @@ namespace exahype2 {
       const int       haloSize,
       patchData2d     pV,
       const int       sourcePatchSize,
-      const int       destPatchSize
+      const int       destPatchSize,
+      int             targetDevice
     )
     {
       const size_t NPT  = pV.npatches;
@@ -261,7 +262,7 @@ namespace exahype2 {
       bool     skipNCPEvaluation,
       bool     skipSourceTerm
       >
-    void Fusanov_2D_host(
+    void Fusanov_2D(
       const int       haloSize,
       patchData2d     pV,
       const int       sourcePatchSize,
@@ -272,7 +273,7 @@ namespace exahype2 {
       const size_t LR   = NPT*sourcePatchSize;
 
       {
-        #pragma omp for collapse(4)
+        #pragma omp for simd collapse(4)
         for (int pidx=0;pidx<NPT;pidx++)
         for (int x = 0; x < numVPAIP; x++)
         for (int y = 0; y < numVPAIP; y++)
@@ -294,7 +295,7 @@ namespace exahype2 {
       }
 
       if (not skipSourceTerm) {
-        #pragma omp for collapse(3)
+        #pragma omp for simd collapse(3)
         for (int pidx=0;pidx<NPT;pidx++)
         for (int x = 0; x < numVPAIP; x++)
         for (int y = 0; y < numVPAIP; y++) {
@@ -324,7 +325,7 @@ namespace exahype2 {
 
 
       for (int shift = 0; shift < 2; shift++) {
-        #pragma omp parallel for collapse(3)
+        #pragma omp for simd collapse(3)
         for (int pidx=0;pidx<NPT;pidx++)
         for (int x = shift; x <= numVPAIP; x += 2)
         for (int y = 0; y < numVPAIP; y++) {
@@ -394,7 +395,7 @@ namespace exahype2 {
       }
 
       for (int shift = 0; shift < 2; shift++) {
-        #pragma omp parallel for collapse(3)
+        #pragma omp for simd collapse(3)
         for (int pidx=0;pidx<NPT;pidx++)
         for (int y = shift; y <= numVPAIP; y += 2)
         for (int x = 0;     x <  numVPAIP; x++   ) {
@@ -486,7 +487,8 @@ namespace exahype2 {
       int                                          haloSize,
       patchData3d                            pV,
       int                                          sourcePatchSize,
-      int                                          destPatchSize
+      int                                          destPatchSize,
+      int             targetDevice
     )
     {
       const size_t NPT  = pV.npatches;

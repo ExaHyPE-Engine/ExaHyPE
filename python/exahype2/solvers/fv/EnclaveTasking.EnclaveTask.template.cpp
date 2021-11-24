@@ -442,20 +442,17 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
-  #if GPUOffloading
   return true;
-  #else
-  return false;
-  #endif
 }
 
 
+/**
+ * Also merge the current task
+ */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
-  // @todo Debug
-  logInfo( "fuse(...)", "asked to fuse " << otherTasks.size() << " tasks into one large GPU task" );
+  logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task" );
 
   assertion( not otherTasks.empty() );
-
 
   #if Dimensions==2
   ::exahype2::fv::patchData2d pD;
@@ -464,8 +461,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   ::exahype2::fv::patchData3d pD;
   #endif
 
-  const int NPT =otherTasks.size();
-  const int LR = _sourcePatchSize*NPT;
+  const int NPT  = otherTasks.size()+1;
+  const int LR   = _sourcePatchSize*NPT;
   const int LTOT = _destinationPatchSize*NPT;
   pD.npatches=NPT;
 
@@ -501,10 +498,27 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     pD.x2[i]  = currentTask->_marker.x()[2];
     pD.h2[i]  = currentTask->_marker.h()[2];
   #endif
-    pD.t[i]   = _t;
-    pD.dt[i]  = _dt;
+    pD.t[i]   = _t; // @todo This is not true likely. Could have different time steps
+    pD.dt[i]  = _dt; // @todo This is not true likely. Could have different time steps
     i++;
   }
+  //
+  // Now add the data from the task from which this whole thing has been called
+  //
+  for (size_t j=0;j<_sourcePatchSize;j++) {
+    pD.reco[i*_sourcePatchSize + j] = _reconstructedValues[j];
+  }
+  pD.id[i]  = getTaskId();
+  pD.x0[i]  = _marker.x()[0];
+  pD.h0[i]  = _marker.h()[0];
+  pD.x1[i]  = _marker.x()[1];
+  pD.h1[i]  = _marker.h()[1];
+#if Dimensions==3
+  pD.x2[i]  = _marker.x()[2];
+  pD.h2[i]  = _marker.h()[2];
+#endif
+  pD.t[i]   = _t;  // @todo This is not true likely. Could have different time steps
+  pD.dt[i]  = _dt; // @todo This is not true likely. Could have different time steps
   
 
   //
@@ -522,14 +536,39 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     //::tarch::MemoryLocation::Heap
   //);
   //for (size_t i = 0;i<_destinationPatchSize*otherTasks.size();i++) *(destinationPatchOnCPU + i) =0;
-  
-  {{FUSED_RIEMANN_SOLVER_CALL}}
-  (
-    1,
-    pD,
-    _sourcePatchSize,
-    _destinationPatchSize
-  );
+
+  //
+  // ==============
+  // Invoke kernels
+  // ==============
+  //
+  if (targetDevice>=0) {
+    {{FUSED_RIEMANN_SOLVER_CALL}}
+    (
+      1,
+      pD,
+      _sourcePatchSize,
+      _destinationPatchSize
+    );
+  }
+  else {
+    // @todo Holger, that's where we pick the SYCL queue. We make the queues static, so they
+    // are created once only.
+    {{FUSED_RIEMANN_SOLVER_CALL}}
+    (
+      1,
+      pD,
+      _sourcePatchSize,
+      _destinationPatchSize,
+      targetDevice
+    );
+  }
+
+  //
+  // ==================
+  // Bring back results
+  // ==================
+  //
   for (int i=0;i<pD.npatches;i++) {
     const int taskid = pD.id[i];
     double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
@@ -542,6 +581,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
   }
 
-  return true;
+  return false;
 }
 {% endif %}
