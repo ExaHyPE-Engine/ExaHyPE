@@ -205,7 +205,6 @@ namespace {
       nonblockingTasks.pop_front();
     }
 
-
     auto pp = nonblockingTasks.begin();
     while (
       myTask!=nullptr
@@ -216,7 +215,7 @@ namespace {
       and
       (*pp)->getTaskType()==myTask->getTaskType()
       and
-      tasksOfSameType.size()<maxTasksAndDevice.first
+      tasksOfSameType.size()<maxTasksAndDevice.first-1
     ) {
       tasksOfSameType.push_back( *pp );
       pp = nonblockingTasks.erase(pp);

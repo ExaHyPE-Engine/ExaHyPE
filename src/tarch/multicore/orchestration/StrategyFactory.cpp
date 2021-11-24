@@ -13,8 +13,8 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
   }
   else if ( realisationString.compare( "fuse-" )>0 ) {
     std::string argument = realisationString.substr( std::string("fuse-").size() );
-    std::cerr << std::endl << "parameter: " << argument << std::endl;
     int maxFusion = atoi( argument.c_str() );
+    assertion(maxFusion>=1);
     return new Fuse(maxFusion);
   }
   else if ( realisationString.compare( "native" )==0 ) {
