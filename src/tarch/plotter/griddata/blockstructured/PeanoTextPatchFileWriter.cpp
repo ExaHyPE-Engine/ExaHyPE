@@ -60,7 +60,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
   std::ofstream     indexFileOut;
   indexFileOut.open( _indexFile, std::ios::app );
   indexFileOut << std::endl << Token_BeginDataSet << std::endl;
-  indexFileOut << std::setprecision(10);
+  indexFileOut << std::setprecision(24) << std::scientific;
   indexFileOut << "  " << Token_TimeStamp << "  " << timestamp << std::endl;
   indexFileOut << std::endl << Token_EndDataSet << std::endl;
 }
@@ -143,8 +143,7 @@ tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::PeanoTextPa
 
   clear();
 
-  const double DefaultTimeStampPrecision = tarch::la::NUMERICAL_ZERO_DIFFERENCE;
-
+  const double DefaultTimeStampPrecision = 1e-5;
 
   switch (appendToIndexFile) {
     case IndexFileMode::CreateNew:

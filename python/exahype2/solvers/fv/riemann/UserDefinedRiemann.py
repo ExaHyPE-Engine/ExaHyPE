@@ -16,11 +16,11 @@ class UserDefinedRiemann( Generic[T] ):
     ncp=None, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
     plot_grid_properties=False, 
-    use_gpu=False
+    stateless_pde_terms=False
   ):
     super(T,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_h, max_h, time_step_size, plot_grid_properties) 
     self._riemann_solver_implementation       = PDETerms.None_Implementation
-    self.set_implementation(riemann_solver=riemann_solver, use_gpu=self._use_gpu)
+    self.set_implementation(riemann_solver=riemann_solver, stateless_pde_terms=self._stateless_pde_terms)
 
 
 
@@ -30,7 +30,7 @@ class UserDefinedRiemann( Generic[T] ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
     use_split_loop          = False,
-    use_gpu =False
+    stateless_pde_terms =False
   ):
     """
       If you pass in User_Defined, then the generator will create C++ stubs
@@ -53,7 +53,7 @@ class UserDefinedRiemann( Generic[T] ):
     if source_term          is not None:  self._source_term_implementation                = source_term
     if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
     if use_split_loop                  :  self._use_split_loop                            = use_split_loop
-    if use_gpu                         :  self._use_gpu                                   = use_gpu
+    if stateless_pde_terms             :  self._stateless_pde_terms                       = stateless_pde_terms
     if riemann_solver       is not None:  self._riemann_solver_implementation             = riemann_solver
 
     if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \

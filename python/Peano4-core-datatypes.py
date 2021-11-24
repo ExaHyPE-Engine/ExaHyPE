@@ -196,8 +196,6 @@ grid_traversal_event.add_attribute( peano4.dastgen2.Peano4IntegerArray( "relativ
 grid_traversal_event.add_attribute( dastgen2.attributes.Integer( "invokingSpacetree" ) )
 grid_traversal_event.add_attribute( dastgen2.attributes.Integer( "invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing" ) )
 
-grid_traversal_event.add_attribute( dastgen2.attributes.Boolean( "parentCellIsAdjacentToChangingOrHangingVertex" ) )
-
 grid_traversal_event.add_aspect( peano4.dastgen2.MPI( peano4.datamodel.DoFAssociation.Generic ) )
 grid_traversal_event.add_aspect( dastgen2.aspects.MPI() )
 

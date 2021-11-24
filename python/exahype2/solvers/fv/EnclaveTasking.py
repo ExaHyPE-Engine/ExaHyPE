@@ -35,7 +35,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
       std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
   ); // previous time step has to be valid
 
-  if (marker.isSkeletonCell()) {
+  if (marker.willBeSkeletonCell()) {
     tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
       cellTimeStamp,
@@ -59,7 +59,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(usedTimeStepSize);
   }
   else { // is an enclave cell
-    assertion( marker.isEnclaveCell() );
+    assertion( marker.willBeEnclaveCell() );
+    assertion( not marker.willBeRefined() );
     auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
       cellTimeStamp,
@@ -86,11 +87,12 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
     ReconstructPatchAndApplyFunctor.__init__(self,
       patch = solver._patch,
-      # todo hier muessen beide rein, denn ich muss ja interpolieren
+      # todo hier muessen beide rein, denn ich muss ja interpolieren -> machen die anderen Codes dann
       patch_overlap = solver._patch_overlap_new,
       functor_implementation = self.TemplateUpdateCell.render(**d),
       reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete,
-      guard  = "not marker.willBeRefined() and not marker.hasBeenRefined() and (" + \
+      # todo Dokumentieren, dass net willBeRefined(), weil wir ja das brauchen wenn wir runtergehen
+      guard  = "not marker.hasBeenRefined() and (" + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::Primary or " + \
       "repositories::" + solver.get_name_of_global_instance() + ".getSolverState()==" + solver._name + "::SolverState::PrimaryAfterGridInitialisation" + \
       ")",
@@ -120,13 +122,13 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 class MergeEnclaveTaskOutcome(AbstractFVActionSet):
   Template = """
   if ( 
-    not marker.willBeRefined() and not marker.hasBeenRefined()
+    not marker.hasBeenRefined()
     and 
     {{GUARD}}
     and
     repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
   ) {
-    if ( marker.isEnclaveCell() ) {
+    if ( marker.hasBeenEnclaveCell() ) {
       const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
 
       if ( taskNumber>=0 ) {
@@ -189,7 +191,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
 class EnclaveTasking( FV ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, use_gpu):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, stateless_pde_terms):
     """
     
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
@@ -224,7 +226,7 @@ class EnclaveTasking( FV ):
     self._start_time_step_implementation           = ""
     self._finish_time_step_implementation          = ""
     
-    self._use_gpu = use_gpu
+    self._stateless_pde_terms = stateless_pde_terms
     
     self._constructor_implementation = ""
     
@@ -325,9 +327,9 @@ class EnclaveTasking( FV ):
   
     """
     self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard() + " and (" + \
-      self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.isSkeletonCell())"
+      self._secondary_sweep_or_grid_initialisation_or_plot_guard + " or marker.willBeSkeletonCell())"
     self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard() + " and (" + \
-      self._primary_sweep_or_plot_guard + " or marker.isSkeletonCell())"
+      self._primary_sweep_or_plot_guard + " or marker.hasBeenSkeletonCell())"
 
 
   def create_action_sets(self):
@@ -348,36 +350,38 @@ class EnclaveTasking( FV ):
     again as they are non-persistent. The projection onto the (hanging) faces is also 
     happening directly in the primary sweep, as the cells adjacent to the hanging 
     face are skeleton cells.
+
+    AMR and adjust cell have to be there always, i.e. also throughout 
+    the grid construction. But the criterion is something that we only
+    evaluate in the secondary sweep. That's when we have an updated/changed time step.
+    If we identify coarsening and refinement instructions in the secondary sweep, the 
+    next primary one will actually see them and trigger the update. That is, the 
+    subsequent secondary switch will actually implement the grid changes, and we can 
+    evaluate the criteria again.
+    
+    For dynamic AMR, this implies that we have to ensure that all changed grid parts
+    are labelled as skeleton cells. This way, we can implement the AMR properly, we 
+    ensure that all the enclaves run in parallel, and we know that all data is held
+    persistently on the stacks.
         
     """
     super(EnclaveTasking, self).create_action_sets()
 
     self._action_set_update_cell                = UpdateCell(self)
     self._action_set_merge_enclave_task_outcome = MergeEnclaveTaskOutcome(self)                                                                                 
-
-    #
-    # AMR and adjust cell have to be there always, i.e. also throughout 
-    # the grid construction. But the criterion is something that we only
-    # evaluate in the primary sweep. If we come to the conclusion that we
-    # want to refine or coarsen, we find this out in the primary sweep.
-    # So the actual trigger will then we done in the secondary sweep. At
-    # this point, Peano 4 won't change anything. We only trigger mesh 
-    # alteration. The real mesh adoption then is due in the subsequent
-    # primary sweep or plotting.
-    #
     
     self._action_set_initial_conditions.guard                       = self._action_set_initial_conditions.guard
     self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard
     #self._action_set_AMR.guard                                      = self._secondary_sweep_or_grid_construction_guard
     #self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_or_grid_construction_guard
-    self._action_set_AMR.guard                                      = self._primary_sweep_guard
-    self._action_set_AMR_commit_without_further_analysis.guard      = self._primary_sweep_guard
+    self._action_set_AMR.guard                                      = self._secondary_sweep_guard
+    self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_guard
     
     self._action_set_handle_boundary.guard                          = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
     self._action_set_project_patch_onto_faces.guard                 = self._store_cell_data_default_guard() + " and (" + \
-         "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.isSkeletonCell() ) " + \
-      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.isSkeletonCell() ) " + \
-      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.isEnclaveCell() ) " + \
+         "(repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Primary                         and marker.willBeSkeletonCell() ) " + \
+      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PrimaryAfterGridInitialisation  and marker.willBeSkeletonCell() ) " + \
+      "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::Secondary                       and marker.willBeEnclaveCell() ) " + \
       "or (repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation )" + \
       ")"
     self._action_set_roll_over_update_of_faces.guard = self._store_face_data_default_guard() + " and " + self._secondary_sweep_or_grid_initialisation_guard
@@ -462,7 +466,7 @@ class EnclaveTasking( FV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D" ] = (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
-    d[ "USE_GPU" ] = self._use_gpu
+    d[ "STATELESS_PDE_TERMS" ]  = self._stateless_pde_terms
     
     
   def set_preprocess_reconstructed_patch_kernel(self,kernel, can_offload_into_enclave_task = True ):
@@ -587,7 +591,7 @@ class EnclaveTasking( FV ):
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
 
-    if self._use_gpu:
+    if self._stateless_pde_terms:
         # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
         # this hack has to suffice
         peanodir = templatefile_prefix.split("python/exahype2",1)[0]

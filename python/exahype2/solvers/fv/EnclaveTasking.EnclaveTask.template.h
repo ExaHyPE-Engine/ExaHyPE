@@ -50,7 +50,7 @@
  *
  * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
  */
-{% if USE_GPU %}
+{% if STATELESS_PDE_TERMS %}
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task
 {% else %}
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
@@ -87,7 +87,8 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
      */
     int          _remoteTaskId = -1;
     #endif
-{% if USE_GPU %}
+
+    {% if STATELESS_PDE_TERMS %}
     static int                                _gpuEnclaveTaskId;
 
     const ::peano4::datamanagement::CellMarker   _marker;
@@ -102,7 +103,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     const int _sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
     #endif
-{% endif %}
+    {% endif %}
 
 
   public:
@@ -134,13 +135,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     static smartmpi::Task* receiveOutcome(int rank, int tag, MPI_Comm communicator, const bool intentionToForward);
     #endif
 
-
-{% if USE_GPU %}
+    {% if STATELESS_PDE_TERMS %}
     bool run() override;
-    bool fuse( const std::list<Task*>& otherTasks ) override;
+    bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host ) override;
     bool canFuse() const override;
-{% endif %}
-    
+    {% endif %}
 };
 
 

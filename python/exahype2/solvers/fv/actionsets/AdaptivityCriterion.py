@@ -156,7 +156,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
   repositories::refinementControl.merge( _localRefinementControl );
 """
     
-    if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
+    if self._build_up_new_refinement_instructions and operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_LAST_TIME:
       d = {}
       if self._solver._patch.dim[0] != self._solver._patch.dim[1]:
         raise Exception( "Error: Can only handle square patches." )

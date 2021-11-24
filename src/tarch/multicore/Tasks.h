@@ -5,6 +5,7 @@
 
 
 #include "multicore.h"
+#include "tarch/multicore/orchestration/Strategy.h"
 
 
 #include <functional>
@@ -16,30 +17,14 @@
 
 namespace tarch {
   namespace multicore {
-    enum class Realisation {
-      MapOntoNativeTasks,
-      HoldTasksBackInLocalQueue,
-      HoldTasksBackInLocalQueueAndEventuallyMapOntoNativeTask,
-      HoldTasksBackInLocalQueueAndBackfill,
-      HoldTasksBackInLocalQueueAndBackfillAndEventuallyMapOntoNativeTask,
-      HoldTasksBackInLocalQueueMergeAndBackfill,
-      HoldTasksBackInLocalQueueMergeAndBackfillAndEventuallyMapOntoNativeTask
-    };
-
-    std::string toString( Realisation realisation );
+    void setOrchestration( tarch::multicore::orchestration::Strategy* realisation );
 
     /**
-     * Use toString() to see valid options
+     * Different to setOrchestration(), this operation does not delete
+     * the current orchestration. It swaps them, so you can use setOrchestration()
+     * with the result afterwards and re-obtain the original strategy.
      */
-    bool parseRealisation( const std::string& realisation );
-    std::string getListOfRealisations();
-    void setRealisation( Realisation realisation );
-    Realisation getRealisation();
-
-    /**
-     * Constrain the fusion.
-     */
-    void configureTaskFusion( int maxNumberOfFusedAssemblies, int maxSizeOfFusedTaskSet );
+    tarch::multicore::orchestration::Strategy* swapOrchestration( tarch::multicore::orchestration::Strategy* realisation );
 
     /**
      * Tells task/thread to yield, i.e. to allow other tasks/threads to run.
@@ -87,6 +72,7 @@ namespace tarch {
         int         _priority;
       public:
         static constexpr int DefaultPriority = 0;
+        static constexpr int Host            = -1;
 
         /**
          * @param id       Unique number of the task
@@ -123,8 +109,15 @@ namespace tarch {
          *
          * @return Is the present task still to be executed or can the runtime 
          *         destroy it straightaway?
+         * @param otherTasks List of tasks to fuse and process. Will all have the
+         *         same type as the present object. It is the tasks responsibility
+         *         to get these tasks done. So either span some new tasks or handle
+         *         them straightaway.
+         * @param targetDevice On which device should the task be processed? A
+         *         negative number means local host anything greater or equal to
+         *         zero denotes an accelerator.
          */
-        virtual bool fuse( const std::list<Task*>& otherTasks );
+        virtual bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host );
 
         /**
          * Is off by default.
@@ -259,7 +252,12 @@ namespace tarch {
     void spawnTask(Task*  job);
 
     /**
-     * The routine deletes all the passed arguments.
+     * - Tell the orchestration that a BSP section starts
+     * - Invoke the native implementation (and tell it what orchestration
+     *   strategy is to be used)
+     * - Tell the orchestration that the BSP section has terminated
+     * - If there are task pending and the orchestration restricts the
+     *   number of tasks to hold back, map them onto native tasks.
      */
     void spawnAndWait(
       const std::vector< Task* >&  tasks
@@ -267,7 +265,10 @@ namespace tarch {
 
     namespace native {
       void spawnTask(Task*  job);
-      void spawnAndWait( const std::vector< Task* >&  tasks );
+      void spawnAndWait(
+        const std::vector< Task* >&  tasks,
+        int                          numberOfTasksToHoldBack
+      );
       void yield();
       int getNumberOfPendingTasks();
     }

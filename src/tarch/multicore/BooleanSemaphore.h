@@ -50,7 +50,7 @@ namespace tarch {
 
    MyClass::foo() {
      ...
-     Lock myLock( _mySemphore );
+     Lock myLock( _mySemaphore );
      // critical Section A
      ...
    }
@@ -58,7 +58,7 @@ namespace tarch {
 
    MyClass::bar() {
      ...
-     Lock myLock( _mySemphore );
+     Lock myLock( _mySemaphore );
      // critical Section B
      ...
    }

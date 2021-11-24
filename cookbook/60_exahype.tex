@@ -711,6 +711,231 @@ source code access to other routines.
 
 
 
+\section{Boundary conditions}
+
+Boundary conditions often are tricky to implement and solely up to the user. 
+In \ExaHyPE, Dirichlet and Neumann boundary conditions on Cartesian meshes are
+close to trivial.
+More sophsticated boundary conditions require slightly more work. 
+Here are some remarks how to implement them.
+
+
+\begin{remark}
+  The boundary condition semantics are solely determined by the user's boundary
+  condition callback.
+  Therefore, it is possible to use different boundary conditions in different
+  domain areas.
+\end{remark}
+
+
+\begin{figure}[htb]
+ \begin{center}
+  \includegraphics[width=0.2\textwidth]{60_exahype/boundary.pdf}
+ \end{center}
+ \caption{
+  \ExaHyPE's Finite Volume scheme organises its mesh into patches. 
+  Here, we use a 5$\times $5 patch (orange/red).
+  Prior to the update of a patch, \ExaHyPE\ calls \texttt{boundaryConditions}
+  for each of the volumes adjacent to the boundary (darker red).
+  The routine allows you to alter the value of the halo surrounding the patch
+  (blue).
+  The outer (blue) cells are subsequentially used to determine a flow through
+  the boundary into the domain.
+  \label{figure:exahype:boundary-conditions}
+ }
+\end{figure}
+
+\noindent
+Boundary conditions in general are realised via their own callback called
+\texttt{boundaryConditions}.
+When you run the Python toolkit, you get an empty implementation of this routine
+that you can befill.
+The routine is called per outer volume (Figure
+\ref{figure:exahype:boundary-conditions}).
+
+
+
+\paragraph{Dirichlet boundary conditions}.
+%
+%
+%
+Dirichlet boundary conditions 
+\[
+  Q(x) | _{\partial \Omega } = f(x,t)
+\]
+are close to trivial to implement. 
+You set  outer values due to
+
+\begin{code}
+void ...::MySolver::boundaryConditions(
+  ...
+) {
+  Qoutside[0] = ...
+  Qoutside[1] = ...
+  ...
+}
+\end{code}
+
+\noindent
+Obviously, the values on the right-hand side can depend on time and spatial
+position.
+We find two different ways to impose Dirichlet conditions:
+\begin{enumerate}
+  \item You simple set the outer volumes (blue in Figure
+\ref{figure:exahype:boundary-conditions}) to $f(x,t)$.
+  \item You compute the average between the blue value and the interior value as
+  $Q | _{\partial \Omega } = \frac{1}{2} (Q_{\text{outside}} +
+  Q_{\text{inside}}) = f(x,t)$ which yields $Q_{\text{outside}} =
+  2f(x,t)-Q_{\text{inside}}$.
+\end{enumerate}
+
+\noindent
+The latter formula is inspired by Finite Differences and might give a slightly
+more accurate values.
+With a sole averaging Riemann solver, it directly sets the flux.
+If you use something like Rusanov, you might tweak $Q_{\text{outside}}$ further
+such that the eigenvalue term along the boundary face has the correct
+(imposed) value too.
+
+
+\paragraph{Neumann boundary conditions (Finite Volumes)}
+
+As we can read the volume values inside the domain prior to a time step
+and modify those outside of the domain, it is straightforward to implement
+homogeneous Neumann conditions.
+The snippet below implements homogeneous Neumann conditions
+
+\[
+  \left( \nabla Q(x), n \right)  | _{\partial \Omega } = 0
+\]
+
+
+\begin{code}
+void ...::MySolver::boundaryConditions(
+  ...
+) {
+  Qoutside[0] = Qinside[0];
+  Qoutside[1] = Qinside[1];
+  ...
+}
+\end{code}
+
+\noindent
+but obviously you can use a simple Finite Differences scheme to impose
+non-homogeneous conditions as well.
+
+
+
+\paragraph{Inflow/outflow boundary conditions}
+
+Inflow or outflow boundary conditions are conceptually close to Neumann
+conditions. 
+Often, it is however reasonable to supplement them with some limiter, i.e.~if
+the flow is close to zero and inwards, a modified outflow condition could
+manually set it (limit it) to zero.
+
+
+While this approach does work in most of the cases, it struggles to handle
+information flow that is not orthogonal to the Cartesian faces.
+It assumes that all flow is axis-aligned:
+You can only modify the face-connected neighbour volume in the ghost 
+region outside of the domain.
+You cannot alter diagonal volumes.
+Unless you want to use distorted, i.e.~boundary-aligned, meshes as discussed
+below, there's no way around this.
+Yet, increasing the domain size usually helps in such a case.
+
+
+
+
+\paragraph{Extrapolating boundary data (Finite Volumes)}
+
+
+
+It is more complicated to realise boundary conditions that extrapolate
+data into the outside.
+Such boundary conditions read as
+\[
+  Q(x) | _{\partial \Omega } = \lim _{x \mapsto \partial \Omega}
+  f(Q(x,t),\nabla f(Q(x,t))
+  \ \text{or} \
+  \left( \nabla Q(x), n \right) | _{\partial \Omega } = \lim _{x \mapsto
+  \partial \Omega} f(Q(x,t),\nabla f(Q(x,t)).
+\]
+It is obviously trivial to extrapolate the solution value within the domain to
+the boundary volumes (dark red to blue value in Figure
+\ref{figure:exahype:boundary-conditions}), but once you need the derivatives at
+the boundaries, you have to invest more work.
+After all, the boundary routine only provides access to the boundary data, but
+not to any derivatives.
+
+
+Users have successfully implemented non-homogeneous Neumann boundary
+conditions where they extrapolate the derivatives onto the boundary and use
+those to inform the actual value.
+This requires work however:
+
+\begin{itemize}
+  \item Introduce a new material parameter that stores the directional
+  derivative. If you need the non-homogeneous Neumann conditions all around the
+  domain, you will need \texttt{Dimensions} material parameter per unknown:
+  \begin{code}
+mySolver = MySolver( "Myname", my_patch_size, number_of_unknowns,
+  auxiliary_variables=3*number_of_unknowns, ... );
+  \end{code}
+  \item Compute the derivatives per volume after each time step in a Finite
+  Differences sense. We can add such a code snippet in Python:
+  \begin{code}
+my_solver.set_preprocess_reconstructed_patch_kernel( """
+  dfor(cell,patchSize) {
+    //tarch::la::Vector<Dimensions,int> currentPosition=marker.getOffset()+(cell+0.5)*volumeH;
+    tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+
+    tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+    tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+    leftCell(d)  -= 1;
+    rightCell(d) += 1;
+
+    if (cell(0)==0) { // left layer of patch, so use right differences
+      const int rightCellSerialised  =
+        peano4::utils::dLinearised(rightCell,patchSize + 2*1); 
+      const int currentCellSerialised = 
+        peano4::utils::dLinearised(rightCell,patchSize + 2*1); 
+      for(int i=0; i<unknowns; i++) { 
+        target[currentCellSerialised*(unknown+auxiliaryVariables)+i] = 
+         1/h * (
+           target[rightCellSerialised*(unknown+auxiliaryVariables)+i] -
+           target[centralCellSerialised*(unknown+auxiliaryVariables)+i]
+         );
+  ...
+      }}}"""
+\end{code}
+  \item With this information, we can finally set the boundary conditions:
+  The routine \texttt{boundaryConditions} is given the data at the boundary.
+  Due to our modifications, these data are augmented by additional ``material''
+  parameters\footnote{The term ``material parameter'' implies that they are not
+  subject to the flux equations.} which store the derivatives from the current
+  time step.
+  We can thus realise boundary conditions which use the (boundary-extrapolated)
+  derivative besides the actual value.
+\end{itemize}
+
+
+
+\paragraph{Boundary-aligned geometries}
+
+\ExaHyPE's mesh is topologically Cartesian.
+That does not mean that you have to work in a Cartesian world.
+You can distort, squeeze, rotate the mesh locally as long as your mesh topology
+remains adaptive Cartesian.
+Codes like the ExaSeis simulation package introduce material parameters per
+degree of freedom to encode mesh distortions.
+This allows them to represent a boundary exactly, i.e.~to adopt the Cartesian
+mesh to the real domain boundaries.
+Obviously, the actual boundary condition implementations then have to be adopted
+accordingly, too.
+
+
 \section{GPU support}
 
 

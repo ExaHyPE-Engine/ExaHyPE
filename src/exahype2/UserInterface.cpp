@@ -7,6 +7,7 @@
 #include "tarch/logging/LogFilterFileReader.h"
 
 #include "tarch/multicore/Tasks.h"
+#include "tarch/multicore/orchestration/StrategyFactory.h"
 
 #include "peano4/peano.h"
 
@@ -183,7 +184,7 @@ Options: \n\
                              switch timeouts off. \n\
   --threading-model <t>      Set threading model. \n\
 \n\n\n\
-Supported threading models: " << tarch::multicore::getListOfRealisations() << std::endl;
+Supported threading models: " << tarch::multicore::orchestration::getListOfRealisations() << std::endl;
 }
 
 
@@ -221,10 +222,13 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
       logInfo( "parseCommandLineArguments(...)", "manually set timeout to " << timeout );
     }
     else if ( select.compare( "--threading-model" ) == 0 ) {
-      if ( not tarch::multicore::parseRealisation( argv[argument+1] ) ) {
+      auto* realisation = tarch::multicore::orchestration::parseRealisation( argv[argument+1] );
+      if (realisation!=nullptr) {
+        tarch::multicore::setOrchestration(realisation);
+      }
+      else {
         return false;
       }
-      logInfo( "parseCommandLineArguments(...)", "manually set threading model to " << tarch::multicore::toString(tarch::multicore::getRealisation()) );
     }
     else {
       printUsage(argv);

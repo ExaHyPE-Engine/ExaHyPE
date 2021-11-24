@@ -146,7 +146,7 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=0.5,
-            use_gpu =args.GPU #=="fv-fixed-gpu" else False
+            #use_gpu =args.GPU #=="fv-fixed-gpu" else False
 #                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
 
@@ -345,6 +345,8 @@ if __name__ == "__main__":
 
         self.set_preprocess_reconstructed_patch_kernel( """
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        int aux_var=""" + str( self._auxiliary_variables ) + """;
+        int real_var=59;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
@@ -360,10 +362,12 @@ if __name__ == "__main__":
             rightCell(d) += 1;
             const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
             const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
-            for (int i=0; i<59; i++) {
-              reconstructedPatch[cellSerialised*(59*4)+59+i*3+d] =
-                ( reconstructedPatch[rightCellSerialised*(59*4)+i] - reconstructedPatch[leftCellSerialised*(59*4)+i] ) / 2.0 / volumeH;
+            for (int i=0; i<real_var; i++) {
+              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d] =
+                ( reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] ) / 2.0 / volumeH;
+              if (isnan(reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d])) {std::cout <<reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i]<<" "<< reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] << std::endl;}
             }
+
           }
         }
     """)
