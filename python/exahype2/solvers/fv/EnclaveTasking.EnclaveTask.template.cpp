@@ -542,7 +542,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // Invoke kernels
   // ==============
   //
-  if (targetDevice>=0) {
+  if (targetDevice<0) {
     {{FUSED_RIEMANN_SOLVER_CALL}}
     (
       1,
