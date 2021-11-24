@@ -157,7 +157,7 @@ void toolbox::particles::TrajectoryDatabase::dumpCSVFile() {
   }
 
   if (_clearDatabaseAfterFlush) {
-    clear(false);
+    clearHistory(false);
   }
 }
 
