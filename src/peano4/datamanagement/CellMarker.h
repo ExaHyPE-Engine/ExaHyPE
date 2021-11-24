@@ -42,13 +42,11 @@ struct peano4::datamanagement::CellMarker {
     bool _isOneVertexHanging;
     bool _isOneVertexCreatedOrDestroyed;
 
-    bool _parentIsFlaggedAsChanging;
-
-    /**
-     * This flag is used to identify enclave cells.
-     */
     bool _areAllVerticesInsideDomain;
     bool _invokingSpacetreeIsNotInvolvedInAnyDynamicLoadBalancing;
+
+    bool _willBeEnclave;
+    bool _hasBeenEnclave;
 
     /**
      * Entries from (0,1,2). (0,0) or (0,0,0) is the left, bottom cell.
@@ -119,12 +117,14 @@ struct peano4::datamanagement::CellMarker {
      * we deployed its computation to the background, we could move around a
      * cell whose computations is done by a thread currently.
      */
-    bool isEnclaveCell() const;
+    bool hasBeenEnclaveCell() const;
+    bool willBeEnclaveCell() const;
 
     /**
      * A skeleton cell is a not-enclave cell
      */
-    bool isSkeletonCell() const;
+    bool hasBeenSkeletonCell() const;
+    bool willBeSkeletonCell() const;
 
     tarch::la::Vector<Dimensions,int>  getRelativePositionWithinFatherCell() const;
 

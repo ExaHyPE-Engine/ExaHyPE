@@ -20,6 +20,13 @@ namespace tarch {
     void setOrchestration( tarch::multicore::orchestration::Strategy* realisation );
 
     /**
+     * Different to setOrchestration(), this operation does not delete
+     * the current orchestration. It swaps them, so you can use setOrchestration()
+     * with the result afterwards and re-obtain the original strategy.
+     */
+    tarch::multicore::orchestration::Strategy* swapOrchestration( tarch::multicore::orchestration::Strategy* realisation );
+
+    /**
      * Tells task/thread to yield, i.e. to allow other tasks/threads to run.
      * Typically to be used within busy-waiting/polling loops.
      *
@@ -65,6 +72,7 @@ namespace tarch {
         int         _priority;
       public:
         static constexpr int DefaultPriority = 0;
+        static constexpr int Host            = -1;
 
         /**
          * @param id       Unique number of the task
@@ -101,8 +109,15 @@ namespace tarch {
          *
          * @return Is the present task still to be executed or can the runtime 
          *         destroy it straightaway?
+         * @param otherTasks List of tasks to fuse and process. Will all have the
+         *         same type as the present object. It is the tasks responsibility
+         *         to get these tasks done. So either span some new tasks or handle
+         *         them straightaway.
+         * @param targetDevice On which device should the task be processed? A
+         *         negative number means local host anything greater or equal to
+         *         zero denotes an accelerator.
          */
-        virtual bool fuse( const std::list<Task*>& otherTasks );
+        virtual bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host );
 
         /**
          * Is off by default.

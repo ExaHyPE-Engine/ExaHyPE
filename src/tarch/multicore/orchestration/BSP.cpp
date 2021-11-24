@@ -14,7 +14,7 @@ int tarch::multicore::orchestration::BSP::getNumberOfTasksToHoldBack() {
 }
 
 
-int tarch::multicore::orchestration::BSP::getNumberOfTasksToFuse() {
-  return 0;
+std::pair<int,int> tarch::multicore::orchestration::BSP::getNumberOfTasksToFuseAndTargetDevice() {
+  return std::pair<int,int>(0,0);
 }
 

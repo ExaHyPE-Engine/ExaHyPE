@@ -429,14 +429,14 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
   return Template.render(**d)
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, use_gpu):
+def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, stateless_pde_terms):
   Template = jinja2.Template( """
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
     #error eigenvalue implementation cannot be none
     {% endif %}
     
-    {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and USE_GPU %}
+    {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -469,7 +469,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
 
-    {% if FLUX_IMPLEMENTATION!="<user-defined>" and USE_GPU %}
+    {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -499,7 +499,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% endif %}
 
 
-    {% if NCP_IMPLEMENTATION!="<user-defined>" and USE_GPU %}
+    {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -531,7 +531,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% endif %}
     
 
-    {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and USE_GPU %}
+    {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -567,11 +567,11 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "USE_GPU"]                             = use_gpu
+  d[ "STATELESS_PDE_TERMS"]                             = stateless_pde_terms
   return Template.render(**d)
 
 
-def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, use_gpu):
+def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, stateless_pde_terms):
   Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -638,7 +638,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 
-{% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and USE_GPU %}
+{% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -658,7 +658,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% endif %}
 
 
-{% if FLUX_IMPLEMENTATION!="<user-defined>" and USE_GPU %}
+{% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -683,7 +683,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% endif %}
 
 
-{% if NCP_IMPLEMENTATION!="<user-defined>" and USE_GPU %}
+{% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -709,7 +709,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 {% endif %}
 
 
-{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and USE_GPU %}
+{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
@@ -739,11 +739,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "USE_GPU"]                             = use_gpu  
+  d[ "STATELESS_PDE_TERMS"]                             = stateless_pde_terms  
   return Template.render(**d)
 
 
-def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, use_gpu):
+def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, stateless_pde_terms):
   Template = jinja2.Template( """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -800,7 +800,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     {% endif %}
     
    
-    {% if USE_GPU  and SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
+    {% if STATELESS_PDE_TERMS  and SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
     // The GPU offloading requires static functions, we do the
     // TBB trick of overloading static functions with an enum
     #if defined(OpenMPGPUOffloading)
@@ -821,7 +821,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     {% endif %}
 
 
-    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and USE_GPU %}
+    {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Determine max eigenvalue over Jacobian in a given point with solution values
      * (states) Q. All parameters are in.
@@ -846,7 +846,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     {% endif %}
 
 
-    {% if USE_GPU  and FLUX_IMPLEMENTATION=="<user-defined>" %}
+    {% if STATELESS_PDE_TERMS  and FLUX_IMPLEMENTATION=="<user-defined>" %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -865,7 +865,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     {% endif %}
      
    
-    {% if USE_GPU  and NCP_IMPLEMENTATION=="<user-defined>" %}
+    {% if STATELESS_PDE_TERMS  and NCP_IMPLEMENTATION=="<user-defined>" %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -889,11 +889,11 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "USE_GPU"]                             = use_gpu  
+  d[ "STATELESS_PDE_TERMS"]                             = stateless_pde_terms  
   return Template.render(**d)
 
 
-def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, use_gpu):
+def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, stateless_pde_terms):
   Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -962,7 +962,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 
 
 
-{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and USE_GPU %}
+{% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -982,7 +982,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% endif %}
 
 
-{% if FLUX_IMPLEMENTATION=="<user-defined>" and USE_GPU %}
+{% if FLUX_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -1003,7 +1003,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 {% endif %}
 
 
-{% if NCP_IMPLEMENTATION=="<user-defined>" and USE_GPU %}
+{% if NCP_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -1026,7 +1026,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 
 
 
-{% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and USE_GPU %}
+{% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -1053,7 +1053,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "USE_GPU"]                             = use_gpu  
+  d[ "STATELESS_PDE_TERMS"]                             = stateless_pde_terms  
   return Template.render(**d)
 
 

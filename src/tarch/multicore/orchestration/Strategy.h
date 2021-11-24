@@ -13,6 +13,9 @@ namespace tarch {
 }
 
 
+#include <utility>
+
+
 /**
  * Interface
  */
@@ -28,7 +31,7 @@ class tarch::multicore::orchestration::Strategy {
      * decisions after each call.
      */
     virtual int getNumberOfTasksToHoldBack() = 0;
-    virtual int getNumberOfTasksToFuse() = 0;
+    virtual std::pair<int,int> getNumberOfTasksToFuseAndTargetDevice() = 0;
 };
 
 #endif
