@@ -11,7 +11,7 @@ import dastgen2.attributes.Integer
 
 
 class ParticleParticleInteraction(ActionSet):
-  def __init__(self, particle_set, cell_compute_kernel, touch_vertex_first_time_compute_kernel=None, touch_vertex_last_time_compute_kernel=None, additional_includes="", guard="true", active_particle_set=None ):
+  def __init__(self, particle_set, particle_particle_interaction_kernel, touch_vertex_first_time_compute_particle_update_kernel=None, touch_vertex_last_time_compute_particle_update_kernel=None, additional_includes="", guard="true", active_particle_set=None ):
     """
 
     This code snippet creates a tree walker, i.e. an action set that runs
@@ -67,7 +67,7 @@ class ParticleParticleInteraction(ActionSet):
 
     particle_set: ParticleSet
 
-    cell_compute_kernel: String holding C++ code
+    particle_particle_interaction_kernel: String holding C++ code
       This C++ code can access three different types of variables: There's
       a list of particles called activeParticles, there's a list of particles
       called localParticles, and there's the cell marker. See the guidebook
@@ -79,7 +79,7 @@ class ParticleParticleInteraction(ActionSet):
       the local ones that you actually update. Pick None if both sets are of
       the same type.
       
-    touch_vertex_first_time_compute_kernel: String or None
+    touch_vertex_first_time_compute_particle_update_kernel: String or None
       Can be empty, but if you wanna move particles, then a minimal example
       string passed equals
         
@@ -99,9 +99,9 @@ class ParticleParticleInteraction(ActionSet):
     else:
       self.d[ "ACTIVE_PARTICLE" ]                 = active_particle_set.particle_model.name
       self.d[ "ACTIVE_PARTICLES_CONTAINER" ]      = active_particle_set.name
-    self.d[ "CELL_COMPUTE_KERNEL" ]               = cell_compute_kernel
-    self.d[ "TOUCH_VERTEX_FIRST_COMPUTE_KERNEL" ] = touch_vertex_first_time_compute_kernel
-    self.d[ "TOUCH_VERTEX_LAST_COMPUTE_KERNEL" ]  = touch_vertex_last_time_compute_kernel
+    self.d[ "PARTICLE_PARTICLE_INTERACTION_KERNEL" ]               = particle_particle_interaction_kernel
+    self.d[ "TOUCH_VERTEX_FIRST_COMPUTE_KERNEL" ] = touch_vertex_first_time_compute_particle_update_kernel
+    self.d[ "TOUCH_VERTEX_LAST_COMPUTE_KERNEL" ]  = touch_vertex_last_time_compute_particle_update_kernel
     self.d[ "ADDITIONAL_INCLUDES" ]               = additional_includes
     self.d[ "GUARD" ]                             = guard
     
@@ -142,7 +142,7 @@ class ParticleParticleInteraction(ActionSet):
     std::list< globaldata::{{ACTIVE_PARTICLE}}* >&  activeParticles = _activeParticles;
     for (auto& localParticle: localParticles )
     for (auto& activeParticle: activeParticles ) {
-      {{CELL_COMPUTE_KERNEL}}
+      {{PARTICLE_PARTICLE_INTERACTION_KERNEL}}
     }
   }
 """)
