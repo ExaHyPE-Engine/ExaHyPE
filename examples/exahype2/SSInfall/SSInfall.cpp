@@ -200,7 +200,12 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double * __restrict__                        S  // S[5
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
-  if (isnan(Q[0]) and t>0.5){std::cout << "NaN inside domain" << std::endl; std::abort();}
+
+  nonCriticalAssertion4(
+    not std::isnan(Q[0]) or t<0.5,
+    volumeX, volumeH, t, dt
+  );
+
   constexpr double pi = M_PI;
   logTraceOut( "sourceTerm(...)" );
   double x=volumeX(0)-center(0);
