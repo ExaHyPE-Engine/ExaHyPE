@@ -19,9 +19,12 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
   constexpr double pi = M_PI;
   if (AbstractSSInfall::isFirstGridSweepOfTimeStep()){
   for (int i=0;i<sample_number;i++) {
-    m_tot_copy[i]=global_m_tot[i];
+    m_tot_copy[i]      = global_m_tot[i];
     //m_tot_copy[i]=m_tot[i];
-    global_m_tot[i]=0; global_cell_tot[i]=0; m_tot[i]=0; cell_tot[i]=0;
+    global_m_tot[i]    = 0; 
+    global_cell_tot[i] = 0; 
+    m_tot[i]           = 0; 
+    cell_tot[i]        = 0;
   }
   if (MassCal==1){
     for(int i=0;i<sample_number;i++){
@@ -222,8 +225,9 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   
   if (tarch::la::equals(t,0)){//we know the mass distri at the beginning
     if (iseed==0){
-		  if (r_coor<r_ini) { m_in=rho_ini*delta_rho*pow(r_coor,3)/3;}
-		  else { m_in=rho_ini*delta_rho*pow(r_ini,3)/3;}
+      if (r_coor<r_ini) { 
+        m_in=rho_ini*delta_rho*pow(r_coor,3)/3;}
+      else { m_in=rho_ini*delta_rho*pow(r_ini,3)/3;}
 		}
 		if (iseed==1){
 		  if (r_coor<r_point){m_in=delta_m*pow(r_coor/r_point,3)/4/pi;}
@@ -233,30 +237,29 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   else {
     if (iseed==0){
       m_in=mass_interpolate(r_coor,MassCal)/4/pi; //remove the overall 4\pi coefficient. 
+      nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
     }
     if (iseed==1){
-		  if (r_coor<r_point){m_in=(mass_interpolate(r_coor, MassCal)+delta_m*pow(r_coor/r_point,3))/4/pi;}
-		  else {m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4/pi;}
-		}
+      if (r_coor<r_point){
+        m_in=(mass_interpolate(r_coor, MassCal)+delta_m*pow(r_coor/r_point,3))/4/pi;
+        nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
+      }
+      else {
+        m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4/pi;
+        nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
+      }
+    }
   }
 
   double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
   double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
-  //if (r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
 
-  //force_density_norm=0;
 
   S[0] = 0;  // rho
   S[1] = -force_density_norm*x;    // velocities
   S[2] = -force_density_norm*y;
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
-  //for (int i=0;i<5;i++){S[i]=S[i]*tarch::la::volume(volumeH);}
-/*  S[0] = 0;  // rho
-  S[1] = 0;    // velocities
-  S[2] = 0;
-  S[3] = 0;
-  S[4] = 0;*/
 }
 
 
@@ -275,7 +278,6 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   nonCriticalAssertion4( Qinside[3]==Qinside[3], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
-  //nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
   if (extrapolate_bc==0){
@@ -410,6 +412,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
 
+
 void examples::exahype2::SSInfall::SSInfall::add_mass(
   const double r_coor,
   const double rho,
@@ -423,8 +426,15 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   //m=1;
   tarch::multicore::Lock myLock( _mySemaphore );
   for (int i=0;i<sample_number;i++){
-    if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;cell_tot[i]+=1; global_m_tot[i]+=m; global_cell_tot[i]+=1;}
-    else if ((r_coor-size/2)>r_s[i]) {m_tot[i]+=0;}
+    if ((r_coor+size/2)<r_s[i]) {
+      m_tot[i]+=m;
+      cell_tot[i]+=1; 
+      global_m_tot[i]+=m; 
+      global_cell_tot[i]+=1;
+    }
+    else if ((r_coor-size/2)>r_s[i]) {
+      m_tot[i]+=0;
+    }
     else {
       m_tot[i]+=m*std::max(0.0,pow((r_s[i]-r_coor+size/2),3))/pow(size,3);cell_tot[i]+=1;
       global_m_tot[i]+=m*std::max(0.0,pow((r_s[i]-r_coor+size/2),3))/pow(size,3); global_cell_tot[i]+=1;
@@ -435,6 +445,7 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
     else {m_tot[i]+=0;}
   }*/
 }
+
 
 double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   const double r_coor,
