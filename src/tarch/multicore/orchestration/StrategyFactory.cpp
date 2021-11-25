@@ -4,6 +4,7 @@
 #include "Fuse.h"
 #include "NativeTasks.h"
 
+#include "tarch/Assertions.h"
 #include "tarch/logging/Log.h"
 
 
