@@ -5,6 +5,7 @@
 #include "exahype2/NonCriticalAssertions.h"
 #include "tarch/multicore/Lock.h"
 
+
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
 void examples::exahype2::SSInfall::SSInfall::startTimeStep(
@@ -97,8 +98,26 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
     }
   }
   if (ReSwi==3){ //radius based
-    if (radius<0.3) {result=::exahype2::RefinementCommand::Refine;}
+    if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
   }
+  if (ReSwi==4){ //dynamic one
+    double Mpc=3.086*1e19; //in Km;
+    double t_real=pow( (pow((Mpc/150),(-1.0/3.0))*pow(a_i,(-0.5))-t*pow(150,(4.0/3.0))/300/pow(Mpc,(1.0/3.0))),-3);
+    double a_scale=pow((150/Mpc),(2.0/3.0))*pow( (pow((Mpc/150),(-1.0/3.0))*pow(a_i,(-0.5))-t*pow(150,(4.0/3.0))/300/pow(Mpc,(1.0/3.0))),-2);
+    double R_ta_code=(a_i/a_scale)*pow((3.0*delta_m)/(4.0*M_PI*tilde_rho_ini),(1.0/3.0))*pow((4.0/3.0/M_PI),(8/9))*pow((t_real/6.505/1e12),(8/9));
+    double delta_R=std::abs(radius-R_ta_code*0.55);
+    
+    constexpr int NumberOfRefinementLayers = 1;
+    double distance[NumberOfRefinementLayers] = {0.4};
+    double MaxH[NumberOfRefinementLayers]   = {0.015};
+    //if (delta_R>-1) {std::cout << t_real <<" "<<a_scale<<" "<<R_ta_code<<" "<< radius <<" "<< delta_R << std::endl;}
+
+    for (int i=0; i<NumberOfRefinementLayers; i++) {
+      if (delta_R<distance[i] and tarch::la::max(volumeH)>MaxH[i]) {
+        result=::exahype2::RefinementCommand::Refine;
+      }
+    }
+  }  
   return result;
 }
 
@@ -181,6 +200,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double * __restrict__                        S  // S[5
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+  if (isnan(Q[0]) and t>0.5){std::cout << "NaN inside domain" << std::endl; std::abort();}
   constexpr double pi = M_PI;
   logTraceOut( "sourceTerm(...)" );
   double x=volumeX(0)-center(0);
@@ -350,7 +370,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   result=result*(1+C_1*exp(-C_2*t));
     //std::cout <<" u_n "<<u_n<<" c "<< c <<" eigenvale " << result << std::endl;
   //}
-  if (result>10000) {std::cout << "eigen too big: " << result << std::endl; std::abort();}
+  if (result>10000 and t>0.5) {std::cout << "eigen too big: " << result << std::endl; std::abort();}
   if (result<1e-8 and t>0.5) {std::cout << "eigen too small: " << result << std::endl; std::abort();}
   return result;
 }

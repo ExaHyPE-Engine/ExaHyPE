@@ -225,7 +225,7 @@ if __name__ == "__main__":
           double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
-          if (isnan(reconstructedPatch[cellSerialised*(5+aux_var)+0])){std::cout << "NaN inside domain" << std::endl; std::abort();}
+          //if (isnan(reconstructedPatch[cellSerialised*(5+aux_var)+0])){std::cout << "NaN inside domain" << std::endl; std::abort();}
           //if (r_coor>0.84) {std::cout << "add here" << std::endl;}
 
           double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
