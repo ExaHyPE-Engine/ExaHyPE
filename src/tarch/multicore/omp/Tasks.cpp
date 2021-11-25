@@ -54,7 +54,7 @@ namespace {
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
-    int                                            numberOfTasksToHoldBack
+    tarch::multicore::orchestration::Strategy*     strategy
   ) {
     assertion( not tasks.empty() );
 
@@ -88,16 +88,24 @@ namespace {
         ) {
           int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 
-          if ( numberOfPendingTasks>=numberOfTasksToHoldBack ) {
-            bool gotATask = tarch::multicore::processPendingTasks( std::max(1,numberOfPendingTasks/2) );
-            if (not gotATask) {
-              #pragma omp taskyield
-              #if defined(Parallel)
-              // Allow MPI to make progress. We otherwise might starve MPI
-              int flag;
-              MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, MPI_STATUS_IGNORE );
-              #endif
+          if ( numberOfPendingTasks>0 ) {
+            std::pair<int,int> fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
+
+            if (fusion.first>0 and numberOfPendingTasks>=fusion.first) {
+              tarch::multicore::internal::fusePendingTasks(fusion);
             }
+            else {
+              int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
+              tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+            }
+          }
+          else {
+            #pragma omp taskyield
+            #if defined(Parallel)
+            // Allow MPI to make progress. We otherwise might starve MPI
+            int flag;
+            MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, MPI_STATUS_IGNORE );
+            #endif
           }
         }
       }
@@ -135,10 +143,10 @@ void tarch::multicore::native::spawnTask(Task*  job) {
  */
 void tarch::multicore::native::spawnAndWait(
   const std::vector< Task* >&  tasks,
-  int                          numberOfTasksToHoldBack
+  orchestration::Strategy*     strategy
 ) {
-  if (numberOfTasksToHoldBack>0) {
-    spawnAndWaitAsExplicitTasksWithPolling(tasks,numberOfTasksToHoldBack);
+  if (strategy->processPendingTasksWhileWaitingInBSPSection()) {
+    spawnAndWaitAsExplicitTasksWithPolling(tasks,strategy);
   }
   else {
     spawnAndWaitAsTaskLoop(tasks);

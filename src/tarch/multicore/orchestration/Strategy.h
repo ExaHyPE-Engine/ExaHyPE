@@ -27,6 +27,10 @@ class tarch::multicore::orchestration::Strategy {
      * Notifies the strategy that we enter a BSP section
      */
     virtual void startBSPSection() = 0;
+
+    /**
+     *
+     */
     virtual void endBSPSection()   = 0;
 
     /**
@@ -62,6 +66,14 @@ class tarch::multicore::orchestration::Strategy {
      * device.
      */
     virtual std::pair<int,int> getNumberOfTasksToFuseAndTargetDevice() = 0;
+
+    /**
+     * If you set this flag, tasks are immediately fused. You might want
+     * idling threads to fuse the tasks. In this case, return false.
+     */
+    virtual bool fuseTasksImmediatelyWhenSpawned() = 0;
+
+    virtual bool processPendingTasksWhileWaitingInBSPSection() = 0;
 };
 
 #endif

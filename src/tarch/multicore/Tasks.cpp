@@ -141,35 +141,36 @@ namespace {
 
     return extractedTasks.size();
   }
+}
 
 
-  /**
-   * @return Number of processed tasks
-   */
-  int mapPendingTasksOntoNativeTasks(int maxTasks) {
-    NonblockingTasks extractedTasks;
+/**
+ * @return Number of processed tasks
+ */
+int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
+  NonblockingTasks extractedTasks;
 
-    tarch::multicore::Lock lock(nonblockingTasksSemaphore);
+  tarch::multicore::Lock lock(nonblockingTasksSemaphore);
     
-    NonblockingTasks::iterator cutIteration = nonblockingTasks.begin();
-    while (
-      cutIteration!=nonblockingTasks.end()
-      and
-      maxTasks>0
-    ) {
-      maxTasks--;
-      cutIteration++;
-    }
-    
-    extractedTasks.splice( extractedTasks.begin(), nonblockingTasks, nonblockingTasks.begin(), cutIteration );
-    lock.free();
-
-    for (auto& task: extractedTasks) {
-      tarch::multicore::native::spawnTask(task);
-    }
-
-    return extractedTasks.size();
+  NonblockingTasks::iterator cutIteration = nonblockingTasks.begin();
+  while (
+    cutIteration!=nonblockingTasks.end()
+    and
+    maxTasks>0
+  ) {
+    maxTasks--;
+    cutIteration++;
   }
+    
+  extractedTasks.splice( extractedTasks.begin(), nonblockingTasks, nonblockingTasks.begin(), cutIteration );
+  lock.free();
+
+  for (auto& task: extractedTasks) {
+    tarch::multicore::native::spawnTask(task);
+  }
+
+  return extractedTasks.size();
+}
 
 
   /**
@@ -194,50 +195,49 @@ namespace {
    *
    * @return Number of merged/processed tasks
    */
-  bool fusePendingTasks(std::pair<int,int> maxTasksAndDevice) {
-    logDebug( "fusePendingTasks(int)", "fuse up to " << nonblockingTasks.size() << " tasks (max=" << maxTasksAndDevice.first << ")" );
+bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAndDevice) {
+  logDebug( "fusePendingTasks(int)", "fuse up to " << nonblockingTasks.size() << " tasks (max=" << maxTasksAndDevice.first << ")" );
 
-    tarch::multicore::Task* myTask = nullptr;
-    std::list< tarch::multicore::Task* > tasksOfSameType;
+  tarch::multicore::Task* myTask = nullptr;
+  std::list< tarch::multicore::Task* > tasksOfSameType;
 
-    if (not nonblockingTasks.empty()) {
-      myTask = nonblockingTasks.front();
-      nonblockingTasks.pop_front();
-    }
-
-    auto pp = nonblockingTasks.begin();
-    while (
-      myTask!=nullptr
-      and
-      myTask->canFuse()
-      and
-      pp!=nonblockingTasks.end()
-      and
-      (*pp)->getTaskType()==myTask->getTaskType()
-      and
-      tasksOfSameType.size()<maxTasksAndDevice.first-1
-    ) {
-      tasksOfSameType.push_back( *pp );
-      pp = nonblockingTasks.erase(pp);
-    }
-
-    ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
-
-    if (myTask!=nullptr) {
-      bool stillExecuteLocally;
-      if (tasksOfSameType.empty()) {
-        stillExecuteLocally = true;
-      }
-      else {
-        stillExecuteLocally = myTask->fuse(tasksOfSameType,maxTasksAndDevice.second);
-      }
-      if (stillExecuteLocally) {
-        tarch::multicore::native::spawnTask(myTask);
-      }
-    }
-
-    return myTask==nullptr ? 0 : tasksOfSameType.size()+1;
+  if (not nonblockingTasks.empty()) {
+    myTask = nonblockingTasks.front();
+    nonblockingTasks.pop_front();
   }
+
+  auto pp = nonblockingTasks.begin();
+  while (
+    myTask!=nullptr
+    and
+    myTask->canFuse()
+    and
+    pp!=nonblockingTasks.end()
+    and
+    (*pp)->getTaskType()==myTask->getTaskType()
+    and
+    tasksOfSameType.size()<maxTasksAndDevice.first-1
+  ) {
+    tasksOfSameType.push_back( *pp );
+    pp = nonblockingTasks.erase(pp);
+  }
+
+  ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
+
+  if (myTask!=nullptr) {
+    bool stillExecuteLocally;
+    if (tasksOfSameType.empty()) {
+      stillExecuteLocally = true;
+    }
+    else {
+      stillExecuteLocally = myTask->fuse(tasksOfSameType,maxTasksAndDevice.second);
+    }
+    if (stillExecuteLocally) {
+      tarch::multicore::native::spawnTask(myTask);
+    }
+  }
+
+  return myTask==nullptr ? 0 : tasksOfSameType.size()+1;
 }
 
 
@@ -420,6 +420,7 @@ void tarch::multicore::spawnTask(Task*  task) {
   #endif
 
   if ( nonblockingTasks.size()>=orchestrationStrategy->getNumberOfTasksToHoldBack() ) {
+    logDebug( "spawnTasks(int)", "spawn native task" );
     native::spawnTask(task);
   }
   else {
@@ -429,8 +430,14 @@ void tarch::multicore::spawnTask(Task*  task) {
     logDebug( "spawnTask(...)", "enqueued task (#tasks=" << nonblockingTasks.size() << ")" );
 
     auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
-    if ( fusionCommand.first>0 and nonblockingTasks.size()>=fusionCommand.first ) {
-      fusePendingTasks(fusionCommand);
+    if (
+      fusionCommand.first>0
+      and
+      nonblockingTasks.size()>=fusionCommand.first
+      and
+      orchestrationStrategy->fuseTasksImmediatelyWhenSpawned()
+    ) {
+      internal::fusePendingTasks(fusionCommand);
     }
   }
 
@@ -516,12 +523,12 @@ void tarch::multicore::spawnAndWait(
 
   if (not tasks.empty()) {
     orchestrationStrategy->startBSPSection();
-    native::spawnAndWait(tasks,orchestrationStrategy->getNumberOfTasksToHoldBack());
+    native::spawnAndWait(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
 
     if ( not nonblockingTasks.empty() ) {
       int numberOfTasksToProcessNow = std::max(0,static_cast<int>(nonblockingTasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());
-      mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
+      internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
     }
   }
 }
@@ -555,7 +562,7 @@ void tarch::multicore::native::spawnTask(Task*  job) {
 
 void tarch::multicore::native::spawnAndWait(
   const std::vector< Task* >&  tasks,
-  int                          numberOfTasksToHoldBack
+  orchestration::Strategy*     strategy
 ) {
   for (auto& p: tasks) {
     while (p->run()) {}

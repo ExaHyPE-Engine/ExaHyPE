@@ -267,10 +267,16 @@ namespace tarch {
       void spawnTask(Task*  job);
       void spawnAndWait(
         const std::vector< Task* >&  tasks,
-        int                          numberOfTasksToHoldBack
+        orchestration::Strategy*     strategy
       );
       void yield();
       int getNumberOfPendingTasks();
+    }
+
+
+    namespace internal {
+      int  mapPendingTasksOntoNativeTasks(int maxTasks);
+      bool fusePendingTasks(std::pair<int,int> maxTasksAndDevice);
     }
   }
 }

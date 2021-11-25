@@ -227,6 +227,7 @@ bool exahype2::parseCommandLineArguments(int argc, char** argv) {
         tarch::multicore::setOrchestration(realisation);
       }
       else {
+        logError( "parseCommandLineArguments(...)", "was not able to set threading strategy " << argv[argument+1] );
         return false;
       }
     }
