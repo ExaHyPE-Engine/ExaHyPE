@@ -213,7 +213,7 @@ namespace exahype2 {
    *   time step buckets. So we have a bucket with
    *   @f$ (minGlobalTimeStepSize,minGlobalTimeStepSize*discretisationStepsSize) @f$, then
    *   one with @f$(minGlobalTimeStepSize*discretisationStepsSize,minGlobalTimeStepSize*discretisationStepsSize^2)@f$,
-   *   and so forth.
+   *   and so forth. Consequently, this value has to be smaller than one.
    */
   double discretiseAndTruncateTimeStepSizes(
     double cellTimeStepSize,

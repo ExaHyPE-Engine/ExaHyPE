@@ -361,6 +361,32 @@ def extract_grid_construction_times(performance_data_points):
   return (x_data,y_data)
 
 
+def extract_total_time_stepping_times(performance_data_points, max_cores_per_rank=0, verbose=False):
+  x_data = []
+  y_data = []
+    
+  for point in performance_data_points:
+    if verbose:
+      print( "study " + str(point) + " with " + str(point.total_time_stepping_steps) + " time step(s)" )
+    if point.total_time_stepping_steps>0:
+      x_value = 0.0
+      if max_cores_per_rank>0:
+        x_value = point._ranks + 0.5*point._threads/max_cores_per_rank
+      if max_cores_per_rank==0:
+        x_value = point._ranks
+      if max_cores_per_rank<0:
+        x_value = point._threads
+      if verbose:
+        print( "experiment results from "  + str(x_value) + " cores/ranks" )
+      insert_at_position = 0
+      while insert_at_position<len(x_data) and x_data[insert_at_position]<x_value:
+        insert_at_position += 1
+      x_data.insert( insert_at_position, x_value )
+      raw_data = point.total_time_stepping_time
+      y_data.insert( insert_at_position, raw_data )
+    
+  return (x_data,y_data)
+    
 
 def extract_times_per_step(performance_data_points, max_cores_per_rank=0, verbose=False):
   """
