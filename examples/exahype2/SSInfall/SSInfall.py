@@ -218,7 +218,7 @@ if __name__ == "__main__":
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
-          //tarch::la::Vector<Dimensions,double> vH=(volumeH,volumeH,volumeH);
+          //tarch::la::Vector<Dimensions,double> vH={volumeH,volumeH,volumeH};
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
           
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
