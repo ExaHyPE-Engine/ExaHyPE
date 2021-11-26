@@ -167,6 +167,10 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
     }
   Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini/(gamma-1); // inner energy
 
+  for (int i=5; i<20; i++){
+    	Q[i]=0.0;
+  }
+
   const double irho = 1./Q[0];
   #if Dimensions==3
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
