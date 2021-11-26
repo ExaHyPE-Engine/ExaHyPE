@@ -196,6 +196,8 @@ if __name__ == "__main__":
           }
         }
     """)
+        self.create_data_structures()
+        self.create_action_sets()
 
       def add_mass_cal_cellcount(self):
         """
@@ -216,7 +218,7 @@ if __name__ == "__main__":
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
-          tarch::la::Vector<Dimensions,double> vH={volumeH,volumeH,volumeH};
+          //tarch::la::Vector<Dimensions,double> vH={volumeH,volumeH,volumeH};
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
           
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
@@ -265,10 +267,11 @@ if __name__ == "__main__":
             }
           }*/
 
-
         }
         
     """)
+        self.create_data_structures()
+        self.create_action_sets()
 
       def add_mass_cal_rhointer(self):
         """
@@ -524,7 +527,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=0.0, b=(offset[0]+domain_size[0]), N_x=50,N_y=50,N_z=1)
+        tracer_seeds_generate(Type=args.add_tracer, a=0.0, b=(offset[0]+domain_size[0]), N_x=210,N_y=50,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
 
       if path=="./": path1="."
@@ -533,7 +536,7 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=200,
+        number_of_entries_between_two_db_flushes=20000,
         output_precision=10,
         position_delta_between_two_snapsots=1e16,
         data_delta_between_two_snapsots=1e16,
