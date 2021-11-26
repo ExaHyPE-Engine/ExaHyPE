@@ -65,11 +65,12 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
   }
   #endif
   std::ostringstream msg;
-  msg << "(";
+  msg << "global_m_tot=(";
   for (int i=0;i<sample_number;i++) {
     if (i!=0) msg << ",";
     msg << global_m_tot[i];
   }
+  msg << ")";
   logInfo( "finishTimeStep()", msg.str() );
 }
 
