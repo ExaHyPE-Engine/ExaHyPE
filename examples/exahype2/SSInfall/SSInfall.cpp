@@ -210,6 +210,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double * __restrict__                        S  // S[5
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+  if (std::isnan(Q[0])){std::cout << "NaN in the domain" << std::endl; std::abort();}
 
   nonCriticalAssertion4(
     not std::isnan(Q[0]) or t<0.5,
