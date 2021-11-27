@@ -82,7 +82,7 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
   avoid_staircase_effect: Boolean
   
   """
-  if discretisation_steps<=0.0 or discretisation_steps>=1.0:
+  if discretisation_steps<=1.0:
     raise Exception( "invalid discretisation step size for local time step (val=" + str(discretisation_steps) + ")" )
 
   determine_eigenvalue = """

@@ -20,6 +20,12 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
     assertion(maxFusion>=1);
     return Hardcoded::createFuseAll(maxFusion, true, tarch::multicore::Task::Host);
   }
+  else if ( realisationString.find( "fuse-late-" )==0 ) {
+    std::string argument = realisationString.substr( std::string("fuse-late-").size() );
+    int maxFusion = atoi( argument.c_str() );
+    assertion(maxFusion>=1);
+    return Hardcoded::createFuseAll(maxFusion, false, tarch::multicore::Task::Host);
+  }
   else if ( realisationString==std::string( "native" ) ) {
     return Hardcoded::createNative();
   }
@@ -33,7 +39,7 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
 
 
 std::string tarch::multicore::orchestration::getListOfRealisations() {
-  return "bsp,backfill,fuse-immediately-[1,2,3...],fuse-lazy-[1,2,3...],native,default";
+  return "bsp,backfill,fuse-immediately-[1,2,3...],fuse-late-[1,2,3...],native,default";
 }
 
 

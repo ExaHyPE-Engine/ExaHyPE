@@ -210,10 +210,10 @@ namespace exahype2 {
    *   I expect the time step size not to grow by more than 10 percent.
    *
    * @param discretisationSteps Discretisation step size. This one determines the
-   *   time step buckets. So we have a bucket with
+   *   time step buckets' relative sizes. So we have a bucket with
    *   @f$ (minGlobalTimeStepSize,minGlobalTimeStepSize*discretisationStepsSize) @f$, then
    *   one with @f$(minGlobalTimeStepSize*discretisationStepsSize,minGlobalTimeStepSize*discretisationStepsSize^2)@f$,
-   *   and so forth. Consequently, this value has to be smaller than one.
+   *   and so forth. Consequently, this value has to be bigger than one.
    */
   double discretiseAndTruncateTimeStepSizes(
     double cellTimeStepSize,
