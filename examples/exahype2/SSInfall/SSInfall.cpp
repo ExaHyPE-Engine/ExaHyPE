@@ -64,14 +64,15 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
     global_cell_tot[i]=cell_tot[i];
   }
   #endif
-  std::ostringstream msg;
+  /*std::ostringstream msg;
   msg << "global_m_tot=(";
   for (int i=0;i<sample_number;i++) {
     if (i!=0) msg << ",";
     msg << global_m_tot[i];
   }
-  msg << ")";
-  logInfo( "finishTimeStep()", msg.str() );
+  msg << ")";*/
+  //logInfo( "finishTimeStep()", msg.str() );
+  //logInfo( "finishTimeStep()");
 }
 
 
