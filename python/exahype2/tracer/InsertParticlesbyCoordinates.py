@@ -38,7 +38,7 @@ class InsertParticlesbyCoordinates(ActionSet):
     // need to ensure that particles right in the centre are either associated
     // with the vertex left or right.
     if (
-      not marker.isRefined() 
+      not marker.willBeRefined() 
       and 
       (marker.getOffset()(0) <= coor_s[i][0] and marker.getOffset()(0)+marker.h()(0) > coor_s[i][0])
       and
