@@ -387,10 +387,8 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c)); //result=1;
   nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  //if (t>0.2 and result>1){
   result=result*(1+C_1*exp(-C_2*t));
 
-  // @todo Should be nonCriticalAssertion
   nonCriticalAssertion13( 
     result<10000, 
     result, p, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal 
