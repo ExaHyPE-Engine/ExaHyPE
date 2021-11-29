@@ -34,7 +34,15 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
      Don't interpolate in initialisation. If you have a parallel run with AMR, then some 
      boundary data has not been received yet and your face data thus is not initialised 
      at all.
+
+     # Restriction
      
+     In contrast to the interpolation, it is absolutely key that we restrict alreaday in
+     the initialisation. If we have a cell that is adjacent to a refined cell, then this
+     cell requires proper face data for the subsequent first time step. So we have to 
+     restrict in the initialisation even if there's no update yet - just to get the 
+     coarse representation of fine hanging faces initialised.
+          
      # Restriction of destructed faces
      
      A destructed face has to restrict its data: We've already restricted the cells,
@@ -67,9 +75,7 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       interpolate_guard           = """
   repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::GridInitialisation
 """,
-      restrict_guard           = """
-  repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::GridInitialisation
-""",
+      restrict_guard           = "true",
       additional_includes         = """
 #include "../repositories/SolverRepository.h"
 #include "exahype2/fv/Generic.h"

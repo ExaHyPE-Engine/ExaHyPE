@@ -13,7 +13,8 @@ import numpy as np
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, "stats":  peano4.output.CompileMode.Stats,
+  "assert":  peano4.output.CompileMode.Asserts, 
+  "stats":  peano4.output.CompileMode.Stats,
   "debug":   peano4.output.CompileMode.Debug,
 }
 
@@ -68,7 +69,7 @@ if __name__ == "__main__":
        SuperClass = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking
 
     class SSInfallSolver( SuperClass ):
-      def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl):
+      def __init__(self, name, patch_size, min_volume_h, max_volume_h, cfl, domain_r):
         unknowns = {
           "rho":1,
           "j":3,
@@ -112,6 +113,7 @@ if __name__ == "__main__":
         )
 
         self._patch_size = patch_size
+        self._domain_r = domain_r  
 
         self.set_postprocess_updated_patch_kernel( """
 
@@ -189,12 +191,12 @@ if __name__ == "__main__":
             for (int i=0; i<real_var; i++) {
               reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d] =
                 ( reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] ) / 2.0 / volumeH;
-              if (isnan(reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d])) {std::cout <<reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i]<<" "<< reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] << std::endl;}
             }
-
           }
         }
     """)
+        self.create_data_structures()
+        self.create_action_sets()
 
       def add_mass_cal_cellcount(self):
         """
@@ -210,11 +212,12 @@ if __name__ == "__main__":
         const int patchSize = """ + str( self._patch.dim[0] ) + """;
         double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
         int aux_var=""" + str( self._auxiliary_variables ) + """;
+        double domain_r=""" + str( self._domain_r ) + """;
         int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
         tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
         dfor(cell,patchSize) {
           tarch::la::Vector<Dimensions,double> coor;
-          tarch::la::Vector<Dimensions,double> vH=(volumeH,volumeH,volumeH);
+          //tarch::la::Vector<Dimensions,double> vH={volumeH,volumeH,volumeH};
           for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
           
           tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
@@ -223,7 +226,6 @@ if __name__ == "__main__":
           double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
-          //if (r_coor>0.84) {std::cout << "add here" << std::endl;}
 
           double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
           double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
@@ -236,7 +238,8 @@ if __name__ == "__main__":
             reconstructedPatch[cellSerialised*(5+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
           }
           
-          //int test=0; 
+          //int test=0;
+          if (abs(coor(0))>0.8*domain_r or abs(coor(1))>0.8*domain_r or abs(coor(2))>0.8*domain_r){ 
 					for (int d=0; d<3; d++) {
             tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
             tarch::la::Vector<Dimensions,int> rightCell = currentCell;
@@ -250,17 +253,14 @@ if __name__ == "__main__":
             	else {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ 2.0 / volumeH;}
             }
           }
-          
-          /*for (int d=0; d<15; d++) {
-            if (isnan(reconstructedPatch[cellSerialised*(5+aux_var)+5+d])){
-              std::cout << reconstructedPatch[cellSerialised*(5+aux_var)+5+d] <<" "<< test <<" "<<d<< std::endl;
-            }
-          }*/
-
-
+          } else{
+            for (int d=0; d<15; d++) {reconstructedPatch[cellSerialised*(5+aux_var)+5+d]=0;}
+          }
         }
         
     """)
+        self.create_data_structures()
+        self.create_action_sets()
 
       def add_mass_cal_rhointer(self):
         """
@@ -281,32 +281,24 @@ if __name__ == "__main__":
           tarch::la::Vector<Dimensions,int> centerCell = tarch::la::Vector<Dimensions,int>(1+patchSize/2);
           const int cellSerialised  = peano4::utils::dLinearised(centerCell, patchSize + 2*1);
           repositories::{{SOLVER_INSTANCE}}.rho_0=reconstructedPatch[cellSerialised*(5+aux_var)+0];
-          //std::cout << repositories::{{SOLVER_INSTANCE}}.rho_0 << std::endl;
         }
         for (int i=0;i<sample;i++){
           tarch::la::Vector<Dimensions,double> coor; coor(0)=repositories::{{SOLVER_INSTANCE}}.r_s[i];
           if ( marker.isContained(coor) ){
-            //std::cout << coor << std::endl;
             for (int xindex=0; xindex<(patchSize+2);xindex++){
               if ( (marker.getOffset()(0)+(xindex-1)*volumeH)<repositories::{{SOLVER_INSTANCE}}.r_s[i] and (marker.getOffset()(0)+(xindex-0.5)*volumeH)>repositories::{{SOLVER_INSTANCE}}.r_s[i] ){
-                //std::cout <<  (marker.getOffset()(0)+(xindex-1)*volumeH)<<" "<< (marker.getOffset()(0)+(xindex-0.5)*volumeH)<< std::endl;
                 tarch::la::Vector<Dimensions,int> cell1=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell1(0)=xindex;
                 tarch::la::Vector<Dimensions,int> cell2=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell2(0)=xindex-1;
-                //std::cout << cell1 <<cell2<< std::endl;
                 double rho1=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
                 double rho2=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex-1.5)*volumeH;
                 repositories::{{SOLVER_INSTANCE}}.rho_x[i]=rho1*(x2-repositories::{{SOLVER_INSTANCE}}.r_s[i])/(x2-x1)+rho2*(repositories::{{SOLVER_INSTANCE}}.r_s[i]-x1)/(x2-x1);
-                //std::cout<<repositories::{{SOLVER_INSTANCE}}.rho_x[i]<<std::endl;
               }
               else if ( (marker.getOffset()(0)+(xindex-0.5)*volumeH)<repositories::{{SOLVER_INSTANCE}}.r_s[i] and (marker.getOffset()(0)+(xindex)*volumeH)>repositories::{{SOLVER_INSTANCE}}.r_s[i] ){
-                //std::cout <<  (marker.getOffset()(0)+(xindex-0.5)*volumeH)<<" "<< (marker.getOffset()(0)+(xindex)*volumeH)<< std::endl;
                 tarch::la::Vector<Dimensions,int> cell1=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell1(0)=xindex;
                 tarch::la::Vector<Dimensions,int> cell2=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell2(0)=xindex+1;
-                //std::cout << cell1 <<cell2 <<std::endl;
                 double rho1=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
                 double rho2=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex+0.5)*volumeH;
                 repositories::{{SOLVER_INSTANCE}}.rho_x[i]=rho1*(x2-repositories::{{SOLVER_INSTANCE}}.r_s[i])/(x2-x1)+rho2*(repositories::{{SOLVER_INSTANCE}}.r_s[i]-x1)/(x2-x1);
-                //std::cout<<repositories::{{SOLVER_INSTANCE}}.rho_x[i]<<std::endl;
               }
             }
           }                   
@@ -365,7 +357,7 @@ if __name__ == "__main__":
           sources = exahype2.solvers.aderdg.PDETerms.User_Defined_Implementation
       )
     else:
-      my_solver = SSInfallSolver(solver_name, args.patch_size, min_h, args.max_h,args.cfl)
+      my_solver = SSInfallSolver(solver_name, args.patch_size, min_h, args.max_h,args.cfl,args.domain_r)
       userinfo.append(("CFL ratio set as "+str(args.cfl), None))
       
     if args.extension=="cellcount":  
@@ -496,13 +488,14 @@ if __name__ == "__main__":
     probe_point = [-0,-0,-1e-6]
     project.add_plot_filter( probe_point,[40.0,40.0,2e-6],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0,28))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.9,0,16))" )
 
 ########################################################################################
 #Tracer setting 
 ########################################################################################
     if not args.add_tracer==0:
       tracer_name = {1:"line", 2:"slide", 3:"volume", 6:"Gauss_Legendre_quadrature", 7:"t-design"}
+      userinfo.append(("Tracer added, Type: "+tracer_name[args.add_tracer],None))
       tracer_particles = project.add_tracer( name="MyTracer",attribute_count=5, plot=False)
        #project.add_action_set_to_timestepping(exahype2.tracer.FiniteVolumesTracing(tracer_particles,my_solver,[17,18,19],[16],-1,time_stepping_kernel="toolbox::particles::explicitEulerWithoutInterpolation"))
       project.add_action_set_to_timestepping(
@@ -515,7 +508,7 @@ if __name__ == "__main__":
         )
       )
       if args.add_tracer==1 or args.add_tracer==2 or args.add_tracer==3 :
-        tracer_seeds_generate(Type=args.add_tracer, a=offset[0], b=(offset[0]+domain_size[0]), N_x=400,N_y=50,N_z=1)
+        tracer_seeds_generate(Type=args.add_tracer, a=0.0, b=(offset[0]+domain_size[0]), N_x=210,N_y=50,N_z=1)
         project.add_action_set_to_initialisation( exahype2.tracer.InsertParticlesFromFile( particle_set=tracer_particles, filename=tracer_name[args.add_tracer]+".dat", scale_factor=1)) #"line.dat" #slide.dat #volume.dat
 
       if path=="./": path1="."
@@ -526,8 +519,10 @@ if __name__ == "__main__":
         filename=path1+"zz"+args.tra_name,
         number_of_entries_between_two_db_flushes=20000,
         output_precision=10,
-        position_delta_between_two_snapsots=1e-20,
-        data_delta_between_two_snapsots=0
+        position_delta_between_two_snapsots=1e16,
+        data_delta_between_two_snapsots=1e16,
+        time_delta_between_two_snapsots=1.0,
+        use_relative_deltas=False
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
       #,,-1,"zz",1000))

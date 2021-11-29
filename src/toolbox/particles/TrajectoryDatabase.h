@@ -40,6 +40,8 @@ class toolbox::particles::TrajectoryDatabase {
     double      _maxPositionDelta;
     int         _numberOfDataPointsPerParticle;
 
+    double      _timeDelta;
+
     const int   _deltaBetweenTwoDatabaseFlushes;
     int         _thresholdForNextDatabaseFlush;
     int         _precision;
@@ -149,13 +151,17 @@ class toolbox::particles::TrajectoryDatabase {
      *   than positionDelta.
      * @param dataDelta See positionDelta, but this time we analyse the data held by
      *   the particle.
+     * @param timeDelta this parameter ask the code to dump particle into database after certain time 
+     *   interval of time_delta_between_two_snapsots, even data and position do not change 
+     *   during this time interval. You can set the two parameter above to be extremely big
+     *   to enforce code dump particle with (roughly) regular time interval. 
      * @param deltasAreRelative By default (flag is false), we take the absolute deltas
      *   of the position or data to make a decision if to dump a particle or not. If
      *   this flag is set however, we track the maximum of the deltas, and we dump
      *   data if and only if it exceeds positionDelta times this maximum. So we use a
      *   relative quantity.
      */
-    TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8, bool clearDatabaseAfterFlush=true, bool deltasAreRelative=false );
+    TrajectoryDatabase( int growthBetweenTwoDatabaseFlushes, double positionDelta = 1e-8, double dataDelta = 1e-8, double timeDelta=0.0, bool clearDatabaseAfterFlush=true, bool deltasAreRelative=false );
     ~TrajectoryDatabase();
 
     /**
@@ -165,6 +171,12 @@ class toolbox::particles::TrajectoryDatabase {
      * case, it first locks the sempahore and then it continues.
      */
     void clear(bool lockSemaphore=true);
+
+    /**
+     * This call does not throw away all particles, but it throws away all the history
+     * behind the particles.
+     */
+    void clearHistory(bool lockSemaphore=true);
 
     /**
      * <h2> Thread-safety </h2>
@@ -183,6 +195,7 @@ class toolbox::particles::TrajectoryDatabase {
     void setOutputPrecision( int precision );
     void setDataDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative = false );
     void setPositionDeltaBetweenTwoSnapshots( double value, bool deltasAreRelative = false );
+    void setTimeDeltaBetweenTwoSnapshots( double value );
 
     /**
      * A particle is always uniquely identified by two integers (an
