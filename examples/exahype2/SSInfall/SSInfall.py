@@ -13,7 +13,8 @@ import numpy as np
 modes = { 
   "release": peano4.output.CompileMode.Release,
   "trace":   peano4.output.CompileMode.Trace,
-  "assert":  peano4.output.CompileMode.Asserts, "stats":  peano4.output.CompileMode.Stats,
+  "assert":  peano4.output.CompileMode.Asserts, 
+  "stats":  peano4.output.CompileMode.Stats,
   "debug":   peano4.output.CompileMode.Debug,
 }
 
@@ -190,9 +191,7 @@ if __name__ == "__main__":
             for (int i=0; i<real_var; i++) {
               reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d] =
                 ( reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] ) / 2.0 / volumeH;
-              if (isnan(reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d])) {std::cout <<reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i]<<" "<< reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] << std::endl;}
             }
-
           }
         }
     """)
@@ -227,8 +226,6 @@ if __name__ == "__main__":
           double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
           r_coor=pow(r_coor,0.5);
           repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
-          //if (isnan(reconstructedPatch[cellSerialised*(5+aux_var)+0])){std::cout << "NaN inside domain" << std::endl; std::abort();}
-          //if (r_coor>0.84) {std::cout << "add here" << std::endl;}
 
           double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
           double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
@@ -259,14 +256,6 @@ if __name__ == "__main__":
           } else{
             for (int d=0; d<15; d++) {reconstructedPatch[cellSerialised*(5+aux_var)+5+d]=0;}
           }
-          
-          
-          /*for (int d=0; d<15; d++) {
-            if (isnan(reconstructedPatch[cellSerialised*(5+aux_var)+5+d])){
-              std::cout << reconstructedPatch[cellSerialised*(5+aux_var)+5+d] <<" "<< test <<" "<<d<< std::endl;
-            }
-          }*/
-
         }
         
     """)
@@ -292,32 +281,24 @@ if __name__ == "__main__":
           tarch::la::Vector<Dimensions,int> centerCell = tarch::la::Vector<Dimensions,int>(1+patchSize/2);
           const int cellSerialised  = peano4::utils::dLinearised(centerCell, patchSize + 2*1);
           repositories::{{SOLVER_INSTANCE}}.rho_0=reconstructedPatch[cellSerialised*(5+aux_var)+0];
-          //std::cout << repositories::{{SOLVER_INSTANCE}}.rho_0 << std::endl;
         }
         for (int i=0;i<sample;i++){
           tarch::la::Vector<Dimensions,double> coor; coor(0)=repositories::{{SOLVER_INSTANCE}}.r_s[i];
           if ( marker.isContained(coor) ){
-            //std::cout << coor << std::endl;
             for (int xindex=0; xindex<(patchSize+2);xindex++){
               if ( (marker.getOffset()(0)+(xindex-1)*volumeH)<repositories::{{SOLVER_INSTANCE}}.r_s[i] and (marker.getOffset()(0)+(xindex-0.5)*volumeH)>repositories::{{SOLVER_INSTANCE}}.r_s[i] ){
-                //std::cout <<  (marker.getOffset()(0)+(xindex-1)*volumeH)<<" "<< (marker.getOffset()(0)+(xindex-0.5)*volumeH)<< std::endl;
                 tarch::la::Vector<Dimensions,int> cell1=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell1(0)=xindex;
                 tarch::la::Vector<Dimensions,int> cell2=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell2(0)=xindex-1;
-                //std::cout << cell1 <<cell2<< std::endl;
                 double rho1=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
                 double rho2=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex-1.5)*volumeH;
                 repositories::{{SOLVER_INSTANCE}}.rho_x[i]=rho1*(x2-repositories::{{SOLVER_INSTANCE}}.r_s[i])/(x2-x1)+rho2*(repositories::{{SOLVER_INSTANCE}}.r_s[i]-x1)/(x2-x1);
-                //std::cout<<repositories::{{SOLVER_INSTANCE}}.rho_x[i]<<std::endl;
               }
               else if ( (marker.getOffset()(0)+(xindex-0.5)*volumeH)<repositories::{{SOLVER_INSTANCE}}.r_s[i] and (marker.getOffset()(0)+(xindex)*volumeH)>repositories::{{SOLVER_INSTANCE}}.r_s[i] ){
-                //std::cout <<  (marker.getOffset()(0)+(xindex-0.5)*volumeH)<<" "<< (marker.getOffset()(0)+(xindex)*volumeH)<< std::endl;
                 tarch::la::Vector<Dimensions,int> cell1=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell1(0)=xindex;
                 tarch::la::Vector<Dimensions,int> cell2=tarch::la::Vector<Dimensions,int>(1+patchSize/2); cell2(0)=xindex+1;
-                //std::cout << cell1 <<cell2 <<std::endl;
                 double rho1=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x1=marker.getOffset()(0)+(xindex-0.5)*volumeH;
                 double rho2=reconstructedPatch[peano4::utils::dLinearised(cell1, patchSize + 2*1)*(5+aux_var)+0], x2=marker.getOffset()(0)+(xindex+0.5)*volumeH;
                 repositories::{{SOLVER_INSTANCE}}.rho_x[i]=rho1*(x2-repositories::{{SOLVER_INSTANCE}}.r_s[i])/(x2-x1)+rho2*(repositories::{{SOLVER_INSTANCE}}.r_s[i]-x1)/(x2-x1);
-                //std::cout<<repositories::{{SOLVER_INSTANCE}}.rho_x[i]<<std::endl;
               }
             }
           }                   
