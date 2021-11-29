@@ -6,6 +6,7 @@ import jinja2
 
 from exahype2.solvers.fv.kernels import create_empty_source_term_kernel
 from exahype2.solvers.fv.kernels import create_user_defined_source_term_kernel
+from dis import dis
     
     
 def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
@@ -81,6 +82,9 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
   avoid_staircase_effect: Boolean
   
   """
+  if discretisation_steps<=1.0:
+    raise Exception( "invalid discretisation step size for local time step (val=" + str(discretisation_steps) + ")" )
+
   determine_eigenvalue = """
     double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
       [] (
@@ -586,8 +590,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 {% endif %}
 
 
-{% if FLUX_IMPLEMENTATION!="<none>" %}
-{% if FLUX_IMPLEMENTATION!="<user-defined>" %}
+{% if FLUX_IMPLEMENTATION!="<none>" and FLUX_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -599,11 +602,9 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   {{FLUX_IMPLEMENTATION}}
 }
 {% endif %}
-{% endif %}
 
 
-{% if NCP_IMPLEMENTATION!="<none>" %}
-{% if NCP_IMPLEMENTATION!="<user-defined>" %}
+{% if NCP_IMPLEMENTATION!="<none>" and NCP_IMPLEMENTATION!="<user-defined>" %}
 void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
@@ -615,7 +616,6 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 ) {
   {{NCP_IMPLEMENTATION}}
 }
-{% endif %}
 {% endif %}
 
 

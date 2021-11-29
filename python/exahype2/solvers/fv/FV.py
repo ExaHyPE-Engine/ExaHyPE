@@ -126,7 +126,19 @@ class FV(object):
     - Finally, your own overwrite of create_data_structures() can augment the 
       data structures (which are now in place and called at the right time) with 
       information what it actually shall do.
-        
+      
+    :: Adaptive mesh refinement (AMR)
+    
+    We use by default a linear interpolation and averaging. For the linear interpolation,
+    I do not compute the operators on demand. Instead, I use the optimised scheme which 
+    computes the operators once and then reuses them as static operation.
+    
+    If you wanna alter the inter-resolution transfer operators, please use
+    
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme.
+    
+    Consult the documentation of this routine for the available options.
+
   """
   
       
@@ -345,7 +357,6 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_guard())
     self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
-    # @todo Sollte spezifisches Action Set sein, so dass auch die Timestamps kopiert werden
     self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
 
@@ -353,6 +364,8 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
     self._action_set_update_cell                                                      = None
+
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
 
 
   def _store_cell_data_default_guard(self):

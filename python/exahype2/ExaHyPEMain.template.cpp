@@ -415,6 +415,7 @@ int main(int argc, char** argv) {{
   }}
 
   if (not exahype2::parseCommandLineArguments(argc,argv) ) {{
+    logError("main()", "Invalid command line arguments.");
     return ExitCodeInvalidArguments;
   }}
   

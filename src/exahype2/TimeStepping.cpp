@@ -33,6 +33,8 @@ double exahype2::discretiseAndTruncateTimeStepSizes(
   double maxGlobalTimeStepSize,
   double discretisation
 ) {
+  assertion4( discretisation>1.0, cellTimeStepSize, minGlobalTimeStepSize, maxGlobalTimeStepSize, discretisation);
+
   cellTimeStepSize = std::min(cellTimeStepSize,maxGlobalTimeStepSize*1.1);
   if ( tarch::la::smallerEquals(discretisation,1.0) or tarch::la::smallerEquals(minGlobalTimeStepSize,0.0) ) {
     return cellTimeStepSize;
