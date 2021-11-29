@@ -315,7 +315,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
   > splitRiemannSolve1d,
   std::function< void(
     const double * __restrict__ Q,
-    const tarch::la::Vector<2,double>&           volueCentre,
+    const tarch::la::Vector<2,double>&           volumeCentre,
     double                                       volumeH,
     double                                       t,
     double                                       dt,
@@ -360,6 +360,10 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
 
     for (int unknown = 0; unknown < unknowns; unknown++) {
       Qout[voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * numericalFluxL[unknown];
+      nonCriticalAssertion7(
+        not std::isnan( Qout[voxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+        unknown, x, y, patchCentre, patchSize, t, dt
+      );
     }
   }
 
@@ -391,10 +395,18 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
         if (x > 0) {
           Qout[leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -=
               dt / volumeH (0) * numericalFluxL[unknown];
+          nonCriticalAssertion7(
+            not std::isnan( Qout[leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+            unknown, x, y, patchCentre, patchSize, t, dt
+          );
         }
         if (x < numberOfVolumesPerAxisInPatch) {
           Qout[rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] +=
               dt / volumeH (0) * numericalFluxR[unknown];
+          nonCriticalAssertion7(
+            not std::isnan( Qout[rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+            unknown, x, y, patchCentre, patchSize, t, dt
+          );
         }
       }
     }
@@ -428,10 +440,18 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
         if (y > 0) {
           Qout[lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -=
               dt / volumeH (0) * numericalFluxL[unknown];
+          nonCriticalAssertion7(
+            not std::isnan( Qout[lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+            unknown, x, y, patchCentre, patchSize, t, dt
+          );
         }
         if (y < numberOfVolumesPerAxisInPatch) {
           Qout[upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] +=
               dt / volumeH (0) * numericalFluxR[unknown];
+          nonCriticalAssertion7(
+            not std::isnan( Qout[upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+            unknown, x, y, patchCentre, patchSize, t, dt
+          );
         }
       }
     }
@@ -445,17 +465,17 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
 
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
   std::function<void(
-    const double *__restrict__ QL,
-    const double *__restrict__ QR,
-         const tarch::la::Vector<3, double> &faceCentre,
-         double volumeH, double t, double dt, int normal,
-  double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
+    const double *__restrict__            QL,
+    const double *__restrict__            QR,
+    const tarch::la::Vector<3, double>&   faceCentre,
+    double volumeH, double t, double dt, int normal,
+    double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
   std::function< void(
     const double * __restrict__ Q,
-    const tarch::la::Vector<3,double>&  volueCentre,
-    double                                       volumeH,
-    double                                       t,
-    double                                       dt,
+    const tarch::la::Vector<3,double>&  volumeCentre,
+    double                              volumeH,
+    double                              t,
+    double                              dt,
     double * __restrict__ S
   ) >   sourceTerm,
   const tarch::la::Vector<3, double>&   patchCentre,
@@ -503,6 +523,10 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
 
     for (int unknown = 0; unknown < unknowns; unknown++) {
       Qout[voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * numericalFluxL[unknown];
+      nonCriticalAssertion8(
+        not std::isnan( Qout[voxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+        unknown, x, y, z, patchCentre, patchSize, t, dt
+      );
     }
   }
 
@@ -542,10 +566,18 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
         if (x > 0) {
           Qout[leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -=
               dt / volumeH (0) * numericalFluxL[unknown];
+          nonCriticalAssertion8(
+            not std::isnan( Qout[leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+            unknown, x, y, z, patchCentre, patchSize, t, dt
+          );
         }
         if (x < numberOfVolumesPerAxisInPatch) {
           Qout[rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] +=
               dt / volumeH (0) * numericalFluxR[unknown];
+          nonCriticalAssertion8(
+            not std::isnan( Qout[rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+            unknown, x, y, z, patchCentre, patchSize, t, dt
+          );
         }
       }
     }
@@ -588,10 +620,18 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
           if (y > 0) {
             Qout[lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -=
                 dt / volumeH (0) * numericalFluxL[unknown];
+            nonCriticalAssertion8(
+              not std::isnan( Qout[lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+              unknown, x, y, z, patchCentre, patchSize, t, dt
+            );
           }
           if (y < numberOfVolumesPerAxisInPatch) {
             Qout[upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] +=
                 dt / volumeH (0) * numericalFluxR[unknown];
+            nonCriticalAssertion8(
+              not std::isnan( Qout[upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+              unknown, x, y, z, patchCentre, patchSize, t, dt
+            );
           }
         }
       }
@@ -603,19 +643,19 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
     #endif
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
-        const int lowerVoxelInPreimage = x + 1
+        const int frontVoxelInPreimage = x + 1
             + (y + 1) * (2 + numberOfVolumesPerAxisInPatch)
             + z * (2 + numberOfVolumesPerAxisInPatch)
                 * (2 + numberOfVolumesPerAxisInPatch);
-        const int upperVoxelInPreimage = x + 1
+        const int backVoxelInPreimage = x + 1
             + (y + 1) * (2 + numberOfVolumesPerAxisInPatch)
             + (z + 1) * (2 + numberOfVolumesPerAxisInPatch)
                 * (2 + numberOfVolumesPerAxisInPatch);
 
-        const int lowerVoxelInImage = x + y * numberOfVolumesPerAxisInPatch
+        const int frontVoxelInImage = x + y * numberOfVolumesPerAxisInPatch
             + (z - 1) * numberOfVolumesPerAxisInPatch
                 * numberOfVolumesPerAxisInPatch;
-        const int upperVoxelInImage = x + y * numberOfVolumesPerAxisInPatch
+        const int backVoxelInImage = x + y * numberOfVolumesPerAxisInPatch
             + z * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
 
         tarch::la::Vector<3, double> volumeX = patchCentre
@@ -625,19 +665,27 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
         volumeX (2) += z * volumeH (2);
 
         splitRiemannSolve1d (
-            Qin + lowerVoxelInPreimage * (unknowns + auxiliaryVariables),
-            Qin + upperVoxelInPreimage * (unknowns + auxiliaryVariables),
+            Qin + frontVoxelInPreimage * (unknowns + auxiliaryVariables),
+            Qin + backVoxelInPreimage * (unknowns + auxiliaryVariables),
             volumeX, volumeH (0), t, dt, 2, //  last argument = normal
             numericalFluxL, numericalFluxR);
 
         for (int unknown = 0; unknown < unknowns; unknown++) {
           if (z > 0) {
-            Qout[lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -=
+            Qout[frontVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -=
                 dt / volumeH (0) * numericalFluxL[unknown];
+            nonCriticalAssertion8(
+              not std::isnan( Qout[frontVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+              unknown, x, y, z, patchCentre, patchSize, t, dt
+            );
           }
           if (z < numberOfVolumesPerAxisInPatch) {
-            Qout[upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] +=
+            Qout[backVoxelInImage * (unknowns + auxiliaryVariables) + unknown] +=
                 dt / volumeH (0) * numericalFluxR[unknown];
+            nonCriticalAssertion8(
+              not std::isnan( Qout[backVoxelInImage * (unknowns + auxiliaryVariables) + unknown] ),
+              unknown, x, y, z, patchCentre, patchSize, t, dt
+            );
           }
         }
       }
@@ -656,7 +704,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
   double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
   std::function< void(
     const double * __restrict__ Q,
-    const tarch::la::Vector<2,double>&  volueCentre,
+    const tarch::la::Vector<2,double>&  volumeCentre,
     double                                       volumeH,
     double                                       t,
     double                                       dt,
@@ -770,7 +818,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
       double *__restrict__ FL, double *__restrict__ FR)> splitRiemannSolve1d,
       std::function< void(
         const double * __restrict__ Q,
-        const tarch::la::Vector<3,double>&           volueCentre,
+        const tarch::la::Vector<3,double>&           volumeCentre,
         double                                       volumeH,
         double                                       t,
         double                                       dt,
@@ -979,7 +1027,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS(
   ) >   splitRiemannSolve1d,
   std::function< void(
     const double * __restrict__ Q,
-    const tarch::la::Vector<Dimensions,double>&  volueCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeCentre,
     double                                       volumeH,
     double                                       t,
     double                                       dt,
