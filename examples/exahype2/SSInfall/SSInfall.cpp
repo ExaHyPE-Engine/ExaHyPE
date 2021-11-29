@@ -210,6 +210,9 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double * __restrict__                        S  // S[5
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+
+  // @todo Eventually, we want to keep only the non-critical assertion
+  nonCriticalAssertion4( not std::isnan(Q[0]), volumeX, volumeH, t, dt );
   if (std::isnan(Q[0])){std::cout << "NaN in the domain" << std::endl; std::abort();}
 
   nonCriticalAssertion4(
@@ -338,8 +341,13 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   //  if (Qoutside[j]*Qinside[j]<0) {Qoutside[j]=0;}
   //}
   const double p = (gamma-1) * (Qoutside[4] - 0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]); 
-  if (p<0){Qoutside[4]=0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]+1e-10;}   
-  if (std::isnan(Qinside[0])){std::cout << "NaN at boundary" << std::endl; std::abort();}
+  if (p<0){
+    Qoutside[4]=0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]+1e-10;
+  }   
+  // @todo should really be nonCriticalAssertion
+  if (std::isnan(Qinside[0])){
+    std::cout << "NaN at boundary" << std::endl; std::abort();
+  }
   nonCriticalAssertion7(
     not std::isnan(Qinside[0]),
     normal, faceCentre, Qinside[0], Qinside[1], Qinside[2], Qinside[3], Qinside[4]
@@ -381,8 +389,15 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   //if (t>0.2 and result>1){
   result=result*(1+C_1*exp(-C_2*t));
-  if (result>10000 and t>0.5) {std::cout << "eigen too big: " << result << std::endl; std::abort();}
-  if (result<1e-8 and t>0.5) {std::cout << "eigen too small: " << result << std::endl; std::abort();}
+
+  // @todo Should be nonCriticalAssertion
+  nonCriticalAssertion13( 
+    result<10000, 
+    result, p, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal 
+  );
+  if (result<1e-8) {
+    logInfo( "maxEigenvalue()", "max eigenvalue too small: " << result );
+  }
   return result;
 }
 
@@ -414,6 +429,14 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   F[4] = coeff*Q[4];
   F[normal+1] += p;
   F[4]        += coeff*p;
+
+/*
+  if ( std::isnan(F[0]) ) {std::cout << "error in F[0] at " << faceCentre << ", Q=(" << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "," << Q[4] << ")" << std::endl; std::abort();}
+  if ( std::isnan(F[1]) ) {std::cout << "error in F[1] at " << faceCentre << ", Q=(" << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "," << Q[4] << ")" << std::endl; std::abort();}
+  if ( std::isnan(F[2]) ) {std::cout << "error in F[2] at " << faceCentre << ", Q=(" << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "," << Q[4] << ")" << std::endl; std::abort();}
+  if ( std::isnan(F[3]) ) {std::cout << "error in F[3] at " << faceCentre << ", Q=(" << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "," << Q[4] << ")" << std::endl; std::abort();}
+  if ( std::isnan(F[4]) ) {std::cout << "error in F[4] at " << faceCentre << ", Q=(" << Q[0] << "," << Q[1] << "," << Q[2] << "," << Q[3] << "," << Q[4] << ")" << std::endl; std::abort();}
+*/
 
   logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
