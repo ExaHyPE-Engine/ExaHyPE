@@ -51,6 +51,14 @@ namespace {
   /**
    * This implementation variant follows the patterns described in the 2021
    * IWOMP paper by H. Schulz et al.
+   *
+   *    * IWOMP paper by H. Schulz et al. An important paper to read in the context
+   * of the present solution is https://www.osti.gov/pages/servlets/purl/1465188.
+   * Note in particular the example in Figure 3.
+
+
+   *
+   * NVIDIA does not support the taskloop
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
@@ -59,12 +67,17 @@ namespace {
     assertion( not tasks.empty() );
 
     const int NumberOfThreads = std::max( tarch::multicore::Core::getInstance().getNumberOfThreads(), static_cast<int>(tasks.size()) );
-    int       busyThreads     = NumberOfThreads;
 
-    // for task loop, I need an explicit shared(busyThreads)
+    int       pendingTasks  = NumberOfThreads;
+    int       spawnedTasks  = 0;
+
+    //#pragma omp taskloop nogroup priority(StandardPriority) untied
     for (int i=0; i<NumberOfThreads; i++) {
-      #pragma omp task shared(busyThreads)
+      #pragma omp task shared(pendingTasks, spawnedTasks)
       {
+        #pragma omp atomic
+	spawnedTasks++;
+
         ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
         if (i<tasks.size()) {
           while (tasks[i]->run()) {
@@ -75,17 +88,24 @@ namespace {
 
         ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
   
-        #pragma omp atomic
-        busyThreads--;
+        #pragma omp atomic seq_cst
+        pendingTasks--;
+
+	//#pragma omp flush(busyThreads)
+
+	//std::cout << "thread " << i << " reduced busy threads to " << busyThreads << std::endl;
 
         while (
-          busyThreads>0
+          pendingTasks>0
           and
           // Without this yield, the code will deadlock if you have more trees
           // than cores. As the first p trees on p cores will finish and then
           // poll. The other >p trees/tasks will starve
-          busyThreads<tarch::multicore::Core::getInstance().getNumberOfThreads()
+          pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
+	  and 
+	  spawnedTasks==NumberOfThreads
         ) {
+		std::cout << "@@@@@ I'll try @@@@@@" << std::endl;
           int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 
           if ( numberOfPendingTasks>0 ) {
@@ -108,6 +128,8 @@ namespace {
             #endif
           }
         }
+
+	//std::cout << "thread " << i << " will now terminate" << std::endl;
       }
     }
     #pragma omp taskwait
