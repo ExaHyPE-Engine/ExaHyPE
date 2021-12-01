@@ -58,7 +58,7 @@ namespace {
 
 
    *
-   * NVIDIA does not support the taskloop
+   * NVIDIA does not support the taskloop: nvcc does not support taskloop
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
@@ -71,10 +71,8 @@ namespace {
     int       pendingTasks  = NumberOfThreads;
     int       spawnedTasks  = 0;
 
-    //#pragma omp taskloop nogroup priority(StandardPriority) untied
+    #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks) priority(StandardPriority) untied
     for (int i=0; i<NumberOfThreads; i++) {
-      #pragma omp task shared(pendingTasks, spawnedTasks)
-      {
         #pragma omp atomic
 	spawnedTasks++;
 
@@ -105,7 +103,6 @@ namespace {
 	  and 
 	  spawnedTasks==NumberOfThreads
         ) {
-		std::cout << "@@@@@ I'll try @@@@@@" << std::endl;
           int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 
           if ( numberOfPendingTasks>0 ) {
@@ -128,11 +125,11 @@ namespace {
             #endif
           }
         }
-
-	//std::cout << "thread " << i << " will now terminate" << std::endl;
-      }
     }
-    #pragma omp taskwait
+    #pragma omp taskwait // wait for all elements from tasks to complete
+                         // do not wait for the children of tasks
+                         // but do children if you have time (this does not
+                         // happen however)
   }
 }
 
