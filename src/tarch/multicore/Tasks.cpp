@@ -227,16 +227,7 @@ bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAnd
   ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
 
   if (myTask!=nullptr) {
-    bool stillExecuteLocally;
-    if (tasksOfSameType.empty()) {
-      stillExecuteLocally = true;
-    }
-    else {
-      stillExecuteLocally = myTask->fuse(tasksOfSameType,maxTasksAndDevice.second);
-    }
-    if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask);
-    }
+    native::processFusedTask(myTask, tasksOfSameType, maxTasksAndDevice.second);
   }
 
   return myTask==nullptr ? 0 : tasksOfSameType.size()+1;
@@ -586,6 +577,17 @@ void tarch::multicore::native::yield() {
 
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return 0;
+}
+
+
+void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
+  bool stillExecuteLocally = myTask->fuse(tasksOfSameType,device);
+  if (stillExecuteLocally) {
+    tarch::multicore::native::spawnTask(myTask);
+  }
+  else {
+    delete myTask;
+  }
 }
 
 #endif

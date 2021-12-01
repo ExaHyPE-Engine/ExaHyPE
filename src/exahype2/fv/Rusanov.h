@@ -54,8 +54,13 @@ namespace exahype2 {
     /**
      * Fused kernel that supports execution on CPUs. The kernel tries to collapse all
      * the loops where only possible. If you work with OpenMP, the kernel tries to use
-     * aggressive SIMD, too.
-     *
+     * aggressive SIMD, too. However, it does not use any parallel for. We found that
+     * such nested parallelism slows down the code massively or even introduces
+     * deadlocks. It also makes no sense, as we always issue fused tasks within OpenMP
+     * tasks, and as OpenMP tasks so far cannot span multiple cores/threads. So we
+     * rely on aggressive vectorisation but do not introduce any SIMT-like parallelism
+     * for this fused variant, while the GPU variant (below) operates exactly the other
+     * way round.
      */
     template<
       int      numVPAIP, // numberofVolumesPerAxisInPatch
@@ -104,6 +109,8 @@ namespace exahype2 {
      * Variant of the 3d optimised, fused kernel which is tailored to the CPU.
      * The kernel tries to collapse all loops and makes aggressive use of OpenMP
      * SIMDsation.
+     *
+     * @see Fusanov_2D for details on the CPU optimisation.
      */
     template<
       int                                          numVPAIP, //numberofVolumesPerAxisInPatch,

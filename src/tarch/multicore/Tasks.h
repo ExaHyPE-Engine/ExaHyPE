@@ -105,7 +105,8 @@ namespace tarch {
          * <h2> Memory ownership </h2>
          * 
          * The ownership for otherTasks goes over to fuse, i.e. you don't have to 
-         * delete anything anymore.
+         * delete anything anymore. But you have to destroy the owning object
+         * manually no matter whether we return true or false.
          *
          * @return Is the present task still to be executed or can the runtime 
          *         destroy it straightaway?
@@ -269,6 +270,7 @@ namespace tarch {
         const std::vector< Task* >&  tasks,
         orchestration::Strategy*     strategy
       );
+      void processFusedTask(Task*  firstTask, const std::list< tarch::multicore::Task* >& otherTasks, int device);
       void yield();
       int getNumberOfPendingTasks();
     }

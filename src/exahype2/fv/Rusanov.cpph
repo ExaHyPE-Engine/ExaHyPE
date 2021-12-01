@@ -797,7 +797,7 @@ void exahype2::fv::Fusanov_3D(
   const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
   const int helper = numVPAIP+haloSize*2;
 
-  #pragma omp for simd collapse(5)
+  #pragma omp simd collapse(5)
   for (int pidx=0;pidx<NPT;pidx++)
   for (int z = 0; z < numVPAIP; z++)
   for (int y = 0; y < numVPAIP; y++)
@@ -820,7 +820,7 @@ void exahype2::fv::Fusanov_3D(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp for simd collapse(4)
+    #pragma omp simd collapse(4)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int z = 0; z < numVPAIP; z++)
     for (int y = 0; y < numVPAIP; y++)
@@ -856,7 +856,7 @@ void exahype2::fv::Fusanov_3D(
     }
 
     for (int shift = 0; shift < 2; shift++) {
-      #pragma omp for simd collapse(4)
+      #pragma omp simd collapse(4)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int x = shift; x <= numVPAIP; x += 2)
       for (int z = 0; z < numVPAIP; z++)
@@ -935,7 +935,7 @@ void exahype2::fv::Fusanov_3D(
         }
       }
 
-      #pragma omp for simd collapse(4)
+      #pragma omp simd collapse(4)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int y = shift; y <= numVPAIP; y += 2)
       for (int z = 0; z < numVPAIP; z++)
@@ -1012,7 +1012,7 @@ void exahype2::fv::Fusanov_3D(
         }
       }
 
-      #pragma omp for simd collapse(4)
+      #pragma omp simd collapse(4)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int z = shift; z <= numVPAIP; z += 2)
       for (int y = 0; y < numVPAIP; y++)
@@ -1113,7 +1113,7 @@ void exahype2::fv::Fusanov_2D(
   const size_t LTOT = NPT*destPatchSize;
   const size_t LR   = NPT*sourcePatchSize;
 
-  #pragma omp for simd collapse(4)
+  #pragma omp simd collapse(4)
   for (int pidx=0;pidx<NPT;pidx++)
   for (int x = 0; x < numVPAIP; x++)
   for (int y = 0; y < numVPAIP; y++)
@@ -1134,7 +1134,7 @@ void exahype2::fv::Fusanov_2D(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp for simd collapse(3)
+    #pragma omp simd collapse(3)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = 0; x < numVPAIP; x++)
     for (int y = 0; y < numVPAIP; y++) {
@@ -1164,7 +1164,7 @@ void exahype2::fv::Fusanov_2D(
 
 
   for (int shift = 0; shift < 2; shift++) {
-    #pragma omp for simd collapse(3)
+    #pragma omp simd collapse(3)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = shift; x <= numVPAIP; x += 2)
     for (int y = 0; y < numVPAIP; y++) {
@@ -1233,7 +1233,7 @@ void exahype2::fv::Fusanov_2D(
     }
 
 
-    #pragma omp for simd collapse(3)
+    #pragma omp simd collapse(3)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int y = shift; y <= numVPAIP; y += 2)
     for (int x = 0;     x <  numVPAIP; x++   ) {

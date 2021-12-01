@@ -690,3 +690,40 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
 
     d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
+
+
+  @property
+  def patch_size(self):
+    return self._patch_size
+
+
+  @property
+  def unknowns(self):
+    return self._unknowns
+
+
+  @property
+  def auxiliary_variables(self):
+    return self._auxiliary_variables
+
+
+  @patch_size.setter
+  def patch_size(self, value):
+    self._patch_size = value
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @patch_size.setter
+  def unknowns(self, value):
+    self._unknowns = value
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @patch_size.setter
+  def auxiliary_variables(self, value):
+    self._auxiliary_variables = value
+    self.create_data_structures()
+    self.create_action_sets()
+    

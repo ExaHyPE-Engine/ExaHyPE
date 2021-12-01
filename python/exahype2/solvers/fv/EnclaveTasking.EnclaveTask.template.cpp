@@ -501,6 +501,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     pD.t[i]   = _t; // @todo This is not true likely. Could have different time steps
     pD.dt[i]  = _dt; // @todo This is not true likely. Could have different time steps
     i++;
+
+    delete currentTask;
   }
   //
   // Now add the data from the task from which this whole thing has been called

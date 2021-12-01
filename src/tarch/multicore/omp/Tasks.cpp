@@ -221,4 +221,17 @@ int tarch::multicore::native::getNumberOfPendingTasks() {
 }
 
 
+void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
+  #pragma omp task
+  {
+    bool stillExecuteLocally = myTask->fuse(tasksOfSameType,device);
+    if (stillExecuteLocally) {
+      tarch::multicore::native::spawnTask(myTask);
+    }
+    else {
+      delete myTask;
+    }
+  }
+}
+
 #endif
