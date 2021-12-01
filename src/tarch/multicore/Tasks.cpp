@@ -201,6 +201,7 @@ bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAnd
   tarch::multicore::Task* myTask = nullptr;
   std::list< tarch::multicore::Task* > tasksOfSameType;
 
+  tarch::multicore::Lock lock(nonblockingTasksSemaphore);
   if (not nonblockingTasks.empty()) {
     myTask = nonblockingTasks.front();
     nonblockingTasks.pop_front();
@@ -222,6 +223,7 @@ bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAnd
     pp = nonblockingTasks.erase(pp);
   }
 
+  lock.free();
   ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
 
   if (myTask!=nullptr) {
@@ -426,6 +428,7 @@ void tarch::multicore::spawnTask(Task*  task) {
   else {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
     nonblockingTasks.push_back(task);
+    lock.free();
 
     logDebug( "spawnTask(...)", "enqueued task (#tasks=" << nonblockingTasks.size() << ")" );
 

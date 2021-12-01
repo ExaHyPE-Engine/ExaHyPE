@@ -276,6 +276,8 @@ namespace tarch {
 
     namespace internal {
       int  mapPendingTasksOntoNativeTasks(int maxTasks);
+
+      // Locks and unlocks the queue
       bool fusePendingTasks(std::pair<int,int> maxTasksAndDevice);
     }
   }
