@@ -277,7 +277,12 @@ namespace tarch {
     namespace internal {
       int  mapPendingTasksOntoNativeTasks(int maxTasks);
 
-      // Locks and unlocks the queue
+      /**
+       *
+       * # Thread safety
+       *
+       * The method locks and unlocks the queue. So don't lock it yourself.
+       */
       bool fusePendingTasks(std::pair<int,int> maxTasksAndDevice);
     }
   }
