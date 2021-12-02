@@ -221,13 +221,23 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
   __repr__ = __str__
 
 
-  def create_readme_descriptor(self, domain_offset, domain_size):
+  def get_min_number_of_spacetree_levels(self,domain_size):
     coarsest_tree_level = 0
-    finest_tree_level   = 0
     while (domain_size*3**(-coarsest_tree_level)/self._patch_size>self._max_volume_h):
       coarsest_tree_level+=1 
+    return coarsest_tree_level
+
+
+  def get_max_number_of_spacetree_levels(self,domain_size):
+    finest_tree_level = 0
     while (domain_size*3**(-finest_tree_level)/self._patch_size>self._min_volume_h):
       finest_tree_level+=1 
+    return finest_tree_level
+
+
+  def create_readme_descriptor(self, domain_offset, domain_size):
+    coarsest_tree_level = self.get_min_number_of_spacetree_levels(domain_size)
+    finest_tree_level   = self.get_max_number_of_spacetree_levels(domain_size)
     
     return """
 ### ExaHyPE 2 solver
