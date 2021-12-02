@@ -92,21 +92,39 @@ namespace tarch {
         virtual bool run() = 0;
 
         /**
+         * Fuse multiple tasks
+         *
          * Fuse the task with a list of further tasks. The routine is guaranteed to 
          * be called only for tasks with the same taskType. So if you carefully 
          * distinguish your tasks, you can downcast all the arguments, as you might
          * know the real type.
          *
+         * This operation is invoked on a task. However, it is also given N=otherTasks.size
+         * further tasks of the same type. You have two options now:
+         *
+         * - You can process the N tasks in one rush. In this case, the original
+         *   task, i.e. the object on which fuse() is called, remains intact and
+         *   has not been processed yet. You have to return true.
+         * - You can process the N+1 tasks in one rush, i.e. all tasks from
+         *   otherTasks and the task represented by the actual object on which
+         *   fuse is called. In this case, you return false, as the task on which
+         *   fuse has been called can be destroyed straightaway by the runtime.
+         *
+         * No matter which route you follow, you always have to delete all the tasks
+         * stores within otherTasks, as these have to be processed by fuse().
+         *
          * <h2> Default implementation </h2>
          * 
          * My default implementation executes all the passed tasks and then returns 
-         * the original task back, i.e. this one is not executed.
+         * the original task back, i.e. this one is not executed. This is the first
+         * execution pattern described above.
          *
          * <h2> Memory ownership </h2>
          * 
-         * The ownership for otherTasks goes over to fuse, i.e. you don't have to 
-         * delete anything anymore. But you have to destroy the owning object
-         * manually no matter whether we return true or false.
+         * See above: fuse() has to delete all the instances within otherTasks.
+         * The calling routine does not have to delete anything there anymore.
+         * But it has to destroy the owning object, i.e. the object on which is
+         * has called fuse(), manually no matter whether we return true or false.
          *
          * @return Is the present task still to be executed or can the runtime 
          *         destroy it straightaway?
