@@ -235,10 +235,31 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
     return finest_tree_level
 
 
-  def create_readme_descriptor(self, domain_offset, domain_size):
-    coarsest_tree_level = self.get_min_number_of_spacetree_levels(domain_size)
-    finest_tree_level   = self.get_max_number_of_spacetree_levels(domain_size)
+  def get_coarsest_number_of_patches(self,domain_size):
+    return 3**self.get_min_number_of_spacetree_levels(domain_size)
+
+
+  def get_finest_number_of_patches(self,domain_size):
+    return 3**self.get_max_number_of_spacetree_levels(domain_size)
+
+
+  def get_coarsest_number_of_finite_volumes(self,domain_size):
+    return self.get_coarsest_number_of_patches(domain_size)*self._patch_size
+
+
+  def get_finest_number_of_finite_volumes(self,domain_size):
+    return self.get_finest_number_of_patches(domain_size)*self._patch_size
+
     
+  def get_coarsest_volume_size(self,domain_size):
+    return domain_size/self.get_coarsest_number_of_finite_volumes(domain_size)
+
+
+  def get_finest_volume_size(self,domain_size):
+    return domain_size/self.get_finest_number_of_finite_volumes(domain_size)
+
+  
+  def create_readme_descriptor(self, domain_offset, domain_size):
     return """
 ### ExaHyPE 2 solver
 
@@ -249,19 +270,19 @@ Real type of this solver: """ + str(type(self)) + """
 We assume of domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
 and recursively into three parts along each coordinate axis. This yields a spacetree.
 
-The spacetree will at least have """ + str(coarsest_tree_level) + """ levels.
-The spacetree will at most have """ + str(finest_tree_level) + """ levels.
+The spacetree will at least have """ + str(self.get_min_number_of_spacetree_levels(domain_size)) + """ levels.
+The spacetree will at most have """ + str(self.get_max_number_of_spacetree_levels(domain_size)) + """ levels.
 
-The spacetree will thus span at least """ + str(3**coarsest_tree_level) + """ cells (or patches) per coordinate axis. This means a """ + str(3**coarsest_tree_level) + """^d grid of patches.
-The spacetree will thus span at most """ + str(3**finest_tree_level) + """ cells (or patches) per coordinate axis. This means a """ + str(3**coarsest_tree_level) + """^d grid of patches.
+The spacetree will thus span at least """ + str(self.get_coarsest_number_of_patches(domain_size)) + """ cells (or patches) per coordinate axis. This means a """ + str(self.get_coarsest_number_of_patches(domain_size)) + """^d grid of patches.
+The spacetree will thus span at most """ + str(self.get_finest_number_of_patches(domain_size)) + """ cells (or patches) per coordinate axis. This means a """ + str(self.get_finest_number_of_patches(domain_size)) + """^d grid of patches.
 
 ExaHyPE 2 embeds """ + str(self._patch_size) + """^d patches of Finite Volumes into the finest tree level.
 
-The coarsest possible mesh will consist of """ + str(3**coarsest_tree_level*self._patch_size) + """ Finite Volumes per coordinate axis.
-The finest possible mesh will consist of """ + str(3**finest_tree_level*self._patch_size) + """ Finite Volumes per coordinate axis.
+The coarsest possible mesh will consist of """ + str(self.get_coarsest_number_of_finite_volumes(domain_size)) + """ Finite Volumes per coordinate axis.
+The finest possible mesh will consist of """ + str(self.get_finest_number_of_finite_volumes(domain_size)) + """ Finite Volumes per coordinate axis.
 
-The coarsest mesh width of """ + str(domain_size/3**coarsest_tree_level/self._patch_size) + """ is thus just smaller than the maximum volume size """ + str(self._max_volume_h) + """.
-The finest mesh width of """ + str(domain_size/3**finest_tree_level/self._patch_size) + """ is thus just smaller than the minimum volume size """ + str(self._min_volume_h) + """.
+The coarsest mesh width of """ + str(self.get_coarsest_volume_size(domain_size)) + """ is thus just smaller than the maximum volume size """ + str(self._max_volume_h) + """.
+The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + """ is thus just smaller than the minimum volume size """ + str(self._min_volume_h) + """.
 
 """ 
   
