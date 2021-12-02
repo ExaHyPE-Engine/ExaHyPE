@@ -219,6 +219,41 @@ h_volume_max:           """ + str( self._max_volume_h ) + """
 
 
   __repr__ = __str__
+
+
+  def create_readme_descriptor(self, domain_offset, domain_size):
+    coarsest_tree_level = 0
+    finest_tree_level   = 0
+    while (domain_size*3**(-coarsest_tree_level)/self._patch_size>self._max_volume_h):
+      coarsest_tree_level+=1 
+    while (domain_size*3**(-finest_tree_level)/self._patch_size>self._min_volume_h):
+      finest_tree_level+=1 
+    
+    return """
+### ExaHyPE 2 solver
+
+""" + str(self) + """
+
+Real type of this solver: """ + str(type(self)) + """
+
+We assume of domain size of (0,""" + str(domain_size) + """)^d. Peano 4 will cut this domain equidistantly 
+and recursively into three parts along each coordinate axis. This yields a spacetree.
+
+The spacetree will at least have """ + str(coarsest_tree_level) + """ levels.
+The spacetree will at most have """ + str(finest_tree_level) + """ levels.
+
+The spacetree will thus span at least """ + str(3**coarsest_tree_level) + """ cells (or patches) per coordinate axis. This means a """ + str(3**coarsest_tree_level) + """^d grid of patches.
+The spacetree will thus span at most """ + str(3**finest_tree_level) + """ cells (or patches) per coordinate axis. This means a """ + str(3**coarsest_tree_level) + """^d grid of patches.
+
+ExaHyPE 2 embeds """ + str(self._patch_size) + """^d patches of Finite Volumes into the finest tree level.
+
+The coarsest possible mesh will consist of """ + str(3**coarsest_tree_level*self._patch_size) + """ Finite Volumes per coordinate axis.
+The finest possible mesh will consist of """ + str(3**finest_tree_level*self._patch_size) + """ Finite Volumes per coordinate axis.
+
+The coarsest mesh width of """ + str(domain_size/3**coarsest_tree_level/self._patch_size) + """ is thus just smaller than the maximum volume size """ + str(self._max_volume_h) + """.
+The finest mesh width of """ + str(domain_size/3**finest_tree_level/self._patch_size) + """ is thus just smaller than the minimum volume size """ + str(self._min_volume_h) + """.
+
+""" 
   
 
   def get_user_action_set_includes(self):

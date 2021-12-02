@@ -41,12 +41,21 @@ class Model(object):
   def construct_output(self,output):
     for i in self.cell_data:
       i.generator.construct_output(output)
+      output.readme.add_entry( i.readme_descriptor )
+      output.readme.add_package_description( i.readme_package_descriptor )
     for i in self.face_data:
       i.generator.construct_output(output)
+      output.readme.add_entry( i.readme_descriptor )
+      output.readme.add_package_description( i.readme_package_descriptor )
     for i in self.vertex_data:
       i.generator.construct_output(output)
+      output.readme.add_entry( i.readme_descriptor )
+      output.readme.add_package_description( i.readme_package_descriptor )
     for i in self.global_data:
       i.generator.construct_output(output)
+      output.readme.add_entry( i.readme_descriptor )
+      output.readme.add_package_description( i.readme_package_descriptor )
+
     self.generator.construct_output(output)
 
 
@@ -55,9 +64,6 @@ class Model(object):
     self.face_data   = []
     self.vertex_data = []
     self.global_data = []
-
-
-
 
 
     

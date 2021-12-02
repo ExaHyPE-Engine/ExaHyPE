@@ -1,6 +1,7 @@
 # This file is part of the Peano project. For conditions of distribution and
 # use, please see the copyright notice at www.peano-framework.org
 from .Makefile import Makefile
+from .Readme   import Readme
 
 
 class Output(object):
@@ -11,6 +12,7 @@ class Output(object):
   
   def __init__(self):
     self.artefacts = []
+    self.readme   = Readme()
     self.makefile = Makefile()
 
 
@@ -23,6 +25,7 @@ class Output(object):
     
     """
     self.artefacts = []
+    self.readme   = Readme()
     self.makefile.clear_files()
 
           
@@ -41,4 +44,9 @@ class Output(object):
     self.makefile.generate(overwrite, directory)
     for artefact in self.artefacts:
       artefact.generate(overwrite,directory)
-      
+
+    self.readme.set_executable_name( self.makefile.executable_name() )
+    self.readme.add_entry( self.makefile.readme_entry )
+    self.readme.add_package_description( self.makefile.readme_package_descriptor )
+
+    self.readme.generate(directory) 
