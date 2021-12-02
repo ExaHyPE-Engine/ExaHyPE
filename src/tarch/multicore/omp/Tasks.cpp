@@ -232,7 +232,7 @@ int tarch::multicore::native::getNumberOfPendingTasks() {
  * but tasksOfSameType is not copied and not used within the task.
  */
 void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
-  std::list< tarch::multicore::Task* > copyOfTasksOfSameType;
+  std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
   #pragma omp task firstprivate(myTask,copyOfTasksOfSameType,device)
   {
     bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType,device);
