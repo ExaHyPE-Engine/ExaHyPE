@@ -288,6 +288,21 @@ namespace tarch {
         const std::vector< Task* >&  tasks,
         orchestration::Strategy*     strategy
       );
+      /**
+       * Process a fused task
+       *
+       * A fused task is a task (which can be fused) and a list of further tasks which
+       * are of the same type and, hence, can be fused, too. The list can be empty.
+       *
+       * @param firstTask First task. This is a task which can be fused. The pointer
+       *   is valid. The ownership of firstTask is handed over to the called routine,
+       *   i.e. processFusedTask() has to ensure that it is deleted.
+       * @param otherTasks List of tasks of the same type. The list can be empty.
+       *   processFusedTask() has to ensure that all tasks stored within the list are
+       *   executed and subsequently destroyed.
+       * @param device Target device on which the fused tasks should be executed. Can
+       *   be host if the tasks should end up on the host.
+       */
       void processFusedTask(Task*  firstTask, const std::list< tarch::multicore::Task* >& otherTasks, int device);
       void yield();
       int getNumberOfPendingTasks();

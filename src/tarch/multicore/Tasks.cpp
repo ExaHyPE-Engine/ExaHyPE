@@ -180,12 +180,7 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
    * - If there is a task and task's canFuse() returns true:
    *   - As long as there are further tasks in the queue and these tasks have the same task type
    *     (an integer), append these tasks to tasksOfSameType.
-   * - If there has been a task and merged task list is not empty:
-   *   - Call fuse on this list
-   *   - Check if fuse still requires us to run prototype (first) task explicitly
-   *   - Execute this task if required
-   * - If there has been a task and merged task list is empty:
-   *   - Execute the one task extracted from task queue
+   * - If there has been a task: Call native::processFusedTask() on the task and the list (which might be empty)
    *
    * ## Thread safety
    *
