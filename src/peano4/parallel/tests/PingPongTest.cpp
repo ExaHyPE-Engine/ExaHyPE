@@ -114,7 +114,7 @@ namespace {
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingReceives() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::createNative() );
+  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::Hardcoded::createNative() );
 
     int out;
     testErrors = 0;
@@ -142,7 +142,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingReceives() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::createNative() );
+  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::Hardcoded::createNative() );
 
   int out;
     testErrors = 0;
@@ -171,7 +171,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingSends() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::createNative() );
+  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::Hardcoded::createNative() );
 
   int out = 23;
     testErrors = 0;
@@ -200,7 +200,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSends() {
     #if defined(Parallel) and not defined(UseSmartMPI)
-  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::createNative() );
+  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::Hardcoded::createNative() );
 
   int out = 23;
     testErrors = 0;
@@ -229,7 +229,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonbloc
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockingSendsAndReceives() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::createNative() );
+  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::Hardcoded::createNative() );
 
   int out = 23;
     testErrors = 0;
@@ -257,7 +257,7 @@ void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithBlockin
 
 void peano4::parallel::tests::PingPongTest::testMultithreadedPingPongWithNonblockingSendsAndReceives() {
   #if defined(Parallel) and not defined(UseSmartMPI)
-  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::createNative() );
+  auto* originalOrchestration = tarch::multicore::swapOrchestration( tarch::multicore::orchestration::Hardcoded::createNative() );
 
   int out = 23;
   testErrors = 0;
