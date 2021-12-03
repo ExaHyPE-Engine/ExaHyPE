@@ -80,15 +80,6 @@ namespace peano4 {
    */
   void writeCopyrightMessage();
 
-  void writeBibTeXMessage();
-
-  void addBibTeXEntry( const std::string& newEntry );
-
-  /**
-   * Add further information about this build and run.
-   */
-  void addBuildAndRunInformation( const std::string& newEntry );
-
   /**
    * Fill Lookup Tables
    *

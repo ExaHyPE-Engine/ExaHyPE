@@ -5,13 +5,20 @@ from fileinput import filename
 
 import re
 import traceback
-
+import glob
 
 
 class PerformanceData(object):
   def __init__(self,file_name,solver_name="",verbose=False):
     """
+    :: Attributes
     
+    self._number_of_time_steps: Int
+      Includes the empty time steps (warm-up phase) if you have 
+      adaptive time stepping.
+
+    :: Arguments
+        
     file_name: String
       This is a mandatory field, as it tells us which file to parse.
         
@@ -90,9 +97,9 @@ class PerformanceData(object):
   def __str__(self, *args, **kwargs):
       return "(ranks=" + str(self._ranks) + ",threads=" + str(self._threads) + \
              ",#time-steps=" + str(self._number_of_time_steps) + \
-             ",grid-construction=" + str(self.total_construction_time)  + "s/" + str(self.total_construction_steps) + \
-             ",time-stepping="     + str(self.total_time_stepping_time) + "s/" + str(self.total_time_stepping_steps) + \
-             ",plotting="          + str(self.total_plotting_time)      + "s/" + str(self.total_plotting_steps) + \
+             ",grid-construction=" + str(self.total_construction_time)  + "s/#" + str(self.total_construction_steps) + \
+             ",time-stepping="     + str(self.total_time_stepping_time) + "s/#" + str(self.total_time_stepping_steps) + \
+             ",plotting="          + str(self.total_plotting_time)      + "s/#" + str(self.total_plotting_steps) + \
              ",valid=" + str(self.valid) + \
              ")"
 
@@ -354,7 +361,34 @@ def extract_grid_construction_times(performance_data_points):
   return (x_data,y_data)
 
 
-def extract_times_per_step(performance_data_points, max_cores_per_rank=0):
+def extract_total_time_stepping_times(performance_data_points, max_cores_per_rank=0, verbose=False):
+  x_data = []
+  y_data = []
+    
+  for point in performance_data_points:
+    if verbose:
+      print( "study " + str(point) + " with " + str(point.total_time_stepping_steps) + " time step(s)" )
+    if point.total_time_stepping_steps>0:
+      x_value = 0.0
+      if max_cores_per_rank>0:
+        x_value = point._ranks + 0.5*point._threads/max_cores_per_rank
+      if max_cores_per_rank==0:
+        x_value = point._ranks
+      if max_cores_per_rank<0:
+        x_value = point._threads
+      if verbose:
+        print( "experiment results from "  + str(x_value) + " cores/ranks" )
+      insert_at_position = 0
+      while insert_at_position<len(x_data) and x_data[insert_at_position]<x_value:
+        insert_at_position += 1
+      x_data.insert( insert_at_position, x_value )
+      raw_data = point.total_time_stepping_time
+      y_data.insert( insert_at_position, raw_data )
+    
+  return (x_data,y_data)
+    
+
+def extract_times_per_step(performance_data_points, max_cores_per_rank=0, verbose=False):
   """
      
    Returns a tuple of arrays to be plotted
@@ -375,6 +409,8 @@ def extract_times_per_step(performance_data_points, max_cores_per_rank=0):
   y_data = []
     
   for point in performance_data_points:
+    if verbose:
+      print( "study " + str(point) + " with " + str(point.total_time_stepping_steps) + " time step(s)" )
     if point.total_time_stepping_steps>0:
       x_value = 0.0
       if max_cores_per_rank>0:
@@ -383,6 +419,8 @@ def extract_times_per_step(performance_data_points, max_cores_per_rank=0):
         x_value = point._ranks
       if max_cores_per_rank<0:
         x_value = point._threads
+      if verbose:
+        print( "experiment results from "  + str(x_value) + " cores/ranks" )
       insert_at_position = 0
       while insert_at_position<len(x_data) and x_data[insert_at_position]<x_value:
         insert_at_position += 1
@@ -393,3 +431,20 @@ def extract_times_per_step(performance_data_points, max_cores_per_rank=0):
   return (x_data,y_data)
 
 
+def load_file_sequence(file_prefix,file_postfix="", solver_name="",verbose=False):
+  """
+  
+  Load all files that start with file_prefix and merge them into one 
+  instance of Dataset.
+  
+  """
+  result = []
+  filtered_files = glob.glob( file_prefix + "*" + file_postfix )
+  for filtered_file in filtered_files:
+    print( "parse " + filtered_file )
+    new_dataset = PerformanceData(filtered_file,solver_name,verbose)
+    if new_dataset.valid and result!=None:
+      result.append( new_dataset )
+    else:
+      print( "ERROR: file " + filtered_file + " was not a valid Peano 4 particle database file" )
+  return result
