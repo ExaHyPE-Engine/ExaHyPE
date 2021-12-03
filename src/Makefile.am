@@ -115,9 +115,7 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/omp/Core.cpp \
  tarch/multicore/omp/RecursiveSemaphore.cpp \
  tarch/multicore/omp/Tasks.cpp \
- tarch/multicore/orchestration/BSP.cpp \
- tarch/multicore/orchestration/Fuse.cpp \
- tarch/multicore/orchestration/NativeTasks.cpp \
+ tarch/multicore/orchestration/Hardcoded.cpp \
  tarch/multicore/orchestration/StrategyFactory.cpp \
  tarch/tests/TestCaseCollection.cpp \
  tarch/tests/TreeTestCaseCollection.cpp \

@@ -17,24 +17,26 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_precomputed_opera
   #if Dimensions==2
   if ( normal==0 ) {
     static tarch::la::DynamicMatrix P( internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,0) );
-    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
+    const int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(1);
+    const int firstRowInP    = matrixRowBlock * numberOfDoFsPerAxisInPatch * 2;
     P.batchedMultiplyAoS(
       fineGridValues, // image
       coarseGridValues,  // preimage
       unknowns,          // batch size, i.e. how often to apply it in one AoS rush
       numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-      matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
+      firstRowInP
     );
   }
   else if ( normal==1 ) {
     static tarch::la::DynamicMatrix P( internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch,1) );
-    int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0);
+    const int matrixRowBlock = marker.getRelativePositionWithinFatherCell()(0);
+    const int firstRowInP    = matrixRowBlock * numberOfDoFsPerAxisInPatch * 2;
     P.batchedMultiplyAoS(
       fineGridValues, // image
       coarseGridValues,  // preimage
       unknowns,          // batch size, i.e. how often to apply it in one AoS rush
       numberOfDoFsPerAxisInPatch*2, // result size, i.e. size of image
-      matrixRowBlock * numberOfDoFsPerAxisInPatch * 2
+      firstRowInP
     );
   }
   #elif Dimensions==3
@@ -91,3 +93,45 @@ void toolbox::blockstructured::interpolateCell_AoS_linear_precomputed_operators(
 }
 
 
+
+
+template <int NumberOfDoFsPerAxisInPatch>
+void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_precomputed_operators(
+      const peano4::datamanagement::FaceMarker& marker,
+      int                                       numberOfDoFsPerAxisInPatch,
+      int                                       overlap,
+      int                                       unknowns,
+      double*                                   fineGridFaceValues,
+      double*                                   coarseGridFaceValues,
+      double*                                   coarseGridCellValues
+) {
+  assertionEquals( NumberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch );
+  assertion(overlap==1);
+
+  int normal = marker.getSelectedFaceNumber() % Dimensions;
+  if (
+    marker.getRelativePositionWithinFatherCell()(normal)==0
+    or
+    marker.getRelativePositionWithinFatherCell()(normal)==3
+  ) {
+    interpolateHaloLayer_AoS_linear_precomputed_operators<NumberOfDoFsPerAxisInPatch>(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      unknowns,
+      fineGridFaceValues,
+      coarseGridFaceValues
+    );
+  }
+  else {
+    interpolateHaloLayer_AoS_linear(
+      marker,
+      numberOfDoFsPerAxisInPatch,
+      overlap,
+      unknowns,
+      fineGridFaceValues,
+      coarseGridFaceValues,
+      coarseGridCellValues
+    );
+  }
+}

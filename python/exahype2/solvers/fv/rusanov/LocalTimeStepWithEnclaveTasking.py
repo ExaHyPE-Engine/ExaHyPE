@@ -69,8 +69,8 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._compute_time_step_size  = create_compute_time_step_size_kernel_for_local_time_stepping( name, time_step_relaxation )
-    self._postprocess_updated_patch_throughout_sweep       = create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation,avoid_staircase_effect,discretisation_steps)
+    self._compute_time_step_size                     = create_compute_time_step_size_kernel_for_local_time_stepping( name, time_step_relaxation )
+    self._postprocess_updated_patch_throughout_sweep = create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation,avoid_staircase_effect,discretisation_steps)
    
     self.set_implementation(flux=flux, 
       ncp=ncp, 
