@@ -72,6 +72,8 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
       patch = solver._patch,
       patch_overlap_interpolation = solver._patch_overlap_old,
       patch_overlap_restriction   = solver._patch_overlap_update,
+      interpolation_scheme        = "linear_optimised", 
+      restriction_scheme          = "averaging",
       interpolate_guard           = """
   repositories::""" + solver.get_name_of_global_instance() + """.getSolverState()!=""" + solver._name + """::SolverState::GridInitialisation
 """,
