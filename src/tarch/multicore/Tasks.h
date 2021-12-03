@@ -92,20 +92,39 @@ namespace tarch {
         virtual bool run() = 0;
 
         /**
+         * Fuse multiple tasks
+         *
          * Fuse the task with a list of further tasks. The routine is guaranteed to 
          * be called only for tasks with the same taskType. So if you carefully 
          * distinguish your tasks, you can downcast all the arguments, as you might
          * know the real type.
          *
+         * This operation is invoked on a task. However, it is also given N=otherTasks.size
+         * further tasks of the same type. You have two options now:
+         *
+         * - You can process the N tasks in one rush. In this case, the original
+         *   task, i.e. the object on which fuse() is called, remains intact and
+         *   has not been processed yet. You have to return true.
+         * - You can process the N+1 tasks in one rush, i.e. all tasks from
+         *   otherTasks and the task represented by the actual object on which
+         *   fuse is called. In this case, you return false, as the task on which
+         *   fuse has been called can be destroyed straightaway by the runtime.
+         *
+         * No matter which route you follow, you always have to delete all the tasks
+         * stores within otherTasks, as these have to be processed by fuse().
+         *
          * <h2> Default implementation </h2>
          * 
          * My default implementation executes all the passed tasks and then returns 
-         * the original task back, i.e. this one is not executed.
+         * the original task back, i.e. this one is not executed. This is the first
+         * execution pattern described above.
          *
          * <h2> Memory ownership </h2>
          * 
-         * The ownership for otherTasks goes over to fuse, i.e. you don't have to 
-         * delete anything anymore.
+         * See above: fuse() has to delete all the instances within otherTasks.
+         * The calling routine does not have to delete anything there anymore.
+         * But it has to destroy the owning object, i.e. the object on which is
+         * has called fuse(), manually no matter whether we return true or false.
          *
          * @return Is the present task still to be executed or can the runtime 
          *         destroy it straightaway?
@@ -269,6 +288,22 @@ namespace tarch {
         const std::vector< Task* >&  tasks,
         orchestration::Strategy*     strategy
       );
+      /**
+       * Process a fused task
+       *
+       * A fused task is a task (which can be fused) and a list of further tasks which
+       * are of the same type and, hence, can be fused, too. The list can be empty.
+       *
+       * @param firstTask First task. This is a task which can be fused. The pointer
+       *   is valid. The ownership of firstTask is handed over to the called routine,
+       *   i.e. processFusedTask() has to ensure that it is deleted.
+       * @param otherTasks List of tasks of the same type. The list can be empty.
+       *   processFusedTask() has to ensure that all tasks stored within the list are
+       *   executed and subsequently destroyed.
+       * @param device Target device on which the fused tasks should be executed. Can
+       *   be host if the tasks should end up on the host.
+       */
+      void processFusedTask(Task*  firstTask, const std::list< tarch::multicore::Task* >& otherTasks, int device);
       void yield();
       int getNumberOfPendingTasks();
     }
@@ -276,6 +311,13 @@ namespace tarch {
 
     namespace internal {
       int  mapPendingTasksOntoNativeTasks(int maxTasks);
+
+      /**
+       *
+       * # Thread safety
+       *
+       * The method locks and unlocks the queue. So don't lock it yourself.
+       */
       bool fusePendingTasks(std::pair<int,int> maxTasksAndDevice);
     }
   }

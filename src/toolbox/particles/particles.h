@@ -9,7 +9,6 @@
 
 namespace toolbox {
   namespace particles {
-    void addBibTeXEntry();
   }
 }
 

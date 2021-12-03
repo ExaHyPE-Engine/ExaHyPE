@@ -180,12 +180,7 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
    * - If there is a task and task's canFuse() returns true:
    *   - As long as there are further tasks in the queue and these tasks have the same task type
    *     (an integer), append these tasks to tasksOfSameType.
-   * - If there has been a task and merged task list is not empty:
-   *   - Call fuse on this list
-   *   - Check if fuse still requires us to run prototype (first) task explicitly
-   *   - Execute this task if required
-   * - If there has been a task and merged task list is empty:
-   *   - Execute the one task extracted from task queue
+   * - If there has been a task: Call native::processFusedTask() on the task and the list (which might be empty)
    *
    * ## Thread safety
    *
@@ -201,6 +196,7 @@ bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAnd
   tarch::multicore::Task* myTask = nullptr;
   std::list< tarch::multicore::Task* > tasksOfSameType;
 
+  tarch::multicore::Lock lock(nonblockingTasksSemaphore);
   if (not nonblockingTasks.empty()) {
     myTask = nonblockingTasks.front();
     nonblockingTasks.pop_front();
@@ -222,19 +218,11 @@ bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAnd
     pp = nonblockingTasks.erase(pp);
   }
 
+  lock.free();
   ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
 
   if (myTask!=nullptr) {
-    bool stillExecuteLocally;
-    if (tasksOfSameType.empty()) {
-      stillExecuteLocally = true;
-    }
-    else {
-      stillExecuteLocally = myTask->fuse(tasksOfSameType,maxTasksAndDevice.second);
-    }
-    if (stillExecuteLocally) {
-      tarch::multicore::native::spawnTask(myTask);
-    }
+    native::processFusedTask(myTask, tasksOfSameType, maxTasksAndDevice.second);
   }
 
   return myTask==nullptr ? 0 : tasksOfSameType.size()+1;
@@ -426,6 +414,7 @@ void tarch::multicore::spawnTask(Task*  task) {
   else {
     tarch::multicore::Lock lock(nonblockingTasksSemaphore);
     nonblockingTasks.push_back(task);
+    lock.free();
 
     logDebug( "spawnTask(...)", "enqueued task (#tasks=" << nonblockingTasks.size() << ")" );
 
@@ -583,6 +572,17 @@ void tarch::multicore::native::yield() {
 
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return 0;
+}
+
+
+void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
+  bool stillExecuteLocally = myTask->fuse(tasksOfSameType,device);
+  if (stillExecuteLocally) {
+    tarch::multicore::native::spawnTask(myTask);
+  }
+  else {
+    delete myTask;
+  }
 }
 
 #endif
