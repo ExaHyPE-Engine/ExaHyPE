@@ -109,22 +109,54 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
     if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
   }
   if (ReSwi==4){ //dynamic one
+    double t_i=pow(a_i,1.5)*2.057*1e17;
+    double t_used=t;
     double Mpc=3.086*1e19; //in Km;
-    double t_real=pow( (pow((Mpc/150),(-1.0/3.0))*pow(a_i,(-0.5))-t*pow(150,(4.0/3.0))/300/pow(Mpc,(1.0/3.0))),-3);
-    double a_scale=pow((150/Mpc),(2.0/3.0))*pow( (pow((Mpc/150),(-1.0/3.0))*pow(a_i,(-0.5))-t*pow(150,(4.0/3.0))/300/pow(Mpc,(1.0/3.0))),-2);
-    double R_ta_code=(a_i/a_scale)*pow((3.0*delta_m)/(4.0*M_PI*tilde_rho_ini),(1.0/3.0))*pow((4.0/3.0/M_PI),(8/9))*pow((t_real/6.505/1e12),(8/9));
+    double t_real=pow( (pow((Mpc/150),(-1.0/3.0))*pow(a_i,(-0.5))-t_used*pow(150,(4.0/3.0))/300/pow(Mpc,(1.0/3.0))),-3);
+    double a_scale=pow((150/Mpc),(2.0/3.0))*pow( (pow((Mpc/150),(-1.0/3.0))*pow(a_i,(-0.5))-t_used*pow(150,(4.0/3.0))/300/pow(Mpc,(1.0/3.0))),-2);
+    double R_ta_code=(a_i/a_scale)*pow((3.0*delta_m)/(4.0*M_PI*tilde_rho_ini),(1.0/3.0))*pow((4.0/3.0/M_PI),(8.0/9.0))*pow((t_real/t_i),(8.0/9.0));
     double delta_R=std::abs(radius-R_ta_code*0.55);
-    
-    constexpr int NumberOfRefinementLayers = 1;
-    double distance[NumberOfRefinementLayers] = {0.4};
-    double MaxH[NumberOfRefinementLayers]   = {0.015};
+    //double delta_R=std::abs(radius-0.0875);
 
-    for (int i=0; i<NumberOfRefinementLayers; i++) {
-      if (delta_R<distance[i] and tarch::la::max(volumeH)>MaxH[i]) {
-        result=::exahype2::RefinementCommand::Refine;
+    constexpr int NumberOfRefinementLayers = 3;
+    double distance[NumberOfRefinementLayers+1] = {1.5,0.6,0.3,0};
+    double MaxH[NumberOfRefinementLayers+1]   = {0.05,0.018,0.006,0};
+
+    /*if (delta_R>distance[0]) {result=::exahype2::RefinementCommand::Erase;}
+    else if (delta_R<distance[NumberOfRefinementLayers-1]) {result=::exahype2::RefinementCommand::Refine;}
+    else{
+      for (int i=0; i<(NumberOfRefinementLayers-1); i++) {
+        if (delta_R<distance[i] and delta_R>distance[i+1]) {
+          if (tarch::la::max(volumeH)>MaxH[i])   {result=::exahype2::RefinementCommand::Refine;}
+          if (tarch::la::max(volumeH)<MaxH[i+1]) {result=::exahype2::RefinementCommand::Erase;}
+        }
+      }
+    }*/
+    for (int i=0; i<(NumberOfRefinementLayers); i++) {
+      if (delta_R<distance[i] and delta_R>distance[i+1]) {
+        if (tarch::la::max(volumeH)>MaxH[i])   {result=::exahype2::RefinementCommand::Refine;}
+        //if (tarch::la::max(volumeH)<MaxH[i+1]) {result=::exahype2::RefinementCommand::Erase;}
       }
     }
   }  
+  if (ReSwi==5){ //erase test
+    double delta_R=radius;
+
+    constexpr int NumberOfRefinementLayers = 1;
+    double distance[NumberOfRefinementLayers] = {0.1};
+    double MaxH[NumberOfRefinementLayers]   = {0.01};
+
+    if (delta_R>distance[0]) {result=::exahype2::RefinementCommand::Erase;}
+    else if (delta_R<distance[NumberOfRefinementLayers-1]) {result=::exahype2::RefinementCommand::Refine;}
+    else{
+      for (int i=0; i<(NumberOfRefinementLayers-1); i++) {
+        if (delta_R<distance[i] and delta_R>distance[i+1]) {
+          if (tarch::la::max(volumeH)>MaxH[i])   {result=::exahype2::RefinementCommand::Refine;}
+          if (tarch::la::max(volumeH)<MaxH[i+1]) {result=::exahype2::RefinementCommand::Erase;}
+        }
+      }
+    }
+  }
   return result;
 }
 

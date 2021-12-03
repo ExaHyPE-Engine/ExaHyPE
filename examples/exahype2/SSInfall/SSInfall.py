@@ -435,6 +435,7 @@ if __name__ == "__main__":
       userinfo.append(("Use original formula for eigenvalues",None))
 
     solverconstants=""
+    solverconstants+="double free=-1;\n"
     #if args.extension=="cellcount": 
     solverconstants+= "int global_cell_tot[{}]={};\n".format(args.sample_number,"{0}")
     solverconstants+= "double global_m_tot[{}]={};\n".format(args.sample_number,"{0}")
@@ -513,15 +514,16 @@ if __name__ == "__main__":
 
       if path=="./": path1="."
       else: path1=path
+      #path1="/cosma5/data/durham/dc-zhan3/tracer_test/"
       project.add_action_set_to_timestepping(exahype2.tracer.DumpTrajectoryIntoDatabase(
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=20000,
+        number_of_entries_between_two_db_flushes=1000,
         output_precision=10,
         position_delta_between_two_snapsots=1e16,
         data_delta_between_two_snapsots=1e16,
-        time_delta_between_two_snapsots=1.0,
+        time_delta_between_two_snapsots=0.25,
         use_relative_deltas=False
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
