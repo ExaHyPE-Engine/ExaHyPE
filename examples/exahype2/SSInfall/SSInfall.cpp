@@ -20,7 +20,6 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
   if (AbstractSSInfall::isFirstGridSweepOfTimeStep()){
     for (int i=0;i<sample_number;i++) {
       m_tot_copy[i]      = global_m_tot[i];
-      //m_tot_copy[i]=m_tot[i];
       global_m_tot[i]    = 0;
       global_cell_tot[i] = 0;
       m_tot[i]           = 0;

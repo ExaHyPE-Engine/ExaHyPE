@@ -118,6 +118,7 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
         *i          = newEvent;
         i           = result.end();
       }
+/*
       else if (
         (i->getRefinementControl()==GridControlEvent::RefinementControl::Erase and currentEvent.getRefinementControl()==GridControlEvent::RefinementControl::Erase)
         and
@@ -129,6 +130,7 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
         *i          = newEvent;
         i           = result.end();
       }
+*/
       else {
         i++;
       }
