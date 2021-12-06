@@ -1,5 +1,3 @@
-
-
 template <int NumberOfDoFsPerAxisInPatch>
 void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_precomputed_operators(
       const peano4::datamanagement::FaceMarker& marker,
@@ -78,18 +76,191 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear_precomputed_opera
 
 
 /**
- * This version is not optimised (yet) as I think it is used infrequently.
+ * This version has to be optimised. It is one of the really expensive ones.
  */
 template <int NumberOfDoFsPerAxisInPatch>
 void toolbox::blockstructured::interpolateCell_AoS_linear_precomputed_operators(
-      const peano4::datamanagement::CellMarker& marker,
-      int                                       numberOfDoFsPerAxisInPatch,
-      int                                       unknowns,
-      double*                                   fineGridValues,
-      double*                                   coarseGridValues
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
 ) {
+  std::cout << "marker=" << marker.toString() << std::endl;
+
   assertionEquals( NumberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch );
-  toolbox::blockstructured::interpolateCell_AoS_linear(marker,numberOfDoFsPerAxisInPatch,unknowns,fineGridValues,coarseGridValues);
+
+  tarch::la::DynamicMatrix* pickTimesProject = nullptr;
+
+  #if Dimensions==3
+  if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==0 and marker.getRelativePositionWithinFatherCell()(2)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==0 and marker.getRelativePositionWithinFatherCell()(2)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==0 and marker.getRelativePositionWithinFatherCell()(2)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==1 and marker.getRelativePositionWithinFatherCell()(2)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==1 and marker.getRelativePositionWithinFatherCell()(2)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==1 and marker.getRelativePositionWithinFatherCell()(2)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==2 and marker.getRelativePositionWithinFatherCell()(2)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==2 and marker.getRelativePositionWithinFatherCell()(2)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==2 and marker.getRelativePositionWithinFatherCell()(2)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==0 and marker.getRelativePositionWithinFatherCell()(2)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==0 and marker.getRelativePositionWithinFatherCell()(2)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==0 and marker.getRelativePositionWithinFatherCell()(2)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==1 and marker.getRelativePositionWithinFatherCell()(2)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==1 and marker.getRelativePositionWithinFatherCell()(2)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==1 and marker.getRelativePositionWithinFatherCell()(2)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==2 and marker.getRelativePositionWithinFatherCell()(2)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==2 and marker.getRelativePositionWithinFatherCell()(2)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==2 and marker.getRelativePositionWithinFatherCell()(2)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==0 and marker.getRelativePositionWithinFatherCell()(2)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==0 and marker.getRelativePositionWithinFatherCell()(2)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==0 and marker.getRelativePositionWithinFatherCell()(2)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==1 and marker.getRelativePositionWithinFatherCell()(2)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==1 and marker.getRelativePositionWithinFatherCell()(2)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==1 and marker.getRelativePositionWithinFatherCell()(2)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==2 and marker.getRelativePositionWithinFatherCell()(2)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==2 and marker.getRelativePositionWithinFatherCell()(2)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==2 and marker.getRelativePositionWithinFatherCell()(2)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+
+  assertion( pickTimesProject!=nullptr );
+
+  pickTimesProject->batchedMultiplyAoS(
+    fineGridValues, // image
+    coarseGridValues,  // preimage
+    unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+    numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, // result size, i.e. size of image
+    0
+  );
+  #else
+  if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==0 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==1 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==0 and marker.getRelativePositionWithinFatherCell()(1)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==1 and marker.getRelativePositionWithinFatherCell()(1)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+  else if ( marker.getRelativePositionWithinFatherCell()(0)==2 and marker.getRelativePositionWithinFatherCell()(1)==2 ) {
+    static tarch::la::DynamicMatrix precomputedPickTimesProject = tarch::la::DynamicMatrix( internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch) );
+    pickTimesProject = &precomputedPickTimesProject;
+  }
+
+  assertion( pickTimesProject!=nullptr );
+
+  pickTimesProject->batchedMultiplyAoS(
+    fineGridValues, // image
+    coarseGridValues,  // preimage
+    unknowns,          // batch size, i.e. how often to apply it in one AoS rush
+    numberOfDoFsPerAxisInPatch*numberOfDoFsPerAxisInPatch, // result size, i.e. size of image
+    0
+  );
+  #endif
 }
 
 
