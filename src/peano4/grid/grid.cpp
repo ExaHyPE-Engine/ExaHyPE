@@ -230,7 +230,7 @@ std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< 
           and
           eraseEventCoveredByOtherEraseEvent(*inputPP,*inputP)
         ) {
-          logInfo( "merge(...)", "throw away  (" << inputPP->toString() << " as covered by " << inputP->toString() );
+          logInfo( "merge(...)", "throw away " << inputPP->toString() << " as covered by " << inputP->toString() );
           inputPP  = inputEvents.erase(inputP);
           hasMergedRefinementEventOrCancelledErase = true;
         }

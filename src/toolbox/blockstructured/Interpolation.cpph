@@ -86,8 +86,6 @@ void toolbox::blockstructured::interpolateCell_AoS_linear_precomputed_operators(
   double*                                   fineGridValues,
   double*                                   coarseGridValues
 ) {
-  std::cout << "marker=" << marker.toString() << std::endl;
-
   assertionEquals( NumberOfDoFsPerAxisInPatch, numberOfDoFsPerAxisInPatch );
 
   tarch::la::DynamicMatrix* pickTimesProject = nullptr;
