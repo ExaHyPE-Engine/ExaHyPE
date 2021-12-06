@@ -57,7 +57,31 @@ namespace peano4 {
     void clear( GridStatistics& statistics, bool isGlobalMasterTree );
 
     /**
-     * Merge set such that many events next to each other are fused into one
+     * Merge set of refinement/coarsening commands
+     *
+     *
+     * This routine has two roles:
+     * - It shall reduce the number of refine events, so the actual AMR
+     *   checks are faster when we next trigger the traversal
+     * - It brings together the erase events: Erases are only triggered
+     *   if a cell is completely embedded into an event. See
+     *   Spacetree::evaluateGridControlEvents() for details. However, if
+     *   we have two adjacent erase events, then it might happen that none
+     *   of them hosts a cell, while the merger of the two of them does
+     *   host one.
+     *
+     * The algorithm works in multiple sweeps:
+     *
+     * First, we extract all coarsen events from the input list. It is
+     * better to use a list in this algorithm, as we insert and erase
+     * frequently. Now we have two lists: the original input list minus
+     * all erase events, and a list of erase commands.
+     *
+     * Second, we construct a "power set" of all erase events. That is, we
+     * look for each erase event against each other erase event if it is
+     * adjacent to any other event. If so, we create a new merged event and
+     * add this one to the input set. This way, we ensure that the sets
+     * are recursively built up.
      *
      * Take a set of grid control events and try to consolidate them, i.e.
      * remove overlaps and fuse individual requests. The consolidation
@@ -247,7 +271,10 @@ namespace peano4 {
     bool overlaps( const tarch::la::Vector<Dimensions,double>& x, const GridControlEvent& event );
     bool overlaps( const AutomatonState& x, const GridControlEvent& event );
 
-    bool isContained( const AutomatonState& x, const GridControlEvent& event );
+    /**
+     * @return x is completely embeddd into event. x is subject to a re-calibration.
+     */
+    bool isContained( const AutomatonState& x, const GridControlEvent& event, double upscaleAutomatonState=1.0 );
   }
 }
 

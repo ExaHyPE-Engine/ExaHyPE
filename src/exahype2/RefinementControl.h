@@ -127,6 +127,9 @@ class exahype2::RefinementControl {
 
     /**
      * Should be called after each traversal per rank.
+     *
+     * This routine rolls over _newEvents into the _committedEvents if they are still
+     * alive.
      */
     void finishStep();
 
