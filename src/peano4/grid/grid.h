@@ -277,6 +277,13 @@ namespace peano4 {
      */
     bool isContained( const AutomatonState& x, const GridControlEvent& event, double upscaleAutomatonState=1.0 );
 
+    /**
+     * Peano 4 does not reduce any grid control events globally. If you
+     * want to reduce these events, you have to do so manually. Operation
+     * becomes identify if you don't compile with MPI.
+     */
+    void reduceGridControlEvents( std::vector<GridControlEvent>& events );
+
     namespace internal {
       /**
        * This is the first thing I do. Before I even start to think about the
