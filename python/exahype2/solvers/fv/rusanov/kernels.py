@@ -441,6 +441,10 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% endif %}
     
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
+    /**
+     * Depending on the implementation, this variant might be slow as it 
+     * lacks an inline define.
+     */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -474,6 +478,10 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 
 
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
+    /**
+     * Depending on the implementation, this variant might be slow as it 
+     * lacks an inline define.
+     */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -504,6 +512,10 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
 
 
     {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
+    /**
+     * Depending on the implementation, this variant might be slow as it 
+     * lacks an inline define.
+     */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -536,6 +548,10 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     
 
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
+    /**
+     * Depending on the implementation, this variant might be slow as it 
+     * lacks an inline define.
+     */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -801,8 +817,20 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     
    
     {% if STATELESS_PDE_TERMS  and SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
-    // The GPU offloading requires static functions, we do the
-    // TBB trick of overloading static functions with an enum
+    /**
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
+     *
+     * static inline void sourceTerm( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
+     */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -823,11 +851,18 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 
     {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
-     * Determine max eigenvalue over Jacobian in a given point with solution values
-     * (states) Q. All parameters are in.
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
      *
-     * @return Max eigenvalue. Result has to be positive, so we are actually speaking
-     *   about the maximum absolute eigenvalue.
+     * static inline double maxEigenvalue( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -847,6 +882,20 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
 
 
     {% if STATELESS_PDE_TERMS  and FLUX_IMPLEMENTATION=="<user-defined>" %}
+    /**
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
+     *
+     * static inline void flux( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
+     */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -866,6 +915,20 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
      
    
     {% if STATELESS_PDE_TERMS  and NCP_IMPLEMENTATION=="<user-defined>" %}
+    /**
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
+     *
+     * static inline void nonconservativeProduct( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
+     */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif

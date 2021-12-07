@@ -372,8 +372,6 @@ class EnclaveTasking( FV ):
     
     self._action_set_initial_conditions.guard                       = self._action_set_initial_conditions.guard
     self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard
-    #self._action_set_AMR.guard                                      = self._secondary_sweep_or_grid_construction_guard
-    #self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_or_grid_construction_guard
     self._action_set_AMR.guard                                      = self._secondary_sweep_guard
     self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_guard
     

@@ -23,6 +23,8 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
   private:
     static tarch::logging::Log   _log;
 
+    std::string plotGlobalMTot(bool plotCopy) const;
+    std::string plotRs() const;
   public:
     //int sample_number=10;
     //double m_tot[10]={0,0,0,0,0,0,0,0,0,0};
