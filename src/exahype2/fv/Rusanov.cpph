@@ -797,7 +797,7 @@ void exahype2::fv::Fusanov_3D(
   const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
   const int helper = numVPAIP+haloSize*2;
 
-  #pragma omp for simd collapse(5)
+  #pragma omp simd collapse(5)
   for (int pidx=0;pidx<NPT;pidx++)
   for (int z = 0; z < numVPAIP; z++)
   for (int y = 0; y < numVPAIP; y++)
@@ -820,7 +820,7 @@ void exahype2::fv::Fusanov_3D(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp for simd collapse(4)
+    #pragma omp simd collapse(4)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int z = 0; z < numVPAIP; z++)
     for (int y = 0; y < numVPAIP; y++)
@@ -849,7 +849,6 @@ void exahype2::fv::Fusanov_3D(
 
       double sourceTermContributions[unknowns];
 
-      #pragma clang always_inline
       SOLVER::sourceTerm( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables), volumeX, h0/numVPAIP, t, dt, sourceTermContributions, SOLVER::Offloadable::Yes);
 
       for (int unknown = 0; unknown < unknowns; unknown++) {
@@ -858,7 +857,7 @@ void exahype2::fv::Fusanov_3D(
     }
 
     for (int shift = 0; shift < 2; shift++) {
-      #pragma omp for simd collapse(4)
+      #pragma omp simd collapse(4)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int x = shift; x <= numVPAIP; x += 2)
       for (int z = 0; z < numVPAIP; z++)
@@ -900,9 +899,7 @@ void exahype2::fv::Fusanov_3D(
         double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
         if (not skipFluxEvaluation) {
-          #pragma clang always_inline
           SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL , SOLVER::Offloadable::Yes);
-          #pragma clang always_inline
           SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR , SOLVER::Offloadable::Yes);
         }
 
@@ -914,13 +911,10 @@ void exahype2::fv::Fusanov_3D(
             Qaverage[unknown] = *(QL+unknown)*0.5 + *(QR +unknown)*0.5;
             deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
           }
-          #pragma clang always_inline
           SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
         }
 
-        #pragma clang always_inline
         double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
-        #pragma clang always_inline
         double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
         double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
@@ -942,7 +936,7 @@ void exahype2::fv::Fusanov_3D(
         }
       }
 
-      #pragma omp for simd collapse(4)
+      #pragma omp simd collapse(4)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int y = shift; y <= numVPAIP; y += 2)
       for (int z = 0; z < numVPAIP; z++)
@@ -984,9 +978,7 @@ void exahype2::fv::Fusanov_3D(
         double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
         if (not skipFluxEvaluation) {
-          #pragma clang always_inline
           SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL, SOLVER::Offloadable::Yes );
-          #pragma clang always_inline
           SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR, SOLVER::Offloadable::Yes );
         }
 
@@ -998,13 +990,10 @@ void exahype2::fv::Fusanov_3D(
             Qaverage[unknown] = *(QL+unknown)*0.5 + *(QR +unknown)*0.5;
             deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
           }
-          #pragma clang always_inline
           SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
         }
 
-        #pragma clang always_inline
         double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
-        #pragma clang always_inline
         double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
         double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
@@ -1024,7 +1013,7 @@ void exahype2::fv::Fusanov_3D(
         }
       }
 
-      #pragma omp for simd collapse(4)
+      #pragma omp simd collapse(4)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int z = shift; z <= numVPAIP; z += 2)
       for (int y = 0; y < numVPAIP; y++)
@@ -1066,9 +1055,7 @@ void exahype2::fv::Fusanov_3D(
         double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
         if (not skipFluxEvaluation) {
-          #pragma clang always_inline
           SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL , SOLVER::Offloadable::Yes);
-          #pragma clang always_inline
           SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR , SOLVER::Offloadable::Yes);
         }
 
@@ -1081,13 +1068,10 @@ void exahype2::fv::Fusanov_3D(
             deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
           }
 
-          #pragma clang always_inline
           SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
         }
 
-        #pragma clang always_inline
         double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
-        #pragma clang always_inline
         double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
         double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
@@ -1130,21 +1114,10 @@ void exahype2::fv::Fusanov_2D(
   const size_t LTOT = NPT*destPatchSize;
   const size_t LR   = NPT*sourcePatchSize;
 
-  /**
-   * @Holger: Ich hau hier ein bisschen Doku rein. Die sollte meiner Meinung nach
-   *   in den Header, aber zuvor muessen wir das komplett ueberall durchziehen.
-   *   Ausserdem muessen wir den Impact diskutieren. Da bin ich mir jetzt halt
-   *   gar nimmer sicher, was das fuer unser Paper bedeutet.
-   */
-  for (int pidx=0;pidx<NPT;pidx++) {
-    const double                    t =   pV.t[pidx];
-    const double                   dt =  pV.dt[pidx];
-    const int                  taskId = pV.id[pidx];
-    const double                   x0 =  pV.x0[pidx];
-    const double                   h0 =  pV.h0[pidx];
-    const double                   x1 =  pV.x1[pidx];
-    const double                   h1 =  pV.h1[pidx];
-    double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
+//  const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
+//  const int helper = numVPAIP+haloSize*2;
+
+
 
     // We originally wanted to write something like this:
     //
@@ -1156,22 +1129,33 @@ void exahype2::fv::Fusanov_2D(
     // remain non-vectorised. So what we have to do is to remove the const, and
     // to set the individual entries manually. Once done, the code passes
     // through.
-    tarch::la::Vector<2 ,double> volumeH;
-    volumeH(0) = h0/numVPAIP;
-    volumeH(1) = h1/numVPAIP;
+    //
+    // One problem is however that Intel might be fine to optimise it nevertheless.
+    // tarch::la::Vector<2 ,double> volumeH;
+    // volumeH(0) = h0/numVPAIP;
+    // volumeH(1) = h1/numVPAIP;
 
-    #pragma omp for simd collapse(3)
-    for (int x = 0; x < numVPAIP; x++)
-    for (int y = 0; y < numVPAIP; y++)
-    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-      int sourceIndex      = (y+1)*(numVPAIP+ 3*haloSize) + x - y;
-      int destinationIndex = y*numVPAIP + x;
-      pV.result[pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i] =  reconstructedPatch[sourceIndex*(unknowns+auxiliaryVariables)+i];
-    }
+  #pragma omp simd collapse(4)
+  for (int pidx=0;pidx<NPT;pidx++)
+  for (int x = 0; x < numVPAIP; x++)
+  for (int y = 0; y < numVPAIP; y++)
+  for (int i=0; i<unknowns+auxiliaryVariables; i++) {
+    const double                    t =   pV.t[pidx];
+    const double                   dt =  pV.dt[pidx];
+    const int                  taskId = pV.id[pidx];
+    const double                   x0 =  pV.x0[pidx];
+    const double                   h0 =  pV.h0[pidx];
+    const double                   x1 =  pV.x1[pidx];
+    const double                   h1 =  pV.h1[pidx];
+    double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
+
+    int sourceIndex      = (y+1)*(numVPAIP+ 3*haloSize) + x - y;
+    int destinationIndex = y*numVPAIP + x;
+    pV.result[pidx*destPatchSize + destinationIndex*(unknowns+auxiliaryVariables)+i] =  reconstructedPatch[sourceIndex*(unknowns+auxiliaryVariables)+i];
   }
 
   if (not skipSourceTerm) {
-    #pragma omp for simd collapse(3)
+    #pragma omp simd collapse(3)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = 0; x < numVPAIP; x++)
     for (int y = 0; y < numVPAIP; y++) {
@@ -1191,7 +1175,6 @@ void exahype2::fv::Fusanov_2D(
       const int voxelInPreImage  = x+1      + (y+1) * (numVPAIP+2);
       const int voxelInImage     = x            + y * numVPAIP;
       double sourceTermContributions[unknowns];
-      #pragma clang always_inline
       SOLVER::sourceTerm( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables),  volumeX, volumeH(0), t, dt, sourceTermContributions, SOLVER::Offloadable::Yes);
 
       for (int unknown = 0; unknown < unknowns; unknown++) {
@@ -1201,38 +1184,22 @@ void exahype2::fv::Fusanov_2D(
   }
 
 
-  //
-  // @Holger: Ich bau hier mal um, bis dass es vektorisiert. Wir muessen das
-  //   ueberall machen, aber ich will erst mal verstehen was abgeht
-  //
-  // First ingredient: Also the pidx has to be outside of the collapse. We
-  //  cannot collapse over the NPT.
   for (int shift = 0; shift < 2; shift++)
-  for (int pidx=0;pidx<NPT;pidx++) {
-    const double                    t =   pV.t[pidx];
-    const double                   dt =  pV.dt[pidx];
-    const int                  taskId = pV.id[pidx];
-    const double                   x0 =  pV.x0[pidx];
-    const double                   h0 =  pV.h0[pidx];
-    const double                   x1 =  pV.x1[pidx];
-    const double                   h1 =  pV.h1[pidx];
-    double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
-
-    #pragma omp for simd collapse(2)
-    // @Holger Shit, er mag auch das mit dem shift net. Meint er koenne die Iterationszahl net identifizieren
-
+    #pragma omp simd collapse(3)
+    for (int pidx=0;pidx<NPT;pidx++) {
     for (int x = shift; x <= numVPAIP; x += 2)
     for (int y = 0; y < numVPAIP; y++) {
-      // see remark above
-      // const tarch::la::Vector<2 ,double> volumeH = {h0/numVPAIP,h1/numVPAIP};
-      tarch::la::Vector<2 ,double> volumeH;
-      volumeH(0) = h0/numVPAIP;
-      volumeH(1) = h1/numVPAIP;
+      const double                    t =   pV.t[pidx];
+      const double                   dt =  pV.dt[pidx];
+      const int                  taskId = pV.id[pidx];
+      const double                   x0 =  pV.x0[pidx];
+      const double                   h0 =  pV.h0[pidx];
+      const double                   x1 =  pV.x1[pidx];
+      const double                   h1 =  pV.h1[pidx];
+      double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
 
-      //tarch::la::Vector<2,double> volumeX = {x0-0.5*h0, x1-0.5*h1};
-      tarch::la::Vector<2,double> volumeX;
-      volumeX(0) = x0-0.5*h0;
-      volumeX(1) = x1-0.5*h1;
+      const tarch::la::Vector<2 ,double> volumeH = {h0/numVPAIP,h1/numVPAIP};
+      tarch::la::Vector<2,double> volumeX = {x0-0.5*h0, x1-0.5*h1};
 
       volumeX(0) += x * volumeH(0);
       volumeX(1) += (y + 0.5) * volumeH(1);
@@ -1248,9 +1215,7 @@ void exahype2::fv::Fusanov_2D(
       double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
       if (not skipFluxEvaluation) {
-        #pragma clang always_inline
         SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL, SOLVER::Offloadable::Yes );
-        #pragma clang always_inline
         SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR, SOLVER::Offloadable::Yes );
       }
 
@@ -1262,13 +1227,10 @@ void exahype2::fv::Fusanov_2D(
           Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
           deltaQ[unknown]   = QR[unknown] - QL[unknown];
         }
-        #pragma clang always_inline
         SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes );
       }
 
-      #pragma clang always_inline
       double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes );
-      #pragma clang always_inline
       double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes );
       double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
@@ -1291,8 +1253,7 @@ void exahype2::fv::Fusanov_2D(
       }
     }
 
-
-    #pragma omp for simd collapse(3)
+    #pragma omp simd collapse(3)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int y = shift; y <= numVPAIP; y += 2)
     for (int x = 0;     x <  numVPAIP; x++   ) {
@@ -1328,9 +1289,7 @@ void exahype2::fv::Fusanov_2D(
       double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
       if (not skipFluxEvaluation) {
-        #pragma clang always_inline
         SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL , SOLVER::Offloadable::Yes );
-        #pragma clang always_inline
         SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR , SOLVER::Offloadable::Yes );
       }
 
@@ -1342,13 +1301,10 @@ void exahype2::fv::Fusanov_2D(
           Qaverage[unknown] = 0.5 * QL[unknown] + 0.5 * QR[unknown];
           deltaQ[unknown]   = QR[unknown] - QL[unknown];
         }
-        #pragma clang always_inline
         SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes );
       }
 
-      #pragma clang always_inline
       double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes );
-      #pragma clang always_inline
       double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes );
       double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
