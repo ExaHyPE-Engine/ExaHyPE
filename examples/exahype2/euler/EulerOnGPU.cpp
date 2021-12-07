@@ -253,6 +253,7 @@ double ::examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
 
 
 
+/*
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
@@ -291,6 +292,7 @@ void ::examples::exahype2::euler::EulerOnGPU::flux(
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
+*/
 
 
 

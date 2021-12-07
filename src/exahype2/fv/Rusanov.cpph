@@ -1,21 +1,23 @@
+#include "tarch/la/Vector.h"
 
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    template<
-      int                                          numVPAIP,
-      int                                          unknowns,
-      int                                          auxiliaryVariables,
-      typename SOLVER>
+
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+template<
+  int                                          numVPAIP,
+  int                                          unknowns,
+  int                                          auxiliaryVariables,
+  typename SOLVER
+>
 void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop_Rusanov(
-      const tarch::la::Vector<Dimensions,double>&  thepatchCentre,
-      const tarch::la::Vector<Dimensions,double>&  thepatchSize,
-      double                                       t,
-      double                                       dt,
-      const double * __restrict__                  Qin,
-      double * __restrict__                        Qout
-    )
-    {
+  const tarch::la::Vector<Dimensions,double>&  thepatchCentre,
+  const tarch::la::Vector<Dimensions,double>&  thepatchSize,
+  double                                       t,
+  double                                       dt,
+  const double * __restrict__                  Qin,
+  double * __restrict__                        Qout
+) {
 
       // Sadly we cannot directly give the target region a vector due to 'non-trivially copyable'
       double x0 = thepatchCentre[0];
@@ -1198,8 +1200,18 @@ void exahype2::fv::Fusanov_2D(
       const double                   h1 =  pV.h1[pidx];
       double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
 
+/*
       const tarch::la::Vector<2 ,double> volumeH = {h0/numVPAIP,h1/numVPAIP};
       tarch::la::Vector<2,double> volumeX = {x0-0.5*h0, x1-0.5*h1};
+*/
+
+
+      tarch::la::Vector<2 ,double> volumeH;
+      volumeH(0) = h0/numVPAIP;
+      volumeH(1) = h1/numVPAIP;
+      tarch::la::Vector<2,double> volumeX;
+      volumeX(0) = x0-0.5*h0;
+      volumeX(1) = x1-0.5*h1;
 
       volumeX(0) += x * volumeH(0);
       volumeX(1) += (y + 0.5) * volumeH(1);
@@ -1215,6 +1227,7 @@ void exahype2::fv::Fusanov_2D(
       double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
       if (not skipFluxEvaluation) {
+        #pragma forceinline recursive
         SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL, SOLVER::Offloadable::Yes );
         SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR, SOLVER::Offloadable::Yes );
       }

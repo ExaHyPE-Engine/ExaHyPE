@@ -250,6 +250,7 @@ tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::
  * significantly. However, I did encounter numerous problems
  * whenever I tried to use it in combination with GPUs.
  */
+/*
 #if !defined(OpenMPGPUOffloading)
 namespace tarch {
   namespace la {
@@ -261,6 +262,7 @@ namespace tarch {
   }
 }
 #endif
+*/
 
 
 
