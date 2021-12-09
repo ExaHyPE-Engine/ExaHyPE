@@ -9,6 +9,9 @@
 #include "tarch/la/la.h"
 
 
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
+
 #include <string>
 #include <bitset>
 #include <initializer_list>
@@ -77,7 +80,15 @@ struct tarch::la::Vector {
     Scalar _values[Size];
 
   public:
-    Vector();
+    /**
+     * Clang requires the always_inline attribute, as it otherwise makes weird decisions.
+     */
+    Vector()
+    #ifdef UseManualInlining
+    __attribute__((always_inline))
+    #endif
+    = default;
+
 
     Vector( const Scalar* values );
 
@@ -97,7 +108,11 @@ struct tarch::la::Vector {
      * We do not allow assignment of a vector this itself. Consequently, we can
      * insert an ivdep statement and thus allow the compiler to optimise.
      */
-    Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign);
+    inline Vector<Size,Scalar>& operator= (const Vector<Size,Scalar>& toAssign)
+    #ifdef UseManualInlining
+    __attribute__((always_inline))
+    #endif
+    ;
 
     /**
      * Copy constructor to copy from any vector type.

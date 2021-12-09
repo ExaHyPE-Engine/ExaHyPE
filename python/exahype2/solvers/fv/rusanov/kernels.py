@@ -443,7 +443,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define.
+     * lacks an inline define. Also, if you don't want to use ipo aggressively,
+     * it might be clever to put the implementation into the header.
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -480,7 +481,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% if FLUX_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define.
+     * lacks an inline define. Also, if you don't want to use ipo aggressively,
+     * it might be clever to put the implementation into the header.
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -514,7 +516,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% if NCP_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define.
+     * lacks an inline define. Also, if you don't want to use ipo aggressively,
+     * it might be clever to put the implementation into the header.
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
@@ -550,7 +553,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     {% if SOURCE_TERM_IMPLEMENTATION!="<user-defined>" and STATELESS_PDE_TERMS %}
     /**
      * Depending on the implementation, this variant might be slow as it 
-     * lacks an inline define.
+     * lacks an inline define. Also, if you don't want to use ipo aggressively,
+     * it might be clever to put the implementation into the header.
      */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target

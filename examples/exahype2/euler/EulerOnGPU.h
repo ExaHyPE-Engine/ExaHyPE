@@ -11,6 +11,7 @@
 
 #include "AbstractEulerOnGPU.h"
 #include "tarch/logging/Log.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 
 namespace examples {namespace exahype2 {namespace euler {
@@ -126,14 +127,32 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static double maxEigenvalue(
+    static inline double maxEigenvalue(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
       int                                          normal,
       Offloadable
-    );
+    )
+    #ifdef UseManualInlining
+    __attribute__((always_inline))
+    #endif
+    {
+      constexpr double gamma = 1.4;
+      const double irho = 1./Q[0];
+      #if Dimensions==3
+      const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3]));
+      #else
+      const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
+      #endif
+
+      const double u_n = Q[normal + 1] * irho;
+      const double c   = std::sqrt(gamma * p * irho);
+
+      double result = std::max( std::abs(u_n - c), std::abs(u_n + c) );
+      return result;
+    }
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
@@ -144,7 +163,7 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static void flux(
+    static inline void flux(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -152,7 +171,11 @@ class examples::exahype2::euler::EulerOnGPU: public AbstractEulerOnGPU {
       int                                          normal,
       double * __restrict__                        F, // F[5]
       Offloadable
-    ) {
+    )
+    #ifdef UseManualInlining
+    __attribute__((always_inline))
+    #endif
+    {
       constexpr double gamma = 1.4;
       const double irho = 1./Q[0];
       #if Dimensions==3

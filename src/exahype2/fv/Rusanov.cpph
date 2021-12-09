@@ -799,7 +799,7 @@ void exahype2::fv::Fusanov_3D(
   const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
   const int helper = numVPAIP+haloSize*2;
 
-  #pragma omp simd collapse(5)
+  #pragma omp simd collapse(5) safelen(numVPAIP*numVPAIP*numVPAIP)
   for (int pidx=0;pidx<NPT;pidx++)
   for (int z = 0; z < numVPAIP; z++)
   for (int y = 0; y < numVPAIP; y++)
@@ -822,7 +822,7 @@ void exahype2::fv::Fusanov_3D(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp simd collapse(4)
+    #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP*numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int z = 0; z < numVPAIP; z++)
     for (int y = 0; y < numVPAIP; y++)
@@ -861,7 +861,7 @@ void exahype2::fv::Fusanov_3D(
     }
 
     for (int shift = 0; shift < 2; shift++) {
-      #pragma omp simd collapse(4)
+      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int x = shift; x <= numVPAIP; x += 2)
       for (int z = 0; z < numVPAIP; z++)
@@ -957,7 +957,7 @@ void exahype2::fv::Fusanov_3D(
         }
       }
 
-      #pragma omp simd collapse(4)
+      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int y = shift; y <= numVPAIP; y += 2)
       for (int z = 0; z < numVPAIP; z++)
@@ -1053,7 +1053,7 @@ void exahype2::fv::Fusanov_3D(
         }
       }
 
-      #pragma omp simd collapse(4)
+      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int z = shift; z <= numVPAIP; z += 2)
       for (int y = 0; y < numVPAIP; y++)
@@ -1213,8 +1213,8 @@ void exahype2::fv::Fusanov_2D(
   }
 
   if (not skipSourceTerm) {
+    #pragma omp simd collapse(3)  safelen(numVPAIP*numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
-    #pragma omp simd collapse(2)
     for (int x = 0; x < numVPAIP; x++)
     for (int y = 0; y < numVPAIP; y++) {
       const double                    t =   pV.t[pidx];
@@ -1246,7 +1246,7 @@ void exahype2::fv::Fusanov_2D(
 
   for (int shift = 0; shift < 2; shift++)
   {
-    #pragma omp simd collapse(3) safelen(8)
+    #pragma omp simd collapse(3)  safelen(numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = shift; x <= numVPAIP; x += 2)
     for (int y = 0; y < numVPAIP; y++) 
@@ -1285,7 +1285,7 @@ void exahype2::fv::Fusanov_2D(
       const int normal = 0;
 
       double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
-   if (not skipFluxEvaluation) {
+      if (not skipFluxEvaluation) {
         #pragma forceinline recursive
         SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL, SOLVER::Offloadable::Yes );
         #pragma forceinline recursive
@@ -1304,9 +1304,9 @@ void exahype2::fv::Fusanov_2D(
         SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes );
       }
 
-        #pragma forceinline recursive
+      #pragma forceinline recursive
       double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes );
-        #pragma forceinline recursive
+      #pragma forceinline recursive
       double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes );
       double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
@@ -1329,7 +1329,7 @@ void exahype2::fv::Fusanov_2D(
       }
     }
 
-    #pragma omp simd collapse(3) safelen(8)
+    #pragma omp simd collapse(3) safelen(numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int y = shift; y <= numVPAIP; y += 2)
     for (int x = 0;     x <  numVPAIP; x++   )
@@ -1391,9 +1391,9 @@ void exahype2::fv::Fusanov_2D(
         SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes );
       }
 
-        #pragma forceinline recursive
+      #pragma forceinline recursive
       double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes );
-        #pragma forceinline recursive
+      #pragma forceinline recursive
       double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes );
       double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
 
