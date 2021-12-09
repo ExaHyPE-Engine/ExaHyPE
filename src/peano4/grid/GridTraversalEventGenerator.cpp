@@ -335,12 +335,12 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
         event.setFaceDataTo(i,stackNumber);
         break;
       case FaceType::Delete:
-            if ( PeanoCurve::isInOutStack(stackNumber) ) {
+        if ( PeanoCurve::isInOutStack(stackNumber) ) {
           event.setFaceDataTo(i,TraversalObserver::CreateOrDestroyPersistentGridEntity);
-            }
-            else {
+        }
+        else {
           event.setFaceDataTo(i,stackNumber);
-            }
+        }
         break;
     }
 
@@ -408,11 +408,9 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     spacetreeState==SpacetreeState::EmptyRun or
     spacetreeState==SpacetreeState::NewFromSplit
   ) {
-/*
     result.setVertexDataFrom(TraversalObserver::NoData);
     result.setFaceDataFrom(TraversalObserver::NoData);
     result.setCellData(TraversalObserver::NoData);
-*/
   }
 
   return result;
