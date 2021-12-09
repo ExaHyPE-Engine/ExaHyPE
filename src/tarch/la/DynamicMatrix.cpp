@@ -216,10 +216,10 @@ void tarch::la::DynamicMatrix::batchedMultiplyAoS( double* result, double* x, in
   std::fill_n(result,resultSize*batchSize,0.0);
 
   for (int col=0; col<_cols; col++) {
-    #ifdef SharedOMP
-    #pragma omp simd collapse(2)
-    #endif
     for (int rowInResult=0; rowInResult<resultSize; rowInResult++)
+    #ifdef SharedOMP
+    #pragma omp simd
+    #endif
     for (int i=0; i<batchSize; i++)
     {
       assertion3(rowInResult + firstRow<_rows,  batchSize, resultSize, firstRow);
