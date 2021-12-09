@@ -17,6 +17,8 @@
 #define UseTestSpecificCompilerSettings
 
 
+#error Not here
+
 #ifndef noCompilerICC
   #define CompilerICC
 #endif
