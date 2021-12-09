@@ -78,6 +78,10 @@ peano4::grid::Spacetree::Spacetree(
   _root.setInverted( traversalInverted );
   _root.setEvenFlags( std::bitset<Dimensions>(0) );
 
+  for (int i=0; i<DimensionsTimesTwo; i++) {
+    _root.setAccessNumber( i,0 );
+  }
+
   _statistics.setStationarySweeps(-NumberOfStationarySweepsToWaitAtLeastTillJoin - 2);
   clear( _statistics, _id==0 );
 
@@ -142,6 +146,11 @@ bool peano4::grid::Spacetree::isSpacetreeNodeLocal(
 
 void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledFromSpacetreeSet ) {
   logTraceIn( "traverse(TraversalObserver)" );
+
+  for (int d=0; d<TwoTimesD; d++) {
+    assertion2( _root.getAccessNumber(d)>-2*Dimensions, d, _root.toString() );
+    assertion2( _root.getAccessNumber(d)< 2*Dimensions, d, _root.toString() );
+  }
 
   if (calledFromSpacetreeSet) {
     assertion( _joinTriggered.empty() or _splitTriggered.empty() );
@@ -271,8 +280,8 @@ void peano4::grid::Spacetree::traverse(TraversalObserver& observer, bool calledF
 void peano4::grid::Spacetree::refineState(const AutomatonState& coarseGrid, AutomatonState fineGridStates[ThreePowerD], tarch::la::Vector<Dimensions,int>  fineGridStatesPosition, int  axis ) {
   if (axis == -1) {
     int arrayIndex       = peano4::utils::dLinearised(fineGridStatesPosition,3);
-	fineGridStates[arrayIndex] = coarseGrid;
-	fineGridStates[arrayIndex].setLevel( coarseGrid.getLevel()+1 );
+    fineGridStates[arrayIndex] = coarseGrid;
+    fineGridStates[arrayIndex].setLevel( coarseGrid.getLevel()+1 );
   }
   else {
     assertion( axis >= 0 );
@@ -311,6 +320,15 @@ void peano4::grid::Spacetree::refineState(const AutomatonState& coarseGrid, Auto
     fineGridStatesPosition(axis) = 2;
     thirdCell.setX( axis, coarseGrid.getX(axis) + 2.0 * coarseGrid.getH(axis)/3.0 );
     refineState(thirdCell,fineGridStates,fineGridStatesPosition,axis-1);
+  }
+
+  if (axis==Dimensions-1) {
+    for (int i=0; i<ThreePowerD; i++) {
+      for (int d=0; d<TwoTimesD; d++) {
+        assertion6( fineGridStates[i].getAccessNumber(d)>-2*Dimensions, i, d, fineGridStates[i].toString(), coarseGrid.toString(), ThreePowerD, TwoTimesD );
+        assertion6( fineGridStates[i].getAccessNumber(d)< 2*Dimensions, i, d, fineGridStates[i].toString(), coarseGrid.toString(), ThreePowerD, TwoTimesD );
+      }
+    }
   }
 }
 
