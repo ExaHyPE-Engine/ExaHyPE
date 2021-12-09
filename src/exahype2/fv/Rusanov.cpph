@@ -822,10 +822,11 @@ void exahype2::fv::Fusanov_3D(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP*numVPAIP)
+//    #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP*numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int z = 0; z < numVPAIP; z++)
     for (int y = 0; y < numVPAIP; y++)
+    #pragma omp simd
     for (int x = 0; x < numVPAIP; x++) {
       const double                    t =   pV.t[pidx];
       const double                   dt =  pV.dt[pidx];
@@ -861,10 +862,11 @@ void exahype2::fv::Fusanov_3D(
     }
 
     for (int shift = 0; shift < 2; shift++) {
-      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
+//      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int x = shift; x <= numVPAIP; x += 2)
       for (int z = 0; z < numVPAIP; z++)
+      #pragma omp simd
       for (int y = 0; y < numVPAIP; y++) {
         const double                    t =   pV.t[pidx];
         const double                   dt =  pV.dt[pidx];
@@ -957,10 +959,11 @@ void exahype2::fv::Fusanov_3D(
         }
       }
 
-      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
+//      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int y = shift; y <= numVPAIP; y += 2)
       for (int z = 0; z < numVPAIP; z++)
+      #pragma omp simd
       for (int x = 0; x < numVPAIP; x++) {
         const double                    t =   pV.t[pidx];
         const double                   dt =  pV.dt[pidx];
@@ -1053,10 +1056,11 @@ void exahype2::fv::Fusanov_3D(
         }
       }
 
-      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
+//      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
       for (int pidx=0;pidx<NPT;pidx++)
       for (int z = shift; z <= numVPAIP; z += 2)
       for (int y = 0; y < numVPAIP; y++)
+      #pragma omp simd
       for (int x = 0; x < numVPAIP; x++) {
         const double                    t =   pV.t[pidx];
         const double                   dt =  pV.dt[pidx];
@@ -1172,11 +1176,6 @@ void exahype2::fv::Fusanov_2D(
   const size_t LTOT = NPT*destPatchSize;
   const size_t LR   = NPT*sourcePatchSize;
 
-//  const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
-//  const int helper = numVPAIP+haloSize*2;
-
-
-
     // We originally wanted to write something like this:
     //
     //   const tarch::la::Vector<2 ,double> volumeH = {h0/numVPAIP,h1/numVPAIP};
@@ -1213,9 +1212,9 @@ void exahype2::fv::Fusanov_2D(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp simd collapse(3)  safelen(numVPAIP*numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = 0; x < numVPAIP; x++)
+    #pragma omp simd
     for (int y = 0; y < numVPAIP; y++) {
       const double                    t =   pV.t[pidx];
       const double                   dt =  pV.dt[pidx];
@@ -1246,9 +1245,10 @@ void exahype2::fv::Fusanov_2D(
 
   for (int shift = 0; shift < 2; shift++)
   {
-    #pragma omp simd collapse(3)  safelen(numVPAIP)
+    //#pragma omp simd collapse(3)  safelen(numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = shift; x <= numVPAIP; x += 2)
+    #pragma omp simd
     for (int y = 0; y < numVPAIP; y++) 
     {
       const double                    t =   pV.t[pidx];
@@ -1329,9 +1329,10 @@ void exahype2::fv::Fusanov_2D(
       }
     }
 
-    #pragma omp simd collapse(3) safelen(numVPAIP)
+//    #pragma omp simd collapse(3) safelen(numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int y = shift; y <= numVPAIP; y += 2)
+    #pragma simd
     for (int x = 0;     x <  numVPAIP; x++   )
     {
       const double                    t =   pV.t[pidx];
