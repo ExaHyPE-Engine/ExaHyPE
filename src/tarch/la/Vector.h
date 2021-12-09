@@ -248,7 +248,10 @@ tarch::la::Vector<Size,NewScalarType> tarch::la::convertScalar(const tarch::la::
 /**
  * Explicit instantiation speeds up the translation process 
  * significantly. However, I did encounter numerous problems
- * whenever I tried to use it in combination with GPUs.
+ * whenever I tried to use it in combination with GPUs. Also,
+ * we saw that the explicit instantiation stops the compiler
+ * from inlining the corresponding linear algebra calls. So
+ * we decided to remove this again.
  */
 /*
 #if !defined(OpenMPGPUOffloading)
