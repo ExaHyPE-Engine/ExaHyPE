@@ -204,7 +204,7 @@ thus appreciate any citation of the original release paper
          }   
        } 
 
-   
+
 """ )
 
     for i in self._solvers:
