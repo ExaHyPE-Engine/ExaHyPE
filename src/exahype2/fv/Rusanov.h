@@ -52,15 +52,7 @@ namespace exahype2 {
 
 
     /**
-     * Fused kernel that supports execution on CPUs. The kernel tries to collapse all
-     * the loops where only possible. If you work with OpenMP, the kernel tries to use
-     * aggressive SIMD, too. However, it does not use any parallel for. We found that
-     * such nested parallelism slows down the code massively or even introduces
-     * deadlocks. It also makes no sense, as we always issue fused tasks within OpenMP
-     * tasks, and as OpenMP tasks so far cannot span multiple cores/threads. So we
-     * rely on aggressive vectorisation but do not introduce any SIMT-like parallelism
-     * for this fused variant, while the GPU variant (below) operates exactly the other
-     * way round.
+     * @see Fusanov_3D()
      */
     template<
       int      numVPAIP, // numberofVolumesPerAxisInPatch
@@ -105,12 +97,67 @@ namespace exahype2 {
     );
 
 
+
     /**
      * Variant of the 3d optimised, fused kernel which is tailored to the CPU.
      * The kernel tries to collapse all loops and makes aggressive use of OpenMP
      * SIMDsation.
      *
-     * @see Fusanov_2D for details on the CPU optimisation.
+     * The kernel tries to collapse all the loops where only possible and uses
+     * aggressive SIMD. However, it does not use any parallel for. We found that
+     * such nested parallelism slows down the code massively or even introduces
+     * deadlocks. It also makes no sense, as we always issue fused tasks within OpenMP
+     * tasks, and as OpenMP tasks so far cannot span multiple cores/threads. So we
+     * rely on aggressive vectorisation but do not introduce any SIMT-like parallelism
+     * for this fused variant, while the GPU variant (below) operates exactly the other
+     * way round.
+     *
+     * The individual vectorisation challenges can be very tricky and are discussed
+     * below:
+     *
+     * ## Copy solution
+     *
+     * This part is simple. Indeed, we can collapse all five nested loops. It is
+     * important to collapse, as the collapsing allows the compiler to reorder
+     * the loop ranges and, hence, to ensure that all data accesses are continuous.
+     *
+     * ## Source term
+     *
+     * This part is skipped completely if there is no source term.
+     * @todo
+     *
+     * ## Flux terms
+     *
+     * We assume that we always have a conservative flux or an ncp term. Therefore,
+     * we always run through this loop and make the flux vs ncp decision within the
+     * loop.
+     *
+     * We found that there's no way to collapse the flux loops. We have played
+     * around quite a lot with instructions alike
+     *
+     *       #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
+     *
+     * None of them gave us a vectorised code. Even once we had eliminated the key
+     * challenge prohibiting vectorisation:
+     *
+     * If we vectorise over the faces, we have gather data from the left and right
+     * cell of a face. Left and right are likely not continuous in memory. So we
+     * have a gather here. That seems
+     *
+     * ## Optimisation aspect within user solvers
+     *
+     * All solver calls are explicitly inlined, though the corresponding Clang
+     * pragma seems to be widely ignored. We found that the 2022 versions of Intel's
+     * Clang tools require the flux, ncp, source and eigenvalue functions to be
+     * marked with the attribute
+     *
+     *      __attribute__((force_inline))
+     *
+     * If this attribute is missing, the compiler does not manage to inline. For
+     * whatever reason. Might be that we need some fancy ipo magic, but then this is
+     * weird as we work within templates and with header files here.
+     *
+     * @see Fusanov_2D() for details on the CPU optimisation.
      */
     template<
       int                                          numVPAIP, //numberofVolumesPerAxisInPatch,

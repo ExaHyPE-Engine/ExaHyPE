@@ -792,6 +792,7 @@ void exahype2::fv::Fusanov_3D(
   int          sourcePatchSize,
   int          destPatchSize
 ) {
+  std::cout << std::endl << "X(a): " << skipFluxEvaluation << ", " << skipNCPEvaluation << ", " << skipSourceTerm << std::endl;
   const size_t NPT  = pV.npatches;
   const size_t LTOT = NPT*destPatchSize;
   const size_t LR   = NPT*sourcePatchSize;
@@ -822,11 +823,11 @@ void exahype2::fv::Fusanov_3D(
   }
 
   if (not skipSourceTerm) {
-//    #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP*numVPAIP)
+    #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP*numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int z = 0; z < numVPAIP; z++)
     for (int y = 0; y < numVPAIP; y++)
-    #pragma omp simd
+//    #pragma omp simd
     for (int x = 0; x < numVPAIP; x++) {
       const double                    t =   pV.t[pidx];
       const double                   dt =  pV.dt[pidx];
@@ -860,300 +861,297 @@ void exahype2::fv::Fusanov_3D(
         pV.result[pidx*destPatchSize + voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * sourceTermContributions[unknown];
       }
     }
+  }
 
-    for (int shift = 0; shift < 2; shift++) {
-//      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
-      for (int pidx=0;pidx<NPT;pidx++)
-      for (int x = shift; x <= numVPAIP; x += 2)
-      for (int z = 0; z < numVPAIP; z++)
-      #pragma omp simd
-      for (int y = 0; y < numVPAIP; y++) {
-        const double                    t =   pV.t[pidx];
-        const double                   dt =  pV.dt[pidx];
-        const int                  taskId = pV.id[pidx];
-        const double                   x0 =  pV.x0[pidx];
-        const double                   h0 =  pV.h0[pidx];
-        const double                   x1 =  pV.x1[pidx];
-        const double                   h1 =  pV.h1[pidx];
-        const double                   x2 =  pV.x2[pidx];
-        const double                   h2 =  pV.h2[pidx];
-        double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
+  for (int shift = 0; shift < 2; shift++) {
+    for (int pidx=0;pidx<NPT;pidx++)
+    for (int x = shift; x <= numVPAIP; x += 2)
+    for (int y = 0; y < numVPAIP; y++)
+    #pragma omp simd
+    for (int z = 0; z < numVPAIP; z++) {
+      const double                    t =   pV.t[pidx];
+      const double                   dt =  pV.dt[pidx];
+      const int                  taskId = pV.id[pidx];
+      const double                   x0 =  pV.x0[pidx];
+      const double                   h0 =  pV.h0[pidx];
+      const double                   x1 =  pV.x1[pidx];
+      const double                   h1 =  pV.h1[pidx];
+      const double                   x2 =  pV.x2[pidx];
+      const double                   h2 =  pV.h2[pidx];
+      double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
 
-        const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
-        const int helper = numVPAIP+haloSize*2;
+      const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
+      const int helper = numVPAIP+haloSize*2;
         //tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
         //tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
-
-        tarch::la::Vector<Dimensions,double> patchCentre;
-        tarch::la::Vector<Dimensions,double> patchSize;
-        patchCentre(0) = x0;
-        patchCentre(1) = x1;
-        patchCentre(2) = x2;
-        patchSize(0) = h0;
-        patchSize(1) = h1;
-        patchSize(2) = h2;
+      tarch::la::Vector<Dimensions,double> patchCentre;
+      tarch::la::Vector<Dimensions,double> patchSize;
+      patchCentre(0) = x0;
+      patchCentre(1) = x1;
+      patchCentre(2) = x2;
+      patchSize(0) = h0;
+      patchSize(1) = h1;
+      patchSize(2) = h2;
 
         //tarch::la::Vector<Dimensions,double> volumeH = {sf*patchSize(0),sf*patchSize(1),sf*patchSize(2)};
-        tarch::la::Vector<Dimensions,double> volumeH;
-        volumeH(0) = patchSize(0)/numVPAIP;
-        volumeH(1) = patchSize(1)/numVPAIP;
-        volumeH(2) = patchSize(2)/numVPAIP;
+      tarch::la::Vector<Dimensions,double> volumeH;
+      volumeH(0) = patchSize(0)/numVPAIP;
+      volumeH(1) = patchSize(1)/numVPAIP;
+      volumeH(2) = patchSize(2)/numVPAIP;
 
 
         //tarch::la::Vector<Dimensions, double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1), patchCentre(2)-0.5*patchSize(2)};
-        tarch::la::Vector<Dimensions, double> volumeX;
-        volumeX (0) = patchCentre(0)-0.5*patchSize(0) + x * volumeH (0);
-        volumeX (1) = patchCentre(1)-0.5*patchSize(1) + (y + 0.5) * volumeH (1);
-        volumeX (2) = patchCentre(2)-0.5*patchSize(2) + (z + 0.5) * volumeH (2);
+      tarch::la::Vector<Dimensions, double> volumeX;
+      volumeX (0) = patchCentre(0)-0.5*patchSize(0) + x * volumeH (0);
+      volumeX (1) = patchCentre(1)-0.5*patchSize(1) + (y + 0.5) * volumeH (1);
+      volumeX (2) = patchCentre(2)-0.5*patchSize(2) + (z + 0.5) * volumeH (2);
 
-        int leftVoxelInPreimage  = x      + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
-        int rightVoxelInPreimage = x + 1  + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
-        double* QL = reconstructedPatch + leftVoxelInPreimage  * (unknowns + auxiliaryVariables);
-        double* QR = reconstructedPatch + rightVoxelInPreimage * (unknowns + auxiliaryVariables);
+      int leftVoxelInPreimage  = x      + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+      int rightVoxelInPreimage = x + 1  + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+      double* QL = reconstructedPatch + leftVoxelInPreimage  * (unknowns + auxiliaryVariables);
+      double* QR = reconstructedPatch + rightVoxelInPreimage * (unknowns + auxiliaryVariables);
 
-        auto dx = volumeH(0);
-        int normal = 0;
+      auto dx = volumeH(0);
+      int normal = 0;
 
-        double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
+      double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
-        if (not skipFluxEvaluation) {
-          #pragma forceinline recursive
-          SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL , SOLVER::Offloadable::Yes);
-          #pragma forceinline recursive
-          SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR , SOLVER::Offloadable::Yes);
-        }
-
-        if (not skipNCPEvaluation) {
-          double Qaverage[unknowns+auxiliaryVariables];
-          double deltaQ[unknowns+auxiliaryVariables];
-
-          for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-            Qaverage[unknown] = *(QL+unknown)*0.5 + *(QR +unknown)*0.5;
-            deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
-          }
-          #pragma forceinline recursive
-          SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
-        }
-
+      if (not skipFluxEvaluation) {
         #pragma forceinline recursive
-        double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+        SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL , SOLVER::Offloadable::Yes);
         #pragma forceinline recursive
-        double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
-        double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
-
-        const int leftVoxelInImage     = x - 1  +       y * numVPAIP       +       z * numVPAIP * numVPAIP;
-        const int rightVoxelInImage(x      +       y * numVPAIP       +       z * numVPAIP * numVPAIP);
-        for (int unknown = 0; unknown < unknowns; unknown++) {
-          if (x > 0) {
-            double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
-            if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
-            if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
-            pV.result[pidx*destPatchSize + leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown]  -= dt / volumeH (0) * fl;
-          }
-          if (x < numVPAIP) {
-            double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
-            if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
-            if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
-            pV.result[pidx*destPatchSize + rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
-          }
-        }
+        SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR , SOLVER::Offloadable::Yes);
       }
 
-//      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
-      for (int pidx=0;pidx<NPT;pidx++)
-      for (int y = shift; y <= numVPAIP; y += 2)
-      for (int z = 0; z < numVPAIP; z++)
-      #pragma omp simd
-      for (int x = 0; x < numVPAIP; x++) {
-        const double                    t =   pV.t[pidx];
-        const double                   dt =  pV.dt[pidx];
-        const int                  taskId = pV.id[pidx];
-        const double                   x0 =  pV.x0[pidx];
-        const double                   h0 =  pV.h0[pidx];
-        const double                   x1 =  pV.x1[pidx];
-        const double                   h1 =  pV.h1[pidx];
-        const double                   x2 =  pV.x2[pidx];
-        const double                   h2 =  pV.h2[pidx];
-        double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
+      if (not skipNCPEvaluation) {
+        double Qaverage[unknowns+auxiliaryVariables];
+        double deltaQ[unknowns+auxiliaryVariables];
 
-        const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
-        const int helper = numVPAIP+haloSize*2;
+        #pragma omp simd
+        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+          Qaverage[unknown] = *(QL+unknown)*0.5 + *(QR +unknown)*0.5;
+          deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
+        }
+        #pragma forceinline recursive
+        SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
+      }
+
+      #pragma forceinline recursive
+      double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+      #pragma forceinline recursive
+      double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+      double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+
+      const int leftVoxelInImage     = x - 1  +       y * numVPAIP       +       z * numVPAIP * numVPAIP;
+      const int rightVoxelInImage(x      +       y * numVPAIP       +       z * numVPAIP * numVPAIP);
+
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        if (x > 0) {
+          double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+          if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+          if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
+          pV.result[pidx*destPatchSize + leftVoxelInImage * (unknowns + auxiliaryVariables) + unknown]  -= dt / volumeH (0) * fl;
+        }
+        if (x < numVPAIP) {
+          double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+          if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+          if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
+          pV.result[pidx*destPatchSize + rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
+        }
+      }
+    } // close loop over faces with normal along x-axis
+
+    for (int pidx=0;pidx<NPT;pidx++)
+    for (int y = shift; y <= numVPAIP; y += 2)
+    for (int z = 0; z < numVPAIP; z++)
+    #pragma omp simd
+    for (int x = 0; x < numVPAIP; x++) {
+      const double                    t =   pV.t[pidx];
+      const double                   dt =  pV.dt[pidx];
+      const int                  taskId = pV.id[pidx];
+      const double                   x0 =  pV.x0[pidx];
+      const double                   h0 =  pV.h0[pidx];
+      const double                   x1 =  pV.x1[pidx];
+      const double                   h1 =  pV.h1[pidx];
+      const double                   x2 =  pV.x2[pidx];
+      const double                   h2 =  pV.h2[pidx];
+      double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
+
+      const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
+      const int helper = numVPAIP+haloSize*2;
         //tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
         //tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
 
-        tarch::la::Vector<Dimensions,double> patchCentre;
-        tarch::la::Vector<Dimensions,double> patchSize;
-        patchCentre(0) = x0;
-        patchCentre(1) = x1;
-        patchCentre(2) = x2;
-        patchSize(0) = h0;
-        patchSize(1) = h1;
-        patchSize(2) = h2;
+      tarch::la::Vector<Dimensions,double> patchCentre;
+      tarch::la::Vector<Dimensions,double> patchSize;
+      patchCentre(0) = x0;
+      patchCentre(1) = x1;
+      patchCentre(2) = x2;
+      patchSize(0) = h0;
+      patchSize(1) = h1;
+      patchSize(2) = h2;
 
 //        tarch::la::Vector<Dimensions,double> volumeH = {patchSize(0)/numVPAIP,patchSize(1)/numVPAIP,patchSize(2)/numVPAIP};
-        tarch::la::Vector<Dimensions,double> volumeH;
-        volumeH(0) = patchSize(0)/numVPAIP;
-        volumeH(1) = patchSize(1)/numVPAIP;
-        volumeH(2) = patchSize(2)/numVPAIP;
+      tarch::la::Vector<Dimensions,double> volumeH;
+      volumeH(0) = patchSize(0)/numVPAIP;
+      volumeH(1) = patchSize(1)/numVPAIP;
+      volumeH(2) = patchSize(2)/numVPAIP;
 
         //tarch::la::Vector<Dimensions,double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1), patchCentre(2)-0.5*patchSize(2)};
-        tarch::la::Vector<Dimensions,double> volumeX;
-        volumeX(0) = patchCentre(0)-0.5*patchSize(0) + (x + 0.5) * volumeH(0);
-        volumeX(1) = patchCentre(1)-0.5*patchSize(1) +         y * volumeH(1);
-        volumeX(2) = patchCentre(2)-0.5*patchSize(2) + (z + 0.5) * volumeH(2);
+      tarch::la::Vector<Dimensions,double> volumeX;
+      volumeX(0) = patchCentre(0)-0.5*patchSize(0) + (x + 0.5) * volumeH(0);
+      volumeX(1) = patchCentre(1)-0.5*patchSize(1) +         y * volumeH(1);
+      volumeX(2) = patchCentre(2)-0.5*patchSize(2) + (z + 0.5) * volumeH(2);
 
-        const int lowerVoxelInPreimage = x + 1 +       y * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
-        const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
-        const int lowerVoxelInImage    = x     + (y - 1) * numVPAIP       + z * numVPAIP * numVPAIP;
-        const int upperVoxelInImage = x + y * numVPAIP                    + z * numVPAIP * numVPAIP;
+      const int lowerVoxelInPreimage = x + 1 +       y * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+      const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+      const int lowerVoxelInImage    = x     + (y - 1) * numVPAIP       + z * numVPAIP * numVPAIP;
+      const int upperVoxelInImage = x + y * numVPAIP                    + z * numVPAIP * numVPAIP;
 
-        auto QL = reconstructedPatch + lowerVoxelInPreimage * (unknowns + auxiliaryVariables);
-        auto QR = reconstructedPatch + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
+      auto QL = reconstructedPatch + lowerVoxelInPreimage * (unknowns + auxiliaryVariables);
+      auto QR = reconstructedPatch + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
 
-        auto dx = volumeH(0);
-        int normal = 1;
+      auto dx = volumeH(0);
+      int normal = 1;
 
-        double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
+      double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
-        if (not skipFluxEvaluation) {
-          #pragma forceinline recursive
-          SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL, SOLVER::Offloadable::Yes );
-          #pragma forceinline recursive
-          SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR, SOLVER::Offloadable::Yes );
-        }
-
-        if (not skipNCPEvaluation) {
-          double Qaverage[unknowns+auxiliaryVariables];
-          double deltaQ[unknowns+auxiliaryVariables];
-
-          for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-            Qaverage[unknown] = *(QL+unknown)*0.5 + *(QR +unknown)*0.5;
-            deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
-          }
-          #pragma forceinline recursive
-          SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
-        }
-
+      if (not skipFluxEvaluation) {
         #pragma forceinline recursive
-        double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+        SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL, SOLVER::Offloadable::Yes );
         #pragma forceinline recursive
-        double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
-        double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
-
-        for (int unknown = 0; unknown < unknowns; unknown++) {
-          if (y > 0) {
-            double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
-            if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
-            if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
-            pV.result[pidx*destPatchSize + lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
-          }
-          if (y < numVPAIP) {
-            double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
-            if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
-            if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
-            pV.result[pidx*destPatchSize + upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
-          }
-        }
+        SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR, SOLVER::Offloadable::Yes );
       }
 
-//      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
-      for (int pidx=0;pidx<NPT;pidx++)
-      for (int z = shift; z <= numVPAIP; z += 2)
-      for (int y = 0; y < numVPAIP; y++)
-      #pragma omp simd
-      for (int x = 0; x < numVPAIP; x++) {
-        const double                    t =   pV.t[pidx];
-        const double                   dt =  pV.dt[pidx];
-        const int                  taskId = pV.id[pidx];
-        const double                   x0 =  pV.x0[pidx];
-        const double                   h0 =  pV.h0[pidx];
-        const double                   x1 =  pV.x1[pidx];
-        const double                   h1 =  pV.h1[pidx];
-        const double                   x2 =  pV.x2[pidx];
-        const double                   h2 =  pV.h2[pidx];
-        double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
+      if (not skipNCPEvaluation) {
+        double Qaverage[unknowns+auxiliaryVariables];
+        double deltaQ[unknowns+auxiliaryVariables];
+        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+          Qaverage[unknown] = *(QL+unknown)*0.5 + *(QR +unknown)*0.5;
+          deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
+        }
+        #pragma forceinline recursive
+        SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
+      }
 
-        const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
-        const int helper = numVPAIP+haloSize*2;
+      #pragma forceinline recursive
+      double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+      #pragma forceinline recursive
+      double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+      double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        if (y > 0) {
+          double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+          if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+          if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
+          pV.result[pidx*destPatchSize + lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
+        }
+        if (y < numVPAIP) {
+          double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+          if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+          if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
+          pV.result[pidx*destPatchSize + upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
+        }
+      }
+    } // face with normal along y-axis
+
+//      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
+    for (int pidx=0;pidx<NPT;pidx++)
+    for (int z = shift; z <= numVPAIP; z += 2)
+    for (int y = 0; y < numVPAIP; y++)
+    #pragma omp simd
+    for (int x = 0; x < numVPAIP; x++) {
+      const double                    t =   pV.t[pidx];
+      const double                   dt =  pV.dt[pidx];
+      const int                  taskId = pV.id[pidx];
+      const double                   x0 =  pV.x0[pidx];
+      const double                   h0 =  pV.h0[pidx];
+      const double                   x1 =  pV.x1[pidx];
+      const double                   h1 =  pV.h1[pidx];
+      const double                   x2 =  pV.x2[pidx];
+      const double                   h2 =  pV.h2[pidx];
+      double *reconstructedPatch = pV.reco + sourcePatchSize*pidx;
+
+      const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
+      const int helper = numVPAIP+haloSize*2;
         //tarch::la::Vector<Dimensions,double> patchCentre = {x0,x1,x2};
         //tarch::la::Vector<Dimensions,double> patchSize   = {h0,h1,h2};
 
-        tarch::la::Vector<Dimensions,double> patchCentre;
-        tarch::la::Vector<Dimensions,double> patchSize;
-        patchCentre(0) = x0;
-        patchCentre(1) = x1;
-        patchCentre(2) = x2;
-        patchSize(0) = h0;
-        patchSize(1) = h1;
-        patchSize(2) = h2;
+      tarch::la::Vector<Dimensions,double> patchCentre;
+      tarch::la::Vector<Dimensions,double> patchSize;
+      patchCentre(0) = x0;
+      patchCentre(1) = x1;
+      patchCentre(2) = x2;
+      patchSize(0) = h0;
+      patchSize(1) = h1;
+      patchSize(2) = h2;
 
-        tarch::la::Vector<Dimensions,double> volumeH;
-        volumeH(0) = patchSize(0)/numVPAIP;
-        volumeH(1) = patchSize(1)/numVPAIP;
-        volumeH(2) = patchSize(2)/numVPAIP;
+      tarch::la::Vector<Dimensions,double> volumeH;
+      volumeH(0) = patchSize(0)/numVPAIP;
+      volumeH(1) = patchSize(1)/numVPAIP;
+      volumeH(2) = patchSize(2)/numVPAIP;
 
         //tarch::la::Vector<Dimensions,double> volumeX = {patchCentre(0)-0.5*patchSize(0), patchCentre(1)-0.5*patchSize(1), patchCentre(2)-0.5*patchSize(2)};
-        tarch::la::Vector<Dimensions,double> volumeX;
-        volumeX(0) = patchCentre(0)-0.5*patchSize(0) + (x + 0.5) * volumeH(0);
-        volumeX(1) = patchCentre(1)-0.5*patchSize(1) + (y + 0.5) * volumeH(1);
-        volumeX(2) = patchCentre(2)-0.5*patchSize(2) +         z * volumeH(2);
+      tarch::la::Vector<Dimensions,double> volumeX;
+      volumeX(0) = patchCentre(0)-0.5*patchSize(0) + (x + 0.5) * volumeH(0);
+      volumeX(1) = patchCentre(1)-0.5*patchSize(1) + (y + 0.5) * volumeH(1);
+      volumeX(2) = patchCentre(2)-0.5*patchSize(2) +         z * volumeH(2);
 
-        const int lowerVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) +       z * (2 + numVPAIP) * (2 + numVPAIP);
-        const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
-        const int lowerVoxelInImage = x + y * numVPAIP                    + (z - 1) * numVPAIP * numVPAIP;
-        const int upperVoxelInImage = x + y * numVPAIP                    +       z * numVPAIP * numVPAIP;
+      const int lowerVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) +       z * (2 + numVPAIP) * (2 + numVPAIP);
+      const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+      const int lowerVoxelInImage = x + y * numVPAIP                    + (z - 1) * numVPAIP * numVPAIP;
+      const int upperVoxelInImage = x + y * numVPAIP                    +       z * numVPAIP * numVPAIP;
 
-        auto QL = reconstructedPatch + lowerVoxelInPreimage * (unknowns + auxiliaryVariables);
-        auto QR = reconstructedPatch + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
+      auto QL = reconstructedPatch + lowerVoxelInPreimage * (unknowns + auxiliaryVariables);
+      auto QR = reconstructedPatch + upperVoxelInPreimage * (unknowns + auxiliaryVariables);
 
-        auto dx = volumeH(0);
-        int normal = 2;
+      auto dx = volumeH(0);
+      int normal = 2;
 
-        double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
+      double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
 
-        if (not skipFluxEvaluation) {
-          #pragma forceinline recursive
-          SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL , SOLVER::Offloadable::Yes);
-          #pragma forceinline recursive
-          SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR , SOLVER::Offloadable::Yes);
-        }
+      if (not skipFluxEvaluation) {
+        #pragma forceinline recursive
+        SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL , SOLVER::Offloadable::Yes);
+        #pragma forceinline recursive
+        SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR , SOLVER::Offloadable::Yes);
+      }
 
-        if (not skipNCPEvaluation) {
-          double Qaverage[unknowns+auxiliaryVariables];
-          double deltaQ[unknowns+auxiliaryVariables];
-
-          for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
-            Qaverage[unknown] = *(QL+unknown)*0.5 + *(QR +unknown)*0.5;
-            deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
-          }
-
-          #pragma forceinline recursive
-          SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
+      if (not skipNCPEvaluation) {
+        double Qaverage[unknowns+auxiliaryVariables];
+        double deltaQ[unknowns+auxiliaryVariables];
+        for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
+          Qaverage[unknown] = *(QL+unknown)*0.5 + *(QR +unknown)*0.5;
+          deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
         }
 
         #pragma forceinline recursive
-        double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
-        #pragma forceinline recursive
-        double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
-        double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+        SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
+      }
 
-        for (int unknown = 0; unknown < unknowns; unknown++) {
-          if (z > 0) {
-            double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
-            if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
-            if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
-            pV.result[pidx*destPatchSize + lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
-          }
-          if (z < numVPAIP) {
-            double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
-            if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
-            if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
-            pV.result[pidx*destPatchSize + upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
-          }
+      #pragma forceinline recursive
+      double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+      #pragma forceinline recursive
+      double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+      double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+
+      for (int unknown = 0; unknown < unknowns; unknown++) {
+        if (z > 0) {
+          double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+          if (not skipFluxEvaluation) fl +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+          if (not skipNCPEvaluation)  fl += + 0.5 * fluxNCP[unknown];
+          pV.result[pidx*destPatchSize + lowerVoxelInImage * (unknowns + auxiliaryVariables) + unknown] -= dt / volumeH (0) * fl;
+        }
+        if (z < numVPAIP) {
+          double fr = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+          if (not skipFluxEvaluation) fr +=   0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+          if (not skipNCPEvaluation)  fr += - 0.5 * fluxNCP[unknown];
+          pV.result[pidx*destPatchSize + upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
         }
       }
-    }
-  }
+    } // end of face loop over faxes with normal along z-axis
+  } // end of shift loop
 };
 
 
@@ -1242,7 +1240,6 @@ void exahype2::fv::Fusanov_2D(
     }
   }
 
-
   for (int shift = 0; shift < 2; shift++)
   {
     //#pragma omp simd collapse(3)  safelen(numVPAIP)
@@ -1327,7 +1324,7 @@ void exahype2::fv::Fusanov_2D(
           pV.result[pidx*destPatchSize + rightVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
         }
       }
-    }
+    } // close loop over vertical faces
 
 //    #pragma omp simd collapse(3) safelen(numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
@@ -1412,7 +1409,7 @@ void exahype2::fv::Fusanov_2D(
           pV.result[pidx*destPatchSize + upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
         }
       }
-    }
+    } // close loop over horizontal faces
   } // close shift loop
 };
 
