@@ -340,13 +340,8 @@ def create_source_term_kernel_for_Rusanov(source_term_implementation):
     return create_user_defined_source_term_kernel()
   
     
-def create_fused_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation, source_term_implementation):
+def create_optimised_Riemann_kernel_template_arguments(flux_implementation, ncp_implementation, source_term_implementation):
   Template = jinja2.Template( """
-#if Dimensions==2
-::exahype2::fv::Fusanov_2D_with_inlining
-#elif Dimensions==3
-::exahype2::fv::Fusanov_3D_with_inlining
-#endif
   <{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}},{{SKIP_FLUX}},{{SKIP_NCP}},{{SKIP_SOURCE_TERM}}>
 """, undefined=jinja2.DebugUndefined)
   

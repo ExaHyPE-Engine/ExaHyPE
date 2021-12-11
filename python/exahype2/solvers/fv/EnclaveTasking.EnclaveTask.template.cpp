@@ -498,8 +498,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     pD.x2[i]  = currentTask->_marker.x()[2];
     pD.h2[i]  = currentTask->_marker.h()[2];
   #endif
-    pD.t[i]   = _t; // @todo This is not true likely. Could have different time steps
-    pD.dt[i]  = _dt; // @todo This is not true likely. Could have different time steps
+    pD.t[i]   = currentTask->_t;
+    pD.dt[i]  = currentTask->_dt;
     i++;
 
     delete currentTask;
@@ -519,32 +519,20 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   pD.x2[i]  = _marker.x()[2];
   pD.h2[i]  = _marker.h()[2];
 #endif
-  pD.t[i]   = _t;  // @todo This is not true likely. Could have different time steps
-  pD.dt[i]  = _dt; // @todo This is not true likely. Could have different time steps
+  pD.t[i]   = _t;
+  pD.dt[i]  = _dt;
   
-
-  //
-  // If the user specifies some pre-processing, it is inserted here. If
-  // the preprocessing is empty, this loop should be removed by the
-  // compiler.
-  //
-  //for (int i=0;i<static_cast<int>(localwork.size());i++) {
-    // const auto& marker =
-    // PREPROCESS_RECONSTRUCTED_PATCH has to go in here, but the marker can't be copied yet
-  //}
-
-  //double* destinationPatchOnCPU = ::tarch::allocateMemory(
-    //_destinationPatchSize*otherTasks.size(),
-    //::tarch::MemoryLocation::Heap
-  //);
-  //for (size_t i = 0;i<_destinationPatchSize*otherTasks.size();i++) *(destinationPatchOnCPU + i) =0;
-
   //
   // ==============
   // Invoke kernels
   // ==============
   //
   if (targetDevice<0) {
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_inlining
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_inlining
+    #endif
     {{FUSED_RIEMANN_SOLVER_CALL}}
     (
       1,
@@ -556,6 +544,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   else {
     // @todo Holger, that's where we pick the SYCL queue. We make the queues static, so they
     // are created once only.
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_OpenMP_offloading
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_OpenMP_offloading
+    #endif
     {{FUSED_RIEMANN_SOLVER_CALL}}
     (
       1,
@@ -574,12 +567,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   for (int i=0;i<pD.npatches;i++) {
     const int taskid = pD.id[i];
     double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-    //for (int j=0;j<_destinationPatchSize;j++)
-    //{
-       //targetPatch[j] = pD.result[j + i*_destinationPatchSize];
-    //}
     for (int j=0;j<_destinationPatchSize;j++) targetPatch[j] = *(pD.result + j + i*_destinationPatchSize);
-    //{{ POSTPROCESS_UPDATED_PATCH }}
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
   }
 

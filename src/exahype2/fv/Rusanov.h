@@ -41,7 +41,7 @@ namespace exahype2 {
       bool                                         skipNCPEvaluation,
       bool                                         skipSourceTerm
       >
-    void Fusanov_2D_with_accelerator_offloading(
+    void Fusanov_2D_with_OpenMP_offloading(
       const int       haloSize,
       patchData2d     pV,
       const int       sourcePatchSize,
@@ -88,7 +88,7 @@ namespace exahype2 {
       bool                                         skipNCPEvaluation,
       bool                                         skipSourceTerm
     >
-    void Fusanov_3D_with_accelerator_offloading(
+    void Fusanov_3D_with_OpenMP_offloading(
       int                                          haloSize,
       patchData3d                                  pV,
       int                                          sourcePatchSize,
