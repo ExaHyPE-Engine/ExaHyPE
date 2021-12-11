@@ -473,7 +473,7 @@ template<
   bool                                         skipNCPEvaluation,
   bool                                         skipSourceTerm
 >
-void exahype2::fv::Fusanov_3D(
+void exahype2::fv::Fusanov_3D_with_accelerator_offloading(
   int          haloSize,
   patchData3d  pV,
   int          sourcePatchSize,
@@ -786,7 +786,7 @@ template<
   bool         skipNCPEvaluation,
   bool         skipSourceTerm
 >
-void exahype2::fv::Fusanov_3D(
+void exahype2::fv::Fusanov_3D_with_inlining(
   int          haloSize,
   patchData3d  pV,
   int          sourcePatchSize,
@@ -1164,7 +1164,7 @@ template<
   bool     skipNCPEvaluation,
   bool     skipSourceTerm
   >
-void exahype2::fv::Fusanov_2D(
+void exahype2::fv::Fusanov_2D_with_inlining(
   const int       haloSize,
   patchData2d     pV,
   const int       sourcePatchSize,
@@ -1423,7 +1423,7 @@ template<
   bool                                         skipNCPEvaluation,
   bool                                         skipSourceTerm
   >
-void exahype2::fv::Fusanov_2D(
+void exahype2::fv::Fusanov_2D_with_accelerator_offloading(
   const int       haloSize,
   patchData2d     pV,
   const int       sourcePatchSize,

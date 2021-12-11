@@ -41,7 +41,7 @@ namespace exahype2 {
       bool                                         skipNCPEvaluation,
       bool                                         skipSourceTerm
       >
-    void Fusanov_2D(
+    void Fusanov_2D_with_accelerator_offloading(
       const int       haloSize,
       patchData2d     pV,
       const int       sourcePatchSize,
@@ -52,7 +52,7 @@ namespace exahype2 {
 
 
     /**
-     * @see Fusanov_3D()
+     * @see Fusanov_3D_with_inlining()
      */
     template<
       int      numVPAIP, // numberofVolumesPerAxisInPatch
@@ -63,7 +63,7 @@ namespace exahype2 {
       bool     skipNCPEvaluation,
       bool     skipSourceTerm
       >
-    void Fusanov_2D(
+    void Fusanov_2D_with_inlining(
       const int       haloSize,
       patchData2d     pV,
       const int       sourcePatchSize,
@@ -88,9 +88,9 @@ namespace exahype2 {
       bool                                         skipNCPEvaluation,
       bool                                         skipSourceTerm
     >
-    void Fusanov_3D(
+    void Fusanov_3D_with_accelerator_offloading(
       int                                          haloSize,
-      patchData3d                            pV,
+      patchData3d                                  pV,
       int                                          sourcePatchSize,
       int                                          destPatchSize,
       int             targetDevice
@@ -168,7 +168,7 @@ namespace exahype2 {
       bool                                         skipNCPEvaluation,
       bool                                         skipSourceTerm
     >
-    void Fusanov_3D(
+    void Fusanov_3D_with_inlining(
       int                                          haloSize,
       patchData3d                                  pV,
       int                                          sourcePatchSize,
