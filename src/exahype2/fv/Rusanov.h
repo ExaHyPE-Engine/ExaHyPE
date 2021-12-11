@@ -171,40 +171,6 @@ namespace exahype2 {
     );
 
 
-    template<
-      int      numVPAIP, // numberofVolumesPerAxisInPatch
-      int      unknowns,
-      int      auxiliaryVariables,
-      typename SOLVER,
-      bool     skipFluxEvaluation,
-      bool     skipNCPEvaluation,
-      bool     skipSourceTerm
-      >
-    void Fusanov_2D_with_inlining_and_explicit_scatter(
-      const int       haloSize,
-      patchData2d     pV,
-      const int       sourcePatchSize,
-      const int       destPatchSize
-    );
-
-
-    template<
-      int      numVPAIP, // numberofVolumesPerAxisInPatch
-      int      unknowns,
-      int      auxiliaryVariables,
-      typename SOLVER,
-      bool     skipFluxEvaluation,
-      bool     skipNCPEvaluation,
-      bool     skipSourceTerm
-      >
-    void Fusanov_3D_with_inlining_and_explicit_scatter(
-      const int       haloSize,
-      patchData3d     pV,
-      const int       sourcePatchSize,
-      const int       destPatchSize
-    );
-
-
     //*
      //The routine has exactly the same semantics as applySplit1DRiemannToPatch_Overlap1AoS2d()
      //but runs through the faces slightly differently.
