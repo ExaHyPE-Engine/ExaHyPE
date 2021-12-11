@@ -865,6 +865,7 @@ void exahype2::fv::Fusanov_3D_with_inlining(
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = shift; x <= numVPAIP; x += 2)
     for (int y = 0; y < numVPAIP; y++)
+    #pragma omp simd
     for (int z = 0; z < numVPAIP; z++) {
       const double                    t =   pV.t[pidx];
       const double                   dt =  pV.dt[pidx];
@@ -961,6 +962,7 @@ void exahype2::fv::Fusanov_3D_with_inlining(
     for (int pidx=0;pidx<NPT;pidx++)
     for (int y = shift; y <= numVPAIP; y += 2)
     for (int z = 0; z < numVPAIP; z++)
+    #pragma omp simd
     for (int x = 0; x < numVPAIP; x++) {
       const double                    t =   pV.t[pidx];
       const double                   dt =  pV.dt[pidx];
@@ -1056,6 +1058,7 @@ void exahype2::fv::Fusanov_3D_with_inlining(
     for (int pidx=0;pidx<NPT;pidx++)
     for (int z = shift; z <= numVPAIP; z += 2)
     for (int y = 0; y < numVPAIP; y++)
+    #pragma omp simd
     for (int x = 0; x < numVPAIP; x++) {
       const double                    t =   pV.t[pidx];
       const double                   dt =  pV.dt[pidx];
@@ -1240,6 +1243,7 @@ void exahype2::fv::Fusanov_2D_with_inlining(
   {
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = shift; x <= numVPAIP; x += 2)
+    #pragma omp simd
     for (int y = 0; y < numVPAIP; y++) 
     {
       const double                    t =   pV.t[pidx];
@@ -1323,6 +1327,7 @@ void exahype2::fv::Fusanov_2D_with_inlining(
 
     for (int pidx=0;pidx<NPT;pidx++)
     for (int y = shift; y <= numVPAIP; y += 2)
+    #pragma omp simd
     for (int x = 0;     x <  numVPAIP; x++   )
     {
       const double                    t =   pV.t[pidx];
@@ -1715,7 +1720,6 @@ void exahype2::fv::Fusanov_2D_with_inlining_and_explicit_scatter(
 
   for (int shift = 0; shift < 2; shift++)
   {
-    //#pragma omp simd collapse(3)  safelen(numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = shift; x <= numVPAIP; x += 2)
     #pragma omp simd
@@ -1799,7 +1803,6 @@ void exahype2::fv::Fusanov_2D_with_inlining_and_explicit_scatter(
       }
     } // close loop over vertical faces
 
-//    #pragma omp simd collapse(3) safelen(numVPAIP)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int y = shift; y <= numVPAIP; y += 2)
     #pragma simd
@@ -1975,7 +1978,7 @@ void exahype2::fv::Fusanov_3D_with_inlining_and_explicit_scatter(
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = shift; x <= numVPAIP; x += 2)
     for (int y = 0; y < numVPAIP; y++)
-#pragma omp simd
+    #pragma omp simd
     for (int z = 0; z < numVPAIP; z++) {
       const double                    t =   pV.t[pidx];
       const double                   dt =  pV.dt[pidx];
@@ -2164,7 +2167,7 @@ void exahype2::fv::Fusanov_3D_with_inlining_and_explicit_scatter(
       }
     } // face with normal along y-axis
 
-//      #pragma omp simd collapse(4) safelen(numVPAIP*numVPAIP)
+
     for (int pidx=0;pidx<NPT;pidx++)
     for (int z = shift; z <= numVPAIP; z += 2)
     for (int y = 0; y < numVPAIP; y++)
