@@ -97,23 +97,18 @@ namespace exahype2 {
     );
 
 
-
     /**
      * Variant of the 3d optimised, fused kernel which is tailored to the CPU.
-     * The kernel tries to collapse all loops and makes aggressive use of OpenMP
-     * SIMDsation.
+     * The kernel tries to collapse all loops. There's limited SIMD concurrency
+     * here, but at least some core routines are vectorised.
      *
-     * The kernel tries to collapse all the loops where only possible and uses
-     * aggressive SIMD. However, it does not use any parallel for. We found that
-     * such nested parallelism slows down the code massively or even introduces
+     * The kernel tries to collapse loops and uses SIMD where possible. However,
+     * it does not use any parallel for. We found that such nested parallelism slows down the code massively or even introduces
      * deadlocks. It also makes no sense, as we always issue fused tasks within OpenMP
      * tasks, and as OpenMP tasks so far cannot span multiple cores/threads. So we
-     * rely on aggressive vectorisation but do not introduce any SIMT-like parallelism
-     * for this fused variant, while the GPU variant (below) operates exactly the other
+     * may rely on vectorisation but do not introduce any SIMT-like parallelism
+     * for this fused variant, while the GPU variant operates exactly the other
      * way round.
-     *
-     * The individual vectorisation challenges can be very tricky and are discussed
-     * below:
      *
      * ## Copy solution
      *
@@ -176,6 +171,40 @@ namespace exahype2 {
     );
 
 
+    template<
+      int      numVPAIP, // numberofVolumesPerAxisInPatch
+      int      unknowns,
+      int      auxiliaryVariables,
+      typename SOLVER,
+      bool     skipFluxEvaluation,
+      bool     skipNCPEvaluation,
+      bool     skipSourceTerm
+      >
+    void Fusanov_2D_with_inlining_and_explicit_scatter(
+      const int       haloSize,
+      patchData2d     pV,
+      const int       sourcePatchSize,
+      const int       destPatchSize
+    );
+
+
+    template<
+      int      numVPAIP, // numberofVolumesPerAxisInPatch
+      int      unknowns,
+      int      auxiliaryVariables,
+      typename SOLVER,
+      bool     skipFluxEvaluation,
+      bool     skipNCPEvaluation,
+      bool     skipSourceTerm
+      >
+    void Fusanov_3D_with_inlining_and_explicit_scatter(
+      const int       haloSize,
+      patchData3d     pV,
+      const int       sourcePatchSize,
+      const int       destPatchSize
+    );
+
+
     //*
      //The routine has exactly the same semantics as applySplit1DRiemannToPatch_Overlap1AoS2d()
      //but runs through the faces slightly differently.
@@ -218,9 +247,6 @@ namespace exahype2 {
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
-
-
-
 
 
     #if defined(OpenMPGPUOffloading)
