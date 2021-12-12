@@ -180,6 +180,23 @@ namespace exahype2 {
       bool                                         skipNCPEvaluation,
       bool                                         skipSourceTerm
     >
+    void Fusanov_3D_with_batching(
+      int                                          haloSize,
+      patchData3d                                  pV,
+      int                                          sourcePatchSize,
+      int                                          destPatchSize
+    );
+
+
+    template<
+      int                                          numVPAIP, //numberofVolumesPerAxisInPatch,
+      int                                          unknowns,
+      int                                          auxiliaryVariables,
+      typename SOLVER,
+      bool                                         skipFluxEvaluation,
+      bool                                         skipNCPEvaluation,
+      bool                                         skipSourceTerm
+    >
     void Fusanov_3D_with_inlining_and_explicit_scatter(
       int                                          haloSize,
       patchData3d                                  pV,

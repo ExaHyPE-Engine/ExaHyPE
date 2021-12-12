@@ -19,6 +19,7 @@
 #endif
 
 #include <string.h>
+#include <memory>
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 {% if STATELESS_PDE_TERMS %}
@@ -466,19 +467,21 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   const int LTOT = _destinationPatchSize*NPT;
   pD.npatches=NPT;
 
-  pD.reco     = new double[LR];
-  pD.id       = new    int[NPT];
-  pD.x0       = new double[NPT];
-  pD.h0       = new double[NPT];
-  pD.x1       = new double[NPT];
-  pD.h1       = new double[NPT];
+  constexpr int Alignment = 64;
+
+  pD.reco     = new (std::align_val_t(Alignment)) double[LR];
+  pD.id       = new (std::align_val_t(Alignment))   int[NPT];
+  pD.x0       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.h0       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.x1       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.h1       = new (std::align_val_t(Alignment)) double[NPT];
   #if Dimensions==3
-  pD.x2       = new double[NPT];
-  pD.h2       = new double[NPT];
+  pD.x2       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.h2       = new (std::align_val_t(Alignment)) double[NPT];
   #endif
-  pD.t        = new double[NPT];
-  pD.dt       = new double[NPT];
-  pD.result   = new double[LTOT];
+  pD.t        = new (std::align_val_t(Alignment)) double[NPT];
+  pD.dt       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.result   = new (std::align_val_t(Alignment)) double[LTOT];
   memset(pD.result, 0, LTOT*sizeof(double));
 
 
