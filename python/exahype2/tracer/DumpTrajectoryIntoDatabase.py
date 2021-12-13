@@ -9,7 +9,7 @@ import jinja2
 
 
 class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
-  def __init__(self, particle_set, solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, time_delta_between_two_snapsots=0, output_precision=8, use_relative_deltas=False):
+  def __init__(self, particle_set, solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, time_delta_between_two_snapsots=0, output_precision=8, use_relative_deltas=False, initial_record_time=-1, last_record_time=1e8):
     """
      
     data_delta_between_two_snapsots: Float
@@ -45,6 +45,12 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
       
     use_relative_deltas: Boolean
       See description of C++ class in toolbox::particles::TrajectoryDatabase
+
+    initial_record_time: Float
+      you can specify from when does the tracer start to dump data to files.
+
+    last_record_time: Float
+      you can specify at when does the tracer stop dumping data to files.
      
     """
     self.d = {}
@@ -61,18 +67,25 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
       self.d[ "USE_RELATIVE_DELTAS" ]    = "true"
     else:
       self.d[ "USE_RELATIVE_DELTAS" ]    = "false"
-        
+    self.d[ "INI_RECORD" ]               = initial_record_time
+    self.d[ "LAST_RECORD" ]              = last_record_time
 
     self.number_of_entries_between_two_db_flushes = number_of_entries_between_two_db_flushes
 
   __Template_TouchCellLastTime = jinja2.Template("""
 if ( not marker.willBeRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+  double IniRecord={{INI_RECORD}};
+  double LastRecord={{LAST_RECORD}};
   for (int i=0; i<TwoPowerD; i++) {
     for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
       if (
         p->getParallelState()==globaldata::{{PARTICLE}}::ParallelState::Local
         and
         marker.isContained( p->getX() )
+        and
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()>=IniRecord
+        and
+        fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp()<=LastRecord
       ) {
         _database.addParticleSnapshot( 
           p->getNumber(0), 
