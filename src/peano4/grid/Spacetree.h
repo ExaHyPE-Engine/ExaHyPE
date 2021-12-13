@@ -164,6 +164,18 @@ class peano4::grid::Spacetree {
 
     /**
      * Should only be called for inner cells
+     *
+     * We run over all the grid refinement/erase events and first check if
+     * there are overlaps (refinement) or if the state is completely
+     * embedded within the current cell.
+     *
+     * If there's an overlap with a refinement event, then we refine all
+     * adjacent vertices which are not yet refined.
+     *
+     * If there's an erase event that's relevant, then we erase all
+     * adjacent vertices which are refined. To avoid that we have
+     * oscillations, I make the cell twice as big along each coordinate
+     * axis.
      */
     void evaluateGridControlEvents(
       const AutomatonState& fineGridState,

@@ -127,6 +127,9 @@ class exahype2::RefinementControl {
 
     /**
      * Should be called after each traversal per rank.
+     *
+     * This routine rolls over _newEvents into the _committedEvents if they are still
+     * alive.
      */
     void finishStep();
 
@@ -154,6 +157,19 @@ class exahype2::RefinementControl {
      * Container with all the valid events. Is an extract from _newEvents
      * which is built up in finishStep() and then handed out to Peano once
      * it asks.
+     *
+     * ## Event lifetime
+     *
+     * The individual events are not only copied over. Each event is annotated
+     * with its lifetime. That is, events might remain active over multiple
+     * iterations. This operation decrements the lifespan and, after that,
+     * copies those events that are still alive over into the result.
+     *
+     * ## Optimisation
+     *
+     * The raw events might become really large over time. However, I decided to
+     * keep this routine clear of any optimisation. It is the grid which has
+     * to clean up the refinement events appropriately.
      */
     std::vector< peano4::grid::GridControlEvent >  _committedEvents;
 };

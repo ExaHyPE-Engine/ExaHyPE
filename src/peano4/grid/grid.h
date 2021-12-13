@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <list>
 
 
 #include "GridVertex.h"
@@ -57,7 +58,31 @@ namespace peano4 {
     void clear( GridStatistics& statistics, bool isGlobalMasterTree );
 
     /**
-     * Merge set such that many events next to each other are fused into one
+     * Merge set of refinement/coarsening commands
+     *
+     *
+     * This routine has two roles:
+     * - It shall reduce the number of refine events, so the actual AMR
+     *   checks are faster when we next trigger the traversal
+     * - It brings together the erase events: Erases are only triggered
+     *   if a cell is completely embedded into an event. See
+     *   Spacetree::evaluateGridControlEvents() for details. However, if
+     *   we have two adjacent erase events, then it might happen that none
+     *   of them hosts a cell, while the merger of the two of them does
+     *   host one.
+     *
+     * The algorithm works in multiple sweeps:
+     *
+     * First, we extract all coarsen events from the input list. It is
+     * better to use a list in this algorithm, as we insert and erase
+     * frequently. Now we have two lists: the original input list minus
+     * all erase events, and a list of erase commands.
+     *
+     * Second, we construct a "power set" of all erase events. That is, we
+     * look for each erase event against each other erase event if it is
+     * adjacent to any other event. If so, we create a new merged event and
+     * add this one to the input set. This way, we ensure that the sets
+     * are recursively built up.
      *
      * Take a set of grid control events and try to consolidate them, i.e.
      * remove overlaps and fuse individual requests. The consolidation
@@ -247,7 +272,50 @@ namespace peano4 {
     bool overlaps( const tarch::la::Vector<Dimensions,double>& x, const GridControlEvent& event );
     bool overlaps( const AutomatonState& x, const GridControlEvent& event );
 
-    bool isContained( const AutomatonState& x, const GridControlEvent& event );
+    /**
+     * @return x is completely embeddd into event. x is subject to a re-calibration.
+     */
+    bool isContained( const AutomatonState& x, const GridControlEvent& event, double upscaleAutomatonState=1.0 );
+
+    /**
+     * Peano 4 does not reduce any grid control events globally. If you
+     * want to reduce these events, you have to do so manually. Operation
+     * becomes identify if you don't compile with MPI.
+     */
+    void reduceGridControlEvents( std::vector<GridControlEvent>& events );
+
+    namespace internal {
+      /**
+       * This is the first thing I do. Before I even start to think about the
+       * erase events, lets get rid of those that are definitely cancelled.
+       */
+      void removeEraseEventsThatAreCancelledByRefineEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
+
+      /**
+       * Once I've computed the "power set" of erase events, I can throw those
+       * away that are redundant, i.e. totally covered by other events. To make
+       * this work correctly, it is important that
+       * removeEraseEventsThatAreCancelledByRefineEvents() has been called before.
+       * This is therefore the very last thing I do.
+       */
+      void removeEraseEventsCoverredByOtherEraseEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
+
+      /**
+       * This is the second step in the algorithm. I could also trigger it prior
+       * to removeEraseEventsThatAreCancelledByRefineEvents, but if I have already
+       * removed all the erase events from the set, then this routine runs way
+       * faster.
+       */
+      void mergeAdjacentRefinementEvents( std::list< peano4::grid::GridControlEvent >&  inputEvents );
+
+      bool twoEventsOverlap( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+      bool equals( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+      bool eraseEventCoveredByOtherEraseEvent( const peano4::grid::GridControlEvent& smaller, const peano4::grid::GridControlEvent& bigger );
+      bool refinementEventOverrulesCoarsening( const peano4::grid::GridControlEvent& refineEvent, const peano4::grid::GridControlEvent& eraseEvent );
+      bool twoEventsAreAdjacent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+
+      peano4::grid::GridControlEvent createBoundingBoxEvent( const peano4::grid::GridControlEvent& lhs, const peano4::grid::GridControlEvent& rhs );
+    }
   }
 }
 

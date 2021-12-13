@@ -12,23 +12,22 @@ class AdaptivityCriterion(AbstractFVActionSet):
   The action set to realise AMR
   
   AMR is a multistep process in ExaHyPE. Most of the relevant documentation 
-  on it is documented in the class exahype2::RefinementControl. As it is a 
-  multistep algorithm, it is also clear even observers that do not want AMR
-  have to include this action set - though with a context-specific choice 
-  of boolean flags.
+  on it is documented in the class exahype2::RefinementControl.
   
   There are different phases in ExaHyPE: grid generation (either with 
   refinement or without), initialisation, plotting and time stepping. It 
   depends on your solver in which time stepping to use AMR, but the there
-  are some things to take into account:
+  are some things to take into account that are in common for all schemes:
   
-  - The grid creation does already create all volumetric data as we have to
-    evaluate the refinement criteria. There is however no need to manage all
-    face data et al in this step, as we have a dedicated init sweep after 
-    the grid generation has terminated.
-  - The plotting usually has to implement AMR as we have a multi-stage 
-    adaptive refinement. It might not re-evalutae the AMR again, as the 
-    solution is not changed.
+  - The grid creation does not use any actual solver data, so we should not
+    evalutae the adaptivity criterion here.
+  - InitGrid has volumetric data and might want to evaluate the criterion.
+    This is implicitly done by the t=0 check below.
+  - The plotting does not alter the solution. It thus makes no sense to 
+    evaluate the criterion here.
+  
+  Please consult EnclaveTasking.create_action_sets for details regarding
+  the handling of AMR within the enclave tasking concept.
   
   """
   
@@ -110,6 +109,16 @@ class AdaptivityCriterion(AbstractFVActionSet):
     
   def __init__(self, solver, guard, build_up_new_refinement_instructions, implement_previous_refinement_instructions, event_lifetime=1):
     """
+    
+    :: Attributes
+    
+    _implement_previous_refinement_instructions: Boolean
+      This name might be misleading. Consult exahype2::RefinementControl for
+      a description of the control flow. This flag controls if instructions
+      are picked up from the RefinementControl database.
+      
+    
+    :: Arguments
     
     guard: C++ expression which evaluates to true or false
       A per cell decision whether we should study a cell or not.

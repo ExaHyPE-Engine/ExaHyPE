@@ -1126,7 +1126,7 @@ void peano4::grid::Spacetree::evaluateGridControlEvents(
         }
 
         if (
-          isContained(state,p)
+          isContained(state,p,2.0)
           and
           p.getRefinementControl()==GridControlEvent::RefinementControl::Erase
           and

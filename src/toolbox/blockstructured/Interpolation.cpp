@@ -710,12 +710,9 @@ void toolbox::blockstructured::interpolateHaloLayer_AoS_linear(
 }
 
 
-void toolbox::blockstructured::interpolateCell_AoS_linear(
+tarch::la::DynamicMatrix  toolbox::blockstructured::internal::createLinearInterpolationMatrix(
   const peano4::datamanagement::CellMarker& marker,
-  int                                       numberOfDoFsPerAxisInPatch,
-  int                                       unknowns,
-  double*                                   fineGridValues,
-  double*                                   coarseGridValues
+  int                                       numberOfDoFsPerAxisInPatch
 ) {
   tarch::la::DynamicMatrix Project = internal::createLinearInterpolationMatrix(numberOfDoFsPerAxisInPatch);
 
@@ -741,13 +738,18 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
   #endif
 
   tarch::la::DynamicMatrix PickTimesProject = Pick * Project;
+  return PickTimesProject;
+}
 
-/*
-  std::cout << "marker=" << marker.toString() << std::endl;
-  std::cout << "Pick=" << Pick.toString(true) << std::endl;
-  std::cout << "Project=" << Project.toString(true) << std::endl;
-  std::cout << "PickTimesProject=" << PickTimesProject.toString(true) << std::endl;
-*/
+
+void toolbox::blockstructured::interpolateCell_AoS_linear(
+  const peano4::datamanagement::CellMarker& marker,
+  int                                       numberOfDoFsPerAxisInPatch,
+  int                                       unknowns,
+  double*                                   fineGridValues,
+  double*                                   coarseGridValues
+) {
+  tarch::la::DynamicMatrix PickTimesProject = internal::createLinearInterpolationMatrix(marker,numberOfDoFsPerAxisInPatch);
 
   #if Dimensions==2
   PickTimesProject.batchedMultiplyAoS(
@@ -766,16 +768,6 @@ void toolbox::blockstructured::interpolateCell_AoS_linear(
     0
   );
   #endif
-
-  dfor(cell,numberOfDoFsPerAxisInPatch) {
-    int cellSerialised = peano4::utils::dLinearised(cell,numberOfDoFsPerAxisInPatch);
-    for (int j=0; j<5; j++) {
-      assertion6(
-        fineGridValues[cellSerialised*unknowns+j]==fineGridValues[cellSerialised*unknowns+j],
-        cellSerialised, j, unknowns, numberOfDoFsPerAxisInPatch, cell, marker.toString()
-      );
-    }
-  }
 }
 
 

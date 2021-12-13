@@ -1,5 +1,8 @@
 #include "RefinementControl.h"
+
 #include "tarch/multicore/Lock.h"
+
+#include "peano4/grid/grid.h"
 
 
 exahype2::RefinementCommand exahype2::getDefaultRefinementCommand() {
@@ -128,6 +131,8 @@ void exahype2::RefinementControl::finishStep() {
     }
   }
   _newEvents.clear();
+
+  peano4::grid::reduceGridControlEvents( _committedEvents );
 }
 
 
