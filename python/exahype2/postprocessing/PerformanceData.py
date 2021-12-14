@@ -446,5 +446,5 @@ def load_file_sequence(file_prefix,file_postfix="", solver_name="",verbose=False
     if new_dataset.valid and result!=None:
       result.append( new_dataset )
     else:
-      print( "ERROR: file " + filtered_file + " was not a valid Peano 4 particle database file" )
+      print( "ERROR: file " + filtered_file + " was not a valid Peano 4 output file" )
   return result

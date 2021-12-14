@@ -503,6 +503,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
     pD.t[i]   = currentTask->_t;
     pD.dt[i]  = currentTask->_dt;
+    delete[]  currentTask->_reconstructedValues;
     i++;
 
     delete currentTask;
@@ -525,6 +526,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   pD.t[i]   = _t;
   pD.dt[i]  = _dt;
   
+  delete[] _reconstructedValues;
+
   //
   // ==============
   // Invoke kernels
