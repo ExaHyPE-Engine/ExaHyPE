@@ -535,9 +535,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   if (targetDevice<0) {
     #if Dimensions==2
-    ::exahype2::fv::Fusanov_2D_with_inlining
+    ::exahype2::fv::Fusanov_2D_with_batching
     #elif Dimensions==3
-    ::exahype2::fv::Fusanov_3D_with_inlining
+    ::exahype2::fv::Fusanov_3D_with_batching
     #endif
     {{FUSED_RIEMANN_SOLVER_CALL}}
     (
