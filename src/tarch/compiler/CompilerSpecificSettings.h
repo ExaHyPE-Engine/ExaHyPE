@@ -5,13 +5,19 @@
 
 
   #if defined(__INTEL_COMPILER) && defined(__WIN32__)
-    #include "tarch/compiler/WindowsIntel.h"
+    #include "tarch/compiler/WindowsIntelLegacy.h"
   #elif defined(__GNUC__) && defined(__WIN32__)
     #include "tarch/compiler/WindowsGCC.h"
-  #elif defined(__INTEL_COMPILER) && defined(__linux) && defined(__MIC__)
-    #include "tarch/compiler/LinuxIntelMIC.h"
+  /**
+   * icpx does not define __INTEL_COMPILER anymore
+   */
   #elif defined(__INTEL_COMPILER) && defined(__linux)
-    #include "tarch/compiler/LinuxIntel.h"
+    #include "tarch/compiler/LinuxIntelLegacy.h"
+  #elif defined(__INTEL_LLVM_COMPILER) && defined(__linux)
+    #include "tarch/compiler/LinuxIntelICPX.h"
+  /**
+   * The icpx compiler defined __GNUC__ as well, so it has to come last
+   */
   #elif defined(__GNUC__) && defined(__linux)
     #include "tarch/compiler/LinuxGCC.h"
   #elif defined(__clang__) && defined(__APPLE__)

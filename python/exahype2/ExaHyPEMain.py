@@ -15,7 +15,7 @@ class ExaHyPEMain(peano4.runner.DefaultSequence):
      
     """
     super(ExaHyPEMain,self).__init__(project)
-    self.overwrite     = True
+    self.overwrite     = False
 
     periodicBCString = "0"
     for i in range(0,dimensions):
