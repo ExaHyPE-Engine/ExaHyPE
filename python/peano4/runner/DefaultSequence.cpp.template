@@ -15,6 +15,11 @@
 #include "peano4/UnitTests.h"
 #include "tarch/UnitTests.h"
 
+#ifdef UseFEExcept
+#include <fenv.h>
+#pragma float_control(precise, on)
+#pragma STDC FENV_ACCESS ON
+#endif
 
 tarch::logging::Log _log("::");
 
@@ -22,6 +27,10 @@ tarch::logging::Log _log("::");
 int main(int argc, char** argv) {{
   const int ExitCodeSuccess         = 0;
   const int ExitCodeUnitTestsFailed = 1;
+
+#ifdef UseFEExcept
+  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
 
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
     tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
