@@ -30,11 +30,11 @@ class tarch::la::DynamicMatrix {
     int       _rows;
     double*   _m;
 
-    static int serialise( int row, int col, int Rows, int Cols ) {
+    static inline int serialise( int row, int col, int Rows, int Cols ) {
       return col + row * Cols;
     }
 
-    int serialise( int row, int col ) const {
+    int inline serialise( int row, int col ) const {
       return serialise( row, col, _rows, _cols );
     }
 

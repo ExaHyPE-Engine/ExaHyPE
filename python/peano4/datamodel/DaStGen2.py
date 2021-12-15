@@ -71,6 +71,52 @@ class DaStGen2(DoF):
     
       
   """  
+  
+  
+  readme_descriptor = """
+"""
+
+  
+  readme_package_descriptor = """
+### Data structure modelling
+
+Peano models its data structures via a tool called DaStGen. The actual DaStGen 
+version in use is the second generation of DaStGen which is integrated into 
+LLVM, e.g. The first generation of DaStGen has been a stand-alone Java tool
+which serves as a precompiler. As DaStGen 2 is not published yet, we appreciate 
+a citation of the two original DaStGen papers when you discuss the memory needs: 
+
+
+        @InProceedings{Bungartz:2008:DaStGen,
+          author={Bungartz, Hans--Joachim and Eckhardt, Wolfgang and Mehl, Miriam and Weinzierl, Tobias}, "
+          editor={Bubak, Marian and van Albada, Geert Dick and Dongarra, Jack and Sloot, Peter M. A.}, 
+          title={DaStGen---A Data Structure Generator for Parallel C++ HPC Software}, 
+          booktitle={Computational Science -- ICCS 2008}, 
+          year=2008,
+          publisher={Springer Berlin Heidelberg}, 
+          address={Berlin, Heidelberg}, "
+          pages={213--222}, 
+          isbn={978-3-540-69389-5} 
+        }
+
+
+        @article{Bungartz:2010:DaStGen, 
+          title = {A precompiler to reduce the memory footprint of multiscale PDE solvers in C++}, 
+          journal = {Future Generation Computer Systems},"
+          volume = {26}, 
+          number = {1}, 
+          pages = {175-182}, 
+          year = {2010}, 
+          issn = {0167-739X}, 
+          doi = {https://doi.org/10.1016/j.future.2009.05.011},
+          url = {https://www.sciencedirect.com/science/article/pii/S0167739X09000673},
+          author = {H.-J. Bungartz and W. Eckhardt and T. Weinzierl and C. Zenger}, 
+          keywords = {Data compaction and compression, Code generation, Multigrid and multilevel methods}, 
+          abstract = {A PDE solver's value is increasingly co-determined by its memory footprint, as the increase of computational multicore power overtakes the memory access speed, and as memory restricts the maximum experiment size. Tailoring a code to require less memory is technical challenging, error-prone, and hardware-dependent. Object-oriented code typically consumes much memory, though developers favour such high-level languages offering meaningful models and good maintainability. We augment the language C++ with new keywords branding records to be memory-critical. Our precompiler DaStGen then transforms this augmented specification into plain C++ optimised for low memory requirements. Hereby, it encodes multiple attributes with fixed range within one variable, and it reduces the number of bits per floating point value. The tool also generates one user-defined MPI data type per class and, thus, facilitates the construction of parallel codes with small messages.} 
+        } 
+"""  
+  
+  
   def __init__(self, name):
     super(DaStGen2, self).__init__(name)
     self.generator        = DaStGen2Generator(self)

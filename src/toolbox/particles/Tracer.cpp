@@ -10,8 +10,6 @@ tarch::la::Vector<Dimensions,int> toolbox::particles::mapParticleOntoVoxel(
   int voxelsPerAxis,
   const tarch::la::Vector<Dimensions,double>& particleX
 ) {
-  toolbox::particles::addBibTeXEntry();
-
   tarch::la::Vector<Dimensions,int> result;
 
   assertion(voxelsPerAxis>0);
@@ -32,8 +30,6 @@ tarch::la::Vector<Dimensions*2,int> toolbox::particles::mapParticleOntoVoxelwith
   int voxelsPerAxis,
   const tarch::la::Vector<Dimensions,double>& particleX
 ) {
-  toolbox::particles::addBibTeXEntry();
-
   tarch::la::Vector<Dimensions*2,int> result;
 
   assertion(voxelsPerAxis>0);

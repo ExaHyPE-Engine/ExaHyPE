@@ -376,6 +376,14 @@ namespace toolbox {
        */
       tarch::la::DynamicMatrix  createLinearInterpolationMatrix(int numberOfDoFsPerAxisInPatch);
 
+      /**
+       * Create a linear interpolation matrix for a new cell.
+       */
+      tarch::la::DynamicMatrix  createLinearInterpolationMatrix(
+        const peano4::datamanagement::CellMarker& marker,
+        int                                       numberOfDoFsPerAxisInPatch
+      );
+
 
       /**
        * Clear half of a halo layer

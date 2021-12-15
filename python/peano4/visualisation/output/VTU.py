@@ -344,7 +344,7 @@ class VTU(Visualiser):
     meta_file = open( self.output_directory + "/" + file_name + ".pvd", "w" )
     meta_file.write( pvd_file )
     
-    if "/" in file_name and not strip_relative_pathes:
+    if "/" in file_name and not self._strip_relative_pathes:
       print( """
 WARNING: The conversion tool has processed a dataset stored in a different
 directory. If the resulting .pvd file (""" + file_name + """.pvd)

@@ -5,7 +5,9 @@
 #include "exahype2/NonCriticalAssertions.h"
 #include "tarch/multicore/Lock.h"
 
+
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
+
 
 void examples::exahype2::SSInfall::SSInfall::startTimeStep(
   double globalMinTimeStamp,
@@ -15,57 +17,91 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
 ){
   AbstractSSInfall::startTimeStep(globalMinTimeStamp, globalMaxTimeStamp, globalMinTimeStepSize, globalMaxTimeStepSize);
   constexpr double pi = M_PI;
-  if ( isFirstGridSweepOfTimeStep() ){
-  for (int i=0;i<sample_number;i++) {
-    m_tot_copy[i]=global_m_tot[i];
-    //m_tot_copy[i]=m_tot[i];
-    //if (MassCal==0) {std::cout << std::setprecision (16) << m_tot_copy[i] << " " <<global_cell_tot[i] <<" "<< r_s[i] << std::endl;}
-    global_m_tot[i]=0; global_cell_tot[i]=0; m_tot[i]=0; cell_tot[i]=0;
-    //std::cout << rho_x[i] <<" "<< r_s[i] << std::endl;
-  }
-  //std::cout << rho_0 << std::endl;
-  if (MassCal==1){
-    for(int i=0;i<sample_number;i++){
-      m_tot_copy[i]=std::max(0.0,(4/3)*pi*pow(r_s[0],3)*((rho_0+rho_x[0])/2-1));
+  if (AbstractSSInfall::isFirstGridSweepOfTimeStep()){
+    for (int i=0;i<sample_number;i++) {
+      m_tot_copy[i]      = global_m_tot[i];
+      global_m_tot[i]    = 0;
+      global_cell_tot[i] = 0;
+      m_tot[i]           = 0;
+      cell_tot[i]        = 0;
     }
-    for(int i=1;i<sample_number;i++){
-      double m_layer=(4/3)*pi*(pow(r_s[i],3)-pow(r_s[i-1],3))*((rho_x[i]+rho_x[i-1])/2-1);
-      //std::cout << rho_x[i] <<" "<< rho_x[i-1]<<" " << m_layer << std::endl;
-      for(int j=i;j<sample_number;j++){
-        m_tot_copy[j]+=std::max(0.0,m_layer);
+
+    if (MassCal==1){
+      for(int i=0;i<sample_number;i++){
+        m_tot_copy[i]=std::max(0.0,(4/3)*pi*pow(r_s[0],3)*((rho_0+rho_x[0])/2-1));
+      }
+      for(int i=1;i<sample_number;i++){
+        double m_layer=(4/3)*pi*(pow(r_s[i],3)-pow(r_s[i-1],3))*((rho_x[i]+rho_x[i-1])/2-1);
+        for(int j=i;j<sample_number;j++){
+          m_tot_copy[j]+=std::max(0.0,m_layer);
+        }
       }
     }
-    //for (int i=0;i<sample_number;i++) {std::cout << m_tot_copy[i] <<" "<< (4/3)*pi*pow(r_s[i],3) <<" "<< r_s[i] << std::endl;}
-  }
   }
 }
 
+
 void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
   AbstractSSInfall::finishTimeStep();
-  //std::cout << "add mass together here!" << std::endl;
+
   #ifdef Parallel
-  tarch::mpi::Rank::getInstance().allReduce(
-      m_tot,
-      global_m_tot,
-      sample_number, MPI_DOUBLE,
-      MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
-  tarch::mpi::Rank::getInstance().allReduce(
-      cell_tot,
-      global_cell_tot,
-      sample_number, MPI_DOUBLE,
-      MPI_SUM,
-      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
-      );
+    tarch::mpi::Rank::getInstance().allReduce(
+        m_tot,
+        global_m_tot,
+        sample_number, MPI_DOUBLE,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
+    tarch::mpi::Rank::getInstance().allReduce(
+        cell_tot,
+        global_cell_tot,
+        sample_number, MPI_DOUBLE,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+    );
   #else
-  for (int i=0;i<sample_number;i++) {
-    global_m_tot[i]=m_tot[i];
-    global_cell_tot[i]=cell_tot[i];
-    std::cout << global_m_tot[i] <<" "<< m_tot[i] << std::endl;
-  }
+    for (int i=0;i<sample_number;i++) {
+      global_m_tot[i]=m_tot[i];
+      global_cell_tot[i]=cell_tot[i];
+    }
   #endif
+    plotGlobalMTot(false);
 }
+
+
+std::string examples::exahype2::SSInfall::SSInfall::plotRs() const {
+  std::ostringstream msg;
+  msg << "r_s=(";
+  for (int i=0;i<sample_number;i++) {
+    if (i!=0) msg << ",";
+    msg << r_s[i];
+  }
+  msg << ")";
+  return msg.str();
+}
+
+
+std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy) const {
+  std::ostringstream msg;
+  if (plotCopy) {
+    msg << "m_tot_copy=(";
+    for (int i=0;i<sample_number;i++) {
+      if (i!=0) msg << ",";
+      msg << m_tot_copy[i];
+    }
+    msg << ")";
+  }
+  else {
+    msg << "global_m_tot=(";
+    for (int i=0;i<sample_number;i++) {
+      if (i!=0) msg << ",";
+      msg << global_m_tot[i];
+    }
+    msg << ")";
+  }
+  return msg.str();
+}
+
 
 ::exahype2::RefinementCommand examples::exahype2::SSInfall::SSInfall::refinementCriterion(
   const double * __restrict__ Q, // Q[5+0]
@@ -78,8 +114,8 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
   double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
   if (ReSwi==1){ //radius based
     constexpr int NumberOfRefinementLayers = 2;
-    double Radius[NumberOfRefinementLayers] = {1.4,0.4};
-    double MaxH[NumberOfRefinementLayers]   = {0.03,0.008};
+    double Radius[NumberOfRefinementLayers] = {1.0,0.5};
+    double MaxH[NumberOfRefinementLayers]   = {0.02,0.006};
     for (int i=0; i<NumberOfRefinementLayers; i++) {
       if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
         result=::exahype2::RefinementCommand::Refine;
@@ -97,7 +133,56 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
     }
   }
   if (ReSwi==3){ //radius based
-    if (radius<0.3) {result=::exahype2::RefinementCommand::Refine;}
+    if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
+  }
+  if (ReSwi==4){ //dynamic one
+    double t_i=pow(a_i,1.5)*2.057*1e17;
+    double t_used=t;
+    double Mpc=3.086*1e19; //in Km;
+    double t_real=pow( (pow((Mpc/150),(-1.0/3.0))*pow(a_i,(-0.5))-t_used*pow(150,(4.0/3.0))/300/pow(Mpc,(1.0/3.0))),-3);
+    double a_scale=pow((150/Mpc),(2.0/3.0))*pow( (pow((Mpc/150),(-1.0/3.0))*pow(a_i,(-0.5))-t_used*pow(150,(4.0/3.0))/300/pow(Mpc,(1.0/3.0))),-2);
+    double R_ta_code=(a_i/a_scale)*pow((3.0*delta_m)/(4.0*M_PI*tilde_rho_ini),(1.0/3.0))*pow((4.0/3.0/M_PI),(8.0/9.0))*pow((t_real/t_i),(8.0/9.0));
+    double delta_R=std::abs(radius-R_ta_code*0.55);
+    //double delta_R=std::abs(radius-0.0875);
+
+    constexpr int NumberOfRefinementLayers = 3;
+    double distance[NumberOfRefinementLayers+1] = {1.5,0.6,0.3,0};
+    double MaxH[NumberOfRefinementLayers+1]   = {0.05,0.018,0.006,0};
+
+    /*if (delta_R>distance[0]) {result=::exahype2::RefinementCommand::Erase;}
+    else if (delta_R<distance[NumberOfRefinementLayers-1]) {result=::exahype2::RefinementCommand::Refine;}
+    else{
+      for (int i=0; i<(NumberOfRefinementLayers-1); i++) {
+        if (delta_R<distance[i] and delta_R>distance[i+1]) {
+          if (tarch::la::max(volumeH)>MaxH[i])   {result=::exahype2::RefinementCommand::Refine;}
+          if (tarch::la::max(volumeH)<MaxH[i+1]) {result=::exahype2::RefinementCommand::Erase;}
+        }
+      }
+    }*/
+    for (int i=0; i<(NumberOfRefinementLayers); i++) {
+      if (delta_R<distance[i] and delta_R>distance[i+1]) {
+        if (tarch::la::max(volumeH)>MaxH[i])   {result=::exahype2::RefinementCommand::Refine;}
+        //if (tarch::la::max(volumeH)<MaxH[i+1]) {result=::exahype2::RefinementCommand::Erase;}
+      }
+    }
+  }  
+  if (ReSwi==5){ //erase test
+    double delta_R=radius;
+
+    constexpr int NumberOfRefinementLayers = 1;
+    double distance[NumberOfRefinementLayers] = {0.1};
+    double MaxH[NumberOfRefinementLayers]   = {0.01};
+
+    if (delta_R>distance[0]) {result=::exahype2::RefinementCommand::Erase;}
+    else if (delta_R<distance[NumberOfRefinementLayers-1]) {result=::exahype2::RefinementCommand::Refine;}
+    else{
+      for (int i=0; i<(NumberOfRefinementLayers-1); i++) {
+        if (delta_R<distance[i] and delta_R>distance[i+1]) {
+          if (tarch::la::max(volumeH)>MaxH[i])   {result=::exahype2::RefinementCommand::Refine;}
+          if (tarch::la::max(volumeH)<MaxH[i+1]) {result=::exahype2::RefinementCommand::Erase;}
+        }
+      }
+    }
   }
   return result;
 }
@@ -125,8 +210,9 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
 
   double rho_ini=tilde_rho_ini;
   //constexpr double gamma = 5.0/3.0;
-  if (iseed==0)
-  	{Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;}  // rho
+  if (iseed==0) {
+    Q[0] = isInTheSphere ? rho_ini*(1+delta_rho) : rho_ini;
+  }  // rho
   if (iseed==1)
   	{Q[0] = rho_ini;}
   if (v_scale==0)
@@ -142,6 +228,10 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
         Q[3]=-v_scale*z*1.5*Omega_m*a_i*delta_m/4/pi/pow(r_coor,3)*Q[0];}
     }
   Q[4] = 0.5*(Q[1]*Q[1]+Q[2]*Q[2]+Q[3]*Q[3])/Q[0]+tilde_P_ini/(gamma-1); // inner energy
+
+  for (int i=5; i<20; i++){
+    	Q[i]=0.0;
+  }
 
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -181,8 +271,26 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double * __restrict__                        S  // S[5
 ) {
   logTraceInWith4Arguments( "sourceTerm(...)", volumeX, volumeH, t, dt );
+
+  nonCriticalAssertion4( not std::isnan(Q[0]), volumeX, volumeH, t, dt );
+
+  assertion4( not std::isnan(Q[0]), volumeX, volumeH, t, dt );
+  assertion4( not std::isnan(Q[1]), volumeX, volumeH, t, dt );
+  assertion4( not std::isnan(Q[2]), volumeX, volumeH, t, dt );
+  assertion4( not std::isnan(Q[3]), volumeX, volumeH, t, dt );
+  assertion4( not std::isnan(Q[4]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(Q[0]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(Q[1]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(Q[2]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(Q[3]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(Q[4]), volumeX, volumeH, t, dt );
+
+  nonCriticalAssertion4(
+    not std::isnan(Q[0]) or t<0.5,
+    volumeX, volumeH, t, dt
+  );
+
   constexpr double pi = M_PI;
-  logTraceOut( "sourceTerm(...)" );
   double x=volumeX(0)-center(0);
   double y=volumeX(1)-center(1);
   double z=volumeX(2)-center(2);
@@ -194,42 +302,70 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double m_in=0;
   
   if (tarch::la::equals(t,0)){//we know the mass distri at the beginning
-    if (iseed==0){
-		  if (r_coor<r_ini) { m_in=rho_ini*delta_rho*pow(r_coor,3)/3;}
-		  else { m_in=rho_ini*delta_rho*pow(r_ini,3)/3;}
-		}
-		if (iseed==1){
-		  if (r_coor<r_point){m_in=delta_m*pow(r_coor/r_point,3)/4/pi;}
-		  else {m_in=delta_m/4/pi;}
-		}
+    if (iseed==0) {
+      if (r_coor<r_ini) { 
+        m_in=rho_ini*delta_rho*pow(r_coor,3)/3;
+      }
+      else {
+        m_in=rho_ini*delta_rho*pow(r_ini,3)/3;
+      }
+    }
+    if (iseed==1) {
+      if (r_coor<r_point){
+        m_in=delta_m*pow(r_coor/r_point,3)/4/pi;
+      }
+      else {
+        m_in=delta_m/4/pi;
+      }
+    }
   } 
   else {
     if (iseed==0){
       m_in=mass_interpolate(r_coor,MassCal)/4/pi; //remove the overall 4\pi coefficient. 
+      nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
+      nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
     }
     if (iseed==1){
-		  if (r_coor<r_point){m_in=(mass_interpolate(r_coor, MassCal)+delta_m*pow(r_coor/r_point,3))/4/pi;}
-		  else {m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4/pi;}
-		}
+      if (r_coor<r_point){
+        m_in=(mass_interpolate(r_coor, MassCal)+delta_m*pow(r_coor/r_point,3))/4/pi;
+        nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
+        nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
+      }
+      else {
+        m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4/pi;
+        nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
+        nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
+      }
+    }
   }
 
   double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
   double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
-  //if (r_coor<1e-8) {force_density_norm=0;}//in case we meet explosive force at the grid center
 
-  //force_density_norm=0;
+  // @todo remove
+
+  assertion4( not std::isnan(force_density_norm), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(force_density_norm), volumeX, volumeH, t, dt );
+
 
   S[0] = 0;  // rho
   S[1] = -force_density_norm*x;    // velocities
   S[2] = -force_density_norm*y;
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
-  //for (int i=0;i<5;i++){S[i]=S[i]*tarch::la::volume(volumeH);}
-/*  S[0] = 0;  // rho
-  S[1] = 0;    // velocities
-  S[2] = 0;
-  S[3] = 0;
-  S[4] = 0;*/
+
+  assertion4( not std::isnan(S[0]), volumeX, volumeH, t, dt );
+  assertion4( not std::isnan(S[1]), volumeX, volumeH, t, dt );
+  assertion4( not std::isnan(S[2]), volumeX, volumeH, t, dt );
+  assertion4( not std::isnan(S[3]), volumeX, volumeH, t, dt );
+  assertion4( not std::isnan(S[4]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(S[0]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(S[1]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(S[2]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(S[3]), volumeX, volumeH, t, dt );
+  assertion4( not std::isinf(S[4]), volumeX, volumeH, t, dt );
+
+  logTraceOut( "sourceTerm(...)" );
 }
 
 
@@ -242,13 +378,13 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   int                                          normal
 ) {
   logTraceInWith4Arguments( "boundaryConditions(...)", faceCentre, volumeH, t, normal );
+
   nonCriticalAssertion4( Qinside[0]==Qinside[0], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[1]==Qinside[1], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[2]==Qinside[2], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[3]==Qinside[3], faceCentre, volumeH, t, normal );
   nonCriticalAssertion4( Qinside[4]==Qinside[4], faceCentre, volumeH, t, normal );
 
-  //nonCriticalAssertion4( Qinside[0]>1e-12, faceCentre, volumeH, t, normal );
   nonCriticalAssertion5( Qinside[0]>1e-12, faceCentre, volumeH, t, normal, Qinside[0] );
 
   if (extrapolate_bc==0){
@@ -263,7 +399,6 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   }
   else if (extrapolate_bc==1)
   {
-      //std::cout <<  normal << " " << faceCentre(0) << " "<<faceCentre(1)<<" "<<faceCentre(2) << std::endl;
     Qoutside[0] = Qinside[0];
     Qoutside[4] = Qinside[4];
     for (int i=0; i<5; i++){
@@ -300,17 +435,19 @@ void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
     }
   }  
   //add more constraints here
-  //if (Qoutside[0]<tilde_rho_ini) {Qoutside[0]=tilde_rho_ini;std::cout << "reset density" << std::endl;}
   //for (int j=1; j<=3; j++){
   //  if (Qoutside[j]*Qinside[j]<0) {Qoutside[j]=0;}
   //}
   const double p = (gamma-1) * (Qoutside[4] - 0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]); 
-  if (p<0){Qoutside[4]=0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]+1e-10;}   
-  logTraceOut( "boundaryConditions(...)" );
+  if (p<0){
+    Qoutside[4]=0.5*(Qoutside[1]*Qoutside[1]+Qoutside[2]*Qoutside[2]+Qoutside[3]*Qoutside[3])/Qoutside[0]+1e-10;
+  }   
   nonCriticalAssertion7(
     not std::isnan(Qinside[0]),
     normal, faceCentre, Qinside[0], Qinside[1], Qinside[2], Qinside[3], Qinside[4]
   );
+
+  logTraceOut( "boundaryConditions(...)" );
 }
 
 
@@ -325,6 +462,17 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   assertion(normal<Dimensions);
   assertion( Q[0]>0.0 );
 
+  assertion4( not std::isnan(Q[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(Q[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(Q[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(Q[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(Q[4]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
+
   //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -334,7 +482,6 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   #endif
 
   if ( p<0 ) {
-    //std::cout << "what this function saw is " << p << std::endl;
     p=0;
     //::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure "+std::to_string(p)+" detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
   }
@@ -345,10 +492,15 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c)); //result=1;
   nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
-  //if (t>0.2 and result>1){
   result=result*(1+C_1*exp(-C_2*t));
-    //std::cout <<" u_n "<<u_n<<" c "<< c <<" eigenvale " << result << std::endl;
-  //}
+
+  nonCriticalAssertion13( 
+    result<10000, 
+    result, p, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal 
+  );
+  if (result<1e-8) {
+    logInfo( "maxEigenvalue()", "max eigenvalue too small: " << result );
+  }
   return result;
 }
 
@@ -363,6 +515,17 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   double * __restrict__ F // F[5]
 )  {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+
+  assertion4( not std::isnan(Q[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(Q[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(Q[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(Q[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(Q[4]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
   //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
@@ -381,8 +544,20 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   F[normal+1] += p;
   F[4]        += coeff*p;
 
+  assertion4( not std::isnan(F[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[4]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[4]), faceCentre, volumeH, t, normal );
+
   logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
+
 
 void examples::exahype2::SSInfall::SSInfall::add_mass(
   const double r_coor,
@@ -395,22 +570,24 @@ void examples::exahype2::SSInfall::SSInfall::add_mass(
   double m=(rho-1)*pow(size,3);
   if (m<0){m=0.0;}
   //m=1;
-  //std::cout << m <<std::endl;
   tarch::multicore::Lock myLock( _mySemaphore );
   for (int i=0;i<sample_number;i++){
-    if ((r_coor+size/2)<r_s[i]) {m_tot[i]+=m;cell_tot[i]+=1; global_m_tot[i]+=m; global_cell_tot[i]+=1;}
-    else if ((r_coor-size/2)>r_s[i]) {m_tot[i]+=0;}
+    if ((r_coor+size/2)<r_s[i]) {
+      m_tot[i]+=m;
+      cell_tot[i]+=1; 
+      global_m_tot[i]+=m; 
+      global_cell_tot[i]+=1;
+    }
+    else if ((r_coor-size/2)>r_s[i]) {
+      m_tot[i]+=0;
+    }
     else {
       m_tot[i]+=m*std::max(0.0,pow((r_s[i]-r_coor+size/2),3))/pow(size,3);cell_tot[i]+=1;
       global_m_tot[i]+=m*std::max(0.0,pow((r_s[i]-r_coor+size/2),3))/pow(size,3); global_cell_tot[i]+=1;
     }
   }
-  //std::cout << m_tot[7] <<std::endl;
-  /*for (int i=0;i<sample_number;i++){
-    if (r_coor<r_s[i]) {m_tot[i]+=m; cell_tot[i]+=1;}
-    else {m_tot[i]+=0;}
-  }*/
 }
+
 
 double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   const double r_coor,
@@ -420,92 +597,84 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   double a,b;
   double m_a,m_b;
   double m_result;
-  //for (int i=0;i<sample_number;i++) {std::cout << m_tot_copy[i] << " ";}
-  //if (r_coor>0.84) {std::cout << "use it" << std::endl;}
-if (MassCal==0){ //which means we use cell counting
-  bool IsCenter=false;
-  bool IsOutSkirt=false;
 
-  if (r_coor<r_s[0]) {
-    a=0; b=r_s[0];
-    m_a=0; m_b=m_tot_copy[0];
-    IsCenter=true;
-  }
-  else if (r_coor>r_s[sample_number-1]) {
-    a=r_s[sample_number-2]; b=r_s[sample_number-1];
-    m_a=m_tot_copy[sample_number-2]; m_b=m_tot_copy[sample_number-1];
-    IsOutSkirt=true;    
-  }
-  else{
-    for (int i=1;i<sample_number;i++){
-      if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])){
-        a=r_s[i-1]; b=r_s[i];
-        m_a=m_tot_copy[i-1]; m_b=m_tot_copy[i];
-        //std::cout << m_tot_copy[i] << std::endl;
+  if (MassCal==0){ //which means we use cell counting
+    bool IsCenter=false;    // means that we are right in the centre
+    bool IsOutSkirt=false;  // means that we are outside of the accreditation area
+
+    if ( tarch::la::smallerEquals( r_coor,r_s[0] ) ) {
+      a=0; b=r_s[0];
+      m_a=0;
+      m_b=m_tot_copy[0];
+      IsCenter=true;
+    }
+    else if ( tarch::la::greater( r_coor, r_s[sample_number-1] ) ) {
+      a=r_s[sample_number-2]; b=r_s[sample_number-1];
+      m_a=m_tot_copy[sample_number-2];
+      m_b=m_tot_copy[sample_number-1];
+      IsOutSkirt=true;
+    }
+    else{
+      for (int i=1;i<sample_number;i++){
+        if ( tarch::la::greater(r_coor, r_s[i-1]) and tarch::la::smallerEquals(r_coor,r_s[i])) {
+          a=r_s[i-1]; b=r_s[i];
+          m_a=m_tot_copy[i-1];
+          m_b=m_tot_copy[i];
+        }
       }
     }
-  }
 
-  if (IsCenter){
-    m_result=m_b*pow((r_coor),3)/pow(b,3);
-  }
-  else if (IsOutSkirt){
-    double vol_tem=(4/3)*pi*(pow(b,3)-pow(a,3));
-    double rho_tem=(m_b-m_a)/vol_tem;
-    double vol_out=(4/3)*pi*(pow(r_coor,3)-pow(b,3));
-    m_result=m_b+rho_tem*vol_out;
-  }
-  else {  //linear interpolation
-    m_result=m_a*(b-r_coor)/(b-a)+m_b*(r_coor-a)/(b-a);
+    if (IsCenter){
+      m_result=m_b*pow((r_coor),3)/pow(b,3);
+      assertion10( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, IsOutSkirt, plotGlobalMTot(false), plotGlobalMTot(true) );
+      assertion10( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, IsOutSkirt, plotGlobalMTot(false), plotGlobalMTot(true) );
+    }
+    else if (IsOutSkirt){
+      double vol_tem=(4/3)*pi*(pow(b,3)-pow(a,3));
+      double rho_tem=(m_b-m_a)/vol_tem;
+      double vol_out=(4/3)*pi*(pow(r_coor,3)-pow(b,3));
+      m_result=m_b+rho_tem*vol_out;
+      assertion14( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, IsOutSkirt, IsCenter, plotRs(), plotGlobalMTot(false), plotGlobalMTot(true), rho_tem, vol_out );
+      assertion14( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, IsOutSkirt, IsCenter, plotRs(), plotGlobalMTot(false), plotGlobalMTot(true), rho_tem, vol_out );
+    }
+    else {  //linear interpolation
+      m_result=m_a*(b-r_coor)/(b-a)+m_b*(r_coor-a)/(b-a);
     //try to use a more precise mass calculation scheme here
     /*double vol_tem=(4/3)*pi*(pow(b,3)-pow(a,3));
     double rho_tem=(m_b-m_a)/vol_tem;
     double vol_in=(4/3)*pi*(pow(r_coor,3)-pow(a,3));
     m_result=m_a+rho_tem*vol_in;*/
     //if (not m_b==0){    
-    //std::cout << m_b <<" "<< m_a << std::endl;}
-    //std::cout << m_result <<" "<< vol_tem << " "<<rho_tem<<" "<<vol_in << std::endl;
-  }
-}  
-else if (MassCal==1){ //which means we use rho interpolation
-  if (r_coor<r_s[0]){
-    double rho_currentpos=rho_0+(rho_x[0]-rho_0)*r_coor/r_s[0];
-    m_result=(4/3)*pi*pow(r_coor,3)*((rho_0+rho_currentpos)/2-1);
-  }
-  else{
-    for (int i=1;i<sample_number;i++){
-      if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])){
-        double rho_currentpos=rho_x[i-1]*(r_s[i]-r_coor)/(r_s[i]-r_s[i-1])+rho_x[i]*(r_coor-r_s[i-1])/(r_s[i]-r_s[i-1]);
-        m_result=(4/3)*pi*(pow(r_coor,3)-pow(r_s[i-1],3))*((rho_x[i-1]+rho_currentpos)/2-1);
-        m_result+=m_tot_copy[i-1];
-      }
+      assertion11( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, IsOutSkirt, plotGlobalMTot(false), plotGlobalMTot(true), plotRs() );
+      assertion11( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, IsOutSkirt, plotGlobalMTot(false), plotGlobalMTot(true), plotRs() );
     }
   }
-  if (r_coor>r_s[sample_number-1]){
-    m_result=(4/3)*pi*(pow(r_coor,3)-pow(r_s[sample_number-1],3))*(rho_x[sample_number-1]-1);
-    m_result+=m_tot_copy[sample_number-1];
+  else if (MassCal==1) { //which means we use rho interpolation
+    if (r_coor<r_s[0]) {
+      double rho_currentpos=rho_0+(rho_x[0]-rho_0)*r_coor/r_s[0];
+      m_result=(4/3)*pi*pow(r_coor,3)*((rho_0+rho_currentpos)/2-1);
+      assertion9( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, plotGlobalMTot(false), plotGlobalMTot(true) );
+      assertion9( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, plotGlobalMTot(false), plotGlobalMTot(true) );
+    }
+    else{
+      for (int i=1;i<sample_number;i++) {
+        if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])) {
+          double rho_currentpos=rho_x[i-1]*(r_s[i]-r_coor)/(r_s[i]-r_s[i-1])+rho_x[i]*(r_coor-r_s[i-1])/(r_s[i]-r_s[i-1]);
+          m_result=(4/3)*pi*(pow(r_coor,3)-pow(r_s[i-1],3))*((rho_x[i-1]+rho_currentpos)/2-1);
+          m_result+=m_tot_copy[i-1];
+          assertion10( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, i, plotGlobalMTot(false), plotGlobalMTot(true) );
+          assertion10( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, i, plotGlobalMTot(false), plotGlobalMTot(true) );
+        }
+      }
+    }
+    if (r_coor>r_s[sample_number-1]){
+      m_result=(4/3)*pi*(pow(r_coor,3)-pow(r_s[sample_number-1],3))*(rho_x[sample_number-1]-1);
+      m_result+=m_tot_copy[sample_number-1];
+      assertion10( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, r_s[sample_number-1], plotGlobalMTot(false), plotGlobalMTot(true) );
+      assertion10( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, r_s[sample_number-1], plotGlobalMTot(false), plotGlobalMTot(true) );
+    }
   }
-//m_result=0.0;
-
-}  
-  //if (r_coor>0.84) {std::cout << m_result << std::endl;} 
-  //m_result=0.0;
 
   return m_result;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

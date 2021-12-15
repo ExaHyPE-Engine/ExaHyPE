@@ -5,6 +5,10 @@ from .DoF                import DoF
 
 
 class Patch(DoF):
+  readme_package_descriptor = """
+"""
+
+    
   def __init__(self, dim, no_of_unknowns, name):
     """
       dim should be a two-tuple or a three-tuple of integers, so a construction 
@@ -17,6 +21,9 @@ class Patch(DoF):
     self.dim       = dim
     self.no_of_unknowns = no_of_unknowns
     self.generator = PatchToDoubleArray(self)
+    self.readme_descriptor = """
+### Datamodel for """ + name + str(self)
+
 
   def __str__(self):
     return """

@@ -24,6 +24,106 @@ class Makefile(object):
     self.clear()
 
 
+  @property
+  def readme_entry(self):
+    return jinja2.Template( """
+## Makefile settings
+
+CXX       = {{CXX}}
+CXXFLAGS  = {{CXXFLAGS}}
+FC        = {{FC}}
+FCFLAGS   = {{FCFLAGS}}
+LDFLAGS   = {{LDFLAGS}}
+GPUOBJS   = {{GPUOBJS}}
+LIBS      = {{LIBS}}
+DIM       = {{DIM}}
+CONFIGUREPATH   = {{CONFIGUREPATH}}
+EXECUTABLENAME  = {{EXECUTABLENAME}}
+FORTRAN_MODULES = {{FORTRAN_MODULES}}
+MODE            = {{MODE}}
+ 
+Code base configured with
+
+""").render(**self.d) + self.configure_call  
+
+
+  @property
+  def readme_package_descriptor(self):
+    return jinja2.Template( """
+{% if Parallel %}
+
+### MPI parallelisation
+
+Peano's distributed memory parallelisation is based upon plain space-filling 
+curves which are used first to split the cells among the ranks, and, after   
+that, to split the cells into chunks and deploy them onto cores (if shared   
+memory is used). There is no particularly novel contribution/paper on this   
+aspect of the code. The paper that is (algorithmically) most interesting is  
+an old EuroPar publication:                                                 
+
+
+       @InProceedings{Bungartz:2006:Parallelisation,
+         author={Bungartz, Hans-Joachim and Mehl, Miriam and Weinzierl, Tobias}, 
+         editor={Nagel, Wolfgang E. and Walter, Wolfgang V. and Lehner, Wolfgang}, 
+         title={A Parallel Adaptive Cartesian PDE Solver Using Space--Filling Curves},  
+         booktitle={Euro-Par 2006 Parallel Processing}, 
+         year={2006}, 
+         publisher={Springer Berlin Heidelberg}, 
+         address={Berlin, Heidelberg}, 
+         pages={1064--1074}, 
+         abstract={In this paper, we present a parallel multigrid PDE solver working on adaptive hierarchical cartesian grids. The presentation is restricted to the linear elliptic operator of second order, but extensions are possible and have already been realised as prototypes. Within the solver the handling of the vertices and the degrees of freedom associated to them is implemented solely using stacks and iterates of a Peano space--filling curve. Thus, due to the structuredness of the grid, two administrative bits per vertex are sufficient to store both geometry and grid refinement information. The implementation and parallel extension, using a space--filling curve to obtain a load balanced domain decomposition, will be formalised. In view of the fact that we are using a multigrid solver of linear complexity {\\$}{\\backslash}mathcal{\\{}O{\\}}(n){\\$}, it has to be ensured that communication cost and, hence, the parallel algorithm's overall complexity do not exceed this linear behaviour.}, 
+         isbn={978-3-540-37784-9} 
+       } 
+
+{% endif %}
+{% if SharedOMP %}
+
+### OpenMP parallelisation
+
+Peano 4 run uses a wrapper around OpenMP to obtain a high task efficiency. 
+The wrapper can be read as user-level threading implemented on top of OpenMP's 
+tasking mechanism. It is described in
+                                                                            
+       @article{Schulz:2021:Tasking,   
+         title = {Task inefficiency patterns for a wave equation solver},   
+         journal = {IWOMP},   "
+         year = {2021},   
+         author = {Holger Schulz and Gonzalo Brito Gadeschi and Oleksandr Rudyy and Tobias Weinzierl},
+      } 
+
+{% endif %}
+
+
+{% if SharedOMP %}
+
+Peano relies on a mixture of classic domain decomposition and task-based  
+parallelism. The domain decomposition provides the baseline performance,  
+and the tasking adds the big flexibility and scalability gain on top. The 
+key publication discussing the overall idea and algorithmic ingredients is
+the SISC paper
+                                                                            
+       @article{Charrier:2020:Enclave,
+         author = {Charrier, Dominic Etienne and Hazelwood, Benjamin and Weinzierl, Tobias},
+         title = {Enclave Tasking for DG Methods on Dynamically Adaptive Meshes},
+         journal = {SIAM Journal on Scientific Computing},
+         volume = {42},
+         number = {3},
+         pages = {C69-C96},
+         year = {2020},
+         doi = {10.1137/19M1276194},
+         URL = {https://doi.org/10.1137/19M1276194},
+         eprint = {https://doi.org/10.1137/19M1276194}
+       }
+
+{% endif %}
+
+""").render(**self.d)
+
+
+  def executable_name(self):
+    return self.d["EXECUTABLENAME"]
+
+
   def clear(self):
     self.configure_call = ""
     self.d = {}
@@ -179,6 +279,13 @@ class Makefile(object):
     """
     self.d[ "CONFIGUREPATH" ] = directory
 
+    MakefileDefined = [
+        "Parallel",
+        "SharedOMP",
+        "SharedTBB",
+        "SharedCPP",
+    ]
+    
     input_file = directory + "/config.log"
     try:
       input = open( input_file, "r" )
@@ -188,6 +295,9 @@ class Makefile(object):
         if "./configure" in line and self.configure_call == "":
           print( "found the configure call info " + line )
           self.configure_call = line.strip()
+        for define in MakefileDefined: 
+          if re.search( "#define " + define, line ): 
+              self.d[define] = "1"
     except IOError:
       print( """
 Error: if you call parse_configure_script_outcome(), please hand over directory where
@@ -232,7 +342,7 @@ did search for a file """ + input_file )
         "CXXFLAGS",
         "LDFLAGS"
       ]
-      
+            
       for line in input:
         for constant in MakefileConstants: 
           if re.search( constant + " *=", line) and line.startswith( constant ): 

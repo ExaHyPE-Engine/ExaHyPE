@@ -9,7 +9,7 @@ import jinja2
 
 
 class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
-  def __init__(self, particle_set, solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, output_precision=8, use_relative_deltas=False):
+  def __init__(self, particle_set, solver, filename, number_of_entries_between_two_db_flushes=65536, data_delta_between_two_snapsots=1e-8, position_delta_between_two_snapsots=1e-8, time_delta_between_two_snapsots=0, output_precision=8, use_relative_deltas=False):
     """
      
     data_delta_between_two_snapsots: Float
@@ -28,6 +28,13 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
      value, as theyare tracer, while stationary seismograms usually do not change
      their position at all.
      
+    time_delta_between_two_snapsots: Float
+     this parameter ask the code to dump particle into database after certain time 
+     interval of time_delta_between_two_snapsots, even data and position do not change 
+     during this time interval. You can set the two parameter above to be extremely big
+     to enforce code dump particle with (roughly) regular time interval. 
+     set it as 0 to switch this feature off.
+
     number_of_entries_between_two_db_flushes: Int
       Number of entries that we dump into the database before it is flushed the next
       time. Set it to max of an integer or zero to disable on-the-fly dumps. In this
@@ -45,6 +52,7 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
     self.d[ "PARTICLES_CONTAINER" ]      = particle_set.name
     self.d[ "DATA_DELTA" ]               = data_delta_between_two_snapsots
     self.d[ "POSITION_DELTA" ]           = position_delta_between_two_snapsots
+    self.d[ "TIME_DELTA" ]               = time_delta_between_two_snapsots
     self.d[ "OUTPUT_PRECISION"]          = output_precision
     self.d[ "FILENAME" ]                 = filename
     self.d[ "SOLVER_NAME" ]              = solver._name
@@ -58,7 +66,7 @@ class DumpTrajectoryIntoDatabase(peano4.solversteps.ActionSet):
     self.number_of_entries_between_two_db_flushes = number_of_entries_between_two_db_flushes
 
   __Template_TouchCellLastTime = jinja2.Template("""
-if ( not marker.isRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
+if ( not marker.willBeRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
   for (int i=0; i<TwoPowerD; i++) {
     for (auto& p: fineGridVertices{{PARTICLES_CONTAINER}}(i) ) {
       if (
@@ -102,6 +110,7 @@ if ( not marker.isRefined() and fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdat
   _database.setOutputPrecision( {{OUTPUT_PRECISION}} );
   _database.setDataDeltaBetweenTwoSnapshots( {{DATA_DELTA}}, {{USE_RELATIVE_DELTAS}} );
   _database.setPositionDeltaBetweenTwoSnapshots( {{POSITION_DELTA}}, {{USE_RELATIVE_DELTAS}} );
+  _database.setTimeDeltaBetweenTwoSnapshots( {{TIME_DELTA}} );
 """)
     return template.render(**self.d)
 

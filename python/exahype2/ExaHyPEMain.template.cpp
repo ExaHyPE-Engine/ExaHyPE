@@ -35,6 +35,11 @@
 #include "exahype2/UserInterface.h"
 #include "exahype2/UnitTests.h"
 
+#ifdef UseFEExcept
+#include <fenv.h>
+#pragma float_control(precise, on)
+#pragma STDC FENV_ACCESS ON
+#endif
 
 using namespace {FULL_NAMESPACE};
 
@@ -396,7 +401,11 @@ int main(int argc, char** argv) {{
   const int ExitCodeUnitTestsFailed  = 1;
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
-  
+
+#ifdef UseFEExcept
+  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
+
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
   tarch::multicore::initSmartMPI();
@@ -415,6 +424,7 @@ int main(int argc, char** argv) {{
   }}
 
   if (not exahype2::parseCommandLineArguments(argc,argv) ) {{
+    logError("main()", "Invalid command line arguments.");
     return ExitCodeInvalidArguments;
   }}
   
@@ -484,8 +494,6 @@ int main(int argc, char** argv) {{
   #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
-  peano4::addBuildAndRunInformation( "\n\nThe present executable has been created by \n\n     " + BuildInformation + "\n\n" );
-  peano4::addBuildAndRunInformation( "\n\nThe underlying Peano 4 configuration is\n\n     " + ConfigureInformation + "\n\n" );
 
   repositories::finishSimulation();
 
