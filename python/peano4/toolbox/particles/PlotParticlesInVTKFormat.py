@@ -74,6 +74,17 @@ class PlotParticlesInVTKFormat(ActionSet):
 
 
   def add_attribute_to_plot(self, attribute, cardinality=1):
+      """
+      
+      attribute: Attribute
+        The actual attribute that we have to plot.
+        
+      cardinality: Integer
+        The cardinality of the attribute. This is 1 for a scalar value, 2 for a 2d vector,
+        and so forth. We support arbitrary cardinalities, but the cardinality hsa to match
+        attribute. 
+      
+      """
       self._attributes_to_plot.append(attribute)
       writer_name = f"{attribute.get_to_string()}Writer"
       delim = "\n  "
