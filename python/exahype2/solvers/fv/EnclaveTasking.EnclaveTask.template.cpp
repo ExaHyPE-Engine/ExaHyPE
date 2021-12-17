@@ -10,7 +10,10 @@
 
 #include "peano4/utils/Loop.h"
 
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
 #include "tarch/multicore/SmartScheduler.h"
+
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 
@@ -466,8 +469,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   const int LR   = _sourcePatchSize*NPT;
   const int LTOT = _destinationPatchSize*NPT;
   pD.npatches=NPT;
-
-  constexpr int Alignment = 64;
 
   pD.reco     = new (std::align_val_t(Alignment)) double[LR];
   pD.id       = new (std::align_val_t(Alignment))   int[NPT];

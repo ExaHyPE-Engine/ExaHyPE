@@ -1,5 +1,7 @@
 #include "tarch/la/Vector.h"
 
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
 
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
@@ -817,7 +819,7 @@ void exahype2::fv::Fusanov_2D_with_batching(
     // volumeH(0) = h0/numVPAIP;
     // volumeH(1) = h1/numVPAIP;
 
-  #pragma omp simd collapse(4)  aligned(basePointerReconstructed:64) aligned(basePointerResult:64)
+  #pragma omp simd collapse(4)  aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
   for (int pidx=0;pidx<NPT;pidx++)
   for (int x = 0; x < numVPAIP; x++)
   for (int y = 0; y < numVPAIP; y++)
@@ -837,7 +839,7 @@ void exahype2::fv::Fusanov_2D_with_batching(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp simd collapse(3) aligned(basePointerReconstructed:64) aligned(basePointerResult:64)
+    #pragma omp simd collapse(3) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = 0; x < numVPAIP; x++)
     for (int y = 0; y < numVPAIP; y++) {
@@ -870,7 +872,7 @@ void exahype2::fv::Fusanov_2D_with_batching(
 
   for (int shift = 0; shift < 2; shift++)
   {
-    #pragma omp simd collapse(3) aligned(basePointerReconstructed:64) aligned(basePointerResult:64)
+    #pragma omp simd collapse(3) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int x = shift; x <= numVPAIP; x += 2)
     for (int y = 0; y < numVPAIP; y++) 
@@ -953,7 +955,7 @@ void exahype2::fv::Fusanov_2D_with_batching(
       }
     } // close loop over vertical faces
 
-    #pragma omp simd collapse(3) aligned(basePointerReconstructed:64) aligned(basePointerResult:64)
+    #pragma omp simd collapse(3) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int pidx=0;pidx<NPT;pidx++)
     for (int y = shift; y <= numVPAIP; y += 2)
     for (int x = 0;     x <  numVPAIP; x++   )
@@ -1286,7 +1288,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
   double* basePointerReconstructed = pV.reco;
   double* basePointerResult        = pV.result;
 
-  #pragma omp simd collapse(5) aligned(basePointerReconstructed:64) aligned(basePointerResult:64)
+  #pragma omp simd collapse(5) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
   for (int pidx=0;pidx<NPT;pidx++)
   for (int z = 0; z < numVPAIP; z++)
   for (int y = 0; y < numVPAIP; y++)
@@ -1309,7 +1311,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
   }
 
   if (not skipSourceTerm) {
-    #pragma omp simd collapse(4) aligned(basePointerReconstructed:64) aligned(basePointerResult:64)
+    #pragma omp simd collapse(4) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int z = 0; z < numVPAIP; z++)
     for (int y = 0; y < numVPAIP; y++)
     for (int x = 0; x < numVPAIP; x++)
@@ -1349,7 +1351,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
   }
 
   for (int shift = 0; shift < 2; shift++) {
-    #pragma omp simd collapse(4) aligned(basePointerReconstructed:64) aligned(basePointerResult:64)
+    #pragma omp simd collapse(4) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int x = shift; x <= numVPAIP; x += 2)
     for (int y = 0; y < numVPAIP; y++)
     for (int z = 0; z < numVPAIP; z++)
@@ -1448,7 +1450,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
       }
     } // close loop over faces with normal along x-axis
 
-    #pragma omp simd collapse(4) aligned(basePointerReconstructed:64) aligned(basePointerResult:64)
+    #pragma omp simd collapse(4) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int x = 0; x < numVPAIP; x++)
     for (int y = shift; y <= numVPAIP; y += 2)
     for (int z = 0; z < numVPAIP; z++)
@@ -1546,7 +1548,7 @@ void exahype2::fv::Fusanov_3D_with_batching(
       }
     } // face with normal along y-axis
 
-    #pragma omp simd collapse(4) aligned(basePointerReconstructed:64) aligned(basePointerResult:64)
+    #pragma omp simd collapse(4) aligned(basePointerReconstructed:Alignment) aligned(basePointerResult:Alignment)
     for (int x = 0; x < numVPAIP; x++)
     for (int y = 0; y < numVPAIP; y++)
     for (int z = shift; z <= numVPAIP; z += 2)

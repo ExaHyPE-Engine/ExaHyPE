@@ -18,6 +18,9 @@
 #define UseManualInlining
 #endif
 
+#if !defined(Alignment)
+#define Alignment 512
+#endif
 
 #define LittleEndian
 
