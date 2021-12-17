@@ -14,6 +14,7 @@ ReFrame-Hamilton:
   tags:
     - hamilton
   script:
+    - find /ddn/data/gcgt96/reframe_stage -mtime +2 -name Peano -type d |xargs rm -rf
     - cd /ddn/data/gcgt96/Peano/reframe/tests/rfm_euler
     - git pull  
     - module purge
