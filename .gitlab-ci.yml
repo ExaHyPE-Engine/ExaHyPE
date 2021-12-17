@@ -3,6 +3,7 @@ ReFrame-DINE:
   tags:
     - dine
   script:
+    - find /cosma5/data/durham/hschulz/reframe_stage -mtime +2 -name Peano -type d |xargs rm -rf
     - cd /cosma5/data/durham/hschulz/Peano/reframe/tests/rfm_euler
     - git pull
     - module purge
