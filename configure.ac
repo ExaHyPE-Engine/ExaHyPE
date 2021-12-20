@@ -163,7 +163,7 @@ if test "$multithreading" == cpp; then
 fi
 
 if test "$multithreading" == sycl; then
-  AC_CHECK_HEADERS([CL/sycl.hpp],[],[AC_MSG_ERROR([header <CL/sycl.hpp> not found])])
+  #AC_CHECK_HEADERS([cycl/CL/hpsycl.hpp],[],[AC_MSG_ERROR([header <cycl/CL/sycl.hpp> not found])])
   AC_DEFINE([SharedSYCL], [1], [SharedSYCL])
 fi
 

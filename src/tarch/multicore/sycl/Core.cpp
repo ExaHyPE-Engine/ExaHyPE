@@ -10,18 +10,13 @@
 
 #if defined(SharedSYCL)
 #include <sstream>
-
 #include "config.h"
+#include <oneapi/tbb/global_control.h>
+#include <oneapi/tbb/info.h>
 
 
 namespace {
-  /**
-   * Global task scheduler. By default, it is configured to host the default
-   * number of parameters. We can tweak this behaviour by defining a global_control
-   * variable.
-   */
-//  tbb::task_scheduler_init tsi(tbb::task_scheduler_init::default_num_threads());
-  tbb::global_control* globalControl;
+  oneapi::tbb::global_control*  globalControl = nullptr;
 }
 
 
@@ -29,7 +24,7 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 tarch::multicore::Core::Core():
-  _numberOfThreads(tbb::task_scheduler_init::default_num_threads()) {
+  _numberOfThreads( oneapi::tbb::info::default_concurrency() ) {
 }
 
 
@@ -44,12 +39,14 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 
 
 void tarch::multicore::Core::configure( int numberOfThreads ) {
+  if (globalControl!=nullptr) delete globalControl;
+  globalControl = nullptr;
   if (numberOfThreads != UseDefaultNumberOfThreads) {
     _numberOfThreads = numberOfThreads;
-  //  c(global_control::max_allowed_parallelism, parallelism/2);
+    globalControl    = new oneapi::tbb::global_control(oneapi::tbb::global_control::max_allowed_parallelism,numberOfThreads);
   }
   else {
-    _numberOfThreads = tbb::task_scheduler_init::default_num_threads();
+    _numberOfThreads = oneapi::tbb::info::default_concurrency();
   }
 
   if (_numberOfThreads>getNumberOfUnmaskedThreads()) {
@@ -59,6 +56,8 @@ void tarch::multicore::Core::configure( int numberOfThreads ) {
 
 
 void tarch::multicore::Core::shutdown() {
+  if (globalControl!=nullptr) delete globalControl;
+  globalControl = nullptr;
 }
 
 

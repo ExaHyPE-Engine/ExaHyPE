@@ -15,12 +15,17 @@
 #include <execution>
 #include <future>
 
+#include <oneapi/tbb/task_arena.h>
 
 namespace {
   std::atomic<int> nonblockingTasksCounter          = 0;
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
 
+  /**
+   * Additional subarena
+   */
+  oneapi::tbb::task_arena backgroundTaskArena(oneapi::tbb::task_arena::automatic,1,oneapi::tbb::task_arena::priority::low);
 
   /**
    * Native mapping of a task loop onto a task loop
@@ -35,17 +40,20 @@ namespace {
     // important, otherwise taskwait synchronises
     assertion( not tasks.empty() );
 
-    std::for_each(
-      std::execution::par_unseq,
-      tasks.begin(),
-      tasks.end(),
-      [](auto&& item) -> void {
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
-        while (item->run()) {}
-        delete item;
-        ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
-      }
-    );
+    // is implicitly executed within root arena, as the invoking task is
+    // run within root arena
+    oneapi::tbb::task_group taskGroup;
+    for (auto& p: tasks) {
+      taskGroup.run(
+        [&tasks,p]() -> void {
+          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
+          while (p->run()) {}
+          delete p;
+          ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
+        }
+      );
+    }
+    taskGroup.wait();
   }
 
 
@@ -110,10 +118,10 @@ namespace {
     std::atomic<int>       pendingTasks  = NumberOfThreads;
     std::atomic<int>       spawnedTasks  = 0;
 
-    std::vector< std::thread* > threads;
-
+    oneapi::tbb::task_group taskGroup;
     for (int i=0; i<NumberOfThreads; i++) {
-      std::thread* newThread = new std::thread(
+      // is implicitly executed within root arena
+      taskGroup.run(
         [&spawnedTasks,&pendingTasks,&tasks,i,NumberOfThreads,&strategy] () -> void {
           spawnedTasks++;
 
@@ -138,8 +146,8 @@ namespace {
             pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
             and
             spawnedTasks==NumberOfThreads
-           ) {
-             int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
+          ) {
+            int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 
             if ( numberOfPendingTasks>0 ) {
               std::pair<int,int> fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
@@ -163,13 +171,8 @@ namespace {
           }
         }
       );
-      newThread->detach();
-      threads.push_back( newThread );
     }
-
-    for (auto& p: threads) {
-      p->join();
-    }
+    taskGroup.wait();
   }
 }
 
@@ -177,7 +180,7 @@ namespace {
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
-  std::future<void> dontWait = std::async( std::launch::async,
+  backgroundTaskArena.enqueue(
     [job] () -> void {
       while (job->run()) {
         std::this_thread::yield();
@@ -214,7 +217,9 @@ void tarch::multicore::native::spawnAndWait(
 
 
 void tarch::multicore::native::yield() {
-  std::this_thread::yield();
+  //std::this_thread::yield();
+  //backgroundTaskArena.
+  //oneapi::tbb::task::suspend();
 }
 
 
@@ -235,7 +240,7 @@ int tarch::multicore::native::getNumberOfPendingTasks() {
  */
 void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
   std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
-  std::future<void> dontWait = std::async( std::launch::async,
+  backgroundTaskArena.enqueue(
     [myTask,copyOfTasksOfSameType,device]() -> void {
       bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType,device);
       if (stillExecuteLocally) {
