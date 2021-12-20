@@ -115,6 +115,11 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/omp/Core.cpp \
  tarch/multicore/omp/RecursiveSemaphore.cpp \
  tarch/multicore/omp/Tasks.cpp \
+ tarch/multicore/sycl/multicore.cpp \
+ tarch/multicore/sycl/BooleanSemaphore.cpp \
+ tarch/multicore/sycl/Core.cpp \
+ tarch/multicore/sycl/RecursiveSemaphore.cpp \
+ tarch/multicore/sycl/Tasks.cpp \
  tarch/multicore/orchestration/Hardcoded.cpp \
  tarch/multicore/orchestration/StrategyFactory.cpp \
  tarch/tests/TestCaseCollection.cpp \

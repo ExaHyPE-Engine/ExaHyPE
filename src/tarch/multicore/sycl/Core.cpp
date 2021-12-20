@@ -8,17 +8,28 @@
 #endif
 
 
-#if defined(SharedTBB)
+#if defined(SharedSYCL)
 #include <sstream>
 
 #include "config.h"
+
+
+namespace {
+  /**
+   * Global task scheduler. By default, it is configured to host the default
+   * number of parameters. We can tweak this behaviour by defining a global_control
+   * variable.
+   */
+//  tbb::task_scheduler_init tsi(tbb::task_scheduler_init::default_num_threads());
+  tbb::global_control* globalControl;
+}
 
 
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 tarch::multicore::Core::Core():
-  _numberOfThreads(std::thread::hardware_concurrency()) {
+  _numberOfThreads(tbb::task_scheduler_init::default_num_threads()) {
 }
 
 
@@ -35,9 +46,10 @@ tarch::multicore::Core& tarch::multicore::Core::getInstance() {
 void tarch::multicore::Core::configure( int numberOfThreads ) {
   if (numberOfThreads != UseDefaultNumberOfThreads) {
     _numberOfThreads = numberOfThreads;
+  //  c(global_control::max_allowed_parallelism, parallelism/2);
   }
   else {
-    _numberOfThreads = std::thread::hardware_concurrency();
+    _numberOfThreads = tbb::task_scheduler_init::default_num_threads();
   }
 
   if (_numberOfThreads>getNumberOfUnmaskedThreads()) {

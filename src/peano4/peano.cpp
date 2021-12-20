@@ -53,8 +53,8 @@ void peano4::writeCopyrightMessage() {
     buildInfo += ", omp (";
     buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
     buildInfo += " threads)";
-    #elif defined(SharedTBB)
-    buildInfo += ", tbb (";
+    #elif defined(SharedSYCL)
+    buildInfo += ", sycl (";
     buildInfo += std::to_string( tarch::multicore::Core::getInstance().getNumberOfThreads() );
     buildInfo += " threads)";
     #elif defined(SharedCPP)

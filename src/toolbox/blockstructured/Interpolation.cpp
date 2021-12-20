@@ -317,6 +317,11 @@ void toolbox::blockstructured::internal::projectHaloLayers_AoS(
       }
       coarseVolume /= 3;
 
+      assertion3( coarseVolume(0)>=0, kFine, iFine, marker );
+      assertion3( coarseVolume(1)>=0, kFine, iFine, marker );
+      assertion3( coarseVolume(0)<numberOfDoFsPerAxisInPatch, kFine, iFine, marker );
+      assertion3( coarseVolume(1)<numberOfDoFsPerAxisInPatch, kFine, iFine, marker );
+
       tarch::la::Vector<Dimensions,double> volumeXCoarse = leftBottomCornerOfHaloCoarse
           + volumeHCoarse * tarch::la::convertScalar<double>(coarseVolume)
           + 0.5 * tarch::la::Vector<Dimensions,double>(volumeHCoarse);
