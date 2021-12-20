@@ -40,6 +40,9 @@ std::string toString( exahype2::RefinementCommand value ) {
 tarch::logging::Log  exahype2::RefinementControl::_log( "exahype2::RefinementControl" );
 
 
+int exahype2::RefinementControl::_reductionTag( tarch::mpi::Rank::reserveFreeTag("exahype2::RefinementControl") );
+
+
 tarch::multicore::BooleanSemaphore  exahype2::RefinementControl::_semaphore;
 
 
@@ -132,7 +135,42 @@ void exahype2::RefinementControl::finishStep() {
   }
   _newEvents.clear();
 
-  peano4::grid::reduceGridControlEvents( _committedEvents );
+  int originallyCommittedEvents = _committedEvents.size();
+  if ( _committedEvents.size()>0 ) {
+    logDebug( "finishStep()", "share my " << _committedEvents.size() << " event(s) with others" );
+    for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
+      if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
+        MPI_Send( _committedEvents.data(), _committedEvents.size(), peano4::grid::GridControlEvent::Datatype, rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator() );
+      }
+    }
+  }
+
+  int totalOfReceivedMessages = 0;
+  for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
+    bool pollMessages = true;
+    while (pollMessages and rank!=tarch::mpi::Rank::getInstance().getRank()) {
+        MPI_Status status;
+        int        flag;
+        MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
+        if (flag) {
+          int numberOfMessages;
+          MPI_Get_count( &status, peano4::grid::GridControlEvent::Datatype, &numberOfMessages );
+          logDebug( "finishStep()", "got " << numberOfMessages << " event(s) from rank " << rank );
+          totalOfReceivedMessages += numberOfMessages;
+          std::vector< peano4::grid::GridControlEvent > receiveBuffer;
+          receiveBuffer.resize( numberOfMessages );
+          MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::Datatype, rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
+          _committedEvents.insert( _committedEvents.end(), receiveBuffer.begin(), receiveBuffer.end() );
+          pollMessages = true;
+        }
+        else {
+          pollMessages = false;
+        }
+    }
+  }
+  if (totalOfReceivedMessages>0) {
+    logInfo( "finishStep()", "received " << totalOfReceivedMessages << " event(s) from other ranks on top of my " << originallyCommittedEvents << " event(s)" );
+  }
 }
 
 

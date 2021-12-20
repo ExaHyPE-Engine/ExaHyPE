@@ -141,6 +141,11 @@ class exahype2::RefinementControl {
     static tarch::multicore::BooleanSemaphore  _semaphore;
 
     /**
+     * I need a tag of my own to exchange control info after each step.
+     */
+    static int _reductionTag;
+
+    /**
      * We blow up the region around refinement criterion slightly.
      */
     const double _Tolerance;
@@ -170,6 +175,26 @@ class exahype2::RefinementControl {
      * The raw events might become really large over time. However, I decided to
      * keep this routine clear of any optimisation. It is the grid which has
      * to clean up the refinement events appropriately.
+     *
+     * ## MPI data excange
+     *
+     * I originally wanted to use an MPI reduction to have a consistent view of
+     * all refinement controls. However, this seems not to work, as some ranks
+     * can be out of sync. So what I do instead now is a delayed broadcast: Every
+     * rank sends out its committed events to all others and appends all incoming
+     * ones to its own set.
+     *
+     * This simple implementation also works for our dynamic event sets, where we
+     * do not know a priori how many events are triggered by a rank. Still, it can
+     * happen that event views are out-of-sync. This is not a problem here:
+     *
+     * The actual grid changes are all triggered via vertices, so we never obtain
+     * an invalid grid. The individual grid events have a lifetime and thus are
+     * active over multiple iterations. Hence, they will be merge at one point.
+     *
+     * We have to split up the send and receive loop such that we first send out
+     * all stuff and then receive.
+     *
      */
     std::vector< peano4::grid::GridControlEvent >  _committedEvents;
 };

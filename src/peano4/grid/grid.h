@@ -281,6 +281,10 @@ namespace peano4 {
      * Peano 4 does not reduce any grid control events globally. If you
      * want to reduce these events, you have to do so manually. Operation
      * becomes identify if you don't compile with MPI.
+     *
+     * This is a blocking routine, and it thus requires all ranks to call
+     * it at exactly the same time. Use it with care. In ExaHyPE 2, e.g.,
+     * I prefer a more anarchic exchange of grid control events.
      */
     void reduceGridControlEvents( std::vector<GridControlEvent>& events );
 
