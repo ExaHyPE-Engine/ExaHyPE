@@ -339,6 +339,11 @@ void step() {{
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
 
         repositories::finishGridInitialisationStep();
+
+        #if defined(UseOtter)
+        otterTraceBegin();
+        otterParallelBegin();
+        #endif
       }}
       break;
     case repositories::StepRepository::Steps::PlotSolution:
@@ -485,6 +490,11 @@ int main(int argc, char** argv) {{
   #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
+
+  #if defined(UseOtter)
+  otterParallelEnd();
+  otterTraceEnd();
+  #endif
 
   repositories::finishSimulation();
 
