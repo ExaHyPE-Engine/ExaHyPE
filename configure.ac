@@ -571,6 +571,21 @@ AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 
 
 #
+# FEM 
+#
+AC_ARG_WITH(otter,
+  AC_HELP_STRING([--with-otter], [enable Otter [default=false]]),
+  [ AC_MSG_CHECKING(for otter)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_otter=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_otter=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); toolbox_otter=false ])
+AM_CONDITIONAL([UseOtter],[test "x$toolbox_otter" = xtrue])
+
+
+
+#
 # ===============================================================
 #   Toolbox - setup
 #
@@ -795,6 +810,25 @@ if test "$toolbox_delta" != false; then
   LDADD_PEANO_3D_ASSERTS+=" -ldelta3d " 
   LDADD_PEANO_3D_TRACE+="   -ldelta3d "
   LDADD_PEANO_3D_DEBUG+="   -ldelta3d "
+fi
+
+
+#
+# Otter
+#
+if test "$toolbox_otter" != false; then
+  AC_DEFINE([UseOtter], [1], [UseOtter])
+  LDADD_PEANO_2D_RELEASE+=" -lotter "
+  LDADD_PEANO_2D_STATS+="   -lotter "
+  LDADD_PEANO_2D_ASSERTS+=" -lotter " 
+  LDADD_PEANO_2D_TRACE+="   -lotter "
+  LDADD_PEANO_2D_DEBUG+="   -lotter "
+
+  LDADD_PEANO_3D_RELEASE+=" -lotter "
+  LDADD_PEANO_3D_STATS+="   -lotter "
+  LDADD_PEANO_3D_ASSERTS+=" -lotter " 
+  LDADD_PEANO_3D_TRACE+="   -lotter "
+  LDADD_PEANO_3D_DEBUG+="   -lotter "
 fi
 
 
