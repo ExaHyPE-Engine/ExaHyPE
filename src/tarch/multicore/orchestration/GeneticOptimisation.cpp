@@ -51,7 +51,8 @@ tarch::multicore::orchestration::GeneticOptimisation::GeneticOptimisation():
     0, std::pair<int,int>(0,0), false, false
   ),
   _currentWatch( "tarch::multicore::orchestration::GeneticOptimisation", "GeneticOptimisation", false, false ),
-  _lastDuration(-1.0) {
+  _lastDuration(-1.0),
+  _bspRunThroughsWithActiveKey(0) {
   createInitialConfigurations();
   normalise();
 }
@@ -90,28 +91,37 @@ void tarch::multicore::orchestration::GeneticOptimisation::normalise() {
 
 
 void tarch::multicore::orchestration::GeneticOptimisation::startBSPSection() {
-  _currentWatch.start();
+  if (_bspRunThroughsWithActiveKey==0) {
+    _currentWatch.start();
+  }
 }
 
 
 void tarch::multicore::orchestration::GeneticOptimisation::endBSPSection() {
-  _currentWatch.stop();
-  double newValue = _currentWatch.getCalendarTime();
+  const int BSPRunThroughsWithActiveKey = 16;
+  _bspRunThroughsWithActiveKey++;
 
-  constexpr double Min = 1e-8;
-  if (newValue>Min) {
-    // update stats
-    _configurationVariants.at(_activeKey).measurement.setValue(newValue);
+  if (_bspRunThroughsWithActiveKey>=BSPRunThroughsWithActiveKey) {
+    _bspRunThroughsWithActiveKey = 0;
 
-    // update probabilities. Increase local ones if appropriate and then re-normalise
-    if ( _lastDuration>Min and _lastDuration>_configurationVariants.at(_activeKey).measurement.getValue() ) {
-      increaseProbabilityOfActiveConfiguration();
-      removeUnreasonableProbabilities();
-      normalise();
+    _currentWatch.stop();
+    double newValue = _currentWatch.getCalendarTime();
+
+    constexpr double Min = 1e-8;
+    if (newValue>Min) {
+      // update stats
+      _configurationVariants.at(_activeKey).measurement.setValue(newValue);
+
+      // update probabilities. Increase local ones if appropriate and then re-normalise
+      if ( _lastDuration>Min and _lastDuration>_configurationVariants.at(_activeKey).measurement.getValue() ) {
+        increaseProbabilityOfActiveConfiguration();
+        removeUnreasonableProbabilities();
+        normalise();
+      }
+      _lastDuration = _configurationVariants.at(_activeKey).measurement.getValue();
+
+      pickNewActiveConfigurationRandomly();
     }
-    _lastDuration = _configurationVariants.at(_activeKey).measurement.getValue();
-
-    pickNewActiveConfigurationRandomly();
   }
 }
 
