@@ -3,6 +3,8 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
+#include "tarch/multicore/BooleanSemaphore.h"
+#include "tarch/multicore/Lock.h"
 
 #include "tarch/mpi/Rank.h"
 
@@ -14,10 +16,13 @@
 #include <atomic>
 #include <execution>
 #include <future>
+#include <list>
 
 #include <oneapi/tbb/task_arena.h>
 
 namespace {
+  tarch::multicore::BooleanSemaphore  suspensionPointSemaphore;
+
   std::atomic<int> nonblockingTasksCounter          = 0;
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
@@ -25,7 +30,28 @@ namespace {
   /**
    * Additional subarena
    */
-  oneapi::tbb::task_arena backgroundTaskArena(oneapi::tbb::task_arena::automatic,1,oneapi::tbb::task_arena::priority::low);
+  oneapi::tbb::task_arena backgroundTaskArena( oneapi::tbb::task_arena::automatic, 1, oneapi::tbb::task_arena::priority::low  );
+  oneapi::tbb::task_arena fusedTaskArena(      oneapi::tbb::task_arena::automatic, 1, oneapi::tbb::task_arena::priority::high );
+
+  /**
+   * In oneTBB, we can suspend a task and will get back a tag to wake up the
+   * thread later on.
+   */
+  std::list< oneapi::tbb::task::suspend_point >    suspendedTags;
+
+  /**
+   * If you yield(), the SYCL implementation does not yield. It suspends the
+   * active thread. This implies that we have to wake them up again.
+   */
+  void wakeUpSuspendedTasks() {
+    tarch::multicore::Lock lock( suspensionPointSemaphore );
+
+    for (auto& p: suspendedTags ) {
+      oneapi::tbb::task::resume(p);
+    }
+
+    suspendedTags.clear();
+  }
 
   /**
    * Native mapping of a task loop onto a task loop
@@ -128,7 +154,7 @@ namespace {
           ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
           if (i<tasks.size()) {
             while (tasks[i]->run()) {
-              std::this_thread::yield();
+              wakeUpSuspendedTasks();
             }
             delete tasks[i];
           }
@@ -161,7 +187,7 @@ namespace {
               }
             }
             else {
-              std::this_thread::yield();
+              wakeUpSuspendedTasks();
               #if defined(Parallel)
               // Allow MPI to make progress. We otherwise might starve MPI
               int flag;
@@ -183,13 +209,13 @@ void tarch::multicore::native::spawnTask(Task*  job) {
   backgroundTaskArena.enqueue(
     [job] () -> void {
       while (job->run()) {
-        std::this_thread::yield();
+        wakeUpSuspendedTasks();
       }
       delete job;
+      nonblockingTasksCounter--;
+      wakeUpSuspendedTasks();
     }
   );
-
-  nonblockingTasksCounter--;
 }
 
 
@@ -216,10 +242,31 @@ void tarch::multicore::native::spawnAndWait(
 }
 
 
+/**
+ * In TBB, you should not use a yield. Instead, you can can suspend the running
+ * task and you get back a suspension_point tag. The latter is to be used to wake
+ * the thread again.
+ */
 void tarch::multicore::native::yield() {
-  //std::this_thread::yield();
-  //backgroundTaskArena.
-  //oneapi::tbb::task::suspend();
+/*
+  static tarch::logging::Log _log( "tarch::multicore::native" );
+
+  tarch::multicore::Lock lock( suspensionPointSemaphore );
+  int remainingConcurrency = nonblockingTasksCounter-suspendedTags.size()-1;
+  bool suspendThisTask = remainingConcurrency > tarch::multicore::Core::getInstance().getNumberOfThreads()
+                     and suspendedTags.size() < tarch::multicore::Core::getInstance().getNumberOfThreads()-1; // keep one alive
+  lock.free();
+
+  if (suspendThisTask) {
+    logInfo( "yield()", "yield() suspends thread (nonblocking-tasks=" << nonblockingTasksCounter << ",suspended-tasks=" << suspendedTags.size() << ",threads=" << tarch::multicore::Core::getInstance().getNumberOfThreads() << "), remaining-concurrency=" << remainingConcurrency );
+    oneapi::tbb::task::suspend([&] (oneapi::tbb::task::suspend_point tag) {
+      suspendedTags.push_back( std::move(tag) );
+      lock.free();
+    });
+  }
+
+  wakeUpSuspendedTasks();
+*/
 }
 
 
@@ -240,7 +287,7 @@ int tarch::multicore::native::getNumberOfPendingTasks() {
  */
 void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
   std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
-  backgroundTaskArena.enqueue(
+  fusedTaskArena.enqueue(
     [myTask,copyOfTasksOfSameType,device]() -> void {
       bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType,device);
       if (stillExecuteLocally) {
@@ -249,6 +296,7 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
       else {
         delete myTask;
       }
+      wakeUpSuspendedTasks();
     }
   );
 }
