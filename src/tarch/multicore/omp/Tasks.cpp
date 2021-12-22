@@ -39,7 +39,6 @@ namespace {
       while (tasks[i]->run()) {}
       delete tasks[i];
       ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
-      #pragma omp taskyield
     }
     #pragma omp taskwait // wait for all elements from tasks to complete
                          // do not wait for the children of tasks
@@ -127,9 +126,7 @@ namespace {
         #pragma omp atomic seq_cst
         pendingTasks--;
 
-	//#pragma omp flush(busyThreads)
-
-	//std::cout << "thread " << i << " reduced busy threads to " << busyThreads << std::endl;
+        const std::pair<int,int> fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
 
         while (
           pendingTasks>0
@@ -143,18 +140,16 @@ namespace {
         ) {
           int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 
-          if ( numberOfPendingTasks>0 ) {
-            std::pair<int,int> fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
-
-            if (fusion.first>0 and numberOfPendingTasks>=fusion.first) {
-              tarch::multicore::internal::fusePendingTasks(fusion);
-            }
-            else {
-              int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
-              tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-            }
+          bool processedSomeTasks = false;
+          if (fusion.first>0 and numberOfPendingTasks>=fusion.first) {
+            processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
           }
           else {
+            int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
+            processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+          }
+
+          if (not processedSomeTasks) {
             #pragma omp taskyield
             #if defined(Parallel)
             // Allow MPI to make progress. We otherwise might starve MPI
@@ -211,11 +206,6 @@ void tarch::multicore::native::spawnAndWait(
 }
 
 
-void tarch::multicore::native::yield() {
-  #pragma omp taskyield
-}
-
-
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return nonblockingTasksCounter;
 }
@@ -243,6 +233,11 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
       delete myTask;
     }
   }
+}
+
+
+void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
+  #pragma omp taskyield
 }
 
 #endif

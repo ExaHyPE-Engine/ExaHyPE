@@ -229,11 +229,6 @@ and
 
  */
   namespace multicore {
-     /**
-      * @see file Tasks.h
-      */
-     void yield();
-      
      #if defined(GPUOffloading) and defined(UseAMD)
        #define  GPUCallableMethod __global__ __device__
        #undef   OpenMPGPUOffloading

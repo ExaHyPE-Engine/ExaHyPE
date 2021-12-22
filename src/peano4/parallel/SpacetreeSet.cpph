@@ -297,7 +297,6 @@ void peano4::parallel::SpacetreeSet::finishAllOutstandingSendsAndReceives( Conta
       );
     }
     tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-    tarch::multicore::yield();
   }
 
   logDebug( "finishAllOutstandingSendsAndReceives(...)", "all data transfer is done, trigger garbage collection" );

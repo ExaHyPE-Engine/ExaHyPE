@@ -18,7 +18,6 @@
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
 
 

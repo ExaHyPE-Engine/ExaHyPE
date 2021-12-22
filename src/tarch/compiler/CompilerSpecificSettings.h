@@ -13,6 +13,8 @@
    */
   #elif defined(__INTEL_COMPILER) && defined(__linux)
     #include "tarch/compiler/LinuxIntelLegacy.h"
+  #elif defined(SYCL_LANGUAGE_VERSION) && defined(__INTEL_LLVM_COMPILER) && defined(__linux)
+    #include "tarch/compiler/LinuxIntelSYCL.h"
   #elif defined(__INTEL_LLVM_COMPILER) && defined(__linux)
     #include "tarch/compiler/LinuxIntelICPX.h"
   /**

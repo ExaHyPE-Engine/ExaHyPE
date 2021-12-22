@@ -73,7 +73,6 @@ Peano4Core_SOURCES = \
   peano4/parallel/parallel.cpp \
   peano4/parallel/SpacetreeSet.cpp \
   peano4/parallel/StartTraversalMessage.cpp \
-  peano4/parallel/Tasks.cpp \
   peano4/parallel/TreeEntry.cpp \
   peano4/parallel/TreeManagementMessage.cpp \
   peano4/parallel/tests/PingPongTest.cpp \

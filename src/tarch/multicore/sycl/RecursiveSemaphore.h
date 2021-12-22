@@ -10,6 +10,7 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/logging/Log.h"
 
+#include <mutex>
 
 namespace tarch {
   namespace multicore {

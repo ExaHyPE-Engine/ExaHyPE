@@ -16,12 +16,12 @@ namespace tarch {
 
 
 #if defined(SharedSYCL)
-#include <mutex>
 
+#include <tbb/spin_mutex.h>
 
 class tarch::multicore::BooleanSemaphore {
   private:
-    std::mutex   _mutex;
+    tbb::spin_mutex   _mutex;
 
     friend class tarch::multicore::Lock;
     friend class RecursiveSemaphore;

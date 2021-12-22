@@ -385,12 +385,9 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
       result = true;
     }
     else {
+      native::deferRunningThreadAndContinueWithOtherTasks();
       maxTasks=0;
     }
-  }
-
-  if (not result) {
-    native::yield();
   }
 
   return result;
@@ -523,15 +520,9 @@ void tarch::multicore::spawnAndWait(
 }
 
 
-void tarch::multicore::yield() {
-  tarch::multicore::native::yield();
-}
-
-
 int tarch::multicore::getNumberOfPendingTasks() {
   return nonblockingTasks.size() + tarch::multicore::native::getNumberOfPendingTasks();
 }
-
 
 
 #ifndef SharedMemoryParallelisation
@@ -560,18 +551,12 @@ void tarch::multicore::native::spawnAndWait(
 }
 
 
-/**
- * This has to be the standard C++ implementation. Even if multithreading is
- * disabled, the code might logically run with multiple threads, and then we
- * have to switch the thread context from time to time.
- */
-void tarch::multicore::native::yield() {
-  std::this_thread::yield();
+int tarch::multicore::native::getNumberOfPendingTasks() {
+  return 0;
 }
 
 
-int tarch::multicore::native::getNumberOfPendingTasks() {
-  return 0;
+void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
 }
 
 

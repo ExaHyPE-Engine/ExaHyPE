@@ -13,16 +13,15 @@
 
 #if defined(SharedSYCL)
 
-#include <atomic>
-#include <execution>
-#include <future>
-#include <list>
-
-#include <oneapi/tbb/task_arena.h>
+#include <CL/sycl.hpp>
+#include <tbb/task_group.h>
 
 namespace {
   tarch::multicore::BooleanSemaphore  suspensionPointSemaphore;
 
+  /**
+   * Seems that there is no atomic in tbb. So I use the standard one.
+   */
   std::atomic<int> nonblockingTasksCounter          = 0;
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
@@ -30,35 +29,29 @@ namespace {
   /**
    * Additional subarena
    */
+/*
   oneapi::tbb::task_arena backgroundTaskArena( oneapi::tbb::task_arena::automatic, 1, oneapi::tbb::task_arena::priority::low  );
   oneapi::tbb::task_arena fusedTaskArena(      oneapi::tbb::task_arena::automatic, 1, oneapi::tbb::task_arena::priority::high );
 
+  oneapi::tbb::task_group backgroundTaskGroup;
+  oneapi::tbb::task_group fusedTaskGroup;
+*/
+
   /**
-   * In oneTBB, we can suspend a task and will get back a tag to wake up the
-   * thread later on.
+   * This queue should be on the CPU and have a rather low priority.
+   * Default of queues is out-of-order, so we are fine here.
    */
-  std::list< oneapi::tbb::task::suspend_point >    suspendedTags;
+  //sycl::queue backgroundTaskQueue(sycl::cpu_selector());
+  sycl::queue backgroundTaskQueue;
 
   /**
-   * If you yield(), the SYCL implementation does not yield. It suspends the
-   * active thread. This implies that we have to wake them up again.
-   */
-  void wakeUpSuspendedTasks() {
-    tarch::multicore::Lock lock( suspensionPointSemaphore );
-
-    for (auto& p: suspendedTags ) {
-      oneapi::tbb::task::resume(p);
-    }
-
-    suspendedTags.clear();
-  }
-
-  /**
-   * Native mapping of a task loop onto a task loop
+   * Native mapping of a task loop onto a SYCL/oneTBB loop
    *
-   * I found that quite a lot of OpenMP implementations realise the taskwait at the 
-   * end as busy wait. This is totally annoying as it might lead to deadlocks whenever
-   * a task has a taskyield internally and/or there are more tasks than threads.
+   * I didn't really understand yet whether SYCL has the concept of a task loop or a
+   * parallel loop outside of queues, but if we hit this routine, we don't want to submit
+   * something to a queue. Instead, we want to execute stuff right away. Therefore, I
+   * rely on oneTBB's task group, assuming that it behaves similar to OpenMP's parallel
+   * for.
    */
   void spawnAndWaitAsTaskLoop(
     const std::vector< tarch::multicore::Task* >&  tasks
@@ -87,51 +80,8 @@ namespace {
    * Aggressive BSP-type variant to run through tasks which ensures high
    * throughput
    *
-   * This implementation variant follows the patterns described in the 2021
-   * IWOMP paper by H. Schulz et al, but it is way more advanced. An important
-   * paper to read in the context of the present solution is also
-   * https://www.osti.gov/pages/servlets/purl/1465188. Note in particular the
-   * example in Figure 3.
-   *
-   * # Realisation
-   *
-   * The idea is that we spawn one task per bsp segment (stored within tasks).
-   * If a task terminates, we do not terminate immediately but first check if
-   * all the other tasks have already finished, too. If they haven't, we
-   * process a few pending tasks from the queue and then check again. We
-   * prioritise throughput over an immediate termination of the BSP section.
-   *
-   * As we might have fewer tasks or more tasks than cores, we take the maximum
-   * of both of them. If the a task is spawned that does not correspond to an
-   * entry in tasks, i.e. if tasks has fewer entries than threads, this task
-   * will not process a BSP task but immediately start to run through the
-   * pending tasks.
-   *
-   * The devil is in the details when it comes to the actual while loop that
-   * processes pending tasks:
-   *
-   * - The while loop should terminate once all tasks of the BSP section have
-   *   done their core work. We introduce a shared atomic variable pendingTasks
-   *   which counts down. Whenever a BSP task has finished its core work, it
-   *   decrements it. The while loop continues if pendingTasks reduces to zero.
-   * - If we have more tasks than threads, we should not allow a BSP task to
-   *   process pending tasks. It might become so busy with processing these guys
-   *   that it actually starves other BSP-type tasks.
-   * - We really do not know in OpenMP when a ready task is processed. The task
-   *   loop might trigger all tasks, do them, and then wait. This is the kind
-   *   pattern that we want to have. However, it could also be that two tasks
-   *   start, the machine then does busy waiting in the waitall and the other
-   *   tasks do not start. Therefore, it is important that we introduce a second
-   *   atomic counter which counts how many tasks have actually kicked off. If
-   *   and only if all tasks that are ready had a chance to run, we know that
-   *   all BSP stuff is now in work. In this case, we can also enable the
-   *   polling. But not before.
-   *
-   * # System-specific details
-   *
-   * NVIDIA's nvcc does not support the taskloop. It would be easy to replace
-   * the taskloop with a for loop and tasks within the loop body. But I decided
-   * to strive for a clean code.
+   * This is a straightforward translation of the OpenMP high-throughput
+   * realisation.
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
@@ -153,15 +103,14 @@ namespace {
 
           ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
           if (i<tasks.size()) {
-            while (tasks[i]->run()) {
-              wakeUpSuspendedTasks();
-            }
+            while (tasks[i]->run()) {}
             delete tasks[i];
           }
-
           ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, -1.0, true );
   
           pendingTasks--;
+
+          const std::pair<int,int> fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
 
           while (
             pendingTasks>0
@@ -175,19 +124,16 @@ namespace {
           ) {
             int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 
-            if ( numberOfPendingTasks>0 ) {
-              std::pair<int,int> fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
-
-              if (fusion.first>0 and numberOfPendingTasks>=fusion.first) {
-                tarch::multicore::internal::fusePendingTasks(fusion);
-              }
-              else {
-                int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
-                tarch::multicore::processPendingTasks( numberOfTasksToProcess );
-              }
+            bool processedSomeTasks = false;
+            if (fusion.first>0 and numberOfPendingTasks>=fusion.first) {
+              processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
             }
             else {
-              wakeUpSuspendedTasks();
+              int numberOfTasksToProcess = std::max(1,numberOfPendingTasks/2);
+              processedSomeTasks = tarch::multicore::processPendingTasks( numberOfTasksToProcess );
+            }
+
+            if (not processedSomeTasks) {
               #if defined(Parallel)
               // Allow MPI to make progress. We otherwise might starve MPI
               int flag;
@@ -206,16 +152,16 @@ namespace {
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
-  backgroundTaskArena.enqueue(
-    [job] () -> void {
-      while (job->run()) {
-        wakeUpSuspendedTasks();
+  backgroundTaskQueue.submit([&] (sycl::handler& commandGroupHandler) {
+    commandGroupHandler.single_task(
+      [job] () -> void {
+        while (job->run()) {}
+        delete job;
+        //nonblockingTasksCounter--;
       }
-      delete job;
-      nonblockingTasksCounter--;
-      wakeUpSuspendedTasks();
-    }
-  );
+    );
+    nonblockingTasksCounter--;
+  });
 }
 
 
@@ -242,34 +188,6 @@ void tarch::multicore::native::spawnAndWait(
 }
 
 
-/**
- * In TBB, you should not use a yield. Instead, you can can suspend the running
- * task and you get back a suspension_point tag. The latter is to be used to wake
- * the thread again.
- */
-void tarch::multicore::native::yield() {
-/*
-  static tarch::logging::Log _log( "tarch::multicore::native" );
-
-  tarch::multicore::Lock lock( suspensionPointSemaphore );
-  int remainingConcurrency = nonblockingTasksCounter-suspendedTags.size()-1;
-  bool suspendThisTask = remainingConcurrency > tarch::multicore::Core::getInstance().getNumberOfThreads()
-                     and suspendedTags.size() < tarch::multicore::Core::getInstance().getNumberOfThreads()-1; // keep one alive
-  lock.free();
-
-  if (suspendThisTask) {
-    logInfo( "yield()", "yield() suspends thread (nonblocking-tasks=" << nonblockingTasksCounter << ",suspended-tasks=" << suspendedTags.size() << ",threads=" << tarch::multicore::Core::getInstance().getNumberOfThreads() << "), remaining-concurrency=" << remainingConcurrency );
-    oneapi::tbb::task::suspend([&] (oneapi::tbb::task::suspend_point tag) {
-      suspendedTags.push_back( std::move(tag) );
-      lock.free();
-    });
-  }
-
-  wakeUpSuspendedTasks();
-*/
-}
-
-
 int tarch::multicore::native::getNumberOfPendingTasks() {
   return nonblockingTasksCounter;
 }
@@ -286,19 +204,19 @@ int tarch::multicore::native::getNumberOfPendingTasks() {
  * but tasksOfSameType is not copied and not used within the task.
  */
 void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
-  std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
-  fusedTaskArena.enqueue(
-    [myTask,copyOfTasksOfSameType,device]() -> void {
-      bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType,device);
-      if (stillExecuteLocally) {
-        tarch::multicore::native::spawnTask(myTask);
-      }
-      else {
-        delete myTask;
-      }
-      wakeUpSuspendedTasks();
-    }
-  );
+   bool stillExecuteLocally = myTask->fuse(tasksOfSameType,device);
+   if (stillExecuteLocally) {
+     tarch::multicore::native::spawnTask(myTask);
+   }
+   else {
+     delete myTask;
+   }
 }
+
+
+void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
+  backgroundTaskQueue.wait();
+}
+
 
 #endif
