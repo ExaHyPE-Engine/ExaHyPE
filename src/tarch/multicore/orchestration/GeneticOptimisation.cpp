@@ -52,7 +52,8 @@ tarch::multicore::orchestration::GeneticOptimisation::GeneticOptimisation():
   ),
   _currentWatch( "tarch::multicore::orchestration::GeneticOptimisation", "GeneticOptimisation", false, false ),
   _lastDuration(-1.0),
-  _bspRunThroughsWithActiveKey(0) {
+  _bspRunThroughsWithActiveKey(0),
+  _currentDevice(0) {
   createInitialConfigurations();
   normalise();
 }
@@ -215,7 +216,9 @@ int tarch::multicore::orchestration::GeneticOptimisation::getNumberOfTasksToHold
 
 
 std::pair<int,int> tarch::multicore::orchestration::GeneticOptimisation::getNumberOfTasksToFuseAndTargetDevice() {
-  return _activeKey.tasksToFuseAndTargetDevice;
+  _currentDevice++;
+  _currentDevice = _currentDevice % _activeKey.tasksToFuseAndTargetDevice.second;
+  return std::pair<int,int>(_activeKey.tasksToFuseAndTargetDevice.first,_currentDevice);
 }
 
 

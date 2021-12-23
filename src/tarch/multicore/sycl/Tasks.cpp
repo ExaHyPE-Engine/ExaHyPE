@@ -152,16 +152,18 @@ namespace {
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
+/*
   backgroundTaskQueue.submit([&] (sycl::handler& commandGroupHandler) {
     commandGroupHandler.single_task(
       [job] () -> void {
-        while (job->run()) {}
-        delete job;
         //nonblockingTasksCounter--;
       }
     );
-    nonblockingTasksCounter--;
   });
+*/
+  while (job->run()) {}
+  delete job;
+  nonblockingTasksCounter--;
 }
 
 

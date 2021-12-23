@@ -23,11 +23,9 @@
 tarch::logging::Log  tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
-
-
-
 tarch::multicore::Core::Core():
-  _numberOfThreads( omp_get_max_threads() ) {
+  _numberOfThreads( omp_get_max_threads() ),
+  _numberOfDevices( omp_get_num_devices() ) {
 }
 
 
@@ -82,8 +80,7 @@ int tarch::multicore::Core::getNumberOfThreads() const {
 
 
 int tarch::multicore::Core::getNumberOfGPUs() const {
-  // @todo Holger
-  return 1;
+  return _numberOfDevices;
 }
 
 

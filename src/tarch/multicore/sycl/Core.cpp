@@ -24,7 +24,21 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 tarch::multicore::Core::Core():
-  _numberOfThreads( oneapi::tbb::info::default_concurrency() ) {
+  _numberOfThreads( oneapi::tbb::info::default_concurrency() ),
+  _numberOfDevices( -1 ) {
+  auto platforms = sycl::platform::get_platforms();
+  for (auto &platform : platforms) {
+    auto devices = platform.get_devices();
+    _numberOfDevices = platform.get_devices().size();
+
+    #if PeanoDebug>0
+    std::cout << "found platform " << platform.get_info<sycl::info::platform::name>() << " with " << devices.size() << " device(s)" << std::endl;
+
+    for (auto &device : devices ) {
+      std::cout << "device: " << device.get_info<sycl::info::device::name>() << std::endl;
+    }
+    #endif
+  }
 }
 
 
@@ -72,8 +86,7 @@ int tarch::multicore::Core::getNumberOfThreads() const {
 
 
 int tarch::multicore::Core::getNumberOfGPUs() const {
-  // @todo Holger
-  return 1;
+  return _numberOfDevices;
 }
 
 

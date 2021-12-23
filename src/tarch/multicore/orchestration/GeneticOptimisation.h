@@ -63,6 +63,7 @@ class tarch::multicore::orchestration::GeneticOptimisation: public tarch::multic
     tarch::timing::Watch       _currentWatch;
     double                     _lastDuration;
     int                        _bspRunThroughsWithActiveKey;
+    int                        _currentDevice;
 
     void createInitialConfigurations();
     void normalise();
