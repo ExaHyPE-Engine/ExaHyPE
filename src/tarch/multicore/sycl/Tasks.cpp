@@ -15,6 +15,7 @@
 
 #include <CL/sycl.hpp>
 #include <tbb/task_group.h>
+#include <tbb/task_arena.h>
 
 namespace {
   tarch::multicore::BooleanSemaphore  suspensionPointSemaphore;
@@ -26,23 +27,17 @@ namespace {
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
 
-  /**
-   * Additional subarena
-   */
-/*
-  oneapi::tbb::task_arena backgroundTaskArena( oneapi::tbb::task_arena::automatic, 1, oneapi::tbb::task_arena::priority::low  );
-  oneapi::tbb::task_arena fusedTaskArena(      oneapi::tbb::task_arena::automatic, 1, oneapi::tbb::task_arena::priority::high );
-
   oneapi::tbb::task_group backgroundTaskGroup;
-  oneapi::tbb::task_group fusedTaskGroup;
-*/
 
   /**
    * This queue should be on the CPU and have a rather low priority.
    * Default of queues is out-of-order, so we are fine here.
+   *
+   * You can't use a queue here, as our tasks have side-effects and use
+   * virtual function calls.
    */
   //sycl::queue backgroundTaskQueue(sycl::cpu_selector());
-  sycl::queue backgroundTaskQueue;
+  //sycl::queue backgroundTaskQueue;
 
   /**
    * Native mapping of a task loop onto a SYCL/oneTBB loop
@@ -152,6 +147,7 @@ namespace {
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
+  // Does not work, as we have virtual functions, too.
 /*
   backgroundTaskQueue.submit([&] (sycl::handler& commandGroupHandler) {
     commandGroupHandler.single_task(
@@ -161,9 +157,20 @@ void tarch::multicore::native::spawnTask(Task*  job) {
     );
   });
 */
+
+
+  // Serial version
+/*
   while (job->run()) {}
   delete job;
   nonblockingTasksCounter--;
+*/
+
+  backgroundTaskGroup.run([&,job]{
+    while (job->run()) {}
+    delete job;
+    nonblockingTasksCounter--;
+  });
 }
 
 
@@ -217,7 +224,7 @@ void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< 
 
 
 void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
-  backgroundTaskQueue.wait();
+  backgroundTaskGroup.wait();
 }
 
 
