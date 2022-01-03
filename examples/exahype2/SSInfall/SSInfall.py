@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument("-eigen", "--eigenvalue-control",    dest="eigen", choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
     parser.add_argument("-cfl",  "--CFL-ratio",  dest="cfl",  type=float, default=0.1, help="Set CFL ratio" )
     parser.add_argument("-um", "--universe-model",    dest="model", choices=["Ein-de", "LCDM" ], default="Ein-de",  help="specify the background universe model" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-optimised", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")

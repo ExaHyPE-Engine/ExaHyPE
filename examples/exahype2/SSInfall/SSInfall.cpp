@@ -130,7 +130,7 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
   double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
   if (ReSwi==1){ //radius based
     constexpr int NumberOfRefinementLayers = 2;
-    double Radius[NumberOfRefinementLayers] = {0.7,0.5};
+    double Radius[NumberOfRefinementLayers] = {1.0,0.5};
     double MaxH[NumberOfRefinementLayers]   = {0.02,0.006};
     for (int i=0; i<NumberOfRefinementLayers; i++) {
       if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
