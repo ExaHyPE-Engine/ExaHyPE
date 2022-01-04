@@ -129,9 +129,12 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
   double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
   if (ReSwi==1){ //radius based
-    constexpr int NumberOfRefinementLayers = 2;
-    double Radius[NumberOfRefinementLayers] = {1.0,0.5};
-    double MaxH[NumberOfRefinementLayers]   = {0.02,0.006};
+    //constexpr int NumberOfRefinementLayers = 2;
+    //double Radius[NumberOfRefinementLayers] = {0.7,0.5};
+    //double MaxH[NumberOfRefinementLayers]   = {0.02,0.006};
+    constexpr int NumberOfRefinementLayers = 1;
+    double Radius[NumberOfRefinementLayers] = {0.6};
+    double MaxH[NumberOfRefinementLayers]   = {0.02};
     for (int i=0; i<NumberOfRefinementLayers; i++) {
       if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
         result=::exahype2::RefinementCommand::Refine;
@@ -148,8 +151,8 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
       }
     }
   }
-  if (ReSwi==3){ //radius based
-    if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
+  if (ReSwi==3){ //radius based, for test
+    if (radius<0.2) {result=::exahype2::RefinementCommand::Refine;}
   }
   if (ReSwi==4){ //dynamic one
     double t_i=pow(a_i,1.5)*2.057*1e17;
