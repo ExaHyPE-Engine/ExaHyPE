@@ -360,15 +360,14 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 
   double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
   #ifdef useTable
-  a=0.3*interpolated_a; //if we use a table to interpolate a (for LCDM), we replace it here. We alse add omega_m parameter here.
+  a=interpolated_a; //if we use a table to interpolate a (for LCDM), we replace it here. 
   #endif
   double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
-
-  // @todo remove
-
-  assertion4( not std::isnan(force_density_norm), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(force_density_norm), volumeX, volumeH, t, dt );
-
+  #ifdef DGP
+  double y3_over_Delta=(4.0/3.0)*pi*pow(r_coor,3)/delta_m;
+  double modifier=(27*DGP_beta/16/DGP_zeta/DGP_zeta)*y3_over_Delta*(pow(1+(32*DGP_zeta*DGP_zeta/81/DGP_beta/DGP_beta/y3_over_Delta),0.5)-1);
+  force_density_norm=force_density_norm*(1+modifier);
+  #endif
 
   S[0] = 0;  // rho
   S[1] = -force_density_norm*x;    // velocities

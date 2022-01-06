@@ -19,7 +19,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5}
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5, "DGP_beta":100, "DGP_zeta":1e6}
 
 intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0, "ReSwi":0, "MassCal":0, "extrapolate_bc":0}
 
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
     parser.add_argument("-eigen", "--eigenvalue-control",    dest="eigen", choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
     parser.add_argument("-cfl",  "--CFL-ratio",  dest="cfl",  type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-um", "--universe-model",    dest="model", choices=["Ein-de", "LCDM" ], default="Ein-de",  help="specify the background universe model" )
+    parser.add_argument("-um", "--universe-model",    dest="model", choices=["Ein-de", "LCDM","DGP" ], default="Ein-de",  help="specify the background universe model" )
     parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-optimised", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
 
@@ -406,10 +406,7 @@ if __name__ == "__main__":
     for r in r_list:
       solverconstants+= str(r)+", "
     solverconstants=solverconstants[:-2]; solverconstants+= "};\n"
-      
-    for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
-    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)  
-    
+
     if args.model=="Ein-de":
       userinfo.append(("Use Einstein-de Sitter univese background", None))
     elif args.model=="LCDM":
@@ -426,6 +423,12 @@ if __name__ == "__main__":
       solverconstants=solverconstants[:-2]; solverconstants+= "};\n"
       solverconstants+= "double table_point_number="+str(point_number)+";\n"
       solverconstants+= "double interpolated_a=0.0;\n"
+      floatparams.update({"Omega_m":0.3})
+    elif args.model=="DGP":
+      userinfo.append(("Use DGP modified Model+Einstein-de Sitter univese background", None))
+
+    for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
+    for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)  
             
     my_solver.set_solver_constants(solverconstants)
 
@@ -506,6 +509,8 @@ if __name__ == "__main__":
     peano4_project = project.generate_Peano4_project(verbose=True)
     if args.model=="LCDM":
       peano4_project.output.makefile.add_CXX_flag( "-DuseTable" )
+    if args.model=="DGP":
+      peano4_project.output.makefile.add_CXX_flag( "-DDGP" )
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )
 
