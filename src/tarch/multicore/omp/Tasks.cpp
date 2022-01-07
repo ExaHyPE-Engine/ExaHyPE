@@ -3,7 +3,7 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
-
+#include "tarch/services/ServiceRepository.h"
 #include "tarch/mpi/Rank.h"
 
 #include "tarch/logging/Statistics.h"
@@ -151,11 +151,7 @@ namespace {
 
           if (not processedSomeTasks) {
             #pragma omp taskyield
-            #if defined(Parallel)
-            // Allow MPI to make progress. We otherwise might starve MPI
-            int flag;
-            MPI_Iprobe(MPI_ANY_SOURCE, MPI_ANY_TAG, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, MPI_STATUS_IGNORE );
-            #endif
+            tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
           }
         }
     }
