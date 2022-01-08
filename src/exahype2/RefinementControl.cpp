@@ -152,7 +152,7 @@ void exahype2::RefinementControl::finishStep() {
   int totalOfReceivedMessages = 0;
   while (not sendRequests.empty()) {
     for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
-      while (rank!=tarch::mpi::Rank::getInstance().getRank()) {
+      if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
         MPI_Status status;
         int        flag;
         MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
