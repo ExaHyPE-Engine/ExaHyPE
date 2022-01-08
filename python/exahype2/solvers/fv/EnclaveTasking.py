@@ -69,11 +69,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     );
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
 
-    peano4::parallel::Tasks spawn(
-      newEnclaveTask,
-      peano4::parallel::Tasks::TaskType::LowPriorityLIFO,
-      peano4::parallel::Tasks::getLocationIdentifier( "GenericRusanovFixedTimeStepSizeWithEnclaves" )
-    );
+    tarch::multicore::spawnTask( newEnclaveTask );
   }
   
   fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
@@ -113,7 +109,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
 
   def get_includes(self):
     return ReconstructPatchAndApplyFunctor.get_includes(self) + """
-#include "peano4/parallel/Tasks.h"
+#include "tarch/multicore/Tasks.h"
 #include "repositories/SolverRepository.h"
 #include "tasks/""" + self._solver._name + """EnclaveTask.h"
 """ + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
@@ -392,7 +388,6 @@ class EnclaveTasking( FV ):
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
-#include "peano4/parallel/Tasks.h"
 #include "repositories/SolverRepository.h"
 """    
 

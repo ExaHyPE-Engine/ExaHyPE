@@ -67,7 +67,6 @@ namespace {
           MPI_Request request;
           MPI_Isend(&out,1,MPI_INT,1,_id,MPI_COMM_WORLD,&request);
           logDebug( "PingPongSendTask()", "sent non-blocking message " << out << " to rank 1 with tag " << _id );
-          tarch::multicore::yield();
           MPI_Wait(&request,MPI_STATUS_IGNORE);
         }
         #endif
@@ -97,7 +96,6 @@ namespace {
         else {
           MPI_Request request;
           MPI_Irecv(&in,1,MPI_INT,0,_id,MPI_COMM_WORLD,&request);
-          tarch::multicore::yield();
           MPI_Wait(&request,MPI_STATUS_IGNORE);
         }
         logInfo( "PingPongReceiveTask()", "got content " << in );

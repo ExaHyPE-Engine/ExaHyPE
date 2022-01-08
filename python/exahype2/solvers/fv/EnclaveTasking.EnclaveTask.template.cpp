@@ -8,9 +8,14 @@
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
+#include "peano4/parallel/parallel.h"
+
 #include "peano4/utils/Loop.h"
 
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
 #include "tarch/multicore/SmartScheduler.h"
+
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 
@@ -23,13 +28,13 @@
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 {% if STATELESS_PDE_TERMS %}
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}", false) );
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
 {% endif %}
 
 #if defined(UseSmartMPI)
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(
   tarch::multicore::registerSmartMPITask(
-    peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"),
+    peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"),
     [](smartmpi::ReceiverCallType type, int rank, int tag, MPI_Comm communicator) -> smartmpi::Task* {
       if (type==smartmpi::ReceiverCallType::ReceiveTask) {
         return receiveTask( rank, tag, communicator );
@@ -46,7 +51,7 @@ int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_e
 );
 #else
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(
-  peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
+  peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
 );
 #endif
 
@@ -467,21 +472,19 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   const int LTOT = _destinationPatchSize*NPT;
   pD.npatches=NPT;
 
-  constexpr int Alignment = 64;
-
-  pD.reco     = new (std::align_val_t(Alignment)) double[LR];
-  pD.id       = new (std::align_val_t(Alignment))   int[NPT];
-  pD.x0       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.h0       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.x1       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.h1       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.reco     = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LR];
+  pD.id       = new (std::align_val_t(ExaHyPEFusedKernelAlignment))   int[NPT];
+  pD.x0       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.h0       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.x1       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.h1       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   #if Dimensions==3
-  pD.x2       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.h2       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.x2       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.h2       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   #endif
-  pD.t        = new (std::align_val_t(Alignment)) double[NPT];
-  pD.dt       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.result   = new (std::align_val_t(Alignment)) double[LTOT];
+  pD.t        = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.dt       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.result   = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LTOT];
   memset(pD.result, 0, LTOT*sizeof(double));
 
 

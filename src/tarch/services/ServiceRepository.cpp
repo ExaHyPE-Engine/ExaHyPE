@@ -2,6 +2,7 @@
 #include "tarch/Assertions.h"
 #include "tarch/tarch.h"
 #include "tarch/multicore/RecursiveLock.h"
+#include "tarch/multicore/Tasks.h"
 
 
 #ifdef UseSmartMPI
@@ -77,6 +78,8 @@ void tarch::services::ServiceRepository::receiveDanglingMessages() {
   #ifdef UseSmartMPI
   smartmpi::tock();
   #endif
+
+  tarch::multicore::processPendingTasks(1);
 
   tarch::multicore::RecursiveLock  lock(_receiveDanglingMessagesSemaphore,false);
   if ( lock.tryLock() ) {

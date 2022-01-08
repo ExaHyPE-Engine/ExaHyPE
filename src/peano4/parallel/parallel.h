@@ -4,6 +4,9 @@
 #define _PEANO4_PARALLEL_H_
 
 
+#include <string>
+
+
 namespace peano4 {
   /**
    * \namespace parallel
@@ -22,6 +25,12 @@ java -jar ~/git/DaStGen/DaStGen.jar --plugin PeanoSnippetGenerator --naming Pean
    *
    */
   namespace parallel {
+    /**
+     * Each task needs a unique type (number). As I don't want to hard-code these
+     * types, I use a simple factory mechanism (aka this routine) to hand out integer
+     * types.
+     */
+    int getTaskType(const std::string&  className);
   }
 }
 
