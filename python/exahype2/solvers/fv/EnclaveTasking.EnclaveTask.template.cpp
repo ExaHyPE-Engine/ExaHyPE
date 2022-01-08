@@ -63,8 +63,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double* __restrict__                        reconstructedPatch,
   double* __restrict__                        targetPatch
 ) {
-  {{PREPROCESS_RECONSTRUCTED_PATCH_IN_SKELETON_CELL}}
-
   ::exahype2::fv::copyPatch(
     reconstructedPatch,
     targetPatch,
@@ -123,7 +121,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
   tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
 
-  {{POSTPROCESS_UPDATED_PATCH_IN_SKELETON_CELL}}
+  {{POSTPROCESS_UPDATED_PATCH}}
 }
 
 
@@ -167,8 +165,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
     [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
-          {{PREPROCESS_RECONSTRUCTED_PATCH_IN_ENCLAVE_TASK}}
-
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
             targetPatch,
@@ -225,7 +221,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
             targetPatch
           );
 
-          {{POSTPROCESS_UPDATED_PATCH_IN_ENCLAVE_TASK}}
+          {{POSTPROCESS_UPDATED_PATCH}}
         }
   )
   #ifdef UseSmartMPI

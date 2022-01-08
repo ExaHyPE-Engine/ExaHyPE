@@ -138,6 +138,15 @@ class FV(object):
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme.
     
     Consult the documentation of this routine for the available options.
+    
+    :: Data postprocessing or coupling to other codes
+    
+    For data postprocessing, the introduction of fancy interior conditions or the coupling to 
+    other codes, each Finite Volume solver has an attribute
+    
+         _action_set_postprocess_solution
+
+    You can use this attribute to add postprocessing routines to the code.
 
   """
   
@@ -200,6 +209,18 @@ class FV(object):
     self._solver_template_file_class_name = None
 
     self.plot_description = ""
+    
+    self._action_set_initial_conditions                       = None
+    self._action_set_initial_conditions_for_grid_construction = None
+    self._action_set_AMR                                      = None
+    self._action_set_AMR_commit_without_further_analysis      = None
+    self._action_set_handle_boundary                          = None
+    self._action_set_project_patch_onto_faces                 = None
+    self._action_set_roll_over_update_of_faces                = None
+    self._action_set_copy_new_faces_onto_old_faces            = None
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
+    self._action_set_postprocess_solution                     = None
+
         
     self.create_data_structures()
     self.create_action_sets()
@@ -425,7 +446,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
     self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
-
+    # This one is different: it is the hook-in point for other solvers, so we create it 
+    # only once if it does not exist
+    if self._action_set_postprocess_solution == None:
+      self._action_set_postprocess_solution                   = exahype2.solvers.fv.actionsets.EmptyPostprocessSolution( self )
+    
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
@@ -545,6 +570,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_initial_conditions ) 
+    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
@@ -655,6 +681,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_update_cell )
+    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
 
