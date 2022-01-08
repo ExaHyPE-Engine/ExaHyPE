@@ -242,9 +242,9 @@ void exahype2::fv::tests::applySplit1DRiemannToPatch_Overlap1AoSTest::testMe() {
   for (unsigned int i=0;i<500;++i)
   {
      //printf("%d: %f vs %f\n", i, Qout[i], Qouttest[i]);
-     validateEquals(Qout[i],     Qouttest[i]);
+     validateNumericalEquals(Qout[i],     Qouttest[i]);
      //printf("%f vs %f\n", Qouttest[i], Qouttest2[i]);
-     validateEquals(Qouttest[i], Qouttest2[i]);
+     validateNumericalEquals(Qouttest[i], Qouttest2[i]);
   }
 
 

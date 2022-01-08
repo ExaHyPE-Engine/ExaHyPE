@@ -3,8 +3,8 @@
 #include "tarch/multicore/multicore.h"
 #if defined(SharedCPP)
   #include "cpp/BooleanSemaphore.h"
-#elif defined(SharedTBB)
-  #include "tbb/BooleanSemaphore.h"
+#elif defined(SharedSYCL)
+  #include "sycl/BooleanSemaphore.h"
 #elif defined(SharedOMP)
   #include "omp/BooleanSemaphore.h"
 #elif !defined(_TARCH_MULTICORE_BOOLEAN_SEMAPHORE_H_)

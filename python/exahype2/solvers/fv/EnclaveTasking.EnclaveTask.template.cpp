@@ -8,9 +8,14 @@
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
+#include "peano4/parallel/parallel.h"
+
 #include "peano4/utils/Loop.h"
 
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
 #include "tarch/multicore/SmartScheduler.h"
+
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 
@@ -19,16 +24,17 @@
 #endif
 
 #include <string.h>
+#include <memory>
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 {% if STATELESS_PDE_TERMS %}
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}", false) );
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
 {% endif %}
 
 #if defined(UseSmartMPI)
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(
   tarch::multicore::registerSmartMPITask(
-    peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"),
+    peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"),
     [](smartmpi::ReceiverCallType type, int rank, int tag, MPI_Comm communicator) -> smartmpi::Task* {
       if (type==smartmpi::ReceiverCallType::ReceiveTask) {
         return receiveTask( rank, tag, communicator );
@@ -45,7 +51,7 @@ int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_e
 );
 #else
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(
-  peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
+  peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
 );
 #endif
 
@@ -466,19 +472,19 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   const int LTOT = _destinationPatchSize*NPT;
   pD.npatches=NPT;
 
-  pD.reco     = new double[LR];
-  pD.id       = new    int[NPT];
-  pD.x0       = new double[NPT];
-  pD.h0       = new double[NPT];
-  pD.x1       = new double[NPT];
-  pD.h1       = new double[NPT];
+  pD.reco     = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LR];
+  pD.id       = new (std::align_val_t(ExaHyPEFusedKernelAlignment))   int[NPT];
+  pD.x0       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.h0       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.x1       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.h1       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   #if Dimensions==3
-  pD.x2       = new double[NPT];
-  pD.h2       = new double[NPT];
+  pD.x2       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.h2       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   #endif
-  pD.t        = new double[NPT];
-  pD.dt       = new double[NPT];
-  pD.result   = new double[LTOT];
+  pD.t        = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.dt       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.result   = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LTOT];
   memset(pD.result, 0, LTOT*sizeof(double));
 
 
@@ -498,8 +504,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     pD.x2[i]  = currentTask->_marker.x()[2];
     pD.h2[i]  = currentTask->_marker.h()[2];
   #endif
-    pD.t[i]   = _t; // @todo This is not true likely. Could have different time steps
-    pD.dt[i]  = _dt; // @todo This is not true likely. Could have different time steps
+    pD.t[i]   = currentTask->_t;
+    pD.dt[i]  = currentTask->_dt;
+    delete[]  currentTask->_reconstructedValues;
     i++;
 
     delete currentTask;
@@ -519,25 +526,10 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   pD.x2[i]  = _marker.x()[2];
   pD.h2[i]  = _marker.h()[2];
 #endif
-  pD.t[i]   = _t;  // @todo This is not true likely. Could have different time steps
-  pD.dt[i]  = _dt; // @todo This is not true likely. Could have different time steps
+  pD.t[i]   = _t;
+  pD.dt[i]  = _dt;
   
-
-  //
-  // If the user specifies some pre-processing, it is inserted here. If
-  // the preprocessing is empty, this loop should be removed by the
-  // compiler.
-  //
-  //for (int i=0;i<static_cast<int>(localwork.size());i++) {
-    // const auto& marker =
-    // PREPROCESS_RECONSTRUCTED_PATCH has to go in here, but the marker can't be copied yet
-  //}
-
-  //double* destinationPatchOnCPU = ::tarch::allocateMemory(
-    //_destinationPatchSize*otherTasks.size(),
-    //::tarch::MemoryLocation::Heap
-  //);
-  //for (size_t i = 0;i<_destinationPatchSize*otherTasks.size();i++) *(destinationPatchOnCPU + i) =0;
+  delete[] _reconstructedValues;
 
   //
   // ==============
@@ -545,6 +537,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // ==============
   //
   if (targetDevice<0) {
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_batching
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_batching
+    #endif
     {{FUSED_RIEMANN_SOLVER_CALL}}
     (
       1,
@@ -556,6 +553,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   else {
     // @todo Holger, that's where we pick the SYCL queue. We make the queues static, so they
     // are created once only.
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_OpenMP_offloading
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_OpenMP_offloading
+    #endif
     {{FUSED_RIEMANN_SOLVER_CALL}}
     (
       1,
@@ -574,12 +576,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   for (int i=0;i<pD.npatches;i++) {
     const int taskid = pD.id[i];
     double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-    //for (int j=0;j<_destinationPatchSize;j++)
-    //{
-       //targetPatch[j] = pD.result[j + i*_destinationPatchSize];
-    //}
     for (int j=0;j<_destinationPatchSize;j++) targetPatch[j] = *(pD.result + j + i*_destinationPatchSize);
-    //{{ POSTPROCESS_UPDATED_PATCH }}
     ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
   }
 

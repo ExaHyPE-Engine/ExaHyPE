@@ -96,7 +96,6 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
           publisher={Springer Berlin Heidelberg}, 
           address={Berlin, Heidelberg}, "
           pages={213--222}, 
-          abstract={Simulation codes often suffer from high memory requirements. This holds in particular if they are memory-bounded, and, with multicore systems coming up, the problem will become even worse as more and more cores have to share the memory connections. To optimise data structures with respect to memory manually is error-prone and cumbersome.}, 
           isbn={978-3-540-69389-5} 
         }
 
@@ -113,7 +112,7 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
           url = {https://www.sciencedirect.com/science/article/pii/S0167739X09000673},
           author = {H.-J. Bungartz and W. Eckhardt and T. Weinzierl and C. Zenger}, 
           keywords = {Data compaction and compression, Code generation, Multigrid and multilevel methods}, 
-          abstract = {A PDE solver’s value is increasingly co-determined by its memory footprint, as the increase of computational multicore power overtakes the memory access speed, and as memory restricts the maximum experiment size. Tailoring a code to require less memory is technical challenging, error-prone, and hardware-dependent. Object-oriented code typically consumes much memory, though developers favour such high-level languages offering meaningful models and good maintainability. We augment the language C++ with new keywords branding records to be memory-critical. Our precompiler DaStGen then transforms this augmented specification into plain C++ optimised for low memory requirements. Hereby, it encodes multiple attributes with fixed range within one variable, and it reduces the number of bits per floating point value. The tool also generates one user-defined MPI data type per class and, thus, facilitates the construction of parallel codes with small messages.} 
+          abstract = {A PDE solver's value is increasingly co-determined by its memory footprint, as the increase of computational multicore power overtakes the memory access speed, and as memory restricts the maximum experiment size. Tailoring a code to require less memory is technical challenging, error-prone, and hardware-dependent. Object-oriented code typically consumes much memory, though developers favour such high-level languages offering meaningful models and good maintainability. We augment the language C++ with new keywords branding records to be memory-critical. Our precompiler DaStGen then transforms this augmented specification into plain C++ optimised for low memory requirements. Hereby, it encodes multiple attributes with fixed range within one variable, and it reduces the number of bits per floating point value. The tool also generates one user-defined MPI data type per class and, thus, facilitates the construction of parallel codes with small messages.} 
         } 
 """  
   

@@ -64,6 +64,8 @@ class tarch::multicore::orchestration::Strategy {
      * You can also return tarch::multicore::Task::Host to indicate that
      * this is a fused task that shall run on the host rather than a
      * device.
+     *
+     * @return Tuple (No of tasks to put to device in one rush, device no)
      */
     virtual std::pair<int,int> getNumberOfTasksToFuseAndTargetDevice() = 0;
 

@@ -27,17 +27,6 @@ namespace tarch {
     tarch::multicore::orchestration::Strategy* swapOrchestration( tarch::multicore::orchestration::Strategy* realisation );
 
     /**
-     * Tells task/thread to yield, i.e. to allow other tasks/threads to run.
-     * Typically to be used within busy-waiting/polling loops.
-     *
-     * yield() has to be called very very carefully on the user side. If you wait
-     * for task outcomes from low priority tasks, e.g., do not call yield
-     * immediately. Call processPendingTasks(). It is only if this routine tells
-     * you that no background tasks are available anymore that you should yield.
-     */
-    void yield();
-
-    /**
      * Usually called directly by EnclaveTask.
      *
      * This routine has to return a number which is currently not in use.
@@ -202,10 +191,10 @@ namespace tarch {
     class TaskWithoutCopyOfFunctor: public Task {
       private:
         /**
-            * See the outer class description for an explanation why this is an
-            * attribute, i.e. why we copy the functor here always.
-            */
-    	   std::function<bool()>&   _taskFunctor;
+         * See the outer class description for an explanation why this is an
+         * attribute, i.e. why we copy the functor here always.
+         */
+        std::function<bool()>&   _taskFunctor;
       public:
         TaskWithoutCopyOfFunctor( int id, int taskType, int priority, std::function<bool()>& taskFunctor );
 
@@ -217,10 +206,13 @@ namespace tarch {
     /**
      * Process a few tasks from my backlog of tasks
      *
-     * This routine tries to complete maxTasks. The behaviour of the routine
-     * depends on the value of taskProgressionStrategy. We use different
-     * strategies at different points in time.
-     *
+     * This routine tries to complete maxTasks. It is important that this routine
+     * makes progress, i.e. processes tasks, if there are any tasks left in the
+     * system. ExaHyPE's enclave tasking, for example, uses the process within
+     * its polling for enclave task results. If it does not make progress, this
+     * routine will starve. As such, it is absolutely fine if the implementation
+     * of processPendingTasks() suspends the actual thread, as long as this thread
+     * is not permanently suspended.
      *
      * @param maxTasks Specify how many tasks to process at most. By constraining
      *  this number, you can realise some polling where you check for a condition.
@@ -267,6 +259,9 @@ namespace tarch {
      *
      * @see tarch::multicore::spawnAndWait()
      * @see processPendingTasks(int)
+     *
+     * @param someoneWillWaitForThisTaskNumber Memorise future. A task that asks to be
+     *   re-scheduled always has to pass false.
      */
     void spawnTask(Task*  job);
 
@@ -283,7 +278,7 @@ namespace tarch {
     );
 
     namespace native {
-      void spawnTask(Task*  job);
+      void spawnTask(Task* task);
       void spawnAndWait(
         const std::vector< Task* >&  tasks,
         orchestration::Strategy*     strategy
@@ -304,8 +299,13 @@ namespace tarch {
        *   be host if the tasks should end up on the host.
        */
       void processFusedTask(Task*  firstTask, const std::list< tarch::multicore::Task* >& otherTasks, int device);
-      void yield();
       int getNumberOfPendingTasks();
+
+      /**
+       * This routine is used by processPendingTasks() whenever there are no other tasks
+       * left anymore.
+       */
+      void deferRunningThreadAndContinueWithOtherTasks();
     }
 
 
