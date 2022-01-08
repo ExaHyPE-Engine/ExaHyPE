@@ -130,6 +130,29 @@ class exahype2::RefinementControl {
      *
      * This routine rolls over _newEvents into the _committedEvents if they are still
      * alive.
+     *
+     * ## MPI handing
+     *
+     * The MPI data exchange here is non-trivial, as we do not know which rank has how
+     * many messages. So we run in three steps: First, we send the committed events out to
+     * all partners. These sends are done non-blocking. They logically are a broadcast.
+     * Second, we loop over all the arising MPI_Requests and poll until they are finished.
+     * So we know all data has gone out. This is a while loop with the predicate
+     *
+     *       not sendRequests.empty()
+     *
+     * Third, we hook into this while loop and probe for all the other ranks if they
+     * have sent us anything. So while we wait for our sends to go out, we poll the other
+     * ranks for their data, integrate this information into our data structures and
+     * therefore also free any MPI queues.
+     *
+     * As we build up the incoming data while we wait for our sends to go out, we have to
+     * send from a copy of the actual data (copyOfCommittedEvents): We cannot alter the
+     * outgoing data due to polls for incoming messages while we have still pending sends.
+     *
+     * It is important to work with non-blocking calls here, as the code otherwise tends
+     * to deadlock if we have a lot of events. This is due to MPI falling back to
+     * rendeszvouz message passing if the data that is on-the-fly becomes too large.
      */
     void finishStep();
 

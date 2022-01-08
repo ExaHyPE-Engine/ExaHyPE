@@ -135,20 +135,24 @@ void exahype2::RefinementControl::finishStep() {
   }
   _newEvents.clear();
 
+  #ifdef Parallel
   int originallyCommittedEvents = _committedEvents.size();
+  std::vector<MPI_Request*> sendRequests( _committedEvents.empty() ? 0: tarch::mpi::Rank::getInstance().getNumberOfRanks(), nullptr );
+  auto copyOfCommittedEvents = _committedEvents;
   if ( _committedEvents.size()>0 ) {
     logDebug( "finishStep()", "share my " << _committedEvents.size() << " event(s) with others" );
     for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
       if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
-        MPI_Send( _committedEvents.data(), _committedEvents.size(), peano4::grid::GridControlEvent::Datatype, rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator() );
+        sendRequests[rank] = new MPI_Request;
+        MPI_Isend( copyOfCommittedEvents.data(), copyOfCommittedEvents.size(), peano4::grid::GridControlEvent::Datatype, rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), sendRequests[rank] );
       }
     }
   }
 
   int totalOfReceivedMessages = 0;
-  for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
-    bool pollMessages = true;
-    while (pollMessages and rank!=tarch::mpi::Rank::getInstance().getRank()) {
+  while (not sendRequests.empty()) {
+    for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
+      while (rank!=tarch::mpi::Rank::getInstance().getRank()) {
         MPI_Status status;
         int        flag;
         MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
@@ -161,16 +165,30 @@ void exahype2::RefinementControl::finishStep() {
           receiveBuffer.resize( numberOfMessages );
           MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::Datatype, rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
           _committedEvents.insert( _committedEvents.end(), receiveBuffer.begin(), receiveBuffer.end() );
-          pollMessages = true;
         }
-        else {
-          pollMessages = false;
+      }
+    }
+
+    std::vector<MPI_Request*>::iterator p = sendRequests.begin();
+    while (p!=sendRequests.end()) {
+      if (*p==nullptr) {
+        p = sendRequests.erase(p);
+      }
+      else {
+        int flag;
+        MPI_Test( *p, &flag, MPI_STATUS_IGNORE );
+        if (flag) {
+          *p = nullptr;
         }
+        p++;
+      }
     }
   }
+
   if (totalOfReceivedMessages>0) {
     logInfo( "finishStep()", "received " << totalOfReceivedMessages << " event(s) from other ranks on top of my " << originallyCommittedEvents << " event(s)" );
   }
+  #endif
 }
 
 
