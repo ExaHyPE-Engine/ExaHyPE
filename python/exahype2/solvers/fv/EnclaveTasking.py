@@ -18,7 +18,7 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   double cellTimeStepSize = -1.0;
   double cellTimeStamp    = -1.0;
      
-  {{PREPROCESS_RECONSTRUCTED_PATCH_THROUGHOUT_SWEEP}}
+  {{PREPROCESS_RECONSTRUCTED_PATCH}}
   {{COMPUTE_TIME_STEPSIZE}}
     
   assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
@@ -146,8 +146,6 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
       double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
       
-      {{POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP}}
-      
       repositories::{{SOLVER_INSTANCE}}.update(
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
@@ -204,12 +202,8 @@ class EnclaveTasking( FV ):
     
     self._compute_time_step_size              = "#error Not yet defined"
 
-    self._preprocess_reconstructed_patch_throughout_sweep      = ""
-    self._postprocess_updated_patch_throughout_sweep           = ""
-    self._preprocess_reconstructed_patch_in_enclave_task       = ""
-    self._postprocess_updated_patch_in_enclave_task            = ""
-    self._preprocess_reconstructed_patch_in_skeleton_cell      = ""
-    self._postprocess_updated_patch_in_skeleton_cell           = ""
+    self._preprocess_reconstructed_patch      = ""
+    self._postprocess_updated_patch           = ""
     
     self._source_term_call                = "#error Not yet defined. Set self._source_term_call in your Python solver class."
     self._Riemann_solver_call             = "#error Not yet defined. Set self._Riemann_solver_call in your Python solver class."
@@ -370,6 +364,7 @@ class EnclaveTasking( FV ):
     self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard
     self._action_set_AMR.guard                                      = self._secondary_sweep_guard
     self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_guard
+    self._action_set_postprocess_solution.guard                     = self._secondary_sweep_guard
     
     self._action_set_handle_boundary.guard                          = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
     self._action_set_project_patch_onto_faces.guard                 = self._store_cell_data_default_guard() + " and (" + \
@@ -436,13 +431,9 @@ class EnclaveTasking( FV ):
     d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "FUSED_RIEMANN_SOLVER_CALL"]           = jinja2.Template(self._fused_Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     
-    d[ "COMPUTE_TIME_STEPSIZE" ]                               = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH_THROUGHOUT_SWEEP" ]     = jinja2.Template(self._preprocess_reconstructed_patch_throughout_sweep, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH_THROUGHOUT_SWEEP" ]          = jinja2.Template(self._postprocess_updated_patch_throughout_sweep,      undefined=jinja2.DebugUndefined).render( **d )
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH_IN_ENCLAVE_TASK" ]      = jinja2.Template(self._preprocess_reconstructed_patch_in_enclave_task,  undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH_IN_ENCLAVE_TASK" ]           = jinja2.Template(self._postprocess_updated_patch_in_enclave_task,       undefined=jinja2.DebugUndefined).render( **d )
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH_IN_SKELETON_CELL" ]     = jinja2.Template(self._preprocess_reconstructed_patch_in_skeleton_cell, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH_IN_SKELETON_CELL" ]          = jinja2.Template(self._postprocess_updated_patch_in_skeleton_cell,      undefined=jinja2.DebugUndefined).render( **d )
+    d[ "COMPUTE_TIME_STEPSIZE" ]              = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch,      undefined=jinja2.DebugUndefined).render( **d )
     
     d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
     d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
@@ -462,24 +453,20 @@ class EnclaveTasking( FV ):
     d[ "STATELESS_PDE_TERMS" ]  = self._stateless_pde_terms
     
     
-  def set_preprocess_reconstructed_patch_kernel(self,kernel, can_offload_into_enclave_task = True ):
+  def set_preprocess_reconstructed_patch_kernel(self,kernel ):
     """
   
     Most subclasses will redefine/overwrite this operation as they have
     to incorporate the kernel into their generated stuff
   
     """
-    if can_offload_into_enclave_task:
-      self._preprocess_reconstructed_patch_in_enclave_task  += kernel
-      self._preprocess_reconstructed_patch_in_skeleton_cell += kernel
-    else:
-      self._preprocess_reconstructed_patch_throughout_sweep += kernel
+    self._preprocess_reconstructed_patch  += kernel
       
     self.create_data_structures()
     self.create_action_sets()
 
 
-  def set_postprocess_updated_patch_kernel(self, kernel, can_offload_into_enclave_task = True):
+  def set_postprocess_updated_patch_kernel(self, kernel):
     """
 
     Define a postprocessing routine over the data
@@ -513,11 +500,7 @@ class EnclaveTasking( FV ):
       C++ code that holds the postprocessing kernel
 
     """
-    if can_offload_into_enclave_task:
-      self._postprocess_updated_patch_throughout_sweep += kernel
-    else:
-      self._postprocess_updated_patch_in_enclave_task  += kernel
-      self._postprocess_updated_patch_in_skeleton_cell += kernel
+    self._postprocess_updated_patch += kernel
 
     self.create_data_structures()
     self.create_action_sets()
