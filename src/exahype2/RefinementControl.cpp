@@ -155,6 +155,45 @@ void exahype2::RefinementControl::addCommand(
 }
 
 
+#ifdef Parallel
+void exahype2::RefinementControl::freeAllPendingSendRequests() {
+  while (not _sendRequests.empty()) {
+    std::vector<MPI_Request*>::iterator p = _sendRequests.begin();
+    while (p!=_sendRequests.end()) {
+      if (*p==nullptr) {
+        p = _sendRequests.erase(p);
+      }
+      else {
+        int flag;
+        MPI_Test( *p, &flag, MPI_STATUS_IGNORE );
+        if (flag) {
+          *p = nullptr;
+        }
+        p++;
+      }
+    }
+    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
+  }
+}
+
+
+void exahype2::RefinementControl::triggerSendOfCopyOfCommittedEvents() {
+  _sendRequests.clear();
+
+  logInfo( "finishStep()", "share my " << _copyOfCommittedEvents.size() << " event(s) with others" );
+  if ( _copyOfCommittedEvents.size()>0 ) {
+    _sendRequests = std::vector< MPI_Request* >( tarch::mpi::Rank::getInstance().getNumberOfRanks(), nullptr );
+    for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
+      if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
+        _sendRequests[rank] = new MPI_Request;
+        MPI_Isend( _copyOfCommittedEvents.data(), _copyOfCommittedEvents.size(), peano4::grid::GridControlEvent::Datatype, rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), _sendRequests[rank] );
+      }
+    }
+  }
+}
+#endif
+
+
 void exahype2::RefinementControl::finishStep() {
   if (not _newEvents.empty()) {
     logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep)" );
@@ -179,36 +218,9 @@ void exahype2::RefinementControl::finishStep() {
   }
 
   #ifdef Parallel
-  int originallyCommittedEvents = _committedEvents.size();
-  std::vector<MPI_Request*> sendRequests( _committedEvents.empty() ? 0: tarch::mpi::Rank::getInstance().getNumberOfRanks(), nullptr );
-  auto copyOfCommittedEvents = _committedEvents;
-  if ( _committedEvents.size()>0 ) {
-    logDebug( "finishStep()", "share my " << _committedEvents.size() << " event(s) with others" );
-    for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
-      if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
-        sendRequests[rank] = new MPI_Request;
-        MPI_Isend( copyOfCommittedEvents.data(), copyOfCommittedEvents.size(), peano4::grid::GridControlEvent::Datatype, rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), sendRequests[rank] );
-      }
-    }
-  }
-
-  while (not sendRequests.empty()) {
-    std::vector<MPI_Request*>::iterator p = sendRequests.begin();
-    while (p!=sendRequests.end()) {
-      if (*p==nullptr) {
-        p = sendRequests.erase(p);
-      }
-      else {
-        int flag;
-        MPI_Test( *p, &flag, MPI_STATUS_IGNORE );
-        if (flag) {
-          *p = nullptr;
-        }
-        p++;
-      }
-    }
-    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
-  }
+  freeAllPendingSendRequests();
+  _copyOfCommittedEvents = _committedEvents;
+  triggerSendOfCopyOfCommittedEvents();
   #endif
 }
 

@@ -224,6 +224,14 @@ class exahype2::RefinementControl: public tarch::services::Service {
      *
      */
     std::vector< peano4::grid::GridControlEvent >  _committedEvents;
+
+    #ifdef Parallel
+    std::vector<MPI_Request*>                      _sendRequests;
+    std::vector< peano4::grid::GridControlEvent >  _copyOfCommittedEvents;
+
+    void freeAllPendingSendRequests();
+    void triggerSendOfCopyOfCommittedEvents();
+    #endif
 };
 
 #endif
