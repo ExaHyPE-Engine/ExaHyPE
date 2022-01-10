@@ -7,9 +7,9 @@
 #include <vector>
 #include <list>
 
-#include "peano4/grid/GridControlEvent.h"
-
+#include "tarch/services/Service.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "peano4/grid/GridControlEvent.h"
 
 namespace exahype2 {
   enum class RefinementCommand {
@@ -96,9 +96,13 @@ std::string toString( exahype2::RefinementCommand value );
  *
  *
  */
-class exahype2::RefinementControl {
+class exahype2::RefinementControl: public tarch::services::Service {
   public:
     RefinementControl(double tolerance = 0.1);
+    virtual ~RefinementControl();
+
+    void receiveDanglingMessages() override;
+    void shutdown() override;
 
     void clear();
 

@@ -1,7 +1,7 @@
 #include "RefinementControl.h"
 
 #include "tarch/multicore/Lock.h"
-
+#include "tarch/services/ServiceRepository.h"
 #include "peano4/grid/grid.h"
 
 
@@ -48,10 +48,47 @@ tarch::multicore::BooleanSemaphore  exahype2::RefinementControl::_semaphore;
 
 exahype2::RefinementControl::RefinementControl(double tolerance):
   _Tolerance( tolerance ) {
+  tarch::services::ServiceRepository::getInstance().addService( this, "exahype2::RefinementControl" );
+}
+
+
+exahype2::RefinementControl::~RefinementControl() {
+  tarch::services::ServiceRepository::getInstance().removeService( this );
+}
+
+
+void exahype2::RefinementControl::shutdown() {
+}
+
+
+void exahype2::RefinementControl::receiveDanglingMessages() {
+  #ifdef Parallel
+  for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
+    if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
+      MPI_Status status;
+      int        flag;
+      MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
+      if (flag) {
+        int numberOfMessages;
+        MPI_Get_count( &status, peano4::grid::GridControlEvent::Datatype, &numberOfMessages );
+        logInfo( "finishStep()", "got " << numberOfMessages << " event(s) from rank " << rank );
+        std::vector< peano4::grid::GridControlEvent > receiveBuffer;
+        receiveBuffer.resize( numberOfMessages );
+        MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::Datatype, rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
+
+        tarch::multicore::Lock lock( _semaphore );
+        for (auto p: receiveBuffer) {
+          _newEvents.push_back( std::pair<peano4::grid::GridControlEvent,int>(p, 2) );
+        }
+      }
+    }
+  }
+  #endif
 }
 
 
 void exahype2::RefinementControl::clear() {
+  tarch::multicore::Lock lock( _semaphore );
   logDebug( "clear()", "clear list of control events" );
   _newEvents.clear();
 }
@@ -70,6 +107,8 @@ void exahype2::RefinementControl::addCommand(
   int                                          lifetime
 ) {
   logTraceInWith3Arguments( "addCommand()", x, h, ::toString(command) );
+  tarch::multicore::Lock lock( _semaphore );
+
   switch (command) {
     case ::exahype2::RefinementCommand::Refine:
       {
@@ -120,20 +159,24 @@ void exahype2::RefinementControl::finishStep() {
   if (not _newEvents.empty()) {
     logInfo( "finishStep()", "activate " << _newEvents.size() << " refinement/erase instructions (can be taken into account in next grid sweep)" );
   }
-  _committedEvents.clear();
 
-  NewEvents::iterator p = _newEvents.begin();
-  while (p!=_newEvents.end()) {
-    _committedEvents.push_back( p->first );
-    p->second--;
-    if (p->second<=0) {
-      p = _newEvents.erase(p);
+  {
+    tarch::multicore::Lock lock( _semaphore );
+    _committedEvents.clear();
+
+    NewEvents::iterator p = _newEvents.begin();
+    while (p!=_newEvents.end()) {
+      _committedEvents.push_back( p->first );
+      p->second--;
+      if (p->second<=0) {
+        p = _newEvents.erase(p);
+      }
+      else {
+        p++;
+      }
     }
-    else {
-      p++;
-    }
+    _newEvents.clear();
   }
-  _newEvents.clear();
 
   #ifdef Parallel
   int originallyCommittedEvents = _committedEvents.size();
@@ -149,26 +192,7 @@ void exahype2::RefinementControl::finishStep() {
     }
   }
 
-  int totalOfReceivedMessages = 0;
   while (not sendRequests.empty()) {
-    for (int rank=0; rank<tarch::mpi::Rank::getInstance().getNumberOfRanks(); rank++) {
-      if (rank!=tarch::mpi::Rank::getInstance().getRank()) {
-        MPI_Status status;
-        int        flag;
-        MPI_Iprobe(rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), &flag, &status);
-        if (flag) {
-          int numberOfMessages;
-          MPI_Get_count( &status, peano4::grid::GridControlEvent::Datatype, &numberOfMessages );
-          logDebug( "finishStep()", "got " << numberOfMessages << " event(s) from rank " << rank );
-          totalOfReceivedMessages += numberOfMessages;
-          std::vector< peano4::grid::GridControlEvent > receiveBuffer;
-          receiveBuffer.resize( numberOfMessages );
-          MPI_Recv( receiveBuffer.data(), numberOfMessages, peano4::grid::GridControlEvent::Datatype, rank, _reductionTag, tarch::mpi::Rank::getInstance().getCommunicator(), MPI_STATUS_IGNORE );
-          _committedEvents.insert( _committedEvents.end(), receiveBuffer.begin(), receiveBuffer.end() );
-        }
-      }
-    }
-
     std::vector<MPI_Request*>::iterator p = sendRequests.begin();
     while (p!=sendRequests.end()) {
       if (*p==nullptr) {
@@ -183,10 +207,7 @@ void exahype2::RefinementControl::finishStep() {
         p++;
       }
     }
-  }
-
-  if (totalOfReceivedMessages>0) {
-    logInfo( "finishStep()", "received " << totalOfReceivedMessages << " event(s) from other ranks on top of my " << originallyCommittedEvents << " event(s)" );
+    tarch::services::ServiceRepository::getInstance().receiveDanglingMessages();
   }
   #endif
 }
