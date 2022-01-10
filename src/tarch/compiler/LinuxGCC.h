@@ -20,3 +20,8 @@
 
 
 #define LittleEndian
+
+#if !defined(ExaHyPEFusedKernelAlignment)
+#define ExaHyPEFusedKernelAlignment 16
+#endif
+
