@@ -152,6 +152,7 @@ int main(int argc, char** argv) {
     // inserted manually
     // =================
     //
+
     int gridConstructionSteps = 0;
     while (peano4::parallel::SpacetreeSet::getInstance().getGridStatistics().getStationarySweeps()<5) {
       logInfo( "main()", "run a grid construction step and insert particles" );
@@ -171,18 +172,18 @@ int main(int argc, char** argv) {
     logInfo( "main()", "dumped initial condition" )
 
     for (int i=0; i<100; i++) {
+//      for (int i=0; i<2; i++) {
       for (int j=0; j<10; j++) {
         logInfo( "main()", "run timestep" )
 //        examples::particles::observers::CalcDensities densityObserver;            // Constant h
 //        peano4::parallel::SpacetreeSet::getInstance().traverse(densityObserver);  // Constant h
 
-        for (int k=0; k<5; k++){ // Manual Newton-Raphson iterations
-          examples::particles::observers::CalcDensitiesAndSmoothingLengthNR densityAndSmoothingLObserver;
-          peano4::parallel::SpacetreeSet::getInstance().traverse(densityAndSmoothingLObserver);
-        }
+        examples::particles::observers::CalcDensitiesAndSmoothingLengthNR densityAndSmoothingLObserver;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(densityAndSmoothingLObserver);
 
         examples::particles::observers::CalcInternalEnergies energyObserver;   
         peano4::parallel::SpacetreeSet::getInstance().traverse(energyObserver);
+
         examples::particles::observers::Move moveObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(moveObserver);
       }
@@ -191,7 +192,13 @@ int main(int argc, char** argv) {
       peano4::parallel::SpacetreeSet::getInstance().traverse(plotTimeStepObserver);
     }
 
-    logInfo( "main()", "terminated successfully" ) // end manually inserted block
+    logInfo( "main()", "terminated successfully" ) 
+    
+    //
+    // =================
+    // End of manually inserted block
+    // =================
+    //
 
 }
   else {
