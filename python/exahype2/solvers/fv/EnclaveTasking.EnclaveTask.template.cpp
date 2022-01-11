@@ -56,7 +56,7 @@ int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_e
 #endif
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
@@ -72,19 +72,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     1 // halo size
   );
 
-  {% if USE_SPLIT_LOOP %}
-  #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-  #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-  #endif
-  {% else %}
-  #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-  #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-  #endif
-  {% endif %}
+  {{COMPUTE_KERNEL_CALL}}
+  (
     [&](
       const double* __restrict__                   QL,
       const double* __restrict__                   QR,
@@ -119,32 +108,27 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     targetPatch
   );
 
+  ::exahype2::fv::validatePatch(
+    targetPatch,
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    0, // halo
+    std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+  ); // outcome has to be valid
+
   tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
 
   {{POSTPROCESS_UPDATED_PATCH}}
+
+  // Set the variable
+  // double newTimeStepSize
+  {{COMPUTE_NEW_TIME_STEP_SIZE}}
+
+  return newTimeStepSize;
 }
 
 
-{% if STATELESS_PDE_TERMS %}
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
-  const ::peano4::datamanagement::CellMarker&    marker,
-  double                                         t,
-  double                                         dt,
-  double* __restrict__                           reconstructedValues
-):
-  tarch::multicore::Task(
-    tarch::multicore::reserveTaskNumber(),
-    _gpuEnclaveTaskId,
-    tarch::multicore::Task::DefaultPriority
-  ),
-  _marker(marker),
-  _t(t),
-  _dt(dt),
-  _reconstructedValues(reconstructedValues) {
-  logTraceIn( "EnclaveTask(...)" );
-  logTraceOut( "EnclaveTask(...)" );
-}
-{% else %}
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
@@ -164,7 +148,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
-    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
+    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& newDt ) -> void {
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
             targetPatch,
@@ -174,19 +158,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
             1 // halo size
           );
 
-          {% if USE_SPLIT_LOOP %}
-          #if Dimensions==2
-          ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-          #else
-          ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-          #endif
-          {% else %}
-          #if Dimensions==2
-          ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-          #else
-          ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-          #endif
-          {% endif %}
+          {{COMPUTE_KERNEL_CALL}}
+          (
             [&](
               const double* __restrict__                   QL,
               const double* __restrict__                   QR,
@@ -222,13 +195,19 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
           );
 
           {{POSTPROCESS_UPDATED_PATCH}}
+
+          // Set the variable
+          // double newTimeStepSize
+          {{COMPUTE_NEW_TIME_STEP_SIZE}}
+
+          newDt = newTimeStepSize;
         }
   )
   #ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
 {}
-{% endif %}
+
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   #ifdef UseSmartMPI

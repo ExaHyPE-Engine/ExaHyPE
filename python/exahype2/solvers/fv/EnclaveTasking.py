@@ -15,17 +15,17 @@ from exahype2.solvers.fv.actionsets.AbstractFVActionSet import AbstractFVActionS
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   TemplateUpdateCell = jinja2.Template( """
-  double cellTimeStepSize = -1.0;
-  double cellTimeStamp    = -1.0;
-     
-  {{PREPROCESS_RECONSTRUCTED_PATCH}}
-  {{COMPUTE_TIME_STEPSIZE}}
-    
-  assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
-  assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-  const double usedTimeStepSize = cellTimeStepSize;
+  // Set the following two paramters
+  // double timeStepSize
+  {{COMPUTE_TIME_STEP_SIZE}}
     
+  {{PREPROCESS_RECONSTRUCTED_PATCH}}
+    
+  assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStepSize, timeStamp );
+  assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp );
+
   ::exahype2::fv::validatePatch(
       reconstructedPatch,
       {{NUMBER_OF_UNKNOWNS}},
@@ -36,44 +36,33 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   ); // previous time step has to be valid
 
   if (marker.willBeSkeletonCell()) {
-    tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
+    const double newTimeStepSize = tasks::{{SOLVER_NAME}}EnclaveTask::applyKernelToCell(
       marker,
-      cellTimeStamp,
-      usedTimeStepSize,
+      timeStamp,
+      timeStepSize,
       reconstructedPatch,
       targetPatch
     );
 
-    ::exahype2::fv::validatePatch(
-      targetPatch,
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      0, // halo
-      std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // outcome has to be valid
-
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::SkeletonTask );
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(usedTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
   }
   else { // is an enclave cell
     assertion( marker.willBeEnclaveCell() );
     assertion( not marker.willBeRefined() );
     auto newEnclaveTask = new tasks::{{SOLVER_NAME}}EnclaveTask(
       marker,
-      cellTimeStamp,
-      usedTimeStepSize,
+      timeStamp,
+      timeStepSize,
       reconstructedPatch
     );
     fineGridCell{{SEMAPHORE_LABEL}}.setSemaphoreNumber( newEnclaveTask->getTaskId() );
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp + timeStepSize);
 
     tarch::multicore::spawnTask( newEnclaveTask );
   }
-  
-  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-  fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(usedTimeStepSize);
   """)
 
   def __init__(self,solver):
@@ -124,15 +113,11 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
     and
     repositories::{{SOLVER_INSTANCE}}.getSolverState()=={{SOLVER_NAME}}::SolverState::Secondary 
   ) {
-    if ( marker.hasBeenEnclaveCell() ) {
-      const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+    const int taskNumber = fineGridCell{{LABEL_NAME}}.getSemaphoreNumber();
+    if ( marker.hasBeenEnclaveCell() and taskNumber>=0 ) {
+      double newTimeStepSize;
+      ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value, newTimeStepSize );
 
-      if ( taskNumber>=0 ) {
-        ::exahype2::EnclaveBookkeeping::getInstance().waitForTaskToTerminateAndCopyResultOver( taskNumber, fineGridCell{{UNKNOWN_IDENTIFIER}}.value );
-        fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-      }
-      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
-      
       ::exahype2::fv::validatePatch(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value,
         {{NUMBER_OF_UNKNOWNS}},
@@ -141,11 +126,13 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
         0,
         std::string(__FILE__) + ": " + std::to_string(__LINE__) + "; marker=" + marker.toString()
       );
+      
+      fineGridCell{{LABEL_NAME}}.setSemaphoreNumber( ::exahype2::EnclaveBookkeeping::NoEnclaveTaskNumber );
+      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     }
     
     if ( fineGridCell{{SOLVER_NAME}}CellLabel.getHasUpdated() ) {
-      double* targetPatch = fineGridCell{{UNKNOWN_IDENTIFIER}}.value;
-      
       repositories::{{SOLVER_INSTANCE}}.update(
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
         fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
@@ -191,34 +178,19 @@ class EnclaveTasking( FV ):
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
      which uses this field. 
      
+     _postprocess_updated_patch_after_computation: C code snippet
+       Will be called directly after we have computed the new solution. Depending 
+       on the task type, it will run within the enclave task
+     
+     _postprocess_updated_patch_before_commit: C code snippet
+       Will be called directly before we actually write the task outcome back into
+       the grid.
+     
     """
     self._name = name
     
-    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
-    self._refinement_criterion_implementation = PDETerms.Empty_Implementation
-    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
-
-    self._use_split_loop                      = False
-    
-    self._compute_time_step_size              = "#error Not yet defined"
-
-    self._preprocess_reconstructed_patch      = ""
-    self._postprocess_updated_patch           = ""
-    
-    self._source_term_call                = "#error Not yet defined. Set self._source_term_call in your Python solver class."
-    self._Riemann_solver_call             = "#error Not yet defined. Set self._Riemann_solver_call in your Python solver class."
-    self._fused_Riemann_solver_call       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
-    self._abstract_solver_user_declarations        = ""
-    self._abstract_solver_user_definitions         = ""
-    self._solver_user_declarations                 = ""
-    self._solver_user_definitions                  = ""
-
-    self._start_time_step_implementation           = ""
-    self._finish_time_step_implementation          = ""
-    
-    self._stateless_pde_terms = stateless_pde_terms
-    
-    self._constructor_implementation = ""
+    self._fused_Riemann_solver_call       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."    
+    self._stateless_pde_terms             = stateless_pde_terms
     
     self._initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
@@ -422,27 +394,8 @@ class EnclaveTasking( FV ):
      d: Dictionary of string to string
         in/out argument
     """
-    d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
-    d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
-    d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
-
-    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     d[ "FUSED_RIEMANN_SOLVER_CALL"]           = jinja2.Template(self._fused_Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
     
-    d[ "COMPUTE_TIME_STEPSIZE" ]              = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch,      undefined=jinja2.DebugUndefined).render( **d )
-    
-    d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "START_TIME_STEP_IMPLEMENTATION" ]     = jinja2.Template(self._start_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "FINISH_TIME_STEP_IMPLEMENTATION" ]    = jinja2.Template(self._finish_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
-
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_2D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D" ] = d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * d["NUMBER_OF_VOLUMES_PER_AXIS"] * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
 

@@ -14,7 +14,7 @@ from .kernels import create_solver_definitions
 from .kernels import create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling
 from .kernels import create_optimised_Riemann_kernel_template_arguments
 
-from .kernels import create_postprocess_updated_patch_for_adaptive_time_stepping
+from .kernels import create_compute_new_time_step_size_kernel_for_adaptive_time_stepping
 from .kernels import create_constructor_implementation_for_adaptive_time_stepping
 
 from .kernels import create_abstract_solver_user_declarations_for_adaptive_time_stepping
@@ -56,10 +56,10 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._compute_time_step_size  = create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling( name )
-    self._postprocess_updated_patch_throughout_sweep      = """
-  const double cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
-  const double cellTimeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
+    self._compute_time_step_size              = create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling( name )
+    self._postprocess_updated_patch           = """
+  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();
 """ +    create_postprocess_updated_patch_for_adaptive_time_stepping()
 
     self.set_implementation(flux=flux, 

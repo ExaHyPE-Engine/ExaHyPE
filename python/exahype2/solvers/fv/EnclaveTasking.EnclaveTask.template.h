@@ -49,11 +49,7 @@
  *
  * @author ExaHyPE's code generator written by Holger Schulz and Tobias Weinzierl 
  */
-{% if STATELESS_PDE_TERMS %}
-class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public tarch::multicore::Task
-{% else %}
 class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
-{% endif %}
 #ifdef UseSmartMPI
 , public smartmpi::Task
 #endif
@@ -89,24 +85,13 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 
     {% if STATELESS_PDE_TERMS %}
     static int                                _gpuEnclaveTaskId;
-
-    const ::peano4::datamanagement::CellMarker   _marker;
-    const double                                 _t;
-    const double                                 _dt;
-    double*                                      _reconstructedValues;
-
-    #if Dimensions==2
-    const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    const int _sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #elif Dimensions==3
-    const int _destinationPatchSize = {{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*{{NUMBER_OF_VOLUMES_PER_AXIS}}*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    const int _sourcePatchSize      = ({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_VOLUMES_PER_AXIS}}+2)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-    #endif
     {% endif %}
 
-
   public:
-    static void applyKernelToCell(
+    /**
+     * @return New time step size for cell
+     */
+    static double applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 
       double                                      t,
       double                                      dt,

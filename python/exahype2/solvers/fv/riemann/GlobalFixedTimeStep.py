@@ -32,8 +32,8 @@ class GlobalFixedTimeStep( SingleSweep ):
     self._source_term_implementation          = PDETerms.None_Implementation
     
     self._preprocess_reconstructed_patch      = """
-  cellTimeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() * """ + str(time_step_size) + """;
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  const double timeStepSize = marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMaxMeshSize() * """ + str(time_step_size) + """;
+  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 """
     self._postprocess_updated_patch      = ""
 
