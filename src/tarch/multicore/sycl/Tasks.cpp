@@ -27,31 +27,75 @@ namespace {
 
   const std::string BSPTasksStatisticsIdentifier( "tarch::multicore::bsp-tasks");
 
-  oneapi::tbb::task_group backgroundTaskGroup;
-
   /**
-   * This queue should be on the CPU and have a rather low priority.
-   * Default of queues is out-of-order, so we are fine here.
-   *
-   * You can't use a queue here, as our tasks have side-effects and use
-   * virtual function calls.
+   * @see spawnTask()
+   * @see spawnAndWaitAsTaskLoop()
    */
-  //sycl::queue backgroundTaskQueue(sycl::cpu_selector());
-  //sycl::queue backgroundTaskQueue;
+  oneapi::tbb::task_group backgroundTaskGroup;
 
   /**
    * Native mapping of a task loop onto a SYCL/oneTBB loop
    *
-   * I didn't really understand yet whether SYCL has the concept of a task loop or a
-   * parallel loop outside of queues, but if we hit this routine, we don't want to submit
-   * something to a queue. Instead, we want to execute stuff right away. Therefore, I
-   * rely on oneTBB's task group, assuming that it behaves similar to OpenMP's parallel
-   * for.
+   *
+   * # Design
+   *
+   * In principle, the TBB/SYCL world offers us two ways on the CPU/host to pipe tasks
+   * into the tasking system: We can either rely on bespoke tasking interfaces, or we
+   * can use a queue which we pin to the host. The latter is the mechanism that we have
+   * to use on GPUs: We throw tasks into a GPU queue and wait until these tasks have
+   * completed. I would have liked to use the queue concept on the host, too. From a
+   * source code's perspective, it would be great to stick to one paradigm everywhere.
+   *
+   * Using queues on the host however is off the table, as tasks within queues may not
+   * have side effects, i.e. access and modify global variables, or use virtual function
+   * calls. Our code base however relies heavily on virtual function calls, unless
+   * kernels are explicitly tailored towards particular solvers. So no queues on the CPU.
+   *
+   * With SYCL/TBB, this leaves us with two options on the host side: We could either
+   * use the C++ API, or we could use something TBB-specific. In principle, the C++
+   * front-end should, behind the scenes, feed into TBB. Under the hood, we therefore
+   * work with TBB anyway. TBB however offers some nice constructs such as the taskGroup
+   * which are convenient. Furthermore, the TBB-specific constructs offer two more
+   * advantages:
+   * - They ensure that the BSP section is really mapped onto tasks and not onto
+   *   heavy-weight threads.
+   * - They offer the opportunity to make the interna NUMA-aware as they explicitly
+   *   integrate with TBB's arena concept.
+   *
+   * The high-level architecture thus reads as follows: Peano uses a BSP-like structure
+   * on the highest level. This BSP structure is mapped onto TBB's taskGroup: Every
+   * BSP thread (this is typically a subdomain traversal) is mapped onto one task within
+   * the group, we trigger all of these tasks (aka traversals) and then wait for the
+   * task group to terminate.
+   *
+   * Each task within the task group (aka BSP thread - though these logical threads are
+   * internally mapped onto lightweight tasks) can spawn additional tasks. As part of
+   * the enclave concept, we don't have to wait for these children tasks at the end
+   * of the BSP section. Therefore, the BSP tasks enqueue their new children into a
+   * separate task group (see spawnTask()) and ``forget'' them.
+   *
+   * This design with two task groups is very convenient. The synchronisation within the
+   * BSP task group is straightforward: We fire our tasks (which might spawn additional
+   * tasks which we ignore), and we wait for all BSP tasks to terminate. Whenever we
+   * wait for some task from the second task group, we simply empty the second task
+   * group.
+   *
+   * # Runtime assumptions
+   *
+   * We expect that TBB can handle two task groups. One of them is persistent (the one
+   * holding these enclave tasks), while the other type of task group is created
+   * on-the-fly whenever we hit a BSP code segment. We also expect TBB to use both
+   * task groups to keep all threads idle and to give the temporary BSP-type task
+   * group higher priority: the BSP threads should always come first. Only once they
+   * have terminated and freed their cores, TBB should step in and ``backfill'' the
+   * idling cores with tasks from the other background task group.
+   *
+   * @see spawnTask()
+   *
    */
   void spawnAndWaitAsTaskLoop(
     const std::vector< tarch::multicore::Task* >&  tasks
   ) {
-    // important, otherwise taskwait synchronises
     assertion( not tasks.empty() );
 
     // is implicitly executed within root arena, as the invoking task is
@@ -77,6 +121,8 @@ namespace {
    *
    * This is a straightforward translation of the OpenMP high-throughput
    * realisation.
+   *
+   * @see spawnAndWaitAsTaskLoop() for realisation details re TBB/SYCL.
    */
   void spawnAndWaitAsExplicitTasksWithPolling(
     const std::vector< tarch::multicore::Task* >&  tasks,
@@ -140,6 +186,11 @@ namespace {
 }
 
 
+/**
+ * Read spawnAndWaitAsTaskLoop() first.
+ *
+ * @see spawnAndWaitAsTaskLoop()
+ */
 void tarch::multicore::native::spawnTask(Task*  job) {
   nonblockingTasksCounter++;
 
