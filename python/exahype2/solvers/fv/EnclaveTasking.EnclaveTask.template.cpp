@@ -402,26 +402,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 #endif
 
 {% if STATELESS_PDE_TERMS %}
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
-  logTraceIn( "run()" );
-
-  double* outputValues = tarch::allocateMemory(_destinationPatchSize,tarch::MemoryLocation::Heap);
-
-  applyKernelToCell(
-    _marker,
-    _t,
-    _dt,
-    _reconstructedValues,
-    outputValues
-  );
-
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,outputValues);
-
-  logTraceOut( "run()" );
-  return false;
-}
-
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   return true;
 }
@@ -443,8 +423,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
 
   const int NPT  = otherTasks.size()+1;
-  const int LR   = _sourcePatchSize*NPT;
-  const int LTOT = _destinationPatchSize*NPT;
+  const int LR   = _numberOfInputValues*NPT;
+  const int LTOT = _numberOfResultValues*NPT;
   pD.npatches=NPT;
 
   pD.reco     = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LR];
@@ -460,28 +440,29 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   pD.t        = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   pD.dt       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   pD.result   = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LTOT];
+  pD.newDt    = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   memset(pD.result, 0, LTOT*sizeof(double));
 
 
   int i=0;
   for (auto p: otherTasks) {
     {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
-    for (size_t j=0;j<_sourcePatchSize;j++) 
-    {
-      pD.reco[i*_sourcePatchSize + j] = currentTask->_reconstructedValues[j];
+    for (size_t j=0;j<_numberOfInputValues;j++) {
+      pD.reco[i*_numberOfInputValues + j] = currentTask->_inputValues[j];
     }
-    pD.id[i]  = currentTask->getTaskId();
-    pD.x0[i]  = currentTask->_marker.x()[0];
-    pD.h0[i]  = currentTask->_marker.h()[0];
-    pD.x1[i]  = currentTask->_marker.x()[1];
-    pD.h1[i]  = currentTask->_marker.h()[1];
-  #if Dimensions==3
-    pD.x2[i]  = currentTask->_marker.x()[2];
-    pD.h2[i]  = currentTask->_marker.h()[2];
-  #endif
-    pD.t[i]   = currentTask->_t;
-    pD.dt[i]  = currentTask->_dt;
-    delete[]  currentTask->_reconstructedValues;
+    pD.id[i]    = currentTask->getTaskId();
+    pD.x0[i]    = currentTask->_marker.x()[0];
+    pD.h0[i]    = currentTask->_marker.h()[0];
+    pD.x1[i]    = currentTask->_marker.x()[1];
+    pD.h1[i]    = currentTask->_marker.h()[1];
+    #if Dimensions==3
+    pD.x2[i]    = currentTask->_marker.x()[2];
+    pD.h2[i]    = currentTask->_marker.h()[2];
+    #endif
+    pD.t[i]     = currentTask->_t;
+    pD.dt[i]    = currentTask->_dt;
+    pD.newDt[i] = -1.0;
+    delete[]  currentTask->_inputValues;
     i++;
 
     delete currentTask;
@@ -489,22 +470,23 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   // Now add the data from the task from which this whole thing has been called
   //
-  for (size_t j=0;j<_sourcePatchSize;j++) {
-    pD.reco[i*_sourcePatchSize + j] = _reconstructedValues[j];
+  for (size_t j=0;j<_numberOfInputValues;j++) {
+    pD.reco[i*_numberOfInputValues + j] = _inputValues[j];
   }
   pD.id[i]  = getTaskId();
   pD.x0[i]  = _marker.x()[0];
   pD.h0[i]  = _marker.h()[0];
   pD.x1[i]  = _marker.x()[1];
   pD.h1[i]  = _marker.h()[1];
-#if Dimensions==3
+  #if Dimensions==3
   pD.x2[i]  = _marker.x()[2];
   pD.h2[i]  = _marker.h()[2];
-#endif
+  #endif
   pD.t[i]   = _t;
   pD.dt[i]  = _dt;
+  pD.newDt[i] = -1.0;
   
-  delete[] _reconstructedValues;
+  delete[] _inputValues;
 
   //
   // ==============
@@ -521,8 +503,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     (
       1,
       pD,
-      _sourcePatchSize,
-      _destinationPatchSize
+      _numberOfInputValues,
+      _numberOfResultValues
     );
   }
   else {
@@ -537,8 +519,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     (
       1,
       pD,
-      _sourcePatchSize,
-      _destinationPatchSize,
+      _numberOfInputValues,
+      _numberOfResultValues,
       targetDevice
     );
   }
@@ -550,9 +532,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   for (int i=0;i<pD.npatches;i++) {
     const int taskid = pD.id[i];
-    double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-    for (int j=0;j<_destinationPatchSize;j++) targetPatch[j] = *(pD.result + j + i*_destinationPatchSize);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
+    double* targetPatch = ::tarch::allocateMemory(_numberOfResultValues, ::tarch::MemoryLocation::Heap);
+    for (int j=0;j<_numberOfResultValues;j++) {
+      targetPatch[j] = *(pD.result + j + i*_numberOfResultValues);
+    }
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _numberOfResultValues, targetPatch, pD.newDt[i]);
   }
 
   return false;
