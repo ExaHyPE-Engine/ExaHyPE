@@ -10,19 +10,25 @@ from dis import dis
     
     
 def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
-  result = """
+  if remove_accumulation_errors:
+    result = """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
-  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+  const double originalStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
+  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalStepSize);
+  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
 """  
-
-  if remove_accumulation_errors:
-    result += """
-  cellTimeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, cellTimeStepSize);
-"""
+  else:
+    result = """
+  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
+  // always chosen such that the finest grid does something meaningful.
+  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+    repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
+    0.0;
+  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
+"""  
 
   return result
 
@@ -31,15 +37,14 @@ def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycl
   result = """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
-  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
 """  
 
   if remove_accumulation_errors:
     result += """
-  cellTimeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, cellTimeStepSize);
+  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, timeStepSize);
 """
 
   return result
@@ -47,10 +52,10 @@ def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycl
 
 def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
   result = """
-  cellTimeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();  
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
+  const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();  
+  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
 
-  cellTimeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, cellTimeStepSize);
+  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, timeStepSize);
 """
 
   return result
@@ -58,8 +63,7 @@ def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, t
 
 def create_compute_time_step_size_kernel_for_adaptive_time_stepping():
   return """
-  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize();
 """
 
 
@@ -162,7 +166,7 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
   return determine_eigenvalue + compute_time_step_sizes + set_time_step_size
     
     
-def create_postprocess_updated_patch_for_adaptive_time_stepping():
+def create_compute_new_time_step_size_kernel_for_adaptive_time_stepping():
   return """
     const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
       [] (
@@ -177,8 +181,8 @@ def create_postprocess_updated_patch_for_adaptive_time_stepping():
       },
       marker.x(),
       marker.h(),
-      cellTimeStamp,
-      cellTimeStepSize,
+      timeStamp,
+      timeStepSize,
       {{NUMBER_OF_VOLUMES_PER_AXIS}},
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -186,6 +190,10 @@ def create_postprocess_updated_patch_for_adaptive_time_stepping():
     );
     
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
+    
+    // This is a dummy value. We'll ignore it later anyway as we ask for a 
+    // new valid time step size from getAdmissibleTimeStepSize().
+    const double newTimeStepSize = timeStepSize;
 """
 
 

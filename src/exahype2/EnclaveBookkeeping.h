@@ -32,6 +32,15 @@ namespace exahype2 {
       Ein Task muss sich, sobald er zuende ist, in den Bookkeeping einreihen, d.h. hier gibt es zwei Datenstrukturen: Semaphoren (set) + Tasks (map)
  */
 class exahype2::EnclaveBookkeeping {
+  public:
+    struct Entry {
+      int      numberOfResultValues;
+      double*  data;
+      double   dt;
+
+      Entry( int  numberOfResultValues_, double*  data_, double   dt_ );
+      std::string toString() const;
+    };
   private:
     static tarch::logging::Log          _log;
 
@@ -42,7 +51,7 @@ class exahype2::EnclaveBookkeeping {
      * Plain map onto ouput array. See lifecycle discussion of EnclaveTask
      * for details.
      */
-    std::unordered_map<int, std::pair<int,double*> >       _finishedTasks;
+    std::unordered_map<int, Entry >       _finishedTasks;
     
     std::set<int>  _tasksThatHaveToBeCancelled;
 
@@ -64,7 +73,7 @@ class exahype2::EnclaveBookkeeping {
      */
     void dumpStatistics();
 
-    void waitForTaskToTerminateAndCopyResultOver(int number, double* destination);
+    void waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& newDt);
     
     /**
      * You have the sole ownership of the result which should be deleted 
@@ -75,10 +84,9 @@ class exahype2::EnclaveBookkeeping {
     
        </pre>
      * 
-     * @return Tuple of an integer (how big is the result patch) and a pointer
-     *         to this patch.
+     * @return Entry
      */
-    std::pair<int, double*> waitForTaskToTerminateAndReturnResult(int number);
+    Entry waitForTaskToTerminateAndReturnResult(int number);
 
     void cancelTask(int number);
 
@@ -89,7 +97,7 @@ class exahype2::EnclaveBookkeeping {
      *
      * @param data Has to be device memory allocated through tarch::multicore::allocateMemory()
      */
-    void finishedTask(int taskNumber, int numberOfResultValues, double* data);
+    void finishedTask(int taskNumber, int numberOfResultValues, double* data, double dt);
 };
 
 #endif

@@ -4,8 +4,7 @@
 
 def create_compute_time_step_size_for_fixed_time_stepping( time_step_size ):
   return """
-  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
 """
 
 

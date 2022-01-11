@@ -47,7 +47,8 @@ class GlobalFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._compute_time_step_size  = create_compute_time_step_size_for_fixed_time_stepping( time_step_size )
+    self._compute_time_step_size              = create_compute_time_step_size_for_fixed_time_stepping( time_step_size )
+    self._compute_new_time_step_size          = "const double newTimeStepSize = dt;"
 
     self.set_implementation(flux=flux, 
       ncp=ncp, 
