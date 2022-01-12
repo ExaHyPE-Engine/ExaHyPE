@@ -346,9 +346,12 @@ def create_source_term_kernel_for_Rusanov(source_term_implementation):
     return create_user_defined_source_term_kernel()
   
     
-def create_optimised_Riemann_kernel_template_arguments(flux_implementation, ncp_implementation, source_term_implementation):
+def create_optimised_Riemann_kernel_template_arguments(flux_implementation, 
+                                                       ncp_implementation, 
+                                                       source_term_implementation, 
+                                                       compute_new_time_step_size):
   Template = jinja2.Template( """
-  <{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}},{{SKIP_FLUX}},{{SKIP_NCP}},{{SKIP_SOURCE_TERM}}>
+  <{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}},{{SKIP_FLUX}},{{SKIP_NCP}},{{SKIP_SOURCE_TERM}},{{SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE}}>
 """, undefined=jinja2.DebugUndefined)
   
   d= {}
@@ -364,9 +367,13 @@ def create_optimised_Riemann_kernel_template_arguments(flux_implementation, ncp_
     d[ "SKIP_SOURCE_TERM"]  = "true"
   else:
     d[ "SKIP_SOURCE_TERM"] = "false"
+  if compute_new_time_step_size:
+    d[ "SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE"] = "false"
+  else:
+    d[ "SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE"] = "true"
   return Template.render(**d)
-    
-    
+
+
 def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation):
   Template = jinja2.Template( """
         ::exahype2::fv::splitRusanov1d(

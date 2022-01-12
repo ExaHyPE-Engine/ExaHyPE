@@ -79,7 +79,7 @@ AC_OPENMP()
 
 AX_COMPILER_VENDOR
 
-AX_CXX_COMPILE_STDCXX_11
+#AX_CXX_COMPILE_STDCXX_11
 
 
 
@@ -208,26 +208,44 @@ fi
 # GPU support
 #
 AC_ARG_ENABLE(gpu,
-  AC_HELP_STRING([--enable-gpu], [build with the GPU support  [default=no,amd,nvidia]]),
+  AC_HELP_STRING([--enable-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,amd,nvidia]]),
   [ AC_MSG_CHECKING(for gpu)
     case "${enableval}" in
-      no)        AC_MSG_RESULT(no);                             gpu=false ;;
-      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support);  gpu=nvidia ;;
-      intel)     AC_MSG_RESULT(build with intel GPU support);   gpu=intel ;;
-      amd)       AC_MSG_RESULT(build with AMD GPU support);     gpu=amd ;;
-      *)         AC_MSG_FAILURE([default=no (no gpu)]); gpu=false ;;
+      no)        AC_MSG_RESULT(no);                               gpu=false ;;
+      generic)   AC_MSG_RESULT(build with NVIDIA GPU support);    gpu=generic ;;
+      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support);    gpu=nvidia ;;
+      intel)     AC_MSG_RESULT(build with intel GPU support);     gpu=intel ;;
+      amd)       AC_MSG_RESULT(build with AMD GPU support);       gpu=amd ;;
+      *)         AC_MSG_RESULT(build with generic GPU defaults);  gpu=generic ;;
     esac 
   ],
   [ AC_MSG_CHECKING(for gpu); AC_MSG_RESULT(no); gpu=false ]
 )
 
 
+AM_CONDITIONAL([OpenMPGPUOffloading], [test "$gpu" != false])
+AM_CONDITIONAL([SYCLGPUOffloading],   [test "$gpu" != false])
+
+
+if test "$gpu" == generic; then
+  if test "$multithreading" == omp; then
+    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
+  elif test "$multithreading" == sycl; then
+    AC_DEFINE([OpenMPGPUOffloading],  [0], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [1], [SYCLGPUOffloading])
+  else
+    AC_MSG_FAILURE([generic GPU support requires OpenMP or SYCL; reconfigure with appropriate multithreading]);
+  fi
+fi
+
+
 if test "$gpu" == amd; then
   #AC_DEFINE([UseAMD], [1], [UseAMD])
   #AC_CHECK_HEADERS([hip/hip_runtime.h],[],[AC_MSG_ERROR([header <hip/hip_runtime.h> not found])])
   if test "$multithreading" == omp; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-    AC_DEFINE([needandhaveomp], [1], [needandhaveomp])
+    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
   else
     AC_MSG_FAILURE([AMD GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
@@ -235,8 +253,8 @@ fi
 
 if test "$gpu" == nvidia; then
   if test "$multithreading" == omp; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-    AC_DEFINE([needandhaveomp], [1], [needandhaveomp])
+    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
   else
     AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
@@ -244,14 +262,13 @@ fi
 
 if test "$gpu" == intel; then
   if test "$multithreading" == omp; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-    AC_DEFINE([needandhaveomp], [1], [needandhaveomp])
+    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
   else
     AC_MSG_FAILURE([INTEL GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
 fi
-AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$needandhaveomp" = x1 ])
-# https://autotools.io/automake/conditional.html
+
 
 #
 # ===============================================================

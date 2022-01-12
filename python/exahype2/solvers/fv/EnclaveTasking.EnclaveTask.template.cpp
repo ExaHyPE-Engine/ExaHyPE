@@ -3,6 +3,8 @@
 // user includes
 {{SOLVER_INCLUDES}}
 
+#include "config.h"
+
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
@@ -493,35 +495,71 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // Invoke kernels
   // ==============
   //
-  if (targetDevice<0) {
-    #if Dimensions==2
-    ::exahype2::fv::Fusanov_2D_with_batching
-    #elif Dimensions==3
-    ::exahype2::fv::Fusanov_3D_with_batching
-    #endif
-    {{FUSED_RIEMANN_SOLVER_CALL}}
-    (
-      1,
-      pD,
-      _numberOfInputValues,
-      _numberOfResultValues
-    );
-  }
-  else {
-    // @todo Holger, that's where we pick the SYCL queue. We make the queues static, so they
-    // are created once only.
+  bool foundOffloadingBranch = false;
+
+  #if OpenMPGPUOffloading>0
+  if (targetDevice>=0) {
+    foundOffloadingBranch = true;
     #if Dimensions==2
     ::exahype2::fv::Fusanov_2D_with_OpenMP_offloading
     #elif Dimensions==3
     ::exahype2::fv::Fusanov_3D_with_OpenMP_offloading
     #endif
-    {{FUSED_RIEMANN_SOLVER_CALL}}
+    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
     (
       1,
       pD,
       _numberOfInputValues,
       _numberOfResultValues,
       targetDevice
+    );
+  }
+  #endif
+
+  #if SYCLGPUOffloading>0
+  if (targetDevice>=0) {
+    static std::vector< sycl::queue* >  gpuQueues;
+
+    if (targetDevice>=gpuQueues.size()) {
+      // @todo Holger, I don't know how to assign a queue to a GPU
+      // -> Ask Andy
+      gpuQueues.push_back( new sycl::queue(gpu_selector{}) );
+    }
+
+    foundOffloadingBranch = true;
+
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_SYCL_offloading
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_SYCL_offloading
+    #endif
+    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
+    // @todo First template arguments are generic (also used in other branches).
+    // The second level of template arguments, i.e. the <1,1,1> are the ones that
+    // describe the workgroup sizes, and we'll have to tune them later
+    <1,1,1>
+    (
+      1,
+      pD,
+      _numberOfInputValues,
+      _numberOfResultValues,
+      *gpuQueues[targetDevice]
+    );
+  }
+  #endif
+
+  if (not foundOffloadingBranch) {
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_batching
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_batching
+    #endif
+    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
+    (
+      1,
+      pD,
+      _numberOfInputValues,
+      _numberOfResultValues
     );
   }
 

@@ -50,7 +50,8 @@ namespace exahype2 {
       typename SOLVER,
       bool                                         skipFluxEvaluation,
       bool                                         skipNCPEvaluation,
-      bool                                         skipSourceTerm
+      bool                                         skipSourceTerm,
+      bool                                         skipNewTimeStepComputation
       >
     void Fusanov_2D_with_OpenMP_offloading(
       const int       haloSize,
@@ -72,7 +73,8 @@ namespace exahype2 {
       typename SOLVER,
       bool     skipFluxEvaluation,
       bool     skipNCPEvaluation,
-      bool     skipSourceTerm
+      bool                                         skipSourceTerm,
+      bool                                         skipNewTimeStepComputation
       >
     void Fusanov_2D_with_batching(
       const int       haloSize,
@@ -97,7 +99,8 @@ namespace exahype2 {
       typename SOLVER,
       bool                                         skipFluxEvaluation,
       bool                                         skipNCPEvaluation,
-      bool                                         skipSourceTerm
+      bool                                         skipSourceTerm,
+      bool                                         skipNewTimeStepComputation
     >
     void Fusanov_3D_with_OpenMP_offloading(
       int                                          haloSize,
@@ -172,7 +175,8 @@ namespace exahype2 {
       typename SOLVER,
       bool                                         skipFluxEvaluation,
       bool                                         skipNCPEvaluation,
-      bool                                         skipSourceTerm
+      bool                                         skipSourceTerm,
+      bool                                         skipNewTimeStepComputation
     >
     void Fusanov_3D_with_batching(
       int                                          haloSize,
