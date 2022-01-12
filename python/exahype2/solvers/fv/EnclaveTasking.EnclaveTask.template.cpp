@@ -5,6 +5,11 @@
 
 #include "config.h"
 
+
+#if SYCLGPUOffloading>0
+#include "tarch/multicore/sycl/Core.h"
+#endif
+
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
@@ -565,14 +570,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
 
   #if SYCLGPUOffloading>0
   if (targetDevice>=0) {
-    static std::vector< sycl::queue* >  gpuQueues;
-
-    if (targetDevice>=gpuQueues.size()) {
-      // @todo Holger, I don't know how to assign a queue to a GPU
-      // -> Ask Andy
-      gpuQueues.push_back( new sycl::queue(gpu_selector{}) );
-    }
-
     foundOffloadingBranch = true;
 
     #if Dimensions==2
@@ -581,16 +578,14 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     ::exahype2::fv::Fusanov_3D_with_SYCL_offloading
     #endif
     {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
-    // @todo First template arguments are generic (also used in other branches).
-    // The second level of template arguments, i.e. the <1,1,1> are the ones that
-    // describe the workgroup sizes, and we'll have to tune them later
-    <1,1,1>
     (
       1,
       pD,
       _numberOfInputValues,
       _numberOfResultValues,
-      *gpuQueues[targetDevice]
+	  tarch::multicore::getSYCLQueue(targetDevice),
+	  {1,1,1} // if we really have to, we can make the range qualifiers template parameters. If there's a
+              // way to pass them in as arrays, then I'd prefer it that way. Up to you
     );
   }
   #endif
