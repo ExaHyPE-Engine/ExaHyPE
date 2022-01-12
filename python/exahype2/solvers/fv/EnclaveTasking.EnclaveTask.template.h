@@ -89,7 +89,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 
   public:
     /**
-     * @return New time step size for cell
+     * @return Max eigenvalue over cell
      */
     static double applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 
@@ -120,7 +120,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
     #endif
 
     {% if STATELESS_PDE_TERMS %}
-    bool run() override;
     bool fuse( const std::list<Task*>& otherTasks, int targetDevice=Host ) override;
     bool canFuse() const override;
     {% endif %}

@@ -42,6 +42,8 @@ class GlobalAdaptiveTimeStep( SingleSweep ):
     
     self._compute_time_step_size              = create_compute_time_step_size_kernel_for_adaptive_time_stepping()
     self._compute_new_time_step_size          = create_compute_new_time_step_size_kernel_for_adaptive_time_stepping()
+    self._compute_eigenvalue                  = True
+    
     self.set_implementation(flux=flux, 
       ncp=ncp, 
       eigenvalues=eigenvalues, 

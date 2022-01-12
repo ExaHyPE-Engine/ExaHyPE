@@ -36,9 +36,9 @@ class exahype2::EnclaveBookkeeping {
     struct Entry {
       int      numberOfResultValues;
       double*  data;
-      double   dt;
+      double   maxEigenvalue;
 
-      Entry( int  numberOfResultValues_, double*  data_, double   dt_ );
+      Entry( int  numberOfResultValues_, double*  data_, double   maxEigenvalue_ );
       std::string toString() const;
     };
   private:
@@ -73,7 +73,7 @@ class exahype2::EnclaveBookkeeping {
      */
     void dumpStatistics();
 
-    void waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& newDt);
+    void waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue);
     
     /**
      * You have the sole ownership of the result which should be deleted 
@@ -97,7 +97,7 @@ class exahype2::EnclaveBookkeeping {
      *
      * @param data Has to be device memory allocated through tarch::multicore::allocateMemory()
      */
-    void finishedTask(int taskNumber, int numberOfResultValues, double* data, double dt);
+    void finishedTask(int taskNumber, int numberOfResultValues, double* data, double maxEigenvalue);
 };
 
 #endif

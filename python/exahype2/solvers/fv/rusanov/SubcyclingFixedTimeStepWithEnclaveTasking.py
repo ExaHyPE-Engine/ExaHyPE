@@ -52,7 +52,8 @@ class SubcyclingFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._compute_time_step_size  = create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, name )
+    self._compute_time_step_size              = create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, name )
+    self._compute_new_time_step_size          = "const double newTimeStepSize = dt;"
     
     self.set_implementation(flux=flux, 
       ncp=ncp, 
@@ -91,7 +92,7 @@ class SubcyclingFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
 
     self._source_term_call           = create_source_term_kernel_for_Rusanov(self._source_term_implementation)
     self._Riemann_solver_call        = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
-    self._fused_Riemann_solver_call  = create_optimised_Riemann_kernel_template_arguments(self._flux_implementation, self._ncp_implementation, self._source_term_implementation)
+    self._fused_Riemann_solver_call  = create_optimised_Riemann_kernel_template_arguments(self._flux_implementation, self._ncp_implementation, self._source_term_implementation, False)
 
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._stateless_pde_terms)
     self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_fixed_time_stepping()

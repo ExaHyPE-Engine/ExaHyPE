@@ -51,7 +51,9 @@ class SubcyclingFixedTimeStep( SingleSweep ):
     self._source_term_implementation          = PDETerms.None_Implementation
     
     self._compute_time_step_size              = create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, name )
-    self._postprocess_updated_patch           = ""
+    self._compute_new_time_step_size          = """
+const double newTimeStepSize = timeStepSize;
+"""    
     
     self.set_implementation(flux=flux, 
       ncp=ncp, 

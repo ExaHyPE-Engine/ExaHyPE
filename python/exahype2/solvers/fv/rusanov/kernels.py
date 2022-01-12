@@ -6,48 +6,46 @@ import jinja2
 
 from exahype2.solvers.fv.kernels import create_empty_source_term_kernel
 from exahype2.solvers.fv.kernels import create_user_defined_source_term_kernel
-from dis import dis
     
     
 def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
   if remove_accumulation_errors:
-    result = """
+    return """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
   const double originalStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
   const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalStepSize);
-  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
 """  
   else:
-    result = """
+    return """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
   const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
-  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
 """  
-
-  return result
 
 
 def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling( solver_name, remove_accumulation_errors=True ):
-  result = """
+  if remove_accumulation_errors:
+    return """
+  // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
+  // always chosen such that the finest grid does something meaningful.
+  const double originalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
+    repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
+    0.0;
+  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, originalTimeStepSize);
+"""
+  else:
+    return """
   // The fixed solver's _timeStepSize scales with min volume h, i.e. it is 
   // always chosen such that the finest grid does something meaningful.
   const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false)>0.0 ?
     repositories::{{SOLVER_INSTANCE}}.getAdmissibleTimeStepSize() * marker.h()(0) / repositories::{{SOLVER_INSTANCE}}.getMinPatchSize(false) :
     0.0;
-"""  
-
-  if remove_accumulation_errors:
-    result += """
-  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, timeStepSize);
 """
-
-  return result
 
 
 def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
@@ -90,26 +88,6 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
     raise Exception( "invalid discretisation step size for local time step (val=" + str(discretisation_steps) + ")" )
 
   determine_eigenvalue = """
-    double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-      [] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-      },
-      marker.x(),
-      marker.h(),
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      targetPatch
-    );
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
 """
 
@@ -168,32 +146,11 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
     
 def create_compute_new_time_step_size_kernel_for_adaptive_time_stepping():
   return """
-    const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-      [] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-      },
-      marker.x(),
-      marker.h(),
-      timeStamp,
-      timeStepSize,
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      targetPatch
-    );
-    
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
     
     // This is a dummy value. We'll ignore it later anyway as we ask for a 
     // new valid time step size from getAdmissibleTimeStepSize().
-    const double newTimeStepSize = timeStepSize;
+    const double newTimeStepSize = 0.0;
 """
 
 
@@ -348,9 +305,12 @@ def create_source_term_kernel_for_Rusanov(source_term_implementation):
     return create_user_defined_source_term_kernel()
   
     
-def create_optimised_Riemann_kernel_template_arguments(flux_implementation, ncp_implementation, source_term_implementation):
+def create_optimised_Riemann_kernel_template_arguments(flux_implementation, 
+                                                       ncp_implementation, 
+                                                       source_term_implementation, 
+                                                       compute_new_time_step_size):
   Template = jinja2.Template( """
-  <{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}},{{SKIP_FLUX}},{{SKIP_NCP}},{{SKIP_SOURCE_TERM}}>
+  <{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}},{{SKIP_FLUX}},{{SKIP_NCP}},{{SKIP_SOURCE_TERM}},{{SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE}}>
 """, undefined=jinja2.DebugUndefined)
   
   d= {}
@@ -366,9 +326,13 @@ def create_optimised_Riemann_kernel_template_arguments(flux_implementation, ncp_
     d[ "SKIP_SOURCE_TERM"]  = "true"
   else:
     d[ "SKIP_SOURCE_TERM"] = "false"
+  if compute_new_time_step_size:
+    d[ "SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE"] = "false"
+  else:
+    d[ "SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE"] = "true"
   return Template.render(**d)
-    
-    
+
+
 def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation):
   Template = jinja2.Template( """
         ::exahype2::fv::splitRusanov1d(

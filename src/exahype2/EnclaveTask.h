@@ -48,7 +48,7 @@ namespace exahype2 {
  */
 class exahype2::EnclaveTask: public tarch::multicore::Task {
   public:
-    typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& newDt) >  Functor;
+    typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& maxEigenvalue) >  Functor;
 
   protected:
     friend class EnclaveBookkeeping;
@@ -66,7 +66,7 @@ class exahype2::EnclaveTask: public tarch::multicore::Task {
     int                                          _numberOfInputValues;
     int                                          _numberOfResultValues;
     Functor                                      _functor;
-    double                                       _newDt;
+    double                                       _maxEigenvalue;
   public:
     /**
      * Create plain enclave task.

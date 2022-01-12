@@ -83,20 +83,20 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
 }
 
 
-void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& newDt) {
-  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double)", "fetch results of task " << number );
+void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue) {
+  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", "fetch results of task " << number );
 
   Entry storedData = waitForTaskToTerminateAndReturnResult(number);
 
   std::copy_n( storedData.data, storedData.numberOfResultValues, destination );
-  newDt = storedData.dt;
+  maxEigenvalue = storedData.maxEigenvalue;
 
   tarch::freeMemory( storedData.data, tarch::MemoryLocation::Heap );
-  logDebug( "waitForTaskToTerminateAndCopyResultOver()", "delivered outcome of task " << number << ": " << storedData.toString() );
+  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", "delivered outcome of task " << number << ": " << storedData.toString() );
 }
 
 
-void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResultValues, double* data, double dt) {
+void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResultValues, double* data, double maxEigenvalue) {
   logDebug( "finishedTask()", "task " << taskNumber << " has terminated. Bookkeep results" );
 
   tarch::multicore::Lock lockFinishedTasks( _finishedTasksSemaphore );
@@ -109,7 +109,7 @@ void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResu
   }
   else {
     auto oldBucketCount = _finishedTasks.bucket_count();
-    Entry newEntry(numberOfResultValues,data,dt);
+    Entry newEntry(numberOfResultValues,data,maxEigenvalue);
     _finishedTasks.insert( std::pair<int, Entry >(taskNumber,newEntry) );
     if (_finishedTasks.bucket_count()>oldBucketCount) {
       ::tarch::logging::Statistics::getInstance().inc( MemoryAllocationsInLookupTableIdentifier );
@@ -119,14 +119,14 @@ void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResu
 }
 
 
-exahype2::EnclaveBookkeeping::Entry::Entry( int  numberOfResultValues_, double*  data_, double   dt_ ):
+exahype2::EnclaveBookkeeping::Entry::Entry( int  numberOfResultValues_, double*  data_, double   maxEigenvalue_ ):
   numberOfResultValues(numberOfResultValues_),
   data(data_),
-  dt(dt_) {}
+  maxEigenvalue(maxEigenvalue_) {}
 
 
 std::string exahype2::EnclaveBookkeeping::Entry::toString() const {
   std::ostringstream msg;
-  msg << "(#" << numberOfResultValues << ",dt=" << dt << ")";
+  msg << "(#" << numberOfResultValues << ",\\lambda_max=" << maxEigenvalue << ")";
   return msg.str();
 }

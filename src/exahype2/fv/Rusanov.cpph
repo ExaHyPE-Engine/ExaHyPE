@@ -473,7 +473,8 @@ template<
   typename SOLVER,
   bool                                         skipFluxEvaluation,
   bool                                         skipNCPEvaluation,
-  bool                                         skipSourceTerm
+  bool                                         skipSourceTerm,
+  bool                                         skipNewTimeStepComputation
 >
 void exahype2::fv::Fusanov_3D_with_OpenMP_offloading(
   int          haloSize,
@@ -499,9 +500,9 @@ void exahype2::fv::Fusanov_3D_with_OpenMP_offloading(
 #pragma omp teams distribute
     for (int pidx=0;pidx<NPT;pidx++)
     {
-      const double                    t =   pV.t[pidx];
+      const double                    t =  pV.t[pidx];
       const double                   dt =  pV.dt[pidx];
-      const int                  taskId = pV.id[pidx];
+      const int                  taskId =  pV.id[pidx];
       const double                   x0 =  pV.x0[pidx];
       const double                   h0 =  pV.h0[pidx];
       const double                   x1 =  pV.x1[pidx];
@@ -525,9 +526,9 @@ void exahype2::fv::Fusanov_3D_with_OpenMP_offloading(
          pV.result[pidx*destPatchSize + mydest * (unknowns + auxiliaryVariables) + i] =reconstructedPatch[mysrc * (unknowns + auxiliaryVariables) + i];
       }
 
-     if (not skipSourceTerm)
-     {
-      #pragma omp parallel for collapse(3)
+      if (not skipSourceTerm)
+      {
+        #pragma omp parallel for collapse(3)
         for (int z = 0; z < numVPAIP; z++)
         for (int y = 0; y < numVPAIP; y++)
         for (int x = 0; x < numVPAIP; x++)
@@ -548,13 +549,12 @@ void exahype2::fv::Fusanov_3D_with_OpenMP_offloading(
            {
              pV.result[pidx*destPatchSize + voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * sourceTermContributions[unknown];
            }
-         }
-       }
+        }
+      } // end of source term loop including if block guarding it
 
-    for (int shift = 0; shift < 2; shift++)
-    {
-
-      #pragma omp parallel for collapse(3)
+      for (int shift = 0; shift < 2; shift++)
+      {
+        #pragma omp parallel for collapse(3)
         for (int x = shift; x <= numVPAIP; x += 2)
         for (int z = 0; z < numVPAIP; z++)
         for (int y = 0; y < numVPAIP; y++)
@@ -627,7 +627,7 @@ void exahype2::fv::Fusanov_3D_with_OpenMP_offloading(
             }
         }
 
-      #pragma omp parallel for collapse(3)
+        #pragma omp parallel for collapse(3)
         for (int y = shift; y <= numVPAIP; y += 2)
         for (int z = 0; z < numVPAIP; z++)
         for (int x = 0; x < numVPAIP; x++)
@@ -696,10 +696,10 @@ void exahype2::fv::Fusanov_3D_with_OpenMP_offloading(
               pV.result[pidx*destPatchSize + upperVoxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt / volumeH (0) * fr;
             }
           }
-        }
+        } // y-fluxes
 
 
-      #pragma omp parallel for collapse(3)
+        #pragma omp parallel for collapse(3)
         for (int z = shift; z <= numVPAIP; z += 2)
         {
           for (int y = 0; y < numVPAIP; y++)
@@ -772,10 +772,35 @@ void exahype2::fv::Fusanov_3D_with_OpenMP_offloading(
               }
             }
           }
+        } // z-fluxes
+      } // loop over the the two shifts
+
+      if (not skipNewTimeStepComputation)
+      {
+        double maxEigenvalue = 0.0;
+        #pragma omp parallel for collapse(4) reduction(max:maxEigenvalue)
+        for (int z = 0; z < numVPAIP; z++)
+        for (int y = 0; y < numVPAIP; y++)
+        for (int x = 0; x < numVPAIP; x++)
+        for (int d=0; d<3; d++) {
+           tarch::la::Vector<3, double> volumeX = {x0-0.5*h0, x1-0.5*h1, x2-0.5*h2};
+
+           volumeX (0) += (x + 0.5) * h0/numVPAIP;
+           volumeX (1) += (y + 0.5) * h1/numVPAIP;
+           volumeX (2) += (z + 0.5) * h2/numVPAIP;
+
+           const int voxelInPreImage  = x+1    + (y+1) * (numVPAIP+2)  + (z+1) * (numVPAIP+2) * (numVPAIP+2);
+           const int voxelInImage     = x          + y * numVPAIP          + z * numVPAIP * numVPAIP;
+
+           double localEigenvalue = SOLVER::maxEigenvalue( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables), volumeX, h0/numVPAIP, t, d, SOLVER::Offloadable::Yes);
+
+           maxEigenvalue = std::max(maxEigenvalue,localEigenvalue);
         }
-      }
-    }
-  }
+        // @todo Holger: Does this field come back already in the OPenMP target mapping?
+        pV.maxEigenvalue[pidx] = maxEigenvalue;
+      } // end of source term loop including if block guarding it
+    } // loop over patches
+  } // end of target block
 };
 
 
@@ -786,7 +811,8 @@ template<
   typename SOLVER,
   bool     skipFluxEvaluation,
   bool     skipNCPEvaluation,
-  bool     skipSourceTerm
+  bool                                         skipSourceTerm,
+  bool                                         skipNewTimeStepComputation
   >
 void exahype2::fv::Fusanov_2D_with_batching(
   const int       haloSize,
@@ -868,7 +894,7 @@ void exahype2::fv::Fusanov_2D_with_batching(
         basePointerResult[pidx*destPatchSize + voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * sourceTermContributions[unknown];
       }
     }
-  }
+  } // end of source term
 
   for (int shift = 0; shift < 2; shift++)
   {
@@ -1041,6 +1067,39 @@ void exahype2::fv::Fusanov_2D_with_batching(
       }
     } // close loop over horizontal faces
   } // close shift loop
+
+  if (not skipNewTimeStepComputation)
+  {
+    double maxEigenvalue = 0.0;
+    #pragma omp parallel for
+    for (int pidx=0;pidx<NPT;pidx++) {
+      #pragma omp parallel for collapse(3) reduction(max:maxEigenvalue)
+      for (int y = 0; y < numVPAIP; y++)
+      for (int x = 0; x < numVPAIP; x++)
+      for (int d=0; d<2; d++) {
+        const double                    t = pV.t[pidx];
+        const double                   dt = pV.dt[pidx];
+        const int                  taskId = pV.id[pidx];
+        const double                   x0 = pV.x0[pidx];
+        const double                   h0 = pV.h0[pidx];
+        const double                   x1 = pV.x1[pidx];
+        const double                   h1 = pV.h1[pidx];
+        double*        reconstructedPatch = basePointerReconstructed + sourcePatchSize*pidx;
+
+        tarch::la::Vector<2, double> volumeX;
+        volumeX (0) = x-0.5*h0 + (x + 0.5) * h0/numVPAIP;
+        volumeX (1) = y-0.5*h1 + (y + 0.5) * h1/numVPAIP;
+
+        const int voxelInPreImage  = x+1    + (y+1) * (numVPAIP+2);
+        const int voxelInImage     = x          + y * numVPAIP;
+
+        double localEigenvalue = SOLVER::maxEigenvalue( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables), volumeX, h0/numVPAIP, t, d, SOLVER::Offloadable::Yes);
+
+        maxEigenvalue = std::max(maxEigenvalue,localEigenvalue);
+      }
+      pV.maxEigenvalue[pidx] = maxEigenvalue;
+    }
+  } // end of eigenvalue computation term loop including if block guarding it
 };
 
 
@@ -1051,7 +1110,8 @@ template<
   typename SOLVER,
   bool                                         skipFluxEvaluation,
   bool                                         skipNCPEvaluation,
-  bool                                         skipSourceTerm
+  bool                                         skipSourceTerm,
+  bool                                         skipNewTimeStepComputation
   >
 void exahype2::fv::Fusanov_2D_with_OpenMP_offloading(
   const int       haloSize,
@@ -1255,9 +1315,31 @@ void exahype2::fv::Fusanov_2D_with_OpenMP_offloading(
             }
         }
       }
-    }
-  }
-#pragma omp taskwait
+      if (not skipNewTimeStepComputation)
+      {
+        double maxEigenvalue = 0.0;
+        #pragma omp parallel for collapse(4) reduction(max:maxEigenvalue)
+        for (int z = 0; z < numVPAIP; z++)
+        for (int y = 0; y < numVPAIP; y++)
+        for (int x = 0; x < numVPAIP; x++)
+        for (int d=0; d<3; d++) {
+           tarch::la::Vector<2, double> volumeX;
+
+           volumeX (0) = x0-0.5*h0 + (x + 0.5) * h0/numVPAIP;
+           volumeX (1) = x1-0.5*h1 + (y + 0.5) * h1/numVPAIP;
+
+           const int voxelInPreImage  = x+1    + (y+1) * (numVPAIP+2);
+           const int voxelInImage     = x          + y * numVPAIP;
+
+           double localEigenvalue = SOLVER::maxEigenvalue( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables), volumeX, h0/numVPAIP, t, d, SOLVER::Offloadable::Yes);
+
+           maxEigenvalue = std::max(maxEigenvalue,localEigenvalue);
+        }
+        // @todo Holger: Does this field come back already in the OPenMP target mapping?
+        pV.maxEigenvalue[pidx] = maxEigenvalue;
+      } // end of source term loop including if block guarding it
+    } // end loop over patches
+  } // end target block
 };
 
 
@@ -1268,7 +1350,8 @@ template<
   typename     SOLVER,
   bool         skipFluxEvaluation,
   bool         skipNCPEvaluation,
-  bool         skipSourceTerm
+  bool                                         skipSourceTerm,
+  bool                                         skipNewTimeStepComputation
 >
 void exahype2::fv::Fusanov_3D_with_batching(
   int          haloSize,
@@ -1646,8 +1729,42 @@ void exahype2::fv::Fusanov_3D_with_batching(
       }
     } // end of face loop over faxes with normal along z-axis
   } // end of shift loop
-};
 
+  if (not skipNewTimeStepComputation)
+  {
+    double maxEigenvalue = 0.0;
+    #pragma omp parallel for
+    for (int pidx=0;pidx<NPT;pidx++) {
+      #pragma omp parallel for collapse(4) reduction(max:maxEigenvalue)
+      for (int z = 0; z < numVPAIP; z++)
+      for (int y = 0; y < numVPAIP; y++)
+      for (int x = 0; x < numVPAIP; x++)
+      for (int d=0; d<3; d++) {
+        const double                    t = pV.t[pidx];
+        const double                   dt = pV.dt[pidx];
+        const int                  taskId = pV.id[pidx];
+        const double                   x0 = pV.x0[pidx];
+        const double                   h0 = pV.h0[pidx];
+        const double                   x1 = pV.x1[pidx];
+        const double                   h1 = pV.h1[pidx];
+        const double                   x2 = pV.x2[pidx];
+        const double                   h2 = pV.h2[pidx];
+        double*        reconstructedPatch = basePointerReconstructed + sourcePatchSize*pidx;
 
+        tarch::la::Vector<3, double> volumeX;
+        volumeX (0) = x-0.5*h0 + (x + 0.5) * h0/numVPAIP;
+        volumeX (1) = y-0.5*h1 + (y + 0.5) * h1/numVPAIP;
+        volumeX (2) = z-0.5*h2 + (z + 0.5) * h2/numVPAIP;
 
+        const int voxelInPreImage  = x+1    + (y+1) * (numVPAIP+2)  + (z+1) * (numVPAIP+2) * (numVPAIP+2);
+        const int voxelInImage     = x          + y * numVPAIP          + z * numVPAIP * numVPAIP;
+
+        double localEigenvalue = SOLVER::maxEigenvalue( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables), volumeX, h0/numVPAIP, t, d, SOLVER::Offloadable::Yes);
+
+        maxEigenvalue = std::max(maxEigenvalue,localEigenvalue);
+      }
+      pV.maxEigenvalue[pidx] = maxEigenvalue;
+    }
+  } // end of eigenvalue computation term loop including if block guarding it
+}
 

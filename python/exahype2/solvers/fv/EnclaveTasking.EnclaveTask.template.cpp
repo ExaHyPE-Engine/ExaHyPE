@@ -3,6 +3,8 @@
 // user includes
 {{SOLVER_INCLUDES}}
 
+#include "config.h"
+
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
@@ -121,11 +123,36 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
   {{POSTPROCESS_UPDATED_PATCH}}
 
-  // Set the variable
-  // double newTimeStepSize
-  {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
-  return newTimeStepSize;
+  {% if COMPUTE_MAX_EIGENVALUE %}
+  const double timeStamp    = t;
+  const double timeStepSize = dt;
+
+  const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+    [] (
+      const double * __restrict__                  Q,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal
+    ) -> double {
+      return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+    },
+    marker.x(),
+    marker.h(),
+    timeStamp,
+    timeStamp + timeStepSize,
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    targetPatch
+  );
+
+  return maxEigenvalue;
+  {% else %}
+  return 0.0;
+  {% endif %}
 }
 
 
@@ -148,7 +175,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
-    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& newDt ) -> void {
+    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& maxEigenvalue ) -> void {
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
             targetPatch,
@@ -196,11 +223,33 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
           {{POSTPROCESS_UPDATED_PATCH}}
 
-          // Set the variable
-          // double newTimeStepSize
-          {{COMPUTE_NEW_TIME_STEP_SIZE}}
+          {% if COMPUTE_MAX_EIGENVALUE %}
+          const double timeStamp    = t;
+          const double timeStepSize = dt;
 
-          newDt = newTimeStepSize;
+          maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+            [] (
+              const double * __restrict__                  Q,
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  volumeH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal
+            ) -> double {
+              return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            },
+            marker.x(),
+            marker.h(),
+            timeStamp,
+            timeStamp + timeStepSize,
+            {{NUMBER_OF_VOLUMES_PER_AXIS}},
+            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            targetPatch
+          );
+          {% else %}
+          maxEigenvalue = 0.0;
+          {% endif %}
         }
   )
   #ifdef UseSmartMPI
@@ -402,26 +451,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 #endif
 
 {% if STATELESS_PDE_TERMS %}
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
-  logTraceIn( "run()" );
-
-  double* outputValues = tarch::allocateMemory(_destinationPatchSize,tarch::MemoryLocation::Heap);
-
-  applyKernelToCell(
-    _marker,
-    _t,
-    _dt,
-    _reconstructedValues,
-    outputValues
-  );
-
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,outputValues);
-
-  logTraceOut( "run()" );
-  return false;
-}
-
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   return true;
 }
@@ -443,8 +472,8 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
 
   const int NPT  = otherTasks.size()+1;
-  const int LR   = _sourcePatchSize*NPT;
-  const int LTOT = _destinationPatchSize*NPT;
+  const int LR   = _numberOfInputValues*NPT;
+  const int LTOT = _numberOfResultValues*NPT;
   pD.npatches=NPT;
 
   pD.reco     = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LR];
@@ -460,28 +489,29 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   pD.t        = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   pD.dt       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   pD.result   = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LTOT];
+  pD.maxEigenvalue    = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   memset(pD.result, 0, LTOT*sizeof(double));
 
 
   int i=0;
   for (auto p: otherTasks) {
     {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
-    for (size_t j=0;j<_sourcePatchSize;j++) 
-    {
-      pD.reco[i*_sourcePatchSize + j] = currentTask->_reconstructedValues[j];
+    for (size_t j=0;j<_numberOfInputValues;j++) {
+      pD.reco[i*_numberOfInputValues + j] = currentTask->_inputValues[j];
     }
-    pD.id[i]  = currentTask->getTaskId();
-    pD.x0[i]  = currentTask->_marker.x()[0];
-    pD.h0[i]  = currentTask->_marker.h()[0];
-    pD.x1[i]  = currentTask->_marker.x()[1];
-    pD.h1[i]  = currentTask->_marker.h()[1];
-  #if Dimensions==3
-    pD.x2[i]  = currentTask->_marker.x()[2];
-    pD.h2[i]  = currentTask->_marker.h()[2];
-  #endif
-    pD.t[i]   = currentTask->_t;
-    pD.dt[i]  = currentTask->_dt;
-    delete[]  currentTask->_reconstructedValues;
+    pD.id[i]    = currentTask->getTaskId();
+    pD.x0[i]    = currentTask->_marker.x()[0];
+    pD.h0[i]    = currentTask->_marker.h()[0];
+    pD.x1[i]    = currentTask->_marker.x()[1];
+    pD.h1[i]    = currentTask->_marker.h()[1];
+    #if Dimensions==3
+    pD.x2[i]    = currentTask->_marker.x()[2];
+    pD.h2[i]    = currentTask->_marker.h()[2];
+    #endif
+    pD.t[i]     = currentTask->_t;
+    pD.dt[i]    = currentTask->_dt;
+    pD.maxEigenvalue[i] = -1.0;
+    delete[]  currentTask->_inputValues;
     i++;
 
     delete currentTask;
@@ -489,57 +519,94 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   // Now add the data from the task from which this whole thing has been called
   //
-  for (size_t j=0;j<_sourcePatchSize;j++) {
-    pD.reco[i*_sourcePatchSize + j] = _reconstructedValues[j];
+  for (size_t j=0;j<_numberOfInputValues;j++) {
+    pD.reco[i*_numberOfInputValues + j] = _inputValues[j];
   }
   pD.id[i]  = getTaskId();
   pD.x0[i]  = _marker.x()[0];
   pD.h0[i]  = _marker.h()[0];
   pD.x1[i]  = _marker.x()[1];
   pD.h1[i]  = _marker.h()[1];
-#if Dimensions==3
+  #if Dimensions==3
   pD.x2[i]  = _marker.x()[2];
   pD.h2[i]  = _marker.h()[2];
-#endif
+  #endif
   pD.t[i]   = _t;
   pD.dt[i]  = _dt;
+  pD.maxEigenvalue[i] = -1.0;
   
-  delete[] _reconstructedValues;
+  delete[] _inputValues;
 
   //
   // ==============
   // Invoke kernels
   // ==============
   //
-  if (targetDevice<0) {
-    #if Dimensions==2
-    ::exahype2::fv::Fusanov_2D_with_batching
-    #elif Dimensions==3
-    ::exahype2::fv::Fusanov_3D_with_batching
-    #endif
-    {{FUSED_RIEMANN_SOLVER_CALL}}
-    (
-      1,
-      pD,
-      _sourcePatchSize,
-      _destinationPatchSize
-    );
-  }
-  else {
-    // @todo Holger, that's where we pick the SYCL queue. We make the queues static, so they
-    // are created once only.
+  bool foundOffloadingBranch = false;
+
+  #if OpenMPGPUOffloading>0
+  if (targetDevice>=0) {
+    foundOffloadingBranch = true;
     #if Dimensions==2
     ::exahype2::fv::Fusanov_2D_with_OpenMP_offloading
     #elif Dimensions==3
     ::exahype2::fv::Fusanov_3D_with_OpenMP_offloading
     #endif
-    {{FUSED_RIEMANN_SOLVER_CALL}}
+    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
     (
       1,
       pD,
-      _sourcePatchSize,
-      _destinationPatchSize,
+      _numberOfInputValues,
+      _numberOfResultValues,
       targetDevice
+    );
+  }
+  #endif
+
+  #if SYCLGPUOffloading>0
+  if (targetDevice>=0) {
+    static std::vector< sycl::queue* >  gpuQueues;
+
+    if (targetDevice>=gpuQueues.size()) {
+      // @todo Holger, I don't know how to assign a queue to a GPU
+      // -> Ask Andy
+      gpuQueues.push_back( new sycl::queue(gpu_selector{}) );
+    }
+
+    foundOffloadingBranch = true;
+
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_SYCL_offloading
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_SYCL_offloading
+    #endif
+    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
+    // @todo First template arguments are generic (also used in other branches).
+    // The second level of template arguments, i.e. the <1,1,1> are the ones that
+    // describe the workgroup sizes, and we'll have to tune them later
+    <1,1,1>
+    (
+      1,
+      pD,
+      _numberOfInputValues,
+      _numberOfResultValues,
+      *gpuQueues[targetDevice]
+    );
+  }
+  #endif
+
+  if (not foundOffloadingBranch) {
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_batching
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_batching
+    #endif
+    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
+    (
+      1,
+      pD,
+      _numberOfInputValues,
+      _numberOfResultValues
     );
   }
 
@@ -550,9 +617,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   for (int i=0;i<pD.npatches;i++) {
     const int taskid = pD.id[i];
-    double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-    for (int j=0;j<_destinationPatchSize;j++) targetPatch[j] = *(pD.result + j + i*_destinationPatchSize);
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
+    double* targetPatch = ::tarch::allocateMemory(_numberOfResultValues, ::tarch::MemoryLocation::Heap);
+    for (int j=0;j<_numberOfResultValues;j++) {
+      targetPatch[j] = *(pD.result + j + i*_numberOfResultValues);
+    }
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _numberOfResultValues, targetPatch, pD.maxEigenvalue[i]);
   }
 
   return false;

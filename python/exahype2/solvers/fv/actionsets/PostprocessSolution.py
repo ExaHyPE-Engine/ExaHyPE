@@ -17,7 +17,7 @@ class EmptyPostprocessSolution(AbstractFVActionSet):
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
     # Is there for compatibility reasons
-    self.guard               = ""
+    self.guard               = "true"
     
 
   def get_body_of_operation(self,operation_name):
@@ -42,8 +42,8 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
   """
   def __init__(self,solver):
     AbstractFVActionSet.__init__(self,solver)
-    self.guard               = ""
-    self._compute_kernel     = " // test "
+    self.guard               = "true"
+    self._compute_kernel     = ""
 
 
   def add_postprocessing_kernel(self, operation_per_point):
@@ -62,7 +62,11 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
     
     """
     self._compute_kernel += """
-  if ({{PREDICATE}}) { 
+  if (
+    not marker.hasBeenRefined() 
+    and 
+    {{PREDICATE}}
+  ) { 
     logTraceIn( "touchCellFirstTime(...)" );
     int index = 0;
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
