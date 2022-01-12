@@ -123,11 +123,36 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
   {{POSTPROCESS_UPDATED_PATCH}}
 
-  // Set the variable
-  // double newTimeStepSize
-  {{COMPUTE_NEW_TIME_STEP_SIZE}}
 
-  return newTimeStepSize;
+  {% if COMPUTE_MAX_EIGENVALUE %}
+  const double timeStamp    = t;
+  const double timeStepSize = dt;
+
+  const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+    [] (
+      const double * __restrict__                  Q,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal
+    ) -> double {
+      return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+    },
+    marker.x(),
+    marker.h(),
+    timeStamp,
+    timeStamp + timeStepSize,
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    targetPatch
+  );
+
+  return maxEigenvalue;
+  {% else %}
+  return 0.0;
+  {% endif %}
 }
 
 
@@ -150,7 +175,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
-    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& newDt ) -> void {
+    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& maxEigenvalue ) -> void {
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
             targetPatch,
@@ -198,11 +223,33 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
           {{POSTPROCESS_UPDATED_PATCH}}
 
-          // Set the variable
-          // double newTimeStepSize
-          {{COMPUTE_NEW_TIME_STEP_SIZE}}
+          {% if COMPUTE_MAX_EIGENVALUE %}
+          const double timeStamp    = t;
+          const double timeStepSize = dt;
 
-          newDt = newTimeStepSize;
+          maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+            [] (
+              const double * __restrict__                  Q,
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  volumeH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal
+            ) -> double {
+              return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            },
+            marker.x(),
+            marker.h(),
+            timeStamp,
+            timeStamp + timeStepSize,
+            {{NUMBER_OF_VOLUMES_PER_AXIS}},
+            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            targetPatch
+          );
+          {% else %}
+          maxEigenvalue = 0.0;
+          {% endif %}
         }
   )
   #ifdef UseSmartMPI
@@ -442,7 +489,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   pD.t        = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   pD.dt       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   pD.result   = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LTOT];
-  pD.newDt    = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.maxEigenvalue    = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   memset(pD.result, 0, LTOT*sizeof(double));
 
 
@@ -463,7 +510,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     #endif
     pD.t[i]     = currentTask->_t;
     pD.dt[i]    = currentTask->_dt;
-    pD.newDt[i] = -1.0;
+    pD.maxEigenvalue[i] = -1.0;
     delete[]  currentTask->_inputValues;
     i++;
 
@@ -486,7 +533,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
   pD.t[i]   = _t;
   pD.dt[i]  = _dt;
-  pD.newDt[i] = -1.0;
+  pD.maxEigenvalue[i] = -1.0;
   
   delete[] _inputValues;
 
@@ -574,7 +621,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
     for (int j=0;j<_numberOfResultValues;j++) {
       targetPatch[j] = *(pD.result + j + i*_numberOfResultValues);
     }
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _numberOfResultValues, targetPatch, pD.newDt[i]);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _numberOfResultValues, targetPatch, pD.maxEigenvalue[i]);
   }
 
   return false;

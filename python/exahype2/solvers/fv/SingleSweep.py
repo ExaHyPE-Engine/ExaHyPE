@@ -89,6 +89,29 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
       ); // outcome has to be valid
       
+      {% if COMPUTE_MAX_EIGENVALUE %}
+      const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+        [] (
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> double {
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+        },
+        marker.x(),
+        marker.h(),
+        timeStamp,
+        timeStamp + timeStepSize,
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        targetPatch
+      );
+      {% endif %}
+      
       // Set the variable
       // double newTimeStepSize
       {{COMPUTE_NEW_TIME_STEP_SIZE}}

@@ -26,7 +26,7 @@ namespace exahype2 {
       int      npatches;
       double*  result;
       // out
-      double*  newDt;
+      double*  maxEigenvalue;
     } ;
 
     struct patchData3d
@@ -38,7 +38,7 @@ namespace exahype2 {
       int      npatches;
       double*  result;
       // out
-      double*  newDt;
+      double*  maxEigenvalue;
     } ;
 
 

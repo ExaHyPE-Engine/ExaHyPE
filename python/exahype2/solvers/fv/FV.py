@@ -238,6 +238,7 @@ class FV(object):
         
     self._source_term_call          = "#error Not yet defined"
     self._Riemann_solver_call       = "#error Not yet defined"
+    self._compute_eigenvalue        = False
     self._abstract_solver_user_declarations        = ""
     self._abstract_solver_user_definitions         = ""
     self._solver_user_declarations                 = ""
@@ -835,6 +836,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     d[ "COMPUTE_TIME_STEP_SIZE" ]             = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
     d[ "COMPUTE_NEW_TIME_STEP_SIZE" ]         = jinja2.Template(self._compute_new_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "COMPUTE_MAX_EIGENVALUE" ]             = self._compute_eigenvalue
 
     
   @property

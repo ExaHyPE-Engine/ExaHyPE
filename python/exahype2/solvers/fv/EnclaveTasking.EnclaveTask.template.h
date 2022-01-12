@@ -89,7 +89,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::EnclaveTask
 
   public:
     /**
-     * @return New time step size for cell
+     * @return Max eigenvalue over cell
      */
     static double applyKernelToCell(
       const ::peano4::datamanagement::CellMarker& marker, 

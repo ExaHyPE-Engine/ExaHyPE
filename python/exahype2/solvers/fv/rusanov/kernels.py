@@ -88,26 +88,6 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
     raise Exception( "invalid discretisation step size for local time step (val=" + str(discretisation_steps) + ")" )
 
   determine_eigenvalue = """
-    double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-      [] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-      },
-      marker.x(),
-      marker.h(),
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp(),
-      fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize(),
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      targetPatch
-    );
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
 """
 
@@ -166,32 +146,11 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
     
 def create_compute_new_time_step_size_kernel_for_adaptive_time_stepping():
   return """
-    const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-      [] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  faceCentre,
-        const tarch::la::Vector<Dimensions,double>&  volumeH,
-        double                                       t,
-        double                                       dt,
-        int                                          normal
-      ) -> double {
-        return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-      },
-      marker.x(),
-      marker.h(),
-      timeStamp,
-      timeStepSize,
-      {{NUMBER_OF_VOLUMES_PER_AXIS}},
-      {{NUMBER_OF_UNKNOWNS}},
-      {{NUMBER_OF_AUXILIARY_VARIABLES}},
-      targetPatch
-    );
-    
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
     
     // This is a dummy value. We'll ignore it later anyway as we ask for a 
     // new valid time step size from getAdmissibleTimeStepSize().
-    const double newTimeStepSize = timeStepSize;
+    const double newTimeStepSize = 0.0;
 """
 
 
