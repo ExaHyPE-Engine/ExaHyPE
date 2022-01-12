@@ -1,3 +1,4 @@
+#include "tarch/Assertions.h"
 #include "tarch/multicore/Core.h"
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
@@ -9,6 +10,8 @@
 
 
 #if defined(SharedSYCL)
+#include "Core.h"
+
 #include <sstream>
 #include "config.h"
 #include <oneapi/tbb/global_control.h>
@@ -17,25 +20,34 @@
 
 namespace {
   oneapi::tbb::global_control*  globalControl = nullptr;
+  std::vector< sycl::queue >    syclQueues;
 }
 
 
 tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
+sycl::queue& tarch::multicore::getSYCLQueue( int number ) {
+  assertion1( number>=0, number );
+  assertion2( number<syclQueues.size(), number, syclQueues.size() );
+  return syclQueues[number];
+}
+
+
 tarch::multicore::Core::Core():
   _numberOfThreads( oneapi::tbb::info::default_concurrency() ),
-  _numberOfDevices( -1 ) {
+  _numberOfDevices( 0 ) {
   auto platforms = sycl::platform::get_platforms();
   for (auto &platform : platforms) {
     auto devices = platform.get_devices();
-    _numberOfDevices = platform.get_devices().size();
 
     #if PeanoDebug>0
     std::cout << "found platform " << platform.get_info<sycl::info::platform::name>() << " with " << devices.size() << " device(s)" << std::endl;
 
     for (auto &device : devices ) {
-      std::cout << "device: " << device.get_info<sycl::info::device::name>() << std::endl;
+      std::cout << "device #" << _numberOfDevices << ": " << device.get_info<sycl::info::device::name>() << std::endl;
+      syclQueues.push_back( sycl::queue(device) );
+      _numberOfDevices++;
     }
     #endif
   }
