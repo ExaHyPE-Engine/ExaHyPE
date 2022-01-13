@@ -81,7 +81,6 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
     logTraceOut( "touchCellFirstTime(...)" );
   } 
 """
-    print( "\n\n\n\n\n CALLED THIS ONE \n\n\n\n " + self._compute_kernel )
 
     
 
