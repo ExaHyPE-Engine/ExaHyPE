@@ -508,10 +508,10 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
     result<10000, 
     result, p, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal 
   );
-  if (result<1e-8) {
-    logInfo( "maxEigenvalue()", "max eigenvalue too small: " << result );
-    std::abort();
-  }
+  //if (t>1.0 and result<1e-8) {
+  //  logInfo( "maxEigenvalue()", "max eigenvalue too small: " << result );
+  //  std::abort();
+  //}
   return result;
 }
 
