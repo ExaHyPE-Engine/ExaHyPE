@@ -527,6 +527,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 )  {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 
+  assertion4( Q[0]>0.0, faceCentre, volumeH, t, normal );
   assertion4( not std::isnan(Q[0]), faceCentre, volumeH, t, normal );
   assertion4( not std::isnan(Q[1]), faceCentre, volumeH, t, normal );
   assertion4( not std::isnan(Q[2]), faceCentre, volumeH, t, normal );
