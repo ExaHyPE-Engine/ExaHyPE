@@ -13,8 +13,7 @@ tarch::multicore::SmartScheduler::SmartScheduler():
 
 
 bool tarch::multicore::SmartScheduler::schedule(smartmpi::Task* task, const int rankToWhichTasksDataShouldReturn) {
-  tarch::multicore::native::spawnTask( dynamic_cast<tarch::multicore::Task*>(task) );
-  return true;
+  return false;
 }
 
 

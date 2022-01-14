@@ -253,7 +253,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::moveTask(int rank, int tag, MPI_
   ::tarch::mpi::DoubleMessage  dtMessage(_dt);
   ::tarch::mpi::IntegerMessage taskIdMessage;
 
-  if ( tag != smartmpi::communication::MoveTaskToMyServerForEvaluationTag ) {
+  if ( tag != smartmpi::communication::MoveTaskToMyServerForEvaluationTag &&
+       tag != smartmpi::communication::MoveTaskToComputesComputeRankTag ) {
     taskIdMessage.setValue(_remoteTaskId);
   } else {
     taskIdMessage.setValue(getTaskId());
