@@ -379,6 +379,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 }
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
+  return _solverState == SolverState::Secondary;
+}
+
+
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
   return _solverState == SolverState::Secondary;
 }

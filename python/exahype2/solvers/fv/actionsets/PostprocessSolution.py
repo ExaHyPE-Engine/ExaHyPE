@@ -90,9 +90,8 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]           = self.guard      
-      result = jinja2.Template(self._compute_kernel).render(**d)
-      print( "\n\n\n\n\n WAS HERE \n\n\n\n " + self._compute_kernel + " -> " + result)
+      d[ "PREDICATE" ]           = jinja2.Template(self.guard, undefined=jinja2.DebugUndefined).render(**d)
+      result = jinja2.Template(self._compute_kernel, undefined=jinja2.DebugUndefined).render(**d)
       pass 
     return result
 

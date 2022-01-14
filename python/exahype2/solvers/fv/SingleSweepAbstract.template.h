@@ -260,6 +260,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * implementation, i.e. each grid sweep realises one time step.
      */
     bool isFirstGridSweepOfTimeStep() const;
+    bool isLastGridSweepOfTimeStep() const;
 
     SolverState  _solverState;
 
