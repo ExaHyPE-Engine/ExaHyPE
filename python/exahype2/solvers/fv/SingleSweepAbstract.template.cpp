@@ -353,4 +353,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() con
 }
 
 
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
+  return true;
+}
+
+
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}

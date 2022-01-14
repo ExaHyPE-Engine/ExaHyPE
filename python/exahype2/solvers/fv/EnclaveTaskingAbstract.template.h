@@ -268,6 +268,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * to negate it.
      */
     bool isFirstGridSweepOfTimeStep() const;
+    bool isLastGridSweepOfTimeStep() const;
 
     SolverState  _solverState;
 
