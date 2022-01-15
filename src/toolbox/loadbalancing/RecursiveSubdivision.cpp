@@ -164,7 +164,7 @@ void toolbox::loadbalancing::RecursiveSubdivision::updateGlobalView() {
       logInfo(
         "updateGlobalView()",
         "local number of cells (" << _localNumberOfInnerUnrefinedCell << ") is bigger than global cell count (" << _globalNumberOfInnerUnrefinedCells << 
-        ") . Use local cell count to guide partitioning as local data seems to lag behind"
+        "). Use local cell count to guide partitioning as local data seems to lag behind"
       );
       _globalNumberOfInnerUnrefinedCells = _localNumberOfInnerUnrefinedCell;
       _lightestRank._rank                = tarch::mpi::Rank::getInstance().getRank();
