@@ -253,9 +253,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     bool mayPlot() const override;
 
-  protected:
-    static tarch::logging::Log  _log;
-
     /**
      * As we work with enclave tasking, we have to run multiple grid sweeps
      * per time step. With this routine, you can find out if the current
@@ -269,6 +266,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
+
+  protected:
+    static tarch::logging::Log  _log;
 
     SolverState  _solverState;
 
