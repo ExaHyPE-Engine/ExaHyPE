@@ -176,7 +176,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
 class EnclaveTasking( FV ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, stateless_pde_terms):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, stateless_pde_terms: bool):
     """
     
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
@@ -193,7 +193,7 @@ class EnclaveTasking( FV ):
     """
     self._name = name
     
-    self._fused_Riemann_solver_call       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."    
+    self._fused_Riemann_solver_call       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
     self._stateless_pde_terms             = stateless_pde_terms
     
     self._initialisation_sweep_guard = "(" + \
@@ -340,7 +340,8 @@ class EnclaveTasking( FV ):
     self._action_set_initial_conditions_for_grid_construction.guard = self._action_set_initial_conditions_for_grid_construction.guard
     self._action_set_AMR.guard                                      = self._secondary_sweep_guard
     self._action_set_AMR_commit_without_further_analysis.guard      = self._secondary_sweep_guard
-    self._action_set_postprocess_solution.guard                     = self._secondary_sweep_guard
+    # We do not set the guard of the secondary sweep
+    # self._action_set_postprocess_solution.guard                     = self._secondary_sweep_guard
     
     self._action_set_handle_boundary.guard                          = self._store_face_data_default_guard() + " and " + self._primary_or_initialisation_sweep_guard
     self._action_set_project_patch_onto_faces.guard                 = self._store_cell_data_default_guard() + " and (" + \

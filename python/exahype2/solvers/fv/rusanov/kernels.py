@@ -558,7 +558,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = stateless_pde_terms
+  d[ "STATELESS_PDE_TERMS"]                 = stateless_pde_terms
   return Template.render(**d)
 
 
