@@ -176,7 +176,7 @@ class MergeEnclaveTaskOutcome(AbstractFVActionSet):
 
 
 class EnclaveTasking( FV ):
-  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, stateless_pde_terms: bool):
+  def __init__(self, name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties, pde_terms_without_state: bool):
     """
     
      Not so nice. I have to store this field as I later rely on get_name_of_global_instance()
@@ -194,7 +194,7 @@ class EnclaveTasking( FV ):
     self._name = name
     
     self._fused_Riemann_solver_call       = "#error Not yet defined. Set self._fused_Riemann_solver_call in your Python solver class."
-    self._stateless_pde_terms             = stateless_pde_terms
+    self._pde_terms_without_state             = pde_terms_without_state
     
     self._initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
@@ -408,7 +408,7 @@ class EnclaveTasking( FV ):
     d[ "NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D" ] = (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_VOLUMES_PER_AXIS"]+2) * (d["NUMBER_OF_UNKNOWNS"] + d["NUMBER_OF_AUXILIARY_VARIABLES"])
     
     d[ "SEMAPHORE_LABEL" ]      = exahype2.grid.UpdateCellLabel.get_attribute_name(self._name)
-    d[ "STATELESS_PDE_TERMS" ]  = self._stateless_pde_terms
+    d[ "STATELESS_PDE_TERMS" ]  = self._pde_terms_without_state
     
     
   def set_preprocess_reconstructed_patch_kernel(self,kernel ):
@@ -525,7 +525,7 @@ class EnclaveTasking( FV ):
     output.add( generated_solver_files )
     output.makefile.add_cpp_file( "tasks/" + task_name + ".cpp" )
 
-    if self._stateless_pde_terms:
+    if self._pde_terms_without_state:
         # We need to explicitly link objects in gpu mode, since PEANO_SOURCE_DIR is gone,
         # this hack has to suffice
         peanodir = templatefile_prefix.split("python/exahype2",1)[0]

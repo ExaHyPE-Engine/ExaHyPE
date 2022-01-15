@@ -100,7 +100,7 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_size=1e-2,
-            stateless_pde_terms=args.gpu
+            pde_terms_without_state=args.gpu
           )
         elif SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
@@ -119,7 +119,7 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl,
-            stateless_pde_terms=args.gpu
+            pde_terms_without_state=args.gpu
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__
