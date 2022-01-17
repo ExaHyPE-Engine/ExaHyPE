@@ -938,85 +938,79 @@ accordingly, too.
 
 \section{GPU support}
 
+\begin{definition}
+ \ExaHyPE\ uses GPUs in a classic \emph{offloading, accelerator style}.
+ This means that it takes particular tasks, ships them to the GPU and then ships
+ them back. 
+ This happens under the hood, and neither does data reside on the accelerator
+ permanently nor is the accelerator used all the time.
+ 
+ The whole approach assumes that there are computations (cell/patch updates)
+ which can be done without any effect on global variables. 
+ It works if and only if we can ship a task to the GPU, and then get the
+ solution data for this task back and no other global variabled changes.
+ We furthermore assume that the computations that fit onto the GPU have no
+ state.
+ They can use some global, static variables, but they cannot access the solver's
+ state which can change over time. 
+ We rely on code parts with \emph{have no side effects and do not depend on
+ the solver state} (minus global variables).
+ 
+ This might not work for all patches: There are always patches which evaluate
+ and analyse some global data, or build up global data structures. 
+ In this case, \ExaHyPE\ only offloads the remaining, simple patches to the GPU. 
+\end{definition}
+
+
+\noindent
+\ExaHyPE\ supports GPUs via OpenMP offloading, SYCL and C++ GPU programming
+(WiP).
+To use GPUs, you have to follow the following steps:
+
+
+\paragraph{First, your environment has to be compiled with GPU support.}
+For this, configure with the argument \texttt{--enable-gpu}.
+The default reads out which multithreading backend you use and then picks the 
+corresponding GPU offload model. 
+However, you can also pass an argument to tailor the settings towards a  
+particular vendor.
+Rebuild the whole \Peano\ core.
 
 \begin{remark}
- This section is not up-to-date anymore.
+ If you want to profile or optimise your code, you might want to pick a
+ particular vendor toolchain. See configure's help on \texttt{--with-toolchain}.
 \end{remark}
 
 
-\ExaHyPE\ supports GPUs via OpenMP 5.
-You have to follow the following steps:
 
-
-First, \emph{your environment has to be compiled with GPU support}.
-For this, configure with the argument \texttt{--enable-gpu=xxx} where
-\texttt{xxx} selects the vendor.
-We have different settings for different GPU producers.
-Some GPU targets might require further features; our NVIDIA port for example
-requires OpenMP multithreading.
-For NVIDIA systems, I furthermore strongly
-recommend that you also add \texttt{--with-nvidia} to have support for their tools.
-Rebuild the whole \Peano\ core.
-
-
-Second, \emph{use an \ExaHyPE\ solver which has support for GPUs}. 
-The Finite Volume enclave solver for example does support GPUs. 
+\paragraph{Second, use an \ExaHyPE\ solver which has support for GPUs and instruct
+it that you plan to have patch updates without access to the solver's
+internal state.}
+The Finite Volume enclave solvers for example all support GPUs, but the
+versions without enclave tasking do not support them.
 The solver documentation should clarify which one to select.
+For most of these GPU-enabled solvers, it is sufficient to pass an additional
+flag (\texttt{pde\_terms\_without\_state=True} for the FV variants, e.g.)
+that tells the solver that we have PDE terms which have no side effect which
+also do not need the solver object.
 
 
-Third, \emph{switch to GPU compute kernels}.
-Most solvers allow you to switch between different compute kernels,
-i.e.~realisations of their core compute routines.
-The solvers that support GPUs also offer tailored GPU compute kernels.
-For the Finite Volume solvers, there is for example an explicit
-\texttt{use\_OpenMP5\_GPUs} function that you call within your Python
-script.
-It sets all the required routines.
-
-
-
-Finally, \emph{write alternatives of those solver routines that have to be
-deployed to the GPU}.
-There have to be stateless variants of these routines.
-The remainder of this section orbits around this.
-
-
-\begin{definition}{Solvers with GPU support}
- A solver can use GPUs if and only if can provide all of its PDE terms
- including the eigenvalue computations (so the functions \texttt{flux},
- \texttt{eigenvalues}, \texttt{nonconservativeProducts}, \ldots) as stateless
- functions without side-effects, i.e.~functions that can be written down as
- static and do not need (or even alter) any attribute of the solver class.
-\end{definition}
-
-\noindent
-If you solver does not fit to this class, it is not a fit for GPUs.
-If it fits, then please create two versions of the eigenvalue function and all
-of the PDE term functions (such as the flux computations) in your solver.
-Keep the original one, and add a second one which is 
+\paragraph{Third, provide the additional PDE terms without state}.
+%
+%
+To faciliate the offloading, we have to create alternative versions of our PDE
+term functions that can work independent of the solver object (and in return
+cannot modify it).
+Depending on which terms we have, we'll need stateless versions of the flux, the
+non-conservative product and the source term. 
+We'll always needs the eigenvalue function. 
+Per function, keep the original one and add a second one which is 
 
 \begin{itemize}
-  \item static and 
+  \item static;
   \item accepts an additional flag of type \texttt{
-  tarch::multicore::TargetDevice}.
-\end{itemize}
-
-\noindent
-You will need to include 
-\begin{code}
-#include "tarch/multicore/multicore.h"
-\end{code} 
-
-\noindent
-explicitly. Very often, the standard flux and eigenvalue routines can invoke the
-static variants and you can thus eliminate redundancies.
-Please note that solvers with GPU support still can have states in their PDE
-terms, i.e.~alter solver variables.
-But they can do so only for cells which we call skeletons (see the paper by
-Charrier et al.~on enclave tasking).
-
-
-Finally, add
+  tarch::multicore::TargetDevice};
+  \item is embedded into 
 \begin{code}
 #if defined(GPUOffloading)
 #pragma omp declare target
@@ -1027,7 +1021,20 @@ my new static function variants
 #if defined(GPUOffloading)
 #pragma omp end declare target
 #endif
-\end{code} 
+\end{code}
+  Though you can leave these annotations away if you use SYCL only.  
+\end{itemize}
+
+\noindent
+Very often, the standard flux and eigenvalue routines can invoke the
+static variants and you can thus eliminate code redundancies.
+For example, you might have the normal flux function and a static flux function
+with the additional \texttt{tarch::multicore::TargetDevice} parameter, but the 
+normal function just invokes the static cousin.
+
+
+
+
 
 
 

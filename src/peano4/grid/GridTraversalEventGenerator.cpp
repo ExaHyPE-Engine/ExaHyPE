@@ -403,6 +403,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     result.setIsFaceLocal(0);
     result.setIsVertexLocal(0);
   }
+/*
 
   if(
     spacetreeState==SpacetreeState::EmptyRun or
@@ -412,6 +413,7 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     result.setFaceDataFrom(TraversalObserver::NoData);
     result.setCellData(TraversalObserver::NoData);
   }
+*/
 
   return result;
 }
@@ -430,17 +432,17 @@ peano4::grid::GridTraversalEvent peano4::grid::GridTraversalEventGenerator::crea
     result.setIsVertexLocal(0);
   }
 
+  /*
   if(
     spacetreeState==SpacetreeState::EmptyRun or
 //    spacetreeState==SpacetreeState::NewFromSplit or
     spacetreeState==SpacetreeState::Joining
   ) {
-/*
     result.setVertexDataTo(TraversalObserver::NoData);
     result.setFaceDataTo(TraversalObserver::NoData);
     result.setCellData(TraversalObserver::NoData);
-*/
   }
+*/
 
   return result;
 }

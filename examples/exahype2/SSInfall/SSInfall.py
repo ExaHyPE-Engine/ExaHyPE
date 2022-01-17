@@ -25,26 +25,26 @@ intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0, "ReSwi":0, "Mass
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - SSInfall script')
-    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume size, i.e. not to patch size" )
-    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
-    parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
-    parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["cellcount","rhointer"],   default="cellcount",  help="Pick extension, i.e. the way to calculate the mass. Default is cell counting" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
-    #parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
-    parser.add_argument("-bc", "--boundary-condition",  dest="boundary",  choices=["periodic","neumann","extrapolate", "hybrid"], default="neumann",  help="Pick the type of Boundary condtion" )
-    parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
-    parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
-    parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
-    parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
-    parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
-    parser.add_argument("-eigen", "--eigenvalue-control",    dest="eigen", choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
-    parser.add_argument("-cfl",  "--CFL-ratio",  dest="cfl",  type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-um", "--universe-model",    dest="model", choices=["Ein-de", "LCDM","DGP" ], default="Ein-de",  help="specify the background universe model" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-optimised", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
-    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
+    parser.add_argument("-maxh",     "--max-h",               dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
+    parser.add_argument("-minh",     "--min-h",               dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume size, i.e. not to patch size" )
+    parser.add_argument("-ps",       "--patch-size",          dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
+    parser.add_argument("-plt",      "--plot-step-size",      dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
+    parser.add_argument("-m",        "--mode",                dest="mode",            default="release",  help="|".join(modes.keys()) )
+    parser.add_argument("-ext",      "--extension",           dest="extension",       choices=["cellcount","rhointer"],   default="cellcount",  help="Pick extension, i.e. the way to calculate the mass. Default is cell counting" )
+    parser.add_argument("-impl",     "--implementation",      dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
+    parser.add_argument("-bc",       "--boundary-condition",  dest="boundary",        choices=["periodic","neumann","extrapolate", "hybrid"], default="neumann",  help="Pick the type of Boundary condtion" )
+    parser.add_argument("-et",       "--end-time",            dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
+    parser.add_argument("-tn",       "--tracer-name",         dest="tra_name",        type=str, default="de",  help="name of output tracer file (temporary)" )
+    parser.add_argument("-exn",      "--exe-name",            dest="exe_name",        type=str, default="",  help="name of output executable file" )
+    parser.add_argument("-outdir",   "--output-directory",    dest="path",            type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
+    parser.add_argument("-tracer",   "--add-tracer",          dest="add_tracer",      type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
+    parser.add_argument("-iseed",    "--initial-seed",        dest="seed",            type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
+    parser.add_argument("-eigen",    "--eigenvalue-control",  dest="eigen",           choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
+    parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
+    parser.add_argument("-um",       "--universe-model",      dest="model",           choices=["Ein-de", "LCDM","DGP" ], default="Ein-de",  help="specify the background universe model" )
+    parser.add_argument("-interp",   "--interpolation",       dest="interpolation",   choices=["constant", "linear-slow", "linear-optimised", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
+    parser.add_argument("-restrict", "--restriction",         dest="restriction",     choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
+    parser.add_argument("-gpu",      "--with-gpu",            dest="gpu",             action="store_true", default=False,  help="support offloading to GPU" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -79,12 +79,11 @@ if __name__ == "__main__":
 
         number_of_unknowns = sum(unknowns.values())
 
+        print( "\n\n\n\I'm stateless: {}\n\n\n".format(args.gpu) )
         self._my_user_includes = """
 #include "exahype2/PatchUtils.h"
 """
-        #if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
-        #   SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
-        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep or SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
@@ -93,7 +92,17 @@ if __name__ == "__main__":
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_size=1e-2
           )
-        else:
+        elif SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_size=1e-2,
+            pde_terms_without_state=args.gpu
+          )
+        elif SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
@@ -101,6 +110,16 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
+          )
+        else:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_relaxation=cfl,
+            pde_terms_without_state=args.gpu
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__

@@ -112,8 +112,6 @@ bool selectNextAlgorithmicStep() {{
     peano4::parallel::Node::getInstance().setNextProgramStep(
       repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::CreateGridAndConvergeLoadBalancing )
     );
-
-    assertionNumericalEquals( repositories::getMinTimeStamp(), 0.0 );
   }}
   else if (gridBalanced and not gridInitialised) {{
     peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -121,8 +119,6 @@ bool selectNextAlgorithmicStep() {{
     );
 
     gridInitialised = true;
- 
-    assertionNumericalEquals( repositories::getMinTimeStamp(), 0.0 );
   }}
   else if (not gridConstructed) {{
     // Grid construction termination criterion
@@ -191,13 +187,13 @@ bool selectNextAlgorithmicStep() {{
       repositories::mayPlot()
     ) {{
       if ( nextPlotTimeStamp+TimeInBetweenPlots < repositories::getMinTimeStamp() ) {{
+        nextPlotTimeStamp = repositories::getMinTimeStamp() + TimeInBetweenPlots;
         logWarning(
           "selectNextAlgorithmicStep()",
           "plot as t=" << repositories::getMinTimeStamp() << " and next plot has been due at t=" << nextPlotTimeStamp << ". " <<
           "Code is asked to plot every dt=" << TimeInBetweenPlots << ", but this seems to be less than the minimal time step size of the solvers. " <<
-          "Postpone next plot"
+          "Postpone next plot to " << nextPlotTimeStamp
         );
-        nextPlotTimeStamp = repositories::getMinTimeStamp();
       }}
       nextPlotTimeStamp += TimeInBetweenPlots;
       peano4::parallel::Node::getInstance().setNextProgramStep(
@@ -206,7 +202,7 @@ bool selectNextAlgorithmicStep() {{
       haveJustWrittenSnapshot = true;
       continueToSolve         = true;
     }}
-    else if ( repositories::getMinTimeStamp()<TerminalTime ) {{
+    else if ( repositories::getMinTimeStamp()<TerminalTime) {{
       peano4::parallel::Node::getInstance().setNextProgramStep(
         repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::TimeStep )
       );
@@ -214,13 +210,16 @@ bool selectNextAlgorithmicStep() {{
       haveJustWrittenSnapshot = false;
     }}
     else {{
-      if (not haveJustWrittenSnapshot and TimeInBetweenPlots>0.0) {{
+      if (not haveJustWrittenSnapshot and TimeInBetweenPlots>0.0 and repositories::mayPlot()) {{
         peano4::parallel::Node::getInstance().setNextProgramStep(
           repositories::StepRepository::toProgramStep( repositories::StepRepository::Steps::PlotSolution )
         );
         continueToSolve         = true; // don't want to terminate immediately
         haveJustWrittenSnapshot = true;
         nextPlotTimeStamp       = std::numeric_limits<double>::max();
+      }}
+      else if (not haveJustWrittenSnapshot and TimeInBetweenPlots>0.0 and not repositories::mayPlot()) {{
+        continueToSolve = true; // don't want to terminate immediately but to wait for incomplete time steps to complete
       }}
       else {{
         continueToSolve = false;
