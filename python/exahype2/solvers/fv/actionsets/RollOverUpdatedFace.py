@@ -27,7 +27,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
       const int normal = marker.getSelectedFaceNumber() % Dimensions;
       // Left half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(0)) {
-        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated left half of face)"  );
+        logTraceInWith1Argument( "touchFaceLastTime(...)", "left half of face"  );
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i=0; i<{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
@@ -45,7 +45,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
         {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(0) );
         {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(0, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(0) );
         
-        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated left part of face)"  );
+        logTraceOut( "touchFaceLastTime(...)"  );
       }
       else {
         logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip left part of face)"  );
@@ -54,7 +54,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
       
       // Right half
       if ({{FACE_METADATA_ACCESSOR}}.getUpdated(1)) {
-        logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated right part of face)"  );
+        logTraceInWith1Argument( "touchFaceLastTime(...)", "right half of face"  );
         dfore(k,{{DOFS_PER_AXIS}},normal,0) {
           for (int i={{OVERLAP}}; i<2*{{OVERLAP}}; i++) {
             tarch::la::Vector<Dimensions,int> overlapCell = k;
@@ -72,7 +72,7 @@ class RollOverUpdatedFace(AbstractFVActionSet):
         {{FACE_METADATA_ACCESSOR}}.setOldTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getNewTimeStamp(1) );
         {{FACE_METADATA_ACCESSOR}}.setNewTimeStamp(1, {{FACE_METADATA_ACCESSOR}}.getUpdatedTimeStamp(1) );
         
-        logTraceOut( "touchFaceLastTime(...)---RollOverUpdatedFace (roll over updated right part of face)"  );
+        logTraceOut( "touchFaceLastTime(...)" );
       }
       else {
         logTraceIn( "touchFaceLastTime(...)---RollOverUpdatedFace (skip right part of face)"  );

@@ -253,9 +253,6 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     bool mayPlot() const override;
 
-  protected:
-    static tarch::logging::Log  _log;
-
     /**
      * As we work with enclave tasking, we have to run multiple grid sweeps
      * per time step. With this routine, you can find out if the current
@@ -268,6 +265,18 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * to negate it.
      */
     bool isFirstGridSweepOfTimeStep() const;
+    bool isLastGridSweepOfTimeStep() const;
+
+    {% if STATELESS_PDE_TERMS %}
+    virtual bool patchCanUseStatelessPDETerms(
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchH,
+      double                                       t,
+      double                                       dt
+    ) const;
+    {% endif %}
+  protected:
+    static tarch::logging::Log  _log;
 
     SolverState  _solverState;
 

@@ -111,7 +111,7 @@ namespace {
     #pragma omp taskloop nogroup shared(pendingTasks, spawnedTasks) priority(StandardPriority) untied
     for (int i=0; i<NumberOfThreads; i++) {
         #pragma omp atomic
-	spawnedTasks++;
+        spawnedTasks++;
 
         ::tarch::logging::Statistics::getInstance().inc( BSPTasksStatisticsIdentifier, 1.0, true );
         if (i<tasks.size()) {
@@ -135,8 +135,8 @@ namespace {
           // than cores. As the first p trees on p cores will finish and then
           // poll. The other >p trees/tasks will starve
           pendingTasks<tarch::multicore::Core::getInstance().getNumberOfThreads()
-	  and 
-	  spawnedTasks==NumberOfThreads
+          and
+          spawnedTasks==NumberOfThreads
         ) {
           int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 

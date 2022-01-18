@@ -43,6 +43,24 @@ bool mayPlot() {
 }
 
 
+bool isFirstGridSweepOfTimeStep() {
+  bool result = true;
+  {% for item in SOLVERS -%}
+    result &= {{ item[1] }}.isFirstGridSweepOfTimeStep();
+  {%- endfor %}
+  return result;
+}
+
+
+bool isLastGridSweepOfTimeStep() {
+  bool result = true;
+  {% for item in SOLVERS -%}
+    result &= {{ item[1] }}.isLastGridSweepOfTimeStep();
+  {%- endfor %}
+  return result;
+}
+
+
 double getMinTimeStamp(bool ofCurrentlyRunningGridSweep) {
   double result = std::numeric_limits<double>::max();
   {% for item in SOLVERS -%}

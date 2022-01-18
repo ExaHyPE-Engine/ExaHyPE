@@ -54,6 +54,10 @@ void exahype2::fv::splitRusanov1d(
   assertion(normal>=0);
   assertion(normal<Dimensions);
 
+  assertion4( t<1e100, x, dx, t, dt  );
+  assertion4(dt>=0.0,  x, dx, t, dt  );
+  assertion4(dt<1e100, x, dx, t, dt  );
+
   double * fluxFL;
   double * fluxFR;
   double * fluxNCP;

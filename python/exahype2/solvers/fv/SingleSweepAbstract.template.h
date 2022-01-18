@@ -252,14 +252,15 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     bool mayPlot() const override;
 
-  protected:
-    static tarch::logging::Log  _log;
-
     /**
      * This predicate is always true, as we work with a single-sweep
      * implementation, i.e. each grid sweep realises one time step.
      */
     bool isFirstGridSweepOfTimeStep() const;
+    bool isLastGridSweepOfTimeStep() const;
+
+  protected:
+    static tarch::logging::Log  _log;
 
     SolverState  _solverState;
 
