@@ -129,12 +129,12 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
   double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
   if (ReSwi==1){ //radius based
-    //constexpr int NumberOfRefinementLayers = 2;
-    //double Radius[NumberOfRefinementLayers] = {0.7,0.5};
-    //double MaxH[NumberOfRefinementLayers]   = {0.02,0.006};
-    constexpr int NumberOfRefinementLayers = 1;
-    double Radius[NumberOfRefinementLayers] = {0.6};
-    double MaxH[NumberOfRefinementLayers]   = {0.02};
+    constexpr int NumberOfRefinementLayers = 2;
+    double Radius[NumberOfRefinementLayers] = {0.7,0.5};
+    double MaxH[NumberOfRefinementLayers]   = {0.02,0.006};
+    //constexpr int NumberOfRefinementLayers = 1;
+    //double Radius[NumberOfRefinementLayers] = {0.5};
+    //double MaxH[NumberOfRefinementLayers]   = {0.02};
     for (int i=0; i<NumberOfRefinementLayers; i++) {
       if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
         result=::exahype2::RefinementCommand::Refine;
@@ -365,7 +365,10 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
   #ifdef DGP
   double y3_over_Delta=(4.0/3.0)*pi*pow(r_coor,3)/delta_m;
-  double modifier=(27*DGP_beta/16/DGP_zeta/DGP_zeta)*y3_over_Delta*(pow(1+(32*DGP_zeta*DGP_zeta/81/DGP_beta/DGP_beta/y3_over_Delta),0.5)-1);
+  double modifier=0.0;
+  if (tarch::la::equals(DGP_zeta,0.0)){modifier=1.0/3.0/DGP_beta;}
+  else{modifier=(27*DGP_beta/16/DGP_zeta/DGP_zeta)*y3_over_Delta*(pow(1+(32*DGP_zeta*DGP_zeta/81/DGP_beta/DGP_beta/y3_over_Delta),0.5)-1);}
+  //logInfo( "source()", "modifier" << modifier );
   force_density_norm=force_density_norm*(1+modifier);
   #endif
 
