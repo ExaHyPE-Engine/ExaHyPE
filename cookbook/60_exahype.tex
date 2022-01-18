@@ -995,7 +995,7 @@ that tells the solver that we have PDE terms which have no side effect which
 also do not need the solver object.
 
 
-\paragraph{Third, provide the additional PDE terms without state}.
+\paragraph{Third, provide the additional PDE terms without state.}
 %
 %
 To faciliate the offloading, we have to create alternative versions of our PDE
@@ -1008,8 +1008,13 @@ Per function, keep the original one and add a second one which is
 
 \begin{itemize}
   \item static;
-  \item accepts an additional flag of type \texttt{
-  tarch::multicore::TargetDevice};
+  \item accepts an additional flag of type \texttt{Offloadable}. This is the last argument, i.e.~a static
+  version of a function has exactly the same arguments as the non-static,
+  default variant but then has one more argument. The last argument is solely
+  there to be able to distinguish the static version from the normal one, as C++
+  cannot overload w.r.t.~static vs.~not static. \texttt{Offloadable} is
+  automatically defined in the abstract base class which \ExaHyPE's Python API
+  generates.
   \item is embedded into 
 \begin{code}
 #if defined(GPUOffloading)
@@ -1032,10 +1037,87 @@ For example, you might have the normal flux function and a static flux function
 with the additional \texttt{tarch::multicore::TargetDevice} parameter, but the 
 normal function just invokes the static cousin.
 
+In many of our codes, we take a function like
+\begin{code}
+void examples::exahype2::SSInfall::SSInfall::flux(
+ ...
+)  {
+  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+  assertion4( Q[0]>0.0, faceCentre, volumeH, t, normal );
+  compute something;
+  assertion4( F[0]>0.0, faceCentre, volumeH, t, normal );
+  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+}
+\end{code}
+
+\noindent
+and simply split it into two variants:
+\begin{code}
+void examples::exahype2::SSInfall::SSInfall::flux(
+ ...
+)  {
+  logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+  assertion4( Q[0]>0.0, faceCentre, volumeH, t, normal );
+  flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes);
+  assertion4( F[0]>0.0, faceCentre, volumeH, t, normal );
+  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+}
+
+
+void examples::exahype2::SSInfall::SSInfall::flux(
+  ...,
+  Offloadable
+)  {
+  compute something;
+}
+\end{code}
+
+
+\noindent
+The static version is used on the GPU. 
+The normal one is used on the CPU yet defers immediately to the static version.
+Please note that GPUs are quite restrictive w.r.t.~terminal outputs and
+assertions.
+You will have to remove both from your static routine versions.
+In the example above, the non-static version wraps the core functionality into
+assertions. 
+Therefore, we have the assertions on the CPU, but the core part that goes to the
+GPU is free of assertions.
+The same holds for the logging.
+
+
+\paragraph{Finally, pick a threading backend which supports GPU offloading.}
+%
+%
+%
+The default threading model of \Peano\ does not support task fusion or the
+offloading to GPUs. 
+If you run the code with \texttt{--help}, it will report on various threading
+models.
+Use one that has \texttt{fuse} in its title, and you should finally get GPU
+offloading.
 
 
 
 
+\begin{remark}
+ If only some patches/cells can be offloaded to the GPU, then you can redefine
+ the routine
+ \begin{code}
+virtual bool patchCanUseStatelessPDETerms(
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchH,
+  double                                       t,
+  double                                       dt
+) const;
+ \end{code} 
+ 
+ \noindent
+ in your
+ solver. By default, this routine returns \texttt{true} always. Here's the clue: 
+ This is a normal function, i.e.~you can use the solver's state and make the
+ result depend on this one.
+\end{remark}
 
 
 

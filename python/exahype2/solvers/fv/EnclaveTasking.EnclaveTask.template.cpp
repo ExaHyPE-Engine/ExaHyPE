@@ -457,7 +457,12 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 
 {% if STATELESS_PDE_TERMS %}
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
-  return true;
+  return repositories::{{SOLVER_INSTANCE}}.patchCanUseStatelessPDETerms(
+    _marker.x(),
+    _marker.h(),
+    _t,
+    _dt
+  );
 }
 
 
@@ -466,8 +471,6 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
  */
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
   logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task" );
-
-  assertion( not otherTasks.empty() );
 
   #if Dimensions==2
   ::exahype2::fv::patchData2d pD;

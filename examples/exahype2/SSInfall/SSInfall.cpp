@@ -382,6 +382,34 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 }
 
 
+void examples::exahype2::SSInfall::SSInfall::sourceTerm(
+  const double * __restrict__                  Q, // Q[5+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__                        S, // S[5
+  Offloadable
+) {
+  S[0] = 0.0;  // rho
+  S[1] = 0.0;
+  S[2] = 0.0;
+  S[3] = 0.0;
+  S[4] = 0.0;
+}
+
+
+bool examples::exahype2::SSInfall::SSInfall::patchCanUseStatelessPDETerms(
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchH,
+  double                                       t,
+  double                                       dt
+) const {
+  // @todo Han: I need your input here: When is it safe to ignore the rhs?
+  return true;
+}
+
+
 void examples::exahype2::SSInfall::SSInfall::boundaryConditions(
   const double * __restrict__                  Qinside, // Qinside[5+0]
   double * __restrict__                        Qoutside, // Qoutside[5+0]
@@ -486,6 +514,28 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
+  double result = maxEigenvalue(Q,faceCentre,volumeH,t,normal,Offloadable::Yes);
+
+  nonCriticalAssertion10(
+    result<10000,
+    result, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal
+  );
+  //if (t>1.0 and result<1e-8) {
+  //  logInfo( "maxEigenvalue()", "max eigenvalue too small: " << result );
+  //  std::abort();
+  //}
+  return result;
+}
+
+
+double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
+  const double * __restrict__ Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  Offloadable
+)  {
   //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -499,25 +549,16 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
     //::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure "+std::to_string(p)+" detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
   }
 
-  nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  // nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   const double c   = std::sqrt(gamma * p * irho);
 
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c)); //result=1;
-  nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  //nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   result=result*(1+C_1*exp(-C_2*t));
 
-  nonCriticalAssertion13( 
-    result<10000, 
-    result, p, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal 
-  );
-  //if (t>1.0 and result<1e-8) {
-  //  logInfo( "maxEigenvalue()", "max eigenvalue too small: " << result );
-  //  std::abort();
-  //}
   return result;
 }
-
 
 
 void examples::exahype2::SSInfall::SSInfall::flux(
@@ -542,6 +583,32 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
+  flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes);
+
+  assertion4( not std::isnan(F[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[4]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[4]), faceCentre, volumeH, t, normal );
+
+  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+}
+
+
+void examples::exahype2::SSInfall::SSInfall::flux(
+  const double * __restrict__                  Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double * __restrict__                        F, // F[5]
+  Offloadable
+)  {
   //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -558,19 +625,6 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   F[4] = coeff*Q[4];
   F[normal+1] += p;
   F[4]        += coeff*p;
-
-  assertion4( not std::isnan(F[0]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isnan(F[1]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isnan(F[2]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isnan(F[3]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isnan(F[4]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[0]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[1]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[2]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[3]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[4]), faceCentre, volumeH, t, normal );
-
-  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
 
 

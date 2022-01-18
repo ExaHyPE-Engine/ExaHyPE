@@ -391,3 +391,15 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 
 
 {{ABSTRACT_SOLVER_USER_DEFINITIONS}}
+
+
+{% if STATELESS_PDE_TERMS %}
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::patchCanUseStatelessPDETerms(
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchH,
+  double                                       t,
+  double                                       dt
+) const {
+  return true;
+}
+{% endif %}

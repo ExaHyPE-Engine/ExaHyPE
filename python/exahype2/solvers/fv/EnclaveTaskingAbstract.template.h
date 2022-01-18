@@ -267,6 +267,14 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     bool isFirstGridSweepOfTimeStep() const;
     bool isLastGridSweepOfTimeStep() const;
 
+    {% if STATELESS_PDE_TERMS %}
+    virtual bool patchCanUseStatelessPDETerms(
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchH,
+      double                                       t,
+      double                                       dt
+    ) const;
+    {% endif %}
   protected:
     static tarch::logging::Log  _log;
 
