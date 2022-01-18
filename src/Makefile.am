@@ -73,7 +73,6 @@ Peano4Core_SOURCES = \
   peano4/parallel/parallel.cpp \
   peano4/parallel/SpacetreeSet.cpp \
   peano4/parallel/StartTraversalMessage.cpp \
-  peano4/parallel/Tasks.cpp \
   peano4/parallel/TreeEntry.cpp \
   peano4/parallel/TreeManagementMessage.cpp \
   peano4/parallel/tests/PingPongTest.cpp \
@@ -115,6 +114,12 @@ Tarch_SOURCES= tarch/tarch.cpp \
  tarch/multicore/omp/Core.cpp \
  tarch/multicore/omp/RecursiveSemaphore.cpp \
  tarch/multicore/omp/Tasks.cpp \
+ tarch/multicore/sycl/multicore.cpp \
+ tarch/multicore/sycl/BooleanSemaphore.cpp \
+ tarch/multicore/sycl/Core.cpp \
+ tarch/multicore/sycl/RecursiveSemaphore.cpp \
+ tarch/multicore/sycl/Tasks.cpp \
+ tarch/multicore/orchestration/GeneticOptimisation.cpp \
  tarch/multicore/orchestration/Hardcoded.cpp \
  tarch/multicore/orchestration/StrategyFactory.cpp \
  tarch/tests/TestCaseCollection.cpp \

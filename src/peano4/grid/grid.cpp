@@ -7,6 +7,10 @@
 #include "peano4/utils/Loop.h"
 
 
+namespace {
+  tarch::logging::Log _log( "peano4::grid" );
+}
+
 
 bool peano4::grid::isContained( const peano4::grid::AutomatonState& state, const peano4::grid::GridControlEvent& event, double upscaleAutomatonState ) {
   assertion1(upscaleAutomatonState>=1.0,upscaleAutomatonState);
@@ -58,7 +62,6 @@ peano4::grid::GridVertex peano4::grid::createVertex(
 
 
 std::vector< peano4::grid::GridControlEvent > peano4::grid::merge( std::vector< GridControlEvent >   events, const double Tolerance ) {
-  static tarch::logging::Log _log( "peano4::grid" );
   logTraceInWith1Argument( "merge(...)", events.size() );
 
   std::list< peano4::grid::GridControlEvent > inputEvents;
@@ -451,15 +454,41 @@ peano4::grid::GridControlEvent peano4::grid::internal::createBoundingBoxEvent( c
 
 void peano4::grid::reduceGridControlEvents( std::vector<GridControlEvent>& events ) {
   #ifdef Parallel
-/*
-  std::vector<GridControlEvent> copyOfEvents = events;
+  std::vector<GridControlEvent> localEvents = events;
+  int                           localSize   = events.size();
+  int*                          sizes       = new int[ tarch::mpi::Rank::getInstance().getNumberOfRanks() ];
 
-  int localSize  = events.size();
-  int globalSize;
+  logInfo( "reduceGridControlEvents(...)", "feed local data of size " << localEvents.size() << " into allgather" );
 
-  MPI_Allreduce(&localSize, globalSize, 1, MPI_INT, MPI_SUM, tarch::mpi::Rank::getInstance().getCommunicator());
+  MPI_Allgather(
+    &localSize, 1, MPI_INT,
+    sizes, 1, MPI_INT,
+    tarch::mpi::Rank::getInstance().getCommunicator()
+  );
 
-  logInfo( "")
-*/
+  int totalSize = 0;
+  for (int i=0; i<tarch::mpi::Rank::getInstance().getNumberOfRanks(); i++) {
+    totalSize += sizes[i];
+  }
+  events.resize(totalSize);
+  logInfo( "reduceGridControlEvents(...)", "we have " << totalSize << " grid control event(s) over all ranks, while the local rank hosts " << events.size() << " event(s)" );
+
+  int offset = 0;
+  for (int i=0; i<tarch::mpi::Rank::getInstance().getNumberOfRanks(); i++) {
+    if (i==tarch::mpi::Rank::getInstance().getRank()) {
+      for (int j=0; j<sizes[i]; j++) {
+        events[offset+j] = localEvents[j];
+      }
+    }
+
+    if (sizes[i]>0) {
+      MPI_Bcast(
+        events.data() + offset, sizes[i], GridControlEvent::Datatype, i, tarch::mpi::Rank::getInstance().getCommunicator()
+      );
+      offset += sizes[i];
+    }
+  }
+
+  delete[] sizes;
   #endif
 }

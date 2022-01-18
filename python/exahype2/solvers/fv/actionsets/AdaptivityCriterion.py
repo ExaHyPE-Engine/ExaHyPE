@@ -107,7 +107,7 @@ class AdaptivityCriterion(AbstractFVActionSet):
   """
   
     
-  def __init__(self, solver, guard, build_up_new_refinement_instructions, implement_previous_refinement_instructions, event_lifetime=1):
+  def __init__(self, solver, guard, build_up_new_refinement_instructions, implement_previous_refinement_instructions, event_lifetime=2):
     """
     
     :: Attributes

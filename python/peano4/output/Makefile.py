@@ -282,7 +282,7 @@ the SISC paper
     MakefileDefined = [
         "Parallel",
         "SharedOMP",
-        "SharedTBB",
+        "SharedSYCL",
         "SharedCPP",
     ]
     

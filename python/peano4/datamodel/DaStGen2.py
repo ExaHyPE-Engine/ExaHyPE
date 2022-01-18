@@ -96,7 +96,6 @@ a citation of the two original DaStGen papers when you discuss the memory needs:
           publisher={Springer Berlin Heidelberg}, 
           address={Berlin, Heidelberg}, "
           pages={213--222}, 
-          abstract={Simulation codes often suffer from high memory requirements. This holds in particular if they are memory-bounded, and, with multicore systems coming up, the problem will become even worse as more and more cores have to share the memory connections. To optimise data structures with respect to memory manually is error-prone and cumbersome.}, 
           isbn={978-3-540-69389-5} 
         }
 

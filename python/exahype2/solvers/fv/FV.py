@@ -15,8 +15,10 @@ from abc import abstractmethod
 
 import exahype2
 import exahype2.solvers.fv.actionsets
-
     
+from .PDETerms import PDETerms
+
+
 class FV(object):
   """ 
     An abstract finite volume solver step sizes that works on patch-based
@@ -138,6 +140,15 @@ class FV(object):
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme.
     
     Consult the documentation of this routine for the available options.
+    
+    :: Data postprocessing or coupling to other codes
+    
+    For data postprocessing, the introduction of fancy interior conditions or the coupling to 
+    other codes, each Finite Volume solver has an attribute
+    
+         _action_set_postprocess_solution
+
+    You can use this attribute to add postprocessing routines to the code.
 
   """
   
@@ -200,7 +211,47 @@ class FV(object):
     self._solver_template_file_class_name = None
 
     self.plot_description = ""
+    
+    self._action_set_initial_conditions                       = None
+    self._action_set_initial_conditions_for_grid_construction = None
+    self._action_set_AMR                                      = None
+    self._action_set_AMR_commit_without_further_analysis      = None
+    self._action_set_handle_boundary                          = None
+    self._action_set_project_patch_onto_faces                 = None
+    self._action_set_roll_over_update_of_faces                = None
+    self._action_set_copy_new_faces_onto_old_faces            = None
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = None
+    self._action_set_postprocess_solution                     = None
+
+    self._compute_time_step_size                         = "#error Not yet defined"
+    self._compute_new_time_step_size                     = "#error Not yet defined"
+    self._preprocess_reconstructed_patch                 = ""
+    self._postprocess_updated_patch                      = ""
+
+    self._compute_kernel_call       = """
+      #if Dimensions==2
+      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d
+      #else
+      ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d
+      #endif
+"""    
         
+    self._source_term_call          = "#error Not yet defined"
+    self._Riemann_solver_call       = "#error Not yet defined"
+    self._compute_eigenvalue        = False
+    self._abstract_solver_user_declarations        = ""
+    self._abstract_solver_user_definitions         = ""
+    self._solver_user_declarations                 = ""
+    self._solver_user_definitions                  = ""
+
+    self._start_time_step_implementation           = ""
+    self._finish_time_step_implementation          = ""
+    self._constructor_implementation               = ""
+
+    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
+    self._refinement_criterion_implementation = PDETerms.Empty_Implementation
+    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+
     self.create_data_structures()
     self.create_action_sets()
 
@@ -425,7 +476,11 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
     self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
-
+    # This one is different: it is the hook-in point for other solvers, so we create it 
+    # only once if it does not exist
+    if self._action_set_postprocess_solution == None:
+      self._action_set_postprocess_solution                   = exahype2.solvers.fv.actionsets.EmptyPostprocessSolution( self )
+    
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
@@ -545,6 +600,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_initial_conditions ) 
+    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
@@ -655,6 +711,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_handle_boundary )
     step.add_action_set( self._action_set_update_cell )
+    step.add_action_set( self._action_set_postprocess_solution )
     step.add_action_set( self._action_set_project_patch_onto_faces )
     step.add_action_set( self._action_set_AMR )
 
@@ -758,7 +815,30 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
 
     d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
 
+    d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
+    d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
+    d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
 
+    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "COMPUTE_KERNEL_CALL"]                 = jinja2.Template(self._compute_kernel_call, undefined=jinja2.DebugUndefined).render( **d )
+
+    d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "START_TIME_STEP_IMPLEMENTATION" ]     = jinja2.Template(self._start_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "FINISH_TIME_STEP_IMPLEMENTATION" ]    = jinja2.Template(self._finish_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    
+    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
+
+    d[ "COMPUTE_TIME_STEP_SIZE" ]             = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "COMPUTE_NEW_TIME_STEP_SIZE" ]         = jinja2.Template(self._compute_new_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "COMPUTE_MAX_EIGENVALUE" ]             = self._compute_eigenvalue
+
+    
   @property
   def patch_size(self):
     return self._patch_size

@@ -35,6 +35,11 @@
 #include "exahype2/UserInterface.h"
 #include "exahype2/UnitTests.h"
 
+#ifdef UseFEExcept
+#include <fenv.h>
+#pragma float_control(precise, on)
+#pragma STDC FENV_ACCESS ON
+#endif
 
 using namespace {FULL_NAMESPACE};
 
@@ -339,6 +344,11 @@ void step() {{
         gridConstructionMeasurement.setValue( watch.getCalendarTime() );
 
         repositories::finishGridInitialisationStep();
+
+        #if defined(UseOtter)
+        otterTraceBegin();
+        otterParallelBegin();
+        #endif
       }}
       break;
     case repositories::StepRepository::Steps::PlotSolution:
@@ -396,7 +406,11 @@ int main(int argc, char** argv) {{
   const int ExitCodeUnitTestsFailed  = 1;
   const int ExitCodeInvalidArguments = 2;
   const int ExitCodeInvalidBuild     = 3;
-  
+
+#ifdef UseFEExcept
+  feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
+
   peano4::initParallelEnvironment(&argc,&argv);
   exahype2::initNonCritialAssertionEnvironment();
   tarch::multicore::initSmartMPI();
@@ -485,6 +499,11 @@ int main(int argc, char** argv) {{
   #endif
 
   tarch::logging::Statistics::getInstance().writeToCSV();
+
+  #if defined(UseOtter)
+  otterParallelEnd();
+  otterTraceEnd();
+  #endif
 
   repositories::finishSimulation();
 

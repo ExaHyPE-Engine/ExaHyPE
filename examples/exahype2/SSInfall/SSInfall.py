@@ -7,7 +7,7 @@ import exahype2
 import peano4.toolbox.particles
 import dastgen2
 
-from Probe_file_gene import tracer_seeds_generate
+from Bindding import tracer_seeds_generate, read_scale_factor_table
 import numpy as np
 
 modes = { 
@@ -19,7 +19,7 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5}
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5, "DGP_beta":100, "DGP_zeta":1e6}
 
 intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0, "ReSwi":0, "MassCal":0, "extrapolate_bc":0}
 
@@ -42,7 +42,8 @@ if __name__ == "__main__":
     parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
     parser.add_argument("-eigen", "--eigenvalue-control",    dest="eigen", choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
     parser.add_argument("-cfl",  "--CFL-ratio",  dest="cfl",  type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
+    parser.add_argument("-um", "--universe-model",    dest="model", choices=["Ein-de", "LCDM","DGP" ], default="Ein-de",  help="specify the background universe model" )
+    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-optimised", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
     parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
@@ -115,9 +116,8 @@ if __name__ == "__main__":
         self._patch_size = patch_size
         self._domain_r = domain_r  
 
-        self.set_postprocess_updated_patch_kernel( """
 
-""" )
+
       def create_action_sets(self):
         SuperClass.create_action_sets(self)
 
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         if args.interpolation=="linear-slow":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear" )
           print( "Interpolation rule: linear interpolation without optimisation" )
-        if args.interpolation=="linear":
+        if args.interpolation=="linear-optimised":
           self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
           print( "Interpolation rule: optimised linear interpolation with patch size " + str(self._patch_size) )
         if args.interpolation=="outflow":
@@ -151,53 +151,6 @@ if __name__ == "__main__":
         """
         return SuperClass.get_user_action_set_includes(self) + self._my_user_includes
         
-
-      def add_derivative_calculation(self):
-        """
-
-         Add the constraint verification code
-
-         We introduce new auxiliary variables. Prior to each time step, I
-         compute the Laplacian and store it in the auxiliary variable. This
-         is kind of a material parameter F(Q) which does not feed back into
-         the solution.
-
-         Changing the number of unknowns a posteriori is a delicate update
-         to the solver, so we invoke the constructor again to be on the safe
-         side.
-
-        """
-        self._auxiliary_variables = 5*3
-
-        self.set_preprocess_reconstructed_patch_kernel( """
-        const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        int aux_var=""" + str( self._auxiliary_variables ) + """;
-        int real_var=5;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        dfor(cell,patchSize) {
-          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
-          const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
-
-          // Lets look left vs right and compute the gradient. Then, lets
-          // loop up and down. So we look three times for the respective
-          // directional gradients
-          for (int d=0; d<3; d++) {
-            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-            leftCell(d)  -= 1;
-            rightCell(d) += 1;
-            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
-            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
-            for (int i=0; i<real_var; i++) {
-              reconstructedPatch[cellSerialised*(real_var+aux_var)+real_var+i*3+d] =
-                ( reconstructedPatch[rightCellSerialised*(real_var+aux_var)+i] - reconstructedPatch[leftCellSerialised*(real_var+aux_var)+i] ) / 2.0 / volumeH;
-            }
-          }
-        }
-    """)
-        self.create_data_structures()
-        self.create_action_sets()
-
       def add_mass_cal_cellcount(self):
         """
 
@@ -208,57 +161,67 @@ if __name__ == "__main__":
     """
         self._auxiliary_variables = 5*3
 
-        self.set_preprocess_reconstructed_patch_kernel( """
-        const int patchSize = """ + str( self._patch.dim[0] ) + """;
-        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-        int aux_var=""" + str( self._auxiliary_variables ) + """;
-        double domain_r=""" + str( self._domain_r ) + """;
-        int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
-        tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
-        dfor(cell,patchSize) {
-          tarch::la::Vector<Dimensions,double> coor;
-          //tarch::la::Vector<Dimensions,double> vH={volumeH,volumeH,volumeH};
-          for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
-          
-          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
-          const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
-          
-          double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
-          r_coor=pow(r_coor,0.5);
-          repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
+        self._action_set_postprocess_solution = exahype2.solvers.fv.actionsets.VolumeWisePostprocessSolution(self)
+        self._action_set_postprocess_solution.add_postprocessing_kernel( """
+      double r_coor = (volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))*(volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))
+                    + (volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))*(volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))
+                    + (volumeX(2)-repositories::{{SOLVER_INSTANCE}}.center(2))*(volumeX(2)-repositories::{{SOLVER_INSTANCE}}.center(2));
 
-          double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
-          double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
-          double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
-          double m3  =  reconstructedPatch[cellSerialised*(5+aux_var)+3];
-          double e   =  reconstructedPatch[cellSerialised*(5+aux_var)+4];
-          
-          double p   =  (5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3)/rho);
-          if (p<0) {
-            reconstructedPatch[cellSerialised*(5+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
-          }
-          
-          //int test=0;
-          if (abs(coor(0))>0.8*domain_r or abs(coor(1))>0.8*domain_r or abs(coor(2))>0.8*domain_r){ 
-					for (int d=0; d<3; d++) {
-            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-            leftCell(d)  -= 1;
-            rightCell(d) += 1;
-            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
-            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
-            for (int i=0; i<5; i++){
-            	if (cell(d)==0) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[cellSerialised*(5+aux_var)+i] )/ volumeH;}
-            	else if (cell(d)==(patchSize-1)) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[cellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ volumeH;}
-            	else {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ 2.0 / volumeH;}
-            }
-          }
-          } else{
-            for (int d=0; d<15; d++) {reconstructedPatch[cellSerialised*(5+aux_var)+5+d]=0;}
-          }
-        }
-        
-    """)
+      r_coor=pow(r_coor,0.5);
+      repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,value[0],volumeH(0));  
+"""     )
+
+#        self.set_preprocess_reconstructed_patch_kernel( """
+#        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+#        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+#        int aux_var=""" + str( self._auxiliary_variables ) + """;
+#        double domain_r=""" + str( self._domain_r ) + """;
+#        int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
+#        tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
+#        dfor(cell,patchSize) {
+#          tarch::la::Vector<Dimensions,double> coor;
+#          //tarch::la::Vector<Dimensions,double> vH={volumeH,volumeH,volumeH};
+#          for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
+#          
+#          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+#          const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+#          
+#          double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
+#          r_coor=pow(r_coor,0.5);
+#          repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
+#
+#          double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
+#          double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
+#          double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
+#          double m3  =  reconstructedPatch[cellSerialised*(5+aux_var)+3];
+#          double e   =  reconstructedPatch[cellSerialised*(5+aux_var)+4];
+#          
+#          double p   =  (5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3)/rho);
+#          if (p<0) {
+#            reconstructedPatch[cellSerialised*(5+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
+#          }
+#          
+#          //int test=0;
+#          if (abs(coor(0))>0.8*domain_r or abs(coor(1))>0.8*domain_r or abs(coor(2))>0.8*domain_r){ 
+#					for (int d=0; d<3; d++) {
+#            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+#            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+#            leftCell(d)  -= 1;
+#            rightCell(d) += 1;
+#            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+#            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+#            for (int i=0; i<5; i++){
+#            	if (cell(d)==0) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[cellSerialised*(5+aux_var)+i] )/ volumeH;}
+#            	else if (cell(d)==(patchSize-1)) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[cellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ volumeH;}
+#            	else {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ 2.0 / volumeH;}
+#            }
+#          }
+#          } else{
+#            for (int d=0; d<15; d++) {reconstructedPatch[cellSerialised*(5+aux_var)+5+d]=0;}
+#          }
+#        }
+#        
+#    """)
         self.create_data_structures()
         self.create_action_sets()
 
@@ -435,7 +398,6 @@ if __name__ == "__main__":
       userinfo.append(("Use original formula for eigenvalues",None))
 
     solverconstants=""
-    solverconstants+="double free=-1;\n"
     #if args.extension=="cellcount": 
     solverconstants+= "int global_cell_tot[{}]={};\n".format(args.sample_number,"{0}")
     solverconstants+= "double global_m_tot[{}]={};\n".format(args.sample_number,"{0}")
@@ -452,12 +414,31 @@ if __name__ == "__main__":
     solverconstants+= "double r_s[{}]={}".format(args.sample_number,"{")
     for r in r_list:
       solverconstants+= str(r)+", "
-    solverconstants=solverconstants[:-2]
-    solverconstants+= "};\n"
-    
+    solverconstants=solverconstants[:-2]; solverconstants+= "};\n"
+
+    if args.model=="Ein-de":
+      userinfo.append(("Use Einstein-de Sitter univese background", None))
+    elif args.model=="LCDM":
+      scale_factor_table=read_scale_factor_table("a_LCDM_a_i=1e-3.dat")
+      point_number=len(scale_factor_table[0])
+      userinfo.append(("Use LCDM univese background, scale factor table with "+str(point_number)+" entries accepted", None))
+      solverconstants+= "double code_time_points[{}]={}".format(point_number,"{")
+      for time_point in scale_factor_table[0]:
+        solverconstants+= str(time_point)+", "
+      solverconstants=solverconstants[:-2]; solverconstants+= "};\n"
+      solverconstants+= "double scale_factor_points[{}]={}".format(point_number,"{")
+      for scale_factor in scale_factor_table[1]:
+        solverconstants+= str(scale_factor)+", "
+      solverconstants=solverconstants[:-2]; solverconstants+= "};\n"
+      solverconstants+= "double table_point_number="+str(point_number)+";\n"
+      solverconstants+= "double interpolated_a=0.0;\n"
+      floatparams.update({"Omega_m":0.3})
+    elif args.model=="DGP":
+      userinfo.append(("Use DGP modified Model+Einstein-de Sitter univese background", None))
+
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("{}".format(k), v)  
-     
+            
     my_solver.set_solver_constants(solverconstants)
 
     project.add_solver(my_solver)
@@ -489,7 +470,7 @@ if __name__ == "__main__":
     probe_point = [-0,-0,-1e-6]
     project.add_plot_filter( probe_point,[40.0,40.0,2e-6],1 )
 
-    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.9,0,16))" )
+    project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.9,0))" )
 
 ########################################################################################
 #Tracer setting 
@@ -523,8 +504,10 @@ if __name__ == "__main__":
         output_precision=10,
         position_delta_between_two_snapsots=1e16,
         data_delta_between_two_snapsots=1e16,
-        time_delta_between_two_snapsots=0.25,
-        use_relative_deltas=False
+        time_delta_between_two_snapsots=0.05,
+        use_relative_deltas=False,
+        initial_record_time=args.end_time*2.0/3.0
+        #last_record_time=1e3
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
       #,,-1,"zz",1000))
@@ -533,6 +516,10 @@ if __name__ == "__main__":
 #compile for the real executable
 ########################################################################################
     peano4_project = project.generate_Peano4_project(verbose=True)
+    if args.model=="LCDM":
+      peano4_project.output.makefile.add_CXX_flag( "-DuseTable" )
+    if args.model=="DGP":
+      peano4_project.output.makefile.add_CXX_flag( "-DDGP" )
     peano4_project.generate( throw_away_data_after_generation=False )
     peano4_project.build( make_clean_first = True )
 

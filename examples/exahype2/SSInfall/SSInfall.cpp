@@ -25,6 +25,22 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
       m_tot[i]           = 0;
       cell_tot[i]        = 0;
     }
+    double inter_time=globalMinTimeStamp+globalMinTimeStepSize/2;
+    #ifdef useTable
+    int time_position=0;
+    //logInfo( "startTImeStep()", "current min time=" << globalMinTimeStamp<<" inter time=" << inter_time);
+    for(int i=0; i<table_point_number;i++){
+      if (tarch::la::smallerEquals(inter_time,code_time_points[i]) ){time_position=i; break;}
+      time_position=i;
+    }
+    //logInfo( "startTImeStep()", "it is between time point " << code_time_points[time_position-1] << " and " << code_time_points[time_position]);
+    interpolated_a=scale_factor_points[time_position-1]*(code_time_points[time_position]-inter_time)/(code_time_points[time_position]-code_time_points[time_position-1])+scale_factor_points[time_position]*(inter_time-code_time_points[time_position-1])/(code_time_points[time_position]-code_time_points[time_position-1]);
+    //logInfo( "startTImeStep()", "interpolated to " << interpolated_a << " from " << scale_factor_points[time_position-1] << " and " << scale_factor_points[time_position]);
+    if (tarch::la::equals(globalMinTimeStamp,0.0) ){
+      interpolated_a=scale_factor_points[0];
+      //logInfo( "startTImeStep()", "reset scale a to " << interpolated_a << " because t=0.0");
+    }
+    #endif
 
     if (MassCal==1){
       for(int i=0;i<sample_number;i++){
@@ -113,9 +129,12 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
   double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
   if (ReSwi==1){ //radius based
-    constexpr int NumberOfRefinementLayers = 2;
-    double Radius[NumberOfRefinementLayers] = {1.0,0.5};
-    double MaxH[NumberOfRefinementLayers]   = {0.02,0.006};
+    //constexpr int NumberOfRefinementLayers = 2;
+    //double Radius[NumberOfRefinementLayers] = {0.7,0.5};
+    //double MaxH[NumberOfRefinementLayers]   = {0.02,0.006};
+    constexpr int NumberOfRefinementLayers = 1;
+    double Radius[NumberOfRefinementLayers] = {0.6};
+    double MaxH[NumberOfRefinementLayers]   = {0.02};
     for (int i=0; i<NumberOfRefinementLayers; i++) {
       if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
         result=::exahype2::RefinementCommand::Refine;
@@ -132,8 +151,8 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
       }
     }
   }
-  if (ReSwi==3){ //radius based
-    if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
+  if (ReSwi==3){ //radius based, for test
+    if (radius<0.2) {result=::exahype2::RefinementCommand::Refine;}
   }
   if (ReSwi==4){ //dynamic one
     double t_i=pow(a_i,1.5)*2.057*1e17;
@@ -340,30 +359,21 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   }
 
   double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
+  #ifdef useTable
+  a=interpolated_a; //if we use a table to interpolate a (for LCDM), we replace it here. 
+  #endif
   double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
-
-  // @todo remove
-
-  assertion4( not std::isnan(force_density_norm), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(force_density_norm), volumeX, volumeH, t, dt );
-
+  #ifdef DGP
+  double y3_over_Delta=(4.0/3.0)*pi*pow(r_coor,3)/delta_m;
+  double modifier=(27*DGP_beta/16/DGP_zeta/DGP_zeta)*y3_over_Delta*(pow(1+(32*DGP_zeta*DGP_zeta/81/DGP_beta/DGP_beta/y3_over_Delta),0.5)-1);
+  force_density_norm=force_density_norm*(1+modifier);
+  #endif
 
   S[0] = 0;  // rho
   S[1] = -force_density_norm*x;    // velocities
   S[2] = -force_density_norm*y;
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
-
-  assertion4( not std::isnan(S[0]), volumeX, volumeH, t, dt );
-  assertion4( not std::isnan(S[1]), volumeX, volumeH, t, dt );
-  assertion4( not std::isnan(S[2]), volumeX, volumeH, t, dt );
-  assertion4( not std::isnan(S[3]), volumeX, volumeH, t, dt );
-  assertion4( not std::isnan(S[4]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[0]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[1]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[2]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[3]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[4]), volumeX, volumeH, t, dt );
 
   logTraceOut( "sourceTerm(...)" );
 }
@@ -500,6 +510,7 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   );
   if (result<1e-8) {
     logInfo( "maxEigenvalue()", "max eigenvalue too small: " << result );
+    std::abort();
   }
   return result;
 }

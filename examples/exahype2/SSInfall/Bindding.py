@@ -41,7 +41,16 @@ def tracer_seeds_generate(Type=1, a=-0.5, b=0.5 ,N_x=10, N_y=10, N_z=10):
 						f.write(line)
 		f.close()	  
 
-
+def read_scale_factor_table(table_name="test_table.dat"):
+	f=open(table_name,'r')
+	table=f.readlines()
+	output=[[],[]]
+	for line in table:
+		tem=list(map(float,line.split(' ')))
+		output[0].append(tem[0])
+		output[1].append(tem[1])
+		
+	return output
 
 
 

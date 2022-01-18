@@ -5,7 +5,7 @@
 
 #include "config.h"
 
-#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP)
+#if defined(SharedOMP) || defined(SharedSYCL) || defined(SharedCPP)
   #define SharedMemoryParallelisation
 #endif
 

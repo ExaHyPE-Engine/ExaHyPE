@@ -189,14 +189,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 ) {
   logDebug( "startTimeStep(...)", "old state is " << toString(_solverState) );
 
-  {{START_TIME_STEP_IMPLEMENTATION}}
-
   if (
     _solverState == SolverState::GridInitialisation
   ) {
     _solverState = SolverState::PrimaryAfterGridInitialisation;
   }
   else if (
+    _solverState == SolverState::Primary
+    or
+    _solverState == SolverState::PrimaryAfterGridInitialisation
+  ) {
+    _solverState = SolverState::Secondary;
+  }
+  else { // plot initial condition, e.g.
+    _solverState = SolverState::Primary;
+  }
+
+  {{START_TIME_STEP_IMPLEMENTATION}}
+
+  if (
     _solverState == SolverState::Primary
     or
     _solverState == SolverState::PrimaryAfterGridInitialisation
@@ -223,39 +234,33 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
     _patchUpdates    = 0;
 
-    _solverState = SolverState::Secondary;
-
     _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
     _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
   }
-  else { // plot initial condition, e.g.
-    _solverState = SolverState::Primary;
-  }
-
-  logDebug( "startTimeStep(...)", "new state is " << toString(_solverState) );
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
-  #ifdef Parallel
-  double newMinTimeStamp = _minTimeStampThisTimeStep;
-  double newMaxTimeStamp = _maxTimeStampThisTimeStep;
-  double newMinVolumeH   = _minVolumeHThisTimeStep;
-  double newMaxVolumeH   = _maxVolumeHThisTimeStep;
-  double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
-  double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+  if (_solverState==SolverState::Secondary) {
+    #ifdef Parallel
+    double newMinTimeStamp = _minTimeStampThisTimeStep;
+    double newMaxTimeStamp = _maxTimeStampThisTimeStep;
+    double newMinVolumeH   = _minVolumeHThisTimeStep;
+    double newMaxVolumeH   = _maxVolumeHThisTimeStep;
+    double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
+    double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
 
-  double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
-  double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
+    double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
+    double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
 
-  tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::Rank::getInstance().allReduce(
       &newMinTimeStamp,
       &_minTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
-  tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::Rank::getInstance().allReduce(
       &newMaxTimeStamp,
       &_maxTimeStampThisTimeStep,
       1, MPI_DOUBLE,
@@ -263,14 +268,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
 
-  tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::Rank::getInstance().allReduce(
       &newMinVolumeH,
       &_minVolumeHThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
-  tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::Rank::getInstance().allReduce(
       &newMaxVolumeH,
       &_maxVolumeHThisTimeStep,
       1, MPI_DOUBLE,
@@ -278,14 +283,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
 
-  tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::Rank::getInstance().allReduce(
       &newMinTimeStepSize,
       &_minTimeStepSizeThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
-  tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::Rank::getInstance().allReduce(
       &newMaxTimeStepSize,
       &_maxTimeStepSizeThisTimeStep,
       1, MPI_DOUBLE,
@@ -293,8 +298,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
 
-
-  tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::Rank::getInstance().allReduce(
       &newMaxTimeStepSize,
       &_maxTimeStepSizeThisTimeStep,
       1, MPI_DOUBLE,
@@ -302,27 +306,28 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
 
-  tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::Rank::getInstance().allReduce(
       &newLocalMinTimeStamp,
       &_localMinTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
-  tarch::mpi::Rank::getInstance().allReduce(
+    tarch::mpi::Rank::getInstance().allReduce(
       &newLocalMaxTimeStamp,
       &_localMaxTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
-  #endif
+    #endif
 
-  if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
-    _minTimeStampThisTimeStep = 0.0;
-  }
-  if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
-    _maxTimeStampThisTimeStep = 0.0;
+    if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
+      _minTimeStampThisTimeStep = 0.0;
+    }
+    if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
+      _maxTimeStampThisTimeStep = 0.0;
+    }
   }
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}

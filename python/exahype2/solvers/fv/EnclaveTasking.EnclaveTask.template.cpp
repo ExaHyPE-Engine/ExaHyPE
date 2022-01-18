@@ -3,14 +3,26 @@
 // user includes
 {{SOLVER_INCLUDES}}
 
+#include "config.h"
+
+
+#if SYCLGPUOffloading>0
+#include "tarch/multicore/sycl/Core.h"
+#endif
+
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 #include "exahype2/EnclaveBookkeeping.h"
 #include "exahype2/EnclaveTask.h"
 
+#include "peano4/parallel/parallel.h"
+
 #include "peano4/utils/Loop.h"
 
+#include "tarch/compiler/CompilerSpecificSettings.h"
+
 #include "tarch/multicore/SmartScheduler.h"
+
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
 
@@ -19,16 +31,17 @@
 #endif
 
 #include <string.h>
+#include <memory>
 
 tarch::logging::Log                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESPACE | join("::")}}::{{CLASSNAME}}" );
 {% if STATELESS_PDE_TERMS %}
-int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}", false) );
+int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_gpuEnclaveTaskId( peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}") );
 {% endif %}
 
 #if defined(UseSmartMPI)
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(
   tarch::multicore::registerSmartMPITask(
-    peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"),
+    peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}"),
     [](smartmpi::ReceiverCallType type, int rank, int tag, MPI_Comm communicator) -> smartmpi::Task* {
       if (type==smartmpi::ReceiverCallType::ReceiveTask) {
         return receiveTask( rank, tag, communicator );
@@ -45,20 +58,18 @@ int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_e
 );
 #else
 int                                {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_enclaveTaskTypeId(
-  peano4::parallel::Tasks::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
+  peano4::parallel::getTaskType("{{NAMESPACE | join("::")}}::{{CLASSNAME}}")
 );
 #endif
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
   double                                      dt,
   double* __restrict__                        reconstructedPatch,
   double* __restrict__                        targetPatch
 ) {
-  {{PREPROCESS_RECONSTRUCTED_PATCH_IN_SKELETON_CELL}}
-
   ::exahype2::fv::copyPatch(
     reconstructedPatch,
     targetPatch,
@@ -68,19 +79,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     1 // halo size
   );
 
-  {% if USE_SPLIT_LOOP %}
-  #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-  #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-  #endif
-  {% else %}
-  #if Dimensions==2
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-  #else
-  ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-  #endif
-  {% endif %}
+  {{COMPUTE_KERNEL_CALL}}
+  (
     [&](
       const double* __restrict__                   QL,
       const double* __restrict__                   QR,
@@ -115,32 +115,52 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     targetPatch
   );
 
+  ::exahype2::fv::validatePatch(
+    targetPatch,
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    0, // halo
+    std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
+  ); // outcome has to be valid
+
   tarch::freeMemory(reconstructedPatch,tarch::MemoryLocation::Heap );
 
-  {{POSTPROCESS_UPDATED_PATCH_IN_SKELETON_CELL}}
+  {{POSTPROCESS_UPDATED_PATCH}}
+
+
+  {% if COMPUTE_MAX_EIGENVALUE %}
+  const double timeStamp    = t;
+  const double timeStepSize = dt;
+
+  const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+    [] (
+      const double * __restrict__                  Q,
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal
+    ) -> double {
+      return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+    },
+    marker.x(),
+    marker.h(),
+    timeStamp,
+    timeStamp + timeStepSize,
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    targetPatch
+  );
+
+  return maxEigenvalue;
+  {% else %}
+  return 0.0;
+  {% endif %}
 }
 
 
-{% if STATELESS_PDE_TERMS %}
-{{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
-  const ::peano4::datamanagement::CellMarker&    marker,
-  double                                         t,
-  double                                         dt,
-  double* __restrict__                           reconstructedValues
-):
-  tarch::multicore::Task(
-    tarch::multicore::reserveTaskNumber(),
-    _gpuEnclaveTaskId,
-    tarch::multicore::Task::DefaultPriority
-  ),
-  _marker(marker),
-  _t(t),
-  _dt(dt),
-  _reconstructedValues(reconstructedValues) {
-  logTraceIn( "EnclaveTask(...)" );
-  logTraceOut( "EnclaveTask(...)" );
-}
-{% else %}
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker& marker,
   double                                      t,
@@ -160,9 +180,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
-    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt) -> void {
-          {{PREPROCESS_RECONSTRUCTED_PATCH_IN_ENCLAVE_TASK}}
-
+    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& maxEigenvalue ) -> void {
           ::exahype2::fv::copyPatch(
             reconstructedPatch,
             targetPatch,
@@ -172,19 +190,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
             1 // halo size
           );
 
-          {% if USE_SPLIT_LOOP %}
-          #if Dimensions==2
-          ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-          #else
-          ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-          #endif
-          {% else %}
-          #if Dimensions==2
-          ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-          #else
-          ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-          #endif
-          {% endif %}
+          {{COMPUTE_KERNEL_CALL}}
+          (
             [&](
               const double* __restrict__                   QL,
               const double* __restrict__                   QR,
@@ -219,14 +226,42 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
             targetPatch
           );
 
-          {{POSTPROCESS_UPDATED_PATCH_IN_ENCLAVE_TASK}}
+          {{POSTPROCESS_UPDATED_PATCH}}
+
+          {% if COMPUTE_MAX_EIGENVALUE %}
+          const double timeStamp    = t;
+          const double timeStepSize = dt;
+
+          maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+            [] (
+              const double * __restrict__                  Q,
+              const tarch::la::Vector<Dimensions,double>&  faceCentre,
+              const tarch::la::Vector<Dimensions,double>&  volumeH,
+              double                                       t,
+              double                                       dt,
+              int                                          normal
+            ) -> double {
+              return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+            },
+            marker.x(),
+            marker.h(),
+            timeStamp,
+            timeStamp + timeStepSize,
+            {{NUMBER_OF_VOLUMES_PER_AXIS}},
+            {{NUMBER_OF_UNKNOWNS}},
+            {{NUMBER_OF_AUXILIARY_VARIABLES}},
+            targetPatch
+          );
+          {% else %}
+          maxEigenvalue = 0.0;
+          {% endif %}
         }
   )
   #ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)
   #endif
 {}
-{% endif %}
+
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
   #ifdef UseSmartMPI
@@ -422,26 +457,6 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 #endif
 
 {% if STATELESS_PDE_TERMS %}
-bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::run() {
-  logTraceIn( "run()" );
-
-  double* outputValues = tarch::allocateMemory(_destinationPatchSize,tarch::MemoryLocation::Heap);
-
-  applyKernelToCell(
-    _marker,
-    _t,
-    _dt,
-    _reconstructedValues,
-    outputValues
-  );
-
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_destinationPatchSize,outputValues);
-
-  logTraceOut( "run()" );
-  return false;
-}
-
-
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
   return true;
 }
@@ -463,44 +478,46 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
 
   const int NPT  = otherTasks.size()+1;
-  const int LR   = _sourcePatchSize*NPT;
-  const int LTOT = _destinationPatchSize*NPT;
+  const int LR   = _numberOfInputValues*NPT;
+  const int LTOT = _numberOfResultValues*NPT;
   pD.npatches=NPT;
 
-  pD.reco     = new double[LR];
-  pD.id       = new    int[NPT];
-  pD.x0       = new double[NPT];
-  pD.h0       = new double[NPT];
-  pD.x1       = new double[NPT];
-  pD.h1       = new double[NPT];
+  pD.reco     = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LR];
+  pD.id       = new (std::align_val_t(ExaHyPEFusedKernelAlignment))   int[NPT];
+  pD.x0       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.h0       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.x1       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.h1       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   #if Dimensions==3
-  pD.x2       = new double[NPT];
-  pD.h2       = new double[NPT];
+  pD.x2       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.h2       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   #endif
-  pD.t        = new double[NPT];
-  pD.dt       = new double[NPT];
-  pD.result   = new double[LTOT];
+  pD.t        = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.dt       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.result   = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LTOT];
+  pD.maxEigenvalue    = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
   memset(pD.result, 0, LTOT*sizeof(double));
 
 
   int i=0;
   for (auto p: otherTasks) {
     {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
-    for (size_t j=0;j<_sourcePatchSize;j++) 
-    {
-      pD.reco[i*_sourcePatchSize + j] = currentTask->_reconstructedValues[j];
+    for (size_t j=0;j<_numberOfInputValues;j++) {
+      pD.reco[i*_numberOfInputValues + j] = currentTask->_inputValues[j];
     }
-    pD.id[i]  = currentTask->getTaskId();
-    pD.x0[i]  = currentTask->_marker.x()[0];
-    pD.h0[i]  = currentTask->_marker.h()[0];
-    pD.x1[i]  = currentTask->_marker.x()[1];
-    pD.h1[i]  = currentTask->_marker.h()[1];
-  #if Dimensions==3
-    pD.x2[i]  = currentTask->_marker.x()[2];
-    pD.h2[i]  = currentTask->_marker.h()[2];
-  #endif
-    pD.t[i]   = _t; // @todo This is not true likely. Could have different time steps
-    pD.dt[i]  = _dt; // @todo This is not true likely. Could have different time steps
+    pD.id[i]    = currentTask->getTaskId();
+    pD.x0[i]    = currentTask->_marker.x()[0];
+    pD.h0[i]    = currentTask->_marker.h()[0];
+    pD.x1[i]    = currentTask->_marker.x()[1];
+    pD.h1[i]    = currentTask->_marker.h()[1];
+    #if Dimensions==3
+    pD.x2[i]    = currentTask->_marker.x()[2];
+    pD.h2[i]    = currentTask->_marker.h()[2];
+    #endif
+    pD.t[i]     = currentTask->_t;
+    pD.dt[i]    = currentTask->_dt;
+    pD.maxEigenvalue[i] = -1.0;
+    delete[]  currentTask->_inputValues;
     i++;
 
     delete currentTask;
@@ -508,62 +525,84 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   // Now add the data from the task from which this whole thing has been called
   //
-  for (size_t j=0;j<_sourcePatchSize;j++) {
-    pD.reco[i*_sourcePatchSize + j] = _reconstructedValues[j];
+  for (size_t j=0;j<_numberOfInputValues;j++) {
+    pD.reco[i*_numberOfInputValues + j] = _inputValues[j];
   }
   pD.id[i]  = getTaskId();
   pD.x0[i]  = _marker.x()[0];
   pD.h0[i]  = _marker.h()[0];
   pD.x1[i]  = _marker.x()[1];
   pD.h1[i]  = _marker.h()[1];
-#if Dimensions==3
+  #if Dimensions==3
   pD.x2[i]  = _marker.x()[2];
   pD.h2[i]  = _marker.h()[2];
-#endif
-  pD.t[i]   = _t;  // @todo This is not true likely. Could have different time steps
-  pD.dt[i]  = _dt; // @todo This is not true likely. Could have different time steps
+  #endif
+  pD.t[i]   = _t;
+  pD.dt[i]  = _dt;
+  pD.maxEigenvalue[i] = -1.0;
   
-
-  //
-  // If the user specifies some pre-processing, it is inserted here. If
-  // the preprocessing is empty, this loop should be removed by the
-  // compiler.
-  //
-  //for (int i=0;i<static_cast<int>(localwork.size());i++) {
-    // const auto& marker =
-    // PREPROCESS_RECONSTRUCTED_PATCH has to go in here, but the marker can't be copied yet
-  //}
-
-  //double* destinationPatchOnCPU = ::tarch::allocateMemory(
-    //_destinationPatchSize*otherTasks.size(),
-    //::tarch::MemoryLocation::Heap
-  //);
-  //for (size_t i = 0;i<_destinationPatchSize*otherTasks.size();i++) *(destinationPatchOnCPU + i) =0;
+  delete[] _inputValues;
 
   //
   // ==============
   // Invoke kernels
   // ==============
   //
-  if (targetDevice<0) {
-    {{FUSED_RIEMANN_SOLVER_CALL}}
+  bool foundOffloadingBranch = false;
+
+  #if OpenMPGPUOffloading>0
+  if (targetDevice>=0) {
+    foundOffloadingBranch = true;
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_OpenMP_offloading
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_OpenMP_offloading
+    #endif
+    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
     (
       1,
       pD,
-      _sourcePatchSize,
-      _destinationPatchSize
+      _numberOfInputValues,
+      _numberOfResultValues,
+      targetDevice
     );
   }
-  else {
-    // @todo Holger, that's where we pick the SYCL queue. We make the queues static, so they
-    // are created once only.
-    {{FUSED_RIEMANN_SOLVER_CALL}}
+  #endif
+
+  #if SYCLGPUOffloading>0
+  if (targetDevice>=0) {
+    foundOffloadingBranch = true;
+
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_SYCL_offloading
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_SYCL_offloading
+    #endif
+    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
     (
       1,
       pD,
-      _sourcePatchSize,
-      _destinationPatchSize,
-      targetDevice
+      _numberOfInputValues,
+      _numberOfResultValues,
+	  tarch::multicore::getSYCLQueue(targetDevice),
+	  {1,1,1} // if we really have to, we can make the range qualifiers template parameters. If there's a
+              // way to pass them in as arrays, then I'd prefer it that way. Up to you
+    );
+  }
+  #endif
+
+  if (not foundOffloadingBranch) {
+    #if Dimensions==2
+    ::exahype2::fv::Fusanov_2D_with_batching
+    #elif Dimensions==3
+    ::exahype2::fv::Fusanov_3D_with_batching
+    #endif
+    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
+    (
+      1,
+      pD,
+      _numberOfInputValues,
+      _numberOfResultValues
     );
   }
 
@@ -574,14 +613,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   //
   for (int i=0;i<pD.npatches;i++) {
     const int taskid = pD.id[i];
-    double* targetPatch = ::tarch::allocateMemory(_destinationPatchSize, ::tarch::MemoryLocation::Heap);
-    //for (int j=0;j<_destinationPatchSize;j++)
-    //{
-       //targetPatch[j] = pD.result[j + i*_destinationPatchSize];
-    //}
-    for (int j=0;j<_destinationPatchSize;j++) targetPatch[j] = *(pD.result + j + i*_destinationPatchSize);
-    //{{ POSTPROCESS_UPDATED_PATCH }}
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _destinationPatchSize, targetPatch);
+    double* targetPatch = ::tarch::allocateMemory(_numberOfResultValues, ::tarch::MemoryLocation::Heap);
+    for (int j=0;j<_numberOfResultValues;j++) {
+      targetPatch[j] = *(pD.result + j + i*_numberOfResultValues);
+    }
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _numberOfResultValues, targetPatch, pD.maxEigenvalue[i]);
   }
 
   return false;

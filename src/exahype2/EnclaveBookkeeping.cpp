@@ -34,7 +34,7 @@ void exahype2::EnclaveBookkeeping::dumpStatistics() {
   std::ostringstream finishedTasksMsg;
   finishedTasksMsg << "(#" << _finishedTasks.size();
   for (auto& p: _finishedTasks) {
-    finishedTasksMsg << "," << p.first << "x" << p.second.first;
+    finishedTasksMsg << "," << p.first << "->" << p.second.toString();
   }
   finishedTasksMsg << ")";
   logInfo( "dumpStatistics()", "finished tasks=" << finishedTasksMsg.str() );
@@ -45,9 +45,9 @@ void exahype2::EnclaveBookkeeping::cancelTask(int number) {
   tarch::multicore::Lock finishedTasksLock( _finishedTasksSemaphore );
 
   if (_finishedTasks.count( number )>0) {
-    std::pair<int, double*> storedData = _finishedTasks[number];
+    Entry storedData = _finishedTasks.at(number);
     _finishedTasks.erase( number );
-    tarch::freeMemory(storedData.second,tarch::MemoryLocation::Heap );
+    tarch::freeMemory(storedData.data,tarch::MemoryLocation::Heap );
     tarch::multicore::releaseTaskNumber(number);
   }
   else {
@@ -56,7 +56,7 @@ void exahype2::EnclaveBookkeeping::cancelTask(int number) {
 }
 
 
-std::pair<int, double*>  exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndReturnResult(int number) {
+exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndReturnResult(int number) {
   tarch::multicore::Lock finishedTasksLock( _finishedTasksSemaphore );
   bool isContained = _finishedTasks.count( number )>0;
   finishedTasksLock.free();
@@ -64,11 +64,7 @@ std::pair<int, double*>  exahype2::EnclaveBookkeeping::waitForTaskToTerminateAnd
   while (not isContained) {
     ::tarch::logging::Statistics::getInstance().inc( LookupMissesIdentifier );
 
-    bool processedTask = ::tarch::multicore::processPendingTasks(1,false);
-
-    if (not processedTask) {
-      tarch::multicore::yield();
-    }
+    ::tarch::multicore::processPendingTasks(1,false);
 
     finishedTasksLock.lock();
     isContained = _finishedTasks.count( number )>0;
@@ -77,7 +73,7 @@ std::pair<int, double*>  exahype2::EnclaveBookkeeping::waitForTaskToTerminateAnd
 
   finishedTasksLock.lock();
   assertionEquals( _finishedTasks.count(number),1 );
-  std::pair<int, double*> storedData = _finishedTasks[number];
+  Entry storedData = _finishedTasks.at(number);
   _finishedTasks.erase( number );
   finishedTasksLock.free();
 
@@ -87,19 +83,20 @@ std::pair<int, double*>  exahype2::EnclaveBookkeeping::waitForTaskToTerminateAnd
 }
 
 
-void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination) {
-  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double)", "fetch results of task " << number );
+void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue) {
+  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", "fetch results of task " << number );
 
-  std::pair<int, double*> storedData = waitForTaskToTerminateAndReturnResult(number);
+  Entry storedData = waitForTaskToTerminateAndReturnResult(number);
 
-  std::copy_n( storedData.second, storedData.first, destination );
+  std::copy_n( storedData.data, storedData.numberOfResultValues, destination );
+  maxEigenvalue = storedData.maxEigenvalue;
 
-  tarch::freeMemory( storedData.second, tarch::MemoryLocation::Heap );
-  logDebug( "waitForTaskToTerminateAndCopyResultOver()", "delivered outcome of task " << number << " (" << storedData.first << " entries copied over)");
+  tarch::freeMemory( storedData.data, tarch::MemoryLocation::Heap );
+  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", "delivered outcome of task " << number << ": " << storedData.toString() );
 }
 
 
-void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResultValues, double* data) {
+void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResultValues, double* data, double maxEigenvalue) {
   logDebug( "finishedTask()", "task " << taskNumber << " has terminated. Bookkeep results" );
 
   tarch::multicore::Lock lockFinishedTasks( _finishedTasksSemaphore );
@@ -112,8 +109,8 @@ void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResu
   }
   else {
     auto oldBucketCount = _finishedTasks.bucket_count();
-    std::pair<int,double*> newEntry(numberOfResultValues,data);
-    _finishedTasks.insert( std::pair<int, std::pair<int,double*> >(taskNumber,newEntry) );
+    Entry newEntry(numberOfResultValues,data,maxEigenvalue);
+    _finishedTasks.insert( std::pair<int, Entry >(taskNumber,newEntry) );
     if (_finishedTasks.bucket_count()>oldBucketCount) {
       ::tarch::logging::Statistics::getInstance().inc( MemoryAllocationsInLookupTableIdentifier );
     }
@@ -122,3 +119,14 @@ void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResu
 }
 
 
+exahype2::EnclaveBookkeeping::Entry::Entry( int  numberOfResultValues_, double*  data_, double   maxEigenvalue_ ):
+  numberOfResultValues(numberOfResultValues_),
+  data(data_),
+  maxEigenvalue(maxEigenvalue_) {}
+
+
+std::string exahype2::EnclaveBookkeeping::Entry::toString() const {
+  std::ostringstream msg;
+  msg << "(#" << numberOfResultValues << ",\\lambda_max=" << maxEigenvalue << ")";
+  return msg.str();
+}

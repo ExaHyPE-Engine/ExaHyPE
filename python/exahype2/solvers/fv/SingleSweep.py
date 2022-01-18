@@ -13,48 +13,37 @@ from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import Recon
 
 class UpdateCell(ReconstructPatchAndApplyFunctor):
   SolveRiemannProblemsOverPatch = jinja2.Template( """
-    double cellTimeStepSize = -1.0;
-    double cellTimeStamp    = -1.0;
-     
-    {{PREPROCESS_RECONSTRUCTED_PATCH}}
-    {{COMPUTE_TIME_STEPSIZE}}
-    
-    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
-    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+      const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
 
-    const double usedTimeStepSize = cellTimeStepSize;
+      // Set the variable
+      // double timeStepSize
+      {{COMPUTE_TIME_STEP_SIZE}}
+   
+      {{PREPROCESS_RECONSTRUCTED_PATCH}}
 
-    ::exahype2::fv::validatePatch(
+      assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStamp, timeStepSize );
+      assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
+
+      ::exahype2::fv::validatePatch(
         reconstructedPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         1, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // previous time step has to be valid
+      ); // previous time step has to be valid
   
-    ::exahype2::fv::copyPatch(
+      ::exahype2::fv::copyPatch(
         reconstructedPatch,
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         1 // halo size
-    );
+      );
 
-    {% if USE_SPLIT_LOOP %}
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-    #endif
-    {% else %}
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-    #endif
-    {% endif %}
+      {{COMPUTE_KERNEL_CALL}}
+      (
         [&](
           const double * __restrict__                  QL,
           const double * __restrict__                  QR,
@@ -80,31 +69,58 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
         },
         marker.x(),
         marker.h(),
-        cellTimeStamp,
-        cellTimeStepSize,
+        timeStamp,
+        timeStepSize,
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         reconstructedPatch,
         targetPatch
-    );
+      );
   
-    {{POSTPROCESS_UPDATED_PATCH}}
-    
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-    
-    repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
+      {{POSTPROCESS_UPDATED_PATCH}}
 
-    ::exahype2::fv::validatePatch(
+      ::exahype2::fv::validatePatch(
         targetPatch,
         {{NUMBER_OF_UNKNOWNS}},
         {{NUMBER_OF_AUXILIARY_VARIABLES}},
         {{NUMBER_OF_VOLUMES_PER_AXIS}},
         0, // halo
         std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // outcome has to be valid
+      ); // outcome has to be valid
+      
+      {% if COMPUTE_MAX_EIGENVALUE %}
+      const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
+        [] (
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  faceCentre,
+          const tarch::la::Vector<Dimensions,double>&  volumeH,
+          double                                       t,
+          double                                       dt,
+          int                                          normal
+        ) -> double {
+          return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+        },
+        marker.x(),
+        marker.h(),
+        timeStamp,
+        timeStamp + timeStepSize,
+        {{NUMBER_OF_VOLUMES_PER_AXIS}},
+        {{NUMBER_OF_UNKNOWNS}},
+        {{NUMBER_OF_AUXILIARY_VARIABLES}},
+        targetPatch
+      );
+      {% endif %}
+      
+      // Set the variable
+      // double newTimeStepSize
+      {{COMPUTE_NEW_TIME_STEP_SIZE}}
+    
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
+      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+    
+      repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
   """ )
 
 
@@ -127,15 +143,13 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     
     self._Template_TouchCellFirstTime_Epilogue += """
   else if (not marker.willBeRefined() and not marker.hasBeenRefined()) {{
-    double cellTimeStepSize = -1.0;
-    double cellTimeStamp    = -1.0;
-     
-    {COMPUTE_TIME_STEPSIZE}
+    const double timeStamp    = fineGridCell{SOLVER_NAME}CellLabel.getTimeStamp();
+    const double timeStepSize = fineGridCell{SOLVER_NAME}CellLabel.getTimeStepSize();
     
-    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
-    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
+    assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStepSize, timeStamp );
+    assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStepSize, timeStamp );
 
-    repositories::{SOLVER_INSTANCE}.update(0.0, cellTimeStamp, marker.h()(0) );
+    repositories::{SOLVER_INSTANCE}.update(0.0, timeStamp, marker.h()(0) );
   }}
 """
 
@@ -156,7 +170,6 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
     self._solver.add_entries_to_text_replacement_dictionary(d)
     
     d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**d)
-    d[ "USE_SPLIT_LOOP" ]              = self._solver._use_split_loop
 
   
   def get_includes(self):
@@ -177,12 +190,12 @@ class SingleSweep( FV ):
     
     self._preprocess_reconstructed_patch 
       Has to hold any preprocessing, but it also has to set the doubles
-      cellTimeStepSize and cellTimeStamp to valid data.
+      timeStepSize and timeStamp to valid data.
       
     self._postprocess_updated_patch 
       You don't have to redefine this one, but if you want to alter the
       time step size, then this is the right place to do so. If you don't
-      alter cellTimeStepSize, the code will automatically continue with
+      alter timeStepSize, the code will automatically continue with
       the current one subject to a preprocessing in the next step.
 
   """
@@ -194,30 +207,6 @@ class SingleSweep( FV ):
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
-    self._refinement_criterion_implementation = PDETerms.Empty_Implementation
-    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
-
-    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-    self._use_split_loop                      = False
-    
-    self._compute_time_step_size              = "#error Not yet defined"
-    
-    self._preprocess_reconstructed_patch      = ""
-    self._postprocess_updated_patch           = ""
-    
-    self._source_term_call          = "#error Not yet defined"
-    self._Riemann_solver_call       = "#error Not yet defined"
-    self._abstract_solver_user_declarations        = ""
-    self._abstract_solver_user_definitions         = ""
-    self._solver_user_declarations                 = ""
-    self._solver_user_definitions                  = ""
-
-    self._start_time_step_implementation           = ""
-    self._finish_time_step_implementation          = ""
-    
-    self._constructor_implementation = ""
-    
     super(SingleSweep, self).__init__(name, patch_size, 1, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties)
 
     self._solver_template_file_class_name     = "SingleSweep"
@@ -311,23 +300,7 @@ class SingleSweep( FV ):
      d: Dictionary of string to string
         in/out argument
     """
-    d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
-    d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
-    d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
-    
-    d[ "COMPUTE_TIME_STEPSIZE" ]              = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
-
-    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "START_TIME_STEP_IMPLEMENTATION" ]     = jinja2.Template(self._start_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "FINISH_TIME_STEP_IMPLEMENTATION" ]    = jinja2.Template(self._finish_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    pass
 
 
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
