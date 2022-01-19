@@ -1034,7 +1034,7 @@ my new static function variants
 Very often, the standard flux and eigenvalue routines can invoke the
 static variants and you can thus eliminate code redundancies.
 For example, you might have the normal flux function and a static flux function
-with the additional \texttt{tarch::multicore::TargetDevice} parameter, but the 
+with the additional \texttt{Offloadable} parameter, but the 
 normal function just invokes the static cousin.
 
 In many of our codes, we take a function like
