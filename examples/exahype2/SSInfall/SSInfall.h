@@ -76,6 +76,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
     
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
     /**
      * This is the variation that's used on the GPU. It works with
      * a homogeneous source term, i.e. zeroes on the right-hand side.
@@ -89,6 +92,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double * __restrict__                        S,
       Offloadable
     );
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
     
     
@@ -115,6 +121,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
       
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
     static double maxEigenvalue(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -123,6 +132,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       int                                          normal,
       Offloadable
     );
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
     /**
      * The flux in the SSInfall does not depend on any variable of the
@@ -142,6 +154,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
     static void flux(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -151,6 +166,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double * __restrict__ F, // F[5]
       Offloadable
     );
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
     void add_mass(
@@ -164,7 +182,10 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       const int MassCal
     );  
 
-
+    /**
+     * Within the mass accumulation radius, I return false. Outside, I
+     * return true.
+     */
     virtual bool patchCanUseStatelessPDETerms(
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchH,

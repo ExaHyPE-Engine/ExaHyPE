@@ -1017,13 +1017,13 @@ Per function, keep the original one and add a second one which is
   generates.
   \item is embedded into 
 \begin{code}
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
 
 my new static function variants
 
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 \end{code}
