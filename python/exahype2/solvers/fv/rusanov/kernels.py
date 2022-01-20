@@ -400,7 +400,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
   return Template.render(**d)
 
 
-def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, stateless_pde_terms):
+def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
   Template = jinja2.Template( """
   public:
     {% if EIGENVALUES_IMPLEMENTATION=="<none>" %}
@@ -558,11 +558,11 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = stateless_pde_terms
+  d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state
   return Template.render(**d)
 
 
-def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, stateless_pde_terms):
+def create_abstract_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
   Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION!="<user-defined>" and EIGENVALUES_IMPLEMENTATION!="<none>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -726,11 +726,11 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = stateless_pde_terms  
+  d[ "STATELESS_PDE_TERMS"]                             = pde_terms_without_state  
   return Template.render(**d)
 
 
-def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, stateless_pde_terms):
+def create_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
   Template = jinja2.Template( """
   public:
     {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}
@@ -923,11 +923,11 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = stateless_pde_terms  
+  d[ "STATELESS_PDE_TERMS"]                             = pde_terms_without_state  
   return Template.render(**d)
 
 
-def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, stateless_pde_terms):
+def create_solver_definitions(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):
   Template = jinja2.Template( """
 {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}
 double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
@@ -1087,7 +1087,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
   d[ "EIGENVALUES_IMPLEMENTATION"]          = eigenvalues_implementation
   d[ "SOURCE_TERM_IMPLEMENTATION"]          = source_term_implementation
-  d[ "STATELESS_PDE_TERMS"]                             = stateless_pde_terms  
+  d[ "STATELESS_PDE_TERMS"]                             = pde_terms_without_state  
   return Template.render(**d)
 
 

@@ -19,32 +19,32 @@ modes = {
 }
 
 floatparams = {
-         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5, "DGP_beta":100, "DGP_zeta":1e6}
+         "G":1, "tilde_rho_ini":1, "r_ini":0.2, "delta_rho":0.05, "tilde_P_ini":1e-6, "gamma":5.0/3.0, "Omega_m":1, "delta_m":0.15, "r_point":0.05, "a_i":0.001, "v_scale":1.0, "domain_r":0.5, "DGP_beta":100, "DGP_zeta":1e5}
 
 intparams = {"swi":0, "ReSwi":0, "sample_number":10, "iseed":0, "ReSwi":0, "MassCal":0, "extrapolate_bc":0}
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='ExaHyPE 2 - SSInfall script')
-    parser.add_argument("-maxh",   "--max-h",       dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
-    parser.add_argument("-minh",   "--min-h",       dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume size, i.e. not to patch size" )
-    parser.add_argument("-ps",   "--patch-size",      dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
-    parser.add_argument("-plt",  "--plot-step-size",  dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
-    parser.add_argument("-m",    "--mode",            dest="mode",            default="release",  help="|".join(modes.keys()) )
-    parser.add_argument("-ext",  "--extension",       dest="extension",       choices=["cellcount","rhointer"],   default="cellcount",  help="Pick extension, i.e. the way to calculate the mass. Default is cell counting" )
-    parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
-    #parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
-    parser.add_argument("-bc", "--boundary-condition",  dest="boundary",  choices=["periodic","neumann","extrapolate", "hybrid"], default="neumann",  help="Pick the type of Boundary condtion" )
-    parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
-    parser.add_argument("-tn", "--tracer-name",       dest="tra_name",    type=str, default="de",  help="name of output tracer file (temporary)" )
-    parser.add_argument("-exn", "--exe-name",        dest="exe_name",    type=str, default="",  help="name of output executable file" )
-    parser.add_argument("-outdir", "--output-directory",        dest="path",    type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
-    parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
-    parser.add_argument("-iseed", "--initial-seed",    dest="seed", type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
-    parser.add_argument("-eigen", "--eigenvalue-control",    dest="eigen", choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
-    parser.add_argument("-cfl",  "--CFL-ratio",  dest="cfl",  type=float, default=0.1, help="Set CFL ratio" )
-    parser.add_argument("-um", "--universe-model",    dest="model", choices=["Ein-de", "LCDM","DGP" ], default="Ein-de",  help="specify the background universe model" )
-    parser.add_argument("-interp",   "--interpolation", dest="interpolation",     choices=["constant", "linear-slow", "linear-optimised", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
-    parser.add_argument("-restrict", "--restriction",   dest="restriction",       choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
+    parser.add_argument("-maxh",     "--max-h",               dest="max_h",           type=float, required="True",  help="upper limit for refinement. Refers to volume size, i.e. not to patch size" )
+    parser.add_argument("-minh",     "--min-h",               dest="min_h",           type=float, default=0,  help="lower limit for refinement (set to 0 to make it equal to max_h - default). Refers to volume size, i.e. not to patch size" )
+    parser.add_argument("-ps",       "--patch-size",          dest="patch_size",      type=int, default=6,    help="Patch size, i.e. number of volumes per patch per direction" )
+    parser.add_argument("-plt",      "--plot-step-size",      dest="plot_step_size",  type=float, default=0.04, help="Plot step size (0 to switch it off)" )
+    parser.add_argument("-m",        "--mode",                dest="mode",            default="release",  help="|".join(modes.keys()) )
+    parser.add_argument("-ext",      "--extension",           dest="extension",       choices=["cellcount","rhointer"],   default="cellcount",  help="Pick extension, i.e. the way to calculate the mass. Default is cell counting" )
+    parser.add_argument("-impl",     "--implementation",      dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave","fv-subcyling-adaptive-enclave","fv-local-enclave"], required="True",  help="Pick solver type" )
+    parser.add_argument("-bc",       "--boundary-condition",  dest="boundary",        choices=["periodic","neumann","extrapolate", "hybrid"], default="neumann",  help="Pick the type of Boundary condtion" )
+    parser.add_argument("-et",       "--end-time",            dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
+    parser.add_argument("-tn",       "--tracer-name",         dest="tra_name",        type=str, default="de",  help="name of output tracer file (temporary)" )
+    parser.add_argument("-exn",      "--exe-name",            dest="exe_name",        type=str, default="",  help="name of output executable file" )
+    parser.add_argument("-outdir",   "--output-directory",    dest="path",            type=str, default="./",  help="specify the output directory, include the patch file and tracer file" )
+    parser.add_argument("-tracer",   "--add-tracer",          dest="add_tracer",      type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly)" )
+    parser.add_argument("-iseed",    "--initial-seed",        dest="seed",            type=str, default="tophat",  help="specify the overdensity seeds. tophat/point" )
+    parser.add_argument("-eigen",    "--eigenvalue-control",  dest="eigen",           choices=["none", "exp"],  default="none",  help="Modified the formula of eigenvalue to suppress initial time-stepping size" )
+    parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
+    parser.add_argument("-um",       "--universe-model",      dest="model",           choices=["Ein-de", "LCDM","DGP" ], default="Ein-de",  help="specify the background universe model" )
+    parser.add_argument("-interp",   "--interpolation",       dest="interpolation",   choices=["constant", "linear-slow", "linear-optimised", "outflow" ], default="linear-slow",  help="interpolation scheme for AMR" )
+    parser.add_argument("-restrict", "--restriction",         dest="restriction",     choices=["average", "inject"], default="average",  help="restriction scheme for AMR" )
+    parser.add_argument("-gpu",      "--with-gpu",            dest="gpu",             action="store_true", default=False,  help="support offloading to GPU" )
 
     for k, v in floatparams.items(): parser.add_argument("--{}".format(k), dest="{}".format(k), type=float, default=v, help="default: %(default)s")
     for k, v in intparams.items():
@@ -79,12 +79,11 @@ if __name__ == "__main__":
 
         number_of_unknowns = sum(unknowns.values())
 
+        print( "\n\n\n\I'm stateless: {}\n\n\n".format(args.gpu) )
         self._my_user_includes = """
 #include "exahype2/PatchUtils.h"
 """
-        #if SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSize or \
-        #   SuperClass==exahype2.solvers.fv.GenericRusanovFixedTimeStepSizeWithEnclaves:
-        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep or SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
+        if SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStep:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
@@ -93,7 +92,17 @@ if __name__ == "__main__":
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_size=1e-2
           )
-        else:
+        elif SuperClass==exahype2.solvers.fv.rusanov.GlobalFixedTimeStepWithEnclaveTasking:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_size=1e-2,
+            pde_terms_without_state=args.gpu
+          )
+        elif SuperClass==exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep:
           SuperClass.__init__(
             self,
             name=name, patch_size=patch_size,
@@ -101,6 +110,16 @@ if __name__ == "__main__":
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
             time_step_relaxation=cfl
+          )
+        else:
+          SuperClass.__init__(
+            self,
+            name=name, patch_size=patch_size,
+            unknowns=number_of_unknowns,
+            auxiliary_variables=0,
+            min_volume_h=min_volume_h, max_volume_h=max_volume_h,
+            time_step_relaxation=cfl,
+            pde_terms_without_state=args.gpu
           )
 
         #self._solver_template_file_class_name = SuperClass.__name__
@@ -162,6 +181,7 @@ if __name__ == "__main__":
         self._auxiliary_variables = 5*3
 
         self._action_set_postprocess_solution = exahype2.solvers.fv.actionsets.VolumeWisePostprocessSolution(self)
+        self._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()"
         self._action_set_postprocess_solution.add_postprocessing_kernel( """
       double r_coor = (volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))*(volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))
                     + (volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))*(volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))
@@ -171,57 +191,55 @@ if __name__ == "__main__":
       repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,value[0],volumeH(0));  
 """     )
 
-#        self.set_preprocess_reconstructed_patch_kernel( """
-#        const int patchSize = """ + str( self._patch.dim[0] ) + """;
-#        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
-#        int aux_var=""" + str( self._auxiliary_variables ) + """;
-#        double domain_r=""" + str( self._domain_r ) + """;
-#        int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
-#        tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
-#        dfor(cell,patchSize) {
-#          tarch::la::Vector<Dimensions,double> coor;
-#          //tarch::la::Vector<Dimensions,double> vH={volumeH,volumeH,volumeH};
-#          for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
-#          
-#          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
-#          const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
-#          
-#          double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
-#          r_coor=pow(r_coor,0.5);
-#          repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH);  
-#
-#          double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
-#          double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
-#          double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
-#          double m3  =  reconstructedPatch[cellSerialised*(5+aux_var)+3];
-#          double e   =  reconstructedPatch[cellSerialised*(5+aux_var)+4];
-#          
-#          double p   =  (5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3)/rho);
-#          if (p<0) {
-#            reconstructedPatch[cellSerialised*(5+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
-#          }
-#          
-#          //int test=0;
-#          if (abs(coor(0))>0.8*domain_r or abs(coor(1))>0.8*domain_r or abs(coor(2))>0.8*domain_r){ 
-#					for (int d=0; d<3; d++) {
-#            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
-#            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
-#            leftCell(d)  -= 1;
-#            rightCell(d) += 1;
-#            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
-#            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
-#            for (int i=0; i<5; i++){
-#            	if (cell(d)==0) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[cellSerialised*(5+aux_var)+i] )/ volumeH;}
-#            	else if (cell(d)==(patchSize-1)) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[cellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ volumeH;}
-#            	else {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ 2.0 / volumeH;}
-#            }
-#          }
-#          } else{
-#            for (int d=0; d<15; d++) {reconstructedPatch[cellSerialised*(5+aux_var)+5+d]=0;}
-#          }
-#        }
-#        
-#    """)
+        self.set_preprocess_reconstructed_patch_kernel( """
+        const int patchSize = """ + str( self._patch.dim[0] ) + """;
+        double volumeH = ::exahype2::getVolumeLength(marker.h(),patchSize);
+        int aux_var=""" + str( self._auxiliary_variables ) + """;
+        double domain_r=""" + str( self._domain_r ) + """;
+        int sample=repositories::{{SOLVER_INSTANCE}}.sample_number;
+        tarch::la::Vector<Dimensions,double> center=repositories::{{SOLVER_INSTANCE}}.center;
+        dfor(cell,patchSize) {
+          tarch::la::Vector<Dimensions,double> coor;
+          for (int i=0;i<Dimensions;i++) coor(i) = marker.getOffset()(i)+ (cell(i)+0.5)*volumeH;
+          
+          tarch::la::Vector<Dimensions,int> currentCell = cell + tarch::la::Vector<Dimensions,int>(1);
+          const int cellSerialised  = peano4::utils::dLinearised(currentCell, patchSize + 2*1);
+          
+          //double r_coor=(coor(0)-center(0))*(coor(0)-center(0))+(coor(1)-center(1))*(coor(1)-center(1))+(coor(2)-center(2))*(coor(2)-center(2));
+          //r_coor=pow(r_coor,0.5);
+          //repositories::{{SOLVER_INSTANCE}}.add_mass(r_coor,reconstructedPatch[cellSerialised*(5+aux_var)+0],volumeH); 
+
+          double rho =  reconstructedPatch[cellSerialised*(5+aux_var)+0];      
+          double m1  =  reconstructedPatch[cellSerialised*(5+aux_var)+1];
+          double m2  =  reconstructedPatch[cellSerialised*(5+aux_var)+2];
+          double m3  =  reconstructedPatch[cellSerialised*(5+aux_var)+3];
+          double e   =  reconstructedPatch[cellSerialised*(5+aux_var)+4];
+          
+          double p   =  (5.0/3.0-1)*(e-0.5*(m1*m1+m2*m2+m3*m3)/rho);
+          if (p<0) {
+            reconstructedPatch[cellSerialised*(5+aux_var)+4]=0.5*(m1*m1+m2*m2+m3*m3)/rho+1e-14; 
+          }
+          
+          //int test=0;
+          if (abs(coor(0))>0.8*domain_r or abs(coor(1))>0.8*domain_r or abs(coor(2))>0.8*domain_r){ 
+          for (int d=0; d<3; d++) {
+            tarch::la::Vector<Dimensions,int> leftCell  = currentCell;
+            tarch::la::Vector<Dimensions,int> rightCell = currentCell;
+            leftCell(d)  -= 1;
+            rightCell(d) += 1;
+            const int leftCellSerialised  = peano4::utils::dLinearised(leftCell, patchSize + 2*1);
+            const int rightCellSerialised = peano4::utils::dLinearised(rightCell,patchSize + 2*1);
+            for (int i=0; i<5; i++){
+              if (cell(d)==0) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[cellSerialised*(5+aux_var)+i] )/ volumeH;}
+              else if (cell(d)==(patchSize-1)) {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[cellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ volumeH;}
+              else {reconstructedPatch[cellSerialised*(5+aux_var)+5+i*3+d] =( reconstructedPatch[rightCellSerialised*(5+aux_var)+i] - reconstructedPatch[leftCellSerialised*(5+aux_var)+i] )/ 2.0 / volumeH;}
+            }
+          }
+          } else{
+            for (int d=0; d<15; d++) {reconstructedPatch[cellSerialised*(5+aux_var)+5+d]=0;}
+          }
+        }        
+    """)
         self.create_data_structures()
         self.create_action_sets()
 

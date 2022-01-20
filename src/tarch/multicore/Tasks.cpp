@@ -202,27 +202,37 @@ bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAnd
     nonblockingTasks.pop_front();
   }
 
-  auto pp = nonblockingTasks.begin();
-  while (
+  if (
     myTask!=nullptr
     and
     myTask->canFuse()
-    and
-    pp!=nonblockingTasks.end()
-    and
-    (*pp)->getTaskType()==myTask->getTaskType()
-    and
-    tasksOfSameType.size()<maxTasksAndDevice.first-1
   ) {
-    tasksOfSameType.push_back( *pp );
-    pp = nonblockingTasks.erase(pp);
-  }
+    auto pp = nonblockingTasks.begin();
+    while (
+      pp!=nonblockingTasks.end()
+      and
+      (*pp)->getTaskType()==myTask->getTaskType()
+      and
+      (*pp)->getTaskType()==myTask->canFuse()
+      and
+      tasksOfSameType.size()<maxTasksAndDevice.first-1
+    ) {
+      tasksOfSameType.push_back( *pp );
+      pp = nonblockingTasks.erase(pp);
+    }
+    lock.free();
 
-  lock.free();
-  ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
+    ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
 
-  if (myTask!=nullptr) {
     native::processFusedTask(myTask, tasksOfSameType, maxTasksAndDevice.second);
+  }
+  else if (
+    myTask!=nullptr
+    and
+    not myTask->canFuse()
+  ) {
+    lock.free();
+    tarch::multicore::native::spawnTask(myTask);
   }
 
   return myTask==nullptr ? 0 : tasksOfSameType.size()+1;

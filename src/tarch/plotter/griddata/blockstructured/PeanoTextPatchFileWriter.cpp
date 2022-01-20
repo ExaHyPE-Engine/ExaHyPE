@@ -96,7 +96,7 @@ void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::addNew
 
 
 void tarch::plotter::griddata::blockstructured::PeanoTextPatchFileWriter::createEmptyIndexFile() {
-  logInfo( "createEmptyIndexFile()", "Create empty index file " << _indexFile );
+  logInfo( "createEmptyIndexFile()", "create empty index file " << _indexFile );
 
   std::ofstream     indexFileOut;
   indexFileOut.open( _indexFile.c_str(), std::ios::out );

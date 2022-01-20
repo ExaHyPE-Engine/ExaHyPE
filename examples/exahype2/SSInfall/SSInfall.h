@@ -53,8 +53,6 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double                                       t
     ) override;
     
-
-
     
     void initialCondition(
       double * __restrict__ Q,
@@ -64,8 +62,10 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
     
 
-
-    
+    /**
+     * There are two variants of the source term. This one is the modified
+     * gravity variant with an inhomogeneous source term.
+     */
     void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
@@ -74,7 +74,21 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double                                       dt,
       double * __restrict__ S
     ) override;
+
     
+    /**
+     * This is the variation that's used on the GPU. It works with
+     * a homogeneous source term, i.e. zeroes on the right-hand side.
+     */
+    static void sourceTerm(
+      const double * __restrict__                  Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double * __restrict__                        S,
+      Offloadable
+    );
 
     
     
@@ -89,7 +103,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     
 
 
-    
+    /**
+     * See flux() for a description why there are two maxEigenvalue() versions.
+     */
     double maxEigenvalue(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -99,10 +115,23 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
       
-    
+    static double maxEigenvalue(
+      const double * __restrict__ Q, // Q[5+0],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      Offloadable
+    );
 
-
-    
+    /**
+     * The flux in the SSInfall does not depend on any variable of the
+     * solver. Therefore, we wrote a second variant of the flux() function
+     * which is static. This version basically invokes its static counterpart
+     * subject to some additional assertions and logging.
+     *
+     * The static version fits to the GPU (see guidebook).
+     */
     void flux(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -111,6 +140,18 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       int                                          normal,
       double * __restrict__ F // F[5]
     ) override;
+
+
+    static void flux(
+      const double * __restrict__ Q, // Q[5+0],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      int                                          normal,
+      double * __restrict__ F, // F[5]
+      Offloadable
+    );
+
 
     void add_mass(
       const double r_coor,
@@ -123,7 +164,13 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       const int MassCal
     );  
 
-    
+
+    virtual bool patchCanUseStatelessPDETerms(
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchH,
+      double                                       t,
+      double                                       dt
+    ) const;
 };
 
 

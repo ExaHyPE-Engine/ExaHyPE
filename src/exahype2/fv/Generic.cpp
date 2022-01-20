@@ -329,7 +329,9 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
 ) {
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
+
   assertion4( dt>=0.0, patchCentre, patchSize, t, dt  );
+  assertion4( t<1e100, patchCentre, patchSize, t, dt  );
 
   tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
@@ -489,6 +491,8 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
   assertion( dt>=0.0 );
+  assertion4( t<1e100, patchCentre, patchSize, t, dt  );
+  assertion4(dt<1e100, patchCentre, patchSize, t, dt  );
 
   tarch::la::Vector<3, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
