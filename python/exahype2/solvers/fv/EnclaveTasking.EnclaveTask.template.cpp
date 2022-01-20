@@ -21,7 +21,7 @@
 
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include "tarch/multicore/SmartScheduler.h"
+#include "tarch/multicore/smartScheduling.h"
 
 #include "tarch/mpi/DoubleMessage.h"
 #include "tarch/mpi/IntegerMessage.h"
@@ -276,9 +276,9 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isSmartMPITask() const {
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocally() {
   run();
   if (_remoteTaskId != -1) {
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(_remoteTaskId,_numberOfResultValues,_outputValues);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(_remoteTaskId,_numberOfResultValues,_outputValues,_maxEigenvalue);
   } else {
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues);
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(getTaskId(),_numberOfResultValues,_outputValues,_maxEigenvalue);
   }
 }
 
@@ -356,7 +356,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
   _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
-  _functor(_inputValues,_outputValues,_marker,_t,_dt);
+  _functor(_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue);
   tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
 
   logInfo(
@@ -376,11 +376,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::forwardTaskOutputToRank(int rank
 
   ::tarch::mpi::DoubleMessage  tMessage(_t);
   ::tarch::mpi::DoubleMessage  dtMessage(_dt);
+  ::tarch::mpi::DoubleMessage  eValueMessage(_maxEigenvalue);
   ::tarch::mpi::IntegerMessage taskIdMessage(_remoteTaskId);
 
   ::peano4::datamanagement::CellMarker::send( _marker, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::send( tMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::send( dtMessage, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::send( eValueMessage, rank, tag, communicator );
   ::tarch::mpi::IntegerMessage::send( taskIdMessage, rank, tag, communicator );
 
   MPI_Request request;
@@ -409,6 +411,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
 
   ::tarch::mpi::DoubleMessage tMessage;
   ::tarch::mpi::DoubleMessage dtMessage;
+  ::tarch::mpi::DoubleMessage eValueMessage;
   ::tarch::mpi::IntegerMessage taskIdMessage;
   ::peano4::datamanagement::CellMarker markerMessage(dummyEvent);
   double* outputValues = tarch::allocateMemory( NumberOfResultValues, tarch::MemoryLocation::Heap );
@@ -416,6 +419,7 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
   ::peano4::datamanagement::CellMarker::receive( markerMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::receive( tMessage, rank, tag, communicator );
   ::tarch::mpi::DoubleMessage::receive( dtMessage, rank, tag, communicator );
+  ::tarch::mpi::DoubleMessage::receive( eValueMessage, rank, tag, communicator );
   ::tarch::mpi::IntegerMessage::receive( taskIdMessage, rank, tag, communicator );
 
   logInfo(
@@ -445,13 +449,14 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveOutcome(int ra
     );
     result->_remoteTaskId = taskIdMessage.getValue();
     result->_outputValues = outputValues;
+    result->_maxEigenvalue = eValueMessage.getValue();
     return result;
   }
   logInfo(
     "receiveOutcome(...)",
     "bookmark outcome of task " << taskIdMessage.getValue()
   );
-  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues);
+  ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskIdMessage.getValue(),NumberOfResultValues,outputValues,eValueMessage.getValue());
   return nullptr;
 }
 #endif
