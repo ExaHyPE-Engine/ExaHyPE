@@ -17,10 +17,12 @@
 #include <oneapi/tbb/global_control.h>
 #include <oneapi/tbb/info.h>
 
+#include <map>
+
 
 namespace {
   oneapi::tbb::global_control*  globalControl = nullptr;
-  std::vector< sycl::queue >    syclQueues;
+  std::map< int, sycl::queue >  syclQueues;
 }
 
 
@@ -28,8 +30,7 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 sycl::queue& tarch::multicore::getSYCLQueue( int number ) {
-  assertion1( number>=0, number );
-  assertion2( number<syclQueues.size(), number, syclQueues.size() );
+  assertion1( syclQueues.count(number)==1, number );
   return syclQueues[number];
 }
 
@@ -37,20 +38,18 @@ sycl::queue& tarch::multicore::getSYCLQueue( int number ) {
 tarch::multicore::Core::Core():
   _numberOfThreads( oneapi::tbb::info::default_concurrency() ),
   _numberOfDevices( 0 ) {
-  auto platforms = sycl::platform::get_platforms();
+  auto platforms     = sycl::platform::get_platforms();
   for (auto &platform : platforms) {
     auto devices = platform.get_devices();
 
-    #if PeanoDebug>0
-    std::cout << "found platform " << platform.get_info<sycl::info::platform::name>() << " with " << devices.size() << " device(s)" << std::endl;
-
     for (auto &device : devices ) {
       std::cout << "device #" << _numberOfDevices << ": " << device.get_info<sycl::info::device::name>() << std::endl;
-      syclQueues.push_back( sycl::queue(device) );
+      syclQueues.insert( std::pair< int, sycl::queue >( _numberOfDevices, sycl::queue(device) ) );
       _numberOfDevices++;
     }
-    #endif
   }
+  syclQueues.insert( std::pair< int, sycl::queue >( -1, sycl::device(sycl::cpu_selector()) ) );
+  std::cout << "default device (queue -1) maps onto CPU:" << syclQueues[-1].get_device().get_info<sycl::info::device::name>() << std::endl;
 }
 
 
