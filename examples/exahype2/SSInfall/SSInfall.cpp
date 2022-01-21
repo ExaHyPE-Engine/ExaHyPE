@@ -382,6 +382,9 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
 }
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   const double * __restrict__                  Q, // Q[5+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -397,6 +400,9 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   S[3] = 0.0;
   S[4] = 0.0;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 bool examples::exahype2::SSInfall::SSInfall::patchCanUseStatelessPDETerms(
@@ -528,6 +534,9 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 }
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   const double * __restrict__ Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -559,6 +568,9 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
 
   return result;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 void examples::exahype2::SSInfall::SSInfall::flux(
@@ -600,6 +612,9 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 }
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
 void examples::exahype2::SSInfall::SSInfall::flux(
   const double * __restrict__                  Q, // Q[5+0],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -626,6 +641,9 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   F[normal+1] += p;
   F[4]        += coeff*p;
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 void examples::exahype2::SSInfall::SSInfall::add_mass(
