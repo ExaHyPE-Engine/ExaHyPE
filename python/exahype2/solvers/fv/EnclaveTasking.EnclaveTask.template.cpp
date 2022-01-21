@@ -572,7 +572,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
 
   #if SYCLGPUOffloading>0
-  if (targetDevice>=0) {
+  if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
 
     #if Dimensions==2
