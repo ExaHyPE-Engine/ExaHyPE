@@ -31,13 +31,13 @@ class tarch::multicore::orchestration::GeneticOptimisation: public tarch::multic
   public:
     struct Key {
       int  numberOfTasksToHoldBack;
-      std::pair<int,int> tasksToFuseAndTargetDevice;
+      FuseInstruction fusionInstruction;
       bool fuseTasksImmediatelyWhenSpawned;
       bool processPendingTasksWhileWaiting;
 
       Key(
         int  numberOfTasksToHoldBack_,
-        std::pair<int,int> tasksToFuseAndTargetDevice_,
+        FuseInstruction fusionInstruction_,
         bool fuseTasksImmediatelyWhenSpawned_,
         bool processPendingTasksWhileWaiting_
       );
@@ -77,7 +77,7 @@ class tarch::multicore::orchestration::GeneticOptimisation: public tarch::multic
     void startBSPSection() override;
     void endBSPSection()   override;
     int getNumberOfTasksToHoldBack() override;
-    std::pair<int,int> getNumberOfTasksToFuseAndTargetDevice()     override;
+    FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
     bool fuseTasksImmediatelyWhenSpawned() override;
     bool processPendingTasksWhileWaitingInBSPSection() override;
 };

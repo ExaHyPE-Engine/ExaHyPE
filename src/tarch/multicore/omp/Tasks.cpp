@@ -126,7 +126,7 @@ namespace {
         #pragma omp atomic seq_cst
         pendingTasks--;
 
-        const std::pair<int,int> fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
+        const auto fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
 
         while (
           pendingTasks>0
@@ -141,7 +141,7 @@ namespace {
           int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 
           bool processedSomeTasks = false;
-          if (fusion.first>0 and numberOfPendingTasks>=fusion.first) {
+          if (numberOfPendingTasks>=fusion.minTasks) {
             processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
           }
           else {

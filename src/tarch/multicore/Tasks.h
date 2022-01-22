@@ -318,7 +318,7 @@ namespace tarch {
        *
        * The method locks and unlocks the queue. So don't lock it yourself.
        */
-      bool fusePendingTasks(std::pair<int,int> maxTasksAndDevice);
+      bool fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction);
     }
   }
 }
