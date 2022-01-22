@@ -190,8 +190,8 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
    *
    * @return Number of merged/processed tasks
    */
-bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAndDevice) {
-  logDebug( "fusePendingTasks(int)", "fuse up to " << nonblockingTasks.size() << " tasks (max=" << maxTasksAndDevice.first << ")" );
+bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction) {
+  logDebug( "fusePendingTasks(int)", "process " << nonblockingTasks.size() << " tasks subject to " << fuseInstruction.toString() );
 
   tarch::multicore::Task* myTask = nullptr;
   std::list< tarch::multicore::Task* > tasksOfSameType;
@@ -215,7 +215,7 @@ bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAnd
       and
       (*pp)->getTaskType()==myTask->canFuse()
       and
-      tasksOfSameType.size()<maxTasksAndDevice.first-1
+      tasksOfSameType.size()<fuseInstruction.maxTasks-1
     ) {
       tasksOfSameType.push_back( *pp );
       pp = nonblockingTasks.erase(pp);
@@ -224,7 +224,7 @@ bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAnd
 
     ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
 
-    native::processFusedTask(myTask, tasksOfSameType, maxTasksAndDevice.second);
+    native::processFusedTask(myTask, tasksOfSameType, fuseInstruction.device);
   }
   else if (
     myTask!=nullptr
@@ -427,9 +427,7 @@ void tarch::multicore::spawnTask(Task*  task) {
 
     auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
     if (
-      fusionCommand.first>0
-      and
-      nonblockingTasks.size()>=fusionCommand.first
+      nonblockingTasks.size()>=fusionCommand.minTasks
       and
       orchestrationStrategy->fuseTasksImmediatelyWhenSpawned()
     ) {
@@ -521,6 +519,12 @@ void tarch::multicore::spawnAndWait(
     orchestrationStrategy->startBSPSection();
     native::spawnAndWait(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
+
+    const auto fusionInstruction = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
+    bool successInFusing = true;
+    while ( successInFusing and nonblockingTasks.size()>=fusionInstruction.minTasks) {
+      successInFusing = tarch::multicore::internal::fusePendingTasks(fusionInstruction);
+    }
 
     if ( not nonblockingTasks.empty() ) {
       int numberOfTasksToProcessNow = std::max(0,static_cast<int>(nonblockingTasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());

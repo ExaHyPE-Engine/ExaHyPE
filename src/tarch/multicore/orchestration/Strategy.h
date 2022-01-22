@@ -14,6 +14,7 @@ namespace tarch {
 
 
 #include <utility>
+#include <string>
 
 
 /**
@@ -21,6 +22,20 @@ namespace tarch {
  */
 class tarch::multicore::orchestration::Strategy {
   public:
+    struct FuseInstruction {
+      int  device;
+      int  minTasks;
+      int  maxTasks;
+      FuseInstruction(int device_, int minTasks_, int maxTasks_):
+        device(device_),
+        minTasks(minTasks_),
+        maxTasks(maxTasks_) {}
+
+      std::string toString() const {
+        return "(#device=" + std::to_string(device) + ",min=" + std::to_string(minTasks) + ",max=" + std::to_string(maxTasks) + ")";
+      }
+    };
+
     virtual ~Strategy() = default;
 
     /**
@@ -64,10 +79,8 @@ class tarch::multicore::orchestration::Strategy {
      * You can also return tarch::multicore::Task::Host to indicate that
      * this is a fused task that shall run on the host rather than a
      * device.
-     *
-     * @return Tuple (No of tasks to put to device in one rush, device no)
      */
-    virtual std::pair<int,int> getNumberOfTasksToFuseAndTargetDevice() = 0;
+    virtual FuseInstruction getNumberOfTasksToFuseAndTargetDevice() = 0;
 
     /**
      * If you set this flag, tasks are immediately fused. You might want

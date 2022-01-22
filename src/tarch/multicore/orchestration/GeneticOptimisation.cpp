@@ -6,12 +6,12 @@
 
 tarch::multicore::orchestration::GeneticOptimisation::Key::Key(
   int  numberOfTasksToHoldBack_,
-  std::pair<int,int> tasksToFuseAndTargetDevice_,
+  FuseInstruction fusionInstruction_,
   bool fuseTasksImmediatelyWhenSpawned_,
   bool processPendingTasksWhileWaiting_
 ):
   numberOfTasksToHoldBack(numberOfTasksToHoldBack_),
-  tasksToFuseAndTargetDevice(tasksToFuseAndTargetDevice_),
+  fusionInstruction(fusionInstruction_),
   fuseTasksImmediatelyWhenSpawned(fuseTasksImmediatelyWhenSpawned_),
   processPendingTasksWhileWaiting(processPendingTasksWhileWaiting_) {
 }
@@ -19,18 +19,20 @@ tarch::multicore::orchestration::GeneticOptimisation::Key::Key(
 
 bool tarch::multicore::orchestration::GeneticOptimisation::Key::operator<(const Key& other) const {
   return numberOfTasksToHoldBack<other.numberOfTasksToHoldBack
-      or (numberOfTasksToHoldBack==other.numberOfTasksToHoldBack and tasksToFuseAndTargetDevice.first<other.tasksToFuseAndTargetDevice.first)
-      or (numberOfTasksToHoldBack==other.numberOfTasksToHoldBack and tasksToFuseAndTargetDevice.first==other.tasksToFuseAndTargetDevice.first and tasksToFuseAndTargetDevice.second<other.tasksToFuseAndTargetDevice.second)
-      or (numberOfTasksToHoldBack==other.numberOfTasksToHoldBack and tasksToFuseAndTargetDevice.first==other.tasksToFuseAndTargetDevice.first and tasksToFuseAndTargetDevice.second==other.tasksToFuseAndTargetDevice.second and fuseTasksImmediatelyWhenSpawned<other.fuseTasksImmediatelyWhenSpawned)
-      or (numberOfTasksToHoldBack==other.numberOfTasksToHoldBack and tasksToFuseAndTargetDevice.first==other.tasksToFuseAndTargetDevice.first and tasksToFuseAndTargetDevice.second==other.tasksToFuseAndTargetDevice.second and fuseTasksImmediatelyWhenSpawned==other.fuseTasksImmediatelyWhenSpawned and processPendingTasksWhileWaiting<other.processPendingTasksWhileWaiting);
+      or (numberOfTasksToHoldBack==other.numberOfTasksToHoldBack and fusionInstruction.device<other.fusionInstruction.device)
+      or (numberOfTasksToHoldBack==other.numberOfTasksToHoldBack and fusionInstruction.device==other.fusionInstruction.device and fusionInstruction.minTasks<other.fusionInstruction.minTasks)
+      or (numberOfTasksToHoldBack==other.numberOfTasksToHoldBack and fusionInstruction.device==other.fusionInstruction.device and fusionInstruction.minTasks==other.fusionInstruction.minTasks and fusionInstruction.maxTasks<other.fusionInstruction.maxTasks)
+      or (numberOfTasksToHoldBack==other.numberOfTasksToHoldBack and fusionInstruction.device==other.fusionInstruction.device and fusionInstruction.minTasks==other.fusionInstruction.minTasks and fusionInstruction.maxTasks==other.fusionInstruction.maxTasks and fuseTasksImmediatelyWhenSpawned<other.fuseTasksImmediatelyWhenSpawned)
+      or (numberOfTasksToHoldBack==other.numberOfTasksToHoldBack and fusionInstruction.device==other.fusionInstruction.device and fusionInstruction.minTasks==other.fusionInstruction.minTasks and fusionInstruction.maxTasks==other.fusionInstruction.maxTasks and fuseTasksImmediatelyWhenSpawned==other.fuseTasksImmediatelyWhenSpawned and processPendingTasksWhileWaiting<other.processPendingTasksWhileWaiting);
 }
 
 
 std::string tarch::multicore::orchestration::GeneticOptimisation::Key::toString() const {
   std::ostringstream msg;
   msg << "(hold-back=" << numberOfTasksToHoldBack
-      << ",fuse=" << tasksToFuseAndTargetDevice.first
-      << ",device=" << tasksToFuseAndTargetDevice.second
+      << ",device=" << fusionInstruction.device
+      << ",min-tasks=" << fusionInstruction.minTasks
+      << ",max-tasks=" << fusionInstruction.maxTasks
       << ",fuse-immediately=" << fuseTasksImmediatelyWhenSpawned
       << ",process-pending=" << processPendingTasksWhileWaiting
       << ")";
@@ -48,7 +50,7 @@ tarch::logging::Log tarch::multicore::orchestration::GeneticOptimisation::_log( 
 
 tarch::multicore::orchestration::GeneticOptimisation::GeneticOptimisation():
   _activeKey(
-    0, std::pair<int,int>(0,0), false, false
+    0, FuseInstruction(-1,std::numeric_limits<int>::max(),0), false, false
   ),
   _currentWatch( "tarch::multicore::orchestration::GeneticOptimisation", "GeneticOptimisation", false, false ),
   _lastDuration(-1.0),
@@ -62,14 +64,15 @@ tarch::multicore::orchestration::GeneticOptimisation::GeneticOptimisation():
 void tarch::multicore::orchestration::GeneticOptimisation::createInitialConfigurations() {
   const int MaxInitialRage = 16;
   for (int numberOfTasksToHoldBack = 0; numberOfTasksToHoldBack<=MaxInitialRage; numberOfTasksToHoldBack++)
-  for (int tasksToFuse = 0; tasksToFuse<=MaxInitialRage; tasksToFuse++)
+  for (int maxTasksToFuse = 0; maxTasksToFuse<=MaxInitialRage; maxTasksToFuse++)
+  for (int minTasksToFuse = 0; minTasksToFuse<=maxTasksToFuse; minTasksToFuse++)
   for (int targetDevice = -1; targetDevice<=tarch::multicore::Core::getInstance().getNumberOfGPUs(); targetDevice++)
   for (int fuseTasksImmediatelyWhenSpawned = 0; fuseTasksImmediatelyWhenSpawned<2; fuseTasksImmediatelyWhenSpawned++)
   for (int processPendingTasksWhileWaiting = 0; processPendingTasksWhileWaiting<2; processPendingTasksWhileWaiting++) {
     _configurationVariants.insert(std::pair<Key,Value>(
       Key(
         numberOfTasksToHoldBack,
-        std::pair<int,int>(tasksToFuse,targetDevice),
+        FuseInstruction(targetDevice,minTasksToFuse,maxTasksToFuse),
         fuseTasksImmediatelyWhenSpawned==0,
         processPendingTasksWhileWaiting==0
       ),
@@ -130,25 +133,25 @@ void tarch::multicore::orchestration::GeneticOptimisation::endBSPSection() {
 void tarch::multicore::orchestration::GeneticOptimisation::increaseProbabilityOfActiveConfiguration() {
   Key left(
     _activeKey.numberOfTasksToHoldBack-1,
-    std::pair<int,int>( _activeKey.tasksToFuseAndTargetDevice.first, _activeKey.tasksToFuseAndTargetDevice.second),
+    _activeKey.fusionInstruction,
     _activeKey.fuseTasksImmediatelyWhenSpawned,
     _activeKey.processPendingTasksWhileWaiting
   );
   Key right(
     _activeKey.numberOfTasksToHoldBack-1,
-    std::pair<int,int>( _activeKey.tasksToFuseAndTargetDevice.first, _activeKey.tasksToFuseAndTargetDevice.second),
+    _activeKey.fusionInstruction,
     _activeKey.fuseTasksImmediatelyWhenSpawned,
     _activeKey.processPendingTasksWhileWaiting
   );
   Key down(
     _activeKey.numberOfTasksToHoldBack,
-    std::pair<int,int>( _activeKey.tasksToFuseAndTargetDevice.first-1, _activeKey.tasksToFuseAndTargetDevice.second),
+    FuseInstruction( _activeKey.fusionInstruction.device, _activeKey.fusionInstruction.minTasks, _activeKey.fusionInstruction.maxTasks+1 ),
     _activeKey.fuseTasksImmediatelyWhenSpawned,
     _activeKey.processPendingTasksWhileWaiting
   );
   Key up(
     _activeKey.numberOfTasksToHoldBack,
-    std::pair<int,int>( _activeKey.tasksToFuseAndTargetDevice.first+1, _activeKey.tasksToFuseAndTargetDevice.second),
+    FuseInstruction( _activeKey.fusionInstruction.device, _activeKey.fusionInstruction.minTasks+1, _activeKey.fusionInstruction.maxTasks+1 ),
     _activeKey.fuseTasksImmediatelyWhenSpawned,
     _activeKey.processPendingTasksWhileWaiting
   );
@@ -215,10 +218,12 @@ int tarch::multicore::orchestration::GeneticOptimisation::getNumberOfTasksToHold
 }
 
 
-std::pair<int,int> tarch::multicore::orchestration::GeneticOptimisation::getNumberOfTasksToFuseAndTargetDevice() {
+tarch::multicore::orchestration::GeneticOptimisation::FuseInstruction tarch::multicore::orchestration::GeneticOptimisation::getNumberOfTasksToFuseAndTargetDevice() {
   _currentDevice++;
-  _currentDevice = _currentDevice % _activeKey.tasksToFuseAndTargetDevice.second;
-  return std::pair<int,int>(_activeKey.tasksToFuseAndTargetDevice.first,_currentDevice);
+  _currentDevice = _currentDevice % tarch::multicore::Core::getInstance().getNumberOfGPUs();
+  auto result = _activeKey.fusionInstruction;
+  result.device = _currentDevice;
+  return result;
 }
 
 
