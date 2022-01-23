@@ -70,20 +70,7 @@ class FV(object):
     iteration is not overwritten by some adjacent cell halfway through the 
     computation.
 
-    @todo TW write more
-    
-    :: Data flow
-    
-    @todo Rewrite
-    
-    The class has a number of guards. They are boolean expression which control 
-    whether data is stored and communicated. If you want to redefine these guards,
-    you have to redefine create_data_structures() and reset the guards after
-    you have called the superclass' operation. I recommend that you refrain from
-    defining completely new guards. Use the predefined guards instead and
-    refine them by adding more and and or clauses.
-  
-  
+ 
     :: Parallelisation
     
     I do equip both Q and NewQ with proper merge routines. However, all merge guards
@@ -352,7 +339,7 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     
      Recall in subclasses if you wanna change the number of unknowns
      or auxiliary variables. See class description's subsection on 
-     data flow.
+    control flow.
      
      :: Call order and ownership
      
@@ -794,7 +781,6 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
-    d["SOLVER_NUMBER"]                  = 22
 
     if self._patch_overlap_old.dim[0]/2!=1:
       print( "ERROR: Finite Volume solver currently supports only a halo size of 1")

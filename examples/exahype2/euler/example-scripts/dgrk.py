@@ -102,6 +102,7 @@ if args.type=="global-adaptive":
     solver_name,
     args.dg_order,
     args.rk_order,
+    exahype2.solvers.rkdg.Polynomials.Gauss_Legendre,
     unknowns, auxiliary_variables,
     min_h, max_h,
     0.5,

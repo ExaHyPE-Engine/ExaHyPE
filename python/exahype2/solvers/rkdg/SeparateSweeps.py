@@ -11,164 +11,6 @@ import jinja2
 from peano4.toolbox.blockstructured.ReconstructPatchAndApplyFunctor import ReconstructPatchAndApplyFunctor
 
 
-class UpdateCell(ReconstructPatchAndApplyFunctor):
-  SolveRiemannProblemsOverPatch = jinja2.Template( """
-    double cellTimeStepSize = -1.0;
-    double cellTimeStamp    = -1.0;
-     
-    {{PREPROCESS_RECONSTRUCTED_PATCH}}
-    {{COMPUTE_TIME_STEPSIZE}}
-    
-    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
-    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
-
-    const double usedTimeStepSize = cellTimeStepSize;
-
-    ::exahype2::fv::validatePatch(
-        reconstructedPatch,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        1, // halo
-        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // previous time step has to be valid
-  
-    ::exahype2::fv::copyPatch(
-        reconstructedPatch,
-        targetPatch,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        1 // halo size
-    );
-
-    {% if USE_SPLIT_LOOP %}
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop(
-    #endif
-    {% else %}
-    #if Dimensions==2
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d(
-    #else
-    ::exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d(
-    #endif
-    {% endif %}
-        [&](
-          const double * __restrict__                  QL,
-          const double * __restrict__                  QR,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       dx,
-          double                                       t,
-          double                                       dt,
-          int                                          normal,
-          double                                       FL[],
-          double                                       FR[]
-        ) -> void {
-          {{RIEMANN_SOLVER_CALL}}
-        },
-        [&](
-          const double * __restrict__                  Q,
-          const tarch::la::Vector<Dimensions,double>&  x,
-          double                                       dx,
-          double                                       t,
-          double                                       dt,
-          double * __restrict__                        S
-        ) -> void {
-          {{SOURCE_TERM_CALL}}
-        },
-        marker.x(),
-        marker.h(),
-        cellTimeStamp,
-        cellTimeStepSize,
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        reconstructedPatch,
-        targetPatch
-    );
-  
-    {{POSTPROCESS_UPDATED_PATCH}}
-    
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(cellTimeStamp + usedTimeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(cellTimeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-    
-    repositories::{{SOLVER_INSTANCE}}.update(cellTimeStepSize, cellTimeStamp + usedTimeStepSize, marker.h()(0) );
-
-    ::exahype2::fv::validatePatch(
-        targetPatch,
-        {{NUMBER_OF_UNKNOWNS}},
-        {{NUMBER_OF_AUXILIARY_VARIABLES}},
-        {{NUMBER_OF_VOLUMES_PER_AXIS}},
-        0, // halo
-        std::string(__FILE__) + "(" + std::to_string(__LINE__) + "): " + marker.toString()
-    ); // outcome has to be valid
-  """ )
-
-
-  def __init__(self, solver):
-    """
-    
-    
-    """
-    ReconstructPatchAndApplyFunctor.__init__(self,
-      patch = solver._patch,
-      patch_overlap = solver._patch_overlap_new,
-      functor_implementation = """
-#error please switch to your Riemann solver of choice
-""",
-      reconstructed_array_memory_location = solver._reconstructed_array_memory_location,
-      guard = "not marker.willBeRefined() and not marker.hasBeenRefined()",
-      add_assertions_to_halo_exchange = False
-    )
-    self._solver = solver
-    
-    self._Template_TouchCellFirstTime_Epilogue += """
-  else if (not marker.willBeRefined() and not marker.hasBeenRefined()) {{
-    double cellTimeStepSize = -1.0;
-    double cellTimeStamp    = -1.0;
-     
-    {COMPUTE_TIME_STEPSIZE}
-    
-    assertion2( tarch::la::greaterEquals( cellTimeStepSize, 0.0 ), cellTimeStepSize, cellTimeStamp );
-    assertion2( tarch::la::greaterEquals( cellTimeStamp, 0.0 ), cellTimeStepSize, cellTimeStamp );
-
-    repositories::{SOLVER_INSTANCE}.update(0.0, cellTimeStamp, marker.h()(0) );
-  }}
-"""
-
-    self._Template_TouchCellFirstTime_Preamble = """
-  fineGridCell""" + solver._name + """CellLabel.setHasUpdated(false);
-""" + self._Template_TouchCellFirstTime_Preamble
-
-
-  def _add_action_set_entries_to_dictionary(self,d):
-    """
-    
-    This is our plug-in point to alter the underlying dictionary
-    
-    """
-    super(UpdateCell,self)._add_action_set_entries_to_dictionary(d)
-    
-    self._solver._init_dictionary_with_default_parameters(d)
-    self._solver.add_entries_to_text_replacement_dictionary(d)
-    
-    d[ "CELL_FUNCTOR_IMPLEMENTATION" ] = self.SolveRiemannProblemsOverPatch.render(**d)
-    d[ "USE_SPLIT_LOOP" ]              = self._solver._use_split_loop
-
-  
-  def get_includes(self):
-    return """
-#include "exahype2/fv/BoundaryConditions.h"
-#include "exahype2/NonCriticalAssertions.h"
-""" + self._solver._get_default_includes() + self._solver.get_user_action_set_includes()
-
-
-
-
-
 class SeparateSweeps( RungeKuttaDG ):
   """
     Probably the simplest solver you could think off. 
@@ -188,7 +30,7 @@ class SeparateSweeps( RungeKuttaDG ):
   """
 
 
-  def __init__(self, name, dg_order, rk_order, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+  def __init__(self, name, dg_order, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
 
       Instantiate a generic FV scheme with an overlap of 1.
@@ -198,9 +40,6 @@ class SeparateSweeps( RungeKuttaDG ):
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
 
-    self._reconstructed_array_memory_location = peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.CallStack
-    self._use_split_loop                      = False
-    
     self._compute_time_step_size              = "#error Not yet defined"
     
     self._preprocess_reconstructed_patch      = ""
@@ -218,9 +57,9 @@ class SeparateSweeps( RungeKuttaDG ):
     
     self._constructor_implementation = ""
     
-    super(SeparateSweeps, self).__init__(name, dg_order, rk_order, 1, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
+    super(SeparateSweeps, self).__init__(name, dg_order, rk_order, 1, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
 
-    self._solver_template_file_class_name     = "SingleSweep"
+    self._solver_template_file_class_name     = "SeparateSweeps"
 
 
   def create_data_structures(self):
@@ -248,11 +87,11 @@ class SeparateSweeps( RungeKuttaDG ):
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
 
-    self._patch_overlap_new.generator.send_condition               = "true"
-    self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
+    #self._patch_overlap_new.generator.send_condition               = "true"
+    #self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
 
-    self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
-    self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
+    #self._patch_overlap_old.generator.send_condition               = initialisation_sweep_guard
+    #self._patch_overlap_old.generator.receive_and_merge_condition  = first_iteration_after_initialisation_guard
 
             
   def create_action_sets(self):
@@ -265,7 +104,7 @@ class SeparateSweeps( RungeKuttaDG ):
       
     """
     super(SeparateSweeps, self).create_action_sets()
-    self._action_set_update_cell = UpdateCell(self)
+    #self._action_set_update_cell = UpdateCell(self)
 
 
   def get_user_action_set_includes(self):
@@ -277,8 +116,6 @@ class SeparateSweeps( RungeKuttaDG ):
 
   def set_implementation(self,
     boundary_conditions, refinement_criterion, initial_conditions,
-    memory_location,
-    use_split_loop,
     additional_action_set_includes,
     additional_user_includes
   ):
@@ -292,13 +129,6 @@ class SeparateSweeps( RungeKuttaDG ):
     if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
     if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
     if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
-    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
-    if use_split_loop                  :  self._use_split_loop                            = use_split_loop
-
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
 
     self.user_action_set_includes += additional_action_set_includes
     self.user_solver_includes     += additional_user_includes

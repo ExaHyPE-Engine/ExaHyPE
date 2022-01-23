@@ -16,6 +16,9 @@ import math
 
 from abc import abstractmethod
 
+import exahype2
+import exahype2.solvers.rkdg.actionsets
+
 from enum import IntEnum
 
 from exahype2.solvers.rkdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
@@ -36,6 +39,7 @@ class Polynomials(IntEnum):
 
 class RungeKuttaDG(object):
   """ 
+  
     An abstract class for any RKDG solver of any order 
     
     This is the base class of all Runge-Kutta DG solvers. It defines what kind of action 
@@ -59,16 +63,43 @@ class RungeKuttaDG(object):
     :: Data structures
 
     Each cell hosts a DG polynomial of order _dg_order. Technically, we store this polynomial
-    in a regular array (blockstructured data) with (_dg_order+1)^d entries. 
+    in a regular array (blockstructured data) with (_dg_order+1)^d entries. On top of this 
+    current time step, we need the shots into the future. for RK(_rk_order), we need _rk_order
+    of these snapshots. Most DG variants will only need them temporarily, i.e. don't store 
+    them in-between two time steps. But this is up to the guards to decide.
+    
+    On the boundary, I store both the left and right solution projection as well as the left
+    and right flux projection subject to a multiplication with the face normal.  
+    
+    More details are provided in create_data_structures().
 
 
-
-
-
+    :: Control flow between this class and subclasses
+    
+    There are three key routines: the constructor, create_data_structures() and 
+    create_action_sets(). The constructor sets/memorises some solver variables (such as the 
+    name) and then invokes the other two routines.
+    
+    create_data_structures() establishes all the data structures tied to the 
+    grid entities. If you want to alter the configuration of data tied to grid
+    entities, you should redefine create_data_structures(). However, any 
+    subclass still should call Runge Kutta's create_data_structures() before that. 
+    This will ensure that the baseline configuration of all data is in place. 
+    After that, you can modify the properties.
+    
+    create_action_sets() establishes the action sets, i.e. activities that are to 
+    be triggered whenever you run a time step, you plot, you initialise the grid.
+    Same here: If you want to alter the configuration of the code, call 
+    create_action_sets() of the superclass first, before you do fancy stuff. This 
+    way, all the important action sets are in place.
+    
+    
+    number_of_derivatives_projected_onto_face
+    
   """
   
       
-  def __init__(self, name, dg_order, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
+  def __init__(self, name, dg_order, rk_order, polynomials, number_of_face_projections, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
     
   Constructor of the Runge-Kutta Discontinuous Galerkin solver
@@ -81,13 +112,19 @@ class RungeKuttaDG(object):
      name.
      
   dg_order: int
-     Order of the Discontinuous Galerkin approximation
+     Order of the Discontinuous Galerkin approximation.
      
   rk_order: int 
-     Runge-Kutta order, i.e. time stepping order
+     Runge-Kutta order, i.e. time stepping order.
      
   polynomials: Polynomials
-     Picks which kind of polynomial to use 
+     Picks which kind of polynomial to use.
+     
+  number_of_face_projections: Integer
+     How many projections do we need per face. If you are only
+     interested in the left and right solution along a face, pass in 1. If you
+     want to have the fluxes or derivatives as well, pass in 2. The latter version
+     is the type of data structure you need for Rusanov, e.g.
      
   unknowns: int
      Number of unknowns per Finite Volume voxel.
@@ -124,6 +161,7 @@ class RungeKuttaDG(object):
     self._dg_order          = dg_order
     self._rk_order          = rk_order
     self._polynomials       = polynomials
+    self._number_of_face_projections = number_of_face_projections
     
     self._unknowns             = unknowns
     self._auxiliary_variables  = auxiliary_variables
@@ -199,8 +237,8 @@ and recursively into three parts along each coordinate axis. This yields a space
 The spacetree will at least have """ + str(self.get_min_number_of_spacetree_levels(domain_size)) + """ levels.
 The spacetree will at most have """ + str(self.get_max_number_of_spacetree_levels(domain_size)) + """ levels.
 
-The spacetree will thus span at least """ + str(self.get_coarsest_number_of_cells(domain_size)) + """ cells per coordinate axis. This means a """ + str(self.get_coarsest_number_of_patches(domain_size)) + """^d grid of patches.
-The spacetree will thus span at most """ + str(self.get_finest_number_of_cells(domain_size)) + """ cells per coordinate axis. This means a """ + str(self.get_finest_number_of_patches(domain_size)) + """^d grid of patches.
+The spacetree will thus span at least """ + str(self.get_coarsest_number_of_cells(domain_size)) + """ cells per coordinate axis. 
+The spacetree will thus span at most """ + str(self.get_finest_number_of_cells(domain_size)) + """ cells per coordinate axis. 
 
 ExaHyPE 2 embeds polynomials of order """ + str(self._dg_order) + """ into the finest tree level.
 
@@ -237,79 +275,84 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      specialised) run through all create_data_structure() variants 
      within the inheritance tree.
      
-     :: Arguments
+     :: Solver fields built up
      
-     _patch: Patch (NxNxN)
-       Actual patch data. We use Finite Volumes, so this is 
-       always the current snapshot, i.e. the valid data at one point.
-    
-     _patch_overlap_old, _patch_overlap_new: Patch (2xNxN)
-       This is a copy/excerpt from the two adjacent finite volume
-       snapshots plus the old data as backup. If I want to implement
-       local timestepping, I don't have to backup the whole patch 
-       (see _patch), but I need a backup of the face data to be able
-       to interpolate in time.
-       
-     _patch_overlap_update: Patch (2xNxN)
-       This is hte new update. After the time step, I roll this 
-       information over into _patch_overlap_new, while I backup the 
-       previous _patch_overlap_new into _patch_overlap_old. If I 
-       worked with regular meshes only, I would not need this update
-       field and could work directly with _patch_overlap_new. However,
-       AMR requires me to accumulate data within new while I need 
-       the new and old data temporarily. Therefore, I employ this 
-       accumulation/roll-over data which usually is not stored
-       persistently.
+     _time_step: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
+       Actual polynomial data of the DG patch in the current time step. 
+
+     _projections: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1)xself._rk_order )
+       These are the Runge-Kutta extrapolations. It is important that the
+       rk_order is mixed into the first argument, as the triple is automatically
+       truncated to a tuple if the code is translated with 2d. 
+
+     _face_projection: Patch ( 2xnumber_of_face_projectionsx(_dg_order+1)x(_dg_order+1) )
+       This is the projection of the polynomial data of the current guess onto the 
+       faces. It is important that the first dimension is only a 2. This way, we can
+       (logically) handle the projected data again as an overlap of two patches with 
+       the width 1.  
+
+     _face_label: FaceLabel
+       See class description. General information such as "is boundary". 
+     
+     _cell_label: CellLabel
+       See class description. General information such as "is enclave". 
+     
+     Per default, I do always store the projections onto faces, and I
+     always keep the actual time step data and the cell projections. It is 
+     up to the subclasses to alter this storage behaviour.
+     
+     By default, I do not exchange any face data in-between two grid sweeps.
+     You will have to overwrite the behaviour in subclasses. Please note that 
+     a face is communicated between two tree/domain partitions if and only if
+     it is stored persistently and the exchange flag is set, too. 
+         
        
     """
-    self._patch                = peano4.datamodel.Patch( (self._patch_size,self._patch_size,self._patch_size), self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._patch_overlap_old    = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Old" )
-    self._patch_overlap_new    = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "New" )
-    self._patch_overlap_update = peano4.datamodel.Patch( (2,self._patch_size,self._patch_size),                self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Update" )
+    self._current_time_step            = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                   self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._approximation                = peano4.datamodel.Patch( (self._rk_order*(self._dg_order+1),self._dg_order+1,self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Projection" )
+    self._current_time_step_projection = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._approximation_projection     = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
     
-    self._patch_overlap_old.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_old)
-    self._patch_overlap_new.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._patch_overlap_new)
-    
-    self._patch_overlap_old.generator.includes     += """
-#include "peano4/utils/Loop.h"
-#include "repositories/SolverRepository.h" 
-"""
-    self._patch_overlap_new.generator.includes += """
+    self._current_time_step_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
+    self._current_time_step_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
    
-    self._patch.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._patch.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._approximation_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._approximation_projection)
+    self._approximation_projection.generator.includes     += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+
+    self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
     
-    self._patch_overlap_old.generator.send_condition               = "false"
-    self._patch_overlap_old.generator.receive_and_merge_condition  = "false"
+    self._approximation.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._approximation.generator.load_persistent_condition  = self._load_cell_data_default_guard()
 
-    self._patch_overlap_new.generator.send_condition               = "false"
-    self._patch_overlap_new.generator.receive_and_merge_condition  = "false"
+    self._current_time_step_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._current_time_step_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
 
-    self._patch_overlap_update.generator.send_condition               = "false"
-    self._patch_overlap_update.generator.receive_and_merge_condition  = "false"
+    self._current_time_step_projection.generator.send_condition               = "false"
+    self._current_time_step_projection.generator.receive_and_merge_condition  = "false"
 
-    self._patch_overlap_old.generator.store_persistent_condition   = self._store_face_data_default_guard()
-    self._patch_overlap_old.generator.load_persistent_condition    = self._load_face_data_default_guard()
+    self._approximation_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._approximation_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
 
-    self._patch_overlap_new.generator.store_persistent_condition   = self._store_face_data_default_guard()
-    self._patch_overlap_new.generator.load_persistent_condition    = self._load_face_data_default_guard()
+    self._approximation_projection.generator.send_condition               = "false"
+    self._approximation_projection.generator.receive_and_merge_condition  = "false"
 
-    self._patch_overlap_update.generator.store_persistent_condition   = "false"
-    self._patch_overlap_update.generator.load_persistent_condition    = "false"
-
-    self._patch.generator.includes  += """
+    self._current_time_step.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
-    self._patch_overlap_old.generator.includes  += """
+    self._approximation.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
-    self._patch_overlap_new.generator.includes  += """
+    self._current_time_step_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
-    self._patch_overlap_update.generator.includes  += """
+    self._approximation_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
 
@@ -326,8 +369,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      
      :: Call order and ownership
      
-     This operation can be called multiple times. However, only the very
-     last call matters. All previous calls are wiped out.
+     This operation can be called multiple times over the construction of
+     a solver. However, only the very last call matters. All previous calls 
+     are wiped out.
      
      If you have a hierarchy of solvers, every create_data_structure()
      should first(!) call its parent version. This way, you always ensure
@@ -337,22 +381,22 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      within the inheritance tree.
      
     """
-    self._action_set_initial_conditions                       = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
-    self._action_set_initial_conditions_for_grid_construction = exahype2.solvers.fv.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
-    self._action_set_AMR                                      = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
-    self._action_set_AMR_commit_without_further_analysis      = exahype2.solvers.fv.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
-    self._action_set_handle_boundary                          = exahype2.solvers.fv.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
-    self._action_set_project_patch_onto_faces                 = exahype2.solvers.fv.actionsets.ProjectPatchOntoFaces(self, self._store_cell_data_default_guard())
-    self._action_set_roll_over_update_of_faces                = exahype2.solvers.fv.actionsets.RollOverUpdatedFace(self, self._store_face_data_default_guard())
-    self._action_set_copy_new_faces_onto_old_faces            = peano4.toolbox.blockstructured.BackupPatchOverlap(self._patch_overlap_new, self._patch_overlap_old, False, self._store_face_data_default_guard(), self._get_default_includes())
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.fv.actionsets.DynamicAMR( solver=self )
+    #self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
+    #self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    #self._action_set_AMR                                                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
+    #self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
+    #self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
+    #self._action_set_project_current_time_step_onto_faces                             = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
+    #self._action_set_project_approximation_onto_faces                                 = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
+    #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR( solver=self )
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
     self._action_set_update_cell                                                      = None
+    self._action_set_solve_Riemann_problem                                            = None
 
-    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
+    #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement.switch_interpolation_scheme( "linear_precomputed_operators<" + str(self._patch_size) +">" )
 
 
   def _store_cell_data_default_guard(self):
@@ -403,11 +447,11 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
       print( "----------" )
       print( str(self._patch_overlap_new) )
     datamodel.add_cell(self._cell_label)
-    datamodel.add_cell(self._patch)
-    datamodel.add_face(self._patch_overlap_old)
-    datamodel.add_face(self._patch_overlap_new)
-    datamodel.add_face(self._patch_overlap_update)
+    datamodel.add_cell(self._current_time_step)
+    datamodel.add_cell(self._approximation)
     datamodel.add_face(self._face_label)
+    datamodel.add_face(self._current_time_step_projection)
+    datamodel.add_face(self._approximation_projection)
 
  
   def add_use_data_statements_to_Peano4_solver_step(self, step):
@@ -419,12 +463,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
       ExaHyPE's point of view, i.e. I use it for all grid sweep types. 
     
     """
-    step.use_cell(self._patch)
     step.use_cell(self._cell_label)
-    step.use_face(self._patch_overlap_old)
-    step.use_face(self._patch_overlap_new)
-    step.use_face(self._patch_overlap_update)
+    step.use_cell(self._current_time_step)
+    step.use_cell(self._approximation)
     step.use_face(self._face_label)
+    step.use_face(self._current_time_step_projection)
+    step.use_face(self._approximation_projection)
 
   
   def _get_default_includes(self):
@@ -440,7 +484,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
   def add_actions_to_init_grid(self, step):
     """
-    
+
+    @todo
+        
      The AMR stuff has to be the very first thing. Actually, the AMR routines' 
      interpolation doesn't play any role here. But the restriction indeed is
      very important, as we have to get the face data for BCs et al. The action 
@@ -462,30 +508,32 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      
     
     """
-    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-    step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
-    step.add_action_set( self._action_set_roll_over_update_of_faces )
-    step.add_action_set( self._action_set_initial_conditions ) 
-    step.add_action_set( self._action_set_project_patch_onto_faces )
-    step.add_action_set( self._action_set_update_face_label )
-    step.add_action_set( self._action_set_update_cell_label )
-    step.add_action_set( self._action_set_AMR )
+    #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    #step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
+    #step.add_action_set( self._action_set_roll_over_update_of_faces )
+    #step.add_action_set( self._action_set_initial_conditions ) 
+    #step.add_action_set( self._action_set_project_patch_onto_faces )
+    #step.add_action_set( self._action_set_update_face_label )
+    #step.add_action_set( self._action_set_update_cell_label )
+    #step.add_action_set( self._action_set_AMR )
     
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
     """
     
+    @todo: 
+    
      The boundary information is set only once. It is therefore important that
      we ues the face label and initialise it properly.
      
     """
-    step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
-    step.add_action_set( self._action_set_update_face_label )
-    step.add_action_set( self._action_set_update_cell_label )
-    if evaluate_refinement_criterion:
-      step.add_action_set( self._action_set_AMR )
-    else:
-      step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+    #step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
+    #step.add_action_set( self._action_set_update_face_label )
+    #step.add_action_set( self._action_set_update_cell_label )
+    #if evaluate_refinement_criterion:
+    #  step.add_action_set( self._action_set_AMR )
+    #else:
+    #  step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
           
   
   def set_plot_description(self,description):
@@ -502,6 +550,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
   def add_actions_to_plot_solution(self, step, output_path):
     """
     
+     @todo
+     
      Consult the discussion in add_actions_to_init_grid() around the order
      of the individual action sets.
      
@@ -522,16 +572,15 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
-    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-    step.add_action_set( self._action_set_roll_over_update_of_faces )
-    step.add_action_set( self._action_set_update_face_label )
-    step.add_action_set( self._action_set_update_cell_label )
-    step.add_action_set( self._action_set_project_patch_onto_faces )
-    #step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+    #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    #step.add_action_set( self._action_set_roll_over_update_of_faces )
+    #step.add_action_set( self._action_set_update_face_label )
+    #step.add_action_set( self._action_set_update_cell_label )
+    #step.add_action_set( self._action_set_project_patch_onto_faces )
 
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
-      patch=self._patch, 
+      patch=self._current_time_step, 
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
       guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
@@ -559,7 +608,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
  
   def add_actions_to_perform_time_step(self, step):
     """
-    
+ 
+    @todo: 
+       
     AMR
     
     It is important that we do the inter-grid transfer operators before we 
@@ -570,14 +621,14 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
 
-    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
-    step.add_action_set( self._action_set_roll_over_update_of_faces )
-    step.add_action_set( self._action_set_update_face_label )
-    step.add_action_set( self._action_set_update_cell_label )
-    step.add_action_set( self._action_set_handle_boundary )
-    step.add_action_set( self._action_set_update_cell )
-    step.add_action_set( self._action_set_project_patch_onto_faces )
-    step.add_action_set( self._action_set_AMR )
+    #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    #step.add_action_set( self._action_set_roll_over_update_of_faces )
+    #step.add_action_set( self._action_set_update_face_label )
+    #step.add_action_set( self._action_set_update_cell_label )
+    #step.add_action_set( self._action_set_handle_boundary )
+    #step.add_action_set( self._action_set_update_cell )
+    #step.add_action_set( self._action_set_project_patch_onto_faces )
+    #step.add_action_set( self._action_set_AMR )
 
 
   @abstractmethod
@@ -651,17 +702,15 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
 
     """
-    d["NUMBER_OF_VOLUMES_PER_AXIS"]     = self._patch.dim[0]
-    d["HALO_SIZE"]                      = int(self._patch_overlap_old.dim[0]/2)
+    d["DG_ORDER"]                       = self._dg_order
+    d["RK_ORDER"]                       = self._rk_order
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
-    d["SOLVER_NUMBER"]                  = 22
 
-    if self._patch_overlap_old.dim[0]/2!=1:
-      print( "ERROR: Finite Volume solver currently supports only a halo size of 1")
+    d["POLYNOMIALS"]                    = str(self._polynomials)
 
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
     d[ "ASSERTION_WITH_2_ARGUMENTS" ] = "nonCriticalAssertion2"
@@ -670,10 +719,10 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d[ "ASSERTION_WITH_5_ARGUMENTS" ] = "nonCriticalAssertion5"
     d[ "ASSERTION_WITH_6_ARGUMENTS" ] = "nonCriticalAssertion6"
 
-    if (self._min_volume_h > self._max_volume_h ):
+    if (self._min_cell_h > self._max_cell_h ):
       raise Exception( "min/max h are inconsistent" )
-    d[ "MAX_VOLUME_H"] = self._max_volume_h
-    d[ "MIN_VOLUME_H"] = self._min_volume_h
+    d[ "MAX_CELL_H"] = self._min_cell_h
+    d[ "MIN_CELL_H"] = self._min_cell_h
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
 
