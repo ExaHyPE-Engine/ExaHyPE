@@ -235,6 +235,16 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
      * This is a very conservative routine. It takes the difference
      * to centre, computes the L2 norm, adds a safety distance of
      * @f$ \sqrt{3} h/2 @f$ and return true if an only if this holds.
+     *
+     * If a patch is definitely outside of the largest radius, there's
+     * a couple of very natural consequences:
+     *
+     * - The interpolation is way easier than int eh general case: It
+     *   will always be the fallback/generic version only using the
+     *   static fields to interpolate.
+     * - A patch outside of the largest radius will definitely not
+     *   contribute at all to the global mass, density, ...
+     *
      */
     bool isOutsideOfLargestRadius(
       const tarch::la::Vector<Dimensions,double>&  patchCentre,

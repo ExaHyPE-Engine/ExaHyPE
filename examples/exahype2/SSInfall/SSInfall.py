@@ -181,7 +181,8 @@ if __name__ == "__main__":
         self._auxiliary_variables = 5*3
 
         self._action_set_postprocess_solution = exahype2.solvers.fv.actionsets.VolumeWisePostprocessSolution(self)
-        self._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep()"
+        # @todo To be discussed with Han
+        self._action_set_postprocess_solution.guard = "repositories::{{SOLVER_INSTANCE}}.isLastGridSweepOfTimeStep() and repositories::{{SOLVER_INSTANCE}}.isOutsideOfLargestRadius(marker.x(),marker.h())"
         self._action_set_postprocess_solution.add_postprocessing_kernel( """
       double r_coor = (volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))*(volumeX(0)-repositories::{{SOLVER_INSTANCE}}.center(0))
                     + (volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))*(volumeX(1)-repositories::{{SOLVER_INSTANCE}}.center(1))
