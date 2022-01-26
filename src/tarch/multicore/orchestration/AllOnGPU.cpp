@@ -1,4 +1,5 @@
 #include "AllOnGPU.h"
+#include <limits>
 
 
 tarch::multicore::orchestration::AllOnGPU::AllOnGPU(int device):
