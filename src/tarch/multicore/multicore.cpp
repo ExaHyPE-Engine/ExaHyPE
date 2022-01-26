@@ -6,9 +6,6 @@
 #include "topology/topologies.h"
 #endif
 
-#include "SmartScheduler.h"
-
-
 #ifndef SharedMemoryParallelisation
 
 double* tarch::allocateMemory(int size, MemoryLocation location) {
@@ -32,7 +29,6 @@ void tarch::multicore::initSmartMPI() {
   smartmpi::init( smartMPITopology );
 
   smartmpi::appendToSchedulerChain( "LocalScheduler,MigrationScheduler" );
-  smartmpi::appendToSchedulerChain( new SmartScheduler() );
 
   tarch::mpi::Rank::getInstance().setCommunicator( smartMPITopology->computeNodeOrSmartServerCommunicator );
   #endif

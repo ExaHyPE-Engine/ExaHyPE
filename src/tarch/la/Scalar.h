@@ -9,12 +9,18 @@
 
 namespace tarch {
   namespace la {
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
     constexpr double PI = 3.1415926535897932384626433832795028841972;
     constexpr double E = 2.7182818284590452353602874713526624977572;
     #ifdef MACHINE_PRECISION
     constexpr double NUMERICAL_ZERO_DIFFERENCE = MACHINE_PRECISION;
     #else
     constexpr double NUMERICAL_ZERO_DIFFERENCE = 1.0e-8;
+    #endif
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
     #endif
 
     /**

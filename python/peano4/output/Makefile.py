@@ -340,7 +340,8 @@ did search for a file """ + input_file )
         "CXX",
         "FC",
         "CXXFLAGS",
-        "LDFLAGS"
+        "LDFLAGS",
+        "LIBS"
       ]
             
       for line in input:

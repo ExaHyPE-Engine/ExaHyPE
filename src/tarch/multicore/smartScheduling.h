@@ -8,11 +8,8 @@
 
 #include "smartmpi.h"
 
-
 namespace tarch {
   namespace multicore {
-    class SmartScheduler;
-
     /**
      * Register a new smart task
      *
@@ -36,36 +33,5 @@ namespace tarch {
     int registerSmartMPITask(int taskTypeNumber, smartmpi::Receiver functor);
   }
 }
-
-
-#include "scheduler/Scheduler.h"
-
-
-/**
- * Smart Scheduler
- *
- * The smart scheduler is used if and only if you compile with SmartMPI.
- * It maps incoming messages onto Peano's native tasking interface chosen via
- * the configure script.
- */
-class tarch::multicore::SmartScheduler: public smartmpi::scheduler::Scheduler {
-  public:
-    SmartScheduler();
-
-    /**
-     * Take the task and map it into the native tasking backend of choice.
-     */
-    bool schedule(smartmpi::Task* task, const int rankToWhichTasksDataShouldReturn) override;
-
-    /**
-     * nop
-     */
-    void configure( const smartmpi::topology::Topology& topology ) override;
-
-    /**
-     * nop
-     */
-    void update( const smartmpi::GlobalStatistics& statistics ) override;
-};
 
 #endif

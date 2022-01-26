@@ -151,7 +151,7 @@ namespace {
   
           pendingTasks--;
 
-          const std::pair<int,int> fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
+          const auto fusion = strategy->getNumberOfTasksToFuseAndTargetDevice();
 
           while (
             pendingTasks>0
@@ -166,7 +166,7 @@ namespace {
             int numberOfPendingTasks = tarch::multicore::getNumberOfPendingTasks();
 
             bool processedSomeTasks = false;
-            if (fusion.first>0 and numberOfPendingTasks>=fusion.first) {
+            if (numberOfPendingTasks>=fusion.minTasks) {
               processedSomeTasks = tarch::multicore::internal::fusePendingTasks(fusion);
             }
             else {
@@ -260,13 +260,16 @@ int tarch::multicore::native::getNumberOfPendingTasks() {
  * but tasksOfSameType is not copied and not used within the task.
  */
 void tarch::multicore::native::processFusedTask(Task*  myTask, const std::list< tarch::multicore::Task* >& tasksOfSameType, int device) {
-   bool stillExecuteLocally = myTask->fuse(tasksOfSameType,device);
-   if (stillExecuteLocally) {
-     tarch::multicore::native::spawnTask(myTask);
-   }
-   else {
-     delete myTask;
-   }
+  std::list< tarch::multicore::Task* > copyOfTasksOfSameType = tasksOfSameType;
+  backgroundTaskGroup.run([&,myTask,copyOfTasksOfSameType]{
+    bool stillExecuteLocally = myTask->fuse(copyOfTasksOfSameType,device);
+     if (stillExecuteLocally) {
+       tarch::multicore::native::spawnTask(myTask);
+     }
+     else {
+       delete myTask;
+     }
+  });
 }
 
 

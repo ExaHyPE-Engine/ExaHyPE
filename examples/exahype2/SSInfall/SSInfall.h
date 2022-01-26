@@ -25,6 +25,42 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
 
     std::string plotGlobalMTot(bool plotCopy) const;
     std::string plotRs() const;
+
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    /**
+     * This is a straight 1:1 copy of r_s[sample_number-1]. We need a
+     * scalar here, as this one goes to to the GPU.
+     */
+    static double _rMax;
+
+    /**
+     * This is a straight 1:1 copy of rho_x[sample_number-1]. We need
+     * a scalar here, as this one goes to the GPU.
+     */
+    static double _rhoMax;
+
+    /**
+     * From m_tot_copy[sample_number-1].
+     */
+    static double _mTotMax;
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+
+    /**
+     * Returns m_in for time t=0.
+     */
+    double getInitialMIn( double r_coord ) const;
+
+    /**
+     * @return force density norm
+     * @param m_in Typically the result of getInitialMIn()
+     * @param t    Timestamp
+     * @param density Typically Q[0]
+     */
+    static double getForceDensityNorm(double r_coord, double m_in, double t, double density);
   public:
     //int sample_number=10;
     //double m_tot[10]={0,0,0,0,0,0,0,0,0,0};
@@ -76,6 +112,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
     
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
     /**
      * This is the variation that's used on the GPU. It works with
      * a homogeneous source term, i.e. zeroes on the right-hand side.
@@ -89,6 +128,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double * __restrict__                        S,
       Offloadable
     );
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
     
     
@@ -115,6 +157,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
       
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
     static double maxEigenvalue(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -123,6 +168,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       int                                          normal,
       Offloadable
     );
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
     /**
      * The flux in the SSInfall does not depend on any variable of the
@@ -142,6 +190,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
     ) override;
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
     static void flux(
       const double * __restrict__ Q, // Q[5+0],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -151,6 +202,9 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       double * __restrict__ F, // F[5]
       Offloadable
     );
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
     void add_mass(
@@ -164,12 +218,37 @@ class examples::exahype2::SSInfall::SSInfall: public AbstractSSInfall {
       const int MassCal
     );  
 
-
+    /**
+     * Within the mass accumulation radius, I return false. Outside, I
+     * return true. In the initial step, we do not allow anything to be
+     * offloaded to an accelerator.
+     */
     virtual bool patchCanUseStatelessPDETerms(
       const tarch::la::Vector<Dimensions,double>&  patchCentre,
       const tarch::la::Vector<Dimensions,double>&  patchH,
       double                                       t,
       double                                       dt
+    ) const;
+
+
+    /**
+     * This is a very conservative routine. It takes the difference
+     * to centre, computes the L2 norm, adds a safety distance of
+     * @f$ \sqrt{3} h/2 @f$ and return true if an only if this holds.
+     *
+     * If a patch is definitely outside of the largest radius, there's
+     * a couple of very natural consequences:
+     *
+     * - The interpolation is way easier than int eh general case: It
+     *   will always be the fallback/generic version only using the
+     *   static fields to interpolate.
+     * - A patch outside of the largest radius will definitely not
+     *   contribute at all to the global mass, density, ...
+     *
+     */
+    bool isOutsideOfLargestRadius(
+      const tarch::la::Vector<Dimensions,double>&  patchCentre,
+      const tarch::la::Vector<Dimensions,double>&  patchH
     ) const;
 };
 

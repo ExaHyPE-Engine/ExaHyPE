@@ -1017,13 +1017,13 @@ Per function, keep the original one and add a second one which is
   generates.
   \item is embedded into 
 \begin{code}
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
 
 my new static function variants
 
-#if defined(GPUOffloading)
+#if defined(OpenMPGPUOffloading)
 #pragma omp end declare target
 #endif
 \end{code}
@@ -1034,7 +1034,7 @@ my new static function variants
 Very often, the standard flux and eigenvalue routines can invoke the
 static variants and you can thus eliminate code redundancies.
 For example, you might have the normal flux function and a static flux function
-with the additional \texttt{tarch::multicore::TargetDevice} parameter, but the 
+with the additional \texttt{Offloadable} parameter, but the 
 normal function just invokes the static cousin.
 
 In many of our codes, we take a function like
