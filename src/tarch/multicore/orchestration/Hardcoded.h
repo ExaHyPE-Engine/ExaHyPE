@@ -25,7 +25,8 @@ namespace tarch {
 class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orchestration::Strategy {
   private:
     int  _numberOfTasksToHoldBack;
-    int  _tasksToFuse;
+    int  _minTasksToFuse;
+    int  _maxTasksToFuse;
     int  _deviceForFusedTasks;
     bool _fuseTasksImmediatelyWhenSpawned;
     bool _processPendingTasksWhileWaiting;
@@ -67,7 +68,8 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
 
     Hardcoded(
       int  numberOfTasksToHoldBack,
-      int  tasksToFuse,
+      int  minTasksToFuse,
+      int  maxTasksToFuse,
       int  deviceForFusedTasks,
       bool fuseTasksImmediatelyWhenSpawned,
       bool processPendingTasksWhileWaiting
@@ -77,7 +79,7 @@ class tarch::multicore::orchestration::Hardcoded: public tarch::multicore::orche
     void startBSPSection() override;
     void endBSPSection()   override;
     int getNumberOfTasksToHoldBack() override;
-    std::pair<int,int> getNumberOfTasksToFuseAndTargetDevice()     override;
+    FuseInstruction getNumberOfTasksToFuseAndTargetDevice()     override;
     bool fuseTasksImmediatelyWhenSpawned() override;
     bool processPendingTasksWhileWaitingInBSPSection() override;
 };

@@ -2,6 +2,7 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 #include "../PatchUtils.h"
 
@@ -10,19 +11,21 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 // This is a fantastic hack
-#if defined(OpenMPGPUOffloading)
+#if !defined(__INTEL_LLVM_COMPILER) && defined(OpenMPGPUOffloading)
 namespace std
 {
 #pragma omp declare target
-void __throw_bad_function_call() {};
+//void __throw_bad_function_call() {};
+[[noreturn]] void __throw_bad_function_call() { __builtin_trap(); };
 #pragma omp  end declare target
 }
 #endif
 
 // This is another hack
-#if defined(OpenMPGPUOffloading)
+#if !defined(__INTEL_LLVM_COMPILER) && defined(OpenMPGPUOffloading)
 #pragma omp declare target
-void abort() {};
+//void abort() {};
+[[noreturn]] void abort() noexcept(true) { __builtin_trap(); };
 #pragma omp  end declare target
 #endif
 

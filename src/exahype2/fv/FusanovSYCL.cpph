@@ -1,0 +1,370 @@
+#include <numeric>
+#include <CL/sycl.hpp>
+#include "Rusanov.h"
+using namespace sycl;
+
+
+// 2D helper function to get local indices a,b from linear sycl range index.
+// This is essentially the inverse of collapse(2)
+std::tuple<int, int> exahype2::fv::glob2loc(const int g, const int J)
+{
+    return std::make_tuple(g/J,g%J);
+}
+
+// 3D helper function to get local indices a,b,c from linear sycl range index.
+// This is essentially the inverse of collapse(3)
+std::tuple<int, int, int> exahype2::fv::glob2loc(const int g, const int J, const int K)
+{
+    int i = g/J/K;
+    return std::make_tuple(i, (g-i*J*K)/J, g%K);
+}
+
+
+
+template<
+    int numVPAIP,
+    int unknowns,
+    int aux,
+    bool skipFluxEvaluation,
+    bool skipNCPEvaluation,
+    bool skipSourceTerm,
+    typename SOLVER
+    >
+void exahype2::fv::core_3D(const size_t pidx, const patchData3d pD, const int destPatchSize,
+        double const * QL, double const * QR, double * Qout, 
+        const int offset, const int normal, const int sign,
+        tarch::la::Vector<3, double> volumeX,
+        tarch::la::Vector<3, double> volumeH
+        )
+{
+        const double                    t =   pD.t[pidx];
+        const double                   dt =  pD.dt[pidx];
+        const double                   x0 =  pD.x0[pidx];
+        const double                   h0 =  pD.h0[pidx];
+        const double                   x1 =  pD.x1[pidx];
+        const double                   h1 =  pD.h1[pidx];
+        const double                   x2 =  pD.x2[pidx];
+        const double                   h2 =  pD.h2[pidx];
+
+        double fluxFL[unknowns], fluxFR[unknowns], fluxNCP[unknowns];
+            
+        if (not skipFluxEvaluation)
+        {
+            SOLVER::flux( QL, volumeX, dx, t, normal, fluxFL , SOLVER::Offloadable::Yes);
+            SOLVER::flux( QR, volumeX, dx, t, normal, fluxFR , SOLVER::Offloadable::Yes);
+        }
+
+        if (not skipNCPEvaluation)
+        {
+          double Qaverage[unknowns+auxiliaryVariables];
+          double deltaQ[unknowns+auxiliaryVariables];
+
+          for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++)
+          {
+            Qaverage[unknown] = *(QL+unknown)*0.5 + *(QR +unknown)*0.5;
+            deltaQ[unknown]   = *(QR+unknown) - *(QL+unknown);
+          }
+          SOLVER::nonconservativeProduct(Qaverage,deltaQ,x,dx,t,normal,fluxNCP, SOLVER::Offloadable::Yes);
+        }
+        
+        double lambdaMaxL = SOLVER::maxEigenvalue(QL,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+        double lambdaMaxR = SOLVER::maxEigenvalue(QR,volumeX,dx,t,normal, SOLVER::Offloadable::Yes);
+        double lambdaMax  = std::max( lambdaMaxL, lambdaMaxR );
+        
+        for (int unknown = 0; unknown < unknowns; unknown++)
+        {
+            double fl = - 0.5 * lambdaMax * (QR[unknown] - QL[unknown]);
+            if (not skipFluxEvaluation)  fl +=       0.5 * fluxFL[unknown] + 0.5 * fluxFR[unknown];
+            if (not skipNCPEvaluation)   fl += sign* 0.5 * fluxNCP[unknown];
+
+            int index = pidx*destPatchSize + offset * (unknowns + aux) + unknown;
+            Qout[index]  -= sign*dt / volumeH[0] * fl;
+        }
+}
+
+// SYCL implementation of 3D Fusanov.
+// Note: the we launch a total of 8 kernels per function call.
+// The first kernel is the equivalent of copyPatch, followed by the source term.
+// The other six are calling core_3D with different
+// offsets, normals.
+// All arrays and patchdata are malloc_shared.
+// TODO future hardware will be able to execute kernel launches in parallel,
+// it might be worthwhile investigating in how far we can benefit from events
+// and depend_on.
+
+template<
+    size_t NPT,
+    int numVPAIP,
+    int unknowns,
+    int aux,
+    bool skipFluxEvaluation,
+    bool skipNCPEvaluation,
+    bool skipSourceTerm,
+    typename SOLVER
+    >
+void exahype2::fv::Fusanov_3D(queue& Q, const patchData3d pD, const int haloSize, const int sourcePatchSize, const int destPatchSize, double * Qin, double * Qout, const size_t GX, const size_t GY, const size_t GZ)
+{
+  // copyPatch
+  Q.submit([&](handler &cgh)
+  {
+    cgh.parallel_for(nd_range<3>{{NPT, (unknowns+aux)*numVPAIP, numVPAIP*numVPAIP}, {1, 20, 1}}, [=](nd_item<3> item)
+    {
+        const int sourceSerialised = (numVPAIP + haloSize * 2) * (numVPAIP + haloSize * 2) + numVPAIP + haloSize * 2 + haloSize;
+        const int helper = numVPAIP+haloSize*2;
+        const size_t pidx=item.get_global_id(0);
+        auto [z,y] = glob2loc(item.get_global_id(2), numVPAIP);
+        auto [x,i] = glob2loc(item.get_global_id(1), unknowns+aux);
+        double *reconstructedPatch = Qin + sourcePatchSize*pidx;
+        const int mydest = z*numVPAIP*numVPAIP + y*numVPAIP + x;
+        const int mysrc  = z*helper*helper + y*helper + x + sourceSerialised;
+        Qout[pidx*destPatchSize + mydest * (unknowns + aux) + i] = reconstructedPatch[mysrc * (unknowns + aux) + i];
+    });
+  }).wait();
+
+  if (not skipSourceTerm)
+  {
+    Q.submit([&](handler &cgh)
+    {
+      cgh.parallel_for(nd_range<3>{{NPT, numVPAIP, numVPAIP*numVPAIP}, {GX, GY, GZ}}, [=](nd_item<3> item)
+      {
+        const size_t pidx=item.get_global_id(0);;
+        double *reconstructedPatch = Qin + sourcePatchSize*pidx;
+        const size_t x=item.get_global_id(1);
+        auto [y,z] = glob2loc(item.get_global_id(2), numVPAIP);
+    
+        const double                    t =   pD.t[pidx];
+        const double                   dt =  pD.dt[pidx];
+        const double                   x0 =  pD.x0[pidx];
+        const double                   h0 =  pD.h0[pidx];
+        const double                   x1 =  pD.x1[pidx];
+        const double                   h1 =  pD.h1[pidx];
+        const double                   x2 =  pD.x2[pidx];
+        const double                   h2 =  pD.h2[pidx];
+   
+        tarch::la::Vector<3, double> volumeX = {x0-0.5*h0, x1-0.5*h1, x2-0.5*h2};
+        volumeX (0) += (x + 0.5) * h0/numVPAIP;
+        volumeX (1) += (y + 0.5) * h1/numVPAIP;
+        volumeX (2) += (z + 0.5) * h2/numVPAIP;
+    
+        const int voxelInPreImage  = x+1    + (y+1) * (numVPAIP+2)  + (z+1) * (numVPAIP+2) * (numVPAIP+2);
+        const int voxelInImage     = x          + y * numVPAIP          + z * numVPAIP * numVPAIP;
+    
+        double sourceTermContributions[unknowns];
+        SOLVER::sourceTerm( reconstructedPatch + voxelInPreImage * (unknowns + auxiliaryVariables), volumeX, h0/numVPAIP, t, dt, sourceTermContributions, SOLVER::Offloadable::Yes);
+    
+        for (int unknown = 0; unknown < unknowns; unknown++)
+        {
+          Qout[pidx*destPatchSize + voxelInImage * (unknowns + auxiliaryVariables) + unknown] += dt * sourceTermContributions[unknown];
+        }
+      }
+    }).wait();
+  } 
+  
+  // Normal 0, x>0
+  // NOTE xoffset=1
+  Q.submit([&](handler &cgh)
+  {
+    cgh.parallel_for(nd_range<3>{{NPT, numVPAIP, numVPAIP*numVPAIP}, {GX, GY, GZ}}, [=](nd_item<3> item)
+    {
+        const size_t pidx=item.get_global_id(0);//[0];
+        double *reconstructedPatch = Qin + sourcePatchSize*pidx;
+        const size_t x=item.get_global_id(1)+1;
+        auto [y,z] = glob2loc(item.get_global_id(2), numVPAIP);
+        
+        int leftVoxelInPreimage  = x      + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        int rightVoxelInPreimage = x + 1  + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        double const * QL = reconstructedPatch + leftVoxelInPreimage  * (unknowns + aux);
+        double const * QR = reconstructedPatch + rightVoxelInPreimage * (unknowns + aux);
+        const int leftVoxelInImage     = x - 1  +       y * numVPAIP       +       z * numVPAIP * numVPAIP;
+
+        const double                   x0 =  pD.x0[pidx];
+        const double                   h0 =  pD.h0[pidx];
+        const double                   x1 =  pD.x1[pidx];
+        const double                   h1 =  pD.h1[pidx];
+        const double                   x2 =  pD.x2[pidx];
+        const double                   h2 =  pD.h2[pidx];
+        const double sf = 1./numVPAIP;
+        tarch::la::Vector<3, double> volumeX = {x0-0.5*h0, x1-0.5*h1, x2-0.5*h2};
+        tarch::la::Vector<3, double> volumeH = {sf*h0,sf*h1,sf*h2};
+        volumeX (0) += x * volumeH (0);
+        volumeX (1) += (y + 0.5) * volumeH (1);
+        volumeX (2) += (z + 0.5) * volumeH (2);
+
+        core_3D<numVPAIP,unknowns,aux,skipFluxEvaluation,skipNCPEvaluation,skipSourceTerm,SOLVER>(pidx,pD,destPatchSize,QL, QR, Qout, leftVoxelInImage, 0, 1, volumeX, volumeH);
+      });
+  }).wait();
+  
+  // Normal 0 x<numVPAIP
+  // NOTE xoffset=0
+  Q.submit([&](handler &cgh)
+  {
+    cgh.parallel_for(nd_range<3>{{NPT, numVPAIP, numVPAIP*numVPAIP}, {GX, GY, GZ}}, [=](nd_item<3> item)
+    {
+        const size_t pidx=item.get_global_id(0);//[0];
+        double *reconstructedPatch = Qin + sourcePatchSize*pidx;
+        const size_t x=item.get_global_id(1)+0;
+        auto [y,z] = glob2loc(item.get_global_id(2), numVPAIP);
+        
+        int leftVoxelInPreimage  = x      + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        int rightVoxelInPreimage = x + 1  + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        double * QL = reconstructedPatch + leftVoxelInPreimage  * (unknowns + aux);
+        double * QR = reconstructedPatch + rightVoxelInPreimage * (unknowns + aux);
+        const int rightVoxelInImage(x      +       y * numVPAIP       +       z * numVPAIP * numVPAIP);
+        
+        const double                   x0 =  pD.x0[pidx];
+        const double                   h0 =  pD.h0[pidx];
+        const double                   x1 =  pD.x1[pidx];
+        const double                   h1 =  pD.h1[pidx];
+        const double                   x2 =  pD.x2[pidx];
+        const double                   h2 =  pD.h2[pidx];
+        const double sf = 1./numVPAIP;
+        tarch::la::Vector<3, double> volumeX = {x0-0.5*h0, x1-0.5*h1, x2-0.5*h2};
+        tarch::la::Vector<3, double> volumeH = {sf*h0,sf*h1,sf*h2};
+        volumeX (0) += x * volumeH (0);
+        volumeX (1) += (y + 0.5) * volumeH (1);
+        volumeX (2) += (z + 0.5) * volumeH (2);
+
+        core_3D<numVPAIP,unknowns,aux,skipFluxEvaluation,skipNCPEvaluation,skipSourceTerm,SOLVER>(pidx,pD,destPatchSize,QL, QR, Qout, rightVoxelInImage, 0, -1, volumeX, volumeH);
+    });
+  }).wait();
+  
+  // Normal 1, y>0
+  // NOTE yoffset=1
+  Q.submit([&](handler &cgh)
+  {
+    cgh.parallel_for(nd_range<3>{{NPT, numVPAIP, numVPAIP*numVPAIP}, {GX, GY, GZ}}, [=](nd_item<3> item)
+    {
+        const size_t pidx=item.get_global_id(0);
+        double *reconstructedPatch = Qin + sourcePatchSize*pidx;
+        const size_t x=item.get_global_id(1);
+        auto [y,z] = glob2loc(item.get_global_id(2), numVPAIP);
+        y+=1;
+        
+        const int lowerVoxelInPreimage = x + 1 +       y * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        auto QL = reconstructedPatch + lowerVoxelInPreimage * (unknowns + aux);
+        auto QR = reconstructedPatch + upperVoxelInPreimage * (unknowns + aux);
+        const int lowerVoxelInImage    = x     + (y - 1) * numVPAIP       + z * numVPAIP * numVPAIP;
+        
+        const double                   x0 =  pD.x0[pidx];
+        const double                   h0 =  pD.h0[pidx];
+        const double                   x1 =  pD.x1[pidx];
+        const double                   h1 =  pD.h1[pidx];
+        const double                   x2 =  pD.x2[pidx];
+        const double                   h2 =  pD.h2[pidx];
+        const double sf = 1./numVPAIP;
+        tarch::la::Vector<3, double> volumeX = {x0-0.5*h0, x1-0.5*h1, x2-0.5*h2};
+        tarch::la::Vector<3, double> volumeH = {sf*h0,sf*h1,sf*h2};
+        volumeX(0) += (x + 0.5) * volumeH(0);
+        volumeX(1) +=         y * volumeH(1);
+        volumeX(2) += (z + 0.5) * volumeH(2);
+
+        core_3D<numVPAIP,unknowns,aux,skipFluxEvaluation,skipNCPEvaluation,skipSourceTerm,SOLVER>(pidx,pD,destPatchSize,QL, QR, Qout, lowerVoxelInImage, 1, 1, volumeX, volumeH);
+     });
+  }).wait();
+  
+  // Normal 1 y<numVPAIP
+  // NOTE yoffset=0
+  Q.submit([&](handler &cgh)
+  {
+    cgh.parallel_for(nd_range<3>{{NPT, numVPAIP, numVPAIP*numVPAIP}, {GX, GY, GZ}}, [=](nd_item<3> item)
+    {
+        const size_t pidx=item.get_global_id(0);;
+        double *reconstructedPatch = Qin + sourcePatchSize*pidx;
+        const size_t x=item.get_global_id(1)+0;
+        auto [y,z] = glob2loc(item.get_global_id(2), numVPAIP);
+        
+        const int lowerVoxelInPreimage = x + 1 +       y * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        auto QL = reconstructedPatch + lowerVoxelInPreimage * (unknowns + aux);
+        auto QR = reconstructedPatch + upperVoxelInPreimage * (unknowns + aux);
+        const int upperVoxelInImage = x + y * numVPAIP                    + z * numVPAIP * numVPAIP;
+
+        const double                   x0 =  pD.x0[pidx];
+        const double                   h0 =  pD.h0[pidx];
+        const double                   x1 =  pD.x1[pidx];
+        const double                   h1 =  pD.h1[pidx];
+        const double                   x2 =  pD.x2[pidx];
+        const double                   h2 =  pD.h2[pidx];
+        const double sf = 1./numVPAIP;
+        tarch::la::Vector<3, double> volumeX = {x0-0.5*h0, x1-0.5*h1, x2-0.5*h2};
+        tarch::la::Vector<3, double> volumeH = {sf*h0,sf*h1,sf*h2};
+        volumeX(0) += (x + 0.5) * volumeH(0);
+        volumeX(1) +=         y * volumeH(1);
+        volumeX(2) += (z + 0.5) * volumeH(2);
+
+        core_3D<numVPAIP,unknowns,aux,skipFluxEvaluation,skipNCPEvaluation,skipSourceTerm,SOLVER>(pidx,pD,destPatchSize,QL, QR, Qout, upperVoxelInImage, 1, -1, volumeX, volumeH);
+      
+     });
+  }).wait();
+ 
+  // Normal 2, z>0
+  // NOTE zoffset=1
+  Q.submit([&](handler &cgh)
+  {
+    cgh.parallel_for(nd_range<3>{{NPT, numVPAIP, numVPAIP*numVPAIP}, {GX, GY, GZ}}, [=](nd_item<3> item)
+    {
+        const size_t pidx=item.get_global_id(0);
+        double *reconstructedPatch = Qin + sourcePatchSize*pidx;
+        const size_t x=item.get_global_id(1);
+        auto [y,z] = glob2loc(item.get_global_id(2), numVPAIP);
+        z+=1;
+        
+        const int lowerVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) +       z * (2 + numVPAIP) * (2 + numVPAIP);
+        const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        auto QL = reconstructedPatch + lowerVoxelInPreimage * (unknowns + aux);
+        auto QR = reconstructedPatch + upperVoxelInPreimage * (unknowns + aux);
+        const int lowerVoxelInImage = x + y * numVPAIP                    + (z - 1) * numVPAIP * numVPAIP;
+        const int upperVoxelInImage = x + y * numVPAIP                    +       z * numVPAIP * numVPAIP;
+
+        const double                   x0 =  pD.x0[pidx];
+        const double                   h0 =  pD.h0[pidx];
+        const double                   x1 =  pD.x1[pidx];
+        const double                   h1 =  pD.h1[pidx];
+        const double                   x2 =  pD.x2[pidx];
+        const double                   h2 =  pD.h2[pidx];
+        const double sf = 1./numVPAIP;
+        tarch::la::Vector<3, double> volumeX = {x0-0.5*h0, x1-0.5*h1, x2-0.5*h2};
+        tarch::la::Vector<3, double> volumeH = {sf*h0,sf*h1,sf*h2};
+        volumeX(0) += (x + 0.5) * volumeH(0);
+        volumeX(1) += (y + 0.5) * volumeH(1);
+        volumeX(2) +=         z * volumeH(2);
+
+        core_3D<numVPAIP,unknowns,aux,skipFluxEvaluation,skipNCPEvaluation,skipSourceTerm,SOLVER>(pidx,pD,destPatchSize,QL, QR, Qout, lowerVoxelInImage, 2, 1, volumeX, volumeH);
+      });
+  }).wait();
+  
+  // Normal 2 z<numVPAIP
+  // NOTE zoffset=0
+  Q.submit([&](handler &cgh)
+  {
+    cgh.parallel_for(nd_range<3>{{NPT, numVPAIP, numVPAIP*numVPAIP}, {GX, GY, GZ}}, [=](nd_item<3> item)
+    {
+        const size_t pidx=item.get_global_id(0);;
+        double *reconstructedPatch = Qin + sourcePatchSize*pidx;
+        const size_t x=item.get_global_id(1)+0;
+        auto [y,z] = glob2loc(item.get_global_id(2), numVPAIP);
+
+        const int lowerVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) +       z * (2 + numVPAIP) * (2 + numVPAIP);
+        const int upperVoxelInPreimage = x + 1 + (y + 1) * (2 + numVPAIP) + (z + 1) * (2 + numVPAIP) * (2 + numVPAIP);
+        auto QL = reconstructedPatch + lowerVoxelInPreimage * (unknowns + aux);
+        auto QR = reconstructedPatch + upperVoxelInPreimage * (unknowns + aux);
+        const int upperVoxelInImage = x + y * numVPAIP                    +       z * numVPAIP * numVPAIP;
+        
+        const double                   x0 =  pD.x0[pidx];
+        const double                   h0 =  pD.h0[pidx];
+        const double                   x1 =  pD.x1[pidx];
+        const double                   h1 =  pD.h1[pidx];
+        const double                   x2 =  pD.x2[pidx];
+        const double                   h2 =  pD.h2[pidx];
+        const double sf = 1./numVPAIP;
+        tarch::la::Vector<3, double> volumeX = {x0-0.5*h0, x1-0.5*h1, x2-0.5*h2};
+        tarch::la::Vector<3, double> volumeH = {sf*h0,sf*h1,sf*h2};
+        volumeX(0) += (x + 0.5) * volumeH(0);
+        volumeX(1) += (y + 0.5) * volumeH(1);
+        volumeX(2) +=         z * volumeH(2);
+      
+        core_3D<numVPAIP,unknowns,aux,skipFluxEvaluation,skipNCPEvaluation,skipSourceTerm,SOLVER>(pidx,pD,destPatchSize,QL, QR, Qout, upperVoxelInImage, 2, -1, volumeX, volumeH);
+    });
+  }).wait();
+}
