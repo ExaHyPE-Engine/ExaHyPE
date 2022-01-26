@@ -518,13 +518,13 @@ if __name__ == "__main__":
         particle_set=tracer_particles,
         solver=my_solver,
         filename=path1+"zz"+args.tra_name,
-        number_of_entries_between_two_db_flushes=1000,
+        number_of_entries_between_two_db_flushes=2000,
         output_precision=10,
         position_delta_between_two_snapsots=1e16,
         data_delta_between_two_snapsots=1e16,
-        time_delta_between_two_snapsots=0.05,
+        time_delta_between_two_snapsots=0.02,
         use_relative_deltas=False,
-        initial_record_time=args.end_time*2.0/3.0
+        initial_record_time=55#args.end_time*2.0/3.0
         #last_record_time=1e3
       ))
       #data_delta_between_two_snapsots,position_delta_between_two_snapsots,filename,          
