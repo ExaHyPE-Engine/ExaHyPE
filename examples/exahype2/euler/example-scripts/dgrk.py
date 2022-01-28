@@ -94,7 +94,7 @@ min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels)
 auxiliary_variables = 0
 
 thesolver = None
-solver_name = "Euler"
+solver_name = "EulerDGRK"
 if args.gpu:
   solver_name += "OnGPU" 
 if args.type=="global-adaptive":

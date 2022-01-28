@@ -93,9 +93,6 @@ class RungeKuttaDG(object):
     create_action_sets() of the superclass first, before you do fancy stuff. This 
     way, all the important action sets are in place.
     
-    
-    number_of_derivatives_projected_onto_face
-    
   """
   
       
@@ -155,6 +152,19 @@ class RungeKuttaDG(object):
      This can be used by subclasses to pick which template is to be used to create
      the abstract solver and the actual solver blueprint.
   
+    
+  _number_of_derivatives_projected_onto_face: Int
+    
+  _solver_states: [String] 
+      Returns a list of strings of the individual solver states. The code will
+      automatically supplement this list with the following states:
+
+        GridConstruction,
+        GridInitialisation,
+        Plotting,
+        PlottingAfterGridInitialisation
+      
+      So you may implicitly assume that these guys do exist always.
     """
     self._name              = name
     
@@ -180,7 +190,7 @@ class RungeKuttaDG(object):
     self._solver_template_file_class_name = None
 
     self.plot_description = ""
-        
+    
     self.create_data_structures()
     self.create_action_sets()
 
@@ -704,6 +714,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     """
     d["DG_ORDER"]                       = self._dg_order
     d["RK_ORDER"]                       = self._rk_order
+    d["RK_STEPS"]                       = self.number_of_Runge_Kutta_steps()
+
     d["SOLVER_INSTANCE"]                = self.get_name_of_global_instance()
     d["SOLVER_NAME"]                    = self._name
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
@@ -721,7 +733,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     if (self._min_cell_h > self._max_cell_h ):
       raise Exception( "min/max h are inconsistent" )
-    d[ "MAX_CELL_H"] = self._min_cell_h
+    d[ "MAX_CELL_H"] = self._max_cell_h
     d[ "MIN_CELL_H"] = self._min_cell_h
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
@@ -763,3 +775,13 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._auxiliary_variables = value
     self.create_data_structures()
     self.create_action_sets()
+
+
+  def number_of_Runge_Kutta_steps(self):
+    if self._rk_order<1:
+      raise Exception( "RK order has to be 1 at least" )
+    if self._rk_order>4:
+      raise Exception( "max RK order supported is 4" )
+    return self._rk_order
+    
+

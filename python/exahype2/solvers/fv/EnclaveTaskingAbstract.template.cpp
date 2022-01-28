@@ -254,6 +254,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
     double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
     double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
 
+    int newPatchUpdates = _patchUpdates;
+
     tarch::mpi::Rank::getInstance().allReduce(
       &newMinTimeStamp,
       &_minTimeStampThisTimeStep,
@@ -321,6 +323,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
+
+    tarch::mpi::Rank::getInstance().allReduce(
+        &newPatchUpdates,
+        &_patchUpdates,
+        1, MPI_INT,
+        MPI_SUM,
+        [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+        );
     #endif
 
     if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {

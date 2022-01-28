@@ -4,6 +4,14 @@ from exahype2.solvers.rkdg.SeparateSweeps import SeparateSweeps
 from exahype2.solvers.rkdg.PDETerms       import PDETerms
 
 
+#from .kernels import create_source_term_kernel_for_Rusanov
+#from .kernels import create_compute_Riemann_kernel_for_Rusanov
+from .kernels import create_abstract_solver_declarations
+from .kernels import create_abstract_solver_definitions
+from .kernels import create_solver_declarations
+from .kernels import create_solver_definitions
+
+
 class GlobalAdaptiveTimeStep( SeparateSweeps ):
   def __init__(self, 
     name, 
@@ -13,6 +21,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     unknowns, auxiliary_variables, min_cell_h, max_cell_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
     ncp=None, 
+    point_source=None,
     eigenvalues=PDETerms.User_Defined_Implementation, 
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False
@@ -25,6 +34,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     self._ncp_implementation                  = PDETerms.None_Implementation
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
+    self._point_source_implementation         = PDETerms.None_Implementation
     
     self._compute_time_step_size              = ""
     self._compute_new_time_step_size          = ""
@@ -35,14 +45,14 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
       eigenvalues=eigenvalues, 
       boundary_conditions=boundary_conditions, 
       refinement_criterion=refinement_criterion, 
-      initial_conditions=initial_conditions, 
+      initial_conditions=initial_conditions,
+      point_source=point_source,
       source_term=source_term )
-
 
   def set_implementation(self,
     flux=None,ncp=None,
     eigenvalues=None,
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,point_source=None,
     additional_action_set_includes = "",
     additional_user_includes       = ""
   ):
@@ -62,16 +72,17 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     if ncp                  is not None:  self._ncp_implementation                        = ncp
     if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
     if source_term          is not None:  self._source_term_implementation                = source_term
+    if point_source         is not None:  self._point_source_implementation               = source_term
 
     #self._source_term_call    = create_source_term_kernel_for_Rusanov(self._source_term_implementation)
     #self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
 
-    #self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_source_implementation, False)
     #self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_adaptive_time_stepping()
-    #self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._abstract_solver_user_definitions   = create_abstract_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_source_implementation, False)
     #self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_adaptive_time_stepping()
-    #self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
-    #self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, False)
+    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_source_implementation, False)
+    self._solver_user_definitions            = create_solver_definitions( self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._point_source_implementation, False)
     #self._constructor_implementation         = create_constructor_implementation_for_adaptive_time_stepping()
     
     #self._start_time_step_implementation          = create_start_time_step_implementation_for_adaptive_time_stepping(False)

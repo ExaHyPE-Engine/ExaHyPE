@@ -36,6 +36,8 @@ class SeparateSweeps( RungeKuttaDG ):
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
+    super(SeparateSweeps, self).__init__(name, dg_order, rk_order, 1, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
+    
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
@@ -56,10 +58,12 @@ class SeparateSweeps( RungeKuttaDG ):
     self._finish_time_step_implementation          = ""
     
     self._constructor_implementation = ""
-    
-    super(SeparateSweeps, self).__init__(name, dg_order, rk_order, 1, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
 
     self._solver_template_file_class_name     = "SeparateSweeps"
+    
+    self.create_action_sets()
+    self.create_data_structures()
+    
 
 
   def create_data_structures(self):

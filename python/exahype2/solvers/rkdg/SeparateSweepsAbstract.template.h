@@ -61,23 +61,23 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     enum class SolverState {
       GridConstruction,
       GridInitialisation,
-      TimeStep,
-      Plotting,
-      TimeStepAfterGridInitialisation,
-      PlottingAfterGridInitialisation
+      Plotting {% for item in range(RK_STEPS) -%}
+      ,
+      ProjectOnFacesAndComputeVolumeIntegralOfStep{{item}},
+      SolveRiemannProblemAndAddToVolumeIntegralOfStep{{item}}
+      {%- endfor %}
     };
 
     static std::string toString(SolverState);
 
-    static constexpr int  NumberOfFiniteVolumesPerAxisPerPatch = {{NUMBER_OF_VOLUMES_PER_AXIS}};
+    static constexpr int  DGOrder = {{DG_ORDER}};
 
     /**
      * Maximum mesh size that this solver wants/is allowed to support. Peano 4
      * has to ensure that none of its ExaHyPE 2 solvers has to work on a mesh
      * which is coarser than its MaxH value.
      */
-    static constexpr double MaxAdmissiblePatchH  = {{MAX_VOLUME_H}} * NumberOfFiniteVolumesPerAxisPerPatch;
-    static constexpr double MaxAdmissibleVolumeH = {{MAX_VOLUME_H}};
+    static constexpr double MaxAdmissibleCellH  = {{MAX_CELL_H}};
 
     /**
      * Minimum mesh size that this solver wants to support. Peano 4 tries
@@ -87,8 +87,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * work with fine mesh resolutions even though they have specified a
      * coarser MinH.
      */
-    static constexpr double MinAdmissiblePatchH  = {{MIN_VOLUME_H}} * NumberOfFiniteVolumesPerAxisPerPatch;
-    static constexpr double MinAdmissibleVolumeH = {{MIN_VOLUME_H}};
+    static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
 
 
     {{CLASSNAME}}();
@@ -109,17 +108,16 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * @param t Time
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double * __restrict__                  dQdx, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 
     virtual void initialCondition(
       double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const tarch::la::Vector<Dimensions,double>&  x,
       bool                                         gridIsConstructred
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
@@ -131,10 +129,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * to the Riemann solver, i.e. flux and eigenvalues.
      */
     virtual void boundaryConditions(
-      const double * __restrict__ Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      double * __restrict__ Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      const double * __restrict__                  Qinside, // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      double * __restrict__                        Qoutside, // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal
     ) {% if BOUNDARY_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
@@ -216,13 +213,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @return Actually observed sizes, not the admissible quantities
      */
-    double getMaxPatchSize(bool currentTimeStep = true) const;
-    double getMinPatchSize(bool currentTimeStep = true) const;
-    double getMaxVolumeSize(bool currentTimeStep = true) const;
-    double getMinVolumeSize(bool currentTimeStep = true) const;
+    double getMaxCellSize(bool currentTimeStep = true) const;
+    double getMinCellSize(bool currentTimeStep = true) const;
 
     /**
-     * Within the FV context, mesh is an alias for patch.
+     * Within the DG context, mesh is an alias for cell.
      */
     double getMaxMeshSize() const override final;
     double getMinMeshSize() const override final;
@@ -233,33 +228,24 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      *
      * @see setTimeStepSize(double)
      */
-    void update(double timeStepSize, double timeStamp, double patchSize);
+    void update(double timeStepSize, double timeStamp, double cellSize);
 
     SolverState  getSolverState() const;
-
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static constexpr int    NumberOfUnknowns           = {{NUMBER_OF_UNKNOWNS}};
-    static constexpr int    NumberOfAuxiliaryVariables = {{NUMBER_OF_AUXILIARY_VARIABLES}};
-    {{SOLVER_CONSTANTS}}
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
 
     /**
      * Always holds.
      */
     bool mayPlot() const override;
 
-  protected:
-    static tarch::logging::Log  _log;
-
     /**
      * This predicate is always true, as we work with a single-sweep
      * implementation, i.e. each grid sweep realises one time step.
      */
     bool isFirstGridSweepOfTimeStep() const;
+    bool isLastGridSweepOfTimeStep() const;
+
+  protected:
+    static tarch::logging::Log  _log;
 
     SolverState  _solverState;
 
@@ -272,11 +258,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double     _localMinTimeStampThisTimeStep;
     double     _localMaxTimeStampThisTimeStep;
 
-    double     _minVolumeH;
-    double     _maxVolumeH;
+    double     _minCellH;
+    double     _maxCellH;
 
-    double     _minVolumeHThisTimeStep;
-    double     _maxVolumeHThisTimeStep;
+    double     _minCellHThisTimeStep;
+    double     _maxCellHThisTimeStep;
 
     double     _minTimeStepSize;
     double     _maxTimeStepSize;
@@ -284,7 +270,7 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
     double     _minTimeStepSizeThisTimeStep;
     double     _maxTimeStepSizeThisTimeStep;
 
-    int        _patchUpdates;
+    int        _cellUpdates;
 
     tarch::multicore::BooleanSemaphore  _semaphore;
 
