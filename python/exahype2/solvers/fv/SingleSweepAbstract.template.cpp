@@ -187,8 +187,6 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  {{START_TIME_STEP_IMPLEMENTATION}}
-
   if ( _solverState==SolverState::GridInitialisation ) {
     _solverState     = SolverState::TimeStepAfterGridInitialisation;
   }
@@ -196,6 +194,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
     assertion( _solverState!=SolverState::GridConstruction );
     _solverState     = SolverState::TimeStep;
   }
+
+  {{START_TIME_STEP_IMPLEMENTATION}}
 
   _minTimeStamp = _minTimeStampThisTimeStep;
   _maxTimeStamp = _maxTimeStampThisTimeStep;

@@ -319,9 +319,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
        
     """
     self._current_time_step            = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                   self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._approximation                = peano4.datamodel.Patch( (self._rk_order*(self._dg_order+1),self._dg_order+1,self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Projection" )
+    self._approximation                = peano4.datamodel.Patch( (self._rk_order*(self._dg_order+1),self._dg_order+1,self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Approximation" )
     self._current_time_step_projection = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._approximation_projection     = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._approximation_projection     = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Approximation" )
     
     self._current_time_step_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
     self._current_time_step_projection.generator.includes     += """

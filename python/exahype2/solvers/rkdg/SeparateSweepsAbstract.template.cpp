@@ -174,29 +174,33 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  {{START_TIME_STEP_IMPLEMENTATION}}
-
   switch (_solverState) {
     case SolverState::GridConstruction:
+      _solverState = SolverState::GridInitialisation;
       break;
     case SolverState::GridInitialisation:
+      _solverState = SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
       break;
     case SolverState::Plotting:
+      _solverState = SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
       break;
-  {% for item in range(RK_STEPS) -%}
+  {% for item in range(RK_STEPS-1) %}
     case SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{{item}}:
+      _solverState = SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{item}};
       break;
     case SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{item}}:
+      _solverState = SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{{item+1}};
       break;
   {%- endfor %}
+    case SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{{RK_STEPS-1}}:
+      _solverState = SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{RK_STEPS-1}};
+      break;
+    case SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{RK_STEPS-1}}:
+      _solverState = SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
+      break;
   }
-//  if ( _solverState==SolverState::GridInitialisation ) {
-//    _solverState     = SolverState::project_onto_faces_and_compute_volume_integral_step_0;
-//  }
-//  else {
-//    assertion( _solverState!=SolverState::GridConstruction );
-//    _solverState     = SolverState::TimeStep;
-//  }
+
+  {{START_TIME_STEP_IMPLEMENTATION}}
 
   _minTimeStamp = _minTimeStampThisTimeStep;
   _maxTimeStamp = _maxTimeStampThisTimeStep;
@@ -323,12 +327,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  if ( _solverState== SolverState::GridInitialisation) {
-    _solverState = SolverState::PlottingAfterGridInitialisation;
-  }
-  else {
-    _solverState = SolverState::Plotting;
-  }
+  assertion( mayPlot() );
+  _solverState = SolverState::Plotting;
 }
 
 
@@ -342,31 +342,34 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-construction";
     case SolverState::GridInitialisation:
       return "grid-initialisation";
-    case SolverState::TimeStep:
-      return "time-step";
     case SolverState::Plotting:
       return "plotting";
-    case SolverState::TimeStepAfterGridInitialisation:
-      return "time-step-after-grid-initialisation";
-    case SolverState::PlottingAfterGridInitialisation:
-      return "plotting-after-grid-initialisation";
+    {% for item in range(RK_STEPS-1) %}
+    case SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{{item}}:
+      return "project-on-faces-and-compute-volume-integral-of-step-{{item}}";
+      break;
+    case SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{item}}:
+    return "solve-Riemann-problem-and-add-to-volume-integral-of-step-{{item}}";
+    {%- endfor %}
   }
   return "<undef>";
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return true;
+  return isLastGridSweepOfTimeStep()
+      or _solverState==SolverState::GridInitialisation
+      or _solverState==SolverState::Plotting;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
-  return ;
+  return _solverState==SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
-  return ;
+  return _solverState==SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{RK_STEPS-1}};
 }
 
 
