@@ -400,8 +400,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     """
     self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
     self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
-    #self._action_set_AMR                                                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
-    #self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
+    self._action_set_AMR                                                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     #self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     #self._action_set_project_current_time_step_onto_faces                             = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
     #self._action_set_project_approximation_onto_faces                                 = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
@@ -530,9 +530,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_initial_conditions ) 
     #step.add_action_set( self._action_set_project_patch_onto_faces )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
-    #step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_AMR )
     
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -545,12 +545,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      
     """
     step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
-    #if evaluate_refinement_criterion:
-    #  step.add_action_set( self._action_set_AMR )
-    #else:
-    #  step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
+    if evaluate_refinement_criterion:
+      step.add_action_set( self._action_set_AMR )
+    else:
+      step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
           
   
   def set_plot_description(self,description):
@@ -591,8 +591,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
     #step.add_action_set( self._action_set_project_patch_onto_faces )
 
 
@@ -650,12 +650,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
     #step.add_action_set( self._action_set_handle_boundary )
     #step.add_action_set( self._action_set_update_cell )
     #step.add_action_set( self._action_set_project_patch_onto_faces )
-    #step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_AMR )
 
 
   @abstractmethod
