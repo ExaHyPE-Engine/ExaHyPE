@@ -391,8 +391,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      within the inheritance tree.
      
     """
-    #self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
-    #self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
+    self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
     #self._action_set_AMR                                                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
     #self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     #self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
@@ -521,7 +521,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     #step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
-    #step.add_action_set( self._action_set_initial_conditions ) 
+    step.add_action_set( self._action_set_initial_conditions ) 
     #step.add_action_set( self._action_set_project_patch_onto_faces )
     #step.add_action_set( self._action_set_update_face_label )
     #step.add_action_set( self._action_set_update_cell_label )
@@ -537,7 +537,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      we ues the face label and initialise it properly.
      
     """
-    #step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
+    step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
     #step.add_action_set( self._action_set_update_face_label )
     #step.add_action_set( self._action_set_update_cell_label )
     #if evaluate_refinement_criterion:

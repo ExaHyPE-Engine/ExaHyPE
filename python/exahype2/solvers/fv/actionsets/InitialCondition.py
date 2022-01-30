@@ -14,8 +14,8 @@ class InitialCondition(AbstractFVActionSet):
     dfor( volume, {{NUMBER_OF_VOLUMES_PER_AXIS}} ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index,
-        ::exahype2::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
-        ::exahype2::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
+        ::exahype2::fv::getVolumeCentre( marker.x(), marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}}, volume), 
+        ::exahype2::fv::getVolumeSize( marker.h(), {{NUMBER_OF_VOLUMES_PER_AXIS}} ),
         {{GRID_IS_CONSTRUCTED}}
       );
       index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};

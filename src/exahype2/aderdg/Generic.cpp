@@ -3,7 +3,7 @@
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/multicore.h"
 
-#include "../PatchUtils.h"
+#include "../fv/PatchUtils.h"
 
 #include "peano4/utils/Loop.h"
 

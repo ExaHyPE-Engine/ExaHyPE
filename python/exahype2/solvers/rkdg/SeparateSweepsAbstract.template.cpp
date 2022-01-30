@@ -344,7 +344,7 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-initialisation";
     case SolverState::Plotting:
       return "plotting";
-    {% for item in range(RK_STEPS-1) %}
+    {% for item in range(RK_STEPS) %}
     case SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{{item}}:
       return "project-on-faces-and-compute-volume-integral-of-step-{{item}}";
       break;

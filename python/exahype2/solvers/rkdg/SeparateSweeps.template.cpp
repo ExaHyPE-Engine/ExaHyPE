@@ -28,6 +28,8 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
   bool                                         gridIsConstructred
 ) {
   logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructred );

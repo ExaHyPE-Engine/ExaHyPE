@@ -112,7 +112,7 @@ class SeparateSweeps( RungeKuttaDG ):
 
 
   def get_user_action_set_includes(self):
-    return super(SingleSweep, self).get_user_action_set_includes() + """
+    return super(SeparateSweeps, self).get_user_action_set_includes() + """
 #include "exahype2/fv/Generic.h"
 #include "exahype2/fv/Rusanov.h"
 """

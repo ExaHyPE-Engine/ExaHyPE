@@ -108,16 +108,34 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      * @param t Time
      */
     virtual ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * __restrict__                  dQdx, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double * __restrict__                  dQdx, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t
     ) {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
 
+    /**
+     *
+     * @param x     Position of point that is to be initialised within computational domain.
+     * @param h     Size of cell within which the point is placed.
+     * @param index Index of point within cell. This one can be used to look up which shape
+     *              function is tied to the point. You just have to scale it with h. By
+     *              translating the shape function's centre to x, you can reconstruct where
+     *              the shape function is placed within the computational domain.
+     * @param gridIsConstructred Boolean holds if grid is completely constructed.
+     *              initialCondition() is invoked both by the grid construction and the
+     *              initialisation, and you might want to do different things depending on
+     *              the context. For most applications, they initialise data if and only if
+     *              gridIsConstructed holds, but others might also initialise data throughout
+     *              the construction to guide AMR criteria.
+     *
+     */
     virtual void initialCondition(
-      double * __restrict__ Q,
+      double * __restrict__                        Q,     // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
+      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,int>&     index,
       bool                                         gridIsConstructred
     ) {% if INITIAL_CONDITIONS_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
 
