@@ -14,8 +14,8 @@ class InitialCondition(AbstractRungeKuttaDGActionSet):
     dfor( index, {{DG_ORDER}}+1 ) {
       repositories::{{SOLVER_INSTANCE}}.initialCondition(
         fineGridCell{{UNKNOWN_IDENTIFIER}}.value + linearisedIndex,
-        ::exahype2::dg::getNodePosition(
-          marker.x(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, P
+        ::exahype2::dg::getQuadraturePoint(
+          marker.x(), index, repositories::{{SOLVER_INSTANCE}}.DGOrder, repositories::{{SOLVER_INSTANCE}}.QuadraturePoints
         ),
         marker.h(),
         index,

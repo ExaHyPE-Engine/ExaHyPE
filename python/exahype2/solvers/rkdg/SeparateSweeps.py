@@ -36,7 +36,12 @@ class SeparateSweeps( RungeKuttaDG ):
       Instantiate a generic FV scheme with an overlap of 1.
 
     """
-    super(SeparateSweeps, self).__init__(name, dg_order, rk_order, 1, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
+    super(SeparateSweeps, self).__init__(name, 
+                                         dg_order, 
+                                         rk_order, 
+                                         polynomials, 
+                                         1,     # number of face projections
+                                         unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
     
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation

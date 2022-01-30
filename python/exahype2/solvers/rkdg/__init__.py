@@ -3,8 +3,5 @@
 from .PDETerms                                       import PDETerms
 
 from .RungeKuttaDG                                   import Polynomials
-from .LagrangeBasis                                  import LagrangeBasis
-from .LagrangeBasis                                  import GaussLegendreBasis
-from .LagrangeBasis                                  import GaussLobattoBasis
 
 import exahype2.solvers.rkdg.rusanov

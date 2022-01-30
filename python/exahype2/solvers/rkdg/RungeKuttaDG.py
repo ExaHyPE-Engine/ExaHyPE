@@ -166,6 +166,8 @@ class RungeKuttaDG(object):
       
       So you may implicitly assume that these guys do exist always.
     """
+    print( "ok, got those arguments: {}, {}, {}, {}".format(name, dg_order, rk_order, polynomials) )
+    
     self._name              = name
     
     self._dg_order          = dg_order
@@ -190,6 +192,13 @@ class RungeKuttaDG(object):
     self._solver_template_file_class_name = None
 
     self.plot_description = ""
+    
+    if polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Legendre:
+      self._basis = GaussLegendreBasis(dg_order+1)
+    elif polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Lobatto:
+      self._basis = GaussLobattoBasis(dg_order+1)
+    else:
+      raise Exception( "No proper basis chosen: {}".format(polynomials) )
     
     self.create_data_structures()
     self.create_action_sets()
@@ -739,8 +748,10 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
 
     d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
+    
+    self._basis.init_dictionary_with_default_parameters(d)        
 
-
+  
   @property
   def patch_size(self):
     return self._patch_size

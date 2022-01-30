@@ -89,6 +89,11 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public ::exahype2::Solver {
      */
     static constexpr double MinAdmissibleCellH  = {{MIN_CELL_H}};
 
+    /**
+     * Quadrature points, derivative operators, and various projectors for (1D) unit interval.
+     */
+{{BASIS_DECLARATIONS | indent(4,True) }}
+
 
     {{CLASSNAME}}();
 
