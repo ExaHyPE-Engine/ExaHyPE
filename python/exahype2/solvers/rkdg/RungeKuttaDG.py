@@ -166,8 +166,6 @@ class RungeKuttaDG(object):
       
       So you may implicitly assume that these guys do exist always.
     """
-    print( "ok, got those arguments: {}, {}, {}, {}".format(name, dg_order, rk_order, polynomials) )
-    
     self._name              = name
     
     self._dg_order          = dg_order
@@ -597,18 +595,27 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #step.add_action_set( self._action_set_update_cell_label )
     #step.add_action_set( self._action_set_project_patch_onto_faces )
 
+
+    mapping = []    
+    for z in self._basis.quadrature_points():
+      for y in self._basis.quadrature_points():
+        for x in self._basis.quadrature_points():
+          mapping.append( (x,y,z) )
+          
+          
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._current_time_step, 
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
+      mapping=mapping,
       guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
       additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="repositories::getMinTimeStamp()"
+      time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False
     ))
 
     if self._plot_grid_properties:    
@@ -619,7 +626,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
-"""
+""",     
+        plot_cell_data=False
       ))
       
     pass
