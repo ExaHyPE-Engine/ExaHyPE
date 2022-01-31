@@ -27,7 +27,7 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     plot_grid_properties=False
   ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, dg_order, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
-    
+   
     self._time_step_relaxation = time_step_relaxation
 
     self._flux_implementation                 = PDETerms.None_Implementation

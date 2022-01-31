@@ -191,6 +191,13 @@ class RungeKuttaDG(object):
 
     self.plot_description = ""
     
+    if polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Legendre:
+      self._basis = GaussLegendreBasis(dg_order+1)
+    elif polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Lobatto:
+      self._basis = GaussLobattoBasis(dg_order+1)
+    else:
+      raise Exception( "No proper basis chosen: {}".format(polynomials) )
+    
     self.create_data_structures()
     self.create_action_sets()
 
@@ -391,10 +398,10 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      within the inheritance tree.
      
     """
-    #self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
-    #self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
-    #self._action_set_AMR                                                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
-    #self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
+    self._action_set_initial_conditions                                               = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
+    self._action_set_initial_conditions_for_grid_construction                         = exahype2.solvers.rkdg.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    self._action_set_AMR                                                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     #self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
     #self._action_set_project_current_time_step_onto_faces                             = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
     #self._action_set_project_approximation_onto_faces                                 = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
@@ -521,11 +528,11 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     #step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
-    #step.add_action_set( self._action_set_initial_conditions ) 
+    step.add_action_set( self._action_set_initial_conditions ) 
     #step.add_action_set( self._action_set_project_patch_onto_faces )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
-    #step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_AMR )
     
     
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -537,13 +544,13 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      we ues the face label and initialise it properly.
      
     """
-    #step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
-    #if evaluate_refinement_criterion:
-    #  step.add_action_set( self._action_set_AMR )
-    #else:
-    #  step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+    step.add_action_set( self._action_set_initial_conditions_for_grid_construction )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
+    if evaluate_refinement_criterion:
+      step.add_action_set( self._action_set_AMR )
+    else:
+      step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
           
   
   def set_plot_description(self,description):
@@ -584,22 +591,31 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
     #step.add_action_set( self._action_set_project_patch_onto_faces )
 
+
+    mapping = []    
+    for z in self._basis.quadrature_points():
+      for y in self._basis.quadrature_points():
+        for x in self._basis.quadrature_points():
+          mapping.append( (x,y,z) )
+          
+          
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._current_time_step, 
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
+      mapping=mapping,
       guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
       additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="repositories::getMinTimeStamp()"
+      time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False
     ))
 
     if self._plot_grid_properties:    
@@ -610,7 +626,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
-"""
+""",     
+        plot_cell_data=False
       ))
       
     pass
@@ -633,12 +650,12 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     #step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
-    #step.add_action_set( self._action_set_update_face_label )
-    #step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
     #step.add_action_set( self._action_set_handle_boundary )
     #step.add_action_set( self._action_set_update_cell )
     #step.add_action_set( self._action_set_project_patch_onto_faces )
-    #step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_AMR )
 
 
   @abstractmethod
@@ -739,8 +756,10 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
 
     d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
+    
+    self._basis.init_dictionary_with_default_parameters(d)        
 
-
+  
   @property
   def patch_size(self):
     return self._patch_size

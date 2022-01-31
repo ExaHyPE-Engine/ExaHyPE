@@ -1,7 +1,7 @@
 // This file is part of the ExaHyPE2 project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
-#ifndef _EXAHYPE2_PATCH_UTILS_H_
-#define _EXAHYPE2_PATCH_UTILS_H_
+#ifndef _EXAHYPE2_FV_PATCH_UTILS_H_
+#define _EXAHYPE2_FV_PATCH_UTILS_H_
 
 
 #include <vector>
@@ -14,6 +14,7 @@
 
 
 namespace exahype2 {
+ namespace fv {
   /**
    * In ExaHyPE's Finite Volume setup, a cell hosts a patch of Finite Volumes.
    * When we iterate over these volumes, we typically have to know the centre
@@ -63,6 +64,7 @@ namespace exahype2 {
     const tarch::la::Vector<3,double>&  h,
     int                                 numberOfVolumesPerAxisInPatch
   );
+ }
 }
 
 #endif

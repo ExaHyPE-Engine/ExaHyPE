@@ -4,7 +4,7 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include "../PatchUtils.h"
+#include "PatchUtils.h"
 
 #include "peano4/utils/Loop.h"
 
@@ -160,7 +160,7 @@ double exahype2::fv::maxEigenvalue_AoS(
 ) {
   double result = 0.0;
 
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<Dimensions, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   #if Dimensions==2
@@ -336,7 +336,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
   assertion4( dt>=0.0, patchCentre, patchSize, t, dt  );
   assertion4( t<1e100, patchCentre, patchSize, t, dt  );
 
-  tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<2, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
@@ -497,7 +497,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
   assertion4( t<1e100, patchCentre, patchSize, t, dt  );
   assertion4(dt<1e100, patchCentre, patchSize, t, dt  );
 
-  tarch::la::Vector<3, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<3, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double numericalFluxL[unknowns]; // helper out variable
@@ -727,7 +727,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
-  tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<2, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
@@ -841,7 +841,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
-  tarch::la::Vector<3, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<3, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double numericalFluxL[unknowns]; // helper out variable
@@ -1051,7 +1051,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS(
   double * __restrict__                        Qout,
   std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        updatePredicate
 ) {
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<Dimensions, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
@@ -1141,7 +1141,7 @@ double exahype2::fv::maxEigenvalue_AoS(
 ) {
   double result = 0.0;
 
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<Dimensions, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   dfor(k,numberOfVolumesPerAxisInPatch) {

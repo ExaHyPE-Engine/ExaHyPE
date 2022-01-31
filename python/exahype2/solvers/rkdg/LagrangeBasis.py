@@ -13,7 +13,17 @@ mp.dps    = PREC_DIGITS
 mp.pretty = False
 
 class LagrangeBasis():
-
+  """
+  
+  Method representing a Lagrange basis which is used as a factory mechanism
+  to produce all the vectors and matrices that we need within the DG solvers.
+  Never use this class directly, but always rely on GaussLegendre or 
+  GaussLobatto. The only two things that are relevant for a user are the two
+  routines quadrature_points() and quadrature_weights() as well as the routine
+  to befill a map with replacement rules: init_dictionary_with_default_parameters()
+  
+  """
+  
   def __init__(self,num_points):
     self.__num_points = num_points
     self.__max_poly_order = num_points - 1
@@ -33,11 +43,14 @@ class LagrangeBasis():
     self.__fine_grid_projector             = [None]*3
     for j in range(0,3):
       self.__fine_grid_projector[j] = self.__compute_fine_grid_projector(j)
+      
+      
   def __str__(self):
     d = {}
     self._init_dictionary_with_default_parameters(d)
     return "<{}.{} object>: {}".format(self.__class__.__module__,self.__class__.__name__,d)
   __repr__ = __str__
+  
   
   # private methods
   def __evaluate(self,xi):
@@ -75,6 +88,7 @@ class LagrangeBasis():
         phi_xi[m] += tmp/(xin[m]-xin[i])
     return phi, phi_xi  
 
+
   def __compute_barycentric_weights(self):
     """
     See Eq. 3.2 in
@@ -88,6 +102,7 @@ class LagrangeBasis():
           divisor *= (xj-xk)
       result[j] = 1.0/divisor
     return result
+     
      
   def __compute_mass_matrix(self):
     """
@@ -124,6 +139,7 @@ class LagrangeBasis():
     #      MM[k][l] += self.__quadrature_weights[i]*phi[k]*phi[l]
     return MM
 
+
   def __compute_stiffness_operator(self):
     """
     Computes the (reference) element stiffness matrix for an approximation of order self.__max_poly_order.
@@ -153,6 +169,7 @@ class LagrangeBasis():
     #  for k in range(0,self.__num_points):
     #    Kxi[k][i] = self.__quadrature_weights[i]*phi_xi[k]*phi[i] 
     return Kxi
+  
 
   def __compute_K1(self):
     """
@@ -178,6 +195,7 @@ class LagrangeBasis():
     #    print(K1[k][l] - K1_orig[k][l])
    
     return K1    
+      
       
   def __compute_derivative_operator(self):
     """
@@ -227,6 +245,7 @@ class LagrangeBasis():
         dudx[i][j] = phi_xi[j]
         #print(dudx[i][j] - dudx_orig[i][j])
     return dudx
+  
 
   def __compute_fine_grid_projector(self, j):
     """
@@ -254,6 +273,7 @@ class LagrangeBasis():
       for m in range(0, self.__num_points): # DG basis
         fineGridProjector[m][i] = phi_i[m]
     return fineGridProjector
+  
 
   def __compute_equidistant_grid_projector(self):
     """
@@ -277,26 +297,36 @@ class LagrangeBasis():
       for m in range(0, self.__num_points): # DG basis
         equidistantGridProjector[m][i] = phi_i[m]
     return equidistantGridProjector
+  
 
   # private class methods
   @classmethod
   def __make_initializer_list(cls,rendered_tensor):
     """
+    
+    This implementation is a little bit nasty: We use the resulting strings within
+    jinja2 templates which are then repeatedly resolved/rendered. Therefore, we have
+    to be carefully not to write {{ where we want to have two brackets. Instead, we 
+    have to write { { (not the space) so the render engine does not consider an
+    initialisation list with nested arrays as a jinja2 token.
+    
     :param rendered_tensor: (nested) list of str elements
     :return: C++ initializer list for tensor
+    
     """
     def descend(current):
       if type(current) is list:
-        result ="{"
+        result =" {"
         for element in current[:-1]:
           result += descend(element)
           result += ","
         result += descend(current[-1])
-        result += "}"
+        result += "} "
         return result
       else:
         return current
     return descend(rendered_tensor)
+  
 
   @classmethod
   def __render_tensor_1(cls,tensor):
@@ -308,6 +338,7 @@ class LagrangeBasis():
     for elem in tensor:
       result.append(mp.nstr(elem,n=RENDER_DIGITS))
     return result
+  
   
   @classmethod
   def __render_tensor_2(cls,tensor,multiDimArray=True):
@@ -324,8 +355,8 @@ class LagrangeBasis():
          result.append(resultRow)
        else:
          result += resultRow
-        
     return result
+  
 
   @classmethod
   def __render_tensor_3(cls,tensor,multiDimArray=True):
@@ -347,6 +378,7 @@ class LagrangeBasis():
        if multiDimArray:
          result.append(tmp1)
     return result
+
 
   # protected 
   @abstractmethod
@@ -380,7 +412,8 @@ class LagrangeBasis():
       sorted_transformed_quadrature_weights.append(ws)
     return sorted_transformed_quadrature_points, sorted_transformed_quadrature_weights
   
-  def _init_dictionary_with_default_parameters(self,d,multiDimArrays=False):
+  
+  def init_dictionary_with_default_parameters(self,d,multiDimArrays=False):
     def snake_to_camel(word):
       return ''.join(x.capitalize() or '_' for x in word.lower().split('_'))
 
@@ -412,14 +445,17 @@ class LagrangeBasis():
     
     d["ORDER"]              = self.__max_poly_order
     d["BASIS_DECLARATIONS"] = basisDeclarations  
-    d["BASIS_INITIALIZERS"] = basisInitializers  
+    d["BASIS_INITIALIZERS"] = basisInitializers
+   
    
   # public
   def quadrature_points(self,render=True):
     return LagrangeBasis.__render_tensor_1(self.__quadrature_points) if render else self.__quadrature_points
   
+  
   def quadrature_weights(self,render=True):
     return LagrangeBasis.__render_tensor_1(self.__quadrature_weights) if render else self.__quadrature_weights
+  
   
 
 class GaussLegendreBasis(LagrangeBasis):

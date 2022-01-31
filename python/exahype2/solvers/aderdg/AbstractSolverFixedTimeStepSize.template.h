@@ -130,7 +130,7 @@
     /**
      * Quadrature points, derivative operators, and various projectors for (1D) unit interval.
      */
-{{BASIS_DECLARATIONS | indent(4,True) }}
+{{QUADRATURE_POINTS | indent(4,True) }}
 
   protected:
     static tarch::logging::Log  _log;
