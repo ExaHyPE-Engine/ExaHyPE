@@ -1,7 +1,7 @@
-#include "GeneticOptimisation.h"
 #include "tarch/multicore/Tasks.h"
 #include "tarch/multicore/Core.h"
 #include <limits>
+#include "SamplingMulticoreOrchestration.h"
 
 
 tarch::multicore::orchestration::GeneticOptimisation::Key::Key(
