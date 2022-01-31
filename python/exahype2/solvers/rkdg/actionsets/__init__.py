@@ -4,6 +4,7 @@
 from .AdaptivityCriterion            import AdaptivityCriterion
 #from .HandleBoundary        import HandleBoundary
 from .InitialCondition               import InitialCondition
+from .LinearCombinationOfEstimates   import LinearCombinationOfEstimates
 #from .ProjectPatchOntoFaces import ProjectPatchOntoFaces
 #from .RollOverUpdatedFace   import RollOverUpdatedFace
 #from .DynamicAMR            import DynamicAMR
