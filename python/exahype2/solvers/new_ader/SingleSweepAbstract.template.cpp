@@ -20,46 +20,36 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _maxTimeStamp(0.0),
   _minTimeStampThisTimeStep(0.0),
   _maxTimeStampThisTimeStep(0.0),
-  _minVolumeH(0.0),
-  _maxVolumeH(0.0),
-  _minVolumeHThisTimeStep(0.0),
-  _maxVolumeHThisTimeStep(0.0),
+  _minCellH(0.0),
+  _maxCellH(0.0),
+  _minCellHThisTimeStep(0.0),
+  _maxCellHThisTimeStep(0.0),
   _minTimeStepSize(0.0),
   _maxTimeStepSize(0.0),
   _minTimeStepSizeThisTimeStep(0.0),
   _maxTimeStepSizeThisTimeStep(0.0),
-  _patchUpdates(0) {
+  _cellUpdates(0) {
   {{CONSTRUCTOR_IMPLEMENTATION}}
 }
 
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxMeshSize() const {
-  return getMaxPatchSize();
+  return getMaxCellSize();
 }
 
 
 double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinMeshSize() const {
-  return getMinPatchSize();
+  return getMinCellSize();
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinPatchSize(bool ofCurrentlyRunningGridSweep) const {
-  return getMinVolumeSize(ofCurrentlyRunningGridSweep) * NumberOfFiniteVolumesPerAxisPerPatch;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinCellSize(bool ofCurrentlyRunningGridSweep) const {
+  return ofCurrentlyRunningGridSweep ? _minCellHThisTimeStep : _minCellH;
 }
 
 
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxPatchSize(bool ofCurrentlyRunningGridSweep) const {
-  return getMaxVolumeSize(ofCurrentlyRunningGridSweep) * NumberOfFiniteVolumesPerAxisPerPatch;
-}
-
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMinVolumeSize(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _minVolumeHThisTimeStep : _minVolumeH;
-}
-
-
-double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxVolumeSize(bool ofCurrentlyRunningGridSweep) const {
-  return ofCurrentlyRunningGridSweep ? _maxVolumeHThisTimeStep : _maxVolumeH;
+double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxCellSize(bool ofCurrentlyRunningGridSweep) const {
+  return ofCurrentlyRunningGridSweep ? _maxCellHThisTimeStep : _maxCellH;
 }
 
 
@@ -83,7 +73,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::getMaxTimeStepSize() const {
 }
 
 
-void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double patchSize) {
+void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, double timeStamp, double cellSize) {
   tarch::multicore::Lock lock(_semaphore);
 
   if ( tarch::la::greater(timeStepSize,0.0) ) {
@@ -93,7 +83,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
     _maxTimeStepSizeThisTimeStep = std::max(timeStepSize,_maxTimeStepSizeThisTimeStep);
     assertion2(_minTimeStepSizeThisTimeStep<=_maxTimeStepSizeThisTimeStep, _minTimeStepSizeThisTimeStep, _maxTimeStepSizeThisTimeStep );
 
-    _patchUpdates++;
+    _cellUpdates++;
 
     _localMinTimeStampThisTimeStep = std::min(_localMinTimeStampThisTimeStep, timeStamp);
     _localMaxTimeStampThisTimeStep = std::max(_localMaxTimeStampThisTimeStep, timeStamp);
@@ -107,8 +97,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
   assertion1(patchSize<std::numeric_limits<double>::max()/10.0,patchSize);
   assertion1(patchSize>0.0,patchSize);
-  _maxVolumeHThisTimeStep = std::max(_maxVolumeHThisTimeStep,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
-  _minVolumeHThisTimeStep = std::min(_minVolumeHThisTimeStep,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
+  _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep,cellSize);
+  _minCellHThisTimeStep = std::min(_minCellHThisTimeStep,cellSize);
 }
 
 
@@ -119,9 +109,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
-  const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const double * __restrict__ Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const double * __restrict__ dQdx, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+  const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
@@ -139,8 +129,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if INITIAL_CONDITIONS_IMPLEMENTATION!="<user-defined>" %}
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * __restrict__ Q,
-  const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
   bool                                         gridIsConstructred
 ) {
   {{INITIAL_CONDITIONS_IMPLEMENTATION}}
@@ -152,8 +141,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::boundaryConditions(
   const double * __restrict__                  Qinside,   // Qinside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   double * __restrict__                        Qoutside,  // Qoutside[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const tarch::la::Vector<Dimensions,double>&  faceCentre,
-  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  const tarch::la::Vector<Dimensions,double>&  x,
   double                                       t,
   int                                          normal
 ) {
@@ -186,15 +174,25 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  {{START_TIME_STEP_IMPLEMENTATION}}
+  switch (_solverState) {
+    case SolverState::GridConstruction:
+      _solverState = SolverState::GridInitialisation;
+      break;
+    case SolverState::GridInitialisation:
+      _solverState = SolverState::Prediction;
+      break;
+    case SolverState::Plotting:
+      _solverState = SolverState::Prediction;
+      break;
+    case SolverState::Prediction:
+      _solverState = SolverState::Correction;
+      break;
+    case SolverState::Correction:
+      _solverState = SolverState::Prediction;
+      break;
+  }
 
-  if ( _solverState==SolverState::GridInitialisation ) {
-    _solverState     = SolverState::TimeStepAfterGridInitialisation;
-  }
-  else {
-    assertion( _solverState!=SolverState::GridConstruction );
-    _solverState     = SolverState::TimeStep;
-  }
+  {{START_TIME_STEP_IMPLEMENTATION}}
 
   _minTimeStamp = _minTimeStampThisTimeStep;
   _maxTimeStamp = _maxTimeStampThisTimeStep;
@@ -208,30 +206,32 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
   _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
 
-  _minVolumeH = _minVolumeHThisTimeStep;
-  _maxVolumeH = _maxVolumeHThisTimeStep;
+  _minCellH = _minCellHThisTimeStep;
+  _maxCellH = _maxCellHThisTimeStep;
 
-  _maxVolumeHThisTimeStep      = 0.0;
-  _minVolumeHThisTimeStep      = std::numeric_limits<double>::max();
+  _maxCellHThisTimeStep      = 0.0;
+  _minCellHThisTimeStep      = std::numeric_limits<double>::max();
 
   _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
   _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-  _patchUpdates    = 0;
+  _cellUpdates    = 0;
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
   #ifdef Parallel
-  double newMinTimeStamp = _minTimeStampThisTimeStep;
-  double newMaxTimeStamp = _maxTimeStampThisTimeStep;
-  double newMinVolumeH   = _minVolumeHThisTimeStep;
-  double newMaxVolumeH   = _maxVolumeHThisTimeStep;
+  double newMinTimeStamp    = _minTimeStampThisTimeStep;
+  double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
+  double newMinCellH        = _minCellHThisTimeStep;
+  double newMaxCellH        = _maxCellHThisTimeStep;
   double newMinTimeStepSize = _minTimeStepSizeThisTimeStep;
   double newMaxTimeStepSize = _maxTimeStepSizeThisTimeStep;
 
   double newLocalMinTimeStamp = _localMinTimeStampThisTimeStep;
   double newLocalMaxTimeStamp = _localMaxTimeStampThisTimeStep;
+
+  int newCellUpdates = _cellUpdates;
 
   tarch::mpi::Rank::getInstance().allReduce(
       &newMinTimeStamp,
@@ -249,15 +249,15 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       );
 
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMinVolumeH,
-      &_minVolumeHThisTimeStep,
+      &newMinCellH,
+      &_minCellHThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MIN,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxVolumeH,
-      &_maxVolumeHThisTimeStep,
+      &newMaxCellH,
+      &_maxCellHThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
@@ -292,6 +292,14 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       MPI_MAX,
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
+
+  tarch::mpi::Rank::getInstance().allReduce(
+      &newCellUpdates,
+      &_cellUpdates,
+      1, MPI_INT,
+      MPI_SUM,
+      [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
+      );
   #endif
 
   if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
@@ -311,12 +319,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startPlottingStep(
   double globalMinTimeStepSize,
   double globalMaxTimeStepSize
 ) {
-  if ( _solverState== SolverState::GridInitialisation) {
-    _solverState = SolverState::PlottingAfterGridInitialisation;
-  }
-  else {
-    _solverState = SolverState::Plotting;
-  }
+  assertion( mayPlot() );
+  _solverState = SolverState::Plotting;
 }
 
 
@@ -330,26 +334,32 @@ std::string {{NAMESPACE | join("::")}}::{{CLASSNAME}}::toString(SolverState stat
       return "grid-construction";
     case SolverState::GridInitialisation:
       return "grid-initialisation";
-    case SolverState::TimeStep:
-      return "time-step";
     case SolverState::Plotting:
       return "plotting";
-    case SolverState::TimeStepAfterGridInitialisation:
-      return "time-step-after-grid-initialisation";
-    case SolverState::PlottingAfterGridInitialisation:
-      return "plotting-after-grid-initialisation";
+    case SolverState::Prediction:
+      return "prediction";
+      break;
+    case SolverState::Correction:
+			return "correction";
   }
   return "<undef>";
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
-  return true;
+  return isLastGridSweepOfTimeStep()
+      or _solverState==SolverState::GridInitialisation
+      or _solverState==SolverState::Plotting;
 }
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
-  return true;
+  return _solverState==SolverState::Prediction;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
+  return _solverState==SolverState::Correction;
 }
 
 

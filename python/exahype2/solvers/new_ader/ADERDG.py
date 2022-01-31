@@ -4,6 +4,7 @@
 
  
 import peano4.toolbox.blockstructured
+import peano4.datamodel
 import peano4.output
 import exahype2.grid
 
@@ -59,11 +60,63 @@ class ADERDG( object ):
             
   @abstractmethod
   def create_data_structures(self):
-    #TODO
-    return
+    #TODO: expand
+    self._current_time_step            = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1),                   self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._approximation                = peano4.datamodel.Patch( (self._order*(self._order+1),self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Projection" )
+    self._current_time_step_projection = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._approximation_projection     = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    
+    self._current_time_step_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
+    self._current_time_step_projection.generator.includes     += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+   
+    self._approximation_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._approximation_projection)
+    self._approximation_projection.generator.includes     += """
+#include "peano4/utils/Loop.h"
+#include "repositories/SolverRepository.h" 
+"""
+
+    self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    
+    self._approximation.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._approximation.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+
+    self._current_time_step_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._current_time_step_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+
+    self._current_time_step_projection.generator.send_condition               = "false"
+    self._current_time_step_projection.generator.receive_and_merge_condition  = "false"
+
+    self._approximation_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._approximation_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+
+    self._approximation_projection.generator.send_condition               = "false"
+    self._approximation_projection.generator.receive_and_merge_condition  = "false"
+
+    self._current_time_step.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+    self._approximation.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+    self._current_time_step_projection.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+    self._approximation_projection.generator.includes  += """
+#include "../repositories/SolverRepository.h"
+"""    
+
+    self._cell_label = exahype2.grid.create_cell_label( self._name )
+    self._face_label = exahype2.grid.create_face_label( self._name )      
+
+
 
   @abstractmethod
   def create_action_sets(self):
+    #TODO: expand
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
@@ -128,12 +181,31 @@ class ADERDG( object ):
        
        
   def add_to_Peano4_datamodel( self, datamodel, verbose ):       
-    #TODO
-    return
+    if verbose:
+      print( "Patch data" )
+      print( "----------" )
+      print( str(self._patch) )
+      print( "Patch overlap data" )
+      print( "----------" )
+      print( str(self._patch_overlap_old) )
+      print( "Patch overlap data" )
+      print( "----------" )
+      print( str(self._patch_overlap_new) )
+    datamodel.add_cell(self._cell_label)
+    datamodel.add_cell(self._current_time_step)
+    datamodel.add_cell(self._approximation)
+    datamodel.add_face(self._face_label)
+    datamodel.add_face(self._current_time_step_projection)
+    datamodel.add_face(self._approximation_projection)
+
   
   def add_use_data_statements_to_Peano4_solver_step(self, step):
-    #TODO
-    return  
+    step.use_cell(self._cell_label)
+    step.use_cell(self._current_time_step)
+    step.use_cell(self._approximation)
+    step.use_face(self._face_label)
+    step.use_face(self._current_time_step_projection)
+    step.use_face(self._approximation_projection)
   
   def add_actions_to_init_grid(self, step):  
     #TODO
@@ -235,6 +307,44 @@ class ADERDG( object ):
   def set_solver_constants(self, datastring): self.solver_constants_ = datastring
 
   def add_solver_constants(self, datastring): self.solver_constants_ += datastring  
+  
+  
+    @property
+  def patch_size(self):
+    return self._patch_size
+
+
+  @property
+  def unknowns(self):
+    return self._unknowns
+
+
+  @property
+  def auxiliary_variables(self):
+    return self._auxiliary_variables
+
+
+  @patch_size.setter
+  def patch_size(self, value):
+    self._patch_size = value
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @patch_size.setter
+  def unknowns(self, value):
+    self._unknowns = value
+    self.create_data_structures()
+    self.create_action_sets()
+
+
+  @patch_size.setter
+  def auxiliary_variables(self, value):
+    self._auxiliary_variables = value
+    self.create_data_structures()
+    self.create_action_sets()
+  
+  
   
   @abstractmethod
   def add_entries_to_text_replacement_dictionary(self,d):

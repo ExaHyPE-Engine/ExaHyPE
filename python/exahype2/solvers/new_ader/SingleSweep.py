@@ -8,7 +8,9 @@ import jinja2
 
 class SingleSweep( ADERDG ):
   def __init__(self, name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties=False):
-    
+
+    super(SingleSweep, self).__init__(name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
+        
     self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
     self._refinement_criterion_implementation = PDETerms.Empty_Implementation
     self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
@@ -29,17 +31,28 @@ class SingleSweep( ADERDG ):
     self._finish_time_step_implementation          = ""    
     self._constructor_implementation = ""
 
-    super(SingleSweep, self).__init__(name, order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties)
         
-    self._solver_template_file_class_name     = "SeparateSweeps"
+    self._solver_template_file_class_name     = "SingleSweep"
+    
+    self.create_action_sets()
+    self.create_data_structures()
   
   
   
   def create_data_structures(self):
-    #TODO
-    return
+    #TODO: erweitern
+    super(SingleSweep, self).create_data_structures()
+    
+    initialisation_sweep_guard = "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
+      ")"
+    first_iteration_after_initialisation_guard = "(" + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
+      "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
+    ")"
               
   def create_action_sets(self):
+    #TODO: erweitern
     super(SingleSweep, self).create_action_sets()
 
 
