@@ -776,6 +776,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
 
+    d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._dg_order+1) * (self._dg_order+1);
+    d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._dg_order+1) * (self._dg_order+1) * (self._dg_order+1);
+
     d["POLYNOMIALS"]                    = str(self._polynomials)
 
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"

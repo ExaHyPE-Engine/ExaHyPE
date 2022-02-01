@@ -17,23 +17,35 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
   TemplateLinearCombination = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
-    int index = 0;
-    for (int x=0; x<{{DG_ORDER}}+1; x++) 
-    for (int y=0; y<{{DG_ORDER}}+1; y++) { 
-      for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}; unknown++) {
-        *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) = *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index);
-        int estimateOffset = 0;
-        {% for WEIGHT in BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO] %}
-        *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{WEIGHT}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + estimateOffset + index);
-        estimateOffset += {{NUMBER_OF_DOFS_PER_CELL}} * ({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}});
-        {% endfor %}
-        index++; 
-      }
-      for (int unknown=0; unknown<{{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
-        *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) = *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index);
-        index++; 
-      }
+    #if Dimensions==2
+    for (int dof=0; dof<{{NUMBER_OF_DOFS_PER_CELL_2D}}; dof++)
+    for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+      const int index = dof*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+unknown;
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index)  = *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index);
+      {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
+      {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]==0 %}
+      // *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}});
+      {% else %}
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}});
+      {% endif %}
+      {% endfor %}
     }
+    #endif
+
+    #if Dimensions==3
+    for (int dof=0; dof<{{NUMBER_OF_DOFS_PER_CELL_3D}}; dof++)
+    for (int unknown=0; unknown<{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}; unknown++) {
+      const int index = dof*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+unknown;
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index)  = *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index);
+      {% for WEIGHT_NO in range(0,BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO]|length) %}
+      {% if BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]==0 %}
+      // *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}});
+      {% else %}
+      *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + index) += {{BUTCHER_TABLEAU_WEIGHTS[PREDICATE_NO][WEIGHT_NO]}}* *(fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + index + {{WEIGHT_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}});
+      {% endif %}
+      {% endfor %}
+    }
+    #endif
   }
   {% endfor %} 
 """
@@ -71,9 +83,8 @@ class LinearCombinationOfEstimates(AbstractRungeKuttaDGActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATES" ]              = self.guards
-      d[ "NUMBER_OF_DOFS_PER_CELL" ] = self._solver._dg_order;
-      d[ "BUTCHER_TABLEAU_WEIGHTS" ] = self._butcher_tableau.weight_matrix()      
+      d[ "PREDICATES" ]                 = self.guards
+      d[ "BUTCHER_TABLEAU_WEIGHTS" ]    = self._butcher_tableau.weight_matrix()      
       result = jinja2.Template(self.TemplateLinearCombination).render(**d)
       pass 
     return result
