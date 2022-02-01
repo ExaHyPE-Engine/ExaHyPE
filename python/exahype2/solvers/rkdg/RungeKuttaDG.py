@@ -110,7 +110,16 @@ class RungeKuttaDG(object):
       and the current solution are combined according to the Butcher tableau.
       
       It is up to the particular subclass to configure the guard of the linear combination 
-      such that it is only computed when it is actually needed. 
+      such that it is only computed when it is actually needed.
+      
+    - Next, we project this linear combination onto the faces. At the same time, we compute
+      a new estimate for the volume integral. The time step size for this new estimate 
+      again depends on the time step size from the Butcher tableau. The two action sets 
+      both are volumetric, i.e. run per cell, but we can run them in parallel. The face
+      projection has to complete immediately (we need the data on the faces), while the 
+      volumetric computation, in principle, doesn't have to finish prior to the next grid
+      sweep, as long as the linear combination remains persistent. It is only a temporary
+      thing, so will be destroyed immediately once we leave a cell.  
          
   """
   
@@ -436,8 +445,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
                                                                                                                                              build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     self._action_set_linear_combination_of_estimates                                  = exahype2.solvers.rkdg.actionsets.LinearCombinationOfEstimates(self)
+    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self)
     #self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
-    #self._action_set_project_current_time_step_onto_faces                             = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
     #self._action_set_project_approximation_onto_faces                                 = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
     #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR( solver=self )
 
@@ -565,7 +574,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_initial_conditions ) 
-    #step.add_action_set( self._action_set_project_patch_onto_faces )
+    step.add_action_set( self._action_set_project_linear_combination_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_AMR )
@@ -689,6 +698,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_linear_combination_of_estimates )
+    step.add_action_set( self._action_set_project_linear_combination_onto_faces )
     #step.add_action_set( self._action_set_handle_boundary )
     #step.add_action_set( self._action_set_update_cell )
     #step.add_action_set( self._action_set_project_patch_onto_faces )
