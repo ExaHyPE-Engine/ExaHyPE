@@ -11,6 +11,8 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 from peano4.solversteps.ActionSet import ActionSet
 
+from .ButcherTableau                import RungeKutta_steps
+
 import jinja2
 import math
 
@@ -65,15 +67,15 @@ class RungeKuttaDG(object):
     Each cell hosts a DG polynomial of order _dg_order. Technically, we store this polynomial
     in a regular array (blockstructured data) with (_dg_order+1)^d entries. On top of this 
     current time step, we need the shots into the future. for RK(_rk_order), we need _rk_order
-    of these snapshots. Most DG variants will only need them temporarily, i.e. don't store 
-    them in-between two time steps. But this is up to the guards to decide.
+    of these snapshots. They are called estimates. 
     
     On the boundary, I store both the left and right solution projection as well as the left
-    and right flux projection subject to a multiplication with the face normal.  
+    and right flux projection subject to a multiplication with the face normal. As I want to 
+    support local time stepping, I'll need a projection of the old (current) solution and 
+    the projection of the estimates.  
     
     More details are provided in create_data_structures().
-
-
+    
     :: Control flow between this class and subclasses
     
     There are three key routines: the constructor, create_data_structures() and 
@@ -93,6 +95,32 @@ class RungeKuttaDG(object):
     create_action_sets() of the superclass first, before you do fancy stuff. This 
     way, all the important action sets are in place.
     
+    :: General control flow and realisation of solver steps
+    
+    A proper numerical time step is mapped onto a cascade of time step sweeps. Per sweep, 
+    we realise the following steps (so step in a computational sense), though their exact
+    orchestration depends on the realisation chosen, i.e. some might merge some 
+    subcalculations into one grid sweep while others distribute a calculation over multiple
+    sweeps.
+    
+    - We combine the data of the current time step with all the shots into the future. These
+      shots are held in one large array. This is not super efficient, as we could build up 
+      these arrays one by one, but I just use one large scratchpad even for the first line
+      in the Butcher tableau. See create_data_structures() for details. So all the estimates
+      and the current solution are combined according to the Butcher tableau.
+      
+      It is up to the particular subclass to configure the guard of the linear combination 
+      such that it is only computed when it is actually needed.
+      
+    - Next, we project this linear combination onto the faces. At the same time, we compute
+      a new estimate for the volume integral. The time step size for this new estimate 
+      again depends on the time step size from the Butcher tableau. The two action sets 
+      both are volumetric, i.e. run per cell, but we can run them in parallel. The face
+      projection has to complete immediately (we need the data on the faces), while the 
+      volumetric computation, in principle, doesn't have to finish prior to the next grid
+      sweep, as long as the linear combination remains persistent. It is only a temporary
+      thing, so will be destroyed immediately once we leave a cell.  
+         
   """
   
       
@@ -198,6 +226,9 @@ class RungeKuttaDG(object):
     else:
       raise Exception( "No proper basis chosen: {}".format(polynomials) )
     
+    self._preprocess_reconstructed_patch      = ""
+    self._postprocess_updated_patch           = ""
+
     self.create_data_structures()
     self.create_action_sets()
 
@@ -297,7 +328,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
      _time_step: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1) )
        Actual polynomial data of the DG patch in the current time step. 
 
-     _estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1)xself._rk_order )
+     _estimates: Patch ( (_dg_order+1)x(_dg_order+1)x(_dg_order+1)xon of RK steps )
        These are the Runge-Kutta extrapolations. It is important that the
        rk_order is mixed into the first argument, as the triple is automatically
        truncated to a tuple if the code is translated with 2d.
@@ -331,7 +362,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
        
     """
     self._current_time_step                 = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._estimates                         = peano4.datamodel.Patch( (self._rk_order*(self._dg_order+1),self._dg_order+1,self._dg_order+1),     self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
+    self._estimates                         = peano4.datamodel.Patch( (self.number_of_Runge_Kutta_steps()*(self._dg_order+1),self._dg_order+1,self._dg_order+1),     self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
     self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
     self._current_time_step_projection      = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
     self._estimates_projection              = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
@@ -413,8 +444,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
                                                                                                                                              guard=self._store_cell_data_default_guard() + " and (repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep() or repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation)", 
                                                                                                                                              build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
+    self._action_set_linear_combination_of_estimates                                  = exahype2.solvers.rkdg.actionsets.LinearCombinationOfEstimates(self)
+    self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self)
     #self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
-    #self._action_set_project_current_time_step_onto_faces                             = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
     #self._action_set_project_approximation_onto_faces                                 = exahype2.solvers.rkdg.actionsets.ProjectCellDataOntoFaces(self, self._store_cell_data_default_guard())
     #self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR( solver=self )
 
@@ -542,7 +574,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #step.add_action_set( self._action_set_copy_new_faces_onto_old_faces )
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_initial_conditions ) 
-    #step.add_action_set( self._action_set_project_patch_onto_faces )
+    step.add_action_set( self._action_set_project_linear_combination_onto_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_AMR )
@@ -665,6 +697,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     #step.add_action_set( self._action_set_roll_over_update_of_faces )
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_linear_combination_of_estimates )
+    step.add_action_set( self._action_set_project_linear_combination_onto_faces )
     #step.add_action_set( self._action_set_handle_boundary )
     #step.add_action_set( self._action_set_update_cell )
     #step.add_action_set( self._action_set_project_patch_onto_faces )
@@ -752,6 +786,9 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
 
+    d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._dg_order+1) * (self._dg_order+1);
+    d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._dg_order+1) * (self._dg_order+1) * (self._dg_order+1);
+
     d["POLYNOMIALS"]                    = str(self._polynomials)
 
     d[ "ASSERTION_WITH_1_ARGUMENTS" ] = "nonCriticalAssertion1"
@@ -810,10 +847,6 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
 
   def number_of_Runge_Kutta_steps(self):
-    if self._rk_order<1:
-      raise Exception( "RK order has to be 1 at least" )
-    if self._rk_order>4:
-      raise Exception( "max RK order supported is 4" )
-    return self._rk_order
+    return RungeKutta_steps(self._rk_order)
     
 

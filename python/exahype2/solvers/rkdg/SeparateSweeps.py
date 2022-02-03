@@ -15,17 +15,10 @@ class SeparateSweeps( RungeKuttaDG ):
   """
     Probably the simplest solver you could think off. 
 
-    :: Write your own specialisation ::
-    
-    self._preprocess_reconstructed_patch 
-      Has to hold any preprocessing, but it also has to set the doubles
-      cellTimeStepSize and cellTimeStamp to valid data.
-      
-    self._postprocess_updated_patch 
-      You don't have to redefine this one, but if you want to alter the
-      time step size, then this is the right place to do so. If you don't
-      alter cellTimeStepSize, the code will automatically continue with
-      the current one subject to a preprocessing in the next step.
+    We run over the grid twice per Runge Kutta step. In the first step,
+    we compute the linear reconstruction, project this one onto the faces
+    and also compute the volumetric prediction. In the second step, we 
+    solve the Riemann problem and add it to the prediction.
 
   """
 
@@ -33,7 +26,6 @@ class SeparateSweeps( RungeKuttaDG ):
   def __init__(self, name, dg_order, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties):
     """
 
-      Instantiate a generic FV scheme with an overlap of 1.
 
     """
     super(SeparateSweeps, self).__init__(name, 
@@ -49,11 +41,8 @@ class SeparateSweeps( RungeKuttaDG ):
 
     self._compute_time_step_size              = "#error Not yet defined"
     
-    self._preprocess_reconstructed_patch      = ""
-    self._postprocess_updated_patch           = ""
-    
-    self._source_term_call          = "#error Not yet defined"
-    self._Riemann_solver_call       = "#error Not yet defined"
+    #self._source_term_call          = "#error Not yet defined"
+    #self._Riemann_solver_call       = "#error Not yet defined"
     self._abstract_solver_user_declarations        = ""
     self._abstract_solver_user_definitions         = ""
     self._solver_user_declarations                 = ""
@@ -74,16 +63,10 @@ class SeparateSweeps( RungeKuttaDG ):
   def create_data_structures(self):
     """
     
-     Call the superclass' create_data_structures() to ensure that all the data
-     structures are in place, i.e. each cell can host a patch, that each face hosts 
-     patch overlaps, and so forth. These quantities are all set to defaults. See
-     FV.create_data_structures().
-     
-     After that, take the patch overlap (that's the data stored within the faces)
-     and ensure that these are sent and received via MPI whenever they are also 
-     stored persistently. The default in FV is that no domain boundary data exchange
-     is active. Finally, ensure that the old data is only exchanged between the 
-     initialisation sweep and the first first grid run-through.
+     First, call the superclass' create_data_structures() to ensure that all 
+     the data structures are in place.
+
+     The linear combination is to be computed if and only if      
     
     """
     super(SeparateSweeps, self).create_data_structures()
@@ -111,15 +94,26 @@ class SeparateSweeps( RungeKuttaDG ):
       
       This operation is implicity called via the superconstructor.
       
+      :: Guards around linear combination of estimates
+      
+      We rely on the action set LinearCombination as it is initialised in the 
+      superclass. So the only thing we have to do is to ensure that the 
+      linear combination over the estimates is computed if and only if this 
+      is required. For the separate sweeps, we compute the linear combinations
+      if the cell holds data, i.e. is on the finest level, and if it is the 
+      primary of the two sweeps which realise a RK step, i.e. the one where
+      we later on project onto the faces.  
+      
     """
     super(SeparateSweeps, self).create_action_sets()
+    self._action_set_linear_combination_of_estimates.guards = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
     #self._action_set_update_cell = UpdateCell(self)
 
 
   def get_user_action_set_includes(self):
     return super(SeparateSweeps, self).get_user_action_set_includes() + """
-#include "exahype2/fv/Generic.h"
-#include "exahype2/fv/Rusanov.h"
 """
 
 
@@ -156,10 +150,10 @@ class SeparateSweeps( RungeKuttaDG ):
     
     d[ "COMPUTE_TIME_STEPSIZE" ]              = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
 
-    d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
-    d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
     d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
     d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
     d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
@@ -169,6 +163,7 @@ class SeparateSweeps( RungeKuttaDG ):
     d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
 
 
+  ## @todo raus
   def set_preprocess_reconstructed_patch_kernel(self,kernel):
     """
   
@@ -181,6 +176,7 @@ class SeparateSweeps( RungeKuttaDG ):
     self.create_action_sets()
 
 
+  ## @todo raus
   def set_postprocess_updated_patch_kernel(self, kernel):
     """
 
