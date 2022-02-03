@@ -9,11 +9,11 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   const double * __restrict__ Q,               // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
-  const double * __restrict__ dQdx,            // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  x,
+	const tarch::la::Vector<Dimensions,double>&  h,
   double                                       t
 ) {
-  logTraceInWith2Arguments( "refinementCriterion(...)", x, t );
+	logTraceInWith3Arguments( "refinementCriterion(...)", x, h, t );
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
 
   // see comments in header file
@@ -28,7 +28,9 @@ tarch::logging::Log   {{NAMESPACE | join("::")}}::{{CLASSNAME}}::_log( "{{NAMESP
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::initialCondition(
   double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  x,
-  bool                                         gridIsConstructred
+  const tarch::la::Vector<Dimensions,double>&  h,
+  const tarch::la::Vector<Dimensions,int>&     point,
+	bool                                         gridIsConstructred
 ) {
   logTraceInWith2Arguments( "initialCondition(...)", x, gridIsConstructred );
 

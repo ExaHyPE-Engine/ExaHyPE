@@ -7,13 +7,13 @@ import peano4.toolbox.blockstructured
 import peano4.datamodel
 import peano4.output
 import exahype2.grid
+import exahype2.solvers.new_ader.actionsets
+from exahype2.solvers.rkdg.LagrangeBasis import GaussLegendreBasis, GaussLobattoBasis
 
 import os
 from abc import abstractmethod
 
 from enum import IntEnum
-from sympy.printing import str
-
 
 
 
@@ -30,6 +30,7 @@ class ADERDG( object ):
     self._name = name
     
     self._order = order
+    self._polynomials = polynomials
     self._unknowns = unknowns
     self._auxiliary_variables = auxiliary_variables
 
@@ -40,31 +41,37 @@ class ADERDG( object ):
 
     self._plot_grid_properties = plot_grid_properties    
     
-    if polynomials == Polynomials.Gauss_Legendre:
-      self._polynomials = polynomials
-    elif polynomials == Polynomials.Gauss_Lobatto:
-      self._polynomials = polynomials
+    if polynomials is Polynomials.Gauss_Legendre:
+      self._basis = GaussLegendreBasis(order+1)
+    elif polynomials is Polynomials.Gauss_Lobatto:
+      self._basis = GaussLobattoBasis(order+1)
     else:
-      raise Exception("""Currently only Gauss-Legendre and Gauss-Lobatto bases are available,
-       to choose from among these please set polynomials to 0 or 1 respectively.""")
+      raise Exception( "No proper basis chosen: {}".format(polynomials) )
+
+    self._preprocess_reconstructed_patch = ""
+    self._postprocess_updated_patch      = ""
 
     self.solver_constants_         = ""
     self.user_action_set_includes  = ""
     self.user_solver_includes      = ""
     self.plot_description = ""    
     
+    #TODO: find out about this
+    self._number_of_face_projections = 1;
+    
     self.create_data_structures()
     self.create_action_sets()
-
-
+    
             
   @abstractmethod
   def create_data_structures(self):
     #TODO: expand
-    self._current_time_step            = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1),                   self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._approximation                = peano4.datamodel.Patch( (self._order*(self._order+1),self._order+1,self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Projection" )
-    self._current_time_step_projection = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
-    self._approximation_projection     = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._dg_order+1),self._dg_order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._current_time_step                 = peano4.datamodel.Patch( (self._order+1,self._order+1,self._order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._estimates                         = peano4.datamodel.Patch( (self._order*(self._order+1),self._order+1,self._order+1),     self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
+    #self._linear_combination_of_estimates   = peano4.datamodel.Patch( (self._dg_order+1,self._dg_order+1,self._dg_order+1),                      self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "LinearCombination")
+    self._current_time_step_projection      = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._order+1),self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() )
+    self._estimates_projection              = peano4.datamodel.Patch( (2,self._number_of_face_projections*(self._order+1),self._order+1),  self._unknowns+self._auxiliary_variables, self._unknown_identifier() + "Estimates" )
+
     
     self._current_time_step_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._current_time_step_projection)
     self._current_time_step_projection.generator.includes     += """
@@ -72,8 +79,8 @@ class ADERDG( object ):
 #include "repositories/SolverRepository.h" 
 """
    
-    self._approximation_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._approximation_projection)
-    self._approximation_projection.generator.includes     += """
+    self._estimates_projection.generator.merge_method_definition = peano4.toolbox.blockstructured.get_face_overlap_merge_implementation(self._estimates_projection)
+    self._estimates_projection.generator.includes     += """
 #include "peano4/utils/Loop.h"
 #include "repositories/SolverRepository.h" 
 """
@@ -81,8 +88,11 @@ class ADERDG( object ):
     self._current_time_step.generator.store_persistent_condition = self._store_cell_data_default_guard()
     self._current_time_step.generator.load_persistent_condition  = self._load_cell_data_default_guard()
     
-    self._approximation.generator.store_persistent_condition = self._store_cell_data_default_guard()
-    self._approximation.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+    self._estimates.generator.store_persistent_condition = self._store_cell_data_default_guard()
+    self._estimates.generator.load_persistent_condition  = self._load_cell_data_default_guard()
+
+#    self._linear_combination_of_estimates.store_persistent_condition = "false"
+#    self._linear_combination_of_estimates.load_persistent_condition = "false"
 
     self._current_time_step_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
     self._current_time_step_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
@@ -90,22 +100,22 @@ class ADERDG( object ):
     self._current_time_step_projection.generator.send_condition               = "false"
     self._current_time_step_projection.generator.receive_and_merge_condition  = "false"
 
-    self._approximation_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
-    self._approximation_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
+    self._estimates_projection.generator.store_persistent_condition = self._store_face_data_default_guard()
+    self._estimates_projection.generator.load_persistent_condition  = self._load_face_data_default_guard()
 
-    self._approximation_projection.generator.send_condition               = "false"
-    self._approximation_projection.generator.receive_and_merge_condition  = "false"
+    self._estimates_projection.generator.send_condition               = "false"
+    self._estimates_projection.generator.receive_and_merge_condition  = "false"
 
     self._current_time_step.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
-    self._approximation.generator.includes  += """
+    self._estimates.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
     self._current_time_step_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
-    self._approximation_projection.generator.includes  += """
+    self._estimates_projection.generator.includes  += """
 #include "../repositories/SolverRepository.h"
 """    
 
@@ -117,6 +127,14 @@ class ADERDG( object ):
   @abstractmethod
   def create_action_sets(self):
     #TODO: expand
+    self._action_set_initial_conditions = exahype2.solvers.new_ader.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "true" )
+    self._action_set_initial_conditions_for_grid_construction  = exahype2.solvers.new_ader.actionsets.InitialCondition(self, self._store_cell_data_default_guard(), "false")
+    
+    self._action_set_AMR = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, 
+         guard=self._store_cell_data_default_guard() + " and (repositories::" + self.get_name_of_global_instance() + ".isLastGridSweepOfTimeStep() or repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation)", 
+         build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
+    self._action_set_AMR_commit_without_further_analysis  = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
+    
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
@@ -181,57 +199,78 @@ class ADERDG( object ):
        
        
   def add_to_Peano4_datamodel( self, datamodel, verbose ):       
+    """
     if verbose:
       print( "Patch data" )
       print( "----------" )
-      print( str(self._patch) )
+      print( str(self._current_time_step) )
       print( "Patch overlap data" )
       print( "----------" )
-      print( str(self._patch_overlap_old) )
-      print( "Patch overlap data" )
-      print( "----------" )
-      print( str(self._patch_overlap_new) )
+      print( str(self._current_time_step_projection) )
+    """  
     datamodel.add_cell(self._cell_label)
     datamodel.add_cell(self._current_time_step)
-    datamodel.add_cell(self._approximation)
+    datamodel.add_cell(self._estimates)
     datamodel.add_face(self._face_label)
     datamodel.add_face(self._current_time_step_projection)
-    datamodel.add_face(self._approximation_projection)
+    datamodel.add_face(self._estimates_projection)
 
   
   def add_use_data_statements_to_Peano4_solver_step(self, step):
     step.use_cell(self._cell_label)
     step.use_cell(self._current_time_step)
-    step.use_cell(self._approximation)
+    step.use_cell(self._estimates)
     step.use_face(self._face_label)
     step.use_face(self._current_time_step_projection)
-    step.use_face(self._approximation_projection)
+    step.use_face(self._estimates_projection)
   
   def add_actions_to_init_grid(self, step):  
     #TODO
-    return
+    step.add_action_set( self._action_set_initial_conditions )
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_AMR )
+
   
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
-    #TODO
-    return
+    step.add_action_set( self._action_set_initial_conditions_for_grid_construction )    
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
+    if evaluate_refinement_criterion:
+      step.add_action_set( self._action_set_AMR )
+    else:
+      step.add_action_set( self._action_set_AMR_commit_without_further_analysis )
+
   
   def add_actions_to_plot_solution(self, step, output_path):
     #TODO
     d = {}
     self._init_dictionary_with_default_parameters(d)
     self.add_entries_to_text_replacement_dictionary(d)
+    
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )    
+    
+    mapping = []    
+    for z in self._basis.quadrature_points():
+      for y in self._basis.quadrature_points():
+        for x in self._basis.quadrature_points():
+          mapping.append( (x,y,z) )
+
+    
     step.add_action_set( peano4.toolbox.blockstructured.PlotPatchesInPeanoBlockFormat( 
       filename=output_path + "solution-" + self._name, 
       patch=self._current_time_step, 
       dataset_name=self._unknown_identifier(), 
       description=self.plot_description,
+      mapping=mapping,
       guard="repositories::plotFilter.plotPatch(marker) and " + self._load_cell_data_default_guard(),
       additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
 """,
       precision="PlotterPrecision",
-      time_stamp_evaluation="repositories::getMinTimeStamp()"
+      time_stamp_evaluation="repositories::getMinTimeStamp()", plot_cell_data=False
     ))
 
     if self._plot_grid_properties:    
@@ -242,13 +281,18 @@ class ADERDG( object ):
         additional_includes="""
 #include "exahype2/PlotFilter.h"
 #include "../repositories/SolverRepository.h"
-"""
+""",
+        plot_cell_data=False
       ))      
     pass
   
   def add_actions_to_perform_time_step(self, step):  
-    #TODO
-    return
+    step.add_action_set( self._action_set_update_face_label )
+    step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_AMR )
+    
+    step.add_action_set(self._action_set_update_cell)
+
   
     
   def set_plot_description(self,description):
@@ -309,7 +353,7 @@ class ADERDG( object ):
   def add_solver_constants(self, datastring): self.solver_constants_ += datastring  
   
   
-    @property
+  @property
   def patch_size(self):
     return self._patch_size
 
@@ -357,6 +401,10 @@ class ADERDG( object ):
     d["UNKNOWN_IDENTIFIER"]             = self._unknown_identifier()
     d["NUMBER_OF_UNKNOWNS"]             = self._unknowns
     d["NUMBER_OF_AUXILIARY_VARIABLES"]  = self._auxiliary_variables
+    
+    d[ "NUMBER_OF_DOFS_PER_CELL_2D" ] = (self._order+1) * (self._order+1);
+    d[ "NUMBER_OF_DOFS_PER_CELL_3D" ] = (self._order+1) * (self._order+1) * (self._order+1);
+
 
     d["POLYNOMIALS"]                    = str(self._polynomials)
 
@@ -369,12 +417,13 @@ class ADERDG( object ):
 
     if (self._min_cell_h > self._max_cell_h ):
       raise Exception( "min/max h are inconsistent" )
-    d[ "MAX_CELL_H"] = self._min_cell_h
+    d[ "MAX_CELL_H"] = self._max_cell_h
     d[ "MIN_CELL_H"] = self._min_cell_h
 
     d[ "SOLVER_CONSTANTS" ] = self.solver_constants_
     d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
     
+    self._basis.init_dictionary_with_default_parameters(d)
     
     
     

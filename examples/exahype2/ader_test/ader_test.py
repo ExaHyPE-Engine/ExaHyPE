@@ -8,6 +8,7 @@ import exahype2.solvers.new_ader
 from exahype2.solvers.new_ader.rusanov.GlobalFixedTimeStep import GlobalFixedTimeStep
 from exahype2.solvers.new_ader.ADERDG import ADERDG
 from exahype2.solvers.new_ader.SingleSweep import SingleSweep
+from exahype2.solvers.new_ader.ADERDG import Polynomials
 
 modes = {
   "release": peano4.output.CompileMode.Release,
@@ -23,7 +24,7 @@ parser.add_argument("-o",  "--output",                 dest="out",              
 parser.add_argument("-amr", "--adaptive-levels",       dest="adaptivity_levels", type=int, default=0, help="Number of AMR grid levels on top of hmax (0 by default)" )
 parser.add_argument("-d",  "--dim",                    dest="dim",            type=int, default=2, help="Dimensions" )
 parser.add_argument("-m",  "--mode",                   dest="mode",                     default="release", help="|".join(modes.keys()) )
-parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0, help="Time interval in-between two snapshots (switched off by default")
+parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_interval", default=0.1, help="Time interval in-between two snapshots (switched off by default")
 parser.add_argument("-et", "--end-time",               dest="end_time",                 type=float, default=1.0, help="Number of timesteps" )
 parser.add_argument("-order",   "--order",       dest="order",          type=int, default=3, help="DG Order" )
 parser.add_argument("-p",   "--p",       dest="polynomials",          type=int, default=0, help="Polynomial type, 0 is gauss-legendre, 1 is gauss-lobatto" )
@@ -39,16 +40,20 @@ auxiliary_variables = 0
 max_h          = args.h
 min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels)
 order=args.order
-polynomials = args.polynomials
 
-theSolver=GlobalFixedTimeStep()
-theSolver=SingleSweep()
-theSolver=ADERDG(
+if args.polynomials == 0:
+  polynomials = Polynomials.Gauss_Legendre
+elif args.polynomials == 1:
+  polynomials = Polynomials.Gauss_Lobatto
+else:
+  raise AttributeError("not acceptable choice of polynomials")  
+
+theSolver=GlobalFixedTimeStep(
   name="testing",  order=order, polynomials=polynomials,
   unknowns=unknowns, auxiliary_variables=auxiliary_variables,
-  min_cell_h=min_h, max_cell_h=max_h)
+  min_cell_h=min_h, max_cell_h=max_h, time_step=0.1)
 
-#project.add_solver(theSolver)
+project.add_solver(theSolver)
 
 dimensions = args.dim
 build_mode = modes[args.mode]

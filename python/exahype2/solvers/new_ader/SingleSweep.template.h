@@ -51,9 +51,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
      */
     ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * __restrict__                  dQdx, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       t
+      const tarch::la::Vector<Dimensions,double>&  h,
+			double                                       t
     ) override;
     {% endif %}
 
@@ -62,7 +62,9 @@ class {{NAMESPACE | join("::")}}::{{CLASSNAME}}: public Abstract{{CLASSNAME}} {
     void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
-      bool                                         gridIsConstructred
+      const tarch::la::Vector<Dimensions,double>&  h,
+      const tarch::la::Vector<Dimensions,int>&     index,
+			bool                                         gridIsConstructred
     ) override;
     {% endif %}
 

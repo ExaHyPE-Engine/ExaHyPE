@@ -181,7 +181,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}
-""", undefined=jinja2.DebugUndefined)
+    """, undefined=jinja2.DebugUndefined)
 
   d= {}
   d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
@@ -620,6 +620,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #pragma omp end declare target
     #endif
     {% endif %}    
+    
 """, undefined=jinja2.DebugUndefined)
   d= {}
   d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
@@ -807,3 +808,62 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
   return Template.render(**d)
 
+
+def create_abstract_solver_user_declarations_for_fixed_time_stepping():
+  return """
+private:
+  double _timeStepSize;
+public:
+  double getTimeStepSize() const;  
+    """  
+
+
+def create_abstract_solver_user_definitions_for_fixed_time_stepping():
+  return """
+double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::getTimeStepSize() const {
+  return _timeStepSize;
+}
+    """  
+
+
+def create_compute_time_step_size_for_fixed_time_stepping(_time_step_size):
+  return """
+  const double timeStepSize = """ +str(_time_step_size)
+
+def create_start_time_step_implementation_for_fixed_time_stepping(use_enclave_tasking):
+  """
+  
+  The outcome is used before we actually roll over the accumulation variables
+  and other stuff.
+  
+  """
+  predicate = """
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxCellH>0.0
+  """
+  
+  if use_enclave_tasking:
+    predicate += """and (_solverState == SolverState::Primary or _solverState == SolverState::PrimaryAfterGridInitialisation) """
+      
+  return """
+  if (""" + predicate + """) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "step()", "dt      = " << getTimeStepSize() );
+    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep << " (volume size)");
+    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep<< " (volume size)" );
+  }
+"""
+
+def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
+  return """
+  assertion( _minVolumeH >= 0.0 );
+  assertion( MaxAdmissibleCellH > 0.0 );
+  if (_minCellH <= MaxAdmissibleCellH) {
+    _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minCellH / MaxAdmissibleCellH;
+  }
+  else {
+    _timeStepSize = 0.0;
+  }
+"""
