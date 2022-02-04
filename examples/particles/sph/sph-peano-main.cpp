@@ -27,6 +27,7 @@
 #include "observers/CalcDensities.h"
 #include "observers/CalcInternalEnergies.h"
 #include "observers/CalcDensitiesAndSmoothingLengthNR.h"
+#include "observers/ForceNonSym.h"
 
 
 tarch::logging::Log _log("::");
@@ -181,9 +182,12 @@ int main(int argc, char** argv) {
         examples::particles::observers::CalcDensitiesAndSmoothingLengthNR densityAndSmoothingLObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(densityAndSmoothingLObserver);
 
-        examples::particles::observers::CalcInternalEnergies energyObserver;   
-        peano4::parallel::SpacetreeSet::getInstance().traverse(energyObserver);
+//        examples::particles::observers::CalcInternalEnergies energyObserver;    Moved into force calc
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(energyObserver);
 
+        examples::particles::observers::ForceNonSym forcesObserver;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(forcesObserver);
+     
         examples::particles::observers::Move moveObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(moveObserver);
       }
