@@ -31,7 +31,9 @@ class Enumeration(Attribute):
     return self._name[:1].title() + self._name[1:]
 
   def get_public_fields(self):
-    result = "    enum class " + self._enum_name() + """: int {
+    result = """
+    #pragma for Pawel
+    enum class """ + self._enum_name() + """: int {
       """
     
     for i in self._variants:

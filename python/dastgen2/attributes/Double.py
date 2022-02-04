@@ -11,8 +11,15 @@ class Double(Attribute):
     with a scalar.
     
   """
-  def __init__(self, name):
+  def __init__(self, name, relative_accuracy_in_bits=None):
+    """
+    
+    @Pawel Can you add some docu?
+    
+    """
     Attribute.__init__(self, name)
+    self._relative_accuracy_in_bits = relative_accuracy_in_bits
+    
     
   def get_methods(self,_full_qualified_class_name):
     accessor_name = self._name[:1].title() + self._name[1:]
@@ -21,8 +28,13 @@ class Double(Attribute):
       ("set" + accessor_name + "(double value)", "void")
     ]
 
+
   def get_plain_C_attributes(self):
-    return [ ("_" + self._name, "double" ) ]
+    if self._relative_accuracy_in_bits==None:
+      return [ ("_" + self._name, "double" ) ]
+    else:
+      return [ ("_" + self._name + " [[fancy attribute for Pawel]]", "double" ) ]
+
 
   def get_method_body(self,signature):
     if signature.startswith( "get" ):
@@ -32,6 +44,7 @@ class Double(Attribute):
     else:
       assert(False)
     return ""
+
   
   def get_native_MPI_type(self):
     return [ ("MPI_DOUBLE", 1) ]

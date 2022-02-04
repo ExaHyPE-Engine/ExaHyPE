@@ -17,8 +17,8 @@ enum class Scenario {
 };
 
 
-//Scenario scenario = Scenario::BreakingDamResolutionStudies;
-Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
+Scenario scenario = Scenario::BreakingDamResolutionStudies;
+//Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
 
 //Scenario scenario = Scenario::BreakingDam;
 
