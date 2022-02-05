@@ -71,13 +71,25 @@ class SeparateSweeps( RungeKuttaDG ):
     """
     super(SeparateSweeps, self).create_data_structures()
 
-    initialisation_sweep_guard = "(" + \
+    self._initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
-    first_iteration_after_initialisation_guard = "(" + \
+    self._first_iteration_after_initialisation_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
+    self._first_grid_sweep_within_RK_step = "( false "
+    for step in range(0,self.number_of_Runge_Kutta_steps()):
+      self._first_grid_sweep_within_RK_step += "or ("
+      self._first_grid_sweep_within_RK_step += "repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,step)
+      self._first_grid_sweep_within_RK_step += ")"
+    self._first_grid_sweep_within_RK_step += ")"
+    self._second_grid_sweep_within_RK_step = "( false "
+    for step in range(0,self.number_of_Runge_Kutta_steps()):
+      self._second_grid_sweep_within_RK_step += "or ("
+      self._second_grid_sweep_within_RK_step += "repositories::{}.getSolverState()=={}::SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,step)
+      self._second_grid_sweep_within_RK_step += ")"
+    self._second_grid_sweep_within_RK_step += ")" 
 
     #self._patch_overlap_new.generator.send_condition               = "true"
     #self._patch_overlap_new.generator.receive_and_merge_condition  = "true"
@@ -109,7 +121,8 @@ class SeparateSweeps( RungeKuttaDG ):
     self._action_set_linear_combination_of_estimates.guards = [
       "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
-    #self._action_set_update_cell = UpdateCell(self)
+    self._action_set_project_linear_combination_onto_faces.guard = self._store_cell_data_default_guard() + " and " + self._first_grid_sweep_within_RK_step
+        #self._action_set_update_cell = UpdateCell(self)
 
 
   def get_user_action_set_includes(self):

@@ -5,8 +5,9 @@ from .AdaptivityCriterion            import AdaptivityCriterion
 #from .HandleBoundary        import HandleBoundary
 from .InitialCondition               import InitialCondition
 from .LinearCombinationOfEstimates   import LinearCombinationOfEstimates
-#from .ProjectPatchOntoFaces import ProjectPatchOntoFaces
-#from .RollOverUpdatedFace   import RollOverUpdatedFace
+from .LinearCombinationOfEstimates   import LinearCombinationOfEstimates
+from .ProjectLinearCombinationOfEstimatesOntoFaces import ProjectLinearCombinationOfEstimatesOntoFaces
+from .ProjectSolutionOntoFaces                     import ProjectSolutionOntoFaces
 #from .DynamicAMR            import DynamicAMR
 #from .PostprocessSolution   import EmptyPostprocessSolution
 #from .PostprocessSolution   import VolumeWisePostprocessSolution
