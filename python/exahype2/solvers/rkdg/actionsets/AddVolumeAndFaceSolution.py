@@ -6,7 +6,7 @@ from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 import peano4
 import jinja2
 
-class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet):
+class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
   """
   
   The linear combination of the Runge Kutta trials has to be projected onto
@@ -32,7 +32,7 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
       the old solution and the time step should also be moved over
     
     """
-    super(ProjectLinearCombinationOfEstimatesOntoFaces,self).__init__(solver)
+    super(AddVolumeAndFaceSolution,self).__init__(solver)
     self.guard            = guard
     
 

@@ -219,6 +219,8 @@ class RungeKuttaDG(object):
 
     self.plot_description = ""
     
+    self._action_set_postprocess_solution = None   
+
     if polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Legendre:
       self._basis = GaussLegendreBasis(dg_order+1)
     elif polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Lobatto:
@@ -414,8 +416,8 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 """    
 
     self._cell_label = exahype2.grid.create_cell_label( self._name )
-    self._face_label = exahype2.grid.create_face_label( self._name )  
-    
+    self._face_label = exahype2.grid.create_face_label( self._name )
+        
 
   @abstractmethod
   def create_action_sets(self):
@@ -452,15 +454,13 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
     self._action_set_add_volume_and_face_solution                                     = exahype2.solvers.rkdg.actionsets.AddVolumeAndFaceSolution(self, self._store_face_data_default_guard())
     self._action_set_project_solution_onto_faces                                      = exahype2.solvers.rkdg.actionsets.ProjectSolutionOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
     self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.rkdg.actionsets.DynamicAMR(solver=self,guard=self._store_cell_data_default_guard())
-    self._action_set_postprocess_solution                                             = exahype2.solvers.rkdg.actionsets.PostprocessSolution(solver=self,guard=self._store_cell_data_default_guard())
+    
+    if self._action_set_postprocess_solution==None:
+      self._action_set_postprocess_solution                                             = exahype2.solvers.rkdg.actionsets.EmptyPostprocessSolution(solver=self)
 
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
-    self._action_set_update_cell                                                      = None
-    self._action_set_solve_Riemann_problem                                            = None
-
-
 
   def _store_cell_data_default_guard(self):
     return "not marker.willBeRefined() " + \

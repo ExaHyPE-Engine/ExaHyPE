@@ -1,12 +1,12 @@
 # This file is part of the ExaHyPE2 project. For conditions of distribution and 
 # use, please see the copyright notice at www.peano-framework.org
 
-from .AbstractFVActionSet import AbstractFVActionSet
+from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 
 import peano4
 import jinja2
 
-class EmptyPostprocessSolution(AbstractFVActionSet):
+class EmptyPostprocessSolution(AbstractRungeKuttaDGActionSet):
   """
   
   PostprocessSolution differs from other action sets, as I only create it once. See 
@@ -15,7 +15,7 @@ class EmptyPostprocessSolution(AbstractFVActionSet):
   
   """
   def __init__(self,solver):
-    AbstractFVActionSet.__init__(self,solver)
+    super(EmptyPostprocessSolution,self).__init__(solver)
     # Is there for compatibility reasons
     self.guard               = "true"
     
@@ -32,7 +32,7 @@ class EmptyPostprocessSolution(AbstractFVActionSet):
 
 
 
-class VolumeWisePostprocessSolution(AbstractFVActionSet):
+class VolumeWisePostprocessSolution(AbstractRungeKuttaDGActionSet):
   """
   
   PostprocessSolution differs from other action sets, as I only create it once. See 
@@ -41,7 +41,7 @@ class VolumeWisePostprocessSolution(AbstractFVActionSet):
   
   """
   def __init__(self,solver):
-    AbstractFVActionSet.__init__(self,solver)
+    super(EmptyPostprocessSolution,self).__init__(solver)
     self.guard               = "true"
     self._compute_kernel     = ""
 
