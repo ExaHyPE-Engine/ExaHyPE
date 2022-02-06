@@ -81,7 +81,7 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
 
   tarch::la::Vector<Dimensions,double> firstParticleX = domainOffset;
   for (int d=0; d<Dimensions; d++) {
-    while ( tarch::la::smaller( firstParticleX(d), voxelX(d) - voxelH(d)/2.0, RelativeAccuracyForGeometricChecks ) ) {
+    while ( tarch::la::smaller( firstParticleX(d), voxelX(d) - 0.5*voxelH(d), RelativeAccuracyForGeometricChecks ) ) {
       firstParticleX(d) += spacing;
     }
   }
@@ -90,7 +90,7 @@ std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMes
   dfor(k,particlesPerAxis) {
     tarch::la::Vector<Dimensions,double> x = firstParticleX + spacing * tarch::la::convertScalar<double>(k);
 
-    if ( tarch::la::allSmaller(x,voxelX+voxelH, RelativeAccuracyForGeometricChecks) ) {
+    if ( tarch::la::allSmaller(x,voxelX+0.5*voxelH, RelativeAccuracyForGeometricChecks) ) {
       T* newParticle = new T();
 
       if (addNoise) {
