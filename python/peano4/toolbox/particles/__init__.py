@@ -9,5 +9,5 @@ from .ParticleParticleInteraction   import ParticleParticleInteraction
 from .ParticleTreeAnalysis          import ParticleTreeAnalysis
 from .UpdateParticleGridAssociation import UpdateParticleGridAssociation
 from .InsertRandomParticlesIntoUnrefinedCells import InsertRandomParticlesIntoUnrefinedCells
-
+from .InsertParticlesAlongCartesianLayoutIntoUnrefinedCells import InsertParticlesAlongCartesianLayoutIntoUnrefinedCells
 

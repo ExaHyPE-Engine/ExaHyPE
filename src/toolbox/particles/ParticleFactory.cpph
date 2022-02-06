@@ -67,3 +67,42 @@ std::vector<T*> toolbox::particles::createEquallySpacedParticles(double spacing,
 
   return result;
 }
+
+
+template <class T>
+std::vector<T*> toolbox::particles::createParticlesAlignedWithGlobalCartesianMesh(double spacing, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, const tarch::la::Vector<Dimensions,double>& domainOffset, bool addNoise) {
+  static tarch::logging::Log _log( "toolbox::particles" );
+  logInfo( "createParticlesAlignedWithGlobalCartesianMesh(...)", "spacing=" << spacing << ", voxelX=" << voxelX << ", domain-offset=" << domainOffset << ", noise=" << addNoise );
+  std::vector<T*> result;
+
+  const double RelativeAccuracyForGeometricChecks = 0.01 * voxelH(0);
+
+  double continuousParticlesPerAxis = voxelH(0) / spacing;
+
+  tarch::la::Vector<Dimensions,double> firstParticleX = domainOffset;
+  for (int d=0; d<Dimensions; d++) {
+    while ( tarch::la::smaller( firstParticleX(d), voxelX(d) - voxelH(d)/2.0, RelativeAccuracyForGeometricChecks ) ) {
+      firstParticleX(d) += spacing;
+    }
+  }
+
+  int    particlesPerAxis           = static_cast<int>( std::floor(continuousParticlesPerAxis) )+1;
+  dfor(k,particlesPerAxis) {
+    tarch::la::Vector<Dimensions,double> x = firstParticleX + spacing * tarch::la::convertScalar<double>(k);
+
+    if ( tarch::la::allSmaller(x,voxelX+voxelH, RelativeAccuracyForGeometricChecks) ) {
+      T* newParticle = new T();
+
+      if (addNoise) {
+        for (int d=0; d<Dimensions; d++) {
+          x(d) += (randomDist(e2) - 0.5) * spacing;
+        }
+      }
+
+      init(*newParticle,x,0.9*tarch::la::min(voxelH));
+      result.push_back(newParticle);
+    }
+  }
+
+  return result;
+}

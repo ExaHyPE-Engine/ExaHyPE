@@ -11,6 +11,13 @@ class InsertRandomParticlesIntoUnrefinedCells(ActionSet):
   def __init__(self,particle_set,average_distance_between_particles,initialisation_call,round_down = False, noise=True,additional_includes=""):
     """
       Insert particles
+      
+      The particles are topologically Cartesian, i.e. they are not totally random. So
+      we embed a Cartesian "grid" of particles into each unrefined cell, and then add
+      some noise to them. As the individual cells are not coupled with each other, and
+      as we do not evaluate any global coordinates, the overall result will not be 
+      random, even if you switch off noise completely, as the spacing between two
+      regular particle layouts between two neighbouring cells is not "synchronised".
 
       :Attibutes:
 

@@ -46,14 +46,24 @@ if ( not marker.isRefined() ) {
   fineGridVertex{{PARTICLES_CONTAINER}}.insert( fineGridVertex{{PARTICLES_CONTAINER}}.end(), newParticles.begin(), newParticles.end() );
 }
 </pre>
+
      * @param spacingH Spacing of particles. Pick it smaller or equal to 0 and we'll always
      *   create one particle in the center.
+     *
+     * @param voxelX Centre of voxel in space
+     *
+     * @param voxelH Size of voxel, i.e. subcell, into which the particles shall be embedded
+     *
      * @param roundDown Always round down. In this case, you get a totally equal-spaced
      *   initial particle layout, but it will not match h globally.
+     *
+     *
      */
     template <class T>
     std::vector<T*> createEquallySpacedParticles(double spacingH, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, bool roundDown, bool addNoise);
 
+    template <class T>
+    std::vector<T*> createParticlesAlignedWithGlobalCartesianMesh(double spacingH, const tarch::la::Vector<Dimensions,double>& voxelX, const tarch::la::Vector<Dimensions,double>& voxelH, const tarch::la::Vector<Dimensions,double>& domainOffset, bool addNoise);
   }
 }
 
