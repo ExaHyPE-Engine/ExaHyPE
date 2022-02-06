@@ -8,7 +8,7 @@
 #include <string>
 
 
-#if defined(SharedOMP) || defined(SharedTBB) || defined(SharedCPP)
+#if defined(SharedOMP) || defined(SharedSYCL) || defined(SharedCPP)
   #define SharedMemoryParallelisation
 #endif
 
@@ -229,11 +229,6 @@ and
 
  */
   namespace multicore {
-     /**
-      * @see file Tasks.h
-      */
-     void yield();
-      
      #if defined(GPUOffloading) and defined(UseAMD)
        #define  GPUCallableMethod __global__ __device__
        #undef   OpenMPGPUOffloading

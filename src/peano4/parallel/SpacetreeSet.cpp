@@ -247,7 +247,7 @@ void peano4::parallel::SpacetreeSet::addSpacetree( int masterId, int newTreeId )
 }
 
 
-int peano4::parallel::SpacetreeSet::TraverseTask::_typeId( peano4::parallel::Tasks::getTaskType("peano4::parallel::SpacetreeSet::TraverseTask", false) );
+int peano4::parallel::SpacetreeSet::TraverseTask::_typeId( peano4::parallel::getTaskType("peano4::parallel::SpacetreeSet::TraverseTask") );
 
 
 peano4::parallel::SpacetreeSet::TraverseTask::TraverseTask(
@@ -532,12 +532,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   const bool runSequentially = false;
 
   logTraceInWith1Argument( "traverse(TraversalObserver&)-primary", primaryTasks.size() );
-  if ( not primaryTasks.empty() ) {
-    static int multitasking = peano4::parallel::Tasks::getLocationIdentifier( "peano4::parallel::SpacetreeSet::traverse-1" );
-    peano4::parallel::Tasks runs( primaryTasks,
-      runSequentially ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
-      multitasking,true);
-  }
+  tarch::multicore::spawnAndWait( primaryTasks );
   logTraceOut( "traverse(TraversalObserver&)-primary" );
 
   logDebug( "traverse(TraversalObserver&)", "primary tasks (traversals) complete, trigger split data stream if required" );
@@ -546,12 +541,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   exchangeVerticalDataBetweenTrees(observer);
 
   logTraceInWith1Argument( "traverse(TraversalObserver&)-secondary", secondaryTasks.size() );
-  if ( not secondaryTasks.empty() ) {
-    static int multitasking = peano4::parallel::Tasks::getLocationIdentifier( "peano4::parallel::SpacetreeSet::traverse-2" );
-    peano4::parallel::Tasks runs( secondaryTasks,
-      runSequentially ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
-      multitasking,true);
-  }
+  tarch::multicore::spawnAndWait( secondaryTasks );
   logTraceOut( "traverse(TraversalObserver&)-secondary" );
 
   tarch::timing::Watch dataExchangeTime("peano4::parallel::SpacetreeSet", "traverse", false );
@@ -559,12 +549,7 @@ void peano4::parallel::SpacetreeSet::traverse(peano4::grid::TraversalObserver& o
   exchangeVerticalDataBetweenTrees(observer);
 
   logTraceInWith1Argument( "traverse(TraversalObserver&)-tertiary", tertiaryTasks.size() );
-  if ( not tertiaryTasks.empty() ) {
-    static int multitasking = peano4::parallel::Tasks::getLocationIdentifier( "peano4::parallel::SpacetreeSet::traverse-3" );
-    peano4::parallel::Tasks runs( tertiaryTasks,
-      runSequentially ? peano4::parallel::Tasks::TaskType::Sequential : peano4::parallel::Tasks::TaskType::Task,
-      multitasking,true);
-  }
+  tarch::multicore::spawnAndWait( tertiaryTasks );
   logTraceOut( "traverse(TraversalObserver&)-tertiary" );
 
   exchangeHorizontalDataBetweenTrees(observer);

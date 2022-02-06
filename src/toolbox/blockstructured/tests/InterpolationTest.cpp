@@ -91,6 +91,9 @@ void toolbox::blockstructured::tests::InterpolationTest::testRestrictCellForBrea
 void toolbox::blockstructured::tests::InterpolationTest::testRestrictHaloLayer_AoS_averaging() {
   #if Dimensions==2
   peano4::grid::GridTraversalEvent    dummyEvent;
+  dummyEvent.setRelativePositionToFather(0,0);
+  dummyEvent.setRelativePositionToFather(1,0);
+
   peano4::datamanagement::FaceMarker  faceMarker(dummyEvent);
   double fineGridValues[] =
       {

@@ -63,7 +63,7 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * Tell all registered services to answer to MPI messages that are still
      * pending in the MPI queues.
      *
-     * <h2> MPI tuning </h2>
+     * ## MPI tuning
      *
      * I once had an implementation that checks via Iprobe whether to call the
      * receiveDanglingMessages() of all registered services. Without that probe,
@@ -77,7 +77,7 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * (unexpected message arrival). But it can also be something else such as
      * the handling of left-ofter tasks.
      *
-     * <h2> Receive dangling message in multithreaded environment </h2>
+     * ## Receive dangling message in multithreaded environment
      *
      * It is important that you never ever call receiveDanglingMessages() of a
      * service directly. Instead, you always should go to the repository. The
@@ -89,6 +89,12 @@ class tarch::services::ServiceRepository: public tarch::services::Service {
      * but we also solve it in the old-fashioned way if you only issue receives
      * through the repository, as the repository invokes the services, but it
      * first blocks all other threads through a semaphore.
+     *
+     * ## Interplay with tasking system
+     *
+     * It is important that we get the number of iprobes down. At the same time,
+     * when I hit this operation, I know that I'm waiting for something. So what
+     * I do is that I also invoke the tasking subsystem.
      */
     void receiveDanglingMessages() override;
 

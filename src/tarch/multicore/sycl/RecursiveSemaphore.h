@@ -1,8 +1,8 @@
 // This file is part of the Peano project. For conditions of distribution and
 // use, please see the copyright notice at www.peano-framework.org
 #include "tarch/multicore/multicore.h"
-#if !defined(_TARCH_MULTICORE_TBB_RECURSIVE_SEMAPHORE_H_) && defined(SharedTBB)
-#define _TARCH_MULTICORE_TBB_RECURSIVE_SEMAPHORE_H_
+#if !defined(_TARCH_MULTICORE_SYCL_RECURSIVE_SEMAPHORE_H_) && defined(SharedSYCL)
+#define _TARCH_MULTICORE_SYCL_RECURSIVE_SEMAPHORE_H_
 
 #include <string>
 #include <thread>
@@ -10,6 +10,7 @@
 #include "tarch/multicore/BooleanSemaphore.h"
 #include "tarch/logging/Log.h"
 
+#include <mutex>
 
 namespace tarch {
   namespace multicore {

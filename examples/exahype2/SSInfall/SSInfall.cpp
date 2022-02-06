@@ -9,6 +9,17 @@
 tarch::logging::Log   examples::exahype2::SSInfall::SSInfall::_log( "examples::exahype2::SSInfall::SSInfall" );
 
 
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+double examples::exahype2::SSInfall::SSInfall::_rMax;
+double examples::exahype2::SSInfall::SSInfall::_rhoMax;
+double examples::exahype2::SSInfall::SSInfall::_mTotMax;
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
+
+
 void examples::exahype2::SSInfall::SSInfall::startTimeStep(
   double globalMinTimeStamp,
   double globalMaxTimeStamp,
@@ -25,6 +36,22 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
       m_tot[i]           = 0;
       cell_tot[i]        = 0;
     }
+    double inter_time=globalMinTimeStamp+globalMinTimeStepSize/2;
+    #ifdef useTable
+    int time_position=0;
+    //logInfo( "startTImeStep()", "current min time=" << globalMinTimeStamp<<" inter time=" << inter_time);
+    for(int i=0; i<table_point_number;i++){
+      if (tarch::la::smallerEquals(inter_time,code_time_points[i]) ){time_position=i; break;}
+      time_position=i;
+    }
+    //logInfo( "startTImeStep()", "it is between time point " << code_time_points[time_position-1] << " and " << code_time_points[time_position]);
+    interpolated_a=scale_factor_points[time_position-1]*(code_time_points[time_position]-inter_time)/(code_time_points[time_position]-code_time_points[time_position-1])+scale_factor_points[time_position]*(inter_time-code_time_points[time_position-1])/(code_time_points[time_position]-code_time_points[time_position-1]);
+    //logInfo( "startTImeStep()", "interpolated to " << interpolated_a << " from " << scale_factor_points[time_position-1] << " and " << scale_factor_points[time_position]);
+    if (tarch::la::equals(globalMinTimeStamp,0.0) ){
+      interpolated_a=scale_factor_points[0];
+      //logInfo( "startTImeStep()", "reset scale a to " << interpolated_a << " because t=0.0");
+    }
+    #endif
 
     if (MassCal==1){
       for(int i=0;i<sample_number;i++){
@@ -44,7 +71,8 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
 void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
   AbstractSSInfall::finishTimeStep();
 
-  #ifdef Parallel
+  if (AbstractSSInfall::isLastGridSweepOfTimeStep()){
+    #ifdef Parallel
     tarch::mpi::Rank::getInstance().allReduce(
         m_tot,
         global_m_tot,
@@ -59,13 +87,19 @@ void examples::exahype2::SSInfall::SSInfall::finishTimeStep(){
         MPI_SUM,
         [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
     );
-  #else
+    #else
     for (int i=0;i<sample_number;i++) {
       global_m_tot[i]=m_tot[i];
       global_cell_tot[i]=cell_tot[i];
     }
-  #endif
+
+    // @Han is this ok?
+    _rMax     = r_s[sample_number-1];
+    _rhoMax   = rho_x[sample_number-1];
+    _mTotMax  = m_tot_copy[sample_number-1];
+    #endif
     plotGlobalMTot(false);
+  }
 }
 
 
@@ -114,8 +148,11 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
   double radius=volumeX(0)*volumeX(0)+volumeX(1)*volumeX(1)+volumeX(2)*volumeX(2); radius=pow(radius,0.5);
   if (ReSwi==1){ //radius based
     constexpr int NumberOfRefinementLayers = 2;
-    double Radius[NumberOfRefinementLayers] = {1.0,0.5};
+    double Radius[NumberOfRefinementLayers] = {0.7,0.5};
     double MaxH[NumberOfRefinementLayers]   = {0.02,0.006};
+    //constexpr int NumberOfRefinementLayers = 1;
+    //double Radius[NumberOfRefinementLayers] = {0.5};
+    //double MaxH[NumberOfRefinementLayers]   = {0.02};
     for (int i=0; i<NumberOfRefinementLayers; i++) {
       if (radius<Radius[i] and tarch::la::max(volumeH)>MaxH[i]) {
         result=::exahype2::RefinementCommand::Refine;
@@ -132,8 +169,8 @@ std::string examples::exahype2::SSInfall::SSInfall::plotGlobalMTot(bool plotCopy
       }
     }
   }
-  if (ReSwi==3){ //radius based
-    if (radius<0.4) {result=::exahype2::RefinementCommand::Refine;}
+  if (ReSwi==3){ //radius based, for test
+    if (radius<0.2) {result=::exahype2::RefinementCommand::Refine;}
   }
   if (ReSwi==4){ //dynamic one
     double t_i=pow(a_i,1.5)*2.057*1e17;
@@ -262,6 +299,46 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
 }
 
 
+double examples::exahype2::SSInfall::SSInfall::getInitialMIn( double r_coor ) const {
+  const double rho_ini=tilde_rho_ini;
+  if (iseed==0) {
+    if (r_coor<r_ini) {
+      return rho_ini*delta_rho*pow(r_coor,3)/3;
+    }
+    else {
+      return rho_ini*delta_rho*pow(r_ini,3)/3;
+    }
+  }
+  if (iseed==1) {
+    if (r_coor<r_point){
+      return delta_m*pow(r_coor/r_point,3)/4/tarch::la::PI;
+    }
+    else {
+      return delta_m/4/tarch::la::PI;
+    }
+  }
+  return 0.0;
+}
+
+
+double examples::exahype2::SSInfall::SSInfall::getForceDensityNorm(double r_coor,double m_in, double t, double density) {
+  double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
+  #ifdef useTable
+  a=interpolated_a; //if we use a table to interpolate a (for LCDM), we replace it here.
+  #endif
+  double force_density_norm=density*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
+  #ifdef DGP
+  double y3_over_Delta=(4.0/3.0)*pi*pow(r_coor,3)/delta_m;
+  double modifier=0.0;
+  if (tarch::la::equals(DGP_zeta,0.0)){modifier=1.0/3.0/DGP_beta;}
+  else{modifier=(27*DGP_beta/16/DGP_zeta/DGP_zeta)*y3_over_Delta*(pow(1+(32*DGP_zeta*DGP_zeta/81/DGP_beta/DGP_beta/y3_over_Delta),0.5)-1);}
+  //logInfo( "source()", "modifier" << modifier );
+  force_density_norm=force_density_norm*(1+modifier);
+  #endif
+  return force_density_norm;
+}
+
+
 void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   const double * __restrict__                  Q, // Q[5+0]
   const tarch::la::Vector<Dimensions,double>&  volumeX,
@@ -290,63 +367,43 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
     volumeX, volumeH, t, dt
   );
 
-  constexpr double pi = M_PI;
   double x=volumeX(0)-center(0);
   double y=volumeX(1)-center(1);
   double z=volumeX(2)-center(2);
 
   double r_coor=x*x+y*y+z*z;
   r_coor=pow(r_coor,0.5);
-  //double rho_ini=1/(6*pi*G*t_ini*t_ini);
-  double rho_ini=tilde_rho_ini;
   double m_in=0;
   
   if (tarch::la::equals(t,0)){//we know the mass distri at the beginning
-    if (iseed==0) {
-      if (r_coor<r_ini) { 
-        m_in=rho_ini*delta_rho*pow(r_coor,3)/3;
-      }
-      else {
-        m_in=rho_ini*delta_rho*pow(r_ini,3)/3;
-      }
-    }
-    if (iseed==1) {
-      if (r_coor<r_point){
-        m_in=delta_m*pow(r_coor/r_point,3)/4/pi;
-      }
-      else {
-        m_in=delta_m/4/pi;
-      }
-    }
+    m_in = getInitialMIn( r_coor );
   } 
   else {
     if (iseed==0){
-      m_in=mass_interpolate(r_coor,MassCal)/4/pi; //remove the overall 4\pi coefficient. 
+      m_in=mass_interpolate(r_coor,MassCal)/4.0/tarch::la::PI; //remove the overall 4\pi coefficient.
       nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
       nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
     }
     if (iseed==1){
       if (r_coor<r_point){
-        m_in=(mass_interpolate(r_coor, MassCal)+delta_m*pow(r_coor/r_point,3))/4/pi;
+        m_in=(mass_interpolate(r_coor, MassCal)+delta_m*pow(r_coor/r_point,3))/4.0/tarch::la::PI;
         nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
         nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
       }
       else {
-        m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4/pi;
+        assertion( isOutsideOfLargestRadius(volumeX, volumeH) );
+        m_in=(mass_interpolate(r_coor, MassCal)+delta_m)/4.0/tarch::la::PI;
         nonCriticalAssertion4( not std::isnan(m_in), volumeX, volumeH, t, dt );
         nonCriticalAssertion4( m_in<1e100, volumeX, volumeH, t, dt );
       }
     }
   }
 
-  double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
-  double force_density_norm=Q[0]*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
-
-  // @todo remove
-
-  assertion4( not std::isnan(force_density_norm), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(force_density_norm), volumeX, volumeH, t, dt );
-
+  double force_density_norm = getForceDensityNorm(
+    r_coor,
+    m_in,
+    t, Q[0]
+  );
 
   S[0] = 0;  // rho
   S[1] = -force_density_norm*x;    // velocities
@@ -354,18 +411,66 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   S[3] = -force_density_norm*z;
   S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
 
-  assertion4( not std::isnan(S[0]), volumeX, volumeH, t, dt );
-  assertion4( not std::isnan(S[1]), volumeX, volumeH, t, dt );
-  assertion4( not std::isnan(S[2]), volumeX, volumeH, t, dt );
-  assertion4( not std::isnan(S[3]), volumeX, volumeH, t, dt );
-  assertion4( not std::isnan(S[4]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[0]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[1]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[2]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[3]), volumeX, volumeH, t, dt );
-  assertion4( not std::isinf(S[4]), volumeX, volumeH, t, dt );
-
   logTraceOut( "sourceTerm(...)" );
+}
+
+
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+void examples::exahype2::SSInfall::SSInfall::sourceTerm(
+  const double * __restrict__                  Q, // Q[5+0]
+  const tarch::la::Vector<Dimensions,double>&  volumeX,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  double                                       dt,
+  double * __restrict__                        S, // S[5
+  Offloadable
+) {
+  const tarch::la::Vector<Dimensions,double> center(0.0);
+  double r_coor         = tarch::la::norm2(volumeX - center);
+
+  // @todo Han, this requires work
+  double m_in = (4.0/3.0)*tarch::la::PI*(pow(r_coor,3)-pow(_rMax,3))*(_rMax-1.0) + _mTotMax;
+
+  double force_density_norm = getForceDensityNorm(
+    r_coor,
+    m_in,
+    t, Q[0]
+  );
+
+  double x = volumeX(0)-center(0);
+  double y = volumeX(1)-center(1);
+  double z = volumeX(2)-center(2);
+
+  S[0] = 0.0;  // rho
+  S[1] = -force_density_norm*x;    // velocities
+  S[2] = -force_density_norm*y;
+  S[3] = -force_density_norm*z;
+  S[4] = -force_density_norm*(Q[1]*x+Q[2]*y+Q[3]*z)/Q[0];
+}
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
+
+
+bool examples::exahype2::SSInfall::SSInfall::isOutsideOfLargestRadius(
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchH
+) const {
+  double r_coor         = tarch::la::norm2(patchCentre - center);
+  double safetyDistance = std::sqrt(3) * tarch::la::max(patchH) / 2.0;
+  return  r_coor + safetyDistance > _rMax;
+}
+
+
+bool examples::exahype2::SSInfall::SSInfall::patchCanUseStatelessPDETerms(
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchH,
+  double                                       t,
+  double                                       dt
+) const {
+  return tarch::la::greater(t,0.0) and isOutsideOfLargestRadius(patchCentre,patchH);
 }
 
 
@@ -473,6 +578,31 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
+  double result = maxEigenvalue(Q,faceCentre,volumeH,t,normal,Offloadable::Yes);
+
+  nonCriticalAssertion10(
+    result<10000,
+    result, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal
+  );
+  //if (t>1.0 and result<1e-8) {
+  //  logInfo( "maxEigenvalue()", "max eigenvalue too small: " << result );
+  //  std::abort();
+  //}
+  return result;
+}
+
+
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
+  const double * __restrict__ Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  Offloadable
+)  {
   //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -486,24 +616,19 @@ double examples::exahype2::SSInfall::SSInfall::maxEigenvalue(
     //::exahype2::triggerNonCriticalAssertion( __FILE__, __LINE__, "p>=0", "negative pressure "+std::to_string(p)+" detected at t=" + std::to_string(t) + " at face position ["+std::to_string(faceCentre(0))+", "+std::to_string(faceCentre(1))+", "+std::to_string(faceCentre(2))+"] Q[] array: "+std::to_string(Q[0])+" "+std::to_string(Q[1])+" "+std::to_string(Q[2])+" "+std::to_string(Q[3])+" "+std::to_string(Q[4])+".");
   }
 
-  nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  // nonCriticalAssertion9( p>=0.0, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   const double c   = std::sqrt(gamma * p * irho);
 
   const double u_n = Q[normal + 1] * irho;
   double result = std::max( std::abs(u_n - c), std::abs(u_n + c)); //result=1;
-  nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
+  //nonCriticalAssertion14( result>0.0, result, p, u_n, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal );
   result=result*(1+C_1*exp(-C_2*t));
 
-  nonCriticalAssertion13( 
-    result<10000, 
-    result, p, irho, c, Q[0], Q[1], Q[2], Q[3], Q[4], faceCentre, volumeH, t, normal 
-  );
-  if (result<1e-8) {
-    logInfo( "maxEigenvalue()", "max eigenvalue too small: " << result );
-  }
   return result;
 }
-
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 void examples::exahype2::SSInfall::SSInfall::flux(
@@ -516,6 +641,7 @@ void examples::exahype2::SSInfall::SSInfall::flux(
 )  {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 
+  assertion4( Q[0]>0.0, faceCentre, volumeH, t, normal );
   assertion4( not std::isnan(Q[0]), faceCentre, volumeH, t, normal );
   assertion4( not std::isnan(Q[1]), faceCentre, volumeH, t, normal );
   assertion4( not std::isnan(Q[2]), faceCentre, volumeH, t, normal );
@@ -527,6 +653,35 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   assertion4( not std::isinf(Q[3]), faceCentre, volumeH, t, normal );
   assertion4( not std::isinf(Q[4]), faceCentre, volumeH, t, normal );
 
+  flux(Q,faceCentre,volumeH,t,normal,F,Offloadable::Yes);
+
+  assertion4( not std::isnan(F[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isnan(F[4]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[0]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[1]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[2]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[3]), faceCentre, volumeH, t, normal );
+  assertion4( not std::isinf(F[4]), faceCentre, volumeH, t, normal );
+
+  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
+}
+
+
+#if defined(OpenMPGPUOffloading)
+#pragma omp declare target
+#endif
+void examples::exahype2::SSInfall::SSInfall::flux(
+  const double * __restrict__                  Q, // Q[5+0],
+  const tarch::la::Vector<Dimensions,double>&  faceCentre,
+  const tarch::la::Vector<Dimensions,double>&  volumeH,
+  double                                       t,
+  int                                          normal,
+  double * __restrict__                        F, // F[5]
+  Offloadable
+)  {
   //constexpr double gamma = 5.0/3.0;
   const double irho = 1./Q[0];
   #if Dimensions==3
@@ -543,20 +698,10 @@ void examples::exahype2::SSInfall::SSInfall::flux(
   F[4] = coeff*Q[4];
   F[normal+1] += p;
   F[4]        += coeff*p;
-
-  assertion4( not std::isnan(F[0]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isnan(F[1]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isnan(F[2]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isnan(F[3]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isnan(F[4]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[0]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[1]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[2]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[3]), faceCentre, volumeH, t, normal );
-  assertion4( not std::isinf(F[4]), faceCentre, volumeH, t, normal );
-
-  logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }
+#if defined(OpenMPGPUOffloading)
+#pragma omp end declare target
+#endif
 
 
 void examples::exahype2::SSInfall::SSInfall::add_mass(
@@ -593,7 +738,6 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   const double r_coor,
   const int MassCal
 ) {
-  constexpr double pi = M_PI;
   double a,b;
   double m_a,m_b;
   double m_result;
@@ -630,9 +774,9 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
       assertion10( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, IsOutSkirt, plotGlobalMTot(false), plotGlobalMTot(true) );
     }
     else if (IsOutSkirt){
-      double vol_tem=(4/3)*pi*(pow(b,3)-pow(a,3));
+      double vol_tem=(4.0/3.0)*tarch::la::PI*(pow(b,3)-pow(a,3));
       double rho_tem=(m_b-m_a)/vol_tem;
-      double vol_out=(4/3)*pi*(pow(r_coor,3)-pow(b,3));
+      double vol_out=(4.0/3.0)*tarch::la::PI*(pow(r_coor,3)-pow(b,3));
       m_result=m_b+rho_tem*vol_out;
       assertion14( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, IsOutSkirt, IsCenter, plotRs(), plotGlobalMTot(false), plotGlobalMTot(true), rho_tem, vol_out );
       assertion14( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, IsOutSkirt, IsCenter, plotRs(), plotGlobalMTot(false), plotGlobalMTot(true), rho_tem, vol_out );
@@ -652,7 +796,7 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
   else if (MassCal==1) { //which means we use rho interpolation
     if (r_coor<r_s[0]) {
       double rho_currentpos=rho_0+(rho_x[0]-rho_0)*r_coor/r_s[0];
-      m_result=(4/3)*pi*pow(r_coor,3)*((rho_0+rho_currentpos)/2-1);
+      m_result=(4.0/3.0)*tarch::la::PI*pow(r_coor,3)*((rho_0+rho_currentpos)/2-1);
       assertion9( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, plotGlobalMTot(false), plotGlobalMTot(true) );
       assertion9( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, plotGlobalMTot(false), plotGlobalMTot(true) );
     }
@@ -660,7 +804,7 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
       for (int i=1;i<sample_number;i++) {
         if ((r_coor>r_s[i-1]) and (r_coor<r_s[i])) {
           double rho_currentpos=rho_x[i-1]*(r_s[i]-r_coor)/(r_s[i]-r_s[i-1])+rho_x[i]*(r_coor-r_s[i-1])/(r_s[i]-r_s[i-1]);
-          m_result=(4/3)*pi*(pow(r_coor,3)-pow(r_s[i-1],3))*((rho_x[i-1]+rho_currentpos)/2-1);
+          m_result=(4.0/3.0)*tarch::la::PI*(pow(r_coor,3)-pow(r_s[i-1],3))*((rho_x[i-1]+rho_currentpos)/2-1);
           m_result+=m_tot_copy[i-1];
           assertion10( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, i, plotGlobalMTot(false), plotGlobalMTot(true) );
           assertion10( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, i, plotGlobalMTot(false), plotGlobalMTot(true) );
@@ -668,7 +812,7 @@ double examples::exahype2::SSInfall::SSInfall::mass_interpolate(
       }
     }
     if (r_coor>r_s[sample_number-1]){
-      m_result=(4/3)*pi*(pow(r_coor,3)-pow(r_s[sample_number-1],3))*(rho_x[sample_number-1]-1);
+      m_result=(4.0/3.0)*tarch::la::PI*(pow(r_coor,3)-pow(r_s[sample_number-1],3))*(rho_x[sample_number-1]-1);
       m_result+=m_tot_copy[sample_number-1];
       assertion10( m_result>=0.0,  m_result, r_coor, MassCal, m_a, m_b, a, b, r_s[sample_number-1], plotGlobalMTot(false), plotGlobalMTot(true) );
       assertion10( m_result<1e100, m_result, r_coor, MassCal, m_a, m_b, a, b, r_s[sample_number-1], plotGlobalMTot(false), plotGlobalMTot(true) );

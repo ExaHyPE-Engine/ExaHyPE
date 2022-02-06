@@ -18,6 +18,9 @@
 #define UseManualInlining
 #endif
 
+#if !defined(ExaHyPEFusedKernelAlignment)
+#define ExaHyPEFusedKernelAlignment 64
+#endif
 
 #define LittleEndian
 

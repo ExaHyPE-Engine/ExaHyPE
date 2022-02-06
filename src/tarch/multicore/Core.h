@@ -47,6 +47,7 @@ class tarch::multicore::Core {
     Core();
 
     int _numberOfThreads;
+    int _numberOfDevices;
   public:
     /**
      * The default is what the system management typically gives you. So if

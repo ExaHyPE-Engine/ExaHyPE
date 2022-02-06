@@ -2,6 +2,7 @@
 
 #include "tarch/logging/Log.h"
 #include "tarch/multicore/multicore.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 #include "../PatchUtils.h"
 
@@ -10,19 +11,21 @@
 #include "exahype2/NonCriticalAssertions.h"
 
 // This is a fantastic hack
-#if defined(OpenMPGPUOffloading)
+#if !defined(__INTEL_LLVM_COMPILER) && defined(OpenMPGPUOffloading)
 namespace std
 {
 #pragma omp declare target
-void __throw_bad_function_call() {};
+//void __throw_bad_function_call() {};
+[[noreturn]] void __throw_bad_function_call() { __builtin_trap(); };
 #pragma omp  end declare target
 }
 #endif
 
 // This is another hack
-#if defined(OpenMPGPUOffloading)
+#if !defined(__INTEL_LLVM_COMPILER) && defined(OpenMPGPUOffloading)
 #pragma omp declare target
-void abort() {};
+//void abort() {};
+[[noreturn]] void abort() noexcept(true) { __builtin_trap(); };
 #pragma omp  end declare target
 #endif
 
@@ -329,7 +332,9 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
 ) {
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
+
   assertion4( dt>=0.0, patchCentre, patchSize, t, dt  );
+  assertion4( t<1e100, patchCentre, patchSize, t, dt  );
 
   tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
@@ -489,6 +494,8 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
   assertion( dt>=0.0 );
+  assertion4( t<1e100, patchCentre, patchSize, t, dt  );
+  assertion4(dt<1e100, patchCentre, patchSize, t, dt  );
 
   tarch::la::Vector<3, double> volumeH = exahype2::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);

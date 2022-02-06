@@ -79,7 +79,7 @@ AC_OPENMP()
 
 AX_COMPILER_VENDOR
 
-AX_CXX_COMPILE_STDCXX_11
+#AX_CXX_COMPILE_STDCXX_11
 
 
 
@@ -139,15 +139,15 @@ LDADD_PEANO_3D_DEBUG="   -lPeano4Core3d_debug   -lTarch_debug"
 #
 AC_ARG_WITH(
   multithreading, 
-  AC_HELP_STRING([--with-multithreading], [switch on multithreading [default=no,cpp,tbb,omp,omp-layered]]),
+  AC_HELP_STRING([--with-multithreading], [switch on multithreading [default=no,cpp,omp,sycl]]),
   [
     AC_MSG_CHECKING(for multithreading)
     case "${withval}" in
       no)     AC_MSG_RESULT([no multithreading]);                    multithreading=false ;;
       cpp)    AC_MSG_RESULT([build with C++11 threading support]);                          multithreading=cpp ;;
-      tbb)    AC_MSG_RESULT([build with TBB (Intel Threading Building Blocks) support]); multithreading=tbb ;;
+      sycl)   AC_MSG_RESULT([build with SYCL]);                                              multithreading=sycl ;;
       omp)    AC_MSG_RESULT([build with OpenMP - please ensure you pass -fopenmp/-qopenmp/-openmp or similar to your CXX flags]); multithreading=omp ;;
-      *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or tbb to define target]);            multithreading=false ;;
+      *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or sycl to define target]);            multithreading=false ;;
     esac
   ], 
   [ 
@@ -162,9 +162,9 @@ if test "$multithreading" == cpp; then
   AC_SEARCH_LIBS(pthread_create,pthread)
 fi
 
-if test "$multithreading" == tbb; then
-  AC_CHECK_HEADERS([tbb/tbb.h],[],[AC_MSG_ERROR([header <tbb.h> not found])])
-  AC_DEFINE([SharedTBB], [1], [SharedTBB])
+if test "$multithreading" == sycl; then
+  #AC_CHECK_HEADERS([cycl/CL/hpsycl.hpp],[],[AC_MSG_ERROR([header <cycl/CL/sycl.hpp> not found])])
+  AC_DEFINE([SharedSYCL], [1], [SharedSYCL])
 fi
 
 if test "$multithreading" == omp; then
@@ -208,26 +208,44 @@ fi
 # GPU support
 #
 AC_ARG_ENABLE(gpu,
-  AC_HELP_STRING([--enable-gpu], [build with the GPU support  [default=no,amd,nvidia]]),
+  AC_HELP_STRING([--enable-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,amd,nvidia]]),
   [ AC_MSG_CHECKING(for gpu)
     case "${enableval}" in
-      no)        AC_MSG_RESULT(no);                             gpu=false ;;
-      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support);  gpu=nvidia ;;
-      intel)     AC_MSG_RESULT(build with intel GPU support);   gpu=intel ;;
-      amd)       AC_MSG_RESULT(build with AMD GPU support);     gpu=amd ;;
-      *)         AC_MSG_FAILURE([default=no (no gpu)]); gpu=false ;;
+      no)        AC_MSG_RESULT(no);                               gpu=false ;;
+      generic)   AC_MSG_RESULT(build with NVIDIA GPU support);    gpu=generic ;;
+      nvidia)    AC_MSG_RESULT(build with NVIDIA GPU support);    gpu=nvidia ;;
+      intel)     AC_MSG_RESULT(build with intel GPU support);     gpu=intel ;;
+      amd)       AC_MSG_RESULT(build with AMD GPU support);       gpu=amd ;;
+      *)         AC_MSG_RESULT(build with generic GPU defaults);  gpu=generic ;;
     esac 
   ],
   [ AC_MSG_CHECKING(for gpu); AC_MSG_RESULT(no); gpu=false ]
 )
 
 
+AM_CONDITIONAL([OpenMPGPUOffloading], [test "$gpu" != false])
+AM_CONDITIONAL([SYCLGPUOffloading],   [test "$gpu" != false])
+
+
+if test "$gpu" == generic; then
+  if test "$multithreading" == omp; then
+    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
+  elif test "$multithreading" == sycl; then
+    AC_DEFINE([OpenMPGPUOffloading],  [0], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [1], [SYCLGPUOffloading])
+  else
+    AC_MSG_FAILURE([generic GPU support requires OpenMP or SYCL; reconfigure with appropriate multithreading]);
+  fi
+fi
+
+
 if test "$gpu" == amd; then
   #AC_DEFINE([UseAMD], [1], [UseAMD])
   #AC_CHECK_HEADERS([hip/hip_runtime.h],[],[AC_MSG_ERROR([header <hip/hip_runtime.h> not found])])
   if test "$multithreading" == omp; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-    AC_DEFINE([needandhaveomp], [1], [needandhaveomp])
+    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
   else
     AC_MSG_FAILURE([AMD GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
@@ -235,8 +253,8 @@ fi
 
 if test "$gpu" == nvidia; then
   if test "$multithreading" == omp; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-    AC_DEFINE([needandhaveomp], [1], [needandhaveomp])
+    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
   else
     AC_MSG_FAILURE([NVIDIA GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
@@ -244,14 +262,13 @@ fi
 
 if test "$gpu" == intel; then
   if test "$multithreading" == omp; then
-    AC_DEFINE([GPUOffloading], [1], [GPUOffloading])
-    AC_DEFINE([needandhaveomp], [1], [needandhaveomp])
+    AC_DEFINE([OpenMPGPUOffloading],  [1], [OpenMPGPUOffloading])
+    AC_DEFINE([SYCLGPUOffloading],  [0], [SYCLGPUOffloading])
   else
     AC_MSG_FAILURE([INTEL GPU support requires OpenMP; reconfigure with omp multithreading]);
   fi
 fi
-AM_CONDITIONAL([OpenMPGPUOffloading],[test "x$needandhaveomp" = x1 ])
-# https://autotools.io/automake/conditional.html
+
 
 #
 # ===============================================================
@@ -571,6 +588,21 @@ AM_CONDITIONAL([UseDelta],[test "$toolbox_delta" != false])
 
 
 #
+# FEM 
+#
+AC_ARG_WITH(otter,
+  AC_HELP_STRING([--with-otter], [enable Otter [default=false]]),
+  [ AC_MSG_CHECKING(for otter)
+    case "${withval}" in
+      no)    AC_MSG_RESULT(no);    toolbox_otter=false ;;
+      *)     AC_MSG_RESULT(yes);   toolbox_otter=true  ;;
+    esac ],
+  [ AC_MSG_CHECKING(for otter); AC_MSG_RESULT(no); toolbox_otter=false ])
+AM_CONDITIONAL([UseOtter],[test "x$toolbox_otter" = xtrue])
+
+
+
+#
 # ===============================================================
 #   Toolbox - setup
 #
@@ -737,14 +769,12 @@ fi
 # SmartMPI
 #
 AC_ARG_WITH(smartmpi,
-  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no,Merged,OneToOne,Alternating,NToOneServerAlt]]),
+  AC_HELP_STRING([--with-smartmpi], [build with SmartMPI [default=no,Merged,Alternating]]),
   [ AC_MSG_CHECKING(for smartmpi)
     case "${withval}" in
       no)               AC_MSG_RESULT(no);    smartmpi=false ;;
       Merged)           AC_MSG_RESULT(yes; use topology Merged);            smartmpi=Merged ;;
-      OneToOne)         AC_MSG_RESULT(yes; use topology OneToOne);          smartmpi=OneToOne ;;
       Alternating)      AC_MSG_RESULT(yes; use topology Alternating);       smartmpi=Alternating ;;
-      NToOneServerAlt)  AC_MSG_RESULT(yes; use topology NToOneServerAlt);   smartmpi=NToOneServerAlt ;;
       *)         AC_MSG_RESULT(failed);   AC_MSG_ERROR([invalid option for SmartMPI]) ;;
     esac ],
   [ AC_MSG_CHECKING(for smartmpi); AC_MSG_RESULT(no); smartmpi=false ])
@@ -752,14 +782,8 @@ AM_CONDITIONAL([UseSmartMPI],[test "x$smartmpi" = xtrue])
 if test "$smartmpi" == Merged; then
   AC_DEFINE([UseSmartMPI], [Merged], [UseSmartMPI])
 fi
-if test "$smartmpi" == OneToOne; then
-  AC_DEFINE([UseSmartMPI], [OneToOne], [UseSmartMPI])
-fi
 if test "$smartmpi" == Alternating; then
   AC_DEFINE([UseSmartMPI], [Alternating], [UseSmartMPI])
-fi
-if test "$smartmpi" == NToOneServerAlt; then
-  AC_DEFINE([UseSmartMPI], [NToOneServerAlt], [UseSmartMPI])
 fi
 if test "$smartmpi" != false; then
   if test "$mpi" == false; then
@@ -795,6 +819,25 @@ if test "$toolbox_delta" != false; then
   LDADD_PEANO_3D_ASSERTS+=" -ldelta3d " 
   LDADD_PEANO_3D_TRACE+="   -ldelta3d "
   LDADD_PEANO_3D_DEBUG+="   -ldelta3d "
+fi
+
+
+#
+# Otter
+#
+if test "$toolbox_otter" != false; then
+  AC_DEFINE([UseOtter], [1], [UseOtter])
+  LDADD_PEANO_2D_RELEASE+=" -lotter "
+  LDADD_PEANO_2D_STATS+="   -lotter "
+  LDADD_PEANO_2D_ASSERTS+=" -lotter " 
+  LDADD_PEANO_2D_TRACE+="   -lotter "
+  LDADD_PEANO_2D_DEBUG+="   -lotter "
+
+  LDADD_PEANO_3D_RELEASE+=" -lotter "
+  LDADD_PEANO_3D_STATS+="   -lotter "
+  LDADD_PEANO_3D_ASSERTS+=" -lotter " 
+  LDADD_PEANO_3D_TRACE+="   -lotter "
+  LDADD_PEANO_3D_DEBUG+="   -lotter "
 fi
 
 

@@ -1,14 +1,12 @@
 #include "tarch/multicore/multicore.h"
 
 
-#if defined(SharedTBB)
+#if defined(SharedSYCL)
 
 double* tarch::allocateMemory(int size, MemoryLocation location) {
   double* result;
   switch (location) {
     case MemoryLocation::Heap:
-      //#pragma omp allocate(result) allocator(allocator) memspace(memspace) memtraits(optimized=latency)
-      //#pragma omp allocate(result) memtraits(optimized=latency)
       result = new double[size];
       break;
     case MemoryLocation::ManagedAcceleratorMemory:

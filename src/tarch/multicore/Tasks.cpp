@@ -190,8 +190,8 @@ int tarch::multicore::internal::mapPendingTasksOntoNativeTasks(int maxTasks) {
    *
    * @return Number of merged/processed tasks
    */
-bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAndDevice) {
-  logDebug( "fusePendingTasks(int)", "fuse up to " << nonblockingTasks.size() << " tasks (max=" << maxTasksAndDevice.first << ")" );
+bool tarch::multicore::internal::fusePendingTasks(const tarch::multicore::orchestration::Strategy::FuseInstruction&  fuseInstruction) {
+  logDebug( "fusePendingTasks(int)", "process " << nonblockingTasks.size() << " tasks subject to " << fuseInstruction.toString() );
 
   tarch::multicore::Task* myTask = nullptr;
   std::list< tarch::multicore::Task* > tasksOfSameType;
@@ -202,27 +202,37 @@ bool tarch::multicore::internal::fusePendingTasks(std::pair<int,int> maxTasksAnd
     nonblockingTasks.pop_front();
   }
 
-  auto pp = nonblockingTasks.begin();
-  while (
+  if (
     myTask!=nullptr
     and
     myTask->canFuse()
-    and
-    pp!=nonblockingTasks.end()
-    and
-    (*pp)->getTaskType()==myTask->getTaskType()
-    and
-    tasksOfSameType.size()<maxTasksAndDevice.first-1
   ) {
-    tasksOfSameType.push_back( *pp );
-    pp = nonblockingTasks.erase(pp);
+    auto pp = nonblockingTasks.begin();
+    while (
+      pp!=nonblockingTasks.end()
+      and
+      (*pp)->getTaskType()==myTask->getTaskType()
+      and
+      (*pp)->getTaskType()==myTask->canFuse()
+      and
+      tasksOfSameType.size()<fuseInstruction.maxTasks-1
+    ) {
+      tasksOfSameType.push_back( *pp );
+      pp = nonblockingTasks.erase(pp);
+    }
+    lock.free();
+
+    ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
+
+    native::processFusedTask(myTask, tasksOfSameType, fuseInstruction.device);
   }
-
-  lock.free();
-  ::tarch::logging::Statistics::getInstance().log( FuseTasksStatisticsIdentifier, tasksOfSameType.size() );
-
-  if (myTask!=nullptr) {
-    native::processFusedTask(myTask, tasksOfSameType, maxTasksAndDevice.second);
+  else if (
+    myTask!=nullptr
+    and
+    not myTask->canFuse()
+  ) {
+    lock.free();
+    tarch::multicore::native::spawnTask(myTask);
   }
 
   return myTask==nullptr ? 0 : tasksOfSameType.size()+1;
@@ -385,12 +395,9 @@ bool tarch::multicore::processPendingTasks(int maxTasks, bool fifo) {
       result = true;
     }
     else {
+      native::deferRunningThreadAndContinueWithOtherTasks();
       maxTasks=0;
     }
-  }
-
-  if (not result) {
-    native::yield();
   }
 
   return result;
@@ -420,9 +427,7 @@ void tarch::multicore::spawnTask(Task*  task) {
 
     auto fusionCommand = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
     if (
-      fusionCommand.first>0
-      and
-      nonblockingTasks.size()>=fusionCommand.first
+      nonblockingTasks.size()>=fusionCommand.minTasks
       and
       orchestrationStrategy->fuseTasksImmediatelyWhenSpawned()
     ) {
@@ -515,6 +520,12 @@ void tarch::multicore::spawnAndWait(
     native::spawnAndWait(tasks,orchestrationStrategy);
     orchestrationStrategy->endBSPSection();
 
+    const auto fusionInstruction = orchestrationStrategy->getNumberOfTasksToFuseAndTargetDevice();
+    bool successInFusing = true;
+    while ( successInFusing and nonblockingTasks.size()>=fusionInstruction.minTasks) {
+      successInFusing = tarch::multicore::internal::fusePendingTasks(fusionInstruction);
+    }
+
     if ( not nonblockingTasks.empty() ) {
       int numberOfTasksToProcessNow = std::max(0,static_cast<int>(nonblockingTasks.size())-orchestrationStrategy->getNumberOfTasksToHoldBack());
       internal::mapPendingTasksOntoNativeTasks(numberOfTasksToProcessNow);
@@ -523,15 +534,9 @@ void tarch::multicore::spawnAndWait(
 }
 
 
-void tarch::multicore::yield() {
-  tarch::multicore::native::yield();
-}
-
-
 int tarch::multicore::getNumberOfPendingTasks() {
   return nonblockingTasks.size() + tarch::multicore::native::getNumberOfPendingTasks();
 }
-
 
 
 #ifndef SharedMemoryParallelisation
@@ -560,18 +565,12 @@ void tarch::multicore::native::spawnAndWait(
 }
 
 
-/**
- * This has to be the standard C++ implementation. Even if multithreading is
- * disabled, the code might logically run with multiple threads, and then we
- * have to switch the thread context from time to time.
- */
-void tarch::multicore::native::yield() {
-  std::this_thread::yield();
+int tarch::multicore::native::getNumberOfPendingTasks() {
+  return 0;
 }
 
 
-int tarch::multicore::native::getNumberOfPendingTasks() {
-  return 0;
+void tarch::multicore::native::deferRunningThreadAndContinueWithOtherTasks() {
 }
 
 

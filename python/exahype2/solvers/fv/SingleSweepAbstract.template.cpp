@@ -20,13 +20,14 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
   _maxTimeStamp(0.0),
   _minTimeStampThisTimeStep(0.0),
   _maxTimeStampThisTimeStep(0.0),
-  _minVolumeH(0.0),
+  // This way, we still compute the patch size without an overflow
+  _minVolumeH(std::numeric_limits<double>::max()/NumberOfFiniteVolumesPerAxisPerPatch/2.0),
   _maxVolumeH(0.0),
-  _minVolumeHThisTimeStep(0.0),
+  _minVolumeHThisTimeStep(std::numeric_limits<double>::max()/NumberOfFiniteVolumesPerAxisPerPatch/2.0),
   _maxVolumeHThisTimeStep(0.0),
-  _minTimeStepSize(0.0),
+  _minTimeStepSize(std::numeric_limits<double>::max()),
   _maxTimeStepSize(0.0),
-  _minTimeStepSizeThisTimeStep(0.0),
+  _minTimeStepSizeThisTimeStep(std::numeric_limits<double>::max()),
   _maxTimeStepSizeThisTimeStep(0.0),
   _patchUpdates(0) {
   {{CONSTRUCTOR_IMPLEMENTATION}}
@@ -105,7 +106,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   _minTimeStampThisTimeStep = std::min(timeStamp,_minTimeStampThisTimeStep);
   assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, patchSize );
 
-  assertion1(patchSize<std::numeric_limits<double>::max()/10.0,patchSize);
+  assertion1(patchSize<std::numeric_limits<double>::max()/NumberOfFiniteVolumesPerAxisPerPatch,patchSize);
   assertion1(patchSize>0.0,patchSize);
   _maxVolumeHThisTimeStep = std::max(_maxVolumeHThisTimeStep,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
   _minVolumeHThisTimeStep = std::min(_minVolumeHThisTimeStep,patchSize / NumberOfFiniteVolumesPerAxisPerPatch);
@@ -212,7 +213,7 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
   _maxVolumeH = _maxVolumeHThisTimeStep;
 
   _maxVolumeHThisTimeStep      = 0.0;
-  _minVolumeHThisTimeStep      = std::numeric_limits<double>::max();
+  _minVolumeHThisTimeStep      = std::numeric_limits<double>::max()/NumberOfFiniteVolumesPerAxisPerPatch/2.0;
 
   _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
   _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
@@ -349,6 +350,11 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::mayPlot() const {
 
 
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isFirstGridSweepOfTimeStep() const {
+  return true;
+}
+
+
+bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::isLastGridSweepOfTimeStep() const {
   return true;
 }
 

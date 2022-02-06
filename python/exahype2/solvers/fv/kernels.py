@@ -4,8 +4,7 @@
 
 def create_compute_time_step_size_for_fixed_time_stepping( time_step_size ):
   return """
-  cellTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
-  cellTimeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+  const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
 """
 
 
@@ -13,8 +12,12 @@ def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_ti
   return """
   assertion( _minVolumeH >= 0.0 );
   assertion( MaxAdmissibleVolumeH > 0.0 );
-  assertion2( _minVolumeH <= MaxAdmissibleVolumeH, _minVolumeH, MaxAdmissibleVolumeH );
-  _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minVolumeH / MaxAdmissibleVolumeH;
+  if (_minVolumeH <= MaxAdmissibleVolumeH) {
+    _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minVolumeH / MaxAdmissibleVolumeH;
+  }
+  else {
+    _timeStepSize = 0.0;
+  }
 """
 
 

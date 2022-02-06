@@ -6,7 +6,8 @@
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createBSP() {
   return new Hardcoded(
     std::numeric_limits<int>::max(), // numberOfTasksToHoldBack
-    0,                               // tasksToFuse
+    std::numeric_limits<int>::max(), // min tasks to fuse
+    0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
     false                            // processPendingTasksWhileWaiting
@@ -17,7 +18,8 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createNative() {
   return new Hardcoded(
     0,                               // numberOfTasksToHoldBack
-    0,                               // tasksToFuse
+    std::numeric_limits<int>::max(), // min tasks to fuse
+    0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
     false                            // processPendingTasksWhileWaiting
@@ -28,7 +30,8 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
 tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Hardcoded::createBackfill() {
   return new Hardcoded(
     std::numeric_limits<int>::max(), // numberOfTasksToHoldBack
-    0,                               // tasksToFuse
+    std::numeric_limits<int>::max(), // min tasks to fuse
+    0,                               // max tasks to fuse
     tarch::multicore::Task::Host,    // deviceForFusedTasks
     false,                           // fuseTasksImmediatelyWhenSpawned
     true                             // processPendingTasksWhileWaiting
@@ -40,6 +43,7 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
   return new Hardcoded(
     std::numeric_limits<int>::max(), // numberOfTasksToHoldBack
     numberOfTasksToFuse,             // tasksToFuse
+    numberOfTasksToFuse,             // tasksToFuse
     targetDevice,                    // deviceForFusedTasks
     fuseImmediately,                 // fuseTasksImmediatelyWhenSpawned
     not fuseImmediately              // processPendingTasksWhileWaiting
@@ -49,13 +53,15 @@ tarch::multicore::orchestration::Hardcoded* tarch::multicore::orchestration::Har
 
 tarch::multicore::orchestration::Hardcoded::Hardcoded(
   int  numberOfTasksToHoldBack,
-  int  tasksToFuse,
+  int  minTasksToFuse,
+  int  maxTasksToFuse,
   int  deviceForFusedTasks,
   bool fuseTasksImmediatelyWhenSpawned,
   bool processPendingTasksWhileWaiting
 ):
   _numberOfTasksToHoldBack(numberOfTasksToHoldBack),
-  _tasksToFuse(tasksToFuse),
+  _minTasksToFuse(minTasksToFuse),
+  _maxTasksToFuse(maxTasksToFuse),
   _deviceForFusedTasks(deviceForFusedTasks),
   _fuseTasksImmediatelyWhenSpawned(fuseTasksImmediatelyWhenSpawned),
   _processPendingTasksWhileWaiting(processPendingTasksWhileWaiting) {}
@@ -72,8 +78,8 @@ int tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToHoldBack() {
 }
 
 
-std::pair<int,int> tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToFuseAndTargetDevice() {
-  return std::pair<int,int>(_tasksToFuse,_deviceForFusedTasks);
+tarch::multicore::orchestration::Hardcoded::FuseInstruction tarch::multicore::orchestration::Hardcoded::getNumberOfTasksToFuseAndTargetDevice() {
+  return tarch::multicore::orchestration::Hardcoded::FuseInstruction( _deviceForFusedTasks, _minTasksToFuse, _maxTasksToFuse );
 }
 
 

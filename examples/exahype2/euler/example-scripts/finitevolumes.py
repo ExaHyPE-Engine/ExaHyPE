@@ -129,7 +129,7 @@ elif args.type=="global-fixed-enclave":
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    stateless_pde_terms = args.gpu
+    pde_terms_without_state = args.gpu
   )
 elif args.type=="global-adaptive-enclave":
   thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStepWithEnclaveTasking(
@@ -140,7 +140,7 @@ elif args.type=="global-adaptive-enclave":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.01,
-    stateless_pde_terms = args.gpu
+    pde_terms_without_state = args.gpu
   )
 elif args.type=="subcycling-fixed-linear-interpolation":
   thesolver = exahype2.solvers.fv.rusanov.SubcyclingFixedTimeStep(
@@ -174,7 +174,7 @@ elif args.type=="subcycling-fixed-linear-interpolation-enclave":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=True,
-    stateless_pde_terms = args.gpu
+    pde_terms_without_state = args.gpu
   )
 elif args.type=="subcycling-adaptive-linear-interpolation-enclave":
   thesolver = exahype2.solvers.fv.rusanov.SubcyclingAdaptiveTimeStepWithEnclaveTasking(
@@ -186,7 +186,7 @@ elif args.type=="subcycling-adaptive-linear-interpolation-enclave":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=True,
-    stateless_pde_terms = args.gpu
+    pde_terms_without_state = args.gpu
   )
 elif args.type=="local-linear-interpolation-enclave":
   thesolver = exahype2.solvers.fv.rusanov.LocalTimeStepWithEnclaveTasking(
@@ -198,7 +198,7 @@ elif args.type=="local-linear-interpolation-enclave":
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=True,
-    stateless_pde_terms = args.gpu
+    pde_terms_without_state = args.gpu
   )
 
 

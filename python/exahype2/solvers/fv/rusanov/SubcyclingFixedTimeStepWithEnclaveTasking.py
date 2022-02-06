@@ -30,7 +30,7 @@ class SubcyclingFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     plot_grid_properties=False,
     interpolate_linearly_in_time=True,
-    stateless_pde_terms=False
+    pde_terms_without_state=False
   ):
     """
   
@@ -43,7 +43,7 @@ class SubcyclingFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     """
     self._interpolate_linearly_in_time        = interpolate_linearly_in_time
     
-    super(SubcyclingFixedTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,stateless_pde_terms) 
+    super(SubcyclingFixedTimeStepWithEnclaveTasking,self).__init__(name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, plot_grid_properties,pde_terms_without_state) 
     
     self._time_step_size = time_step_size
 
@@ -52,7 +52,8 @@ class SubcyclingFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
-    self._compute_time_step_size  = create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, name )
+    self._compute_time_step_size              = create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, name )
+    self._compute_new_time_step_size          = "const double newTimeStepSize = dt;"
     
     self.set_implementation(flux=flux, 
       ncp=ncp, 
@@ -91,15 +92,15 @@ class SubcyclingFixedTimeStepWithEnclaveTasking( EnclaveTasking ):
 
     self._source_term_call           = create_source_term_kernel_for_Rusanov(self._source_term_implementation)
     self._Riemann_solver_call        = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
-    self._fused_Riemann_solver_call  = create_optimised_Riemann_kernel_template_arguments(self._flux_implementation, self._ncp_implementation, self._source_term_implementation)
+    self._fused_Riemann_solver_call  = create_optimised_Riemann_kernel_template_arguments(self._flux_implementation, self._ncp_implementation, self._source_term_implementation, False)
 
-    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._stateless_pde_terms)
+    self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_declarations += create_abstract_solver_user_declarations_for_fixed_time_stepping()
-    self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._stateless_pde_terms)
+    self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_definitions  += create_abstract_solver_user_definitions_for_fixed_time_stepping()
 
-    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._stateless_pde_terms)
-    self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._stateless_pde_terms)
+    self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
+    self._solver_user_definitions            = create_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
 
     self._start_time_step_implementation     = create_start_time_step_implementation_for_fixed_time_stepping_with_subcycling(True)
     self._finish_time_step_implementation    = create_finish_time_step_implementation_for_fixed_time_stepping(self._time_step_size)

@@ -7,9 +7,9 @@
 #include <vector>
 #include <list>
 
-#include "peano4/grid/GridControlEvent.h"
-
+#include "tarch/services/Service.h"
 #include "tarch/multicore/BooleanSemaphore.h"
+#include "peano4/grid/GridControlEvent.h"
 
 namespace exahype2 {
   enum class RefinementCommand {
@@ -96,9 +96,13 @@ std::string toString( exahype2::RefinementCommand value );
  *
  *
  */
-class exahype2::RefinementControl {
+class exahype2::RefinementControl: public tarch::services::Service {
   public:
     RefinementControl(double tolerance = 0.1);
+    virtual ~RefinementControl();
+
+    void receiveDanglingMessages() override;
+    void shutdown() override;
 
     void clear();
 
@@ -130,6 +134,29 @@ class exahype2::RefinementControl {
      *
      * This routine rolls over _newEvents into the _committedEvents if they are still
      * alive.
+     *
+     * ## MPI handing
+     *
+     * The MPI data exchange here is non-trivial, as we do not know which rank has how
+     * many messages. So we run in three steps: First, we send the committed events out to
+     * all partners. These sends are done non-blocking. They logically are a broadcast.
+     * Second, we loop over all the arising MPI_Requests and poll until they are finished.
+     * So we know all data has gone out. This is a while loop with the predicate
+     *
+     *       not sendRequests.empty()
+     *
+     * Third, we hook into this while loop and probe for all the other ranks if they
+     * have sent us anything. So while we wait for our sends to go out, we poll the other
+     * ranks for their data, integrate this information into our data structures and
+     * therefore also free any MPI queues.
+     *
+     * As we build up the incoming data while we wait for our sends to go out, we have to
+     * send from a copy of the actual data (copyOfCommittedEvents): We cannot alter the
+     * outgoing data due to polls for incoming messages while we have still pending sends.
+     *
+     * It is important to work with non-blocking calls here, as the code otherwise tends
+     * to deadlock if we have a lot of events. This is due to MPI falling back to
+     * rendeszvouz message passing if the data that is on-the-fly becomes too large.
      */
     void finishStep();
 
@@ -139,6 +166,11 @@ class exahype2::RefinementControl {
     static tarch::logging::Log  _log;
 
     static tarch::multicore::BooleanSemaphore  _semaphore;
+
+    /**
+     * I need a tag of my own to exchange control info after each step.
+     */
+    static int _reductionTag;
 
     /**
      * We blow up the region around refinement criterion slightly.
@@ -170,8 +202,36 @@ class exahype2::RefinementControl {
      * The raw events might become really large over time. However, I decided to
      * keep this routine clear of any optimisation. It is the grid which has
      * to clean up the refinement events appropriately.
+     *
+     * ## MPI data excange
+     *
+     * I originally wanted to use an MPI reduction to have a consistent view of
+     * all refinement controls. However, this seems not to work, as some ranks
+     * can be out of sync. So what I do instead now is a delayed broadcast: Every
+     * rank sends out its committed events to all others and appends all incoming
+     * ones to its own set.
+     *
+     * This simple implementation also works for our dynamic event sets, where we
+     * do not know a priori how many events are triggered by a rank. Still, it can
+     * happen that event views are out-of-sync. This is not a problem here:
+     *
+     * The actual grid changes are all triggered via vertices, so we never obtain
+     * an invalid grid. The individual grid events have a lifetime and thus are
+     * active over multiple iterations. Hence, they will be merge at one point.
+     *
+     * We have to split up the send and receive loop such that we first send out
+     * all stuff and then receive.
+     *
      */
     std::vector< peano4::grid::GridControlEvent >  _committedEvents;
+
+    #ifdef Parallel
+    std::vector<MPI_Request*>                      _sendRequests;
+    std::vector< peano4::grid::GridControlEvent >  _copyOfCommittedEvents;
+
+    void freeAllPendingSendRequests();
+    void triggerSendOfCopyOfCommittedEvents();
+    #endif
 };
 
 #endif

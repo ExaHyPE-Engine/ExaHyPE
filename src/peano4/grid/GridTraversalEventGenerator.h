@@ -223,7 +223,7 @@ class peano4::grid::GridTraversalEventGenerator {
     /**
      * Create description of an enter cell traversal.
      *
-     * <h2> Identifying NoData entries </h2>
+     * # Identifying NoData entries
      *
      * The routine sets entries in the load instruction manually from "take from the
      * in stream" to NoData if the entry refers to a remote grid entity. That is, if
@@ -235,7 +235,7 @@ class peano4::grid::GridTraversalEventGenerator {
      * data. This gives us two opportunities: We can either throw away data after
      * the splitting traversal or we can throw it away one iteration later. There is
      * however not really a decision to be made: We send out data (stream) after we
-     * have piped data to hte output stream. That is, we still have to write all user
+     * have piped data to the output stream. That is, we still have to write all user
      * data to the output stream throughout the splitting traversal even if this data
      * will become remote afterwards. It is the output stream from where the spacetree
      * will pick data and stream it over. So we have to use the iteration after
@@ -290,7 +290,10 @@ class peano4::grid::GridTraversalEventGenerator {
      * However, despite the fact that they are local, we should not invoke
      * any user event on them. We should move data over the stacks, and we
      * should (maybe) exchange data, but we should never call user code within
-     * the observers. So eventually, we need a pruned version of the event
+     * the observers, as the reponsibility of the user operations remains with
+     * the original owner prior to the fork or join. See links below.
+     *
+     * Therefore, we need a pruned version of the event
      * with all local flags unset. We still need the version of the event
      * with set local flags, as they feed into the boundary data exchange.
      * But for enterCell and leaveCell, we need copies without these flags.
@@ -304,13 +307,15 @@ class peano4::grid::GridTraversalEventGenerator {
      * (computations) that shall not be invoked and therefore we have to unset
      * the local flags.
      *
-     * <h2> Rationale </h2>
+     * # Rationale
      *
      * I originally thought about having the pruning mechanism as a part of
      * createEnterCellTraversalEvent() or createLeaveCellTraversalEvent(). This
      * does not work however, as the data exchange et al need the real inside/
      * outside flag whereas a pruned version of the event might disable all of
      * these flags to effectively switch off the invocation of user events.
+     *
+     * @see peano4::parallel::SpactreeSet::streamDataFromSplittingTreesToNewTrees()
      */
     GridTraversalEvent createPrunedEnterCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const;
     GridTraversalEvent createPrunedLeaveCellTraversalEvent( SpacetreeState spacetreeState, const GridTraversalEvent& event ) const;

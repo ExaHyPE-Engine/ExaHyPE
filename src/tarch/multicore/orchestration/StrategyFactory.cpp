@@ -1,5 +1,7 @@
 #include "StrategyFactory.h"
 #include "Hardcoded.h"
+#include "GeneticOptimisation.h"
+#include "AllOnGPU.h"
 
 #include "tarch/multicore/Tasks.h"
 
@@ -14,6 +16,9 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
   else if ( realisationString==std::string( "backfill" ) ) {
     return Hardcoded::createBackfill();
   }
+  else if ( realisationString==std::string( "genetic-optimisation" ) ) {
+    return new GeneticOptimisation();
+  }
   else if ( realisationString.find( "fuse-immediately-" )==0 ) {
     std::string argument = realisationString.substr( std::string("fuse-immediately-").size() );
     int maxFusion = atoi( argument.c_str() );
@@ -25,6 +30,12 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
     int maxFusion = atoi( argument.c_str() );
     assertion(maxFusion>=1);
     return Hardcoded::createFuseAll(maxFusion, false, tarch::multicore::Task::Host);
+  }
+  else if ( realisationString.find( "all-on-gpu-" )==0 ) {
+    std::string argument = realisationString.substr( std::string("all-on-gpu-").size() );
+    int device = atoi( argument.c_str() );
+    assertion(device>=0);
+    return new AllOnGPU(device);
   }
   else if ( realisationString==std::string( "native" ) ) {
     return Hardcoded::createNative();
@@ -39,7 +50,7 @@ tarch::multicore::orchestration::Strategy* tarch::multicore::orchestration::pars
 
 
 std::string tarch::multicore::orchestration::getListOfRealisations() {
-  return "bsp,backfill,fuse-immediately-[1,2,3...],fuse-late-[1,2,3...],native,default";
+  return "bsp,backfill,fuse-immediately-[1,2,3...],fuse-late-[1,2,3...],native,all-on-gpu-[0,1,...],genetic-optimisation,default";
 }
 
 

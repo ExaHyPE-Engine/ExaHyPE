@@ -94,6 +94,8 @@
   void finishSimulation();
 
   bool mayPlot();
+  bool isFirstGridSweepOfTimeStep();
+  bool isLastGridSweepOfTimeStep();
 
 {% for item in NAMESPACE -%}
   }
