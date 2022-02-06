@@ -18,8 +18,33 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   
   TemplateProject = """
   if ({{PREDICATE}}) {
-    ::exahype2::dg::projectSolutionOntoFaces(
+    #if Dimensions==2
+    ::exahype2::dg::projectVolumetricDataOntoFaces(
+      fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value,
+      {{ORDER}},
+      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(0).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(1).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(2).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(3).value
     );
+    #elif Dimensions==3
+    ::exahype2::dg::projectVolumetricDataOntoFaces(
+      fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value,
+      {{ORDER}},
+      {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}},
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesLeft,
+      repositories::{{SOLVER_INSTANCE}}.BasisFunctionValuesRight,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(0).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(1).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(2).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(3).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(4).value,
+      fineGridFaces{{UNKNOWN_IDENTIFIER}}(5).value
+    );
+    #endif
   }
 """
   
