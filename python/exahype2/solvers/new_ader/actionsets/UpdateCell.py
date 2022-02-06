@@ -9,26 +9,75 @@ import jinja2
 class UpdateCell(AbstractAderDGActionSet):
   TemplateUpdateCell = """
   
-        const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+      switch (repositories::{{SOLVER_INSTANCE}}.getSolverState() ) {
+      case {{SOLVER_NAME}}::SolverState::GridConstruction:
+        break;
+      case {{SOLVER_NAME}}::SolverState::Prediction:
+        {
+          #if Dimensions==2
+          double spaceTimeQ[ ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})  ];
+          #else
+          double spaceTimeQ[ ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})  ];
+          #endif
 
-      // Set the variable
-      // double timeStepSize
-      {{COMPUTE_TIME_STEPSIZE}}
-   
-      {{PREPROCESS_RECONSTRUCTED_PATCH}}
+          extraPolateInitialCondition(spaceTimeQ, fineGridCelltestingQ.value, Dimensions, {{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}, {{ORDER}}+1);
 
-      assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStamp, timeStepSize );
-      assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
-      
-      // Set the variable
-      // double newTimeStepSize
-      {{COMPUTE_NEW_TIME_STEP_SIZE}}
+          /*
+          int index = 0;
+          dfor( volume, {{ORDER}}+1 ) {
+        
+              double * myPointer = (double *) fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
+              
+              myPointer[0] = myPointer[0]*2;//( myPointer[0] < 0.0 ? 1.0 : myPointer[0]*2 );
+              index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+          }
+          */
+
+        }
+        break;
+      case {{SOLVER_NAME}}::SolverState::Correction:
+        {
+        
+          #if Dimensions==2
+          double spaceTimeQ[ ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})  ];
+          #else
+          double spaceTimeQ[ ({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{ORDER}}+1)*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})  ];
+          #endif
+          
+          /*
+          int index = 0;
+          dfor( volume, {{ORDER}}+1 ) {
+        
+              double * myPointer = (double *) fineGridCell{{UNKNOWN_IDENTIFIER}}.value + index;
+              
+              myPointer[1] = myPointer[1]*2;//( myPointer[0] > 0.0 ? -1.0 : myPointer[0]*2 );
+              index += {{NUMBER_OF_UNKNOWNS}} + {{NUMBER_OF_AUXILIARY_VARIABLES}};
+          }
+          */
+
+        }
+        break;
+      }
+
+
+         
+
+          const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+
+#          {{COMPUTE_TIME_STEPSIZE}}
+       
+          {{PREPROCESS_RECONSTRUCTED_PATCH}}
     
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-      fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-    
-      repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
+          assertion2( tarch::la::greaterEquals( timeStamp, 0.0 ),    timeStamp, timeStepSize );
+          assertion2( tarch::la::greaterEquals( timeStepSize, 0.0 ), timeStamp, timeStepSize );
+          
+          {{COMPUTE_NEW_TIME_STEP_SIZE}}
+        
+          fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
+          fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
+          fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+        
+          repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
 
   
   """
@@ -49,5 +98,8 @@ class UpdateCell(AbstractAderDGActionSet):
     return result
 
 
-  def get_action_set_name(self):
-    return __name__.replace(".py", "").replace(".", "_")
+  def get_includes(self):
+    
+    return super(UpdateCell,self).get_includes() + """
+    #include "../predictor.h"
+    """

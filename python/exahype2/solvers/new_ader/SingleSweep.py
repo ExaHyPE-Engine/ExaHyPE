@@ -44,17 +44,21 @@ class SingleSweep( ADERDG ):
     #TODO: erweitern
     super(SingleSweep, self).create_data_structures()
     
-    initialisation_sweep_guard = "(" + \
+    self.initialisation_sweep_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::GridInitialisation" + \
       ")"
-    first_iteration_after_initialisation_guard = "(" + \
+    self.first_iteration_after_initialisation_guard = "(" + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::TimeStepAfterGridInitialisation or " + \
       "repositories::" + self.get_name_of_global_instance() + ".getSolverState()==" + self._name + "::SolverState::PlottingAfterGridInitialisation" + \
     ")"
+    
+
+    
               
   def create_action_sets(self):
-    #TODO: erweitern
+    #TODO: ask Tobias about the project_linear_combination, which I think is not needed in ader-dg
     super(SingleSweep, self).create_action_sets()
+    #self._action_set_project_linear_combination_onto_faces.guard = self._store_cell_data_default_guard()
     self._action_set_update_cell = UpdateCell(self, self._store_cell_data_default_guard() )
 
   def get_user_action_set_includes(self):

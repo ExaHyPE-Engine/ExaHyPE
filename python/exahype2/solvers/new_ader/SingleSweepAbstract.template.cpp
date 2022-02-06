@@ -15,6 +15,7 @@ std::bitset<Dimensions> {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}
 
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}():
+	{{BASIS_INITIALIZERS | indent(2,True) }}
   _solverState(SolverState::GridConstruction),
   _minTimeStamp(0.0),
   _maxTimeStamp(0.0),
@@ -93,10 +94,13 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   assertion1(timeStamp>=0.0,timeStamp);
   _maxTimeStampThisTimeStep = std::max(timeStamp,_maxTimeStampThisTimeStep);
   _minTimeStampThisTimeStep = std::min(timeStamp,_minTimeStampThisTimeStep);
-  assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, patchSize );
+  assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, cellSize );
 
-  assertion1(patchSize<std::numeric_limits<double>::max()/10.0,patchSize);
-  assertion1(patchSize>0.0,patchSize);
+
+  assertion1(_maxCellHThisTimeStep<std::numeric_limits<double>::max()/10.0,_maxCellHThisTimeStep);
+    assertion1(_maxCellHThisTimeStep>0.0,_maxCellHThisTimeStep);
+    assertion1(_minCellHThisTimeStep<std::numeric_limits<double>::max()/10.0,_minCellHThisTimeStep);
+    assertion1(_minCellHThisTimeStep>0.0,_minCellHThisTimeStep);
   _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep,cellSize);
   _minCellHThisTimeStep = std::min(_minCellHThisTimeStep,cellSize);
 }
@@ -110,9 +114,9 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
 {% if REFINEMENT_CRITERION_IMPLEMENTATION!="<user-defined>" %}
 ::exahype2::RefinementCommand {{NAMESPACE | join("::")}}::{{CLASSNAME}}::refinementCriterion(
   const double * __restrict__ Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-  const double * __restrict__ dQdx, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  x,
-  double                                       t
+  const tarch::la::Vector<Dimensions,double>&  h,
+	double                                       t
 ) {
   {% if REFINEMENT_CRITERION_IMPLEMENTATION=="<empty>" %}
   ::exahype2::RefinementCommand result = ::exahype2::RefinementCommand::Keep;
@@ -241,7 +245,8 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       [&]() -> void { tarch::services::ServiceRepository::getInstance().receiveDanglingMessages(); }
       );
   tarch::mpi::Rank::getInstance().allReduce(
-      &newMaxTimeStamp,
+      &newMaxTimeSteSweepAbstract.template.cpp
+			modified:   SingleSweeamp,
       &_maxTimeStampThisTimeStep,
       1, MPI_DOUBLE,
       MPI_MAX,

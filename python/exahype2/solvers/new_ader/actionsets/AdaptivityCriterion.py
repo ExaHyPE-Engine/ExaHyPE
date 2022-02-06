@@ -2,7 +2,7 @@
 # use, please see the copyright notice at www.peano-framework.org
 from .AbstractAderDGActionSet import AbstractAderDGActionSet
 
-import peano4
+#import peano4
 import peano4.solversteps
 import jinja2
 

@@ -56,6 +56,8 @@ class ADERDG( object ):
     self.user_solver_includes      = ""
     self.plot_description = ""    
     
+    self._action_set_postprocess_solution = None
+    
     #TODO: find out about this
     self._number_of_face_projections = 1;
     
@@ -135,12 +137,21 @@ class ADERDG( object ):
          build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis  = exahype2.solvers.new_ader.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     
+    #TODO
+    self._action_set_solve_volume_integral                                            = exahype2.solvers.new_ader.actionsets.SolveVolumeIntegral(self, self._store_face_data_default_guard())
+    self._action_set_handle_boundary                                                  = exahype2.solvers.new_ader.actionsets.HandleBoundary(self, self._store_face_data_default_guard())
+    self._action_set_solve_Riemann_problem                                            = exahype2.solvers.new_ader.actionsets.SolveRiemannProblem(self, self._store_face_data_default_guard())
+    self._action_set_add_volume_and_face_solution                                     = exahype2.solvers.new_ader.actionsets.AddVolumeAndFaceSolution(self, self._store_face_data_default_guard())
+    self._action_set_project_solution_onto_faces                                      = exahype2.solvers.new_ader.actionsets.ProjectSolutionOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
+    self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement = exahype2.solvers.new_ader.actionsets.DynamicAMR(solver=self,guard=self._store_cell_data_default_guard())
+    if self._action_set_postprocess_solution==None:
+          self._action_set_postprocess_solution                                             = exahype2.solvers.new_ader.actionsets.EmptyPostprocessSolution(solver=self)
+
+
+    
     self._action_set_update_face_label = exahype2.grid.UpdateFaceLabel( self._name )  
     self._action_set_update_cell_label = exahype2.grid.UpdateCellLabel( self._name ) 
         
-    self._action_set_update_cell                                                      = None
-    self._action_set_solve_Riemann_problem                                            = None
-
 
 
   def create_readme_descriptor(self, domain_offset, domain_size):
@@ -230,6 +241,8 @@ class ADERDG( object ):
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_project_solution_onto_faces )
+    step.add_action_set( self._action_set_postprocess_solution )
 
   
   def add_actions_to_create_grid(self, step, evaluate_refinement_criterion):
@@ -289,7 +302,14 @@ class ADERDG( object ):
   def add_actions_to_perform_time_step(self, step):  
     step.add_action_set( self._action_set_update_face_label )
     step.add_action_set( self._action_set_update_cell_label )
+    step.add_action_set( self._action_set_couple_resolution_transitions_and_handle_dynamic_mesh_refinement )
+    step.add_action_set( self._action_set_solve_volume_integral )
+    step.add_action_set( self._action_set_handle_boundary )
+    step.add_action_set( self._action_set_solve_Riemann_problem )
+    step.add_action_set( self._action_set_add_volume_and_face_solution )
+    step.add_action_set( self._action_set_project_solution_onto_faces )
     step.add_action_set( self._action_set_AMR )
+    step.add_action_set( self._action_set_postprocess_solution )
     
     step.add_action_set(self._action_set_update_cell)
 
