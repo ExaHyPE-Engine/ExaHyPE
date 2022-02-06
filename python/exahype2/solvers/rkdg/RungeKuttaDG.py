@@ -447,6 +447,7 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
                                                                                                                                              build_up_new_refinement_instructions=True,  implement_previous_refinement_instructions=True )
     self._action_set_AMR_commit_without_further_analysis                              = exahype2.solvers.rkdg.actionsets.AdaptivityCriterion(solver=self, guard=self._store_cell_data_default_guard(), build_up_new_refinement_instructions=False, implement_previous_refinement_instructions=True )
     self._action_set_linear_combination_of_estimates                                  = exahype2.solvers.rkdg.actionsets.LinearCombinationOfEstimates(self)
+    # @todo TW The following two action sets should run in parallel I guess 
     self._action_set_project_linear_combination_onto_faces                            = exahype2.solvers.rkdg.actionsets.ProjectLinearCombinationOfEstimatesOntoFaces(solver=self,guard=self._store_cell_data_default_guard())
     self._action_set_solve_volume_integral                                            = exahype2.solvers.rkdg.actionsets.SolveVolumeIntegral(self, self._store_face_data_default_guard())
     self._action_set_handle_boundary                                                  = exahype2.solvers.rkdg.actionsets.HandleBoundary(self, self._store_face_data_default_guard())

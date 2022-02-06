@@ -25,6 +25,7 @@ ExaHyPE2Sources = \
   aderdg/RusanovNonlinearAoS.cpp \
   aderdg/tests/ADERDGTest.cpp \
   dg/DGUtils.cpp \
+  dg/Euler.cpp \
   fv/BoundaryConditions.cpp \
   fv/Generic.cpp \
   fv/PatchUtils.cpp \

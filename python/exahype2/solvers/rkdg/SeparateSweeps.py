@@ -122,6 +122,7 @@ class SeparateSweeps( RungeKuttaDG ):
       "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
     self._action_set_project_linear_combination_onto_faces.guard = self._store_cell_data_default_guard() + " and " + self._first_grid_sweep_within_RK_step
+    self._action_set_solve_volume_integral.guard                 = self._store_cell_data_default_guard() + " and " + self._first_grid_sweep_within_RK_step
         #self._action_set_update_cell = UpdateCell(self)
 
 

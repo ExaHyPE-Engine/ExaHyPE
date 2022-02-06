@@ -91,8 +91,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #pragma omp declare target
     #endif
     static void nonconservativeProduct(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double * __restrict__                  Q,    // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double * __restrict__                  dQdx, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal,
@@ -106,8 +106,8 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     
     {% if NCP_IMPLEMENTATION!="<none>" %}
     virtual void nonconservativeProduct(
-      const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
-      const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
+      const double * __restrict__                  Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
+      const double * __restrict__                  dQdx, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal,
@@ -129,7 +129,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
-      double                                       dt,
       double * __restrict__ S,
       Offloadable
     );
@@ -143,7 +142,6 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
-      double                                       dt,
       double * __restrict__ S
     ) {% if SOURCE_TERM_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final {% endif %};
     {% endif %}

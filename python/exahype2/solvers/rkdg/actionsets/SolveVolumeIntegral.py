@@ -18,8 +18,89 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   
   TemplateProject = """
   if ({{PREDICATE}}) {
+    ::exahype2::dg::explicitEulerOnCell(
+      fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value,   // const double* __restrict__          cellQin,
+      {{ORDER}},                                                   
+      {{NUMBER_OF_UNKNOWNS}},
+      {{NUMBER_OF_AUXILIARY_VARIABLES}},
+      [&](
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal,
+        double * __restrict__                        F
+      )->void {
+        {% if FLUX_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
+        {% else %}
+        #if Dimensions==2
+        std::fill_n(F,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_2D}},0.0);
+        #else
+        std::fill_n(F,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_3D}},0.0);
+        #endif
+        {% endif %}
+      },
+      [&] (
+        const double * __restrict__                  Q,
+        const double * __restrict__                  dQdx,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal,
+        double * __restrict__                        F
+      ) ->  void {
+        {% if NCP_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQdx,x,t,normal,F);
+        {% else %}
+        #if Dimensions==2
+        std::fill_n(F,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_2D}},0.0);
+        #else
+        std::fill_n(F,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_3D}},0.0);
+        #endif
+        {% endif %}
+      },
+      [&] (
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        double * __restrict__                        S
+      ) -> void {
+        {% if SOURCE_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,S);
+        {% else %}
+        #if Dimensions==2
+        std::fill_n(S,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_2D}},0.0);
+        #else
+        std::fill_n(S,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_3D}},0.0);
+        #endif
+        {% endif %}
+      },
+      [&] (
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        const tarch::la::Vector<Dimensions,double>&  h,
+        const tarch::la::Vector<Dimensions,int>&     index,
+        double                                       t,
+        double * __restrict__                        S
+      ) -> void {
+        {% if SOURCE_IMPLEMENTATION!="<none>" %}
+        repositories::{{SOLVER_INSTANCE}}.pointSourceTerm(Q,x,h,index,t,S);
+        {% else %}
+        #if Dimensions==2
+        std::fill_n(S,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_2D}},0.0);
+        #else
+        std::fill_n(S,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_3D}},0.0);
+        #endif
+        {% endif %}
+      },
+      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,
+      repositories::{{SOLVER_INSTANCE}}.MassMatrix,
+      repositories::{{SOLVER_INSTANCE}}.StiffnessMatrix,
+      repositories::{{SOLVER_INSTANCE}}.InvertedAndLumpedMassMatrix,
+      todo
+    );  
   }
 """
+
   
   def __init__(self,solver,guard):
     """
