@@ -18,6 +18,8 @@ class ProjectLinearCombinationOfEstimatesOntoFaces(AbstractRungeKuttaDGActionSet
   
   TemplateProject = """
   if ({{PREDICATE}}) {
+    ::exahype2::dg::projectSolutionOntoFaces(
+    );
   }
 """
   
