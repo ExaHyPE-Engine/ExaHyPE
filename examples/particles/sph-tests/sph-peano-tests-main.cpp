@@ -24,8 +24,11 @@
 #include "observers/Init.h"
 #include "observers/Plot.h"
 #include "observers/Move.h"
-#include "observers/CalcDensitiesAndSmoothingLengthNR.h"
+#include "observers/DensityNonSym.h"
 #include "observers/ForceNonSym.h"
+#include "observers/NewtonRaphsonSmoothingLength.h"
+#include "observers/Kick.h"
+#include "observers/Drift.h"
 
 
 tarch::logging::Log _log("::");
@@ -174,15 +177,28 @@ int main(int argc, char** argv) {
 //      for (int i=0; i<2; i++) {
       for (int j=0; j<50; j++) {
         logInfo( "main()", "run timestep" )
-//        examples::particles::observers::CalcDensities densityObserver;            // Constant h
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(densityObserver);  // Constant h
 
-        examples::particles::observers::CalcDensitiesAndSmoothingLengthNR densityAndSmoothingLObserver;
-        peano4::parallel::SpacetreeSet::getInstance().traverse(densityAndSmoothingLObserver);
+       
+        examples::particles::observers::DensityNonSym densityObserver;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(densityObserver);
 
-        examples::particles::observers::ForceNonSym forcesObserver;                 // this one also does the internal energy calculations
+        examples::particles::observers::NewtonRaphsonSmoothingLength newtonRaphson;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
+
+        examples::particles::observers::ForceNonSym forcesObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcesObserver);
 
+        if(i>0){ // Do not synchronize at the IC
+          examples::particles::observers::Kick synchroObserver;                  // Synchronization step (last kick from previous time-step)
+          peano4::parallel::SpacetreeSet::getInstance().traverse(synchroObserver);
+        }
+
+        examples::particles::observers::Kick kickObserver;                     // Actual Kick from current time-step
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickObserver);
+
+        examples::particles::observers::Drift driftObserver;                   // Drift from current time-step
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickObserver);
+     
         examples::particles::observers::Move moveObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(moveObserver);
       }
