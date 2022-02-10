@@ -301,7 +301,7 @@ void examples::exahype2::SSInfall::SSInfall::initialCondition(
 
 double examples::exahype2::SSInfall::SSInfall::getInitialMIn( double r_coor ) const {
   const double rho_ini=tilde_rho_ini;
-  if (iseed==0) {
+  if (iseed==0) {//not using
     if (r_coor<r_ini) {
       return rho_ini*delta_rho*pow(r_coor,3)/3;
     }
@@ -309,7 +309,7 @@ double examples::exahype2::SSInfall::SSInfall::getInitialMIn( double r_coor ) co
       return rho_ini*delta_rho*pow(r_ini,3)/3;
     }
   }
-  if (iseed==1) {
+  if (iseed==1) {//tophat
     if (r_coor<r_point){
       return delta_m*pow(r_coor/r_point,3)/4/tarch::la::PI;
     }
@@ -321,19 +321,20 @@ double examples::exahype2::SSInfall::SSInfall::getInitialMIn( double r_coor ) co
 }
 
 
-double examples::exahype2::SSInfall::SSInfall::getForceDensityNorm(double r_coor,double m_in, double t, double density) {
+double examples::exahype2::SSInfall::SSInfall::getForceDensityNorm(double r_coor,double m_in, double t, double density, double a_input) {
   double a=0.0287*pow((-t/11.8+0.1694*pow(a_i,-0.5)),-2);//when code time ~ 2*(a_i^(-0.5)-1), a~1
   #ifdef useTable
-  a=interpolated_a; //if we use a table to interpolate a (for LCDM), we replace it here.
+  a=a_input; //if we use a table to interpolate a (for LCDM), we replace it here.
   #endif
   double force_density_norm=density*G*m_in/pow(r_coor,3)*Omega_m*a*1.5;
   #ifdef DGP
-  double y3_over_Delta=(4.0/3.0)*pi*pow(r_coor,3)/delta_m;
+  //double y3_over_Delta=(4.0/3.0)*tarch::la::PI*pow(r_coor,3)/delta_m;
+  double l3_over_tildeM=(4.0/3.0)*tarch::la::PI*pow(r_coor,3)/m_in;
   double modifier=0.0;
   if (tarch::la::equals(DGP_zeta,0.0)){modifier=1.0/3.0/DGP_beta;}
-  else{modifier=(27*DGP_beta/16/DGP_zeta/DGP_zeta)*y3_over_Delta*(pow(1+(32*DGP_zeta*DGP_zeta/81/DGP_beta/DGP_beta/y3_over_Delta),0.5)-1);}
+  else{modifier=(27*DGP_beta/16/DGP_zeta/DGP_zeta)*l3_over_tildeM*(pow(1+(32*DGP_zeta*DGP_zeta/81/DGP_beta/DGP_beta/l3_over_tildeM),0.5)-1);}
   //logInfo( "source()", "modifier" << modifier );
-  force_density_norm=force_density_norm*(1+modifier);
+  force_density_norm=force_density_norm*(1.0+modifier);
   #endif
   return force_density_norm;
 }
@@ -402,7 +403,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double force_density_norm = getForceDensityNorm(
     r_coor,
     m_in,
-    t, Q[0]
+    t, Q[0],interpolated_a
   );
 
   S[0] = 0;  // rho
@@ -436,7 +437,7 @@ void examples::exahype2::SSInfall::SSInfall::sourceTerm(
   double force_density_norm = getForceDensityNorm(
     r_coor,
     m_in,
-    t, Q[0]
+    t, Q[0],1.0
   );
 
   double x = volumeX(0)-center(0);
