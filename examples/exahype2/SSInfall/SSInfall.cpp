@@ -36,20 +36,24 @@ void examples::exahype2::SSInfall::SSInfall::startTimeStep(
       m_tot[i]           = 0;
       cell_tot[i]        = 0;
     }
-    double inter_time=globalMinTimeStamp+globalMinTimeStepSize/2;
+    double inter_time=_minTimeStamp+getAdmissibleTimeStepSize()/2.0;
     #ifdef useTable
     int time_position=0;
-    //logInfo( "startTImeStep()", "current min time=" << globalMinTimeStamp<<" inter time=" << inter_time);
-    for(int i=0; i<table_point_number;i++){
-      if (tarch::la::smallerEquals(inter_time,code_time_points[i]) ){time_position=i; break;}
-      time_position=i;
-    }
-    //logInfo( "startTImeStep()", "it is between time point " << code_time_points[time_position-1] << " and " << code_time_points[time_position]);
-    interpolated_a=scale_factor_points[time_position-1]*(code_time_points[time_position]-inter_time)/(code_time_points[time_position]-code_time_points[time_position-1])+scale_factor_points[time_position]*(inter_time-code_time_points[time_position-1])/(code_time_points[time_position]-code_time_points[time_position-1]);
-    //logInfo( "startTImeStep()", "interpolated to " << interpolated_a << " from " << scale_factor_points[time_position-1] << " and " << scale_factor_points[time_position]);
-    if (tarch::la::equals(globalMinTimeStamp,0.0) ){
+    //logInfo( "startTImeStep()", "current min time=" << globalMinTimeStamp<<" current min timestep=" << globalMinTimeStepSize<<" inter time=" << inter_time);
+    //logInfo( "startTImeStep()", "current max time=" << globalMaxTimeStamp<<" current max timestep=" << globalMaxTimeStepSize);
+    //logInfo( "startTImeStep()", "current time=" << _minTimeStamp<<" current timestep=" << getAdmissibleTimeStepSize());
+
+    if (tarch::la::equals(inter_time,0.0) ){
       interpolated_a=scale_factor_points[0];
       //logInfo( "startTImeStep()", "reset scale a to " << interpolated_a << " because t=0.0");
+    }else{
+      for(int i=0; i<table_point_number;i++){
+        if (tarch::la::smallerEquals(inter_time,code_time_points[i]) ){time_position=i; break;}
+        time_position=i;
+      }
+      //logInfo( "startTImeStep()", inter_time << " is between time point " << code_time_points[time_position-1] << " and " << code_time_points[time_position]);
+      interpolated_a=scale_factor_points[time_position-1]*(code_time_points[time_position]-inter_time)/(code_time_points[time_position]-code_time_points[time_position-1])+scale_factor_points[time_position]*(inter_time-code_time_points[time_position-1])/(code_time_points[time_position]-code_time_points[time_position-1]);
+      //logInfo( "startTImeStep()", "interpolated to " << interpolated_a << " from " << scale_factor_points[time_position-1] << " and " << scale_factor_points[time_position]);
     }
     #endif
 
