@@ -212,10 +212,9 @@ class PlotParticlesInVTKFormat(ActionSet):
 
 
   def _get_attribute_writer_declarations(self):
-      delim = "\n    "
-      datatype = "tarch::plotter::pointdata::PointWriter::PointDataWriter*"
-      return delim.join(f"{datatype}  {attr.get_to_string()}Writer;"
-                          for attr in self._attributes_to_plot)
+    delim = "\n    "
+    datatype = "tarch::plotter::pointdata::PointWriter::PointDataWriter*"
+    return delim.join(f"{datatype}  _{attr._name}Writer;" for attr in self._attributes_to_plot)
 
 
   def get_attributes(self):
