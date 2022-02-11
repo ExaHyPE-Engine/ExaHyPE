@@ -15,9 +15,15 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
   def __init__(self, name, cardinality, relative_accuracy_in_bits=None):
     """
       See superclass' constructor.
+      
+      cardinality: String
+        This is important: It is not (necessarily) an integer, but can be
+        a string which is defined via a pragma or constexpr later.
+        
     """
     dastgen2.attributes.DoubleArray.__init__(self, name, cardinality)
-    self._cardinality = cardinality
+    self._cardinality               = cardinality
+    self._relative_accuracy_in_bits = relative_accuracy_in_bits
     
     
   def get_methods(self,_full_qualified_class_name):
@@ -29,8 +35,13 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
       ("set" + accessor_name + "(int index, double value)", "void"),
     ]
 
+
   def get_plain_C_attributes(self):
-    return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",double>", "" ) ]
+    if self._relative_accuracy_in_bits != None:
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::compress(" + str(self._relative_accuracy_in_bits) + ")]]" ) ]
+    else:
+      return [ ("_" + self._name, "tarch::la::Vector<" + self._cardinality + ",double>", "" ) ]
+
 
   def get_first_plain_C_attribute(self):
     return [ ("_" + self._name + ".data()[0]", "double" ) ]
@@ -41,14 +52,32 @@ class Peano4DoubleArray(dastgen2.attributes.DoubleArray):
       name = "  _dataStore._" + self._name
     else:
       name = "  _" + self._name
-    if signature.startswith( "get" ) and  "index" in signature:
+    if signature.startswith( "get" ) and  "index" in signature and self._relative_accuracy_in_bits == None:
       return "  return " + name + "(index);\n"
-    elif signature.startswith( "set" ) and  "index" in signature:
+    elif signature.startswith( "set" ) and  "index" in signature and self._relative_accuracy_in_bits == None:
       return  name + "(index) = value;\n"
-    elif signature.startswith( "get" ):
+    elif signature.startswith( "get" ) and self._relative_accuracy_in_bits == None:
       return "  return " + name + ";\n"
-    elif signature.startswith( "set" ):
+    elif signature.startswith( "set" ) and self._relative_accuracy_in_bits == None:
       return name + " = value;\n"
+    elif signature.startswith( "get" ) and  "index" in signature and self._relative_accuracy_in_bits != None:
+      return "  return " + name + "[index];\n"
+    elif signature.startswith( "set" ) and  "index" in signature and self._relative_accuracy_in_bits != None:
+      return  name + "[index] = value;\n"
+    elif signature.startswith( "get" ) and self._relative_accuracy_in_bits != None:
+      return """
+  tarch::la::Vector<""" + self._cardinality + """,double> result;
+  for( int i=0; i<""" + self._cardinality + """; i++) {
+    result(i) = """ + name + """[i];
+  }
+  return result;
+      """
+    elif signature.startswith( "set" ) and self._relative_accuracy_in_bits != None:
+      return """
+  for( int i=0; i<""" + self._cardinality + """; i++) {
+    """ + name + """[i] = value(i);
+  }
+      """
     else:
       assert(False)
     return ""

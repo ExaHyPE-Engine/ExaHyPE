@@ -21,6 +21,7 @@ class DoubleArray(Double):
   def __init__(self, name, cardinality, relative_accuracy_in_bits=None):
     Double.__init__(self, name)
     self._cardinality = cardinality
+    self._relative_accuracy_in_bits = relative_accuracy_in_bits
 
     
   def get_methods(self,_full_qualified_class_name):
@@ -34,7 +35,10 @@ class DoubleArray(Double):
 
 
   def get_plain_C_attributes(self):
-    return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "" ) ]
+    if self._relative_accuracy_in_bits != None:
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::compress(" + str(self._relative_accuracy_in_bits) + ")]]" ) ]
+    else:
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "" ) ]
 
 
   def get_first_plain_C_attribute(self):

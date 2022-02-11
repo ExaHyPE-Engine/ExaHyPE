@@ -207,17 +207,19 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
     output.write( self._full_qualified_name + "::" + dastgen2.get_unqualified_class_name(self._full_qualified_name) + self._get_constructor_arguments() )
     if self._embed_attributes_into_data_store:
       output.write( "{\n" )
-      for attribute in self._get_flattened_attributes():
-        output.write( "_dataStore." + attribute[0] + "= _" + attribute[0] + ";\n" )
+      for attribute in self._attributes:
+        output.write( "set" + attribute._name[0].title() + attribute._name[1:].split( "[" )[0] + "( __" + attribute._name.split( "[" )[0] + ");\n" )
       output.write( "}\n")
     else:
       output.write( ":\n" )
-      for attribute in self._get_flattened_attributes():
-        if attribute==self._get_flattened_attributes()[0]:
-          output.write( "    " )
-        else:
-          output.write( "  , " )
-        output.write( attribute[0] + "(_" + attribute[0] + ")\n" )
+      #for attribute in self._get_flattened_attributes():
+      #  if attribute==self._get_flattened_attributes()[0]:
+      #    output.write( "    " )
+      #  else:
+      #    output.write( "  , " )
+      #  output.write( attribute[0] + "(_" + attribute[0] + ")\n" )
+      for attribute in self._attributes:
+        output.write( "_" + attribute._name.split("[")[0] + "(__" + attribute._name.split("[")[0] + ")\n" )
       output.write( "  {}\n")
 
   

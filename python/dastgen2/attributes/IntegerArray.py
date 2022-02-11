@@ -7,6 +7,9 @@ class IntegerArray(Integer):
   def __init__(self, name, cardinality, min_value=None, max_value=None):
     Integer.__init__(self, name)
     self._cardinality = cardinality
+    self._min_value   = min_value
+    self._max_value   = max_value
+
     
   def get_methods(self,_full_qualified_class_name):
     accessor_name = self._name[:1].title() + self._name[1:]
@@ -17,8 +20,13 @@ class IntegerArray(Integer):
       ("set" + accessor_name + "(int index, int)", "void"),
     ]
 
+
   def get_plain_C_attributes(self):
-    return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "" ) ]
+    if self._min_value!=None or self._max_value!=None:
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "[[clang::compress(" + str(self._min_value) + "-" + str(self._max_value) + ")]]" ) ]
+    else:
+      return [ ("_" + self._name + "[" + self._cardinality + "]", "double", "" ) ]
+
 
   def get_first_plain_C_attribute(self):
     return [ ("_" + self._name + "[0]", "int" ) ]

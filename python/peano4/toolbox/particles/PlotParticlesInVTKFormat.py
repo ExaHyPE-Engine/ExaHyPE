@@ -86,15 +86,14 @@ class PlotParticlesInVTKFormat(ActionSet):
       
       """
       self._attributes_to_plot.append(attribute)
-      writer_name = f"{attribute.get_to_string()}Writer"
+      writer_name = f"_{attribute._name}Writer"
       delim = "\n  "
-      name_no_underscore = attribute.get_to_string()[1:]
-      accessor_name = name_no_underscore[0].title() + name_no_underscore[1:]
+      accessor_name = attribute._name[0].title() + attribute._name[1:]
 
       self.d[ "ATTRIBUTE_WRITER_NULL_INITIALISERS" ] += f"{delim}{writer_name} = nullptr;"
       self.d[ "ATTRIBUTE_WRITER_CLOSES" ]            += f"{delim}{writer_name}->close();"
       self.d[ "ATTRIBUTE_WRITER_DELETES" ]           += f"{delim}delete {writer_name};"
-      self.d[ "ATTRIBUTE_WRITER_INITIALISERS" ]      += f"{delim}{writer_name} = _writer->createPointDataWriter( \"{name_no_underscore}\", {cardinality} );"
+      self.d[ "ATTRIBUTE_WRITER_INITIALISERS" ]      += f"{delim}{writer_name} = _writer->createPointDataWriter( \"{attribute._name}\", {cardinality} );"
       if writer_name=="_dataWriter":
         self.d[ "ATTRIBUTE_WRITER_PLOT_CALLS" ]        += f"{delim}  _dataWriter->plot(particleNumber,p->getData().data(),{cardinality});" 
       else:
