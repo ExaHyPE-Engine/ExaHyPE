@@ -435,6 +435,8 @@ if __name__ == "__main__":
       solverconstants+= str(r)+", "
     solverconstants=solverconstants[:-2]; solverconstants+= "};\n"
 
+    solverconstants+= "double interpolated_a=1.0;\n"
+
     if args.model=="Ein-de":
       userinfo.append(("Use Einstein-de Sitter univese background", None))
     elif args.model=="LCDM" or args.model=="LCDMDGP":
@@ -450,7 +452,6 @@ if __name__ == "__main__":
         solverconstants+= str(scale_factor)+", "
       solverconstants=solverconstants[:-2]; solverconstants+= "};\n"
       solverconstants+= "double table_point_number="+str(point_number)+";\n"
-      solverconstants+= "double interpolated_a=1.0;\n"
       floatparams.update({"Omega_m":0.3})
     elif args.model=="DGP":
       userinfo.append(("Use DGP modified Model+Einstein-de Sitter univese background", None))
