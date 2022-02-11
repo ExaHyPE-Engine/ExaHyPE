@@ -27,15 +27,19 @@ class Integer(Attribute):
 
   def get_plain_C_attributes(self):
     if self._min_value==None and self._max_value==None:
-      return [ ("_" + self._name, "int" ) ]
+      return [ ("_" + self._name, "int", "" ) ]
     else:
-      return [ ("_" + self._name + " [[fancy attribute for Pawel]]", "int" ) ]
+      return [ ("_" + self._name, "int", "[[clang::compress::" + str(self._min_value) + "-" + str(self._max_value) + "]]" ) ]
 
 
   def get_method_body(self,signature):
-    if signature.startswith( "get" ):
+    if signature.startswith( "get" ) and self.use_data_store:
+      return "  return _dataStore._" + self._name + ";\n"
+    elif signature.startswith( "set" ) and self.use_data_store:
+      return "  _dataStore._" + self._name + " = value;\n"
+    elif signature.startswith( "get" ) and not self.use_data_store:
       return "  return _" + self._name + ";\n"
-    elif signature.startswith( "set" ):
+    elif signature.startswith( "set" ) and not self.use_data_store:
       return "  _" + self._name + " = value;\n"
     else:
       assert(False)
@@ -52,5 +56,8 @@ class Integer(Attribute):
       Return string representation of attribute.
 
     """
-    return "_" + self._name
+    if self.use_data_store:
+      return "_dataStore._" + self._name
+    else:
+      return "_" + self._name
 
