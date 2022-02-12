@@ -7,7 +7,7 @@ from .InitialCondition               import InitialCondition
 from .LinearCombinationOfEstimates   import LinearCombinationOfEstimates
 from .LinearCombinationOfEstimates   import LinearCombinationOfEstimates
 from .ProjectLinearCombinationOfEstimatesOntoFaces import ProjectLinearCombinationOfEstimatesOntoFaces
-from .ProjectSolutionOntoFaces                     import ProjectSolutionOntoFaces
+from .ComputeFinalLinearCombinationAndProjectSolutionOntoFaces                     import ComputeFinalLinearCombinationAndProjectSolutionOntoFaces
 from .SolveVolumeIntegral import SolveVolumeIntegral
 from .HandleBoundary import HandleBoundary
 from .SolveRiemannProblem import SolveRiemannProblem

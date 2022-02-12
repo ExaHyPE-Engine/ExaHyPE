@@ -3,23 +3,77 @@
 
 from .AbstractRungeKuttaDGActionSet import AbstractRungeKuttaDGActionSet
 
+from exahype2.solvers.rkdg.ButcherTableau                import ButcherTableau
+
 import peano4
 import jinja2
 
 class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
   """
   
-  The linear combination of the Runge Kutta trials has to be projected onto
-  the faces, so we can then solve the Riemann problems. So the projection 
-  happens in one grid sweep, the corresponding Riemann solve in the next one.
+  Solve volume integral
   
+  Solve the volumetric part of the DG method. This includes the evaluation of the
+  volume integral of the operator multiplied with a trial function, plus the 
+  subsequent multiplication with an inverted (lumped) mass matrix. So, eventually,
+  we do an explicit Euler step subject to a relaxed time step size from the Butcher
+  tableau. The input is already properly computed (see LinearCombinationOfEstimates()).
   
+  The volumen integral definition is an underdetermined action set, i.e. you still
+  have to ensure that a number of macros are actually defined when you use it:
+  
+  - {{COMPUTE_TIME_STEP_SIZE}} has to specify a double timeStepSize. It may be const if 
+    you want. I don't alter it.
+  
+  In return, the following variables will be determined by the action set:
+  
+  - timeStamp: double This is the time stamp of the original solution, i.e. not the
+    one we are currently evaluating due to the Runge-Kutta scheme.
+  -  
+  
+    
   """
   
   TemplateProject = """
-  if ({{PREDICATE}}) {
+  {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+  if ({{PREDICATES[PREDICATE_NO]}}) {
+    const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
+    
+    // Set the variable
+    // double timeStepSize
+    {{COMPUTE_TIME_STEP_SIZE}}
+    
+    const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
+    
+    assertion4( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
+    assertion4( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
+
+    double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
+    #if Dimensions==2
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_2D}};
+    #elif Dimensions==3
+    double* QOut = fineGridCell{{UNKNOWN_IDENTIFIER}}Estimates.value + {{PREDICATE_NO}} * {{NUMBER_OF_DOFS_PER_CELL_3D}};
+    #endif
+
+    {{EXPLICIT_EULER_CALL}}
+
+    // @todo If we keep these guys, then we have to have a SolveVolumeIntegral as separate 
+    //       action set. Which makes sense.
+
+    // Set the variable
+    // double newTimeStepSize
+    {{COMPUTE_NEW_TIME_STEP_SIZE}}
+    
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
+    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+    
+    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
+  }
+  {% endfor %}
+  
     ::exahype2::dg::explicitEulerOnCell(
-      fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value,   // const double* __restrict__          cellQin,
+      ,   // const double* __restrict__          cellQin,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -98,11 +152,10 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.InvertedAndLumpedMassMatrix,
       todo
     );  
-  }
 """
 
   
-  def __init__(self,solver,guard):
+  def __init__(self,solver):
     """
     
     guard_project: String (C++ code)
@@ -114,8 +167,23 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     
     """
     super(SolveVolumeIntegral,self).__init__(solver)
-    self.guard            = guard
+    self.guards           = []
+    self._butcher_tableau = ButcherTableau(self._solver._rk_order)
     
+
+  @property
+  def guards(self):
+    if self._guards==[]:
+      raise Exception( "Guards are not initialised" )
+    return self._guards
+      
+    
+  @guards.setter
+  def guards(self,new_guards):
+    if new_guards!=[] and len(new_guards)!=self._solver.number_of_Runge_Kutta_steps():
+      raise Exception( "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(solver.number_of_Runge_Kutta_steps(),guards) )
+    self._guards = new_guards
+
 
   def get_body_of_operation(self,operation_name):
     result = ""
@@ -123,7 +191,9 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]                 = self.guard
+      d[ "PREDICATES" ]                               = self.guards
+      d[ "BUTCHER_TABLEAU_WEIGHTS" ]                  = self._butcher_tableau.weight_matrix()      
+      d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()      
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result

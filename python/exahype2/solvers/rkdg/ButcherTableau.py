@@ -18,6 +18,40 @@ class ButcherTableau(object):
     self._order = order
     
     
+  def time_step_sizes(self):
+    """
+    
+     These are the relative time step sizes in the scheme, i.e. the very left
+     column in the classic Butcher tableau.
+     
+    """
+    if self._order==1:
+      return [0]
+    elif self._order==2:
+      return [0,1/2]
+    elif self._order==4:
+      return [0,1/3,2/3,1]
+    else:
+      raise Exception( "order {} is not yet supported".format(self._order) ) 
+    
+    
+  def final_estimate_weights(self):
+    """
+    
+     These are the relative time step sizes in the scheme, i.e. the very left
+     column in the classic Butcher tableau.
+     
+    """
+    if self._order==1:
+      return [0]
+    elif self._order==2:
+      return [0,1]
+    elif self._order==4:
+      return [1/8, 3/8, 3/8, 1/8 ]
+    else:
+      raise Exception( "order {} is not yet supported".format(self._order) ) 
+    
+    
   def weight_matrix(self):
     if self._order==1:
       return [

@@ -17,11 +17,13 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
   """
   
   TemplateProject = """
-  if ({{PREDICATE}}) {
+  {% for PREDICATE_NO in range(0,PREDICATES|length) %}
+  if ({{PREDICATES[PREDICATE_NO]}}) {
   }
+  {% endfor %}
 """
   
-  def __init__(self,solver,guard):
+  def __init__(self,solver):
     """
     
     guard_project: String (C++ code)
@@ -33,16 +35,30 @@ class AddVolumeAndFaceSolution(AbstractRungeKuttaDGActionSet):
     
     """
     super(AddVolumeAndFaceSolution,self).__init__(solver)
-    self.guard            = guard
+    self.guards                   = []
     
 
+  @property
+  def guards(self):
+    if self._guards==[]:
+      raise Exception( "Guards are not initialised" )
+    return self._guards
+      
+    
+  @guards.setter
+  def guards(self,new_guards):
+    if new_guards!=[] and len(new_guards)!=self._solver.number_of_Runge_Kutta_steps():
+      raise Exception( "Expect one guard per Runge Kutta step. Have {} steps but got guards {}".format(solver.number_of_Runge_Kutta_steps(),guards) )
+    self._guards = new_guards
+
+  
   def get_body_of_operation(self,operation_name):
     result = ""
     if operation_name==peano4.solversteps.ActionSet.OPERATION_TOUCH_CELL_FIRST_TIME:
       d = {}
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
-      d[ "PREDICATE" ]                 = self.guard
+      d[ "PREDICATEs" ]      = self._guards
       result = jinja2.Template(self.TemplateProject).render(**d)
       pass 
     return result

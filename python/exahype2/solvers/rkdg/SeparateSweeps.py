@@ -122,8 +122,13 @@ class SeparateSweeps( RungeKuttaDG ):
       "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
     ]
     self._action_set_project_linear_combination_onto_faces.guard = self._store_cell_data_default_guard() + " and " + self._first_grid_sweep_within_RK_step
-    self._action_set_solve_volume_integral.guard                 = self._store_cell_data_default_guard() + " and " + self._first_grid_sweep_within_RK_step
-        #self._action_set_update_cell = UpdateCell(self)
+    self._action_set_solve_volume_integral.guards = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
+    self._action_set_add_volume_and_face_solution.guards = [
+      "{} and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self._store_cell_data_default_guard(),self.get_name_of_global_instance(),self._name,step) for step in range(0,self.number_of_Runge_Kutta_steps())
+    ]
+    self._action_set_compute_final_linear_combination_and_project_solution_onto_faces.guard = self._store_cell_data_default_guard() + " and repositories::{}.getSolverState()=={}::SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep{}".format(self.get_name_of_global_instance(),self._name,self.number_of_Runge_Kutta_steps()-1)
 
 
   def get_user_action_set_includes(self):
