@@ -235,9 +235,14 @@ class FV(object):
     self._finish_time_step_implementation          = ""
     self._constructor_implementation               = ""
 
-    self._boundary_conditions_implementation  = PDETerms.User_Defined_Implementation
-    self._refinement_criterion_implementation = PDETerms.Empty_Implementation
-    self._initial_conditions_implementation   = PDETerms.User_Defined_Implementation
+    self._boundary_conditions_implementation  = None
+    self._refinement_criterion_implementation = None
+    self._initial_conditions_implementation   = None
+
+    self._flux_implementation                 = None
+    self._ncp_implementation                  = None
+    self._eigenvalues_implementation          = None
+    self._source_term_implementation          = None
 
     self.create_data_structures()
     self.create_action_sets()
@@ -859,4 +864,46 @@ The finest mesh width of """ + str(self.get_finest_volume_size(domain_size)) + "
     self._auxiliary_variables = value
     self.create_data_structures()
     self.create_action_sets()
+
+
+  def set_implementation(self,
+    flux=None,ncp=None,
+    eigenvalues=None,
+    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+    memory_location         = None,
+    use_split_loop          = False,
+    additional_action_set_includes = "",
+    additional_user_includes       = ""
+  ):
+    """
+    
+      If you pass in User_Defined, then the generator will create C++ stubs
+      that you have to befill manually. If you pass in None_Implementation, it
+      will create nop, i.e. no implementation or defaults. Any other string
+      is copied 1:1 into the implementation. If you pass in None, then the
+      set value so far won't be overwritten.
+      
+    """
+    if flux                 is not None:  self._flux_implementation                       = flux
+    if ncp                  is not None:  self._ncp_implementation                        = ncp
+    if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
+    if source_term          is not None:  self._source_term_implementation                = source_term
+    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
+    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
+    if use_split_loop                  :  self._use_split_loop                            = use_split_loop
+
+    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
+       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
+      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
+
+    self.user_action_set_includes += additional_action_set_includes
+    self.user_solver_includes     += additional_user_includes
+
+    self.create_data_structures()
+    self.create_action_sets()
+
+
     

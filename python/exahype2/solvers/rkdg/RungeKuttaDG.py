@@ -11,7 +11,8 @@ import peano4.output.Jinja2TemplatedHeaderImplementationFilePair
 
 from peano4.solversteps.ActionSet import ActionSet
 
-from .ButcherTableau                import RungeKutta_steps
+from .ButcherTableau              import RungeKutta_steps
+from .PDETerms                    import PDETerms
 
 import jinja2
 import math
@@ -121,6 +122,23 @@ class RungeKuttaDG(object):
       sweep, as long as the linear combination remains persistent. It is only a temporary
       thing, so will be destroyed immediately once we leave a cell.  
          
+         
+    :: Mandatory step of subclasses
+    
+    There are different nuances of subclasses/algorithmic realisations, i.e. few solvers inherit
+    directly from RungeKuttaDG. However, even those subclasses still require you do provide some
+    additional information.
+    
+    These are the fields you have to set:
+    
+    _compute_time_step_size A simple string which defines a double timeStepSize. This snippet will
+      be used by both the Riemann solver and the volumetric integration. You don't have to care 
+      about the Runge-Kutta scaling of time step sizes (or shifts), as this is all done by the 
+      source code, but you have to feed an instruction into the solver how to determine a time step
+      size for a cell.
+      
+    self._compute_new_time_step_size          = "const double newTimeStepSize = timeStepSize;"
+             
   """
   
       
@@ -221,6 +239,9 @@ class RungeKuttaDG(object):
     
     self._action_set_postprocess_solution = None   
 
+    self._compute_time_step_size              = None
+    self._compute_new_time_step_size          = None
+
     if polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Legendre:
       self._basis = GaussLegendreBasis(dg_order+1)
     elif polynomials is exahype2.solvers.rkdg.Polynomials.Gauss_Lobatto:
@@ -231,6 +252,27 @@ class RungeKuttaDG(object):
     self._preprocess_reconstructed_patch      = ""
     self._postprocess_updated_patch           = ""
 
+    self._flux_implementation                 = None
+    self._ncp_implementation                  = None
+    self._eigenvalues_implementation          = None
+    self._source_term_implementation          = None
+    self._point_source_implementation         = None
+    self._boundary_conditions_implementation  = None
+    self._refinement_criterion_implementation = None
+    self._initial_conditions_implementation   = None
+
+    self._compute_time_step_size              = "#error Not yet defined"
+    
+    self._abstract_solver_user_declarations        = ""
+    self._abstract_solver_user_definitions         = ""
+    self._solver_user_declarations                 = ""
+    self._solver_user_definitions                  = ""
+
+    self._start_time_step_implementation           = ""
+    self._finish_time_step_implementation          = ""
+    
+    self._constructor_implementation = ""
+    
     self.create_data_structures()
     self.create_action_sets()
 
@@ -812,6 +854,22 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
 
     d[ "SOLVER_INCLUDES" ]  = self.get_user_solver_includes()
     
+    #d[ "SOURCE_TERM_CALL"]                    = jinja2.Template(self._source_term_call, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "RIEMANN_SOLVER_CALL"]                 = jinja2.Template(self._Riemann_solver_call, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "PREPROCESS_RECONSTRUCTED_PATCH" ]     = jinja2.Template(self._preprocess_reconstructed_patch, undefined=jinja2.DebugUndefined).render( **d )
+    #d[ "POSTPROCESS_UPDATED_PATCH" ]          = jinja2.Template(self._postprocess_updated_patch, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "BOUNDARY_CONDITIONS_IMPLEMENTATION"]  = self._boundary_conditions_implementation
+    d[ "REFINEMENT_CRITERION_IMPLEMENTATION"] = self._refinement_criterion_implementation
+    d[ "INITIAL_CONDITIONS_IMPLEMENTATION"]   = self._initial_conditions_implementation
+    d[ "ABSTRACT_SOLVER_USER_DECLARATIONS" ]  = jinja2.Template(self._abstract_solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "ABSTRACT_SOLVER_USER_DEFINITIONS" ]   = jinja2.Template(self._abstract_solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DECLARATIONS" ]           = jinja2.Template(self._solver_user_declarations, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "SOLVER_USER_DEFINITIONS" ]            = jinja2.Template(self._solver_user_definitions, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "START_TIME_STEP_IMPLEMENTATION" ]     = jinja2.Template(self._start_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "FINISH_TIME_STEP_IMPLEMENTATION" ]    = jinja2.Template(self._finish_time_step_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "CONSTRUCTOR_IMPLEMENTATION"]          = jinja2.Template(self._constructor_implementation, undefined=jinja2.DebugUndefined).render( **d )
+    d[ "COMPUTE_TIME_STEP_SIZE" ]             = jinja2.Template(self._compute_time_step_size, undefined=jinja2.DebugUndefined).render( **d )
+
     self._basis.init_dictionary_with_default_parameters(d)        
 
   
@@ -854,4 +912,40 @@ We use RK(""" + str(self._rk_order) + """) for the time stepping.
   def number_of_Runge_Kutta_steps(self):
     return RungeKutta_steps(self._rk_order)
     
+
+  def set_implementation(self,
+    flux=None,
+    ncp=None,
+    eigenvalues=None,
+    boundary_conditions=None,
+    refinement_criterion=None,
+    initial_conditions=None,
+    source_term=None,
+    point_source=None,
+    additional_action_set_includes = "",
+    additional_user_includes       = ""
+  ):
+    """
+      If you pass in User_Defined, then the generator will create C++ stubs
+      that you have to befill manually. If you pass in None_Implementation, it
+      will create nop, i.e. no implementation or defaults. Any other string
+      is copied 1:1 into the implementation. If you pass in None, then the
+      set value so far won't be overwritten.
+    """
+    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
+    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
+    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
+
+    if flux                 is not None:  self._flux_implementation                       = flux
+    if ncp                  is not None:  self._ncp_implementation                        = ncp
+    if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
+    if source_term          is not None:  self._source_term_implementation                = source_term
+    if point_source         is not None:  self._point_source_implementation               = source_term
+    
+    self.user_action_set_includes += additional_action_set_includes
+    self.user_solver_includes     += additional_user_includes
+
+    self.create_data_structures()
+    self.create_action_sets()
+
 

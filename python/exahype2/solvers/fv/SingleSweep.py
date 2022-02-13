@@ -264,37 +264,6 @@ class SingleSweep( FV ):
 """
 
 
-  def set_implementation(self,
-    boundary_conditions, refinement_criterion, initial_conditions,
-    memory_location,
-    use_split_loop,
-    additional_action_set_includes,
-    additional_user_includes
-  ):
-    """
-      If you pass in User_Defined, then the generator will create C++ stubs
-      that you have to befill manually. If you pass in None_Implementation, it
-      will create nop, i.e. no implementation or defaults. Any other string
-      is copied 1:1 into the implementation. If you pass in None, then the
-      set value so far won't be overwritten.
-    """
-    if boundary_conditions  is not None:  self._boundary_conditions_implementation        = boundary_conditions
-    if refinement_criterion is not None:  self._refinement_criterion_implementation       = refinement_criterion
-    if initial_conditions   is not None:  self._initial_conditions_implementation         = initial_conditions
-    if memory_location      is not None:  self._reconstructed_array_memory_location       = memory_location
-    if use_split_loop                  :  self._use_split_loop                            = use_split_loop
-
-    if self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapThroughTarchWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.HeapWithoutDelete or \
-       self._reconstructed_array_memory_location==peano4.toolbox.blockstructured.ReconstructedArrayMemoryLocation.AcceleratorWithoutDelete:
-      raise Exception( "memory mode without appropriate delete chosen, i.e. this will lead to a memory leak" )
-
-    self.user_action_set_includes += additional_action_set_includes
-    self.user_solver_includes     += additional_user_includes
-
-    self.create_action_sets()
-
-
   def add_entries_to_text_replacement_dictionary(self,d):
     """
      d: Dictionary of string to string

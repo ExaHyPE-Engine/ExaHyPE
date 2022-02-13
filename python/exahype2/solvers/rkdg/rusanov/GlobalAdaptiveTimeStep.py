@@ -20,34 +20,27 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     polynomials,
     unknowns, auxiliary_variables, min_cell_h, max_cell_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
-    ncp=None, 
-    point_source=None,
-    eigenvalues=PDETerms.User_Defined_Implementation, 
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+    ncp=PDETerms.None_Implementation, 
+    point_source=PDETerms.None_Implementation,
+    boundary_conditions=PDETerms.User_Defined_Implementation,
+    refinement_criterion=PDETerms.None_Implementation,
+    initial_conditions=PDETerms.User_Defined_Implementation,
+    source_term=PDETerms.None_Implementation,
     plot_grid_properties=False
   ):
     super(GlobalAdaptiveTimeStep,self).__init__(name, dg_order, rk_order, polynomials, unknowns, auxiliary_variables, min_cell_h, max_cell_h, plot_grid_properties) 
    
     self._time_step_relaxation = time_step_relaxation
 
-    self._flux_implementation                 = PDETerms.None_Implementation
-    self._ncp_implementation                  = PDETerms.None_Implementation
-    self._eigenvalues_implementation          = PDETerms.None_Implementation
-    self._source_term_implementation          = PDETerms.None_Implementation
-    self._point_source_implementation         = PDETerms.None_Implementation
-    
-    self._compute_time_step_size              = ""
-    self._compute_new_time_step_size          = ""
-    self._compute_eigenvalue                  = True
-    
     self.set_implementation(flux=flux, 
       ncp=ncp, 
-      eigenvalues=eigenvalues, 
       boundary_conditions=boundary_conditions, 
       refinement_criterion=refinement_criterion, 
+      eigenvalues=PDETerms.User_Defined_Implementation,
       initial_conditions=initial_conditions,
       point_source=point_source,
       source_term=source_term )
+
 
   def set_implementation(self,
     flux=None,ncp=None,
@@ -68,11 +61,17 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
 
       This routine should be the very last invoked by the constructor.
     """
-    if flux                 is not None:  self._flux_implementation                       = flux
-    if ncp                  is not None:  self._ncp_implementation                        = ncp
-    if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
-    if source_term          is not None:  self._source_term_implementation                = source_term
-    if point_source         is not None:  self._point_source_implementation               = source_term
+    super(GlobalAdaptiveTimeStep,self).set_implementation(boundary_conditions=boundary_conditions, 
+                                                          refinement_criterion=refinement_criterion,
+                                                          initial_conditions=initial_conditions, 
+                                                          additional_action_set_includes=additional_action_set_includes, 
+                                                          additional_user_includes=additional_user_includes,
+                                                          flux=flux,
+                                                          ncp=ncp,
+                                                          eigenvalues=eigenvalues,
+                                                          source_term=source_term,
+                                                          point_source=point_source
+                                                          )
 
     #self._source_term_call    = create_source_term_kernel_for_Rusanov(self._source_term_implementation)
     #self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
@@ -88,5 +87,3 @@ class GlobalAdaptiveTimeStep( SeparateSweeps ):
     #self._start_time_step_implementation          = create_start_time_step_implementation_for_adaptive_time_stepping(False)
     #self._finish_time_step_implementation         = create_finish_time_step_implementation_for_adaptive_time_stepping(self._time_step_relaxation)
     
-    super(GlobalAdaptiveTimeStep,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, additional_action_set_includes, additional_user_includes)
-

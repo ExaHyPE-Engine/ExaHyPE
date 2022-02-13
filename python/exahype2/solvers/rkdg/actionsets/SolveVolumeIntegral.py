@@ -45,8 +45,8 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     
     const double timeStamp = timeStampOldSolution + {{BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES[PREDICATE_NO]}} * timeStepSize;
     
-    assertion4( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
-    assertion4( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
+    assertion3( tarch::la::greaterEquals( timeStepSize, 0.0 ),  timeStamp, timeStepSize, timeStampOldSolution );
+    assertion3( tarch::la::greaterEquals( timeStamp, 0.0 ),     timeStamp, timeStepSize, timeStampOldSolution );
 
     double* QIn  = fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value;
     #if Dimensions==2
@@ -63,15 +63,18 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     // Set the variable
     // double newTimeStepSize
     {{COMPUTE_NEW_TIME_STEP_SIZE}}
-    
+
+/*    
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
     fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
+  */
     
-    repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
+    //repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
   }
   {% endfor %}
   
+  /*
     ::exahype2::dg::explicitEulerOnCell(
       ,   // const double* __restrict__          cellQin,
       {{ORDER}},                                                   
@@ -151,7 +154,9 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       repositories::{{SOLVER_INSTANCE}}.StiffnessMatrix,
       repositories::{{SOLVER_INSTANCE}}.InvertedAndLumpedMassMatrix,
       todo
-    );  
+    );
+    */
+      
 """
 
   

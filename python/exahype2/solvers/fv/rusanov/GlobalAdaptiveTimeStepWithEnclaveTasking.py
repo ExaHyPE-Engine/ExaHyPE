@@ -26,9 +26,12 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
   def __init__(self, 
     name, patch_size, unknowns, auxiliary_variables, min_volume_h, max_volume_h, time_step_relaxation,
     flux=PDETerms.User_Defined_Implementation, 
-    ncp=None, 
+    ncp=PDETerms.None_Implementation, 
     eigenvalues=PDETerms.User_Defined_Implementation, 
-    boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
+    boundary_conditions=PDETerms.User_Defined_Implementation,
+    refinement_criterion=PDETerms.None_Implementation,
+    initial_conditions=PDETerms.User_Defined_Implementation,
+    source_term=PDETerms.None_Implementation,
     plot_grid_properties=False,
     pde_terms_without_state=False
   ):
@@ -36,18 +39,8 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     
     self._time_step_relaxation = time_step_relaxation
 
-    self._flux_implementation                 = PDETerms.None_Implementation
-    self._ncp_implementation                  = PDETerms.None_Implementation
-    self._eigenvalues_implementation          = PDETerms.None_Implementation
-    self._source_term_implementation          = PDETerms.None_Implementation
-    
-    self._compute_time_step_size              = create_compute_time_step_size_kernel_for_adaptive_time_stepping()
-    self._compute_new_time_step_size          = create_compute_new_time_step_size_kernel_for_adaptive_time_stepping()
-    self._compute_eigenvalue = True
-    
     self.set_implementation(flux=flux, 
       ncp=ncp, 
-      eigenvalues=eigenvalues, 
       boundary_conditions=boundary_conditions, 
       refinement_criterion=refinement_criterion, 
       initial_conditions=initial_conditions, 
@@ -56,34 +49,32 @@ class GlobalAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
 
   def set_implementation(self,
     flux=None,ncp=None,
-    eigenvalues=None,
     boundary_conditions=None,refinement_criterion=None,initial_conditions=None,source_term=None,
     memory_location         = None,
     use_split_loop          = False,
     additional_action_set_includes = "",
     additional_user_includes       = ""
   ):
-    """
-      If you pass in User_Defined, then the generator will create C++ stubs
-      that you have to befill manually. If you pass in None_Implementation, it
-      will create nop, i.e. no implementation or defaults. Any other string
-      is copied 1:1 into the implementation. If you pass in None, then the
-      set value so far won't be overwritten.
-
-      Please note that not all options are supported by all solvers. You
-      cannot set ncp and fluxes for the ClawPack Riemann solvers, e.g.
-
-      This routine should be the very last invoked by the constructor.
-    """
-    if flux                 is not None:  self._flux_implementation                       = flux
-    if ncp                  is not None:  self._ncp_implementation                        = ncp
-    if eigenvalues          is not None:  self._eigenvalues_implementation                = eigenvalues
-    if source_term          is not None:  self._source_term_implementation                = source_term
-
+    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).set_implementation(flux=flux,
+                                                       ncp=ncp,
+                                                       eigenvalues=PDETerms.User_Defined_Implementation,
+                                                       boundary_conditions=boundary_conditions,
+                                                       refinement_criterion=refinement_criterion,
+                                                       initial_conditions=initial_conditions,
+                                                       source_term=source_term,
+                                                       memory_location=memory_location,
+                                                       use_split_loop=use_split_loop,
+                                                       additional_action_set_includes=additional_action_set_includes,
+                                                       additional_user_includes=additional_user_includes)
+      
     self._source_term_call    = create_source_term_kernel_for_Rusanov(self._source_term_implementation)
     self._Riemann_solver_call = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
     self._fused_Riemann_solver_call          = create_optimised_Riemann_kernel_template_arguments(self._flux_implementation, self._ncp_implementation, self._source_term_implementation, True)
 
+    self._compute_time_step_size              = create_compute_time_step_size_kernel_for_adaptive_time_stepping()
+    self._compute_new_time_step_size          = create_compute_new_time_step_size_kernel_for_adaptive_time_stepping()
+    self._compute_eigenvalue = True
+    
     self._abstract_solver_user_declarations  = create_abstract_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._abstract_solver_user_definitions   = create_abstract_solver_definitions(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
     self._solver_user_declarations           = create_solver_declarations(self._flux_implementation, self._ncp_implementation, self._eigenvalues_implementation, self._source_term_implementation, self._pde_terms_without_state)
@@ -99,8 +90,6 @@ if (_solverState==SolverState::Secondary) {
 }
 """
     
-    super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).set_implementation(boundary_conditions, refinement_criterion, initial_conditions, memory_location, use_split_loop, additional_action_set_includes, additional_user_includes)
-
 
   def create_data_structures(self):
     super(GlobalAdaptiveTimeStepWithEnclaveTasking,self).create_data_structures()

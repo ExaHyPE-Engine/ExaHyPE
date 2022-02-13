@@ -49,7 +49,7 @@ parser.add_argument("-pdt", "--plot-dt",               dest="plot_snapshot_inter
 parser.add_argument("-pbc", "--periodic-boundary-conditions",  dest="periodic_boundary_conditions",   action="store_true", help="Use periodic boundary conditions" )
 parser.add_argument("-dg-order",   "--dg-order",       dest="dg_order",          type=int, required=True, help="DG order (spatial discretisation)" )
 parser.add_argument("-rk-order",   "--rk-order",       dest="rk_order",          type=int, required=True, help="order of time discretisation (RK scheme)" )
-parser.add_argument("-t",   "--type",                  dest="type",              choices=["global-adaptive"], required=True, help="Pick implementation variant" )
+parser.add_argument("-t",   "--type",                  dest="type",              choices=["global-fixed", "global-adaptive"], required=True, help="Pick implementation variant" )
 parser.add_argument("--no-compile",                    dest="compile",           action="store_false", default="True", help="Compile (on by default)" )
 args = parser.parse_args()
 
@@ -97,6 +97,18 @@ thesolver = None
 solver_name = "EulerDGRK"
 if args.gpu:
   solver_name += "OnGPU" 
+
+if args.type=="global-fixed":
+  thesolver = exahype2.solvers.rkdg.rusanov.GlobalFixedTimeStep(
+    solver_name,
+    args.dg_order,
+    args.rk_order,
+    exahype2.solvers.rkdg.Polynomials.Gauss_Legendre,
+    unknowns, auxiliary_variables,
+    min_h, max_h,
+    0.001, # time step size
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+  )
 if args.type=="global-adaptive":
   thesolver = exahype2.solvers.rkdg.rusanov.GlobalAdaptiveTimeStep(
     solver_name,
@@ -106,8 +118,7 @@ if args.type=="global-adaptive":
     unknowns, auxiliary_variables,
     min_h, max_h,
     0.5,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 
 

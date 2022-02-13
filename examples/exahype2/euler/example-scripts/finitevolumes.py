@@ -107,8 +107,7 @@ if args.type=="global-fixed":
     unknowns, auxiliary_variables,
     min_h, max_h,
     time_step_size,
-    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
+    flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation
   )
 elif args.type=="global-adaptive":
   thesolver = exahype2.solvers.fv.rusanov.GlobalAdaptiveTimeStep(
@@ -117,7 +116,6 @@ elif args.type=="global-adaptive":
     unknowns, auxiliary_variables,
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.01
   )
 elif args.type=="global-fixed-enclave":
@@ -128,7 +126,6 @@ elif args.type=="global-fixed-enclave":
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     pde_terms_without_state = args.gpu
   )
 elif args.type=="global-adaptive-enclave":
@@ -138,7 +135,6 @@ elif args.type=="global-adaptive-enclave":
     unknowns, auxiliary_variables,
     min_h, max_h,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     time_step_relaxation = 0.01,
     pde_terms_without_state = args.gpu
   )
@@ -150,7 +146,6 @@ elif args.type=="subcycling-fixed-linear-interpolation":
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=True
   )
 elif args.type=="subcycling-fixed-no-interpolation":
@@ -161,7 +156,6 @@ elif args.type=="subcycling-fixed-no-interpolation":
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=False
   )
 elif args.type=="subcycling-fixed-linear-interpolation-enclave":
@@ -172,7 +166,6 @@ elif args.type=="subcycling-fixed-linear-interpolation-enclave":
     min_h, max_h,
     time_step_size,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=True,
     pde_terms_without_state = args.gpu
   )
@@ -184,7 +177,6 @@ elif args.type=="subcycling-adaptive-linear-interpolation-enclave":
     min_h, max_h,
     time_step_relaxation = 0.01,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=True,
     pde_terms_without_state = args.gpu
   )
@@ -196,7 +188,6 @@ elif args.type=="local-linear-interpolation-enclave":
     min_h, max_h,
     time_step_relaxation = 0.01,
     flux = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
-    eigenvalues = exahype2.solvers.fv.PDETerms.User_Defined_Implementation,
     interpolate_linearly_in_time=True,
     pde_terms_without_state = args.gpu
   )

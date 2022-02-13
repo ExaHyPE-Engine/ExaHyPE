@@ -26,7 +26,7 @@ class ComputeFinalLinearCombinationAndProjectSolutionOntoFaces(AbstractRungeKutt
       const int destIndex = dof*({{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}})+unknown;
       *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) = 0.0;
 
-      const int srcIndex = destIndex;
+      int srcIndex = destIndex;
       {% for WEIGHT in WEIGHTS %}
       *(fineGridCell{{UNKNOWN_IDENTIFIER}}.value + destIndex) += {{WEIGHT}} * *(fineGridCell{{UNKNOWN_IDENTIFIER}}LinearCombination.value + srcIndex);
       srcIndex += {{NUMBER_OF_DOFS_PER_CELL_2D}};

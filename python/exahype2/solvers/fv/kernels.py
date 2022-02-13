@@ -3,6 +3,14 @@
 
 
 def create_compute_time_step_size_for_fixed_time_stepping( time_step_size ):
+  """
+  
+  If you work with fixed time stepping, the computation of the next
+  time step size per cell or patch is trivial: You simply read out 
+  the solver. Therefore, this computation can trivially be a generic
+  one which is the same for all solver flavours.
+  
+  """
   return """
   const double timeStepSize = repositories::{{SOLVER_INSTANCE}}.getTimeStepSize();
 """
