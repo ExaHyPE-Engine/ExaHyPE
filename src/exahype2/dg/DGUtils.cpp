@@ -35,3 +35,34 @@ tarch::la::Vector<3,double>  exahype2::dg::getQuadraturePoint(
   return tarch::la::multiplyComponents(result,cellSize) + cellCentre - 0.5*cellSize;
 }
 
+
+void exahype2::dg::projectVolumetricDataOntoFaces(
+  const double* __restrict__          cellQ,
+  int                                 order,
+  int                                 unknowns,
+  const double* __restrict__          BasisFunctionValuesLeft,
+  const double* __restrict__          BasisFunctionValuesRight,
+  const double* __restrict__          faceQLeft,
+  const double* __restrict__          faceQRight,
+  const double* __restrict__          faceQBottom,
+  const double* __restrict__          faceQUp
+) {
+  // @todo implement
+}
+
+
+void exahype2::dg::projectVolumetricDataOntoFaces(
+  const double* __restrict__          cellQ,
+  int                                 order,
+  int                                 unknowns,
+  const double* __restrict__          BasisFunctionValuesLeft,
+  const double* __restrict__          BasisFunctionValuesRight,
+  const double* __restrict__          faceQLeft,
+  const double* __restrict__          faceQRight,
+  const double* __restrict__          faceQBottom,
+  const double* __restrict__          faceQUp,
+  const double* __restrict__          faceQFront,
+  const double* __restrict__          faceQBack
+) {
+  // @todo implement
+}

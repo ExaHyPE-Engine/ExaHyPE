@@ -56,21 +56,6 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     #endif
 
     {{EXPLICIT_EULER_CALL}}
-
-    // @todo If we keep these guys, then we have to have a SolveVolumeIntegral as separate 
-    //       action set. Which makes sense.
-
-    // Set the variable
-    // double newTimeStepSize
-    {{COMPUTE_NEW_TIME_STEP_SIZE}}
-
-/*    
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStamp(timeStamp+timeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);
-    fineGridCell{{SOLVER_NAME}}CellLabel.setHasUpdated(true);
-  */
-    
-    //repositories::{{SOLVER_INSTANCE}}.update(newTimeStepSize, timeStamp+timeStepSize, marker.h()(0) );
   }
   {% endfor %}
   

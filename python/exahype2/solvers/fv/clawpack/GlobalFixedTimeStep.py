@@ -7,12 +7,13 @@ import jinja2
 import peano4
 
 from exahype2.solvers.fv.kernels import create_compute_time_step_size_for_fixed_time_stepping
-from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
-from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
+from exahype2.solvers.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
+from exahype2.solvers.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
 from exahype2.solvers.fv.kernels import create_empty_source_term_kernel
 from exahype2.solvers.fv.kernels import create_user_defined_source_term_kernel
+
 from .kernels import create_compute_Riemann_kernel_for_ClawPack
 
 

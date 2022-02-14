@@ -96,12 +96,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::update(double timeStepSize, doub
   _minTimeStampThisTimeStep = std::min(timeStamp,_minTimeStampThisTimeStep);
   assertion6( tarch::la::smallerEquals(_minTimeStamp,_maxTimeStampThisTimeStep), _minTimeStamp, _minTimeStampThisTimeStep, _maxTimeStampThisTimeStep, timeStepSize, timeStamp, cellSize );
 
-  assertion1(_maxCellHThisTimeStep<std::numeric_limits<double>::max()/10.0,_maxCellHThisTimeStep);
-  assertion1(_maxCellHThisTimeStep>0.0,_maxCellHThisTimeStep);
-  assertion1(_minCellHThisTimeStep<std::numeric_limits<double>::max()/10.0,_minCellHThisTimeStep);
-  assertion1(_minCellHThisTimeStep>0.0,_minCellHThisTimeStep);
+  assertion1(cellSize<std::numeric_limits<double>::max()/10.0,cellSize);
+  assertion1(cellSize>0.0,cellSize);
   _maxCellHThisTimeStep = std::max(_maxCellHThisTimeStep,cellSize);
   _minCellHThisTimeStep = std::min(_minCellHThisTimeStep,cellSize);
+
+  logDebug( "update(double,double,double)", "updated with dt=" << timeStepSize << ", t=" << timeStamp << ", h=" << cellSize << ": t(new)=" << _minTimeStampThisTimeStep );
 }
 
 
@@ -205,32 +205,38 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::startTimeStep(
 
   {{START_TIME_STEP_IMPLEMENTATION}}
 
-  _minTimeStamp = _minTimeStampThisTimeStep;
-  _maxTimeStamp = _maxTimeStampThisTimeStep;
+  if (_solverState==SolverState::ProjectOnFacesAndComputeVolumeIntegralOfStep0) {
+    _minTimeStamp = _minTimeStampThisTimeStep;
+    _maxTimeStamp = _maxTimeStampThisTimeStep;
 
-  _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
-  _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+    _minTimeStampThisTimeStep = std::numeric_limits<double>::max();
+    _maxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-  _minTimeStepSize = _minTimeStepSizeThisTimeStep;
-  _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
+    _minTimeStepSize = _minTimeStepSizeThisTimeStep;
+    _maxTimeStepSize = _maxTimeStepSizeThisTimeStep;
 
-  _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
-  _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
+    _minTimeStepSizeThisTimeStep = std::numeric_limits<double>::max();
+    _maxTimeStepSizeThisTimeStep = std::numeric_limits<double>::min();
 
-  _minCellH = _minCellHThisTimeStep;
-  _maxCellH = _maxCellHThisTimeStep;
+    _minCellH = _minCellHThisTimeStep;
+    _maxCellH = _maxCellHThisTimeStep;
 
-  _maxCellHThisTimeStep      = 0.0;
-  _minCellHThisTimeStep      = std::numeric_limits<double>::max();
+    _maxCellHThisTimeStep      = 0.0;
+    _minCellHThisTimeStep      = std::numeric_limits<double>::max();
 
-  _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
-  _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
+    _localMinTimeStampThisTimeStep = std::numeric_limits<double>::max();
+    _localMaxTimeStampThisTimeStep = std::numeric_limits<double>::min();
 
-  _cellUpdates    = 0;
+    _cellUpdates    = 0;
+  }
+
+  logInfo( "startTimeStep(...)", "phase " + toString(_solverState) );
 }
 
 
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
+  if ( _solverState==SolverState::SolveRiemannProblemAndAddToVolumeIntegralOfStep{{RK_STEPS-1}} ) {
+
   #ifdef Parallel
   double newMinTimeStamp    = _minTimeStampThisTimeStep;
   double newMaxTimeStamp    = _maxTimeStampThisTimeStep;
@@ -313,11 +319,12 @@ void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::finishTimeStep() {
       );
   #endif
 
-  if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
-    _minTimeStampThisTimeStep = 0.0;
-  }
-  if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
-    _maxTimeStampThisTimeStep = 0.0;
+    if ( _minTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0) {
+      _minTimeStampThisTimeStep = 0.0;
+    }
+    if ( _maxTimeStampThisTimeStep>=std::numeric_limits<double>::max()/10.0 ) {
+      _maxTimeStampThisTimeStep = 0.0;
+    }
   }
 
   {{FINISH_TIME_STEP_IMPLEMENTATION}}

@@ -4,15 +4,15 @@
 from exahype2.solvers.new_ader.SingleSweep import SingleSweep
 from exahype2.solvers.new_ader.PDETerms import PDETerms
 
-from .kernels import create_abstract_solver_declarations
-from .kernels import create_abstract_solver_definitions
-from .kernels import create_solver_declarations
-from .kernels import create_solver_definitions
-from .kernels import create_compute_time_step_size_for_fixed_time_stepping
-from .kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
-from .kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
-from .kernels import create_start_time_step_implementation_for_fixed_time_stepping
-from .kernels import create_finish_time_step_implementation_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_abstract_solver_declarations
+from exahype2.solvers.fv.kernels import create_abstract_solver_definitions
+from exahype2.solvers.fv.kernels import create_solver_declarations
+from exahype2.solvers.fv.kernels import create_solver_definitions
+from exahype2.solvers.fv.kernels import create_compute_time_step_size_for_fixed_time_stepping
+from exahype2.solvers.kernels import create_abstract_solver_user_declarations_for_fixed_time_stepping
+from exahype2.solvers.kernels import create_abstract_solver_user_definitions_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_fixed_time_stepping
+from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_fixed_time_stepping
 
 class GlobalFixedTimeStep( SingleSweep ):
   def __init__(self,

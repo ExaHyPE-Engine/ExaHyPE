@@ -805,3 +805,38 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   d[ "STATELESS_PDE_TERMS"]                 = pde_terms_without_state  
   return Template.render(**d)
 
+
+def create_finish_time_step_implementation_for_fixed_time_stepping(normalised_time_step_size):
+  return """
+  assertion( _minCellH >= 0.0 );
+  assertion( MaxAdmissibleCellH > 0.0 );
+  if (_minCellH <= MaxAdmissibleCellH) {
+    _timeStepSize  = """ + str(normalised_time_step_size) + """ * _minCellH;
+  }
+  else {
+    _timeStepSize = 0.0;
+  }
+"""
+
+def create_start_time_step_implementation_for_fixed_time_stepping():
+  """
+  
+  The outcome is used before we actually roll over the accumulation variables
+  and other stuff.
+  
+  """
+  return """
+  if (
+    tarch::mpi::Rank::getInstance().isGlobalMaster() 
+    and
+    _maxCellH>0.0
+    and
+    isLastGridSweepOfTimeStep()
+  ) {
+    logInfo( "step()", "Solver {{SOLVER_NAME}}:" );
+    logInfo( "step()", "t       = " << _minTimeStampThisTimeStep );
+    logInfo( "step()", "dt      = " << getTimeStepSize() );
+    logInfo( "step()", "h_{min} = " << _minCellHThisTimeStep );
+    logInfo( "step()", "h_{max} = " << _maxCellHThisTimeStep );
+  }
+"""

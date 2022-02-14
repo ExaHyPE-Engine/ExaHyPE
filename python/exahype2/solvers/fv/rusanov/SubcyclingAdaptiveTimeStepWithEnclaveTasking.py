@@ -5,24 +5,25 @@ from exahype2.solvers.fv.PDETerms       import PDETerms
 
 import jinja2
 
-from .kernels import create_source_term_kernel_for_Rusanov
-from .kernels import create_compute_Riemann_kernel_for_Rusanov
-from .kernels import create_abstract_solver_declarations
-from .kernels import create_abstract_solver_definitions
-from .kernels import create_solver_declarations
-from .kernels import create_solver_definitions
-from .kernels import create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling
-from .kernels import create_optimised_Riemann_kernel_template_arguments
+from exahype2.solvers.fv.kernels import create_source_term_kernel
+from exahype2.solvers.fv.kernels import create_abstract_solver_declarations
+from exahype2.solvers.fv.kernels import create_abstract_solver_definitions
+from exahype2.solvers.fv.kernels import create_solver_declarations
+from exahype2.solvers.fv.kernels import create_solver_definitions
+from exahype2.solvers.fv.kernels import create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling
+from exahype2.solvers.fv.kernels import create_optimised_Riemann_kernel_template_arguments
 
-from .kernels import create_compute_new_time_step_size_kernel_for_adaptive_time_stepping
-from .kernels import create_constructor_implementation_for_adaptive_time_stepping
+from exahype2.solvers.fv.kernels import create_compute_new_time_step_size_kernel_for_adaptive_time_stepping
+from exahype2.solvers.fv.kernels import create_constructor_implementation_for_adaptive_time_stepping
 
-from .kernels import create_abstract_solver_user_declarations_for_adaptive_time_stepping
-from .kernels import create_abstract_solver_user_definitions_for_adaptive_time_stepping
-from .kernels import create_finish_time_step_implementation_for_adaptive_time_stepping
+from exahype2.solvers.fv.kernels import create_abstract_solver_user_declarations_for_adaptive_time_stepping
+from exahype2.solvers.fv.kernels import create_abstract_solver_user_definitions_for_adaptive_time_stepping
+from exahype2.solvers.fv.kernels import create_finish_time_step_implementation_for_adaptive_time_stepping
 from exahype2.solvers.fv.kernels import create_start_time_step_implementation_for_adaptive_time_stepping_with_subcycling
 
 from exahype2.solvers.fv.kernels import create_halo_layer_construction_with_interpolation_for_reconstructed_patch
+
+from exahype2.solvers.fv.rusanov.kernels import create_compute_Riemann_kernel_for_Rusanov
 
 
 class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
@@ -87,7 +88,7 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
                                                        use_split_loop=use_split_loop,
                                                        additional_action_set_includes=additional_action_set_includes,
                                                        additional_user_includes=additional_user_includes)
-    self._source_term_call           = create_source_term_kernel_for_Rusanov(self._source_term_implementation)
+    self._source_term_call           = create_source_term_kernel(self._source_term_implementation)
     self._Riemann_solver_call        = create_compute_Riemann_kernel_for_Rusanov(self._flux_implementation, self._ncp_implementation)
     self._fused_Riemann_solver_call  = create_optimised_Riemann_kernel_template_arguments(self._flux_implementation, self._ncp_implementation, self._source_term_implementation, True)
 
