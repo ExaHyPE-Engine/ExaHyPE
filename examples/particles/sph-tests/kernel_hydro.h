@@ -1,3 +1,9 @@
+#ifndef PEANO_KERNEL_HYDRO_H
+#define PEANO_KERNEL_HYDRO_H
+
+
+
+
 #include "Constants.h"
 #include "peano4/utils/Globals.h"
 
@@ -54,3 +60,6 @@ __attribute__((always_inline)) inline static void kernel_deval(
 
 
 }
+
+#endif // PEANO_KERNEL_HYDRO_H
+
