@@ -44,9 +44,9 @@ __attribute__((always_inline)) inline static void kernel_deval(
   if (q >= 2) {
     dw_dq = 0.0;
   } else if (q >= 1) {
-    dw_dq = (-0.75 * ((2 - q)*(2 - q)));
+    dw_dq = -0.75 * ( (2 - q)*(2 - q) );
   } else {
-    dw_dq = (0.75*q * (3*q - 4));
+    dw_dq = 0.75*q * (3*q - 4);
   }
   
   // Final expression (up to overall factors)

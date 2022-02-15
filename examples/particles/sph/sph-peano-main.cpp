@@ -1,6 +1,5 @@
 #include "sph-peano-main.h"
 #include "Constants.h"
-#include "kernel_hydro.h"
 
 #include "tarch/logging/Log.h"
 #include "tarch/logging/LogFilter.h"
@@ -27,11 +26,10 @@
 #include "observers/Move.h"
 #include "observers/DensityNonSym.h"
 #include "observers/ForceNonSym.h"
-#include "observers/HydroPrepareGradientNonSym.h"
+#include "observers/HydroPrepareGradient.h"
 #include "observers/NewtonRaphsonSmoothingLength.h"
 #include "observers/Kick.h"
 #include "observers/Drift.h"
-
 
 tarch::logging::Log _log("::");
 
@@ -182,7 +180,7 @@ int main(int argc, char** argv) {
         examples::particles::observers::DensityNonSym densityObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(densityObserver);
 
-        examples::particles::observers::HydroPrepareGradientNonSym prepareGradient;
+        examples::particles::observers::HydroPrepareGradient prepareGradient;
         peano4::parallel::SpacetreeSet::getInstance().traverse(prepareGradient);
 
         examples::particles::observers::NewtonRaphsonSmoothingLength newtonRaphson;
