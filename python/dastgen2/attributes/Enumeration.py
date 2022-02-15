@@ -26,7 +26,7 @@ class Enumeration(Attribute):
   def __init__(self, name, variants):
     Attribute.__init__(self, name)
     self._variants    = variants
-    self.compress     = True
+    self.compress     = False
     
     
   def _enum_name(self):

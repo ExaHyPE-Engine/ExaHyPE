@@ -12,7 +12,7 @@ class DataModel(object):
                        :: separating the namespaces.
     
   """
-  def __init__(self, full_qualified_name, has_nondefault_constructor = True, embed_attributes_into_data_store=True ):
+  def __init__(self, full_qualified_name, has_nondefault_constructor = True, embed_attributes_into_data_store=False ):
     self._full_qualified_name = full_qualified_name
     self._attributes          = []
     self._aspects             = []
@@ -212,13 +212,11 @@ struct {FULL_QUALIFIED_CLASS_NAME} {{
       output.write( "}\n")
     else:
       output.write( ":\n" )
-      #for attribute in self._get_flattened_attributes():
-      #  if attribute==self._get_flattened_attributes()[0]:
-      #    output.write( "    " )
-      #  else:
-      #    output.write( "  , " )
-      #  output.write( attribute[0] + "(_" + attribute[0] + ")\n" )
       for attribute in self._attributes:
+        if attribute==self._attributes[0]:
+          output.write( "    " )
+        else:
+          output.write( "  , " )
         output.write( "_" + attribute._name.split("[")[0] + "(__" + attribute._name.split("[")[0] + ")\n" )
       output.write( "  {}\n")
 

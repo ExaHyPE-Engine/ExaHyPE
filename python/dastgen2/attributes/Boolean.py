@@ -6,7 +6,7 @@ from .Attribute import Attribute
 class Boolean(Attribute):
   def __init__(self, name):
     Attribute.__init__(self, name)
-    self.compress       = True
+    self.compress       = False
     
     
   def get_methods(self,_full_qualified_class_name):
