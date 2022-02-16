@@ -58,7 +58,7 @@ namespace exahype2 {
      *   basis, you need a linear combination of all the quadrature points in the
      *   cell.
      *
-     * @param faceQLeft Left unknowns. This array hosts @f$ 2 \times (order+1)^d * unknowns@f$
+     * @param faceQLeft Left unknowns. This array hosts @f$ 2 \times (order+1)^(d-1) * unknowns@f$
      *   values, as it holds the (projected) values from the left side of the face
      *   and those from the right. The ordering of these values is lexicographic,
      *   i.e. the first unknowns entries are those ab the bottom of the vertical
@@ -74,12 +74,12 @@ namespace exahype2 {
       const double* __restrict__          cellQ,
       int                                 order,
       int                                 unknowns,
-      const double* __restrict__          BasisFunctionValuesLeft,
-      const double* __restrict__          BasisFunctionValuesRight,
-      const double* __restrict__          faceQLeft,
-      const double* __restrict__          faceQRight,
-      const double* __restrict__          faceQBottom,
-      const double* __restrict__          faceQUp
+      const double* const __restrict__    BasisFunctionValuesLeft,
+      const double* const __restrict__    BasisFunctionValuesRight,
+      double* const __restrict__          faceQLeft,
+      double* const __restrict__          faceQRight,
+      double* const __restrict__          faceQBottom,
+      double* const __restrict__          faceQUp
     );
 
     /**
@@ -89,14 +89,14 @@ namespace exahype2 {
       const double* __restrict__          cellQ,
       int                                 order,
       int                                 unknowns,
-      const double* __restrict__          BasisFunctionValuesLeft,
-      const double* __restrict__          BasisFunctionValuesRight,
-      const double* __restrict__          faceQLeft,
-      const double* __restrict__          faceQRight,
-      const double* __restrict__          faceQBottom,
-      const double* __restrict__          faceQUp,
-      const double* __restrict__          faceQFront,
-      const double* __restrict__          faceQBack
+      const double* const __restrict__    BasisFunctionValuesLeft,
+      const double* const __restrict__    BasisFunctionValuesRight,
+      double* const __restrict__          faceQLeft,
+      double* const __restrict__          faceQRight,
+      double* const __restrict__          faceQBottom,
+      double* const __restrict__          faceQUp,
+      double* const __restrict__          faceQFront,
+      double* const __restrict__          faceQBack
     );
   }
 }
