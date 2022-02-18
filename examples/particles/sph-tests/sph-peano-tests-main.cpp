@@ -27,7 +27,7 @@
 #include "observers/Move.h"
 #include "observers/DensityNonSym.h"
 #include "observers/ForceNonSym.h"
-#include "observers/HydroPrepareGradientNonSym.h"
+#include "observers/HydroPrepareGradient.h"
 #include "observers/NewtonRaphsonSmoothingLength.h"
 #include "observers/Kick.h"
 #include "observers/Drift.h"
@@ -180,15 +180,15 @@ int main(int argc, char** argv) {
         logInfo( "main()", "run timestep" )
 
         // Debug Step (1D setup)
-//        if(i==0){
-//          examples::particles::observers::RearrangeAtStart rearrangeObserver;
-//          peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
-//        }
+        if(i==0){
+          examples::particles::observers::RearrangeAtStart rearrangeObserver;
+          peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
+        }
 
         examples::particles::observers::DensityNonSym densityObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(densityObserver);
 
-        examples::particles::observers::HydroPrepareGradientNonSym prepareGradient ;
+        examples::particles::observers::HydroPrepareGradient prepareGradient ;
         peano4::parallel::SpacetreeSet::getInstance().traverse(prepareGradient);
 
         examples::particles::observers::NewtonRaphsonSmoothingLength newtonRaphson;
