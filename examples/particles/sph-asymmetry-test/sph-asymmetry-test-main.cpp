@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
     peano4::parallel::SpacetreeSet::getInstance().traverse(plotObserver);
     logInfo( "main()", "dumped initial condition" )
 
-    for (int i=0; i<70; i++) {
+    for (int i=0; i<100; i++) {
       for (int j=0; j<10; j++) {
         logInfo( "main()", "run timestep" )
         examples::particles::observers::CalcDensities densityObserver;           
