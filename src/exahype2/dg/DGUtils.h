@@ -98,6 +98,27 @@ namespace exahype2 {
       double* const __restrict__          faceQFront,
       double* const __restrict__          faceQBack
     );
+
+    //returns the number of nodes in a cell
+    int getNodesPerCell(int nodesPerAxis);
+
+    /* returns a vector with the powers of nodesPerAxis up to the Dimension - 1
+    ** e.g. for dims = 2, nodesPerAxis = 2 will return (1, 2)
+    **			for dims = 3, nodesPerAxis = 4 will return (1, 4, 16)
+    */
+    tarch::la::Vector<Dimensions,int> getStrides(int nodesPerAxis);
+
+    /*for a given linear node number, returns the index of that node
+    **in cartesian coordinate system.
+    **e.g. for dims = 2, nodesPerAxis = 4, there will be 16 total nodes
+    **	so node 0 is [0,0], 1 is [1,0] and so on until 15 which is [3,3]
+    **		 for dims = 3, nodesPerAxis = 4, there will be 16*4 = 64 total nodes
+    **		 ranging from 0 which is [0,0,0] to 63 which is [3,3,3]
+    */
+    tarch::la::Vector<Dimensions,int> getIndex(
+    		int 																	node,
+    		tarch::la::Vector<Dimensions,int>	strides
+    );
   }
 }
 

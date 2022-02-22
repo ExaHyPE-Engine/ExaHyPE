@@ -136,3 +136,35 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 	} // face
 
 }
+
+int exahype2::dg::getNodesPerCell(int nodesPerAxis){
+	int nodesPerCell=nodesPerAxis;
+	for(int d=1; d<Dimensions; d++){
+		nodesPerCell *= nodesPerAxis;
+	}
+	return nodesPerCell;
+}
+
+tarch::la::Vector<Dimensions,int> exahype2::dg::getStrides(int nodesPerAxis){
+	tarch::la::Vector<Dimensions,int> strides(1);
+	for(int i=1; i<Dimensions; i++){
+		strides[i] = strides[i-1]*nodesPerAxis;
+	}
+	return strides;
+}
+
+tarch::la::Vector<Dimensions,int> exahype2::dg::getIndex(
+		int 																	node,
+		tarch::la::Vector<Dimensions,int>	strides
+){
+
+	tarch::la::Vector<Dimensions,int> index(0);
+	int tmp = 0;
+	for(int d=Dimensions-1; d>=0; d--){
+		index[d] = (node - tmp) / strides[d];
+		tmp += strides[d]*index[d];
+	}
+	return index;
+
+}
+

@@ -13,6 +13,7 @@
 #include "peano4/grid/GridControlEvent.h"
 #include "peano4/utils/Globals.h"
 
+#include "DGUtils.h"
 
 namespace exahype2 {
   namespace dg {
@@ -21,10 +22,14 @@ namespace exahype2 {
      *
      */
     void explicitEulerOnCell(
-      const double* __restrict__          cellQin,
-      int                                 order,
-      int                                 unknowns,
-      int                                 auxiliaryVariables,
+      const double* __restrict__          					cellQin,
+      const int                           					order,
+      const int                           					unknowns,
+      const int                           					auxiliaryVariables,
+			const tarch::la::Vector<Dimensions,double>&		x,
+			const double																	dx,
+			const double																	t,
+			const double																	dt,
       std::function< void(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
@@ -54,7 +59,9 @@ namespace exahype2 {
         double                                       t,
         double * __restrict__                        S
       ) >   pointSource,
-      const double* __restrict__                     DerivativeOperator,
+			const double* __restrict__										 quadNodes,
+			const double* __restrict__										 quadWeights,
+			const double* __restrict__                     DerivativeOperator,
       const double* __restrict__                     MassMatrix,
       const double* __restrict__                     StiffnessMatrix,
       const double* __restrict__                     InvertedAndLumpedMassMatrix,
