@@ -84,7 +84,7 @@ exahype2::EnclaveBookkeeping::Entry exahype2::EnclaveBookkeeping::waitForTaskToT
 
 
 void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int number, double* destination, double& maxEigenvalue) {
-  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", "fetch results of task " << number );
+  logTraceInWith1Argument( "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", number );
 
   Entry storedData = waitForTaskToTerminateAndReturnResult(number);
 
@@ -92,7 +92,7 @@ void exahype2::EnclaveBookkeeping::waitForTaskToTerminateAndCopyResultOver(int n
   maxEigenvalue = storedData.maxEigenvalue;
 
   tarch::freeMemory( storedData.data, tarch::MemoryLocation::Heap );
-  logDebug( "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", "delivered outcome of task " << number << ": " << storedData.toString() );
+  logTraceOutWith2Arguments( "waitForTaskToTerminateAndCopyResultOver(int,double,double&)", maxEigenvalue, storedData.toString() );
 }
 
 
