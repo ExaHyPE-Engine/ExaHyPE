@@ -27,6 +27,7 @@
 #include "observers/DensityNonSym.h"
 #include "observers/ForceNonSym.h"
 #include "observers/HydroPrepareGradient.h"
+#include "observers/GradientNonSym.h"
 #include "observers/NewtonRaphsonSmoothingLength.h"
 #include "observers/Kick.h"
 #include "observers/Drift.h"
@@ -174,7 +175,7 @@ int main(int argc, char** argv) {
     logInfo( "main()", "dumped initial condition" )
 
     for (int i=0; i<100; i++) {
-      for (int j=0; j<10; j++) {
+      for (int j=0; j<20; j++) {
         logInfo( "main()", "run timestep" )
 
         examples::particles::observers::DensityNonSym densityObserver;
@@ -200,8 +201,6 @@ int main(int argc, char** argv) {
         examples::particles::observers::Drift driftObserver;                     // Drift from current time-step
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftObserver);
      
-//        examples::particles::observers::Move moveObserver;
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(moveObserver);
       }
       logInfo( "main()", "plot" )
       examples::particles::observers::Plot plotTimeStepObserver;
