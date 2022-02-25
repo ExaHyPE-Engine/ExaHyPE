@@ -99,8 +99,16 @@ namespace exahype2 {
       double* const __restrict__          faceQBack
     );
 
-    //returns the number of nodes in a cell
+
+    /**
+     * The number of nodes in a cell is basically the input to the
+     * power of d. The argument nodesPerAxis is typically the order
+     * plus one.
+     *
+     * @return Number of nodes in a cell
+     */
     int getNodesPerCell(int nodesPerAxis);
+
 
     /* returns a vector with the powers of nodesPerAxis up to the Dimension - 1
     ** e.g. for dims = 2, nodesPerAxis = 2 will return (1, 2)

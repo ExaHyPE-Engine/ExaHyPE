@@ -136,9 +136,10 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 
 }
 
+
 int exahype2::dg::getNodesPerCell(int nodesPerAxis){
   int nodesPerCell=nodesPerAxis;
-  for(int d=1; d<Dimensions; d++){
+  for(int d=1; d<Dimensions; d++) {
     nodesPerCell *= nodesPerAxis;
   }
   return nodesPerCell;

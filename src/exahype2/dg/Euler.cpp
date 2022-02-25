@@ -1,14 +1,14 @@
 #include "Euler.h"
 
 void exahype2::dg::explicitEulerOnCell(
-    const double* __restrict__                    cellQin,
-    const int                                     order,
-    const int                                     unknowns,
-    const int                                     auxiliaryVariables,
-    const tarch::la::Vector<Dimensions,double>&   x,
-    const double                                  dx,
-    const double                                  t,
-    const double                                  dt,
+    const double* __restrict__          					cellQin,
+    const int                           					order,
+    const int                           					unknowns,
+    const int                           					auxiliaryVariables,
+    const tarch::la::Vector<Dimensions,double>&    x,
+    const double                                   dx,
+    const double                                   t,
+    const double                                   dt,
     std::function< void(
       const double * __restrict__                  Q,
       const tarch::la::Vector<Dimensions,double>&  x,
@@ -30,11 +30,14 @@ void exahype2::dg::explicitEulerOnCell(
       double                                       t,
       double * __restrict__                        S
     ) >   source,
-    const double* __restrict__                     quadNodes,
+    const double* __restrict__	                   quadNodes,
     const double* __restrict__                     quadWeights,
+    const double* __restrict__                     DerivativeOperator,
     const double* __restrict__                     MassMatrix,
     const double* __restrict__                     StiffnessMatrix,
-    double* __restrict__                           cellQout){
+    const double* __restrict__                     InvertedAndLumpedMassMatrix,
+    double* __restrict__                           cellQout
+) {
 
   const int nodesPerAxis = order+1;
   const int strideQ=unknowns+auxiliaryVariables;
