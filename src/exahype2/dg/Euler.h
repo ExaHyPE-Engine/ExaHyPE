@@ -22,14 +22,14 @@ namespace exahype2 {
      *
      */
     void explicitEulerOnCell(
-      const double* __restrict__          					cellQin,
-      const int                           					order,
-      const int                           					unknowns,
-      const int                           					auxiliaryVariables,
-			const tarch::la::Vector<Dimensions,double>&		x,
-			const double																	dx,
-			const double																	t,
-			const double																	dt,
+      const double* __restrict__                    cellQin,
+      const int                                     order,
+      const int                                     unknowns,
+      const int                                     auxiliaryVariables,
+      const tarch::la::Vector<Dimensions,double>&    x,
+      const double                                  dx,
+      const double                                  t,
+      const double                                  dt,
       std::function< void(
         const double * __restrict__                  Q,
         const tarch::la::Vector<Dimensions,double>&  x,
@@ -51,20 +51,10 @@ namespace exahype2 {
         double                                       t,
         double * __restrict__                        S
       ) >   source,
-      std::function< void(
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        const tarch::la::Vector<Dimensions,double>&  h,
-        const tarch::la::Vector<Dimensions,int>&     index,
-        double                                       t,
-        double * __restrict__                        S
-      ) >   pointSource,
-			const double* __restrict__										 quadNodes,
-			const double* __restrict__										 quadWeights,
-			const double* __restrict__                     DerivativeOperator,
+      const double* __restrict__                     quadNodes,
+      const double* __restrict__                     quadWeights,
       const double* __restrict__                     MassMatrix,
       const double* __restrict__                     StiffnessMatrix,
-      const double* __restrict__                     InvertedAndLumpedMassMatrix,
       double* __restrict__                           cellQout
     );
   }

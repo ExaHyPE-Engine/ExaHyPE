@@ -40,42 +40,41 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   const double* __restrict__          cellQ,
   int                                 order,
   int                                 unknowns,
-	const double* const __restrict__    BasisFunctionValuesLeft,
-	const double* const __restrict__    BasisFunctionValuesRight,
+  const double* const __restrict__    BasisFunctionValuesLeft,
+  const double* const __restrict__    BasisFunctionValuesRight,
   double* const __restrict__          faceQLeft,
   double* const __restrict__          faceQRight,
   double* const __restrict__          faceQBottom,
   double* const __restrict__          faceQUp
 ) {
 
-	int nodesPerAxis = order+1;
+  int nodesPerAxis = order+1;
 
-	for(int row=0; row<nodesPerAxis; row++){
+  for(int row=0; row<nodesPerAxis; row++){
+    //unrolled from rest of loop to initialize elements of faces
+    for(int var=0; var<unknowns; var++){
+      faceQLeft[(2*row+1)*unknowns+var]   = BasisFunctionValuesLeft[0] * cellQ[(row*nodesPerAxis+0)*unknowns + var];
+      faceQRight[2*row*unknowns+var]      = BasisFunctionValuesRight[0] * cellQ[(row*nodesPerAxis+0)*unknowns + var];
 
-		//unrolled from rest of loop to initialize elements of faces
-		for(int var=0; var<unknowns; var++){
-			faceQLeft[(2*row+1)*unknowns+var] 	= BasisFunctionValuesLeft[0] * cellQ[(row*nodesPerAxis+0)*unknowns + var];
-			faceQRight[2*row*unknowns+var]  		= BasisFunctionValuesRight[0] * cellQ[(row*nodesPerAxis+0)*unknowns + var];
+      faceQBottom[(2*row+1)*unknowns+var] = BasisFunctionValuesLeft[0] * cellQ[(0*nodesPerAxis+row)*unknowns + var];
+      faceQUp[2*row*unknowns+var]         = BasisFunctionValuesLeft[0] * cellQ[(0*nodesPerAxis+row)*unknowns + var];
+      } // var
 
-			faceQBottom[(2*row+1)*unknowns+var] = BasisFunctionValuesLeft[0] * cellQ[(0*nodesPerAxis+row)*unknowns + var];
-			faceQUp[2*row*unknowns+var] 				= BasisFunctionValuesLeft[0] * cellQ[(0*nodesPerAxis+row)*unknowns + var];
-		} // var
+      for(int node=1; node<nodesPerAxis; node++){
+        for(int var=0; var<unknowns; var++){
+          /*iterate over nodes from left to right; remember that in face elements are in order left1, then right1,
+          then left 2, then right 2 etc, and left face here is the face this cell is to the right of*/
+          faceQLeft[(2*row+1)*unknowns+var]   += BasisFunctionValuesLeft[node] * cellQ[(row*nodesPerAxis+node)*unknowns + var];
+          faceQRight[2*row*unknowns+var]      += BasisFunctionValuesRight[node] * cellQ[(row*nodesPerAxis+node)*unknowns + var];
 
-		for(int node=1; node<nodesPerAxis; node++){
-			for(int var=0; var<unknowns; var++){
+          //iterate over nodes from lowest to highest
+          faceQBottom[(2*row+1)*unknowns+var] += BasisFunctionValuesLeft[node] * cellQ[(node*nodesPerAxis+row)*unknowns + var];
+          faceQUp[2*row*unknowns+var]         += BasisFunctionValuesLeft[node] * cellQ[(node*nodesPerAxis+row)*unknowns + var];
+        } // var
 
-				/*iterate over nodes from left to right; remember that in face elements are in order left1, then right1,
-				 then left 2, then right 2 etc, and left face here is the face this cell is to the right of*/
-				faceQLeft[(2*row+1)*unknowns+var] 	+= BasisFunctionValuesLeft[node] * cellQ[(row*nodesPerAxis+node)*unknowns + var];
-				faceQRight[2*row*unknowns+var]  		+= BasisFunctionValuesRight[node] * cellQ[(row*nodesPerAxis+node)*unknowns + var];
+    } // node
+  } // row
 
-				//iterate over nodes from lowest to highest
-				faceQBottom[(2*row+1)*unknowns+var] += BasisFunctionValuesLeft[node] * cellQ[(node*nodesPerAxis+row)*unknowns + var];
-				faceQUp[2*row*unknowns+var] 				+= BasisFunctionValuesLeft[node] * cellQ[(node*nodesPerAxis+row)*unknowns + var];
-			} // var
-
-		} // node
-	} // row
 
 }
 
@@ -84,8 +83,8 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
   const double* __restrict__          cellQ,
   int                                 order,
   int                                 unknowns,
-	const double* const __restrict__    BasisFunctionValuesLeft,
-	const double* const __restrict__    BasisFunctionValuesRight,
+  const double* const __restrict__    BasisFunctionValuesLeft,
+  const double* const __restrict__    BasisFunctionValuesRight,
   double* const __restrict__          faceQLeft,
   double* const __restrict__          faceQRight,
   double* const __restrict__          faceQBottom,
@@ -95,76 +94,100 @@ void exahype2::dg::projectVolumetricDataOntoFaces(
 ) {
   // @todo implement
 
-	int nodesPerAxis = order+1;
-	int nodesPerFace = nodesPerAxis*nodesPerAxis;
+  int nodesPerAxis = order+1;
+  int nodesPerFace = nodesPerAxis*nodesPerAxis;
 
-	for(int face=0; face<nodesPerAxis; face++){
-		for(int row=0; row<nodesPerAxis; row++){
+  for(int face=0; face<nodesPerAxis; face++){
+    for(int row=0; row<nodesPerAxis; row++){
 
-			//unrolled from rest of loop to initialize elements of faces
-			for(int var=0; var<unknowns; var++){
-				faceQLeft[(2*(face*nodesPerAxis+row)+1)*unknowns+var]   = BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerFace+row*nodesPerAxis+0)*unknowns + var];
-				faceQRight[2*(face*nodesPerAxis+row)*unknowns+var] 	 		= BasisFunctionValuesRight[0] * cellQ[(face*nodesPerFace+row*nodesPerAxis+0)*unknowns + var];
+      //unrolled from rest of loop to initialize elements of faces
+      for(int var=0; var<unknowns; var++){
+        faceQLeft[(2*(face*nodesPerAxis+row)+1)*unknowns+var]   = BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerFace+row*nodesPerAxis+0)*unknowns + var];
+        faceQRight[2*(face*nodesPerAxis+row)*unknowns+var]        = BasisFunctionValuesRight[0] * cellQ[(face*nodesPerFace+row*nodesPerAxis+0)*unknowns + var];
 
-				faceQBottom[(2*(face*nodesPerAxis+row)+1)*unknowns+var] = BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerFace+row+0*nodesPerAxis)*unknowns + var];
-				faceQUp[2*(face*nodesPerAxis+row)*unknowns+var] 		 		= BasisFunctionValuesRight[0] * cellQ[(face*nodesPerFace+row+0*nodesPerAxis)*unknowns + var];
+        faceQBottom[(2*(face*nodesPerAxis+row)+1)*unknowns+var] = BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerFace+row+0*nodesPerAxis)*unknowns + var];
+        faceQUp[2*(face*nodesPerAxis+row)*unknowns+var]          = BasisFunctionValuesRight[0] * cellQ[(face*nodesPerFace+row+0*nodesPerAxis)*unknowns + var];
 
-				faceQFront[(2*(face*nodesPerAxis+row)+1)*unknowns+var]  = BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerAxis+row+0*nodesPerFace)*unknowns + var];
-				faceQBack[2*(face*nodesPerAxis+row)*unknowns+var]	   		= BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerAxis+row+0*nodesPerFace)*unknowns + var];
-			} // var
+        faceQFront[(2*(face*nodesPerAxis+row)+1)*unknowns+var]  = BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerAxis+row+0*nodesPerFace)*unknowns + var];
+        faceQBack[2*(face*nodesPerAxis+row)*unknowns+var]         = BasisFunctionValuesLeft[0] * cellQ[(face*nodesPerAxis+row+0*nodesPerFace)*unknowns + var];
+      } // var
 
-			for(int node=1; node<nodesPerAxis; node++){
-				for(int var=0; var<unknowns; var++){
+      for(int node=1; node<nodesPerAxis; node++){
+        for(int var=0; var<unknowns; var++){
 
-					/*iterate over nodes from left to right; remember that in face elements are in order left1, then right1,
-					 then left 2, then right 2 etc, and left face here is the face this cell is to the right of*/
-					faceQLeft[(2*(face*nodesPerAxis+row)+1)*unknowns+var]   += BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerFace+row*nodesPerAxis+node)*unknowns + var];
-					faceQRight[2*(face*nodesPerAxis+row)*unknowns+var] 	 		+= BasisFunctionValuesRight[node] * cellQ[(face*nodesPerFace+row*nodesPerAxis+node)*unknowns + var];
+          /*iterate over nodes from left to right; remember that in face elements are in order left1, then right1,
+           then left 2, then right 2 etc, and left face here is the face this cell is to the right of*/
+          faceQLeft[(2*(face*nodesPerAxis+row)+1)*unknowns+var]   += BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerFace+row*nodesPerAxis+node)*unknowns + var];
+          faceQRight[2*(face*nodesPerAxis+row)*unknowns+var]        += BasisFunctionValuesRight[node] * cellQ[(face*nodesPerFace+row*nodesPerAxis+node)*unknowns + var];
 
-					//iterate over nodes from lowest to highest
-					faceQBottom[(2*(face*nodesPerAxis+row)+1)*unknowns+var] += BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerFace+row+node*nodesPerAxis)*unknowns + var];
-					faceQUp[2*(face*nodesPerAxis+row)*unknowns+var] 		 		+= BasisFunctionValuesRight[node] * cellQ[(face*nodesPerFace+row+node*nodesPerAxis)*unknowns + var];
+          //iterate over nodes from lowest to highest
+          faceQBottom[(2*(face*nodesPerAxis+row)+1)*unknowns+var] += BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerFace+row+node*nodesPerAxis)*unknowns + var];
+          faceQUp[2*(face*nodesPerAxis+row)*unknowns+var]          += BasisFunctionValuesRight[node] * cellQ[(face*nodesPerFace+row+node*nodesPerAxis)*unknowns + var];
 
-					//iterate over nodes from front to back
-					faceQFront[(2*(face*nodesPerAxis+row)+1)*unknowns+var]  += BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerAxis+row+node*nodesPerFace)*unknowns + var];
-					faceQBack[2*(face*nodesPerAxis+row)*unknowns+var]	   		+= BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerAxis+row+node*nodesPerFace)*unknowns + var];
+          //iterate over nodes from front to back
+          faceQFront[(2*(face*nodesPerAxis+row)+1)*unknowns+var]  += BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerAxis+row+node*nodesPerFace)*unknowns + var];
+          faceQBack[2*(face*nodesPerAxis+row)*unknowns+var]         += BasisFunctionValuesLeft[node] * cellQ[(face*nodesPerAxis+row+node*nodesPerFace)*unknowns + var];
 
-				} // var
+        } // var
 
-			} // node
-		} // row
-	} // face
+      } // node
+    } // row
+  } // face
 
 }
 
 int exahype2::dg::getNodesPerCell(int nodesPerAxis){
-	int nodesPerCell=nodesPerAxis;
-	for(int d=1; d<Dimensions; d++){
-		nodesPerCell *= nodesPerAxis;
-	}
-	return nodesPerCell;
+  int nodesPerCell=nodesPerAxis;
+  for(int d=1; d<Dimensions; d++){
+    nodesPerCell *= nodesPerAxis;
+  }
+  return nodesPerCell;
 }
 
 tarch::la::Vector<Dimensions,int> exahype2::dg::getStrides(int nodesPerAxis){
-	tarch::la::Vector<Dimensions,int> strides(1);
-	for(int i=1; i<Dimensions; i++){
-		strides[i] = strides[i-1]*nodesPerAxis;
-	}
-	return strides;
+  tarch::la::Vector<Dimensions,int> strides(1);
+  for(int i=1; i<Dimensions; i++){
+    strides[i] = strides[i-1]*nodesPerAxis;
+  }
+  return strides;
 }
 
 tarch::la::Vector<Dimensions,int> exahype2::dg::getIndex(
-		int 																	node,
-		tarch::la::Vector<Dimensions,int>	strides
+    int                                   node,
+    tarch::la::Vector<Dimensions,int>  strides
 ){
 
-	tarch::la::Vector<Dimensions,int> index(0);
-	int tmp = 0;
-	for(int d=Dimensions-1; d>=0; d--){
-		index[d] = (node - tmp) / strides[d];
-		tmp += strides[d]*index[d];
-	}
-	return index;
+  tarch::la::Vector<Dimensions,int> index(0);
+  int tmp = 0;
+  for(int d=Dimensions-1; d>=0; d--){
+    index[d] = (node - tmp) / strides[d];
+    tmp += strides[d]*index[d];
+  }
+  return index;
 
 }
 
+
+int exahype2::dg::cellIndexToHullIndex(
+    const tarch::la::Vector<Dimensions,int>&   indexCell,
+    const int                                 direction,
+    const int                                 orientation,
+    const int                                 nodesPerAxis
+    ){
+
+  int HullIndex = 0;
+  int stride = 1;
+
+  for(int dim=0; dim<Dimensions; dim++){
+    if(dim!=direction){
+      HullIndex += indexCell[dim]*stride;
+      stride *= nodesPerAxis;
+    }
+  }
+
+  /* if left face need to skip left and right faces for each previous dimension
+   * if right face, need to skip those plus the left face
+   */
+  return HullIndex + stride*(2*direction+orientation); //stride is nodesPerAxis^(d-⁾
+
+}
