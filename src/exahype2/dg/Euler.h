@@ -51,7 +51,6 @@ namespace exahype2 {
       const double* __restrict__                     quadWeights,
       const double* __restrict__                     MassMatrix,
       const double* __restrict__                     StiffnessMatrix,
-      const double* __restrict__                     InvertedAndLumpedMassMatrix,
       double* __restrict__                           cellQout
     );
 
@@ -95,10 +94,8 @@ namespace exahype2 {
         ) >   source,
         const double* __restrict__                     quadNodes,
         const double* __restrict__                     quadWeights,
-        const double* __restrict__                     DerivativeOperator,
         const double* __restrict__                     MassMatrix,
         const double* __restrict__                     StiffnessMatrix,
-        const double* __restrict__                     InvertedAndLumpedMassMatrix,
         double* __restrict__                           cellQout
     );
 

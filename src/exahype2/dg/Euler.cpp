@@ -3,10 +3,10 @@
 
 
 void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
-    const double* __restrict__          					cellQin,
-    const int                           					order,
-    const int                           					unknowns,
-    const int                           					auxiliaryVariables,
+    const double* __restrict__                    cellQin,
+    const int                                     order,
+    const int                                     unknowns,
+    const int                                     auxiliaryVariables,
     const tarch::la::Vector<Dimensions,double>&    x,
     const double                                   dx,
     const double                                   t,
@@ -34,10 +34,8 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     ) >   source,
     const double* __restrict__	                   quadNodes,
     const double* __restrict__                     quadWeights,
-    const double* __restrict__                     DerivativeOperator,
     const double* __restrict__                     MassMatrix,
     const double* __restrict__                     StiffnessMatrix,
-    const double* __restrict__                     InvertedAndLumpedMassMatrix,
     double* __restrict__                           cellQout
 ) {
 
@@ -148,11 +146,10 @@ void exahype2::dg::explicitEulerOnCell_Flux_EvaluateTermsOnce(
       int                                          normal,
       double * __restrict__                        F
   ) >   flux,
-  const double* __restrict__	                 quadNodes,
+  const double* __restrict__	                   quadNodes,
   const double* __restrict__                     quadWeights,
   const double* __restrict__                     MassMatrix,
   const double* __restrict__                     StiffnessMatrix,
-  const double* __restrict__                     InvertedAndLumpedMassMatrix,
   double* __restrict__                           cellQout
 ) {
   const int nodesPerAxis = order+1;
