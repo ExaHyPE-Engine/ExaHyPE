@@ -34,7 +34,7 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     
   """
   
-  TemplateProject = """
+  TemplateCellKernel = """
   {% for PREDICATE_NO in range(0,PREDICATES|length) %}
   if ({{PREDICATES[PREDICATE_NO]}}) {
     const double timeStampOldSolution    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();
@@ -58,10 +58,11 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     {{EXPLICIT_EULER_CALL}}
   }
   {% endfor %}
-  
-  /*
+"""
+
+  TemplateExplicitEulerCallWithFlux = """
     ::exahype2::dg::explicitEulerOnCell(
-      ,   // const double* __restrict__          cellQin,
+      QIn ,   // const double* __restrict__          cellQin,
       {{ORDER}},                                                   
       {{NUMBER_OF_UNKNOWNS}},
       {{NUMBER_OF_AUXILIARY_VARIABLES}},
@@ -72,78 +73,16 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
         int                                          normal,
         double * __restrict__                        F
       )->void {
-        {% if FLUX_IMPLEMENTATION!="<none>" %}
         repositories::{{SOLVER_INSTANCE}}.flux(Q,x,t,normal,F);
-        {% else %}
-        #if Dimensions==2
-        std::fill_n(F,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_2D}},0.0);
-        #else
-        std::fill_n(F,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_3D}},0.0);
-        #endif
-        {% endif %}
       },
-      [&] (
-        const double * __restrict__                  Q,
-        const double * __restrict__                  dQdx,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal,
-        double * __restrict__                        F
-      ) ->  void {
-        {% if NCP_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct(Q,dQdx,x,t,normal,F);
-        {% else %}
-        #if Dimensions==2
-        std::fill_n(F,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_2D}},0.0);
-        #else
-        std::fill_n(F,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_3D}},0.0);
-        #endif
-        {% endif %}
-      },
-      [&] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double * __restrict__                        S
-      ) -> void {
-        {% if SOURCE_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.sourceTerm(Q,x,t,S);
-        {% else %}
-        #if Dimensions==2
-        std::fill_n(S,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_2D}},0.0);
-        #else
-        std::fill_n(S,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_3D}},0.0);
-        #endif
-        {% endif %}
-      },
-      [&] (
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        const tarch::la::Vector<Dimensions,double>&  h,
-        const tarch::la::Vector<Dimensions,int>&     index,
-        double                                       t,
-        double * __restrict__                        S
-      ) -> void {
-        {% if SOURCE_IMPLEMENTATION!="<none>" %}
-        repositories::{{SOLVER_INSTANCE}}.pointSourceTerm(Q,x,h,index,t,S);
-        {% else %}
-        #if Dimensions==2
-        std::fill_n(S,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_2D}},0.0);
-        #else
-        std::fill_n(S,{{NUMBER_OF_UNKNOWNS}}*{{NUMBER_OF_DOFS_PER_CELL_3D}},0.0);
-        #endif
-        {% endif %}
-      },
-      repositories::{{SOLVER_INSTANCE}}.DerivativeOperator,
-      repositories::{{SOLVER_INSTANCE}}.MassMatrix,
+      repositories::{{SOLVER_INSTANCE}}.QuadraturePoints,
+      repositories::{{SOLVER_INSTANCE}}.QuadratureWeights,
       repositories::{{SOLVER_INSTANCE}}.StiffnessMatrix,
       repositories::{{SOLVER_INSTANCE}}.InvertedAndLumpedMassMatrix,
-      todo
+      QOut
     );
-    */
-      
 """
-
+  
   
   def __init__(self,solver):
     """
@@ -157,8 +96,9 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
     
     """
     super(SolveVolumeIntegral,self).__init__(solver)
-    self.guards           = []
-    self._butcher_tableau = ButcherTableau(self._solver._rk_order)
+    self.guards               = []
+    self._butcher_tableau     = ButcherTableau(self._solver._rk_order)
+    self._explicit_Euler_call = self.TemplateExplicitEulerCallWithFlux
     
 
   @property
@@ -182,9 +122,10 @@ class SolveVolumeIntegral(AbstractRungeKuttaDGActionSet):
       self._solver._init_dictionary_with_default_parameters(d)
       self._solver.add_entries_to_text_replacement_dictionary(d)
       d[ "PREDICATES" ]                               = self.guards
-      d[ "BUTCHER_TABLEAU_WEIGHTS" ]                  = self._butcher_tableau.weight_matrix()      
-      d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()      
-      result = jinja2.Template(self.TemplateProject).render(**d)
+      d[ "BUTCHER_TABLEAU_WEIGHTS" ]                  = self._butcher_tableau.weight_matrix()
+      d[ "BUTCHER_TABLEAU_RELATIVE_TIME_STEP_SIZES" ] = self._butcher_tableau.time_step_sizes()
+      d[ "EXPLICIT_EULER_CALL" ]                      = jinja2.Template( self._explicit_Euler_call, undefined=jinja2.DebugUndefined).render(**d)
+      result = jinja2.Template(self.TemplateCellKernel).render(**d)
       pass 
     return result
 

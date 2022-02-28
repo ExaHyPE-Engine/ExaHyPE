@@ -20,6 +20,45 @@ namespace exahype2 {
     /*
      * Computes the explicit Euler on one cell
      *
+     * We exploit the fact that we can update all the updates within a cell independently:
+     * All the unknowns within a patch can (and do) affect every single unknown in the
+     * output, but the output variables do not interact. After all, it is an explicit scheme.
+     * Consequently, we can loop over all the unknowns in parallel (if we want).
+     *
+     * Algorithm:
+     *
+     * - Copy over in into out. We run an explicit Euler, so the value is updated
+     *   according to a formula @f$ Q(t+\Delta t) = Q(t) + \Delta t \cdot F @f$ and
+     *   the
+     */
+    void explicitEulerOnCell(
+      const double* __restrict__                    cellQin,
+      const int                                     order,
+      const int                                     unknowns,
+      const int                                     auxiliaryVariables,
+      const tarch::la::Vector<Dimensions,double>&   x,
+      const double                                  dx,
+      const double                                  t,
+      const double                                  dt,
+      std::function< void(
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal,
+        double * __restrict__                        F
+      ) >   flux,
+      const double* __restrict__                     quadNodes,
+      const double* __restrict__                     quadWeights,
+      const double* __restrict__                     MassMatrix,
+      const double* __restrict__                     StiffnessMatrix,
+      const double* __restrict__                     InvertedAndLumpedMassMatrix,
+      double* __restrict__                           cellQout
+    );
+
+
+    /*
+     * Computes the explicit Euler on one cell
+     *
      */
     void explicitEulerOnCell(
       const double* __restrict__                    cellQin,
@@ -57,6 +96,25 @@ namespace exahype2 {
       const double* __restrict__                     StiffnessMatrix,
       double* __restrict__                           cellQout
     );
+
+
+    namespace internal {
+      /**
+       * Copy solution over for one node
+       *
+       * This method signature is kind of an overkill (we don't need all of the
+       * variables), but I decided to keep the internal routines as close to
+       * each other as possible.
+       */
+      void copySolution(
+        const double* __restrict__                    cellQin,
+        const int                                     order,
+        const int                                     unknowns,
+        const int                                     auxiliaryVariables,
+        const tarch::la::Vector<Dimensions,int>&      node,
+        double* __restrict__                          cellQout
+      );
+    }
   }
 }
 
