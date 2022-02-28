@@ -21,7 +21,7 @@ TP::TwoPunctures* _tp = new TP::TwoPunctures();
 tarch::logging::Log   examples::exahype2::ccz4::FiniteVolumeCCZ4::_log( "examples::exahype2::ccz4::FiniteVolumeCCZ4" );
 examples::exahype2::ccz4::FiniteVolumeCCZ4::FiniteVolumeCCZ4() {
   if ( Scenario==0 || Scenario==1 ) {
-    const char* name = "GaugeWave";
+    const char* name = "GaugeWave";//nothing to do here for now
     int length = strlen(name);
     //initparameters_(&length, name);
   }

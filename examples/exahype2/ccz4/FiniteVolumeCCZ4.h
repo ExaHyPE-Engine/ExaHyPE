@@ -102,7 +102,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
- 
+
     void nonconservativeProduct(
       const double * __restrict__ Q, // Q[59+0],
       const double * __restrict__             deltaQ, // [59+0]
@@ -129,7 +129,7 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
-    
+
     ::exahype2::RefinementCommand refinementCriterion(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>& volumeCentre,
