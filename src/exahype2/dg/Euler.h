@@ -31,7 +31,7 @@ namespace exahype2 {
      *   according to a formula @f$ Q(t+\Delta t) = Q(t) + \Delta t \cdot F @f$ and
      *   the
      */
-    void explicitEulerOnCell(
+    void explicitEulerOnCell_Flux_EvaluateTermsOnce(
       const double* __restrict__                    cellQin,
       const int                                     order,
       const int                                     unknowns,
@@ -59,42 +59,47 @@ namespace exahype2 {
     /*
      * Computes the explicit Euler on one cell
      *
+     * Generic implementation which implements fluxes redundantly
+     *
+     * @todo Rename
      */
-    void explicitEulerOnCell(
-      const double* __restrict__                    cellQin,
-      const int                                     order,
-      const int                                     unknowns,
-      const int                                     auxiliaryVariables,
-      const tarch::la::Vector<Dimensions,double>&    x,
-      const double                                  dx,
-      const double                                  t,
-      const double                                  dt,
-      std::function< void(
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal,
-        double * __restrict__                        F
-      ) >   flux,
-      std::function< void(
-        const double * __restrict__                  Q,
-        const double * __restrict__                  dQdx,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        int                                          normal,
-        double * __restrict__                        F
-      ) >   nonconservativeProduct,
-      std::function< void(
-        const double * __restrict__                  Q,
-        const tarch::la::Vector<Dimensions,double>&  x,
-        double                                       t,
-        double * __restrict__                        S
-      ) >   source,
-      const double* __restrict__                     quadNodes,
-      const double* __restrict__                     quadWeights,
-      const double* __restrict__                     MassMatrix,
-      const double* __restrict__                     StiffnessMatrix,
-      double* __restrict__                           cellQout
+    void explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+        const double* __restrict__                                                  cellQin,
+        const int                                                                   order,
+        const int                                                                   unknowns,
+        const int                                                                   auxiliaryVariables,
+        const tarch::la::Vector<Dimensions,double>&    x,
+        const double                                   dx,
+        const double                                   t,
+        const double                                   dt,
+        std::function< void(
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          int                                          normal,
+          double * __restrict__                        F
+        ) >   flux,
+        std::function< void(
+          const double * __restrict__                  Q,
+          const double * __restrict__                  dQdx,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          int                                          normal,
+          double * __restrict__                        F
+        ) >   nonconservativeProduct,
+        std::function< void(
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          double * __restrict__                        S
+        ) >   source,
+        const double* __restrict__                     quadNodes,
+        const double* __restrict__                     quadWeights,
+        const double* __restrict__                     DerivativeOperator,
+        const double* __restrict__                     MassMatrix,
+        const double* __restrict__                     StiffnessMatrix,
+        const double* __restrict__                     InvertedAndLumpedMassMatrix,
+        double* __restrict__                           cellQout
     );
 
 

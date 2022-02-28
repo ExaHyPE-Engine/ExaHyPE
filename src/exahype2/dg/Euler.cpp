@@ -2,7 +2,7 @@
 #include "peano4/utils/Loop.h"
 
 
-void exahype2::dg::explicitEulerOnCell(
+void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     const double* __restrict__          					cellQin,
     const int                           					order,
     const int                           					unknowns,
@@ -132,7 +132,7 @@ void exahype2::dg::internal::copySolution(
 }
 
 
-void exahype2::dg::explicitEulerOnCell(
+void exahype2::dg::explicitEulerOnCell_Flux_EvaluateTermsOnce(
   const double* __restrict__          					cellQin,
   const int                           					order,
   const int                           					unknowns,
