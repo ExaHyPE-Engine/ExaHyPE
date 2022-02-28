@@ -5,9 +5,9 @@ void exahype2::dg::getMaxEigenvaluePerFace(
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
-        int                                          normal
+        int                                         normal
         ) >   maxEigenvalue,
-    double* __restrict__                     QHull[Dimensions*2],
+    double* __restrict__                          QHull[Dimensions*2],
     const int                                     order,
     const int                                     unknowns,
     const int                                     auxiliaryVariables,
@@ -58,13 +58,13 @@ void exahype2::dg::computeRusanovOnHull(
     ) >   flux,
     std::function< void(
       const double * __restrict__                  Qinside,
-      double * __restrict__                         Qoutside,
+      double * __restrict__                        Qoutside,
       const tarch::la::Vector<Dimensions,double>&  x,
       double                                       t,
       int                                          normal
     ) >   boundaryConditions,
-    double*                                         QHullIn[Dimensions*2],
-    double* __restrict__                           QHullOut,
+    double*                                       QHullIn[Dimensions*2],
+    double* __restrict__                          QHullOut,
     const int                                     order,
     const int                                     unknowns,
     const int                                     auxiliaryVariables,
@@ -72,8 +72,8 @@ void exahype2::dg::computeRusanovOnHull(
     const double                                  dx,
     const double                                  t,
     const double                                  dt,
-    const double                                   maxEigenvalueAlongFace[Dimensions*2],
-    const bool                                      atBoundary[Dimensions*2]
+    const double                                  maxEigenvalueAlongFace[Dimensions*2],
+    const bool                                    atBoundary[Dimensions*2]
     ){
 
   const int nodesPerAxis = order+1;
@@ -160,13 +160,13 @@ void exahype2::dg::computeRusanovOnHull(
 
 
 void exahype2::dg::applyRiemannToPatch(
-    double* __restrict__         Q,
-    const double* __restrict__   QHullIn,
+    double* __restrict__        Q,
+    const double* __restrict__  QHullIn,
     const int                   order,
     const int                   unknowns,
     const int                   auxiliaryVariables,
-    const double                 dx,
-    const double                 dt,
+    const double                dx,
+    const double                dt,
     const double* __restrict__  BasisFunctionValuesLeft,
     const double* __restrict__  BasisFunctionValuesRight,
     const double* __restrict__  quadratureWeights

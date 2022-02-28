@@ -124,12 +124,12 @@ namespace exahype2 {
     **     ranging from 0 which is [0,0,0] to 63 which is [3,3,3]
     */
     tarch::la::Vector<Dimensions,int> getIndex(
-        int                                   node,
+        int                                node,
         tarch::la::Vector<Dimensions,int>  strides
     );
 
     int cellIndexToHullIndex(
-        const tarch::la::Vector<Dimensions,int>&   indexCell,
+        const tarch::la::Vector<Dimensions,int>&  indexCell,
         const int                                 direction,
         const int                                 orientation,
         const int                                 nodesPerAxis

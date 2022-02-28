@@ -17,14 +17,32 @@
 namespace exahype2 {
   namespace dg {
 
+  /*
+   * Evaluates the eigenvalue at each node along each face and, for each face
+   * returns the greatest eigenvalue along this face.
+   * This is used for the computation of the rusanov flux
+   *
+   * @param QHull is an array of double pointers, it contains pointers to each
+   *  face of the cell in order of dimension and negative then positive direction
+   *  e.g. QHull[0] is a pointer to the first element of the left face along
+   *  direction 0, QHull[1] to the right face along direction 0, QHull[2] to the left
+   *  face along direction 1, etc.
+   *  Note that each face has a left and right side because it contains values from its
+   *  left and right cells. The order of the nodes is always left, right, left, right
+   *  and each node contains unknowns+auxiliaryVariables elements so the first
+   *  unknowns+auxiliaryVariable elements correspond to first node of the left side,
+   *  the second to the first node of the right side and so on.
+   *
+   * @param eigenvalues is the array into which the values are inserted in the same order
+   */
   void getMaxEigenvaluePerFace(
       std::function< double(
           const double * __restrict__                 Q,
           const tarch::la::Vector<Dimensions,double>& x,
           double                                      t,
-          int                                          normal
+          int                                         normal
           ) >   maxEigenvalue,
-      double* __restrict__                     QHull[Dimensions*2],
+      double* __restrict__                          QHull[Dimensions*2],
       const int                                     order,
       const int                                     unknowns,
       const int                                     auxiliaryVariables,
@@ -33,6 +51,20 @@ namespace exahype2 {
       double                                        eigenvalues[Dimensions*2]
       );
 
+  /*
+   * Computes the numerical value of the rusanov flux along each node of each face.
+   *
+   * @param QHullIn see above
+   *
+   * @param QHullOut is where the computed values are put, this has a similar structure
+   *  to QHullIn but since we only require one value for the flux instead of a value on
+   *  the left and right sides of the face this is only half as large
+   *
+   * @param atBoundary boolean array which specifies whether a face is at the boundary or
+   *  not. If a face is at the boundary the outside values (e.g. left of the face if the
+   *  face is at the left of the cell) will be ignored and the flux is instead computed
+   *  with the values given by the boundaryConditions() function
+   */
   void computeRusanovOnHull(
       std::function< void(
         const double * __restrict__                  Q,
@@ -43,13 +75,13 @@ namespace exahype2 {
       ) >   flux,
       std::function< void(
         const double * __restrict__                  Qinside,
-        double * __restrict__                         Qoutside,
+        double * __restrict__                        Qoutside,
         const tarch::la::Vector<Dimensions,double>&  x,
         double                                       t,
         int                                          normal
       ) >   boundaryConditions,
-      double*                                         QHullIn[Dimensions*2],
-      double* __restrict__                           QHullOut,
+      double*                                       QHullIn[Dimensions*2],
+      double* __restrict__                          QHullOut,
       const int                                     order,
       const int                                     unknowns,
       const int                                     auxiliaryVariables,
@@ -57,18 +89,28 @@ namespace exahype2 {
       const double                                  dx,
       const double                                  t,
       const double                                  dt,
-      const double                                   maxEigenvalueAlongFace[Dimensions*2],
-      const bool                                      atBoundary[Dimensions*2]
+      const double                                  maxEigenvalueAlongFace[Dimensions*2],
+      const bool                                    atBoundary[Dimensions*2]
       );
 
+  /*
+   * Given a numerical flux at the surface from QHullIn, this applies this flux to
+   * the values of Q to compute the next solution.
+   *
+   * @param Q the current solution, expected to be the solution already updated
+   *   with local contributions. (See Euler.h)
+   *
+   * @param QHullIn see computeRusanov above. This should contain a value for the
+   *   numerical flux at each node along each face
+   */
   void applyRiemannToPatch(
-      double* __restrict__         Q,
-      const double* __restrict__   QHullIn,
+      double* __restrict__        Q,
+      const double* __restrict__  QHullIn,
       const int                   order,
       const int                   unknowns,
       const int                   auxiliaryVariables,
-      const double                 dx,
-      const double                 dt,
+      const double                dx,
+      const double                dt,
       const double* __restrict__  BasisFunctionValuesLeft,
       const double* __restrict__  BasisFunctionValuesRight,
       const double* __restrict__  quadratureWeights

@@ -14,6 +14,11 @@
 namespace exahype2 {
   namespace dg {
     namespace tests{
+
+    /*
+     * Contains implementations of the functions required to test the dg implementation
+     * for euler equations.
+     */
     void eulerFlux(
             const double * __restrict__                  Q,
             const tarch::la::Vector<Dimensions,double>&  x,

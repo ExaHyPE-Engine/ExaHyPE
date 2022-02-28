@@ -74,14 +74,14 @@ void exahype2::dg::tests::DGTest::runDG(){
   const int strideQ = unknowns+auxiliaryVariables;
 
   double*  QIn     = new double[nodesPerCell*(unknowns+auxiliaryVariables)]{1.0};
-  double*  QOut     = new double[2*nodesPerCell*(unknowns+auxiliaryVariables)]{0.0};
-  double* QLeft   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
+  double*  QOut    = new double[2*nodesPerCell*(unknowns+auxiliaryVariables)]{0.0};
+  double* QLeft    = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
   double* QRight   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
   double* QLower   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
   double* QUpper   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
   #if Dimensions==3
   double* QFront   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
-  double* QBack   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
+  double* QBack    = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
   #endif
 
   //initialisation of the initial value
