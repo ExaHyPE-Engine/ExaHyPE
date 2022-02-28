@@ -1,5 +1,9 @@
 #include "DGTest.h"
 
+/*
+ * We use precomputed values for lagrange polynomials as basis function
+ *  on Gauss-Legendre nodes
+ */
 exahype2::dg::tests::DGTest::DGTest():
 TestCase ("exahype2::dg::DGTest"),
 QuadraturePoints {0.069431844202973713731097404888714663684368133544921875,0.33000947820757187134432797392946667969226837158203125,0.66999052179242812865567202607053332030773162841796875,0.9305681557970262307577513638534583151340484619140625},
@@ -40,6 +44,17 @@ void exahype2::dg::tests::DGTest::UtilsTest() {
 }
 
 void exahype2::dg::tests::DGTest::runDG(){
+  /*
+   * In one step of a DG solver, following substeps are taken:
+   * 1) computation of the integral within the cell, for this all contributions within the cell
+   *    are computed, so the local source as well as flux and ncp contributions of neighbouring
+   *    nodes are computed and added to each node.
+   * 2) These local solutions are extrapolated to the cell surface and exchanged with the
+   *    neigbouring nodes
+   * 3) Using extrapolated values on the surface of the own and neighbouring cells, the flux
+   *    between the two cells is computed (here a rusanov flux is used)
+   * 4) Finally, the contributions from the neighbouring cells are added to each node in a cell
+   */
 
   // geometry
   const tarch::la::Vector<Dimensions, double> x({0.0, 0.0});
@@ -52,6 +67,7 @@ void exahype2::dg::tests::DGTest::runDG(){
   const int auxiliaryVariables = 0;
   const int order = 3;
 
+  //Parameter initialisation and memory allocation
   const int nodesPerAxis = order+1;
   const int nodesPerCell = getNodesPerCell(order+1);
   const int nodesPerFace = nodesPerCell/nodesPerAxis;
@@ -68,11 +84,12 @@ void exahype2::dg::tests::DGTest::runDG(){
   double* QBack   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
   #endif
 
-  //initialisation
+  //initialisation of the initial value
   for(int i=0; i<nodesPerCell*(unknowns+auxiliaryVariables); i++){
     QIn[i] = 1.0;
   }
 
+  //logging the results (and in the next steps, verify their correctness)
   file_stream << "Starting values are: \n";
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
@@ -82,7 +99,13 @@ void exahype2::dg::tests::DGTest::runDG(){
     file_stream << "]\n";
   }
 
-  explicitEulerOnCell(
+  /*
+   * Step 1) of the dg solver, this computes the purely local volume integral
+   *  Euler here refers to one explicit euler step, not to the local equations.
+   *  Essentially if we assume the cell is completely isolated and given the solution
+   *  at time t, we compute the solution at time t + Δt.
+   */
+  explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
       QIn,
       order,
       unknowns,
@@ -124,6 +147,9 @@ void exahype2::dg::tests::DGTest::runDG(){
     file_stream << "]\n";
   }
 
+  /*
+   * Step 2), the values computed in step 1) are extrapolated to the surface boundary
+   */
   projectVolumetricDataOntoFaces(
     QOut,
     order,
@@ -214,7 +240,11 @@ void exahype2::dg::tests::DGTest::runDG(){
   }
 #endif
 
-  // project data onto opposite face as well to trade with "identical" cell
+  /*
+   *  project data onto opposite face as well to trade with "identical" cell,
+   *  this essentially simulates the exchange of surface data with the
+   *  neighbouring cells which Peano would take care of for us normally
+   */
   projectVolumetricDataOntoFaces(
     QOut,
     order,
@@ -231,7 +261,12 @@ void exahype2::dg::tests::DGTest::runDG(){
 #endif
   );
 
-
+  /*
+  * The faces are assembled into one pointer construct for ease of access in the
+  * next steps. In addition information about whether the faces are at the boundary
+  * is provided since at the boundary the flux must be computed with boundary values
+  * instead of using the extrapolated solution from the neighbour.
+  */
   double* QHull[Dimensions*2];
   QHull[0] = QLeft;
   QHull[1] = QRight;
@@ -252,6 +287,10 @@ void exahype2::dg::tests::DGTest::runDG(){
 
   double maxEigenvaluePerFace[Dimensions*2];
 
+  /*
+   * this computes the maximal eigenvalue of the solution on each surface
+   * for the rusanov flux computation
+   */
   getMaxEigenvaluePerFace(
     [&](
       const double * __restrict__                 Q,
@@ -277,6 +316,10 @@ void exahype2::dg::tests::DGTest::runDG(){
   }
 
   double* QHullForRiemann = new double[2*Dimensions*nodesPerFace*strideQ]{0.0};
+
+  /*
+   * This step computes the rusanov flux for each surface at each node
+   */
   computeRusanovOnHull(
       [&](
           const double * __restrict__                  Q,
@@ -322,6 +365,10 @@ void exahype2::dg::tests::DGTest::runDG(){
     }
   }
 
+  /*
+   * The contributions from the computed rusanov flux are then added to the nodes
+   * within the cell.
+   */
   applyRiemannToPatch(
       QOut,
       QHullForRiemann,
