@@ -4,6 +4,7 @@
 
 void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     const double* __restrict__                    cellQin,
+    double* __restrict__                          cellQout,
     const int                                     order,
     const int                                     unknowns,
     const int                                     auxiliaryVariables,
@@ -25,7 +26,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
       double                                       t,
       int                                          normal,
       double * __restrict__                        F
-    ) >   nonconservativeProduct,
+    ) >   nonConservativeProduct,
     std::function< void(
       const double * __restrict__                  Q,
       const tarch::la::Vector<Dimensions,double>&  x,
@@ -36,7 +37,10 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     const double* __restrict__                     quadWeights,
     const double* __restrict__                     MassMatrix,
     const double* __restrict__                     StiffnessMatrix,
-    double* __restrict__                           cellQout
+    const double* __restrict__                     DerivativeOperator,
+    const bool                                     useFlux,
+    const bool                                     useSource,
+    const bool                                     useNCP
 ) {
 
   const int nodesPerAxis = order+1;
@@ -46,8 +50,22 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
 
   const double coeff0 = dt/dx; //We assume that the cells are cubes, e.g. A/V = 1/dx
 
-  double* fluxValues    = new double[unknowns]{0.0};
-  double* sourceValues = new double[unknowns]{0.0};
+  const double invDx = 1.0/dx;
+  double* fluxValues      = nullptr;
+  double* sourceValues    = nullptr;
+  double* gradientValues  = nullptr;
+  double* ncpValues       = nullptr;
+
+  if(useFlux){
+    fluxValues      = new double[unknowns]{0.0};
+  }
+  if(useSource){
+    sourceValues    = new double[unknowns]{0.0};
+  }
+  if(useNCP){
+    gradientValues  = new double[unknowns]{0.0};
+    ncpValues       = new double[unknowns]{0.0};
+  }
 
   //which node's value is being computed
   for(int node=0; node<nodesPerCell; node++){
@@ -59,36 +77,38 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
 
     tarch::la::Vector<Dimensions,int> index = getIndex(node, strides);
 
-    // direction in which flux contributions are being computed
-    for(int dim=0; dim<Dimensions; dim++){
+    if(useFlux){
+      // direction in which flux contributions are being computed
+      for(int dim=0; dim<Dimensions; dim++){
 
-      double coeff1 = coeff0 / quadWeights[index[dim]];
+        double coeff1 = coeff0 / quadWeights[index[dim]];
 
-      // contributing node along this direction
-      for(int i=0; i<nodesPerAxis; i++){
+        // contributing node along this direction
+        for(int i=0; i<nodesPerAxis; i++){
 
-        // compute contributing node real position
-        const int neighbourNode = node + (i - index[dim])*strides[dim];
-        tarch::la::Vector<Dimensions,int> contributingNodeIndex = index;
-        contributingNodeIndex[dim] = i;
-        tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
-            dx,
-            contributingNodeIndex,
-            order,
-            quadNodes);
+          // compute contributing node real position
+          const int neighbourNode = node + (i - index[dim])*strides[dim];
+          tarch::la::Vector<Dimensions,int> contributingNodeIndex = index;
+          contributingNodeIndex[dim] = i;
+          tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
+              dx,
+              contributingNodeIndex,
+              order,
+              quadNodes);
 
-        flux(  &cellQin[neighbourNode*strideQ],
-              x,
-              t,
-              dim, //normal
-              fluxValues);
-        double coeff = coeff1 * StiffnessMatrix[i*nodesPerAxis+index[dim]]; //TODO: is this correct? I assume matrix is [receiving node, contributing node] but could be opposite
-        for(int var=0; var<unknowns; var++){
-            cellQout[node*strideQ+var] += coeff * fluxValues[var];
-        } //var
+          flux(  &cellQin[neighbourNode*strideQ],
+                x,
+                t,
+                dim, //normal
+                fluxValues);
+          double coeff = coeff1 * StiffnessMatrix[i*nodesPerAxis+index[dim]]; //TODO: is this correct? I assume matrix is [receiving node, contributing node] but could be opposite
+          for(int var=0; var<unknowns; var++){
+              cellQout[node*strideQ+var] += coeff * fluxValues[var];
+          } //var
 
-      } //i
-    } //dim
+        } //i
+      } //dim
+    }//if useFlux
 
     //compute real node position
     tarch::la::Vector<Dimensions,double> position = getQuadraturePoint( x,
@@ -97,20 +117,54 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
         order,
         quadNodes);
 
-    //compute source term contributions
-    source( &cellQin[node*strideQ],
-            position,
-            t,
-            sourceValues);
+    if(useSource){
+      //compute source term contributions
+      source( &cellQin[node*strideQ],
+              position,
+              t,
+              sourceValues);
+      for(int var=0; var<unknowns; var++){
+        cellQout[node*strideQ+var] += dt * sourceValues[var];
+      } //var
+    } //if useSource
 
-    for(int var=0; var<unknowns; var++){
-      cellQout[node*strideQ+var] += dt * sourceValues[var];
-    } //var
+    if(useNCP){
+      for(int dim=0; dim<Dimensions; dim++){
+        computeGradient(
+          cellQin,
+          DerivativeOperator,
+          invDx,
+          nodesPerAxis,
+          unknowns,
+          node,
+          gradientValues
+          );
+        nonConservativeProduct(
+          &cellQin[node*strideQ],
+          gradientValues,
+          position,
+          t,
+          dim,
+          ncpValues);
+        for(int var=0; var<unknowns; var++){
+          cellQout[node*strideQ+var] += ncpValues[var];
+        } //var
+
+      } //dim
+    } //if useNCP
 
   } //node
 
-  delete [] fluxValues;
-  delete [] sourceValues;
+  if(useFlux){
+    delete [] fluxValues;
+  }
+  if(useSource){
+    delete [] sourceValues;
+  }
+  if(useNCP){
+    delete [] gradientValues;
+    delete [] ncpValues;
+  }
 
 }
 
@@ -132,6 +186,7 @@ void exahype2::dg::internal::copySolution(
 
 void exahype2::dg::explicitEulerOnCell_Flux_EvaluateTermsOnce(
   const double* __restrict__          					cellQin,
+  double* __restrict__                          cellQout,
   const int                           					order,
   const int                           					unknowns,
   const int                           					auxiliaryVariables,
@@ -150,7 +205,10 @@ void exahype2::dg::explicitEulerOnCell_Flux_EvaluateTermsOnce(
   const double* __restrict__                     quadWeights,
   const double* __restrict__                     MassMatrix,
   const double* __restrict__                     StiffnessMatrix,
-  double* __restrict__                           cellQout
+  const double* __restrict__                     DerivativeOperator,
+  bool                                           useFlux,
+  bool                                           useSource,
+  bool                                           useNCP
 ) {
   const int nodesPerAxis = order+1;
 //  const int strideQ=unknowns+auxiliaryVariables;

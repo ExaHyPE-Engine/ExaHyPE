@@ -78,6 +78,7 @@ namespace exahype2 {
      */
     void explicitEulerOnCell_Flux_EvaluateTermsOnce(
       const double* __restrict__                    cellQin,
+      double* __restrict__                          cellQout,
       const int                                     order,
       const int                                     unknowns,
       const int                                     auxiliaryVariables,
@@ -96,7 +97,10 @@ namespace exahype2 {
       const double* __restrict__                     quadWeights,
       const double* __restrict__                     MassMatrix,
       const double* __restrict__                     StiffnessMatrix,
-      double* __restrict__                           cellQout
+      const double* __restrict__                     DerivativeOperator,
+      const bool                                     useFlux,
+      const bool                                     useSource,
+      const bool                                     useNCP
     );
 
 
@@ -115,6 +119,7 @@ namespace exahype2 {
      */
     void explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
         const double* __restrict__                     cellQin,
+        double* __restrict__                           cellQout,
         const int                                      order,
         const int                                      unknowns,
         const int                                      auxiliaryVariables,
@@ -136,7 +141,7 @@ namespace exahype2 {
           double                                       t,
           int                                          normal,
           double * __restrict__                        F
-        ) >   nonconservativeProduct,
+        ) >   nonConservativeProduct,
         std::function< void(
           const double * __restrict__                  Q,
           const tarch::la::Vector<Dimensions,double>&  x,
@@ -147,7 +152,10 @@ namespace exahype2 {
         const double* __restrict__                     quadWeights,
         const double* __restrict__                     MassMatrix,
         const double* __restrict__                     StiffnessMatrix,
-        double* __restrict__                           cellQout
+        const double* __restrict__                     DerivativeOperator,
+        bool                                           useFlux,
+        bool                                           useSource,
+        bool                                           useNCP
     );
 
 

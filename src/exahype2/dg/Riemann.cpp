@@ -57,6 +57,14 @@ void exahype2::dg::computeRusanovOnHull(
       double * __restrict__                        F
     ) >   flux,
     std::function< void(
+      const double * __restrict__                  Q,
+      const double * __restrict__                  dQdx,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t,
+      int                                          normal,
+      double * __restrict__                        F
+    ) >   nonConservativeProduct,
+    std::function< void(
       const double * __restrict__                  Qinside,
       double * __restrict__                        Qoutside,
       const tarch::la::Vector<Dimensions,double>&  x,
@@ -73,7 +81,9 @@ void exahype2::dg::computeRusanovOnHull(
     const double                                  t,
     const double                                  dt,
     const double                                  maxEigenvalueAlongFace[Dimensions*2],
-    const bool                                    atBoundary[Dimensions*2]
+    const bool                                    atBoundary[Dimensions*2],
+    const bool                                    useFlux,
+    const bool                                    useNCP
     ){
 
   const int nodesPerAxis = order+1;
@@ -82,9 +92,22 @@ void exahype2::dg::computeRusanovOnHull(
   const int strideQ = unknowns+auxiliaryVariables;
 
   double* boundaryValuesLeft  = new double[strideQ]{0.0};
-  double* boundaryValuesRight  = new double[strideQ]{0.0};
-  double* fluxValuesLeft       = new double[unknowns]{0.0};
-  double* fluxValuesRight     = new double[unknowns]{0.0};
+  double* boundaryValuesRight = new double[strideQ]{0.0};
+  double* fluxValuesLeft      = nullptr;
+  double* fluxValuesRight     = nullptr;
+  double* ncpValues           = nullptr;
+  double* QValues             = nullptr;
+  double* gradQValues         = nullptr;
+
+  if(useFlux){
+    fluxValuesLeft  = new double[unknowns]{0.0};
+    fluxValuesRight = new double[unknowns]{0.0};
+  }
+  if(useNCP){
+    ncpValues       = new double[unknowns]{0.0};
+    QValues         = new double[strideQ]{0.0};
+    gradQValues     = new double[unknowns]{0.0};
+  }
 
   for(int dim=0; dim<Dimensions; dim++){
     for(int lr=0; lr<2; lr++){
@@ -94,6 +117,7 @@ void exahype2::dg::computeRusanovOnHull(
       const double* qr = nullptr;
 
       for(int node=0; node<nodesPerFace; node++){
+
         /*for dimension i you need to skip 2*(i-1) faces
         **if right face you additionally need to skip left face
         **each skipped face having 2*nodesPerFace elements since it contains elements
@@ -130,31 +154,65 @@ void exahype2::dg::computeRusanovOnHull(
           qr = &QHullIn[2*dim+lr][2*(node+1)*strideQ];
         }
 
-
-        flux(  ql,
-              x, //TODO: add positioning
-              t,
-              dim, //normal
-              fluxValuesLeft);
-        flux(  qr,
-              x, //TODO: add positioning
-              t,
-              dim, //normal
-              fluxValuesRight);
-
         for(int var=0; var<unknowns; var++){
-          //Rusanov flux
-          QHullOut[((2*Dimensions+lr)*nodesPerFace+node)*strideQ] = 0.5*(fluxValuesLeft[var]+fluxValuesRight[var])
-              - coeff*(qr[var]-ql[var]);
-        } //var
+          QHullOut[((2*Dimensions+lr)*nodesPerFace+node)*strideQ] = 0.0;
+        }
+
+        if(useFlux){
+            flux( ql,
+                  x, //TODO: add positioning
+                  t,
+                  dim, //normal
+                  fluxValuesLeft);
+            flux( qr,
+                  x, //TODO: add positioning
+                  t,
+                  dim, //normal
+                  fluxValuesRight);
+
+            for(int var=0; var<unknowns; var++){
+              //Rusanov flux
+              QHullOut[((2*Dimensions+lr)*nodesPerFace+node)*strideQ] += 0.5*(fluxValuesLeft[var]+fluxValuesRight[var])
+                  - coeff*(qr[var]-ql[var]);
+            } //var
+        } //if useFlux
+
+        if(useNCP){
+          for(int var=0; var<unknowns; var++){
+            gradQValues[var] = qr[var] - ql[var];
+          }
+          for(int var=0; var<strideQ; var++){
+            QValues[var] = 0.5* (qr[var] - ql[var]);
+          }
+
+          nonConservativeProduct(
+              QValues,
+              gradQValues,
+              x, //TODO: add positioning
+              t,
+              dim,
+              ncpValues);
+
+          for(int var=0; var<unknowns; var++){
+            QHullOut[((2*Dimensions+lr)*nodesPerFace+node)*strideQ] += coeff*ncpValues[var];
+          }
+        }
 
       } //node
-
     } //lr
   } //dim
 
-  delete [] fluxValuesLeft;
-  delete [] fluxValuesRight;
+  delete [] boundaryValuesLeft;
+  delete [] boundaryValuesRight;
+  if(useFlux){
+    delete [] fluxValuesLeft;
+    delete [] fluxValuesRight;
+  }
+  if(useNCP){
+    delete [] ncpValues;
+    delete [] QValues;
+    delete [] gradQValues;
+  }
 
 }
 

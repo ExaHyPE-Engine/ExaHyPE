@@ -170,7 +170,7 @@ tarch::la::Vector<Dimensions,int> exahype2::dg::getIndex(
 
 
 int exahype2::dg::cellIndexToHullIndex(
-    const tarch::la::Vector<Dimensions,int>&   indexCell,
+    const tarch::la::Vector<Dimensions,int>&  indexCell,
     const int                                 direction,
     const int                                 orientation,
     const int                                 nodesPerAxis
@@ -190,5 +190,35 @@ int exahype2::dg::cellIndexToHullIndex(
    * if right face, need to skip those plus the left face
    */
   return HullIndex + stride*(2*direction+orientation); //stride is nodesPerAxis^(d-⁾
+
+}
+
+
+void exahype2::dg::computeGradient(
+        const double* __restrict__ const QCell,
+        const double* __restrict__ const derivativeOperator,
+        const double                     invDx,
+        const int                        nodesPerAxis,
+        const int                        unknowns,
+        const int                        scalarIndex,
+        double* __restrict__             gradQ
+        ){
+
+  tarch::la::Vector<Dimensions,int> strides = getStrides(nodesPerAxis);
+  tarch::la::Vector<Dimensions,int> index   = getIndex(scalarIndex, strides);
+
+  for(int dim=0; dim<Dimensions; dim++){
+
+    for(int var=0; var<unknowns; var++){
+      gradQ[dim*unknowns+var] = 0.0;
+    }//var
+
+    for(int node=0; node<nodesPerAxis; node++){
+      const double coeff = invDx * derivativeOperator[node*nodesPerAxis + index[dim]];
+      for(int var=0; var<unknowns; var++){
+          gradQ[dim*unknowns+var] += coeff*QCell[(scalarIndex + (index[dim]-node)*strides[dim])*unknowns + var];
+      }//var
+    }//node
+  }//dim
 
 }

@@ -74,6 +74,14 @@ namespace exahype2 {
         double * __restrict__                        F
       ) >   flux,
       std::function< void(
+        const double * __restrict__                  Q,
+        const double * __restrict__                  dQdx,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal,
+        double * __restrict__                        F
+      ) >   nonConservativeProduct,
+      std::function< void(
         const double * __restrict__                  Qinside,
         double * __restrict__                        Qoutside,
         const tarch::la::Vector<Dimensions,double>&  x,
@@ -90,7 +98,9 @@ namespace exahype2 {
       const double                                  t,
       const double                                  dt,
       const double                                  maxEigenvalueAlongFace[Dimensions*2],
-      const bool                                    atBoundary[Dimensions*2]
+      const bool                                    atBoundary[Dimensions*2],
+      const bool                                    useFlux,
+      const bool                                    useNCP
       );
 
   /*

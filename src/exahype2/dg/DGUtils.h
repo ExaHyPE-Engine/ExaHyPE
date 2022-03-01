@@ -128,11 +128,37 @@ namespace exahype2 {
         tarch::la::Vector<Dimensions,int>  strides
     );
 
+    /*
+     * for a given node index within the cell, returns the index of the neighbouring
+     * node on the surface in a given direction with a given orientation.
+     *
+     */
     int cellIndexToHullIndex(
         const tarch::la::Vector<Dimensions,int>&  indexCell,
         const int                                 direction,
         const int                                 orientation,
         const int                                 nodesPerAxis
+        );
+
+    /*
+     * computes the gradient of Q in a given direction for a given node
+     * mostly used for the non-conservative product which requires this
+     * Since the solution is represented by the sum of basis functions, its
+     * derivative at a given node is the sum of the derivatives of the basis
+     * functions evaluated at that node.
+     * The derivative operator contains the value of the derivatives evaluated
+     * at the quadrature nodes, therefore it only needs to be multiplied by
+     * their coefficients.
+     * u(x) = \sum_i \phi_i(x) * u_i => du(x)/dx = d\phi_i(x_i)/dx * u_i
+     */
+    void computeGradient(
+        const double* __restrict__ const QCell,
+        const double* __restrict__ const derivativeOperator,
+        const double                     invDx,
+        const int                        nodesPerAxis,
+        const int                        unknowns,
+        const int                        scalarIndex,
+        double* __restrict__             gradQ
         );
   }
 }
