@@ -210,10 +210,10 @@ AC_ARG_ENABLE(gpu,
   AC_HELP_STRING([--enable-gpu], [build with the GPU support. Not all targets are supported for all programming models, but you will need some threading model enabled [default=no,omp,hip,sycl]]),
   [ AC_MSG_CHECKING(for gpu)
     case "${enableval}" in
-      no)    AC_MSG_RESULT(no);                               gpu=false ;;
-      omp)   AC_MSG_RESULT(build with NVIDIA GPU support);    gpu=omp ;;
-      hip)   AC_MSG_RESULT(build with NVIDIA GPU support);    gpu=hip ;;
-      sycl)  AC_MSG_RESULT(build with intel GPU support);     gpu=sycl ;;
+      no)    AC_MSG_RESULT(no);                                    gpu=false ;;
+      omp)   AC_MSG_RESULT(build with OpenMP offloading to GPUs);  gpu=omp ;;
+      hip)   AC_MSG_RESULT(build with HIP GPU support);            gpu=hip ;;
+      sycl)  AC_MSG_RESULT(build with SYCL GPU support);           gpu=sycl ;;
     esac 
   ],
   [ AC_MSG_CHECKING(for gpu); AC_MSG_RESULT(no); gpu=false ]
@@ -222,7 +222,7 @@ AC_ARG_ENABLE(gpu,
 
 AM_CONDITIONAL([OpenMPGPUOffloading], [test "$gpu" == omp])
 AM_CONDITIONAL([SYCLGPUOffloading],   [test "$gpu" == sycl])
-AM_CONDITIONAL([OpenMPGPUOffloading], [test "$gpu" == omp])
+AM_CONDITIONAL([HIPGPUOffloading],    [test "$gpu" == hip])
 
 
 #
