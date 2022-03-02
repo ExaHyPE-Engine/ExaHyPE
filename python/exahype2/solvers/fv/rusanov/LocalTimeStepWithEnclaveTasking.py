@@ -12,7 +12,7 @@ from .kernels import create_abstract_solver_definitions
 from .kernels import create_solver_declarations
 from .kernels import create_solver_definitions
 from .kernels import create_compute_time_step_size_kernel_for_local_time_stepping
-from .kernels import create_postprocess_updated_patch_for_local_time_stepping
+from .kernels import create_compute_new_time_step_size_kernel_for_local_time_stepping
 from .kernels import create_optimised_Riemann_kernel_template_arguments
 from .kernels import create_abstract_solver_user_declarations_for_local_time_stepping
 from .kernels import create_abstract_solver_user_definitions_for_local_time_stepping
@@ -68,9 +68,11 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._ncp_implementation                  = PDETerms.None_Implementation
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
-    
+ 
+    self._compute_eigenvalue                  = True
+ 
     self._compute_time_step_size              = create_compute_time_step_size_kernel_for_local_time_stepping( name, time_step_relaxation )
-    self._postprocess_updated_patch           = create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation,avoid_staircase_effect,discretisation_steps)
+    self._compute_new_time_step_size          = create_compute_new_time_step_size_kernel_for_local_time_stepping(time_step_relaxation,avoid_staircase_effect,discretisation_steps)
    
     self.set_implementation(flux=flux, 
       ncp=ncp, 

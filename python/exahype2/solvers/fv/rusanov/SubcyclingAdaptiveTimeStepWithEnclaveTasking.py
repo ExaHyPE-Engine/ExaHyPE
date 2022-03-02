@@ -56,6 +56,8 @@ class SubcyclingAdaptiveTimeStepWithEnclaveTasking( EnclaveTasking ):
     self._eigenvalues_implementation          = PDETerms.None_Implementation
     self._source_term_implementation          = PDETerms.None_Implementation
     
+    self._compute_eigenvalue                  = True
+
     self._compute_time_step_size              = create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycling( name )
     self._compute_new_time_step_size          = """
   const double timeStepSize = dt;

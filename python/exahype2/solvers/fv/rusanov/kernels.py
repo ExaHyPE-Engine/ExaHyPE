@@ -50,9 +50,7 @@ def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycl
 
 def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
   result = """
-  const double timeStepSize = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStepSize();  
-  const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
-
+  //const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
   const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, timeStepSize);
 """
 
@@ -65,7 +63,7 @@ def create_compute_time_step_size_kernel_for_adaptive_time_stepping():
 """
 
 
-def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxation, avoid_staircase_effect, discretisation_steps):
+def create_compute_new_time_step_size_kernel_for_local_time_stepping(time_step_relaxation, avoid_staircase_effect, discretisation_steps):
   """
   
   :: Zero eigenvalues
@@ -94,7 +92,6 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
   if avoid_staircase_effect:
     compute_time_step_sizes = """    
     double newTimeStepSize = 0.0;
-    //const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMinVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
     const double minGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize()<std::numeric_limits<double>::max() ? repositories::{{SOLVER_INSTANCE}}.getMinTimeStepSize() : 0.0;
     const double maxGlobalTimeStepSize = repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue()>0.0 ? """ + str(time_step_relaxation) + """ * repositories::{{SOLVER_INSTANCE}}.getMaxVolumeSize(false) / repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() : 0.0;
     if ( tarch::la::greater( maxEigenvalue,0.0) ) {
@@ -131,17 +128,18 @@ def create_postprocess_updated_patch_for_local_time_stepping(time_step_relaxatio
 """    
    
     
-  set_time_step_size = """    
-    if ( tarch::la::equals(newTimeStepSize,0.0) ) {
-      logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
-    }
-    else {
-      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);    
-    }
-"""
+#  set_time_step_size = """    
+#    if ( tarch::la::equals(newTimeStepSize,0.0) ) {
+#      logDebug( "touchCellFirstTime(...)", "can't do a time step on cell " << marker.toString() << " as global max eigenvalue=" << repositories::{{SOLVER_INSTANCE}}.getMaxEigenvalue() );
+#      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(0.0);    
+#    }
+#    else {
+#      fineGridCell{{SOLVER_NAME}}CellLabel.setTimeStepSize(newTimeStepSize);    
+#    }
+#"""
 
-  return determine_eigenvalue + compute_time_step_sizes + set_time_step_size
+  return determine_eigenvalue + compute_time_step_sizes
+  #+ set_time_step_size
     
     
 def create_compute_new_time_step_size_kernel_for_adaptive_time_stepping():
