@@ -229,19 +229,6 @@ and
 
  */
   namespace multicore {
-     #if defined(GPUOffloading) and defined(UseAMD)
-       #define  GPUCallableMethod __global__ __device__
-       #undef   OpenMPGPUOffloading
-     #elif defined(GPUOffloading) and defined(SharedOMP)
-       #define  GPUCallableMethod
-       #define  OpenMPGPUOffloading
-     #elif defined(GPUOffloading)
-       #error GPU Offloading without HIP and OpenMP requested. Not supported
-     #else
-      #define  GPUCallableMethod 
-      #undef   OpenMPGPUOffloading
-     #endif
-
      /**
       * Switch on SmartMPI
       *

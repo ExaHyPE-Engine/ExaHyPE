@@ -145,7 +145,7 @@ AC_ARG_WITH(
     case "${withval}" in
       no)     AC_MSG_RESULT([no multithreading]);                    multithreading=false ;;
       cpp)    AC_MSG_RESULT([build with C++11 threading support]);   multithreading=cpp ;;
-      tbb)    AC_MSG_RESULT([build with SYCL]);                      multithreading=tbb ;;
+      tbb)    AC_MSG_RESULT([build with TBB]);                       multithreading=tbb ;;
       omp)    AC_MSG_RESULT([build with OpenMP - please ensure you pass -fopenmp/-qopenmp/-openmp or similar to your CXX flags]); multithreading=omp ;;
       *)      AC_MSG_FAILURE([default=no (no multithreading). Use omp, cpp or sycl to define target]);            multithreading=false ;;
     esac
