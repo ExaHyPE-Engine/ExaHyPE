@@ -24,7 +24,8 @@ BasisFunctionValuesRight {-0.113917196281990040773735017864964902400970458984375
 
 void exahype2::dg::tests::DGTest::run() {
   testMethod(UtilsTest);
-  testMethod(runDG);
+  testMethod(runDGEuler);
+  testMethod(runDGElastic);
 }
 
 void exahype2::dg::tests::DGTest::UtilsTest() {
@@ -42,9 +43,36 @@ void exahype2::dg::tests::DGTest::UtilsTest() {
     validateEquals(index[i], nodesPerAxis-1);
   }
 
+
+  /*
+   * testing gradient by running it on a cell with constant values.
+   * since the values are constant, the gradient should be zero everywhere
+   */
+  // 1 unknown, 1 auxiliary variable
+  double cellQin[2*nodesPerCell];
+  double gradientValues[Dimensions];
+  for(int i=0; i<nodesPerCell; i++){
+    cellQin[2*i] = 0.0;
+  }
+
+  for(int node=0; node<nodesPerCell; node++){
+    computeGradient(
+      cellQin,
+      DerivativeOperator,
+      10, //invDx
+      nodesPerAxis,
+      1, //unknowns
+      1, //auxiliaryVariables
+      node,
+      gradientValues
+      );
+    for(int var=0; var<Dimensions; var++){
+      validateNumericalEquals(gradientValues[var], 0.0);
+    }
+  }
 }
 
-void exahype2::dg::tests::DGTest::runDG(){
+void exahype2::dg::tests::DGTest::runDGEuler(){
   /*
    * In one step of a DG solver, following substeps are taken:
    * 1) computation of the integral within the cell, for this all contributions within the cell
@@ -56,6 +84,8 @@ void exahype2::dg::tests::DGTest::runDG(){
    *    between the two cells is computed (here a rusanov flux is used)
    * 4) Finally, the contributions from the neighbouring cells are added to each node in a cell
    */
+
+  file_stream << "Starting Euler test in " << Dimensions << " dimensions\n\n";
 
   // geometry
   const tarch::la::Vector<Dimensions, double> x({0.0, 0.0});
@@ -70,7 +100,7 @@ void exahype2::dg::tests::DGTest::runDG(){
 
   //Parameter initialisation and memory allocation
   const int nodesPerAxis = order+1;
-  const int nodesPerCell = getNodesPerCell(order+1);
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
   const int nodesPerFace = nodesPerCell/nodesPerAxis;
   const int strideQ = unknowns+auxiliaryVariables;
 
@@ -95,7 +125,7 @@ void exahype2::dg::tests::DGTest::runDG(){
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
         for(int var=0; var<strideQ;var++){
-          file_stream << QIn[i*(order+1)  +var] << ", ";
+          file_stream << QIn[i*strideQ+var] << ", ";
         }
     file_stream << "]\n";
   }
@@ -146,8 +176,8 @@ void exahype2::dg::tests::DGTest::runDG(){
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
         for(int var=0; var<strideQ;var++){
-          file_stream << QOut[i*(order+1)  +var] << ", ";
-          validateNumericalEquals(QOut[i*nodesPerAxis  +var], QIn[i*nodesPerAxis  +var]);
+          file_stream << QOut[i*strideQ  +var] << ", ";
+          validateNumericalEquals(QOut[i*strideQ  +var], QIn[i*strideQ  +var]);
         }
     file_stream << "]\n";
   }
@@ -220,25 +250,25 @@ void exahype2::dg::tests::DGTest::runDG(){
   }
 
 #if Dimension==3
-  file_stream << "Lower Face:\n";
+  file_stream << "Front Face:\n";
   for(int i=0; i<2*nodesPerFace; i++){
     file_stream << "node " << i << ": [";
     for(int var=0; var<strideQ;var++){
-      file_stream << QLower[i*strideQ + var] << ", ";
+      file_stream << QFront[i*strideQ + var] << ", ";
       if(i%2==1){
-        validateNumericalEquals(QLower[i*strideQ  +var], 1.0);
+        validateNumericalEquals(QFront[i*strideQ  +var], 1.0);
       }
     }
     file_stream << "]\n";
   }
 
-  file_stream << "Upper Face:\n";
+  file_stream << "Back Face:\n";
   for(int i=0; i<2*nodesPerFace; i++){
     file_stream << "node " << i << ": [";
     for(int var=0; var<strideQ;var++){
-      file_stream << QUpper[i*strideQ  + var] << ", ";
+      file_stream << QBack[i*strideQ  + var] << ", ";
       if(i%2==0){
-        validateNumericalEquals(QUpper[i*strideQ  +var], 1.0);
+        validateNumericalEquals(QBack[i*strideQ  +var], 1.0);
       }
     }
     file_stream << "]\n";
@@ -394,11 +424,438 @@ void exahype2::dg::tests::DGTest::runDG(){
   for(int i=0; i<nodesPerCell; i++){
     file_stream << "node " << i << ": [";
         for(int var=0; var<strideQ;var++){
-          file_stream << QOut[i*(order+1)  +var] << ", ";
-          validateNumericalEquals(QOut[i*(order+1)+var], QIn[i*(order+1)+var]);
+          file_stream << QOut[i*strideQ+var] << ", ";
+          validateNumericalEquals(QOut[i*strideQ+var], QIn[i*strideQ+var]);
         }
     file_stream << "]\n";
   }
+
+  file_stream << "\n\n";
+
+  delete [] QIn;
+  delete [] QOut;
+  delete [] QLeft;
+  delete [] QRight;
+  delete [] QLower;
+  delete [] QUpper;
+#if Dimensions==3
+  delete [] QFront;
+  delete [] QBack;
+#endif
+
+}
+
+void exahype2::dg::tests::DGTest::runDGElastic(){
+
+  file_stream << "Starting Elastic test in " << Dimensions << " dimensions\n\n";
+
+  // geometry
+  const tarch::la::Vector<Dimensions, double> x({0.0, 0.0});
+  const double dx = 0.01;
+  const double t  = 0.0;
+  const double dt = 0.01;
+
+  //using euler equations as example
+  const int unknowns = 9;
+  const int auxiliaryVariables = 3;
+  const int order = 3;
+
+  //Parameter initialisation and memory allocation
+  const int nodesPerAxis = order+1;
+  const int nodesPerCell = getNodesPerCell(nodesPerAxis);
+  const int nodesPerFace = nodesPerCell/nodesPerAxis;
+  const int strideQ = unknowns+auxiliaryVariables;
+
+  double*  QIn     = new double[nodesPerCell*(unknowns+auxiliaryVariables)]{1.0};
+  double*  QOut    = new double[2*nodesPerCell*(unknowns+auxiliaryVariables)]{0.0};
+  double* QLeft    = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
+  double* QRight   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
+  double* QLower   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
+  double* QUpper   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
+  #if Dimensions==3
+  double* QFront   = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
+  double* QBack    = new double[2*nodesPerFace*(unknowns+auxiliaryVariables)]{0.0};
+  #endif
+
+  //initialisation of the initial value
+  for(int i=0; i<nodesPerCell; i++){
+    elasticInitial(&QIn[i*strideQ]);
+  }
+
+  //logging the results (and in the next steps, verify their correctness)
+  file_stream << "Starting values are: \n";
+  for(int i=0; i<nodesPerCell; i++){
+    file_stream << "node " << i << ": [";
+        for(int var=0; var<strideQ; var++){
+          file_stream << QIn[i*strideQ+var] << ", ";
+        }
+    file_stream << "]\n";
+  }
+
+  const double invDx = 1.0/dx;
+  computeGradient(
+    QIn,
+    DerivativeOperator,
+    invDx,
+    nodesPerAxis,
+    unknowns,
+    auxiliaryVariables,
+    0,
+    QOut
+    );
+
+  explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
+      QIn,
+      QOut,
+      order,
+      unknowns,
+      auxiliaryVariables,
+      x,
+      dx,
+      t,
+      dt,
+      [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          int                                          normal,
+          double * __restrict__                        F
+          ) -> void {
+          elasticFlux(Q,x,t,normal,F);
+        },
+      [&](
+          const double * __restrict__                  Q,
+          const double * __restrict__                  dQdx,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          int                                          normal,
+          double * __restrict__                        F
+        ) -> void {
+          elasticNonConservativeProduct(Q, dQdx, x, t, normal, F);
+        },
+      [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          double * __restrict__                        S
+        ) -> void {
+          elasticSource(Q,x,t,S);
+        },
+      QuadraturePoints,
+      QuadratureWeights,
+      MassMatrix,
+      StiffnessOperator,
+      DerivativeOperator,
+      true,
+      true,
+      true);
+
+  file_stream << "\nComputed volume integral values are: \n";
+  for(int i=0; i<nodesPerCell; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << QOut[i*strideQ+var] << ", ";
+      validateNumericalEquals(QOut[i*strideQ+var], QIn[i*strideQ+var]+dt);
+    }
+    for(int var=0; var<auxiliaryVariables;var++){
+      file_stream << QOut[i*strideQ+unknowns+var] << ", ";
+      validateNumericalEquals(QOut[i*strideQ+unknowns+var], QIn[i*strideQ+unknowns+var]);
+    }
+    file_stream << "]\n";
+  }
+
+
+  /*
+   * Step 2), the values computed in step 1) are extrapolated to the surface boundary
+   */
+  projectVolumetricDataOntoFaces(
+    QOut,
+    order,
+    unknowns+auxiliaryVariables,
+    BasisFunctionValuesLeft,
+    BasisFunctionValuesRight,
+    QLeft,
+    QRight,
+    QLower,
+    QUpper
+#if Dimensions==3
+    ,QFront,
+    QBack
+#endif
+  );
+
+  const double auxValues[auxiliaryVariables] = {4.0, 2.0, 2.6};
+
+  file_stream << "\nProjected Face values are: \n Left Face:\n";
+  for(int i=0; i<2*nodesPerFace; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns; var++){
+      file_stream << QLeft[i*strideQ+var] << ", ";
+      if(i%2==1){
+        validateNumericalEquals(QLeft[i*strideQ+var], dt);
+      }
+    }
+    for(int var=0; var<auxiliaryVariables; var++){
+      file_stream << QLeft[i*strideQ+unknowns+var] << ", ";
+      if(i%2==1){
+        validateNumericalEquals(QLeft[i*strideQ+unknowns+var], auxValues[var]);
+      }
+    }
+    file_stream << "]\n";
+  }
+
+  file_stream << "Right Face:\n";
+  for(int i=0; i<2*nodesPerFace; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << QRight[i*strideQ+var] << ", ";
+      if(i%2==0){
+        validateNumericalEquals(QRight[i*strideQ+var], dt);
+      }
+    }
+    for(int var=0; var<auxiliaryVariables;var++){
+      file_stream << QRight[i*strideQ+unknowns+var] << ", ";
+      if(i%2==0){
+        validateNumericalEquals(QRight[i*strideQ+unknowns+var], auxValues[var]);
+      }
+    }
+    file_stream << "]\n";
+  }
+
+  file_stream << "Lower Face:\n";
+  for(int i=0; i<2*nodesPerFace; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << QLower[i*strideQ+var] << ", ";
+      if(i%2==1){
+        validateNumericalEquals(QLower[i*strideQ+var], dt);
+      }
+    }
+    for(int var=0; var<auxiliaryVariables;var++){
+      file_stream << QLower[i*strideQ+unknowns+var] << ", ";
+      if(i%2==1){
+        validateNumericalEquals(QLower[i*strideQ+unknowns+var], auxValues[var]);
+      }
+    }
+    file_stream << "]\n";
+  }
+
+  file_stream << "Upper Face:\n";
+  for(int i=0; i<2*nodesPerFace; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << QUpper[i*strideQ+var] << ", ";
+      if(i%2==0){
+        validateNumericalEquals(QUpper[i*strideQ+var], dt);
+      }
+    }
+    for(int var=0; var<auxiliaryVariables;var++){
+      file_stream << QUpper[i*strideQ+unknowns+var] << ", ";
+      if(i%2==0){
+        validateNumericalEquals(QUpper[i*strideQ+unknowns+var], auxValues[var]);
+      }
+    }
+    file_stream << "]\n";
+  }
+
+#if Dimension==3
+  file_stream << "Front Face:\n";
+  for(int i=0; i<2*nodesPerFace; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << QFront[i*strideQ+var] << ", ";
+      if(i%2==1){
+        validateNumericalEquals(QFront[i*strideQ+var], dt);
+      }
+    }
+    for(int var=0; var<auxiliaryVariables;var++){
+      file_stream << QFront[i*strideQ+unknowns+var] << ", ";
+      if(i%2==1){
+        validateNumericalEquals(QFront[i*strideQ+unknowns+var], auxValues[var]);
+      }
+    }
+    file_stream << "]\n";
+  }
+
+  file_stream << "Back Face:\n";
+  for(int i=0; i<2*nodesPerFace; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << QBack[i*strideQ+var] << ", ";
+      if(i%2==0){
+        validateNumericalEquals(QBack[i*strideQ+var], dt);
+      }
+    }
+    for(int var=0; var<auxiliaryVariables;var++){
+      file_stream << QBack[i*strideQ+unknowns+var] << ", ";
+      if(i%2==0){
+        validateNumericalEquals(QBack[i*strideQ+unknowns+var], auxValues[var]);
+      }
+    }
+    file_stream << "]\n";
+  }
+#endif
+
+  /*
+   *  project data onto opposite face as well to trade with "identical" cell,
+   *  this essentially simulates the exchange of surface data with the
+   *  neighbouring cells which Peano would take care of for us normally
+   */
+  projectVolumetricDataOntoFaces(
+    QOut,
+    order,
+    unknowns+auxiliaryVariables,
+    BasisFunctionValuesLeft,
+    BasisFunctionValuesRight,
+    QRight,
+    QLeft,
+    QUpper,
+    QLower
+#if Dimensions==3
+    ,QBack,
+    QFront
+#endif
+  );
+
+  /*
+  * The faces are assembled into one pointer construct for ease of access in the
+  * next steps. In addition information about whether the faces are at the boundary
+  * is provided since at the boundary the flux must be computed with boundary values
+  * instead of using the extrapolated solution from the neighbour.
+  */
+  double* QHull[Dimensions*2];
+  QHull[0] = QLeft;
+  QHull[1] = QRight;
+  QHull[2] = QLower;
+  QHull[3] = QUpper;
+  bool atBoundary[Dimensions*2];
+  atBoundary[0] = false;
+  atBoundary[1] = true;
+  atBoundary[2] = false;
+  atBoundary[3] = true;
+
+#if Dimensions==3
+  QHull[4] = QBack;
+  QHull[5] = QFront;
+  atBoundary[4] = false;
+  atBoundary[5] = true;
+#endif
+
+  double maxEigenvaluePerFace[Dimensions*2];
+
+  /*
+   * this computes the maximal eigenvalue of the solution on each surface
+   * for the rusanov flux computation
+   */
+  getMaxEigenvaluePerFace(
+    [&](
+      const double * __restrict__                 Q,
+      const tarch::la::Vector<Dimensions,double>& x,
+      double                                      t,
+      int                                          normal
+      ) -> double {
+        return elasticEigenvalue(Q,x,t,normal);
+      },
+    QHull,
+    order,
+    unknowns,
+    auxiliaryVariables,
+    x,
+    t,
+    maxEigenvaluePerFace
+  );
+
+  file_stream << "\nMax Eigenvalues per Face:\n";
+  for(int i=0; i<Dimensions*2; i++){
+    file_stream << "Max Eigenvalues at face " << i << ": " << maxEigenvaluePerFace[i] << std::endl;
+    validateNumericalEquals(maxEigenvaluePerFace[i], 2.6);
+  }
+
+  double* QHullForRiemann = new double[2*Dimensions*nodesPerFace*strideQ]{0.0};
+
+  /*
+   * This step computes the rusanov flux for each surface at each node
+   */
+  computeRusanovOnHull(
+      [&](
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          int                                          normal,
+          double * __restrict__                        F
+          ) -> void {
+          eulerFlux(Q,x,t,normal,F);
+        },
+        nullptr,
+        [&](
+          const double * __restrict__                  Qinside,
+          double * __restrict__                         Qoutside,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          int                                          normal
+        ) -> void {
+          eulerBoundaryConditions(Qinside, Qoutside, x, t, normal);
+        },
+        QHull,
+        QHullForRiemann,
+        order,
+        unknowns,
+        auxiliaryVariables,
+        x,
+        dx,
+        t,
+        dt,
+        maxEigenvaluePerFace,
+        atBoundary,
+        true,
+        false
+        );
+
+  file_stream << "\nRusanov Fluxes per Face:\n";
+  for(int f=0; f<2*Dimensions; f++){
+    file_stream << "At face " << f << "\n";
+    for(int i=0; i<nodesPerFace; i++){
+      file_stream << "at node " << i << ": [";
+      for(int var=0; var<strideQ; var++){
+        file_stream << QHullForRiemann[(f*nodesPerFace+i)*strideQ+var] << ", ";
+        validateNumericalEquals(QHullForRiemann[(f*nodesPerFace+i)*strideQ+var], 0.0);
+      }
+      file_stream << "]\n";
+    }
+  }
+
+  /*
+   * The contributions from the computed rusanov flux are then added to the nodes
+   * within the cell.
+   */
+  applyRiemannToPatch(
+      QOut,
+      QHullForRiemann,
+      order,
+      unknowns,
+      auxiliaryVariables,
+      dx,
+      dt,
+      BasisFunctionValuesLeft,
+      BasisFunctionValuesRight,
+      QuadratureWeights
+      );
+
+  file_stream << "\nFinal values are: \n";
+  for(int i=0; i<nodesPerCell; i++){
+    file_stream << "node " << i << ": [";
+    for(int var=0; var<unknowns;var++){
+      file_stream << QOut[i*strideQ+var] << ", ";
+      validateNumericalEquals(QOut[i*strideQ+var], QIn[i*strideQ+var]+dt);
+    }
+    for(int var=0; var<auxiliaryVariables;var++){
+      file_stream << QOut[i*strideQ+unknowns+var] << ", ";
+      validateNumericalEquals(QOut[i*strideQ+unknowns+var], QIn[i*strideQ+unknowns+var]);
+    }
+    file_stream << "]\n";
+  }
+
+  file_stream << "\n\n";
 
   delete [] QIn;
   delete [] QOut;

@@ -33,7 +33,8 @@ class exahype2::dg::tests::DGTest : public tarch::tests::TestCase {
     const double BasisFunctionValuesRight[(3+1)];
 
     void UtilsTest();
-    void runDG();
+    void runDGEuler();
+    void runDGElastic();
 
   public:
     DGTest();

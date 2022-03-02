@@ -20,6 +20,7 @@ void exahype2::dg::tests::eulerFlux(
   F[4] = velocity*(Q[4]+p);
 }
 
+
 void exahype2::dg::tests::eulerSource(
       const double * __restrict__                  Q,
       const tarch::la::Vector<Dimensions,double>&  x,
@@ -32,6 +33,7 @@ void exahype2::dg::tests::eulerSource(
   S[3] = 0.0;
   S[4] = 0.0;
 }
+
 
 double exahype2::dg::tests::eulerEigenvalue(
       const double * __restrict__                 Q,
@@ -74,4 +76,153 @@ void exahype2::dg::tests::eulerBoundaryConditions(
   Qoutside[2] = Qinside[2];
   Qoutside[3] = Qinside[3];
   Qoutside[4] = Qinside[4];
+}
+
+
+void exahype2::dg::tests::elasticInitial(double * __restrict__ Q){
+  for(int i=0; i<9; i++){
+    Q[i] = 0.0; //6 stresses, 3 velocities
+  }
+  //auxiliary variables
+  Q[9]  = 4.0; //rho
+  Q[10] = 2.0; //cp
+  Q[11] = 2.6; //cs
+}
+
+
+void exahype2::dg::tests::elasticFlux(
+        const double * __restrict__                  Q,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal,
+        double * __restrict__                        F
+      ){
+  //stresses
+  for(int i=0; i<6; i++){
+    F[i] = 0;
+  }
+
+  //velocities
+  switch(normal){
+  case 0: //x
+    F[6] = Q[0]; //xx
+    F[7] = Q[3]; //xy
+    F[8] = Q[4]; //xz
+    break;
+  case 1: //y
+    F[6] = Q[3]; //xy
+    F[7] = Q[1]; //yy
+    F[8] = Q[5]; //yz
+    break;
+  case 2: //z
+    F[6] = Q[4]; //xz
+    F[7] = Q[5]; //yz
+    F[8] = Q[2]; //zz
+    break;
+  }
+
+}
+
+
+void exahype2::dg::tests::elasticSource(
+      const double * __restrict__                  Q,
+      const tarch::la::Vector<Dimensions,double>&  x,
+      double                                       t,
+      double * __restrict__                        S
+    ){
+
+  S[0] = 1.0;
+  S[1] = 1.0;
+  S[2] = 1.0;
+  S[3] = 1.0;
+  S[4] = 1.0;
+  S[5] = 1.0;
+  S[6] = 1.0;
+  S[7] = 1.0;
+  S[8] = 1.0;
+
+}
+
+
+double exahype2::dg::tests::elasticEigenvalue(
+    const double * __restrict__                 Q,
+    const tarch::la::Vector<Dimensions,double>& x,
+    double                                      t,
+    int                                          normal
+    ){
+
+  double result = std::max(std::abs(Q[10]), std::abs(Q[11]));
+  return result;
+
+}
+
+
+void exahype2::dg::tests::elasticBoundaryConditions(
+        const double * __restrict__                  Qinside,
+        double * __restrict__                        Qoutside,
+        const tarch::la::Vector<Dimensions,double>&  x,
+        double                                       t,
+        int                                          normal
+      ){
+
+  Qoutside[0] = Qinside[0];
+  Qoutside[1] = Qinside[1];
+  Qoutside[2] = Qinside[2];
+  Qoutside[3] = Qinside[3];
+  Qoutside[4] = Qinside[4];
+  Qoutside[5] = Qinside[5];
+  Qoutside[6] = Qinside[6];
+  Qoutside[7] = Qinside[7];
+  Qoutside[8] = Qinside[8];
+  Qoutside[9] = Qinside[9];
+  Qoutside[10] = Qinside[10];
+  Qoutside[11] = Qinside[11];
+
+}
+
+
+void exahype2::dg::tests::elasticNonConservativeProduct(
+    const double * __restrict__                  Q,
+    const double * __restrict__                  deltaQ,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    double                                       t,
+    int                                          normal,
+    double * __restrict__                        BgradQ // BgradQ[9]
+  ){
+  //Lamé parameters
+  double mu = Q[9] * Q[11] * Q[11]; //rho*cs^2
+  double lambda = Q[9] * Q[10] * Q[10] - 2 * mu; //rho*cp^2 - 2 mu
+
+  //stresses
+  switch(normal){
+  case 0: //x
+    BgradQ[0] = (lambda + 2*mu) * deltaQ[6]; //xx
+    BgradQ[1] =  lambda * deltaQ[6];         //yy
+    BgradQ[2] =  lambda * deltaQ[6];       //zz
+    BgradQ[3] =  mu * deltaQ[7];         //xy
+    BgradQ[4] =  mu * deltaQ[8];         //xz
+    BgradQ[5] =  0;              //yz
+    break;
+  case 1: //y
+    BgradQ[0] =  lambda * deltaQ[7];         //xx
+    BgradQ[1] = (lambda + 2*mu) * deltaQ[7]; //yy
+    BgradQ[2] =  lambda * deltaQ[7];       //zz
+    BgradQ[3] =  mu * deltaQ[6];         //xy
+    BgradQ[4] =  0;              //xz
+    BgradQ[5] =  mu * deltaQ[8];         //yz
+    break;
+  case 2:
+    BgradQ[0] =  lambda * deltaQ[8];         //xx
+    BgradQ[1] =  lambda * deltaQ[8];       //yy
+    BgradQ[2] = (lambda + 2*mu) * deltaQ[8]; //zz
+    BgradQ[3] =  0;              //xy
+    BgradQ[4] =  mu * deltaQ[6];         //xz
+    BgradQ[5] =  mu * deltaQ[7];         //yz
+    break;
+  }
+
+  //velocities
+  BgradQ[6] = 0;
+  BgradQ[7] = 0;
+  BgradQ[8] = 0;
 }

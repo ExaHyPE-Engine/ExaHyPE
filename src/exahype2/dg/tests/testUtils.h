@@ -38,7 +38,7 @@ namespace exahype2 {
         const double * __restrict__                 Q,
         const tarch::la::Vector<Dimensions,double>& x,
         double                                      t,
-        int                                          normal
+        int                                         normal
         );
 
     void eulerBoundaryConditions(
@@ -48,6 +48,49 @@ namespace exahype2 {
             double                                       t,
             int                                          normal
           );
+
+    void elasticInitial(
+            double * __restrict__                        Q
+          );
+
+    void elasticFlux(
+            const double * __restrict__                  Q,
+            const tarch::la::Vector<Dimensions,double>&  x,
+            double                                       t,
+            int                                          normal,
+            double * __restrict__                        F
+          );
+
+    void elasticSource(
+          const double * __restrict__                  Q,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          double * __restrict__                        S
+        );
+
+    double elasticEigenvalue(
+        const double * __restrict__                 Q,
+        const tarch::la::Vector<Dimensions,double>& x,
+        double                                      t,
+        int                                         normal
+        );
+
+    void elasticBoundaryConditions(
+            const double * __restrict__                  Qinside,
+            double * __restrict__                        Qoutside,
+            const tarch::la::Vector<Dimensions,double>&  x,
+            double                                       t,
+            int                                          normal
+          );
+
+    void elasticNonConservativeProduct(  const double * __restrict__  Q,
+        const double * __restrict__                                   deltaQ,
+        const tarch::la::Vector<Dimensions,double>&                   faceCentre,
+        double                                                        t,
+        int                                                           normal,
+        double * __restrict__                                         BgradQ
+      );
+
     }
   }
 }
