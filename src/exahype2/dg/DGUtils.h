@@ -157,6 +157,7 @@ namespace exahype2 {
         const double                     invDx,
         const int                        nodesPerAxis,
         const int                        unknowns,
+        const int                        auxiliaryVariables,
         const int                        scalarIndex,
         double* __restrict__             gradQ
         );

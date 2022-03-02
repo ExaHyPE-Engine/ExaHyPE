@@ -99,8 +99,8 @@ namespace exahype2 {
       const double* __restrict__                     StiffnessMatrix,
       const double* __restrict__                     DerivativeOperator,
       const bool                                     useFlux,
-      const bool                                     useSource,
-      const bool                                     useNCP
+      const bool                                     useNCP,
+      const bool                                     useSource
     );
 
 
@@ -154,8 +154,8 @@ namespace exahype2 {
         const double* __restrict__                     StiffnessMatrix,
         const double* __restrict__                     DerivativeOperator,
         bool                                           useFlux,
-        bool                                           useSource,
-        bool                                           useNCP
+        bool                                           useNCP,
+        bool                                           useSource
     );
 
 

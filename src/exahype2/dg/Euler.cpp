@@ -39,8 +39,8 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     const double* __restrict__                     StiffnessMatrix,
     const double* __restrict__                     DerivativeOperator,
     const bool                                     useFlux,
-    const bool                                     useSource,
-    const bool                                     useNCP
+    const bool                                     useNCP,
+    const bool                                     useSource
 ) {
 
   const int nodesPerAxis = order+1;
@@ -63,7 +63,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
     sourceValues    = new double[unknowns]{0.0};
   }
   if(useNCP){
-    gradientValues  = new double[unknowns]{0.0};
+    gradientValues  = new double[unknowns*Dimensions]{0.0};
     ncpValues       = new double[unknowns]{0.0};
   }
 
@@ -136,6 +136,7 @@ void exahype2::dg::explicitEulerOnCell_FluxNCPSource_EvaluateTermsRedundantly(
           invDx,
           nodesPerAxis,
           unknowns,
+          auxiliaryVariables,
           node,
           gradientValues
           );
