@@ -4,7 +4,7 @@
 // This implementation is valid iff neither OpenMP nor TBBs nor any other
 // shared memory parallelisation are active
 
-#if defined(SharedSYCL)
+#if defined(SharedTBB)
 
 tarch::multicore::BooleanSemaphore::BooleanSemaphore() {
 }

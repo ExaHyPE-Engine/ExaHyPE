@@ -2,7 +2,7 @@
 // use, please see the copyright notice at www.peano-framework.org
 #if defined(SharedCPP)
   #include "cpp/RecursiveSemaphore.h"
-#elif defined(SharedSYCL)
+#elif defined(SharedTBB)
   #include "sycl/RecursiveSemaphore.h"
 #elif defined(SharedOMP)
   #include "omp/RecursiveSemaphore.h"

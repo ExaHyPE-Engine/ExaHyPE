@@ -11,7 +11,7 @@
 #include "tarch/logging/Statistics.h"
 
 
-#if defined(SharedSYCL)
+#if defined(SharedTBB)
 
 #include <CL/sycl.hpp>
 #include <tbb/task_group.h>

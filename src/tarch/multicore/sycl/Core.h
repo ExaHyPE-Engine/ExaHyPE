@@ -7,7 +7,7 @@
 #include "tarch/multicore/multicore.h"
 
 
-#if defined(SharedSYCL)
+#if defined(SharedTBB)
 
 namespace tarch {
   namespace multicore {

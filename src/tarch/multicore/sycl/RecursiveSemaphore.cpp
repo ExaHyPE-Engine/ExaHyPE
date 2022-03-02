@@ -1,7 +1,7 @@
 #include "RecursiveSemaphore.h"
 
 
-#ifdef SharedSYCL
+#ifdef SharedTBB
 
 tarch::multicore::RecursiveSemaphore::RecursiveSemaphore() {
 }

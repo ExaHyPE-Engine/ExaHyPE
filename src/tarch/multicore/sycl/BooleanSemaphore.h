@@ -15,7 +15,7 @@ namespace tarch {
 }
 
 
-#if defined(SharedSYCL)
+#if defined(SharedTBB)
 
 #include <tbb/spin_mutex.h>
 

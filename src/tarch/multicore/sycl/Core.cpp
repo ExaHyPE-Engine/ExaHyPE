@@ -9,7 +9,7 @@
 #endif
 
 
-#if defined(SharedSYCL)
+#if defined(SharedTBB)
 #include "Core.h"
 
 #include <sstream>
