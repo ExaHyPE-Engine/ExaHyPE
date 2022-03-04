@@ -50,8 +50,7 @@ def create_compute_time_step_size_kernel_for_adaptive_time_stepping_with_subcycl
 
 def create_compute_time_step_size_kernel_for_local_time_stepping( solver_name, time_step_relaxation ):
   result = """
-  //const double timeStamp    = fineGridCell{{SOLVER_NAME}}CellLabel.getTimeStamp();  
-  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, timeStepSize);
+  const double timeStepSize = ::exahype2::removeTimeStepAccumulationErrorsFromCell( fineGridCell""" + solver_name + """CellLabel, fineGridFaces""" + solver_name + """FaceLabel, fineGridCell""" + solver_name + """CellLabel.getTimeStepSize() );
 """
 
   return result
