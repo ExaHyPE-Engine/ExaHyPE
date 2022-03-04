@@ -33,6 +33,7 @@
 #include "observers/HydroPrepareForce.h"
 #include "observers/NewtonRaphsonSmoothingLength.h"
 #include "observers/Kick.h"
+#include "observers/HydroKickExtra.h"
 #include "observers/Drift.h"
 #include "observers/RearrangeAtStart.h"
 
@@ -216,11 +217,12 @@ int main(int argc, char** argv) {
         examples::particles::observers::Kick kickObserver;                     // Actual Kick from current time-step
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickObserver);
 
+        examples::particles::observers::HydroKickExtra kickExtra;              // Evolve internal energy
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+
         examples::particles::observers::Drift driftObserver;                   // Drift from current time-step
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftObserver);
      
-//        examples::particles::observers::Move moveObserver;
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(moveObserver);
       }
       logInfo( "main()", "plot" )
       examples::particles::observers::Plot plotTimeStepObserver;
