@@ -11,9 +11,11 @@
 #include "tarch/logging/Statistics.h"
 
 
-#if defined(SharedTBB)
-
+#if defined(SYCLGPUOffloading)
 #include <CL/sycl.hpp>
+#endif
+
+#if defined(SharedTBB)
 #include <tbb/task_group.h>
 #include <tbb/task_arena.h>
 

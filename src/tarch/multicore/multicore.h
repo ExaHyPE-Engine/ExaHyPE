@@ -253,6 +253,13 @@ and
     ManagedAcceleratorMemory
   };
 
+  #if defined(HIPGPUOffloading)
+    #define GPUCallableMethod __global__ __device__
+  #else
+    #define GPUCallableMethod
+  #endif
+
+
   #if defined(OpenMPGPUOffloading)
   #pragma omp declare target
   #endif
