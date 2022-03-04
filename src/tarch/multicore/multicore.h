@@ -3,6 +3,7 @@
 
 
 #include "config.h"
+#include "tarch/compiler/CompilerSpecificSettings.h"
 
 
 #include <string>
@@ -255,6 +256,8 @@ and
 
   #if defined(HIPGPUOffloading)
     #define GPUCallableMethod __global__ __device__
+  #elif defined(UseManualInlining)
+    #define GPUCallableMethod __attribute__((always_inline))
   #else
     #define GPUCallableMethod
   #endif

@@ -414,7 +414,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static double maxEigenvalue(
+    static GPUCallableMethod double maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -452,7 +452,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static void flux(
+    static GPUCallableMethod void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -487,7 +487,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static void nonconservativeProduct(
+    static GPUCallableMethod void nonconservativeProduct(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -524,7 +524,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static void sourceTerm(
+    static GPUCallableMethod void sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -627,7 +627,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -647,7 +647,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -672,7 +672,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -698,7 +698,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
 #if defined(OpenMPGPUOffloading)
 #pragma omp declare target
 #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
       const double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -803,7 +803,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-     static void sourceTerm(
+    static GPUCallableMethod void sourceTerm(
        const double * __restrict__ Q,
        const tarch::la::Vector<Dimensions,double>&  volumeCentre,
        const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -836,7 +836,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static double maxEigenvalue(
+    static GPUCallableMethod double maxEigenvalue(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -868,7 +868,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static void flux(
+    static GPUCallableMethod void flux(
       const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -901,7 +901,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static void nonconservativeProduct(
+    static GPUCallableMethod void nonconservativeProduct(
       const double * __restrict__                  Q,         // Q[5+0],
       const double * __restrict__                  deltaQ,    // [5+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -998,7 +998,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
+GPUCallableMethod double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -1018,7 +1018,7 @@ double {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::maxEigenvalue(
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
@@ -1039,7 +1039,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const double * __restrict__ Q, // Q[{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}],
   const double * __restrict__             deltaQ, // [{{NUMBER_OF_UNKNOWNS}}+{{NUMBER_OF_AUXILIARY_VARIABLES}}]
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -1062,7 +1062,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
+GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::sourceTerm(
   const double * __restrict__ Q,
   const tarch::la::Vector<Dimensions,double>&  volumeCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,

@@ -146,7 +146,7 @@ namespace exahype2 {
 
     if ( maxOfMatchingTimeStamps>0.0 ) {
       double tweakedTimeStepSize = maxOfMatchingTimeStamps - cellLabel.getTimeStamp();
-      assertion( tweakedTimeStepSize>=timeStepSize );
+      assertion2( tarch::la::greaterEquals( tweakedTimeStepSize,timeStepSize ), tweakedTimeStepSize, timeStepSize );
       if (tweakedTimeStepSize>timeStepSize) {
         logDebug( "removeTimeStepAccummulationErrorsFromCell(...)", "adopt local time step from " << timeStepSize << " to " << tweakedTimeStepSize );
       }

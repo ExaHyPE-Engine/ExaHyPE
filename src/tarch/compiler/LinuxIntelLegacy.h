@@ -41,10 +41,9 @@
 
 #if !defined(UseManualInlining) &&  !defined(noUseManualInlining)
 /**
- * I use this flag to switch on statements alike  __attribute__((always_inline))
+ * I use this flag to switch on __attribute__((always_inline))
  * which I otherwise mask out.
  */
-#define UseManualInlining
 #define UseManualInlining
 #endif
 
