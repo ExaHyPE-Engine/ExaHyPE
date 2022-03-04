@@ -43,17 +43,15 @@ void tarch::multicore::initSYCLQueues() {
 
 #include <sstream>
 #include "config.h"
-#include <oneapi/tbb/global_control.h>
-#include <oneapi/tbb/info.h>
-//#include <tbb/global_control.h>
-//#include <tbb/info.h>
+#include <tbb/global_control.h>
+#include <tbb/info.h>
 
 
 #include <map>
 
 
 namespace {
-  oneapi::tbb::global_control*  globalControl = nullptr;
+  ::tbb::global_control*  globalControl = nullptr;
 }
 
 
@@ -61,7 +59,7 @@ tarch::logging::Log tarch::multicore::Core::_log( "tarch::multicore::Core" );
 
 
 tarch::multicore::Core::Core():
-  _numberOfThreads( oneapi::tbb::info::default_concurrency() ),
+  _numberOfThreads( ::tbb::info::default_concurrency() ),
   _numberOfDevices( 0 ) {
   #if defined(SYCLGPUOffloading)
   initSYCLQueues();

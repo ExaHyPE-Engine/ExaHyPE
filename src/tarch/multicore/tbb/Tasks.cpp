@@ -33,7 +33,7 @@ namespace {
    * @see spawnTask()
    * @see spawnAndWaitAsTaskLoop()
    */
-  oneapi::tbb::task_group backgroundTaskGroup;
+  ::tbb::task_group backgroundTaskGroup;
 
   /**
    * Native mapping of a task loop onto a SYCL/oneTBB loop
@@ -102,7 +102,7 @@ namespace {
 
     // is implicitly executed within root arena, as the invoking task is
     // run within root arena
-    oneapi::tbb::task_group taskGroup;
+    ::tbb::task_group taskGroup;
     for (auto& p: tasks) {
       taskGroup.run(
         [&tasks,p]() -> void {
@@ -137,7 +137,7 @@ namespace {
     std::atomic<int>       pendingTasks  = NumberOfThreads;
     std::atomic<int>       spawnedTasks  = 0;
 
-    oneapi::tbb::task_group taskGroup;
+    ::tbb::task_group taskGroup;
     for (int i=0; i<NumberOfThreads; i++) {
       // is implicitly executed within root arena
       taskGroup.run(
