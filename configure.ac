@@ -225,6 +225,20 @@ AM_CONDITIONAL([SYCLGPUOffloading],   [test "$gpu" == sycl])
 AM_CONDITIONAL([HIPGPUOffloading],    [test "$gpu" == hip])
 
 
+#if test "$gpu"==omp; then
+#  AC_DEFINE([OpenMPGPUOffloading], [1], [OpenMPGPUOffloading])
+#fi
+
+#if test "$gpu"==sycl; then
+#  AC_DEFINE([SYCLGPUOffloading], [1], [SYCLGPUOffloading])
+#fi
+
+#if test "$gpu"==hip; then
+#  AC_DEFINE([HIPGPUOffloading], [1], [HIPGPUOffloading])
+#fi
+
+
+
 #
 # ===============================================================
 #   Postprocessing and I/O

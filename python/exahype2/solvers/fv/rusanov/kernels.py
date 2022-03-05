@@ -80,10 +80,11 @@ def create_compute_new_time_step_size_kernel_for_local_time_stepping(time_step_r
   
   avoid_staircase_effect: Boolean
   
+  discretisation_steps: Integer  
+    See exahype2::discretiseAndTruncateTimeStepSizes() for a description of admissible
+    values and the semantics of the values.
+  
   """
-  if discretisation_steps<=1.0:
-    raise Exception( "invalid discretisation step size for local time step (val=" + str(discretisation_steps) + ")" )
-
   determine_eigenvalue = """
     repositories::{{SOLVER_INSTANCE}}.setMaxEigenvalue( maxEigenvalue );  
 """
@@ -96,7 +97,6 @@ def create_compute_new_time_step_size_kernel_for_local_time_stepping(time_step_r
     if ( tarch::la::greater( maxEigenvalue,0.0) ) {
       newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
         """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
-        minGlobalTimeStepSize,
         maxGlobalTimeStepSize,
         """ + str(discretisation_steps) + """
       );
@@ -116,7 +116,6 @@ def create_compute_new_time_step_size_kernel_for_local_time_stepping(time_step_r
     if ( tarch::la::greater( maxEigenvalue,0.0) ) {
       newTimeStepSize = ::exahype2::discretiseAndTruncateTimeStepSizes(
         """ + str(time_step_relaxation) + """ * marker.h()(0) / {{NUMBER_OF_VOLUMES_PER_AXIS}} / maxEigenvalue,
-        minGlobalTimeStepSize,
         maxGlobalTimeStepSize,
         """ + str(discretisation_steps) + """
       );
