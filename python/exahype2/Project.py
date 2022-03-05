@@ -165,7 +165,7 @@ class Project(object):
     self._project.constants.export_const_with_type( "DomainOffset", offset_string, "std::initializer_list<double>" )
     self._project.constants.export_const_with_type( "DomainSize", size_string, "std::initializer_list<double>" )
     self._project.constants.export( "MinTerminalTime", str(self._min_terminal_time) )
-    if self._max_terminal_time>self._min_terminal_time:
+    if self._max_terminal_time>=self._min_terminal_time:
       self._project.constants.export( "MaxTerminalTime", str(self._max_terminal_time) )
     else:
       self._project.constants.export( "MaxTerminalTime", "std::numeric_limits<double>::max()" )
