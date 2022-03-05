@@ -39,7 +39,7 @@ class LocalTimeStepWithEnclaveTasking( EnclaveTasking ):
     interpolate_linearly_in_time=True,
     pde_terms_without_state=False,
     avoid_staircase_effect=True,
-    discretisation_steps=3
+    discretisation_steps=8
   ):
     """
   
