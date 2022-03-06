@@ -1,10 +1,8 @@
 #include "BoundaryConditions.h"
 
-#include "../PatchUtils.h"
-
-
 #include "peano4/utils/Globals.h"
 #include "peano4/utils/Loop.h"
+#include "PatchUtils.h"
 
 
 void exahype2::fv::applyBoundaryConditions(

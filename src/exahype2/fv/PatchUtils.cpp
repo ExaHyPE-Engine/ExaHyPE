@@ -1,11 +1,11 @@
-#include "PatchUtils.h"
+#include "fv/PatchUtils.h"
 
 #include "tarch/Assertions.h"
 #include "tarch/la/la.h"
 
 
 
-tarch::la::Vector<2,double>  exahype2::getVolumeSize(
+tarch::la::Vector<2,double>  exahype2::fv::getVolumeSize(
   const tarch::la::Vector<2,double>&  h,
   int                                 numberOfVolumesPerAxisInPatch
 ) {
@@ -20,7 +20,7 @@ tarch::la::Vector<2,double>  exahype2::getVolumeSize(
 }
 
 
-tarch::la::Vector<3,double>  exahype2::getVolumeSize(
+tarch::la::Vector<3,double>  exahype2::fv::getVolumeSize(
   const tarch::la::Vector<3,double>&  h,
   int                                 numberOfVolumesPerAxisInPatch
 ) {
@@ -34,7 +34,7 @@ tarch::la::Vector<3,double>  exahype2::getVolumeSize(
 }
 
 
-double  exahype2::getVolumeLength(
+double  exahype2::fv::getVolumeLength(
   const tarch::la::Vector<2,double>&  h,
   int                                 numberOfVolumesPerAxisInPatch
 ) {
@@ -42,7 +42,7 @@ double  exahype2::getVolumeLength(
 }
 
 
-double  exahype2::getVolumeLength(
+double  exahype2::fv::getVolumeLength(
   const tarch::la::Vector<3,double>&  h,
   int                                 numberOfVolumesPerAxisInPatch
 ) {
@@ -52,7 +52,7 @@ double  exahype2::getVolumeLength(
 }
 
 
-tarch::la::Vector<2,double>  exahype2::getVolumeCentre(
+tarch::la::Vector<2,double>  exahype2::fv::getVolumeCentre(
   const tarch::la::Vector<2,double>&  x,
   const tarch::la::Vector<2,double>&  h,
   int                                 numberOfVolumesPerAxisInPatch,
@@ -67,7 +67,7 @@ tarch::la::Vector<2,double>  exahype2::getVolumeCentre(
 }
 
 
-tarch::la::Vector<3,double>  exahype2::getVolumeCentre(
+tarch::la::Vector<3,double>  exahype2::fv::getVolumeCentre(
   const tarch::la::Vector<3,double>&  x,
   const tarch::la::Vector<3,double>&  h,
   int                                 numberOfVolumesPerAxisInPatch,

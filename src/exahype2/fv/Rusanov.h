@@ -5,7 +5,7 @@
 
 
 
-#include "../PatchUtils.h"
+#include "PatchUtils.h"
 #include "tarch/la/Vector.h"
 #include "peano4/utils/Globals.h"
 #include "tarch/multicore/multicore.h"
@@ -16,6 +16,10 @@
 
 namespace exahype2 {
   namespace fv {
+    double timeStepWithRusanov(
+    );
+
+    double timeStepWithRusanovAndComputeEigenvalue();
 
     struct patchData2d
     {

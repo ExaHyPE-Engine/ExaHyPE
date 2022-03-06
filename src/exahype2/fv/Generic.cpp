@@ -4,11 +4,10 @@
 #include "tarch/multicore/multicore.h"
 #include "tarch/compiler/CompilerSpecificSettings.h"
 
-#include "../PatchUtils.h"
-
 #include "peano4/utils/Loop.h"
 
 #include "exahype2/NonCriticalAssertions.h"
+#include "PatchUtils.h"
 
 // This is a fantastic hack
 #if !defined(__INTEL_LLVM_COMPILER) && defined(OpenMPGPUOffloading)

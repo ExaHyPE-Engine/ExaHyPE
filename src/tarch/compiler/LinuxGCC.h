@@ -21,7 +21,7 @@
 
 #define LittleEndian
 
-#if !defined(ExaHyPEFusedKernelAlignment)
-#define ExaHyPEFusedKernelAlignment 16
+#if !defined(Alignment)
+#define Alignment 16
 #endif
 

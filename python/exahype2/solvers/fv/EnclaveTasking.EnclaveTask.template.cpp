@@ -490,20 +490,20 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   const int LTOT = _numberOfResultValues*NPT;
   pD.npatches=NPT;
 
-  pD.reco     = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LR];
-  pD.id       = new (std::align_val_t(ExaHyPEFusedKernelAlignment))   int[NPT];
-  pD.x0       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
-  pD.h0       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
-  pD.x1       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
-  pD.h1       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.reco     = new (std::align_val_t(Alignment)) double[LR];
+  pD.id       = new (std::align_val_t(Alignment))   int[NPT];
+  pD.x0       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.h0       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.x1       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.h1       = new (std::align_val_t(Alignment)) double[NPT];
   #if Dimensions==3
-  pD.x2       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
-  pD.h2       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.x2       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.h2       = new (std::align_val_t(Alignment)) double[NPT];
   #endif
-  pD.t        = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
-  pD.dt       = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
-  pD.result   = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[LTOT];
-  pD.maxEigenvalue    = new (std::align_val_t(ExaHyPEFusedKernelAlignment)) double[NPT];
+  pD.t        = new (std::align_val_t(Alignment)) double[NPT];
+  pD.dt       = new (std::align_val_t(Alignment)) double[NPT];
+  pD.result   = new (std::align_val_t(Alignment)) double[LTOT];
+  pD.maxEigenvalue    = new (std::align_val_t(Alignment)) double[NPT];
   memset(pD.result, 0, LTOT*sizeof(double));
 
 
