@@ -70,50 +70,9 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
   double* __restrict__                        reconstructedPatch,
   double* __restrict__                        targetPatch
 ) {
-  ::exahype2::fv::copyPatch(
-    reconstructedPatch,
-    targetPatch,
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    1 // halo size
-  );
+  ::exahype2::fv::PatchData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
 
   {{COMPUTE_KERNEL_CALL}}
-  (
-    [&](
-      const double* __restrict__                   QL,
-      const double* __restrict__                   QR,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       dx,
-      double                                       t,
-      double                                       dt,
-      int                                          normal,
-      double                                       FL[],
-      double                                       FR[]
-    ) -> void {
-      {{RIEMANN_SOLVER_CALL}}
-    },
-    [&](
-      const double * __restrict__                  Q,
-      const tarch::la::Vector<Dimensions,double>&  x,
-      double                                       dx,
-      double                                       t,
-      double                                       dt,
-      double * __restrict__                        S
-    ) -> void {
-      {{SOURCE_TERM_CALL}}
-    },
-    marker.x(),
-    marker.h(),
-    t,
-    dt,
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    reconstructedPatch,
-    targetPatch
-  );
 
   ::exahype2::fv::validatePatch(
     targetPatch,
@@ -128,38 +87,15 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 
   {{POSTPROCESS_UPDATED_PATCH}}
 
-
   {% if COMPUTE_MAX_EIGENVALUE %}
-  const double timeStamp    = t;
-  const double timeStepSize = dt;
-
-  const double maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-    [] (
-      const double * __restrict__                  Q,
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      int                                          normal
-    ) -> double {
-      return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-    },
-    marker.x(),
-    marker.h(),
-    timeStamp,
-    timeStamp + timeStepSize,
-    {{NUMBER_OF_VOLUMES_PER_AXIS}},
-    {{NUMBER_OF_UNKNOWNS}},
-    {{NUMBER_OF_AUXILIARY_VARIABLES}},
-    targetPatch
-  );
-
-  return maxEigenvalue;
+  return patchData.maxEigenvalue[0];
   {% else %}
   return 0.0;
   {% endif %}
 }
 
+
+//_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue
 
 {{NAMESPACE | join("::")}}::{{CLASSNAME}}::{{CLASSNAME}}(
   const ::peano4::datamanagement::CellMarker& marker,
@@ -180,82 +116,15 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_PLUS_HALO_3D}},
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
-    [&](double* reconstructedPatch, double* targetPatch, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& maxEigenvalue ) -> void {
-          ::exahype2::fv::copyPatch(
-            reconstructedPatch,
-            targetPatch,
-            {{NUMBER_OF_UNKNOWNS}},
-            {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            {{NUMBER_OF_VOLUMES_PER_AXIS}},
-            1 // halo size
-          );
-
-          {{COMPUTE_KERNEL_CALL}}
-          (
-            [&](
-              const double* __restrict__                   QL,
-              const double* __restrict__                   QR,
-              const tarch::la::Vector<Dimensions,double>&  x,
-              double                                       dx,
-              double                                       t,
-              double                                       dt,
-              int                                          normal,
-              double                                       FL[],
-              double                                       FR[]
-            ) -> void {
-              {{RIEMANN_SOLVER_CALL}}
-            },
-          [&](
-            const double * __restrict__                  Q,
-            const tarch::la::Vector<Dimensions,double>&  x,
-            double                                       dx,
-            double                                       t,
-            double                                       dt,
-            double * __restrict__                        S
-          ) -> void {
-            {{SOURCE_TERM_CALL}}
-          },
-            marker.x(),
-            marker.h(),
-            t,
-            dt,
-            {{NUMBER_OF_VOLUMES_PER_AXIS}},
-            {{NUMBER_OF_UNKNOWNS}},
-            {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            reconstructedPatch,
-            targetPatch
-          );
-
-          {{POSTPROCESS_UPDATED_PATCH}}
-
-          {% if COMPUTE_MAX_EIGENVALUE %}
-          const double timeStamp    = t;
-          const double timeStepSize = dt;
-
-          maxEigenvalue = ::exahype2::fv::maxEigenvalue_AoS(
-            [] (
-              const double * __restrict__                  Q,
-              const tarch::la::Vector<Dimensions,double>&  faceCentre,
-              const tarch::la::Vector<Dimensions,double>&  volumeH,
-              double                                       t,
-              double                                       dt,
-              int                                          normal
-            ) -> double {
-              return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-            },
-            marker.x(),
-            marker.h(),
-            timeStamp,
-            timeStamp + timeStepSize,
-            {{NUMBER_OF_VOLUMES_PER_AXIS}},
-            {{NUMBER_OF_UNKNOWNS}},
-            {{NUMBER_OF_AUXILIARY_VARIABLES}},
-            targetPatch
-          );
-          {% else %}
-          maxEigenvalue = 0.0;
-          {% endif %}
-        }
+    [&]() -> void {
+      _maxEigenvalue = examples::exahype2::euler::tasks::EulerEnclaveTask::applyKernelToCell(
+        _marker,
+        _t,
+        _dt,
+        _inputValues,
+        _outputValues
+      );
+    }
   )
   #ifdef UseSmartMPI
   , smartmpi::Task(_enclaveTaskTypeId)

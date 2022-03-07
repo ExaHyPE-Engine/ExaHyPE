@@ -39,6 +39,8 @@ namespace exahype2 {
  * responsibility to destroy it) to the bookkeeping and then can be deleted
  * themselves.
  *
+ * I assume that the functor releases the input data.
+ *
  * <h2> SmartMPI </h2>
  * 
  * If you enable SmartMPI, then all enclave tasks are SmartMPI tasks, too. I could
@@ -48,7 +50,7 @@ namespace exahype2 {
  */
 class exahype2::EnclaveTask: public tarch::multicore::Task {
   public:
-    typedef std::function< void(double* input, double* output, const ::peano4::datamanagement::CellMarker& marker, double t, double dt, double& maxEigenvalue) >  Functor;
+    typedef std::function< void() >  Functor;
 
   protected:
     friend class EnclaveBookkeeping;
