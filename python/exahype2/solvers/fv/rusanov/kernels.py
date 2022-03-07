@@ -292,8 +292,12 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
     
 
 def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation, source_implementation, compute_max_eigenvalue_of_next_time_step, use_stateless_function_calls):
-  template = """
-::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
+  """
+  
+  I return only the unqualified function call, i.e. without any namespaces.
+  
+  """  
+  template = """timeStepWithRusanov_overlap1_sequential_AoS(
   patchData,
   {{NUMBER_OF_VOLUMES_PER_AXIS}},
   {{NUMBER_OF_UNKNOWNS}},
@@ -312,7 +316,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     double * __restrict__ F
   )->void {
     {% if FLUX_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==True %}
-    repositories::{{SOLVER_INSTANCE}}::flux( Q, faceCentre, volumeH, t, normal, F, repositories::{{SOLVER_INSTANCE}}::Stateless );
+    {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F, {{SOLVER_NAME}}::Offloadable::Yes );
     {% elif FLUX_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==False %}
     repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
     {% endif %}
@@ -328,7 +332,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     double * __restrict__ BgradQ
   )->void {
     {% if NCP_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==True %}
-    repositories::{{SOLVER_INSTANCE}}::nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ, repositories::{{SOLVER_INSTANCE}}::Stateless );
+    {{SOLVER_NAME}}::nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ, {{SOLVER_NAME}}::Offloadable::Yes );
     {% elif NCP_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==False %}
     repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
     {% endif %}
@@ -342,7 +346,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     double * __restrict__ S
   )->void {
     {% if SOURCE_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==True %}
-    repositories::{{SOLVER_INSTANCE}}::source( Q, volumeX, volumeH, t, BgradQ, repositories::{{SOLVER_INSTANCE}}::Stateless );
+    {{SOLVER_NAME}}::source( Q, volumeX, volumeH, t, BgradQ, {{SOLVER_NAME}}::Offloadable::Yes );
     {% elif SOURCE_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==False %}
     repositories::{{SOLVER_INSTANCE}}.source( Q, volumeX, volumeH, t, BgradQ );
     {% endif %}
@@ -356,7 +360,7 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     int                                          normal
   )->double {
     {% if USE_STATELESS_FUNCTION_CALLS==True %}
-    return repositories::{{SOLVER_INSTANCE}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, repositories::{{SOLVER_INSTANCE}}::Stateless);
+    return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, {{SOLVER_NAME}}::Offloadable::Yes );
     {% else %}
     return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
     {% endif %}

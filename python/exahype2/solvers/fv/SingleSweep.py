@@ -35,7 +35,8 @@ class UpdateCell(ReconstructPatchAndApplyFunctor):
   
       ::exahype2::fv::PatchData  patchData( reconstructedPatch, marker.x(), marker.h(), timeStamp, timeStepSize, targetPatch );
       
-      {{COMPUTE_KERNEL_CALL}}  
+      ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}  
+      
       {{POSTPROCESS_UPDATED_PATCH}}
 
       ::exahype2::fv::validatePatch(

@@ -72,7 +72,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
 ) {
   ::exahype2::fv::PatchData  patchData( reconstructedPatch, marker.x(), marker.h(), t, dt, targetPatch );
 
-  {{COMPUTE_KERNEL_CALL}}
+  ::exahype2::fv::rusanov::{{COMPUTE_KERNEL_CALL}}
 
   ::exahype2::fv::validatePatch(
     targetPatch,
@@ -380,25 +380,15 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #if OpenMPGPUOffloading>0
   if (targetDevice>=0) {
     foundOffloadingBranch = true;
-    #if Dimensions==2
-    ::exahype2::fv::Fusanov_2D_with_OpenMP_offloading
-    #elif Dimensions==3
-    ::exahype2::fv::Fusanov_3D_with_OpenMP_offloading
-    #endif
-    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
-    (
-      1,
-      pD,
-      _numberOfInputValues,
-      _numberOfResultValues,
-      targetDevice
-    );
+    ::exahype2::fv::rusanov::omp::{{FUSED_COMPUTE_KERNEL_CALL}}
   }
   #endif
 
   #if SYCLGPUOffloading>0
   if (targetDevice>=0 or targetDevice==Host) {
     foundOffloadingBranch = true;
+
+    ::exahype2::fv::rusanov::sycl::{{FUSED_COMPUTE_KERNEL_CALL}}
 
     #if Dimensions==2
     ::exahype2::fv::Fusanov_2D_with_SYCL_offloading
@@ -419,7 +409,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
 
   if (not foundOffloadingBranch) {
-    {{COMPUTE_KERNEL_CALL}}
+    ::exahype2::fv::rusanov::{{FUSED_COMPUTE_KERNEL_CALL}}
   }
 
   //
