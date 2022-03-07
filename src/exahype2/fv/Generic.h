@@ -27,6 +27,9 @@ namespace exahype2 {
      * fields and basically manage just pointers to that. All scalar or small
      * vector data are converted in SoA which makes it fairly straightforward
      * later to move them over to an accelerator.
+     *
+     * @todo Doesn't belong into fv. The whole Generic header belongs into the
+     * directory above.
      */
     struct PatchData {
       double**   QIn;
@@ -34,6 +37,7 @@ namespace exahype2 {
       tarch::la::Vector<Dimensions,double>*   patchSize;
       double*    t;
       double*    dt;
+      int*       id;
       const int  numberOfPatches;
       double**   QOut;
       double*    maxEigenvalue;
@@ -101,6 +105,8 @@ namespace exahype2 {
            *
            * The index always refers to the interior of the patches. So you can use negative
            * indices if you want.
+           *
+           * @todo modulo Operator muss ich noch dokumentieren
            */
           int operator()(
             int patchIndex,
@@ -108,13 +114,13 @@ namespace exahype2 {
             int unknown
           ) const {
             if (Dimensions==2) {
-              return patchIndex * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+              return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                    + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                    + (volumeIndex(0)+_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                    + unknown;
             }
             else {
-              return patchIndex * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+              return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                    + (volumeIndex(2)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                    + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                    + (volumeIndex(0)+_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)

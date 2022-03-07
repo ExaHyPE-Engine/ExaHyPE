@@ -117,7 +117,7 @@ double {{NAMESPACE | join("::")}}::{{CLASSNAME}}::applyKernelToCell(
     {{NUMBER_OF_DOUBLE_VALUES_IN_PATCH_3D}},
     #endif
     [&]() -> void {
-      _maxEigenvalue = examples::exahype2::euler::tasks::EulerEnclaveTask::applyKernelToCell(
+      _maxEigenvalue = applyKernelToCell(
         _marker,
         _t,
         _dt,
@@ -225,8 +225,9 @@ smartmpi::Task* {{NAMESPACE | join("::")}}::{{CLASSNAME}}::receiveTask(int rank,
 void {{NAMESPACE | join("::")}}::{{CLASSNAME}}::runLocallyAndSendTaskOutputToRank(int rank, int tag, MPI_Comm communicator) {
   _outputValues = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
 
-  _functor(_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue);
-  tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
+//  _functor(_inputValues,_outputValues,_marker,_t,_dt,_maxEigenvalue);
+//  tarch::freeMemory(_inputValues,tarch::MemoryLocation::Heap );
+  _functor();
 
   logInfo(
     "runLocallyAndSendTaskOutputToRank(...)",
@@ -347,78 +348,27 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::canFuse() const {
 bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& otherTasks, int targetDevice ) {
   logDebug( "fuse(...)", "asked to fuse " << (otherTasks.size()+1) << " tasks into one large GPU task" );
 
-  #if Dimensions==2
-  ::exahype2::fv::patchData2d pD;
-  #endif
-  #if Dimensions==3
-  ::exahype2::fv::patchData3d pD;
-  #endif
-
-  const int NPT  = otherTasks.size()+1;
-  const int LR   = _numberOfInputValues*NPT;
-  const int LTOT = _numberOfResultValues*NPT;
-  pD.npatches=NPT;
-
-  pD.reco     = new (std::align_val_t(Alignment)) double[LR];
-  pD.id       = new (std::align_val_t(Alignment))   int[NPT];
-  pD.x0       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.h0       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.x1       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.h1       = new (std::align_val_t(Alignment)) double[NPT];
-  #if Dimensions==3
-  pD.x2       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.h2       = new (std::align_val_t(Alignment)) double[NPT];
-  #endif
-  pD.t        = new (std::align_val_t(Alignment)) double[NPT];
-  pD.dt       = new (std::align_val_t(Alignment)) double[NPT];
-  pD.result   = new (std::align_val_t(Alignment)) double[LTOT];
-  pD.maxEigenvalue    = new (std::align_val_t(Alignment)) double[NPT];
-  memset(pD.result, 0, LTOT*sizeof(double));
-
-
-  int i=0;
-  for (auto p: otherTasks) {
-    {{CLASSNAME}}* currentTask = static_cast<{{CLASSNAME}}*>(p);
-    for (size_t j=0;j<_numberOfInputValues;j++) {
-      pD.reco[i*_numberOfInputValues + j] = currentTask->_inputValues[j];
-    }
-    pD.id[i]    = currentTask->getTaskId();
-    pD.x0[i]    = currentTask->_marker.x()[0];
-    pD.h0[i]    = currentTask->_marker.h()[0];
-    pD.x1[i]    = currentTask->_marker.x()[1];
-    pD.h1[i]    = currentTask->_marker.h()[1];
-    #if Dimensions==3
-    pD.x2[i]    = currentTask->_marker.x()[2];
-    pD.h2[i]    = currentTask->_marker.h()[2];
-    #endif
-    pD.t[i]     = currentTask->_t;
-    pD.dt[i]    = currentTask->_dt;
-    pD.maxEigenvalue[i] = -1.0;
-    delete[]  currentTask->_inputValues;
-    i++;
-
-    delete currentTask;
+  ::exahype2::fv::PatchData patchData(otherTasks.size()+1);
+  int currentTask = 0;
+  for (auto& p: otherTasks) {
+    patchData.QIn[currentTask]         = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_inputValues;
+    patchData.patchCentre[currentTask] = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.x();
+    patchData.patchSize[currentTask]   = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_marker.h();
+    patchData.t[currentTask]           = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_t;
+    patchData.dt[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_dt;
+    patchData.id[currentTask]          = static_cast<{{NAMESPACE | join("::")}}::{{CLASSNAME}}*>(p)->_id;
+    patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+    delete p;
+    currentTask++;
   }
-  //
-  // Now add the data from the task from which this whole thing has been called
-  //
-  for (size_t j=0;j<_numberOfInputValues;j++) {
-    pD.reco[i*_numberOfInputValues + j] = _inputValues[j];
-  }
-  pD.id[i]  = getTaskId();
-  pD.x0[i]  = _marker.x()[0];
-  pD.h0[i]  = _marker.h()[0];
-  pD.x1[i]  = _marker.x()[1];
-  pD.h1[i]  = _marker.h()[1];
-  #if Dimensions==3
-  pD.x2[i]  = _marker.x()[2];
-  pD.h2[i]  = _marker.h()[2];
-  #endif
-  pD.t[i]   = _t;
-  pD.dt[i]  = _dt;
-  pD.maxEigenvalue[i] = -1.0;
-  
-  delete[] _inputValues;
+  patchData.QIn[currentTask]         = _inputValues;
+  patchData.patchCentre[currentTask] = _marker.x();
+  patchData.patchSize[currentTask]   = _marker.h();
+  patchData.t[currentTask]           = _t;
+  patchData.dt[currentTask]          = _dt;
+  patchData.id[currentTask]          = _id;
+  patchData.QOut[currentTask]        = tarch::allocateMemory( _numberOfResultValues, tarch::MemoryLocation::Heap );
+
 
   //
   // ==============
@@ -469,18 +419,7 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   #endif
 
   if (not foundOffloadingBranch) {
-    #if Dimensions==2
-    ::exahype2::fv::Fusanov_2D_with_batching
-    #elif Dimensions==3
-    ::exahype2::fv::Fusanov_3D_with_batching
-    #endif
-    {{FUSED_RIEMANN_SOLVER_TEMPLATE_ARGUMENTS}}
-    (
-      1,
-      pD,
-      _numberOfInputValues,
-      _numberOfResultValues
-    );
+    {{COMPUTE_KERNEL_CALL}}
   }
 
   //
@@ -488,15 +427,12 @@ bool {{NAMESPACE | join("::")}}::{{CLASSNAME}}::fuse( const std::list<Task*>& ot
   // Bring back results
   // ==================
   //
-  for (int i=0;i<pD.npatches;i++) {
-    const int taskid = pD.id[i];
-    double* targetPatch = ::tarch::allocateMemory(_numberOfResultValues, ::tarch::MemoryLocation::Heap);
-    for (int j=0;j<_numberOfResultValues;j++) {
-      targetPatch[j] = *(pD.result + j + i*_numberOfResultValues);
-    }
-    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(taskid, _numberOfResultValues, targetPatch, pD.maxEigenvalue[i]);
+  for (int i=0; i<patchData.numberOfPatches; i++) {
+    tarch::freeMemory( patchData.QIn[i], tarch::MemoryLocation::Heap );
+    ::exahype2::EnclaveBookkeeping::getInstance().finishedTask(patchData.id[i], _numberOfResultValues, patchData.QOut[i], patchData.maxEigenvalue[i]);
   }
 
+  // Don't rerun, so return false
   return false;
 }
 {% endif %}

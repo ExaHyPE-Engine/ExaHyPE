@@ -100,7 +100,7 @@ void exahype2::EnclaveBookkeeping::finishedTask(int taskNumber, int numberOfResu
   logDebug( "finishedTask()", "task " << taskNumber << " has terminated. Bookkeep results" );
 
   tarch::multicore::Lock lockFinishedTasks( _finishedTasksSemaphore );
-  assertionEquals( _finishedTasks.count(taskNumber),0 );
+  assertionEquals1( _finishedTasks.count(taskNumber),0,taskNumber );
   if (_tasksThatHaveToBeCancelled.count(taskNumber)) {
     _tasksThatHaveToBeCancelled.erase(taskNumber);
     delete[] data;
