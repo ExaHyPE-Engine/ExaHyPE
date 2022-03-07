@@ -4,10 +4,7 @@ from exahype2.solvers.fv.PDETerms  import PDETerms
 
 import jinja2
 
-from exahype2.solvers.fv.kernels import create_empty_source_term_kernel
-from exahype2.solvers.fv.kernels import create_user_defined_source_term_kernel
-    
-    
+
 def create_compute_time_step_size_for_fixed_time_stepping_with_subcycling( time_step_size, solver_name, remove_accumulation_errors=True ):
   if remove_accumulation_errors:
     return """
@@ -291,109 +288,90 @@ def create_finish_time_step_implementation_for_adaptive_time_stepping(time_step_
       logWarning( "finishTimeStep(...)", "degenerated time step size of " << std::to_string(_admissibleTimeStepSize) << ". Problem might be extremely stiff (and can't be solved) or there could be a bug (h_volume=" << minVolumeSize << ")" );
     }
   }
+"""  
+    
+
+def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation, source_implementation, compute_max_eigenvalue_of_next_time_step, use_stateless_function_calls):
+  template = """
+::exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
+  patchData,
+  {{NUMBER_OF_VOLUMES_PER_AXIS}},
+  {{NUMBER_OF_UNKNOWNS}},
+  {{NUMBER_OF_AUXILIARY_VARIABLES}},
+  {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+  {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
+  [&](
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double * __restrict__ F
+  )->void {
+    {% if FLUX_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==True %}
+    repositories::{{SOLVER_INSTANCE}}::flux( Q, faceCentre, volumeH, t, normal, F, repositories::{{SOLVER_INSTANCE}}::Stateless );
+    {% elif FLUX_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==False %}
+    repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+    {% endif %}
+  },
+  [&](
+    const double * __restrict__                  Q,
+    const double * __restrict__     deltaQ,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal,
+    double * __restrict__ BgradQ
+  )->void {
+    {% if NCP_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==True %}
+    repositories::{{SOLVER_INSTANCE}}::nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ, repositories::{{SOLVER_INSTANCE}}::Stateless );
+    {% elif NCP_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==False %}
+    repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
+    {% endif %}
+  },
+  [&](
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  volumeX,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    double * __restrict__ S
+  )->void {
+    {% if SOURCE_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==True %}
+    repositories::{{SOLVER_INSTANCE}}::source( Q, volumeX, volumeH, t, BgradQ, repositories::{{SOLVER_INSTANCE}}::Stateless );
+    {% elif SOURCE_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==False %}
+    repositories::{{SOLVER_INSTANCE}}.source( Q, volumeX, volumeH, t, BgradQ );
+    {% endif %}
+  },
+  [&](
+    const double * __restrict__ Q,
+    const tarch::la::Vector<Dimensions,double>&  faceCentre,
+    const tarch::la::Vector<Dimensions,double>&  volumeH,
+    double                                       t,
+    double                                       dt,
+    int                                          normal
+  )->double {
+    {% if USE_STATELESS_FUNCTION_CALLS==True %}
+    return repositories::{{SOLVER_INSTANCE}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, repositories::{{SOLVER_INSTANCE}}::Stateless);
+    {% else %}
+    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
+    {% endif %}
+  }
+);
 """
 
-
-def create_source_term_kernel_for_Rusanov(source_term_implementation):
-  if source_term_implementation==PDETerms.None_Implementation:
-    return create_empty_source_term_kernel()
-  else:
-    return create_user_defined_source_term_kernel()
-  
-    
-def create_optimised_Riemann_kernel_template_arguments(flux_implementation, 
-                                                       ncp_implementation, 
-                                                       source_term_implementation, 
-                                                       compute_new_time_step_size):
-  Template = jinja2.Template( """
-  <{{NUMBER_OF_VOLUMES_PER_AXIS}},{{NUMBER_OF_UNKNOWNS}},{{NUMBER_OF_AUXILIARY_VARIABLES}},{{SOLVER_NAME}},{{SKIP_FLUX}},{{SKIP_NCP}},{{SKIP_SOURCE_TERM}},{{SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE}}>
-""", undefined=jinja2.DebugUndefined)
-  
+  result = jinja2.Template( template, undefined=jinja2.DebugUndefined)
   d= {}
-  if flux_implementation==PDETerms.None_Implementation or flux_implementation==PDETerms.Empty_Implementation:
-    d[ "SKIP_FLUX"] = "true"
-  else:
-    d[ "SKIP_FLUX"] = "false"
-  if ncp_implementation==PDETerms.None_Implementation or ncp_implementation==PDETerms.Empty_Implementation:
-    d[ "SKIP_NCP"]  = "true"
-  else:
-    d[ "SKIP_NCP"] = "false"
-  if source_term_implementation==PDETerms.None_Implementation or source_term_implementation==PDETerms.Empty_Implementation:
-    d[ "SKIP_SOURCE_TERM"]  = "true"
-  else:
-    d[ "SKIP_SOURCE_TERM"] = "false"
-  if compute_new_time_step_size:
-    d[ "SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE"] = "false"
-  else:
-    d[ "SKIP_COMPUTATION_OF_NEW_TIME_STEP_SIZE"] = "true"
-  return Template.render(**d)
-
-
-def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implementation):
-  Template = jinja2.Template( """
-        ::exahype2::fv::splitRusanov1d(
-          [] (
-            const double * __restrict__                  Q,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       F[]
-          ) -> void {
-            {% if FLUX_IMPLEMENTATION=="<none>" %}
-            std::fill_n(F,{{NUMBER_OF_UNKNOWNS}},0.0);
-            {% else %}
-            repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
-            {% endif %}
-          },
-          [] (
-            const double * __restrict__                  Q,
-            const double * __restrict__                  deltaQ,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal,
-            double                                       BgradQ[]
-          ) -> void {
-            {% if NCP_IMPLEMENTATION!="<none>" %}
-            repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
-            {% else %}
-            std::fill_n(BgradQ,{{NUMBER_OF_UNKNOWNS}},0.0);
-            {% endif %}
-          },
-          [] (
-            const double * __restrict__                  Q,
-            const tarch::la::Vector<Dimensions,double>&  faceCentre,
-            const tarch::la::Vector<Dimensions,double>&  volumeH,
-            double                                       t,
-            double                                       dt,
-            int                                          normal
-          ) -> double {
-            return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-          },
-          QL, QR, x, dx, t, dt, normal,
-          {{NUMBER_OF_UNKNOWNS}},
-          {{NUMBER_OF_AUXILIARY_VARIABLES}},
-          FL,FR,
-          {% if FLUX_IMPLEMENTATION=="<none>" %}
-          true,
-          {% else %}
-          false,
-          {% endif %}
-          {% if NCP_IMPLEMENTATION=="<none>" %}
-          true
-          {% else %}
-          false
-          {% endif %}
-        );
-""", undefined=jinja2.DebugUndefined)
-  
-  d= {}
-  d[ "FLUX_IMPLEMENTATION"]                 = flux_implementation
-  d[ "NCP_IMPLEMENTATION"]                  = ncp_implementation
-  return Template.render(**d)
+  d[ "FLUX_IMPLEMENTATION" ]         = flux_implementation
+  d[ "NCP_IMPLEMENTATION" ]          = ncp_implementation
+  d[ "SOURCE_IMPLEMENTATION" ]       = source_implementation
+  d[ "COMPUTE_MAX_EIGENVALUE" ]      = compute_max_eigenvalue_of_next_time_step
+  d[ "USE_STATELESS_FUNCTION_CALLS"] = use_stateless_function_calls
+  return result.render(**d)
 
 
 def create_abstract_solver_declarations(flux_implementation, ncp_implementation, eigenvalues_implementation, source_term_implementation, pde_terms_without_state):

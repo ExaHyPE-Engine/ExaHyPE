@@ -30,113 +30,89 @@ namespace std
 
 
 
-std::string exahype2::fv::plotVolume(
-  const double* __restrict__ Q,
-  int    unknowns
-) {
-  std::string result = "(" + std::to_string(Q[0]);
-  for (int i=1; i<unknowns; i++) result += "," + std::to_string(Q[i]);
-  result += ")";
-  return result;
+exahype2::fv::PatchData::PatchData(
+  double*   QIn_,
+  const tarch::la::Vector<Dimensions,double>&   patchCentre_,
+  const tarch::la::Vector<Dimensions,double>&   patchSize_,
+  double    t_,
+  double    dt_,
+  double*   QOut_
+):
+  PatchData(1) {
+ QIn[0]         = QIn_;
+ patchCentre[0] = patchCentre_;
+ patchSize[0]   = patchSize_;
+ t[0]           = t_;
+ dt[0]          = dt_;
+ QOut[0]        = QOut_;
 }
 
 
-std::string exahype2::fv::plotPatch(
-  const double* __restrict__ Q,
-  int    unknowns,
-  int    auxiliaryVariables,
-  int    numberOfVolumesPerAxisInPatch,
-  int    haloSize
+exahype2::fv::PatchData::PatchData( int numberOfPatches_ ):
+  numberOfPatches(numberOfPatches_) {
+  QIn           = new (std::align_val_t(Alignment)) double*[numberOfPatches];
+  patchCentre   = new (std::align_val_t(Alignment)) tarch::la::Vector<Dimensions,double>[numberOfPatches];
+  patchSize     = new (std::align_val_t(Alignment)) tarch::la::Vector<Dimensions,double>[numberOfPatches];
+  t             = new (std::align_val_t(Alignment)) double[numberOfPatches];
+  dt            = new (std::align_val_t(Alignment)) double[numberOfPatches];
+  QOut          = new (std::align_val_t(Alignment)) double*[numberOfPatches];
+  maxEigenvalue = new (std::align_val_t(Alignment)) double[numberOfPatches];
+}
+
+
+exahype2::fv::PatchData::~PatchData() {
+  delete QIn;
+  delete patchCentre;
+  delete patchSize;
+  delete t;
+  delete dt;
+  delete QOut;
+  delete maxEigenvalue;
+}
+
+
+int exahype2::fv::getTotalNumberOfVolumeDoFs(
+  int numberOfPatches,
+  int numberOfVolumesPerAxisInPatch,
+  int overlap
 ) {
-  const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
+  return Dimensions==2
+       ? numberOfPatches * (numberOfVolumesPerAxisInPatch+2*overlap) * (numberOfVolumesPerAxisInPatch+2*overlap)
+       : numberOfPatches * (numberOfVolumesPerAxisInPatch+2*overlap) * (numberOfVolumesPerAxisInPatch+2*overlap) * (numberOfVolumesPerAxisInPatch+2*overlap);
+}
 
-  std::ostringstream result;
 
-  dfor (k,PatchSize) {
-    int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
+int exahype2::fv::getTotalNumberOfInnerVolumeDoFs(
+  int numberOfPatches,
+  int numberOfVolumesPerAxisInPatch,
+  int overlap
+) {
+  return Dimensions==2
+       ? numberOfPatches * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch
+       : numberOfPatches * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch * numberOfVolumesPerAxisInPatch;
+}
 
-    // It is a diagonal entry if this counter is bigger than 1. If it equals
-    // 0, it is interior. If it equals 1, then this is a face-connected halo
-    // entry.
-    bool isDiagonal = (tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1))>1;
 
-    result << "(";
-    for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-      const int entry = index+i;
-
-      if (i==0)
-        result << "d[" << entry << "]=";
-      else
-        result << ",d[" << entry << "]=";
-
-      if (haloSize==0 or not isDiagonal)
-        result << Q[entry];
-      else
-        result << "x";
-    }
-    result << ")";
-  }
-
-  return result.str();
+int exahype2::fv::getTotalNumberOfFaceDoFs(
+  int numberOfPatches,
+  int numberOfVolumesPerAxisInPatch,
+  int overlap
+) {
+  return Dimensions==2
+       ? numberOfPatches * (numberOfVolumesPerAxisInPatch+2*overlap-1) * (numberOfVolumesPerAxisInPatch+2*overlap)
+       : numberOfPatches * (numberOfVolumesPerAxisInPatch+2*overlap-1) * (numberOfVolumesPerAxisInPatch+2*overlap) * (numberOfVolumesPerAxisInPatch+2*overlap);
 }
 
 
 
-void exahype2::fv::validatePatch (
-  const double *__restrict__ Q, int unknowns,
-  int auxiliaryVariables,
-  int numberOfVolumesPerAxisInPatch, int haloSize,
-  const std::string &location,
-  bool   triggerNonCriticalAssertion,
-  double* minValues,
-  double* maxValues
-) {
-  #if PeanoDebug>1 && !defined(OpenMPGPUOffloading)
-  static tarch::logging::Log _log( "exahype2::fv" );
-  logTraceInWith5Arguments( "validatePatch(...)", unknowns, auxiliaryVariables, numberOfVolumesPerAxisInPatch, haloSize, location );
-  const int PatchSize = numberOfVolumesPerAxisInPatch+2*haloSize;
-  dfor (k,PatchSize) {
-    int index = peano4::utils::dLinearised(k,PatchSize) * (unknowns+auxiliaryVariables);
 
-    // It is a diagonal entry if this counter is bigger than 1. If it equals
-    // 0, it is interior. If it equals 1, then this is a face-connected halo
-    // entry.
-    bool isDiagonal = (tarch::la::count(k,0) + tarch::la::count(k,PatchSize-1))>1;
+//
+// ========================
+//          old
+// ========================
+//
 
-    if (haloSize==0 or not isDiagonal) {
-      for (int i=0; i<unknowns+auxiliaryVariables; i++) {
-        const int entry = index+i;
-        bool dataValid = true;
-        if (minValues!=nullptr and minValues[i]>Q[entry]) {
-          dataValid = false;
-        }
-        if (maxValues!=nullptr and maxValues[i]<Q[entry]) {
-          dataValid = false;
-        }
-        if (triggerNonCriticalAssertion) {
-          nonCriticalAssertion11(
-            Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid,
-            Q[entry], unknowns,
-            auxiliaryVariables,
-            isDiagonal, haloSize, i,
-            numberOfVolumesPerAxisInPatch, haloSize, k, i, location );
-        }
-        else {
-          assertion12(
-            Q[entry]==Q[entry] and std::isfinite(Q[entry]) and dataValid,
-            Q[entry], unknowns,
-            auxiliaryVariables,
-            isDiagonal, haloSize, i,
-            numberOfVolumesPerAxisInPatch, haloSize, k, i, location,
-            plotPatch(Q,unknowns,auxiliaryVariables,numberOfVolumesPerAxisInPatch,haloSize)
-          );
-        }
-      }
-    }
-  }
-  logTraceOut( "validatePatch(...)" );
-  #endif
-}
+
 
 
 double exahype2::fv::maxEigenvalue_AoS(
@@ -159,7 +135,7 @@ double exahype2::fv::maxEigenvalue_AoS(
 ) {
   double result = 0.0;
 
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<Dimensions, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   #if Dimensions==2
@@ -335,7 +311,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d (
   assertion4( dt>=0.0, patchCentre, patchSize, t, dt  );
   assertion4( t<1e100, patchCentre, patchSize, t, dt  );
 
-  tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<2, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
@@ -496,7 +472,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d (
   assertion4( t<1e100, patchCentre, patchSize, t, dt  );
   assertion4(dt<1e100, patchCentre, patchSize, t, dt  );
 
-  tarch::la::Vector<3, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<3, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double numericalFluxL[unknowns]; // helper out variable
@@ -726,7 +702,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS2d_SplitLoop (
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS2d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
-  tarch::la::Vector<2, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<2, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
@@ -840,7 +816,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS3d_SplitLoop (
   static tarch::logging::Log _log ("exahype2::fv");
   logTraceInWith6Arguments( "applySplit1DRiemannToPatch_Overlap1AoS3d(...)", patchCentre, patchSize, t, dt, numberOfVolumesPerAxisInPatch, unknowns );
 
-  tarch::la::Vector<3, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<3, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double numericalFluxL[unknowns]; // helper out variable
@@ -1050,7 +1026,7 @@ void exahype2::fv::applySplit1DRiemannToPatch_Overlap1AoS(
   double * __restrict__                        Qout,
   std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        updatePredicate
 ) {
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<Dimensions, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   double * numericalFluxL = ::tarch::allocateMemory(unknowns, tarch::MemoryLocation::Heap);
@@ -1140,7 +1116,7 @@ double exahype2::fv::maxEigenvalue_AoS(
 ) {
   double result = 0.0;
 
-  tarch::la::Vector<Dimensions, double> volumeH = exahype2::getVolumeSize (
+  tarch::la::Vector<Dimensions, double> volumeH = exahype2::fv::getVolumeSize (
       patchSize, numberOfVolumesPerAxisInPatch);
 
   dfor(k,numberOfVolumesPerAxisInPatch) {

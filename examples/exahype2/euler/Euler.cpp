@@ -245,12 +245,6 @@ void examples::exahype2::euler::Euler::flux(
   const double p = (gamma-1) * (Q[4] - 0.5*irho*(Q[1]*Q[1]+Q[2]*Q[2]));
   #endif
 
-  nonCriticalAssertion( F[0]==F[0] );
-  nonCriticalAssertion( F[1]==F[1] );
-  nonCriticalAssertion( F[2]==F[2] );
-  nonCriticalAssertion( F[3]==F[3] );
-  nonCriticalAssertion( F[4]==F[4] );
-
   const double coeff = irho*Q[normal+1];
   F[0] = coeff*Q[0];
   F[1] = coeff*Q[1];
@@ -259,6 +253,12 @@ void examples::exahype2::euler::Euler::flux(
   F[4] = coeff*Q[4];
   F[normal+1] += p;
   F[4]        += coeff*p;
+
+  nonCriticalAssertion8( F[0]==F[0], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
+  nonCriticalAssertion8( F[1]==F[1], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
+  nonCriticalAssertion8( F[2]==F[2], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
+  nonCriticalAssertion8( F[3]==F[3], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
+  nonCriticalAssertion8( F[4]==F[4], faceCentre, volumeH, normal, Q[0], Q[1], Q[2], Q[3], Q[4] );
 
   logTraceOutWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
 }

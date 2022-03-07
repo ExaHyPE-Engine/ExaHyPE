@@ -83,10 +83,10 @@ project = exahype2.Project( ["examples", "exahype2", "euler"], "finitevolumes", 
 # Add the Finite Volumes solver
 #
 unknowns       = 5
-time_step_size = 0.001
 max_h          = args.h / args.patch_size
 min_h          = 0.9 * args.h * 3.0**(-args.adaptivity_levels) / args.patch_size
 
+time_step_size = 0.1 * min_h
 
 #
 # Still the same solver, but this time we use named arguments. This is the way

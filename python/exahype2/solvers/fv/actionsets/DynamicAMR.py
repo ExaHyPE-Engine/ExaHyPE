@@ -241,4 +241,5 @@ class DynamicAMR( peano4.toolbox.blockstructured.DynamicAMR ):
   def get_includes(self):
     return super(DynamicAMR,self).get_includes() + """
 #include <cstring>
+#include "exahype2/fv/PatchUtils.h"
 """    

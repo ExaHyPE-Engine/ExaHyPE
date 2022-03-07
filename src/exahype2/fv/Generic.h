@@ -16,11 +16,138 @@
 namespace exahype2 {
   namespace fv {
     /**
+     * Representation of a number of patches which contains all information
+     * that's required to process them (given you know the semantics of the
+     * data).
+     *
+     * This struct is a mixture of AoS and SoA. All data besides the Qin and
+     * result are SoA. The reason for this "inconsistent" model is that we
+     * want to transfer the patch data to accelerators quickly, while we also
+     * want to avoid to copy too much stuff around. So we leave the big input
+     * fields and basically manage just pointers to that. All scalar or small
+     * vector data are converted in SoA which makes it fairly straightforward
+     * later to move them over to an accelerator.
+     */
+    struct PatchData {
+      double**   QIn;
+      tarch::la::Vector<Dimensions,double>*   patchCentre;
+      tarch::la::Vector<Dimensions,double>*   patchSize;
+      double*    t;
+      double*    dt;
+      const int  numberOfPatches;
+      double**   QOut;
+      double*    maxEigenvalue;
+
+      /**
+       * Construct patch data object for one single cell.
+       */
+      PatchData(
+        double*   QIn,
+        const tarch::la::Vector<Dimensions,double>&   patchCentre_,
+        const tarch::la::Vector<Dimensions,double>&   patchSize_,
+        double    t,
+        double    dt,
+        double*   QOut
+      );
+      PatchData( int numberOfPatches_ );
+      ~PatchData();
+    } ;
+
+    /**
+     * Compute total number of unknowns (incl halo) for a 2d patch.
+     */
+    int getTotalNumberOfVolumeDoFs(
+      int numberOfPatches,
+      int numberOfVolumesPerAxisInPatch,
+      int overlap
+    );
+
+    int getTotalNumberOfInnerVolumeDoFs(
+      int numberOfPatches,
+      int numberOfVolumesPerAxisInPatch,
+      int overlap
+    );
+
+    int getTotalNumberOfFaceDoFs(
+      int numberOfPatches,
+      int numberOfVolumesPerAxisInPatch,
+      int overlap
+    );
+
+    namespace enumerator {
+      /**
+       * Default enumerator for volumes
+       *
+       * We assume that we have a lexicographic ordering of the patch data and
+       * all data therein are ordered lexicographically and stored in as AoS.
+       *
+       * @param numberOfPatches_ This field is irrelevant for this enumerator,
+       *   as the patches are enumerated one after another, i.e. there is no
+       *   patch interleaving. To be formally correct, you should set it to 1
+       *   if you construct and enumerator over the input or output data, as
+       *   there is one patch per cell.
+       */
+      struct AoSLexicographicVolumeEnumerator {
+        public:
+          AoSLexicographicVolumeEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+            _numberOfPatches(numberOfPatches),
+            _numberOfVolumesPerAxisInPatch(numberOfVolumesPerAxisInPatch),
+            _haloSize(haloSize),
+            _unknowns(unknowns),
+            _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables){}
+
+          /**
+           * Access an index
+           *
+           * The index always refers to the interior of the patches. So you can use negative
+           * indices if you want.
+           */
+          int operator()(
+            int patchIndex,
+            const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+            int unknown
+          ) const {
+            if (Dimensions==2) {
+              return patchIndex * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + (volumeIndex(0)+_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + unknown;
+            }
+            else {
+              return patchIndex * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + (volumeIndex(2)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + (volumeIndex(0)+_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + unknown;
+            }
+          }
+
+          const int _numberOfPatches;
+          const int _numberOfVolumesPerAxisInPatch;
+          const int _haloSize;
+          const int _unknowns;
+          const int _numberOfAuxiliaryVariables;
+      };
+
+    }
+
+
+
+    //
+    // ====================
+    //         old
+    // ====================
+    //
+
+
+
+    /**
      * Copy the patch data from a patch representation with halo into
      * a representation without halo. If you set haloSize to zero, then
      * it is a direct memcopy.
      *
-     * @todo raus
+     * It is important to recognise that this routine does also copy the
+     * auxiliary values.
      */
     void copyPatch(
       const double* __restrict__  QinWithHalo,
@@ -30,6 +157,7 @@ namespace exahype2 {
       int    numberOfVolumesPerAxisInPatch,
       int    haloSize
     );
+
 
     // @todo raus
     double maxEigenvalue_AoS(
@@ -333,14 +461,6 @@ namespace exahype2 {
       const double * __restrict__                  Q,
       std::function<bool(const tarch::la::Vector<Dimensions, int>&)>        analysePredicate
     );
-
-    namespace volumeenumerator {
-
-    }
-
-    namespace faceenumerator {
-
-    }
   }
 }
 
