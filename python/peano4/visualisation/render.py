@@ -13,6 +13,7 @@ if __name__ == "__main__":
   parser.add_argument("--filter-fine-grid",          dest="filter_fine_grid",             action="store_true",  default = False, help="Display only fine grid" )
   parser.add_argument("--average",                   dest="filter_average",               action="store_true",  default = False, help="Average over cell data (reduces resolution/memory)" )
   parser.add_argument("--norm-calculator",           dest="norm_calculator",              action="store_true",  default = False, help="Compute norm over each point" )
+  parser.add_argument("--shrink-patches",            dest="shrink_patches",               action="store_true",  default = False, help="Shrink patches to around 95%, so they are visually distinguishable from neighbours" )
   parser.add_argument("--eliminate-relative-paths",  dest="eliminate_relative_paths",     action="store_true",  default = False, help="If you invoke the script on a different directory than your current working directory, ensure that all meta files written do not hold relative paths" )
   parser.add_argument("--type",                      dest="type",                         choices=["display", "vtu", "patch-file" ],  default="vtu", help="Output format" )
   parser.add_argument("--dir",                       dest="dir",                          default=".", help="Output directory" )
@@ -46,6 +47,9 @@ if __name__ == "__main__":
   if args.norm_calculator:
     print( "add norm calculator filter" )
     visualiser.append_filter( peano4.visualisation.filters.Calculator(verbose=args.verbose), False )
+  if args.shrink_patches:
+    print( "add shrink patches filter" )
+    visualiser.append_filter( peano4.visualisation.filters.ShrinkPatches(0.95,verbose=args.verbose), False )
     
   
     
