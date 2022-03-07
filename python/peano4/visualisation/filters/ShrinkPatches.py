@@ -22,21 +22,21 @@ class ShrinkPatches( Filter ):
       
   """
   def __init__(self, scaling, verbose=False):
-    super(ShrinkPatches,self).__init__(self, True, True, verbose)
+    super(ShrinkPatches,self).__init__(self, True, verbose)
     self.scaling = scaling
     pass
   
   
   def render(self, cell_data, dof, dimensions, unknowns, description, mapping):
     for i in cell_data:
-      i.offset[0] = i.offset[0] + i.size[0]*(1.0-self.scaling)/2.0
-      i.offset[1] = i.offset[1] + i.size[1]*(1.0-self.scaling)/2.0
       if dimensions==3:
-        i.offset[2] = i.offset[2] + i.size[2]*(1.0-self.scaling)/2.0
-      i.size[0] = i.size[0]*self.scaling
-      i.size[1] = i.size[1]*self.scaling
-      if dimensions==3:
-        i.size[2] = i.size[2]*self.scaling
-        
+        i.offset = ( i.offset[0] + i.size[0]*(1.0-self.scaling)/2.0, 
+                     i.offset[1] + i.size[1]*(1.0-self.scaling)/2.0, 
+                     i.offset[2] + i.size[2]*(1.0-self.scaling)/2.0)
+        i.size = ( i.size[0]*self.scaling, i.size[1]*self.scaling, i.size[2]*self.scaling )
+      else:
+        i.offset = ( i.offset[0] + i.size[0]*(1.0-self.scaling)/2.0, 
+                     i.offset[1] + i.size[1]*(1.0-self.scaling)/2.0)
+        i.size = ( i.size[0]*self.scaling, i.size[1]*self.scaling )        
     return cell_data, dof, dimensions, unknowns, description, mapping
   
