@@ -106,6 +106,6 @@ if (_solverState==SolverState::Secondary) {
 
 
   def get_user_action_set_includes(self):
-    return super(LocalTimeStepWithEnclaveTasking, self).get_user_action_set_includes() + """
+    return super(GlobalAdaptiveTimeStepWithEnclaveTasking, self).get_user_action_set_includes() + """
 #include "exahype2/fv/rusanov/Rusanov.h"
 """
