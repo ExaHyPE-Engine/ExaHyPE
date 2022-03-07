@@ -26,8 +26,7 @@ class Filter(object):
 
 
   def __str__(self):
-    #return "Filter: " + self.__class__.__name__ + ", run on individual pieces of data=" + str(self.run_on_individual_pieces_of_data) + ", run on concatenated data=" + str(self.run_on_concatenated_data) + ", verbose=" + str(self.verbose)  
-    return "Filter: " + self.__class__.__name__
+    return "Filter: " + self.__class__.__name__ + ", run on individual pieces of data=" + str(self.run_on_individual_pieces_of_data) + ", run on concatenated data=" + str(self.run_on_concatenated_data) + ", verbose=" + str(self.verbose)  
 
   
   def render(self, cell_data, dof, dimension, unknowns, description, mapping):

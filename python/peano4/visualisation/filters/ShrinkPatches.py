@@ -22,7 +22,9 @@ class ShrinkPatches( Filter ):
       
   """
   def __init__(self, scaling, verbose=False):
-    super(ShrinkPatches,self).__init__(self, True, verbose)
+    super(ShrinkPatches,self).__init__(run_on_individual_pieces_of_data=True, 
+                                       run_on_concatenated_data=False, 
+                                       verbose=verbose)
     self.scaling = scaling
     pass
   
