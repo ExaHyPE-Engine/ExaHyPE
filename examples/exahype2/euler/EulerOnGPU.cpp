@@ -183,10 +183,11 @@ double ::examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
-  double result = maxEigenvalue( Q, faceCentre, volumeH, t, normal, Offloadable::Yes );
+  double result = maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal, Offloadable::Yes );
   logTraceOutWith1Argument( "maxEigenvalue(...)", result );
   return result;
 }
@@ -197,11 +198,12 @@ void ::examples::exahype2::euler::EulerOnGPU::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[5]
 )  {
   logTraceInWith4Arguments( "flux(...)", faceCentre, volumeH, t, normal );
-  flux( Q, faceCentre, volumeH, t, normal, F, Offloadable::Yes );
+  flux( Q, faceCentre, volumeH, t, dt, normal, F, Offloadable::Yes );
   logTraceOut( "flux(...)" );
 }
 

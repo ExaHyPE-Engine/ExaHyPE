@@ -297,15 +297,21 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
   I return only the unqualified function call, i.e. without any namespaces.
   
   """  
-  template = """timeStepWithRusanov_overlap1_sequential_AoS(
-  patchData,
-  {{NUMBER_OF_VOLUMES_PER_AXIS}},
-  {{NUMBER_OF_UNKNOWNS}},
-  {{NUMBER_OF_AUXILIARY_VARIABLES}},
-  {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
-  {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %},
+  template = """timeStepWithRusanov_overlap1_sequential_AoS
+  {% if USE_STATELESS_FUNCTION_CALLS==True %}
+    <{{SOLVER_NAME}}>
+  {% endif %}
+  (
+    patchData,
+    {{NUMBER_OF_VOLUMES_PER_AXIS}},
+    {{NUMBER_OF_UNKNOWNS}},
+    {{NUMBER_OF_AUXILIARY_VARIABLES}},
+    {% if FLUX_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+    {% if NCP_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+    {% if SOURCE_IMPLEMENTATION=="<none>" %} false {% else %} true {% endif %},
+    {% if COMPUTE_MAX_EIGENVALUE==False %} false {% else %} true {% endif %}
+    {% if USE_STATELESS_FUNCTION_CALLS==False %}
+  ,
   [&](
     const double * __restrict__ Q,
     const tarch::la::Vector<Dimensions,double>&  faceCentre,
@@ -315,10 +321,8 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     int                                          normal,
     double * __restrict__ F
   )->void {
-    {% if FLUX_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==True %}
-    {{SOLVER_NAME}}::flux( Q, faceCentre, volumeH, t, normal, F, {{SOLVER_NAME}}::Offloadable::Yes );
-    {% elif FLUX_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==False %}
-    repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, normal, F );
+    {% if FLUX_IMPLEMENTATION!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.flux( Q, faceCentre, volumeH, t, dt, normal, F );
     {% endif %}
   },
   [&](
@@ -331,10 +335,8 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     int                                          normal,
     double * __restrict__ BgradQ
   )->void {
-    {% if NCP_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==True %}
-    {{SOLVER_NAME}}::nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ, {{SOLVER_NAME}}::Offloadable::Yes );
-    {% elif NCP_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==False %}
-    repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ );
+    {% if NCP_IMPLEMENTATION!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.nonconservativeProduct( Q, deltaQ, faceCentre, volumeH, t, dt, normal, BgradQ );
     {% endif %}
   },
   [&](
@@ -345,10 +347,8 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     double                                       dt,
     double * __restrict__ S
   )->void {
-    {% if SOURCE_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==True %}
-    {{SOLVER_NAME}}::source( Q, volumeX, volumeH, t, BgradQ, {{SOLVER_NAME}}::Offloadable::Yes );
-    {% elif SOURCE_IMPLEMENTATION!="<none>" and USE_STATELESS_FUNCTION_CALLS==False %}
-    repositories::{{SOLVER_INSTANCE}}.source( Q, volumeX, volumeH, t, BgradQ );
+    {% if SOURCE_IMPLEMENTATION!="<none>" %}
+    repositories::{{SOLVER_INSTANCE}}.sourceTerm( Q, volumeX, volumeH, t, dt, BgradQ );
     {% endif %}
   },
   [&](
@@ -359,12 +359,9 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
     double                                       dt,
     int                                          normal
   )->double {
-    {% if USE_STATELESS_FUNCTION_CALLS==True %}
-    return {{SOLVER_NAME}}::maxEigenvalue( Q, faceCentre, volumeH, t, normal, {{SOLVER_NAME}}::Offloadable::Yes );
-    {% else %}
-    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, normal);
-    {% endif %}
+    return repositories::{{SOLVER_INSTANCE}}.maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal);
   }
+  {% endif %}
 );
 """
 
@@ -399,6 +396,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       Offloadable
     );
@@ -419,6 +417,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) {% if EIGENVALUES_IMPLEMENTATION=="<user-defined>" %}= 0{% else %} final{% endif %};
 
@@ -437,6 +436,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
@@ -452,6 +452,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if FLUX_IMPLEMENTATION=="<user-defined>" %}=0{% else %} final {% endif %};
@@ -473,6 +474,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
@@ -489,6 +491,7 @@ def create_abstract_solver_declarations(flux_implementation, ncp_implementation,
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) {% if NCP_IMPLEMENTATION=="<user-defined>" %}=0{% endif %};
@@ -561,6 +564,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
  const tarch::la::Vector<Dimensions,double>&  volumeH,
  double                                       t,
+ double                                       dt,
  int                                          normal,
  double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 ) {
@@ -576,6 +580,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 ) {
@@ -632,6 +637,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
@@ -658,6 +664,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ, // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
@@ -746,6 +753,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
@@ -759,6 +767,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
     ) override;
@@ -853,6 +862,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        F, // F[{{NUMBER_OF_UNKNOWNS}}]
       Offloadable
@@ -887,6 +897,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__                        BgradQ,     // BgradQ[5]
       Offloadable
@@ -928,6 +939,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F // F[{{NUMBER_OF_UNKNOWNS}}]
 )  {
@@ -945,6 +957,7 @@ void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservativeProduct(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[{{NUMBER_OF_UNKNOWNS}}]
 )  {
@@ -1003,6 +1016,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::flux(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ F,
   Offloadable
@@ -1025,6 +1039,7 @@ GPUCallableMethod void {{FULL_QUALIFIED_NAMESPACE}}::{{CLASSNAME}}::nonconservat
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ,
   Offloadable

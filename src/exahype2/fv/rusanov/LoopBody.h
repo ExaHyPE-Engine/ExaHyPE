@@ -31,12 +31,38 @@ namespace exahype2 {
        * thing without static function calls, it won't be inlined. But if you use
        * the kernel also with static function calls, then the code snippet
        * should be inlined.
+       *
+       *
+       * As I've moved all the definitions into the header file, the compiler
+       * can and does successfully inline all function calls within the Rusanov
+       * solvers.
+       *
+       *
+       * For all of the routines, I provide specialisations which exploits that
+       * input data and output data are available as AoS. All of ExaHyPE's user
+       * routines are phrased as AoS, i.e. you are given one or two or a set of
+       * structs representing a volume, and then you return a struct (tuple) of
+       * outputs. If the underlying data storage is not organised as AoS, then
+       * we have to first gather data, pass it into the user functions, and then
+       * fetch it back. If data however is organised as AoS, we can directly
+       * invoke the user's functions on the data. No need to gather and scatter.
+       * While I refer to these routines as specialisations, they are technically
+       * realised via template overloading.
+       *
+       *
+       * Further to the specialisation, each loop body routine is also available
+       * in its static counterpart, i.e. in a version which does not accept a
+       * functor but directly invokes the underlying solver's routines. These
+       * special cases refer to the actual static routines which are there to
+       * support accelerators.
        */
       namespace internal {
         /**
          * Copy solution from QIn to QOut. Typically, both fields have different
          * halo sizes, so we have to use two different enumerators. The loop body
          * copies over exactly one scalar.
+         *
+         * There is no specialisation for this one, as it is a plain copy anyway.
          *
          * @param patchIndex: Which patch is to be updated. QIn can hold multiple
          *   patches, and this index picks one of them.
@@ -70,15 +96,42 @@ namespace exahype2 {
           QOutEnumeratorType                        QOutEnumerator
         ) InlineMethod;
 
-        /**
-         * Specialisation which exploits that input data and output data are available
-         * as AoS.
-         */
+
         template <>
         static void copy_solution_and_add_source_term_loop_body(
           const double* __restrict__                QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           exahype2::fv::rusanov::Source             source,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                       patchIndex,
+          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+          double                                    t,
+          double                                    dt,
+          double* __restrict__                      QOut,
+          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
+        )  InlineMethod;
+
+
+        template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
+        static void copy_solution_and_add_source_term_loop_body(
+          const double* __restrict__                QIn,
+          QInEnumeratorType                         QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                       patchIndex,
+          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+          double                                    t,
+          double                                    dt,
+          double* __restrict__                      QOut,
+          QOutEnumeratorType                        QOutEnumerator
+        ) InlineMethod;
+
+
+        template <typename Solver>
+        static void copy_solution_and_add_source_term_loop_body(
+          const double* __restrict__                QIn,
+          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                       patchIndex,
@@ -119,15 +172,43 @@ namespace exahype2 {
         )  InlineMethod;
 
 
-        /**
-         * Specialisation of the template which exploits the fact that the input
-         * data is already organised as AoS. So we don't have to gather anything.
-         */
         template <class QMaxEigenvalueEnumeratorType>
         static void compute_max_eigenvalue_loop_body(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__                         QMaxEigenvalue,
+          QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
+        ) InlineMethod;
+
+
+        template <typename Solver, class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
+        static void compute_max_eigenvalue_loop_body(
+          const double* __restrict__                   QIn,
+          QInEnumeratorType                            QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__                         QMaxEigenvalue,
+          QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
+        )  InlineMethod;
+
+
+        template <typename Solver, class QMaxEigenvalueEnumeratorType>
+        static void compute_max_eigenvalue_loop_body(
+          const double* __restrict__                   QIn,
+          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -154,14 +235,37 @@ namespace exahype2 {
         ) InlineMethod;
 
 
-        /**
-         * Specialisation, as we know that the outcome is already AoS.
-         */
         template <>
         static double reduce_max_eigenvalue_loop_body(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt
+        ) InlineMethod;
+
+
+        template <typename Solver, class QInEnumeratorType>
+        static double reduce_max_eigenvalue_loop_body(
+          const double* __restrict__                   QIn,
+          QInEnumeratorType                            QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                                       dt
+        ) InlineMethod;
+
+
+        template <typename Solver>
+        static double reduce_max_eigenvalue_loop_body(
+          const double* __restrict__                   QIn,
+          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
@@ -195,17 +299,42 @@ namespace exahype2 {
         ) InlineMethod;
 
 
-        /**
-         * Specialisation of the flux loop body which takes into account that we work
-         * on a sequence of patches with lexicographic AoS data. AoS is exactly what
-         * the user's flux function expects us to pass in, so there is no need to
-         * gather or scatter data.
-         */
-        template <>
-        void compute_flux_loop_body<exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator,exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>(
+        static void compute_flux_loop_body(
           const double* __restrict__                                  QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
-          exahype2::fv::rusanov::Flux                                 flux,
+          exahype2::fv::rusanov::Flux         flux,
+          const tarch::la::Vector<Dimensions,double>&                 patchCentre,
+          const tarch::la::Vector<Dimensions,double>&                 patchSize,
+          int                                                         patchIndex,
+          const tarch::la::Vector<Dimensions,int>&                    volumeIndex,
+          double                                                      t,
+          double                                                      dt,
+          int                                                         normal,
+          double* __restrict__                                        QFlux,
+          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
+        ) InlineMethod;
+
+
+        template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
+        static void compute_flux_loop_body(
+          const double* __restrict__                   QIn,
+          QInEnumeratorType                            QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                              dt,
+          int                                 normal,
+          double* __restrict__                QFlux,
+          QFluxEnumeratorType                 QFluxEnumerator
+        ) InlineMethod;
+
+
+        template <typename Solver>
+        static void compute_flux_loop_body(
+          const double* __restrict__                                  QIn,
+          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,
           const tarch::la::Vector<Dimensions,double>&                 patchSize,
           int                                                         patchIndex,

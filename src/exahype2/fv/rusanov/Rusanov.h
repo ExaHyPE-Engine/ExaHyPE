@@ -56,40 +56,59 @@ namespace exahype2 {
       #endif
       ;
 
-/*
-      double timeStepWithRusanov_overlap1_batching(
-        PatchData2d&                                 patchData,
-        int                                          numberOfVolumesPerAxisInPatch,
-        int                                          unknowns,
-        int                                          auxiliaryVariables,
-        bool                                         evaluateMaximumEigenvalueAfterTimeStep,
-        bool                                         evaluateFlux,
-        bool                                         evaluateNCP,
-        bool                                         evaluateSource,
-        bool                                         evaluateFluxes,
+
+      static void timeStepWithRusanov_overlap1_batched_AoS(
+        PatchData&              patchData,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        bool                    evaluateFlux,
+        bool                    evaluateNonconservativeProduct,
+        bool                    evaluateSource,
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
         Flux                    flux,
         NonconservativeProduct  nonconservativeProduct,
         Source                  source,
         MaxEigenvalue           maxEigenvalue
-      );
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
 
 
-      double timeStepWithRusanov_overlap1_OpenMP_offloading(
-        PatchData2d&                                 patchData,
-        int                                          numberOfVolumesPerAxisInPatch,
-        int                                          unknowns,
-        int                                          auxiliaryVariables,
-        bool                                         evaluateMaximumEigenvalueAfterTimeStep,
-        bool                                         evaluateFlux,
-        bool                                         evaluateNCP,
-        bool                                         evaluateSource,
-        bool                                         evaluateFluxes,
-        Flux                    flux,
-        NonconservativeProduct  nonconservativeProduct,
-        Source                  source,
-        MaxEigenvalue           maxEigenvalue
-      );
-*/
+      template <typename Solver>
+      static void timeStepWithRusanov_overlap1_sequential_AoS(
+        PatchData&              patchData,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        bool                    evaluateFlux,
+        bool                    evaluateNonconservativeProduct,
+        bool                    evaluateSource,
+        bool                    evaluateMaximumEigenvalueAfterTimeStep
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
+
+
+      template <typename Solver>
+      static void timeStepWithRusanov_overlap1_batched_AoS(
+        PatchData&              patchData,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        bool                    evaluateFlux,
+        bool                    evaluateNonconservativeProduct,
+        bool                    evaluateSource,
+        bool                    evaluateMaximumEigenvalueAfterTimeStep
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
     }
   }
 }
