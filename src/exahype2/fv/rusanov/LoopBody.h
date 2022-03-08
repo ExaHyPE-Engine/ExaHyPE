@@ -55,6 +55,14 @@ namespace exahype2 {
        * functor but directly invokes the underlying solver's routines. These
        * special cases refer to the actual static routines which are there to
        * support accelerators.
+       *
+       *
+       * If you compile the code, you'll get warning like
+       * <pre>
+../../..//src/exahype2/fv/rusanov/LoopBody.h:239:23: warning: explicit specialization cannot have a storage class
+</pre>
+       * but it is safe to ignore these. Without a static qualifier (which led to
+       * this warning), the linking will fail due to multiple definitions.
        */
       namespace internal {
         /**

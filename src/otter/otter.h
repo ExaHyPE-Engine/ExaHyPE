@@ -31,7 +31,13 @@ namespace otter {
 }
 
 
-#if !defined(UseOtter)
+#if defined(UseOtter)
+#include <otter-trace/trace.h>
+#else
+#define otterLoopBegin()
+#define otterLoopEnd()
+#define otterLoopIterationBegin()
+#define otterLoopIterationEnd()
 #endif
 
 
