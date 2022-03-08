@@ -25,12 +25,12 @@
 #include "observers/CreateGrid.h"
 #include "observers/Init.h"
 #include "observers/Plot.h"
-#include "observers/Move.h"
 #include "observers/DensityNonSym.h"
-#include "observers/ForceNonSym.h"
 #include "observers/HydroPrepareGradient.h"
+#include "observers/HydroResetGradient.h"
 #include "observers/GradientNonSym.h"
 #include "observers/HydroPrepareForce.h"
+#include "observers/ForceNonSym.h"
 #include "observers/NewtonRaphsonSmoothingLength.h"
 #include "observers/Kick.h"
 #include "observers/HydroKickExtra.h"
@@ -184,19 +184,30 @@ int main(int argc, char** argv) {
         logInfo( "main()", "run timestep" )
 
 /*
-        // Debug Step (1D setup)
+        // Debug Step (if 1D setup is needed)
         if(i==0){
           examples::particles::observers::RearrangeAtStart rearrangeObserver;
           peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
         }
 */
 
+        /* Synchro step (as in N-body -- might not be accurate here) */
+        if(i>0){ // Do not synchronize at the IC
+          examples::particles::observers::Kick synchroObserver;                // Synchronization step (last kick from previous time-step)
+          peano4::parallel::SpacetreeSet::getInstance().traverse(synchroObserver);
+        }
+
+        /* Density loop */
         examples::particles::observers::DensityNonSym densityObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(densityObserver);
 
         examples::particles::observers::HydroPrepareGradient prepareGradient;
         peano4::parallel::SpacetreeSet::getInstance().traverse(prepareGradient);
 
+        examples::particles::observers::HydroResetGradient ResetGradient;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(ResetGradient);
+
+        /* Gradient loop */
         examples::particles::observers::GradientNonSym Gradient;
         peano4::parallel::SpacetreeSet::getInstance().traverse(Gradient);
 
@@ -206,15 +217,12 @@ int main(int argc, char** argv) {
         examples::particles::observers::HydroPrepareForce prepareForce;
         peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
 
+        /* Force loop */
         examples::particles::observers::ForceNonSym forcesObserver;
         peano4::parallel::SpacetreeSet::getInstance().traverse(forcesObserver);
 
-        if(i>0){ // Do not synchronize at the IC
-          examples::particles::observers::Kick synchroObserver;                  // Synchronization step (last kick from previous time-step)
-          peano4::parallel::SpacetreeSet::getInstance().traverse(synchroObserver);
-        }
-
-        examples::particles::observers::Kick kickObserver;                     // Actual Kick from current time-step
+        /* Time integration */
+        examples::particles::observers::Kick kickObserver;                     // First Kick from current time-step
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickObserver);
 
         examples::particles::observers::HydroKickExtra kickExtra;              // Evolve internal energy
@@ -222,6 +230,21 @@ int main(int argc, char** argv) {
 
         examples::particles::observers::Drift driftObserver;                   // Drift from current time-step
         peano4::parallel::SpacetreeSet::getInstance().traverse(driftObserver);
+
+//        examples::particles::observers::Kick kickObserver;                     // Second Kick from current time-step
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickObserver);
+
+        /* Get new acceleration -- Eq 68 of Phantom paper */
+//        examples::particles::observers::HydroPrepareForce prepareForce;
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+
+//        examples::particles::observers::ForceNonSym forcesObserver;
+//      peano4::parallel::SpacetreeSet::getInstance().traverse(forcesObserver);
+
+        /* Final, third kick -- Eq 69 of Phantom paper */
+//        examples::particles::observers::Kick2 kick2;                     
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2);
+
      
       }
       logInfo( "main()", "plot" )
