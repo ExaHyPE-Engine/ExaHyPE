@@ -279,16 +279,16 @@ void exahype2::fv::rusanov::internal::compute_flux_loop_body<exahype2::fv::enume
     double* __restrict__                                        QFlux,
     exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
 ) {
-    flux(
-      QIn + QInEnumerator(patchIndex,volumeIndex,0),
-      ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-      ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
-      t,
-      dt,
-      normal,
-      QFlux + QFluxEnumerator(patchIndex,volumeIndex,0)
-    );
-  }
+  flux(
+        QIn + QInEnumerator(patchIndex,volumeIndex,0),
+        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+        t,
+        dt,
+        normal,
+        QFlux + QFluxEnumerator(patchIndex,volumeIndex,0)
+  );
+}
 
 
 template <typename QInEnumeratorType, typename QFluxEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>

@@ -10,9 +10,28 @@
 #include "../Generic.h"
 #include "../PatchUtils.h"
 
+#include "tarch/multicore/multicore.h"
+
+
 namespace exahype2 {
   namespace fv {
     namespace rusanov {
+      /**
+       * @namespace internal
+       *
+       * The static storage class qualifier is required to avoid that we get
+       * multiple defined instances errors in Clang: We need all functions to
+       * be defined in headers to allow the single-pass compiler to get the
+       * inlining right, but then get multiple definitions without the static
+       * marker.
+       *
+       *
+       * Please note that the compiler will likely complain that it can't inline.
+       * In this case, search for the code location twice: If you call the whole
+       * thing without static function calls, it won't be inlined. But if you use
+       * the kernel also with static function calls, then the code snippet
+       * should be inlined.
+       */
       namespace internal {
         /**
          * Copy solution from QIn to QOut. Typically, both fields have different
@@ -25,7 +44,7 @@ namespace exahype2 {
          *   patch. This index refers to the target index.
          */
         template <class QInEnumeratorType, class QOutEnumeratorType>
-        void copy_solution_loop_body(
+        static void copy_solution_loop_body(
           const double* __restrict__                QIn,
           QInEnumeratorType                         QInEnumerator,
           int                                       patchIndex,
@@ -33,11 +52,11 @@ namespace exahype2 {
           int                                       unknown,
           double* __restrict__                      QOut,
           QOutEnumeratorType                        QOutEnumerator
-        );
+        ) InlineMethod;
 
 
         template <class QInEnumeratorType, class QOutEnumeratorType>
-        void copy_solution_and_add_source_term_loop_body(
+        static void copy_solution_and_add_source_term_loop_body(
           const double* __restrict__                QIn,
           QInEnumeratorType                         QInEnumerator,
           exahype2::fv::rusanov::Source             source,
@@ -49,14 +68,14 @@ namespace exahype2 {
           double                                    dt,
           double* __restrict__                      QOut,
           QOutEnumeratorType                        QOutEnumerator
-        );
+        ) InlineMethod;
 
         /**
          * Specialisation which exploits that input data and output data are available
          * as AoS.
          */
         template <>
-        void copy_solution_and_add_source_term_loop_body(
+        static void copy_solution_and_add_source_term_loop_body(
           const double* __restrict__                QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           exahype2::fv::rusanov::Source             source,
@@ -68,7 +87,7 @@ namespace exahype2 {
           double                                    dt,
           double* __restrict__                      QOut,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QOutEnumerator
-        );
+        )  InlineMethod;
 
 
         /**
@@ -81,9 +100,10 @@ namespace exahype2 {
          * this vector into the user functor. The result is written back to
          * QMaxEigenvalue. Again, we don't know anything about its ordering, so
          * we use the enumerator to access to output array.
+         *
          */
         template <class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
-        void compute_max_eigenvalue_loop_body(
+        static void compute_max_eigenvalue_loop_body(
           const double* __restrict__                   QIn,
           QInEnumeratorType                            QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -96,7 +116,7 @@ namespace exahype2 {
           int                                          normal,
           double* __restrict__                         QMaxEigenvalue,
           QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
-        );
+        )  InlineMethod;
 
 
         /**
@@ -104,7 +124,7 @@ namespace exahype2 {
          * data is already organised as AoS. So we don't have to gather anything.
          */
         template <class QMaxEigenvalueEnumeratorType>
-        void compute_max_eigenvalue_loop_body(
+        static void compute_max_eigenvalue_loop_body(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -117,11 +137,11 @@ namespace exahype2 {
           int                                          normal,
           double* __restrict__                         QMaxEigenvalue,
           QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator
-        );
+        ) InlineMethod;
 
 
         template <class QInEnumeratorType>
-        double reduce_max_eigenvalue_loop_body(
+        static double reduce_max_eigenvalue_loop_body(
           const double* __restrict__                   QIn,
           QInEnumeratorType                            QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -131,14 +151,14 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           double                                       t,
           double                                       dt
-        );
+        ) InlineMethod;
 
 
         /**
          * Specialisation, as we know that the outcome is already AoS.
          */
         template <>
-        double reduce_max_eigenvalue_loop_body(
+        static double reduce_max_eigenvalue_loop_body(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -148,7 +168,7 @@ namespace exahype2 {
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           double                                       t,
           double                                       dt
-        );
+        ) InlineMethod;
 
 
         /**
@@ -159,7 +179,7 @@ namespace exahype2 {
          * itself is generic.
          */
         template <class QInEnumeratorType, class QFluxEnumeratorType>
-        void compute_flux_loop_body(
+        static void compute_flux_loop_body(
           const double* __restrict__                QIn,
           QInEnumeratorType                   QInEnumerator,
           exahype2::fv::rusanov::Flux         flux,
@@ -172,7 +192,7 @@ namespace exahype2 {
           int                                 normal,
           double* __restrict__                QFlux,
           QFluxEnumeratorType                 QFluxEnumerator
-        );
+        ) InlineMethod;
 
 
         /**
@@ -195,7 +215,7 @@ namespace exahype2 {
           int                                                         normal,
           double* __restrict__                                        QFlux,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
-        );
+        ) InlineMethod;
 
 
         /**
@@ -205,7 +225,7 @@ namespace exahype2 {
          *
          */
         template <typename QInEnumeratorType, typename QFluxEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
-        void update_solution_with_flux_loop_body(
+        static void update_solution_with_flux_loop_body(
           const double* __restrict__                   QIn,
           QInEnumeratorType                            QInEnumerator,
           const double* __restrict__                   tempFluxX,
@@ -224,7 +244,7 @@ namespace exahype2 {
           double                                       dt,
           double* __restrict__                         QOut,
           QOutEnumeratorType                           QOutEnumerator
-        );
+        ) InlineMethod;
       }
     }
   }

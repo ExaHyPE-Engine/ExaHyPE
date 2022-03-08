@@ -25,8 +25,19 @@ namespace exahype2 {
        *
        * _AoS: All internal (temporary) data structures are organised as AoS.
        *
+       * ## Implementation details
+       *
+       * The function is marked as static and put into a header file. I still want to
+       * separate the declaration from the definition, so the actual implementation is
+       * in a file with the extension cpph. This indicates that it should (logically)
+       * be in a cpp file, but to allow the compiler to inline aggressively, it has to
+       * be in the header.
+       *
+       * As I put the routine in a header and as multiple code parts might include it,
+       * we often end up with multiple definition errors in Clang. Therefore, I mark the
+       * routine as static.
        */
-      void timeStepWithRusanov_overlap1_sequential_AoS(
+      static void timeStepWithRusanov_overlap1_sequential_AoS(
         PatchData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -82,6 +93,9 @@ namespace exahype2 {
     }
   }
 }
+
+
+#include "Rusanov.cpph"
 
 
 #endif
