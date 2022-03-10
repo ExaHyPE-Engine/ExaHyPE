@@ -16,27 +16,85 @@
 namespace exahype2 {
   namespace fv {
     /**
+     * We need this routine within vectorised and GPUised code. Therefore,
+     * it has to be in the header (as link-time optimisation is quite tricky
+     * for many compilers). To avoid the implied multiple symbol errors, I
+     * declare the function as static. Now the compilers plot warning, but
+     * everything seems to work.
+     */
+    static tarch::la::Vector<2,double>  getVolumeSize(
+      const tarch::la::Vector<2,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch
+    ) InlineMethod  {
+      tarch::la::Vector<2,double> volumeSize;
+
+      for (int d=0; d<2; d++) {
+        assertion2( numberOfVolumesPerAxisInPatch>=1, h, numberOfVolumesPerAxisInPatch );
+        volumeSize(d) = h(d)/numberOfVolumesPerAxisInPatch;
+      }
+
+      return volumeSize;
+    }
+
+
+    static tarch::la::Vector<3,double>  getVolumeSize(
+      const tarch::la::Vector<3,double>&  h,
+      int                                 numberOfVolumesPerAxisInPatch
+    ) InlineMethod {
+      tarch::la::Vector<3,double> volumeSize;
+
+      for (int d=0; d<3; d++) {
+        volumeSize(d) = h(d)/numberOfVolumesPerAxisInPatch;
+      }
+
+      return volumeSize;
+    }
+
+
+    /**
      * In ExaHyPE's Finite Volume setup, a cell hosts a patch of Finite Volumes.
      * When we iterate over these volumes, we typically have to know the centre
      * of the volume.
+     *
+     * I use this routine in a lot of the loops that have to be vectorised.
+     * Therefore, it is absolutely essential that the compiler can inline them.
+     * Inlining works properly with most compilers if and only if the definition
+     * is available in the header. This is the reason why this implementation
+     * ended up here and not in the cpp file.
      *
      * @param x      Centre of the cell
      * @param h      Size of the cell
      * @param index  Index of Finite Volume (in lexicographic ordering)
      */
-    tarch::la::Vector<2,double>  getVolumeCentre(
+    static tarch::la::Vector<2,double>  getVolumeCentre(
       const tarch::la::Vector<2,double>&  x,
       const tarch::la::Vector<2,double>&  h,
       int                                 numberOfVolumesPerAxisInPatch,
       const tarch::la::Vector<2,int>&     index
-    );
+    ) InlineMethod {
+      tarch::la::Vector<2,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<2,double> result     = x - 0.5 * h + 0.5 * volumeSize;
+      for (int d=0; d<2; d++) {
+        result(d) += index(d) * volumeSize(d);
+      }
+      return result;
+    }
 
-    tarch::la::Vector<3,double>  getVolumeCentre(
+
+    static tarch::la::Vector<3,double>  getVolumeCentre(
       const tarch::la::Vector<3,double>&  x,
       const tarch::la::Vector<3,double>&  h,
       int                                 numberOfVolumesPerAxisInPatch,
       const tarch::la::Vector<3,int>&     index
-    );
+    ) InlineMethod  {
+      tarch::la::Vector<3,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
+      tarch::la::Vector<3,double> result     = x - 0.5 * h + 0.5 * volumeSize;
+      for (int d=0; d<3; d++) {
+        result(d) += index(d) * volumeSize(d);
+      }
+      return result;
+    }
+
 
     /**
      * With GCC 10, it was impossible to return/copy the vector class. We
@@ -50,20 +108,13 @@ namespace exahype2 {
       int                                 numberOfVolumesPerAxisInPatch
     );
 
+
     double  getVolumeLength(
       const tarch::la::Vector<3,double>&  h,
       int                                 numberOfVolumesPerAxisInPatch
     );
 
-    tarch::la::Vector<2,double>  getVolumeSize(
-      const tarch::la::Vector<2,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
-    );
 
-    tarch::la::Vector<3,double>  getVolumeSize(
-      const tarch::la::Vector<3,double>&  h,
-      int                                 numberOfVolumesPerAxisInPatch
-    );
     /**
      * Helper routine that I need in the log statements. Applies to
      * AoS data only.

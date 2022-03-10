@@ -25,7 +25,7 @@ namespace exahype2 {
        *
        * _AoS: All internal (temporary) data structures are organised as AoS.
        *
-       * ## Implementation details
+       * ## Implementation details (signatures)
        *
        * The function is marked as static and put into a header file. I still want to
        * separate the declaration from the definition, so the actual implementation is
@@ -36,6 +36,18 @@ namespace exahype2 {
        * As I put the routine in a header and as multiple code parts might include it,
        * we often end up with multiple definition errors in Clang. Therefore, I mark the
        * routine as static.
+       *
+       * Please study the comments on the namespace internal (hosted in LoopBody.h) for
+       * further details why certain code parts are written the way they are written.
+       *
+       * If I evaluate the fluxes, I have to take into account that diagonal volumes
+       * don't hold valid data. After all, we only use split or face-normal fluxes, but
+       * do not support transversal waves. So we should mask out those diagonal volumes
+       * and should not compute anything on them. Indeed, some applications use
+       * assertions to ensure that their user functions are not invoked on uninitialised
+       * data and then fail. Unfortunately, such a mask stops the vectoriser from doing
+       * its job, as the control flow simply becomes too complicated. So I enable the
+       * masking if and only if I am not in release mode.
        */
       static void timeStepWithRusanov_overlap1_sequential_AoS(
         PatchData&              patchData,

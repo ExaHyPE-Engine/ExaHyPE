@@ -355,29 +355,116 @@ namespace exahype2 {
         ) InlineMethod;
 
 
-        /**
-         * Update the solution in QOut.
-         *
-         * The Z flow array is ignored if you use the code in 2d.
-         *
-         */
-        template <typename QInEnumeratorType, typename QFluxEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
+        template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
         static void update_solution_with_flux_loop_body(
-          const double* __restrict__                   QIn,
-          QInEnumeratorType                            QInEnumerator,
           const double* __restrict__                   tempFluxX,
           const double* __restrict__                   tempFluxY,
           const double* __restrict__                   tempFluxZ,
           QFluxEnumeratorType                          fluxEnumerator,
-          double* __restrict__                         QMaxEigenvalueX,
-          double* __restrict__                         QMaxEigenvalueY,
-          double* __restrict__                         QMaxEigenvalueZ,
-          QMaxEigenvalueEnumeratorType                 QMaxEigenvalueEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
+          int                                          d,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          QOutEnumeratorType                           QOutEnumerator
+        ) InlineMethod;
+
+
+        /**
+         * To allow the compiler to vectorise over this routine, it is absolutely
+         * essential that ::exahype2::fv::getVolumeSize() inlines properly. However,
+         * this does not work without lto, and we found lto often tricky to use. So
+         * instead of using
+         *
+         *     const double scaling = dt / ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch )(0);
+         *
+         * we calculate the scaling manually. This allows us, in theory, to run
+         * non-cubic finite volumes as well.
+         *
+         * It is important that we do not accumulate the horizontal, vertical,
+         * front-to-back fluxes directly in QOut. Instead, we store them in
+         * individual variables and then add them to QOut in one rush. Otherwise,
+         * we create write-write dependencies and the LLVM compiler will refuse to
+         * vectorise.
+         */
+        template <typename QInEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
+        static void update_solution_with_eigenvalue_damping(
+          const double* __restrict__                   QIn,
+          const QInEnumeratorType &                    QInEnumerator,
+          double* __restrict__                         tempMaxEigenvalueX,
+          double* __restrict__                         tempMaxEigenvalueY,
+          double* __restrict__                         tempMaxEigenvalueZ,
+          const QMaxEigenvalueEnumeratorType &         eigenvalueEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          tarch::la::Vector<Dimensions,int>            volumeIndex,
+          int                                          unknown,
+          int                                          normal,
+          double                                       dt,
+          double* __restrict__                         QOut,
+          const QOutEnumeratorType &                   QOutEnumerator
+        ) InlineMethod;
+
+
+        /**
+         * We count faces starting with zero, i.e. effectively shift the indices
+         * not by 1/2 but one volume to the right: Let the leftmost volume have
+         * the index i. i is typically 0 but can also be negative (if we have halos).
+         * The leftmost volume's left face does not exist. Its right face has index
+         * 0.
+         *
+         * There is no specialisation for this class, as we have to gather data
+         * always (we have to reconstruct the average and the jump term).
+         */
+        template <class QInEnumeratorType, class QNCPFaceEnumeratorType>
+        static void compute_nonconservative_flux_loop_body(
+          const double* __restrict__                     QIn,
+          QInEnumeratorType                              QInEnumerator,
+          exahype2::fv::rusanov::NonconservativeProduct  ncp,
+          const tarch::la::Vector<Dimensions,double>&    patchCentre,
+          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          int                                            patchIndex,
+          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          double                                         t,
+          double                              dt,
+          int                                 normal,
+          double* __restrict__                QNcp,
+          QNCPFaceEnumeratorType              QNcpEnumerator
+        ) InlineMethod;
+
+
+        template <typename Solver, class QInEnumeratorType, class QNCPFaceEnumeratorType>
+        static void compute_nonconservative_flux_loop_body(
+          const double* __restrict__                     QIn,
+          QInEnumeratorType                              QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&    patchCentre,
+          const tarch::la::Vector<Dimensions,double>&    patchSize,
+          int                                            patchIndex,
+          const tarch::la::Vector<Dimensions,int>&       volumeIndex,
+          double                                         t,
+          double                              dt,
+          int                                 normal,
+          double* __restrict__                QNcp,
+          QNCPFaceEnumeratorType              QNcpEnumerator
+        ) InlineMethod;
+
+
+        template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
+        static void update_solution_with_nonconservative_flux_loop_body(
+          const double* __restrict__                   QNcpX,
+          const double* __restrict__                   QNcpY,
+          const double* __restrict__                   QNcpZ,
+          QNCPFaceEnumeratorType                       ncpEnumerator,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          int                                          unknown,
+          int                                          d,
           double                                       dt,
           double* __restrict__                         QOut,
           QOutEnumeratorType                           QOutEnumerator

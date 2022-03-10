@@ -72,6 +72,14 @@ namespace exahype2 {
       int overlap
     );
 
+    /**
+     * I could count all of the volumes within the patch plus its halo (including
+     * diagonal halo volumes) and then I reduce the count in one dimension by one.
+     * If I go down this route, then I however have to amend all enumerators, i.e.
+     * when I serialise a d-dimensional index, one of the d entries has a different
+     * base. So instead, I make the face dof count one larger in each direction.
+     * In this case, I can be sure that there's enough memory.
+     */
     int getTotalNumberOfFaceDoFs(
       int numberOfPatches,
       int numberOfVolumesPerAxisInPatch,
