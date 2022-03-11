@@ -52,6 +52,7 @@ if __name__ == "__main__":
     parser.add_argument("-impl", "--implementation",  dest="implementation",  choices=["fv-global-fixed", "fv-global-adaptive", "fv-global-fixed-enclave", "fv-global-adaptive-enclave"], required="True",  help="Pick solver type" )
     parser.add_argument("-no-pbc",  "--no-periodic-boundary-conditions",      dest="periodic_bc", action="store_false", default="True",  help="switch on or off the periodic BC" )
     parser.add_argument("-et",   "--end-time",        dest="end_time",        type=float, default=1.0, help="End (terminal) time" )
+    parser.add_argument("-pst",   "--plot-start-time",        dest="plot_start_time",        type=float, default=0.0, help="start time for plot" )
     parser.add_argument("-s",    "--scenario",        dest="scenario",        choices=["gauge", "linear", "single-puncture","two-punctures"], required="True", help="Scenario" )
     parser.add_argument("-cfl",      "--CFL-ratio",           dest="cfl",             type=float, default=0.1, help="Set CFL ratio" )
     parser.add_argument("-tracer", "--add-tracer",    dest="add_tracer", type=int, default=0,  help="Add tracers and specify the seeds. 0-switch off, 1-x axis, 2-xy plane, 3-over domain (evenly), 4-over domain(with noise option), 5-inserted by coordinate, 6-spherical surface(Gauss_Legendre_quadrature), 7-spherical surface(t-design)" )
@@ -150,7 +151,7 @@ if __name__ == "__main__":
             unknowns=number_of_unknowns,
             auxiliary_variables=0,
             min_volume_h=min_volume_h, max_volume_h=max_volume_h,
-            time_step_relaxation=0.5,
+            time_step_relaxation=cfl,
             #use_gpu =args.GPU #=="fv-fixed-gpu" else False
 #                        use_gpu = True if args.implementation=="fv-adaptive-gpu" else False
           )
@@ -519,8 +520,6 @@ if __name__ == "__main__":
 
         self.create_data_structures()
         self.create_action_sets()
-       
-
 
       def pick_Gauge_wave_scenario(self):
         self.add_solver_constants( """static constexpr int Scenario=0; /* Gauge wave */  """ )
@@ -556,9 +555,10 @@ if __name__ == "__main__":
         unknowns = 59
         time_step_size = 0.001
     except Exception as e:
-        msg = "Warning: ADER-DG no supported on this machine"
-        print(msg)
-        userinfo.append((msg,e))
+        pass
+        #msg = "Warning: ADER-DG no supported on this machine"
+        #print(msg)
+        #userinfo.append((msg,e))
 
     if is_aderdg:
       solver_name    = "ADERDG" + solver_name
@@ -582,6 +582,7 @@ if __name__ == "__main__":
       )
     else:
       my_solver = CCZ4Solver(solver_name, args.patch_size, min_h, args.max_h, args.cfl, args.CCZ4domain_r)
+      userinfo.append(("CFL ratio set as "+str(args.cfl), None))
 
 ########################################################################################
 #Add postpocessing function
@@ -620,21 +621,32 @@ if __name__ == "__main__":
       periodic_boundary_conditions = [False,False,False]
       userinfo.append((msg,None))
 
-    intparams.update({"ReSwi":args.CCZ4ReSwi})
+    for k, v in intparams.items():
+      intparams.update({k:eval("args.CCZ4{}".format(k))})
+    for k, v in floatparams.items():
+      floatparams.update({k:eval("args.CCZ4{}".format(k))})
 
     solverconstants=""
+
+    if args.scenario=="gauge":
+      solverconstants+= "static constexpr int Scenario=0; /* Gauge wave */  "
+      userinfo.append(("picking gauge wave scenario",None))
+      floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
+      intparams.update({"LapseType":0})
+    elif args.scenario=="linear":
+      solverconstants+= "static constexpr int Scenario=1; /* Linear wave */  "
+      userinfo.append(("picking linear wave scenario",None))
+      floatparams.update({"sk":0.0}); floatparams.update({"bs":0.0})
+      intparams.update({"LapseType":0})
+    elif  (args.scenario=="two-punctures") or (args.scenario=="single-puncture"):
+      solverconstants+= "static constexpr int Scenario=2; /* Two-puncture */ "
+      userinfo.append(("picking black hole scenario",None))
+    else:
+      raise Exception( "Scenario " + args.scenario + " is now unknown")  
+
     for k, v in floatparams.items(): solverconstants+= "static constexpr double {} = {};\n".format("CCZ4{}".format(k), v)
     for k, v in intparams.items():   solverconstants+= "static constexpr int {} = {};\n".format("CCZ4{}".format(k), v)
     my_solver.set_solver_constants(solverconstants)
-
-    if args.scenario=="gauge":
-      my_solver.pick_Gauge_wave_scenario()
-    elif args.scenario=="linear":
-      my_solver.pick_Linear_wave_scenario()
-    elif  (args.scenario=="two-punctures") or (args.scenario=="single-puncture"):
-      my_solver.pick_two_puncture_scenario()
-    else:
-      raise Exception( "Scenario " + args.scenario + " is now unknown")  
 
     project.add_solver(my_solver)
 
@@ -656,10 +668,12 @@ if __name__ == "__main__":
       dimensions,               # dimensions
       offset,  domain_size,
       args.end_time,                 # end time
-      0.0, args.plot_step_size,   # snapshots
+      args.plot_start_time, args.plot_step_size,   # snapshots
       periodic_boundary_conditions,
       8  # plotter precision
     )
+    userinfo.append(("plot start time: "+str(args.plot_start_time)+", plot step size: "+str(args.plot_step_size),None))
+    userinfo.append(("Terminal time: "+str(args.end_time),None))
 
     project.set_Peano4_installation("../../..", build_mode)
 
@@ -672,8 +686,8 @@ if __name__ == "__main__":
     #path="/cosma5/data/durham/dc-zhan3/bbh-c5-1"
     #path="/cosma6/data/dp004/dc-zhan3/exahype2/sbh-fv3"
     project.set_output_path(path)
-    probe_point = [-20,-20,0.0]
-    project.add_plot_filter( probe_point,[40.0,40.0,0.01],1 )
+    probe_point = [-3,-3,0.0]
+    project.add_plot_filter( probe_point,[6.0,6.0,0.01],1 )
 
     project.set_load_balancing("toolbox::loadbalancing::RecursiveSubdivision","(new ::exahype2::LoadBalancingConfiguration(0.98,0))" )
 
@@ -797,7 +811,7 @@ if __name__ == "__main__":
     if not args.add_tracer==0:
         userinfo.append(("tracer output file: "+path1+"zz"+args.tra_name, None))
     if len(userinfo) >0:
-        print("The building infomation:")
+        print("The building information:")
         for msg, exception in userinfo:
             if exception is None:
                 print(msg)

@@ -230,7 +230,10 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   Offloadable
 )
 {
-
+  if (t>(examples::exahype2::ccz4::TerminalTime-0.5)) {
+    logInfo( "maxEigenvalue()", "workaround of final crash, abort" );
+    std::abort();
+  }
 #if defined(CCZ4EINSTEIN)
   const double qmin = std::min({Q[0],Q[3],Q[5]});
   const double alpha = std::max({1.0, std::exp(Q[16])}) * std::max({1.0, std::exp(Q[54])}) / std::sqrt(qmin);
@@ -328,7 +331,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
       double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
       // nice test case which fits on my laptop:
       //double Radius[NumberOfRefinementLayers] = {3.0, 1.0, 0.5};
-      double MaxH[NumberOfRefinementLayers]   = {1.0, 0.3, 0.0};
+      double MaxH[NumberOfRefinementLayers]   = {0.3, 0.15, 0.0};
       // setup where Han has observed NaNs:
 //      double Radius[NumberOfRefinementLayers] = {5.0, 2.5, 1.25};
 //      double MaxH[NumberOfRefinementLayers]   = {1.0, 0.3, 0.0};
