@@ -63,6 +63,17 @@ namespace exahype2 {
 </pre>
        * but it is safe to ignore these. Without a static qualifier (which led to
        * this warning), the linking will fail due to multiple definitions.
+       *
+       *
+       * Don't use code like this one
+       *
+       * <pre>
+  tarch::la::Vector<Dimensions,int> leftVolume   = volumeIndex;
+  tarch::la::Vector<Dimensions,int> rightVolume  = volumeIndex;
+  leftVolume(normal)--;
+  rightVolume(normal)++;
+         </pre>
+       *
        */
       namespace internal {
         /**
@@ -90,7 +101,7 @@ namespace exahype2 {
 
 
         template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void copy_solution_and_add_source_term_loop_body(
+        static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
           QInEnumeratorType                         QInEnumerator,
           exahype2::fv::rusanov::Source             source,
@@ -106,7 +117,7 @@ namespace exahype2 {
 
 
         template <>
-        static void copy_solution_and_add_source_term_loop_body(
+        static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           exahype2::fv::rusanov::Source             source,
@@ -122,7 +133,7 @@ namespace exahype2 {
 
 
         template <typename Solver, class QInEnumeratorType, class QOutEnumeratorType>
-        static void copy_solution_and_add_source_term_loop_body(
+        static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
           QInEnumeratorType                         QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -137,7 +148,7 @@ namespace exahype2 {
 
 
         template <typename Solver>
-        static void copy_solution_and_add_source_term_loop_body(
+        static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -162,9 +173,14 @@ namespace exahype2 {
          * QMaxEigenvalue. Again, we don't know anything about its ordering, so
          * we use the enumerator to access to output array.
          *
+         * The nice thing with the max (directional) eigenvalue is that the value
+         * is a scalar. So we have to gather the input into one Q vector (see
+         * specialisation below which eliminate this step) but then the outcome
+         * is a scalar which we can write straight back. So this routine should
+         * straightforwardly vectorise.
          */
         template <class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
-        static void compute_max_eigenvalue_loop_body(
+        static void computeMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           QInEnumeratorType                            QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -180,8 +196,12 @@ namespace exahype2 {
         )  InlineMethod;
 
 
+        /**
+         * Specialisation if input data is already in AoS format. This holds for
+         * all of our kernels unless you explicitly reorder the input.
+         */
         template <class QMaxEigenvalueEnumeratorType>
-        static void compute_max_eigenvalue_loop_body(
+        static void computeMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -197,8 +217,11 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * Specialisation invoking the static eigenvalue variant (for GPUs).
+         */
         template <typename Solver, class QInEnumeratorType, class QMaxEigenvalueEnumeratorType>
-        static void compute_max_eigenvalue_loop_body(
+        static void computeMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           QInEnumeratorType                            QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -213,8 +236,11 @@ namespace exahype2 {
         )  InlineMethod;
 
 
+        /**
+         * Specialisation for static eigenvalue call plus AoS input data.
+         */
         template <typename Solver, class QMaxEigenvalueEnumeratorType>
-        static void compute_max_eigenvalue_loop_body(
+        static void computeMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -229,8 +255,12 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * This is the actual eigenvalue loop which reduces the directional
+         * eigenvalues.
+         */
         template <class QInEnumeratorType>
-        static double reduce_max_eigenvalue_loop_body(
+        static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           QInEnumeratorType                            QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -244,7 +274,7 @@ namespace exahype2 {
 
 
         template <>
-        static double reduce_max_eigenvalue_loop_body(
+        static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           exahype2::fv::rusanov::MaxEigenvalue         maxEigenvalue,
@@ -258,7 +288,7 @@ namespace exahype2 {
 
 
         template <typename Solver, class QInEnumeratorType>
-        static double reduce_max_eigenvalue_loop_body(
+        static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           QInEnumeratorType                            QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -271,7 +301,7 @@ namespace exahype2 {
 
 
         template <typename Solver>
-        static double reduce_max_eigenvalue_loop_body(
+        static double reduceMaxEigenvalue_LoopBody(
           const double* __restrict__                   QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -307,6 +337,25 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+/*
+        template <class QInEnumeratorType>
+        static void compute_flux_loop_body(
+          const double* __restrict__                QIn,
+          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator                   QInEnumerator,
+          exahype2::fv::rusanov::Flux         flux,
+          const tarch::la::Vector<Dimensions,double>&  patchCentre,
+          const tarch::la::Vector<Dimensions,double>&  patchSize,
+          int                                          patchIndex,
+          const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+          double                                       t,
+          double                              dt,
+          int                                 normal,
+          double* __restrict__                QFlux,
+          QFluxEnumeratorType                 QFluxEnumerator
+        ) InlineMethod;
+*/
+
+
         static void compute_flux_loop_body(
           const double* __restrict__                                  QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
@@ -339,6 +388,22 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        template <typename Solver, class QFluxEnumeratorType>
+        static void compute_flux_loop_body(
+          const double* __restrict__                                  QIn,
+          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
+          const tarch::la::Vector<Dimensions,double>&                 patchCentre,
+          const tarch::la::Vector<Dimensions,double>&                 patchSize,
+          int                                                         patchIndex,
+          const tarch::la::Vector<Dimensions,int>&                    volumeIndex,
+          double                                                      t,
+          double                                                      dt,
+          int                                                         normal,
+          double* __restrict__                                        QFlux,
+          QFluxEnumeratorType                                         QFluxEnumerator
+        ) InlineMethod;
+
+
         template <typename Solver>
         static void compute_flux_loop_body(
           const double* __restrict__                                  QIn,
@@ -356,7 +421,7 @@ namespace exahype2 {
 
 
         template <typename QFluxEnumeratorType, typename QOutEnumeratorType>
-        static void update_solution_with_flux_loop_body(
+        static void updateSolutionWithFlux_LoopBody(
           const double* __restrict__                   tempFluxX,
           const double* __restrict__                   tempFluxY,
           const double* __restrict__                   tempFluxZ,
@@ -366,7 +431,6 @@ namespace exahype2 {
           int                                          patchIndex,
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
-          int                                          d,
           double                                       dt,
           double* __restrict__                         QOut,
           QOutEnumeratorType                           QOutEnumerator
@@ -374,36 +438,48 @@ namespace exahype2 {
 
 
         /**
-         * To allow the compiler to vectorise over this routine, it is absolutely
-         * essential that ::exahype2::fv::getVolumeSize() inlines properly. However,
-         * this does not work without lto, and we found lto often tricky to use. So
-         * instead of using
+         * Uses the eigenvalues to damp the solution update.
          *
-         *     const double scaling = dt / ::exahype2::fv::getVolumeSize( patchSize, QOutEnumerator._numberOfVolumesPerAxisInPatch )(0);
          *
-         * we calculate the scaling manually. This allows us, in theory, to run
-         * non-cubic finite volumes as well.
+         * ## Rationale for alternative realisations
          *
-         * It is important that we do not accumulate the horizontal, vertical,
-         * front-to-back fluxes directly in QOut. Instead, we store them in
-         * individual variables and then add them to QOut in one rush. Otherwise,
-         * we create write-write dependencies and the LLVM compiler will refuse to
-         * vectorise.
+         * I originally throught the following:
+         *
+         * We could damp along the individual coordinate axis (normal). That is, if normal
+         * equals zero, we take the left and right neighbour of a cell into account,
+         * if it equals one, we look at the lower and upper face-connected neighbour.
+         *
+         * To allow the compiler to vectorise over this routine, it is essential that
+         * you make the loop over normal the outer loop, and then you can collapse
+         * and vectorise over the patch. Yet, even if you do so, there is no guarantee
+         * that the compiler will manage to vectorise. It really depends upon the
+         * QOutEnumerator, i.e. the ordering of the image. If the image is stored as
+         * AoS (default ordering for output data), then the loops over this routine
+         * cannot vectorise properly. To make a long story short: This routine will
+         * vectorise if and only if you explicitly re-sort input and output values of
+         * a patch prior to the update such that they are in SoA format. Obviously,
+         * it is up to you to decide if the overhead for this re-sorting is worth it.
+         *
+         * Anyway, such a damping is a fundamental rewrite, as we then have to pick
+         * either tempMaxEigenvalueX, Y or Z, so we might end up with three routines.
+         *
+         * Along the same lines, all of these arguments motivate why we do not specialise
+         * the template further. We need to do this scattering/gathering anyway, so
+         * what's the point of specialising for particular data formats?
          */
         template <typename QInEnumeratorType, typename QMaxEigenvalueEnumeratorType, typename QOutEnumeratorType>
-        static void update_solution_with_eigenvalue_damping(
+        static void updateSolutionWithEigenvalueDamping_LoopBody(
           const double* __restrict__                   QIn,
           const QInEnumeratorType &                    QInEnumerator,
-          double* __restrict__                         tempMaxEigenvalueX,
-          double* __restrict__                         tempMaxEigenvalueY,
-          double* __restrict__                         tempMaxEigenvalueZ,
+          const double* __restrict__                   tempMaxEigenvalueX,
+          const double* __restrict__                   tempMaxEigenvalueY,
+          const double* __restrict__                   tempMaxEigenvalueZ,
           const QMaxEigenvalueEnumeratorType &         eigenvalueEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
           tarch::la::Vector<Dimensions,int>            volumeIndex,
           int                                          unknown,
-          int                                          normal,
           double                                       dt,
           double* __restrict__                         QOut,
           const QOutEnumeratorType &                   QOutEnumerator
@@ -453,8 +529,12 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * See remarks in updateSolutionWithNonconservativeFlux_LoopBody() for
+         * some rationale.
+         */
         template <typename QNCPFaceEnumeratorType, typename QOutEnumeratorType>
-        static void update_solution_with_nonconservative_flux_loop_body(
+        static void updateSolutionWithNonconservativeFlux_LoopBody(
           const double* __restrict__                   QNcpX,
           const double* __restrict__                   QNcpY,
           const double* __restrict__                   QNcpZ,
@@ -464,7 +544,6 @@ namespace exahype2 {
           int                                          patchIndex,
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           int                                          unknown,
-          int                                          d,
           double                                       dt,
           double* __restrict__                         QOut,
           QOutEnumeratorType                           QOutEnumerator

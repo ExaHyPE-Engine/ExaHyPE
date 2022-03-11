@@ -25,7 +25,9 @@ namespace exahype2 {
     static tarch::la::Vector<2,double>  getVolumeSize(
       const tarch::la::Vector<2,double>&  h,
       int                                 numberOfVolumesPerAxisInPatch
-    ) InlineMethod  {
+    )
+    //InlineMethod
+    {
       tarch::la::Vector<2,double> volumeSize;
 
       for (int d=0; d<2; d++) {
@@ -40,7 +42,9 @@ namespace exahype2 {
     static tarch::la::Vector<3,double>  getVolumeSize(
       const tarch::la::Vector<3,double>&  h,
       int                                 numberOfVolumesPerAxisInPatch
-    ) InlineMethod {
+    )
+    //InlineMethod
+    {
       tarch::la::Vector<3,double> volumeSize;
 
       for (int d=0; d<3; d++) {
@@ -71,7 +75,9 @@ namespace exahype2 {
       const tarch::la::Vector<2,double>&  h,
       int                                 numberOfVolumesPerAxisInPatch,
       const tarch::la::Vector<2,int>&     index
-    ) InlineMethod {
+    )
+    //InlineMethod
+    {
       tarch::la::Vector<2,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
       tarch::la::Vector<2,double> result     = x - 0.5 * h + 0.5 * volumeSize;
       for (int d=0; d<2; d++) {
@@ -86,7 +92,9 @@ namespace exahype2 {
       const tarch::la::Vector<3,double>&  h,
       int                                 numberOfVolumesPerAxisInPatch,
       const tarch::la::Vector<3,int>&     index
-    ) InlineMethod  {
+    )
+    //InlineMethod
+    {
       tarch::la::Vector<3,double> volumeSize = getVolumeSize(h,numberOfVolumesPerAxisInPatch);
       tarch::la::Vector<3,double> result     = x - 0.5 * h + 0.5 * volumeSize;
       for (int d=0; d<3; d++) {

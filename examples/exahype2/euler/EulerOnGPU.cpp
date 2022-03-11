@@ -18,7 +18,8 @@ enum class Scenario {
 
 
 //Scenario scenario = Scenario::BreakingDamResolutionStudies;
-Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
+Scenario scenario = Scenario::PointExplosion;
+//Scenario scenario = Scenario::BreakingDamWithDynamicAMR;
 
 //Scenario scenario = Scenario::BreakingDam;
 
@@ -187,6 +188,12 @@ double ::examples::exahype2::euler::EulerOnGPU::maxEigenvalue(
   int                                          normal
 )  {
   logTraceInWith4Arguments( "maxEigenvalue(...)", faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Q[0]==Q[0], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Q[1]==Q[1], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Q[2]==Q[2], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Q[3]==Q[3], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Q[4]==Q[4], faceCentre, volumeH, t, normal );
+  nonCriticalAssertion4( Q[0]>1e-10, faceCentre, volumeH, t, normal );
   double result = maxEigenvalue( Q, faceCentre, volumeH, t, dt, normal, Offloadable::Yes );
   logTraceOutWith1Argument( "maxEigenvalue(...)", result );
   return result;

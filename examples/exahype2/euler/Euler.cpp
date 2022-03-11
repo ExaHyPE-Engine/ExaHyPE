@@ -179,6 +179,7 @@ double examples::exahype2::euler::Euler::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 ) {
   assertion(normal>=0);
@@ -213,6 +214,7 @@ void examples::exahype2::euler::Euler::flux(
  const tarch::la::Vector<Dimensions,double>&  faceCentre,
  const tarch::la::Vector<Dimensions,double>&  volumeH,
  double                                       t,
+ double                                       dt,
  int                                          normal,
  double * __restrict__ F // F[5]
 )

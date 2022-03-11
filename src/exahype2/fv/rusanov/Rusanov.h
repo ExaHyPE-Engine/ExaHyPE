@@ -89,7 +89,8 @@ namespace exahype2 {
       ;
 
 
-      template <typename Solver>
+//      template <typename Solver, typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>
+      template <typename Solver, typename TempDataEnumerator = exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>
       static void timeStepWithRusanov_overlap1_sequential_AoS(
         PatchData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
@@ -98,7 +99,9 @@ namespace exahype2 {
         bool                    evaluateFlux,
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
-        bool                    evaluateMaximumEigenvalueAfterTimeStep
+        bool                    evaluateMaximumEigenvalueAfterTimeStep,
+        Flux                    flux,
+        MaxEigenvalue           maxEigenvalue
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))
@@ -106,7 +109,7 @@ namespace exahype2 {
       ;
 
 
-      template <typename Solver>
+      template <typename Solver, typename TempDataEnumerator = exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>
       static void timeStepWithRusanov_overlap1_batched_AoS(
         PatchData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
@@ -126,7 +129,11 @@ namespace exahype2 {
 }
 
 
-#include "Rusanov.cpph"
+#include "Rusanov_Helper.cpph"
+#include "Rusanov_overlap1_sequential_AoS_functors.cpph"
+#include "Rusanov_overlap1_sequential_AoS_static_calls.cpph"
+#include "Rusanov_overlap1_batched_AoS_functors.cpph"
+#include "Rusanov_overlap1_batched_AoS_static_calls.cpph"
 
 
 #endif

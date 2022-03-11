@@ -120,7 +120,7 @@ namespace exahype2 {
             int patchIndex,
             const tarch::la::Vector<Dimensions,int>&  volumeIndex,
             int unknown
-          ) const {
+          ) const InlineMethod {
             if (Dimensions==2) {
               return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
                    + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
@@ -143,8 +143,105 @@ namespace exahype2 {
           const int _numberOfAuxiliaryVariables;
       };
 
+
+      /**
+       * This enumerator enumerates the patches one after the other (AoS). Within each
+       * patch, it then however switches to an SoA data layout.
+       */
+      struct AoSoALexicographicVolumeEnumerator {
+        public:
+          AoSoALexicographicVolumeEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+            _numberOfPatches(numberOfPatches),
+            _numberOfVolumesPerAxisInPatch(numberOfVolumesPerAxisInPatch),
+            _haloSize(haloSize),
+            _unknowns(unknowns),
+            _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables){}
+
+          /**
+           * Access an index
+           *
+           * The index always refers to the interior of the patches. So you can use negative
+           * indices if you want.
+           *
+           */
+          int operator()(
+            int patchIndex,
+            const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+            int unknown
+          ) const InlineMethod {
+            if (Dimensions==2) {
+              return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + unknown * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+                   + (volumeIndex(0)+_haloSize);
+            }
+            else {
+              return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + unknown * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + (volumeIndex(2)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+                   + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
+                   + (volumeIndex(0)+_haloSize);
+            }
+          }
+
+          const int _numberOfPatches;
+          const int _numberOfVolumesPerAxisInPatch;
+          const int _haloSize;
+          const int _unknowns;
+          const int _numberOfAuxiliaryVariables;
+      };
     }
 
+
+    /**
+     * This native SoA enumerator uses SoA within the patches plus over patches: It
+     * first enumerates all Q[0] data from patch one, then all Q[0] from patch two,
+     * then all Q[0] from patch three, and so forth. After that, it continues with
+     * Q[1]. This means: The enumerator interleaves the individual patches.
+     */
+    struct SoALexicographicVolumeEnumerator {
+      public:
+        SoALexicographicVolumeEnumerator(int numberOfPatches, int numberOfVolumesPerAxisInPatch, int haloSize, int unknowns, int numberOfAuxiliaryVariables):
+          _numberOfPatches(numberOfPatches),
+          _numberOfVolumesPerAxisInPatch(numberOfVolumesPerAxisInPatch),
+          _haloSize(haloSize),
+          _unknowns(unknowns),
+          _numberOfAuxiliaryVariables(numberOfAuxiliaryVariables){}
+
+        /**
+         * Access an index
+         *
+         * The index always refers to the interior of the patches. So you can use negative
+         * indices if you want.
+         *
+         * @todo modulo Operator muss ich noch dokumentieren
+         */
+        int operator()(
+          int patchIndex,
+          const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+          int unknown
+        ) const InlineMethod {
+          if (Dimensions==2) {
+            return unknown * (_numberOfPatches)    * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 + (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 + (volumeIndex(0)+_haloSize) * (_unknowns+_numberOfAuxiliaryVariables);
+          }
+          else {
+            return unknown * (_numberOfPatches)    * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 + (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 + (volumeIndex(2)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                 + (volumeIndex(0)+_haloSize) * (_unknowns+_numberOfAuxiliaryVariables);
+          }
+        }
+
+        const int _numberOfPatches;
+        const int _numberOfVolumesPerAxisInPatch;
+        const int _haloSize;
+        const int _unknowns;
+        const int _numberOfAuxiliaryVariables;
+    };
 
 
     //

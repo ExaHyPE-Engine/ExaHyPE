@@ -742,6 +742,7 @@ def create_solver_declarations(flux_implementation, ncp_implementation, eigenval
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal
     ) override;
     {% endif %}
