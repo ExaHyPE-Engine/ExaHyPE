@@ -398,7 +398,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
     for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++) {
       otterLoopIterationBegin();
-      internal::compute_flux_loop_body<Solver>(
+      internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
         QInEnumerator,
         patchData.patchCentre[patchIndex],
@@ -423,7 +423,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
     for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++) {
       otterLoopIterationBegin();
-      internal::compute_flux_loop_body<Solver>(
+      internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
         QInEnumerator,
         patchData.patchCentre[patchIndex],
@@ -473,7 +473,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
       otterLoopIterationBegin();
-      internal::compute_flux_loop_body<Solver>(
+      internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
         QInEnumerator,
         patchData.patchCentre[patchIndex],
@@ -499,7 +499,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
     for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
     for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
       otterLoopIterationBegin();
-      internal::compute_flux_loop_body<Solver>(
+      internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
         QInEnumerator,
         patchData.patchCentre[patchIndex],
@@ -525,7 +525,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
     for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
     for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++) {
       otterLoopIterationBegin();
-      internal::compute_flux_loop_body<Solver>(
+      internal::computeFlux_LoopBody<Solver>(
         patchData.QIn[patchIndex],
         QInEnumerator,
         patchData.patchCentre[patchIndex],

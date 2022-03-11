@@ -11,8 +11,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
-  bool                    evaluateMaximumEigenvalueAfterTimeStep,
-  Flux                    flux
+  bool                    evaluateMaximumEigenvalueAfterTimeStep
 ) {
   static tarch::logging::Log _log( "exahype2::fv::rusanov" );
   constexpr int haloSize        = 1;
@@ -286,10 +285,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++) {
         otterLoopIterationBegin();
-        internal::compute_flux_loop_body(
+        internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          flux,
           patchData.patchCentre[patchIndex],
           patchData.patchSize[patchIndex],
           patchIndex,
@@ -308,10 +306,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++) {
         otterLoopIterationBegin();
-        internal::compute_flux_loop_body(
+        internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          flux,
           patchData.patchCentre[patchIndex],
           patchData.patchSize[patchIndex],
           patchIndex,
@@ -353,10 +350,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
         otterLoopIterationBegin();
-        internal::compute_flux_loop_body(
+        internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          flux,
           patchData.patchCentre[patchIndex],
           patchData.patchSize[patchIndex],
           patchIndex,
@@ -376,10 +372,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
       for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
         otterLoopIterationBegin();
-        internal::compute_flux_loop_body(
+        internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          flux,
           patchData.patchCentre[patchIndex],
           patchData.patchSize[patchIndex],
           patchIndex,
@@ -399,10 +394,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
       for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++) {
         otterLoopIterationBegin();
-        internal::compute_flux_loop_body(
+        internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
-          flux,
           patchData.patchCentre[patchIndex],
           patchData.patchSize[patchIndex],
           patchIndex,

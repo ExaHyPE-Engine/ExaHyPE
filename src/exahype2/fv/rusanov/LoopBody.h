@@ -321,7 +321,7 @@ namespace exahype2 {
          * itself is generic.
          */
         template <class QInEnumeratorType, class QFluxEnumeratorType>
-        static void compute_flux_loop_body(
+        static void computeFlux_LoopBody(
           const double* __restrict__                QIn,
           QInEnumeratorType                   QInEnumerator,
           exahype2::fv::rusanov::Flux         flux,
@@ -339,7 +339,7 @@ namespace exahype2 {
 
 /*
         template <class QInEnumeratorType>
-        static void compute_flux_loop_body(
+        static void computeFlux_LoopBody(
           const double* __restrict__                QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator                   QInEnumerator,
           exahype2::fv::rusanov::Flux         flux,
@@ -356,7 +356,7 @@ namespace exahype2 {
 */
 
 
-        static void compute_flux_loop_body(
+        static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
           exahype2::fv::rusanov::Flux         flux,
@@ -373,7 +373,7 @@ namespace exahype2 {
 
 
         template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
-        static void compute_flux_loop_body(
+        static void computeFlux_LoopBody(
           const double* __restrict__                   QIn,
           QInEnumeratorType                            QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -389,7 +389,7 @@ namespace exahype2 {
 
 
         template <typename Solver, class QFluxEnumeratorType>
-        static void compute_flux_loop_body(
+        static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,
@@ -405,7 +405,7 @@ namespace exahype2 {
 
 
         template <typename Solver>
-        static void compute_flux_loop_body(
+        static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,

@@ -486,32 +486,28 @@ double exahype2::fv::rusanov::internal::reduceMaxEigenvalue_LoopBody(
 
 
 template <class QInEnumeratorType, class QFluxEnumeratorType>
-void exahype2::fv::rusanov::internal::compute_flux_loop_body(
-    const double* __restrict__                QIn,
-    QInEnumeratorType                   QInEnumerator,
-    exahype2::fv::rusanov::Flux         flux,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-    double                                       t,
-    double                              dt,
-    int                                 normal,
-    double* __restrict__                QFlux,
-    QFluxEnumeratorType                 QFluxEnumerator
+void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
+  const double* __restrict__                   QIn,
+  QInEnumeratorType                            QInEnumerator,
+  exahype2::fv::rusanov::Flux                  flux,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                                       dt,
+  int                                          normal,
+  double* __restrict__                         QFlux,
+  QFluxEnumeratorType                          QFluxEnumerator
 ) {
-    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-    double QFluxGathered[QInEnumerator._unknowns];
+  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double QFluxGathered[QInEnumerator._unknowns];
 
-    // gather
-#if defined(SharedOMP)
-#pragma omp simd
-#endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
-      QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
-    }
+  for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
+    QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
+  }
 
-    flux(
+  flux(
       QInGathered,
       ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
       ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
@@ -519,22 +515,19 @@ void exahype2::fv::rusanov::internal::compute_flux_loop_body(
       dt,
       normal,
       QFluxGathered
-    );
+  );
 
-    // scatter
-#if defined(SharedOMP)
-#pragma omp simd
-#endif
-    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-      QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
-    }
+  // scatter
+  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+    QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+  }
 }
 
 
 
 /*
 template <class QFluxEnumeratorType>
-void exahype2::fv::rusanov::internal::compute_flux_loop_body(
+void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     const double* __restrict__                QIn,
     exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
     exahype2::fv::rusanov::Flux         flux,
@@ -569,7 +562,7 @@ void exahype2::fv::rusanov::internal::compute_flux_loop_body(
 */
 
 
-void exahype2::fv::rusanov::internal::compute_flux_loop_body(
+void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     const double* __restrict__                                  QIn,
     exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
     exahype2::fv::rusanov::Flux         flux,
@@ -584,33 +577,33 @@ void exahype2::fv::rusanov::internal::compute_flux_loop_body(
     exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
 ) {
   flux(
-        QIn + QInEnumerator(patchIndex,volumeIndex,0),
-        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
-        t,
-        dt,
-        normal,
-        QFlux + QFluxEnumerator(patchIndex,volumeIndex,0)
+    QIn + QInEnumerator(patchIndex,volumeIndex,0),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    t,
+    dt,
+    normal,
+    QFlux + QFluxEnumerator(patchIndex,volumeIndex,0)
   );
 }
 
 
 template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
-void exahype2::fv::rusanov::internal::compute_flux_loop_body(
-    const double* __restrict__                QIn,
-    QInEnumeratorType                   QInEnumerator,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-    double                                       t,
-    double                              dt,
-    int                                 normal,
-    double* __restrict__                QFlux,
-    QFluxEnumeratorType                 QFluxEnumerator
+void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
+  const double* __restrict__                QIn,
+  QInEnumeratorType                   QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                              dt,
+  int                                 normal,
+  double* __restrict__                QFlux,
+  QFluxEnumeratorType                 QFluxEnumerator
 ) {
-    double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
-    double QFluxGathered[QInEnumerator._unknowns];
+  double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
+  double QFluxGathered[QInEnumerator._unknowns];
 
     // gather
     #if defined(SharedOMP)
@@ -642,7 +635,7 @@ void exahype2::fv::rusanov::internal::compute_flux_loop_body(
 
 
 template <typename Solver, class QFluxEnumeratorType>
-void exahype2::fv::rusanov::internal::compute_flux_loop_body(
+void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     const double* __restrict__                QIn,
     exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
     const tarch::la::Vector<Dimensions,double>&  patchCentre,
@@ -679,7 +672,7 @@ void exahype2::fv::rusanov::internal::compute_flux_loop_body(
 
 
 template<typename Solver>
-void exahype2::fv::rusanov::internal::compute_flux_loop_body(
+void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     const double* __restrict__                                  QIn,
     exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
     const tarch::la::Vector<Dimensions,double>&                 patchCentre,
@@ -693,14 +686,14 @@ void exahype2::fv::rusanov::internal::compute_flux_loop_body(
     exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QFluxEnumerator
 ) {
   Solver::flux(
-        QIn + QInEnumerator(patchIndex,volumeIndex,0),
-        ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
-        ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
-        t,
-        dt,
-        normal,
-        QFlux,
-        ::exahype2::Solver::Offloadable::Yes
+    QIn + QInEnumerator(patchIndex,volumeIndex,0),
+    ::exahype2::fv::getVolumeCentre( patchCentre, patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch, volumeIndex ),
+    ::exahype2::fv::getVolumeSize( patchSize, QInEnumerator._numberOfVolumesPerAxisInPatch ),
+    t,
+    dt,
+    normal,
+    QFlux + QFluxEnumerator(patchIndex,volumeIndex,0),
+    ::exahype2::Solver::Offloadable::Yes
   );
 }
 
