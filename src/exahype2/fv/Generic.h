@@ -136,6 +136,8 @@ namespace exahype2 {
             }
           }
 
+          std::string toString() const;
+
           const int _numberOfPatches;
           const int _numberOfVolumesPerAxisInPatch;
           const int _haloSize;
@@ -171,18 +173,20 @@ namespace exahype2 {
           ) const InlineMethod {
             if (Dimensions==2) {
               return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                   + unknown * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + unknown * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                    + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                    + (volumeIndex(0)+_haloSize);
             }
             else {
               return (patchIndex % _numberOfPatches) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
-                   + unknown * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_unknowns+_numberOfAuxiliaryVariables)
+                   + unknown * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                    + (volumeIndex(2)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                    + (volumeIndex(1)+_haloSize) * (_numberOfVolumesPerAxisInPatch+2*_haloSize)
                    + (volumeIndex(0)+_haloSize);
             }
           }
+
+          std::string toString() const;
 
           const int _numberOfPatches;
           const int _numberOfVolumesPerAxisInPatch;
@@ -190,7 +194,6 @@ namespace exahype2 {
           const int _unknowns;
           const int _numberOfAuxiliaryVariables;
       };
-    }
 
 
     /**
@@ -236,12 +239,15 @@ namespace exahype2 {
           }
         }
 
+        std::string toString() const;
+
         const int _numberOfPatches;
         const int _numberOfVolumesPerAxisInPatch;
         const int _haloSize;
         const int _unknowns;
         const int _numberOfAuxiliaryVariables;
-    };
+      };
+    }
 
 
     //
