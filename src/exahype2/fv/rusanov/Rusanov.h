@@ -100,8 +100,7 @@ namespace exahype2 {
         bool                    evaluateNonconservativeProduct,
         bool                    evaluateSource,
         bool                    evaluateMaximumEigenvalueAfterTimeStep,
-        Flux                    flux,
-        MaxEigenvalue           maxEigenvalue
+        Flux                    flux
       )
       #if defined(UseManualInlining)
       __attribute__((always_inline))

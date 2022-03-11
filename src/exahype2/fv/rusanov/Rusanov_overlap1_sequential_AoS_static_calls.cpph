@@ -12,8 +12,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
   bool                    evaluateMaximumEigenvalueAfterTimeStep,
-  Flux                    flux,
-  MaxEigenvalue           maxEigenvalue
+  Flux                    flux
 ) {
   static tarch::logging::Log _log( "exahype2::fv::rusanov" );
   constexpr int haloSize        = 1;
@@ -135,10 +134,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
         isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
         isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
         if ( not isDiagonalCell ) {
-          internal::computeMaxEigenvalue_LoopBody(
+          internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            maxEigenvalue,
             patchData.patchCentre[patchIndex],
             patchData.patchSize[patchIndex],
             patchIndex,
@@ -149,10 +147,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
             eigenvalueEnumerator
           );
 
-          internal::computeMaxEigenvalue_LoopBody(
+          internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
-            maxEigenvalue,
             patchData.patchCentre[patchIndex],
             patchData.patchSize[patchIndex],
             patchIndex,
@@ -213,10 +210,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
         isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
         isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
         if ( not isDiagonalCell ) {
-            internal::computeMaxEigenvalue_LoopBody(
+            internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              maxEigenvalue,
               patchData.patchCentre[patchIndex],
               patchData.patchSize[patchIndex],
               patchIndex,
@@ -227,10 +223,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
               eigenvalueEnumerator
             );
 
-            internal::computeMaxEigenvalue_LoopBody(
+            internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              maxEigenvalue,
               patchData.patchCentre[patchIndex],
               patchData.patchSize[patchIndex],
               patchIndex,
@@ -241,10 +236,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
               eigenvalueEnumerator
             );
 
-            internal::computeMaxEigenvalue_LoopBody(
+            internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
-              maxEigenvalue,
               patchData.patchCentre[patchIndex],
               patchData.patchSize[patchIndex],
               patchIndex,
@@ -610,10 +604,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
         otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
-          internal::reduceMaxEigenvalue_LoopBody(
+          internal::reduceMaxEigenvalue_LoopBody<Solver>(
             *(patchData.QOut + patchIndex),
             QOutEnumerator,
-            maxEigenvalue,
             patchData.patchCentre[patchIndex],
             patchData.patchSize[patchIndex],
             patchIndex,
@@ -637,10 +630,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential_AoS(
         otterLoopIterationBegin();
         newMaxEigenvalue = std::max(
           newMaxEigenvalue,
-          internal::reduceMaxEigenvalue_LoopBody(
+          internal::reduceMaxEigenvalue_LoopBody<Solver>(
             *(patchData.QOut + patchIndex),
             QOutEnumerator,
-            maxEigenvalue,
             patchData.patchCentre[patchIndex],
             patchData.patchSize[patchIndex],
             patchIndex,
