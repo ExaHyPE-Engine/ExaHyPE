@@ -89,7 +89,7 @@ namespace exahype2 {
          *   patch. This index refers to the target index.
          */
         template <class QInEnumeratorType, class QOutEnumeratorType>
-        static void copy_solution_loop_body(
+        static void copySolution_LoopBody(
           const double* __restrict__                QIn,
           QInEnumeratorType                         QInEnumerator,
           int                                       patchIndex,

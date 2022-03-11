@@ -13,7 +13,7 @@ namespace exahype2 {
   namespace fv {
     namespace rusanov {
       /**
-       * Apply a generic Rusanov solver over a set of patches.
+       * Apply the Rusanov Riemann solver over a set of patches.
        *
        * Here's the explanation of the implementation details marked via _subscript:
        *
@@ -21,9 +21,17 @@ namespace exahype2 {
        *
        * _sequential: This solver runs through the individual patches one by one.
        *   We neither exploit any parallelism, not do we merge the patch traversals.
-       *   We do however inform Otter that there would be some parallelism in theory.
+       *   All the operations on patch 0 are completed, then we trigger all steps on
+       *   patch 1, and so forth.
        *
-       * _AoS: All internal (temporary) data structures are organised as AoS.
+       * _batched: We run through the individual steps of the finite volume update,
+       *   and in each step we complete the work on all the patches handed in.
+       *
+       * There are two variants of the kernels: One that accepts a functor, and one
+       * that works with the solver object and involves the static PDE term variants.
+       * Both are annotated with Otter pragmas, so you can find out how much parallelism
+       * there is.
+       *
        *
        * ## Implementation details (signatures)
        *
@@ -39,6 +47,21 @@ namespace exahype2 {
        *
        * Please study the comments on the namespace internal (hosted in LoopBody.h) for
        * further details why certain code parts are written the way they are written.
+       * The punchline is that the routines here host the loops, but the actual loop
+       * bodies then are separated into routines of their own. We inline them aggressively,
+       * so that doesn't come at additional cost. This way, we can re-use the same loop
+       * body within different loop implementations, orderings, ...
+       *
+       *
+       * ## Vectorisation
+       *
+       * I only vectorise the static variants of the routines, and I do so if and only
+       * if OpenMP is enabled.
+       *
+       * Most of the time, I discuss within the individual loop bodies how to vectorise
+       * and what things have to be taken into account. That is, the knowledge around
+       * optimisation is documented with the corresponding loop bodies. There is one
+       * exception:
        *
        * If I evaluate the fluxes, I have to take into account that diagonal volumes
        * don't hold valid data. After all, we only use split or face-normal fluxes, but
@@ -49,7 +72,7 @@ namespace exahype2 {
        * its job, as the control flow simply becomes too complicated. So I enable the
        * masking if and only if I am not in release mode.
        */
-      static void timeStepWithRusanov_overlap1_sequential_AoS(
+      static void timeStepWithRusanov_overlap1_sequential(
         PatchData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -69,7 +92,7 @@ namespace exahype2 {
       ;
 
 
-      static void timeStepWithRusanov_overlap1_batched_AoS(
+      static void timeStepWithRusanov_overlap1_batched(
         PatchData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -91,7 +114,7 @@ namespace exahype2 {
 
 //      template <typename Solver, typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>
       template <typename Solver, typename TempDataEnumerator = exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>
-      static void timeStepWithRusanov_overlap1_sequential_AoS(
+      static void timeStepWithRusanov_overlap1_sequential(
         PatchData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -108,7 +131,7 @@ namespace exahype2 {
 
 
       template <typename Solver, typename TempDataEnumerator = exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>
-      static void timeStepWithRusanov_overlap1_batched_AoS(
+      static void timeStepWithRusanov_overlap1_batched(
         PatchData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
         int                     unknowns,
@@ -128,10 +151,10 @@ namespace exahype2 {
 
 
 #include "Rusanov_Helper.cpph"
-#include "Rusanov_overlap1_sequential_AoS_functors.cpph"
-#include "Rusanov_overlap1_sequential_AoS_static_calls.cpph"
-#include "Rusanov_overlap1_batched_AoS_functors.cpph"
-#include "Rusanov_overlap1_batched_AoS_static_calls.cpph"
+#include "Rusanov_overlap1_sequential_functors.cpph"
+#include "Rusanov_overlap1_sequential_static_calls.cpph"
+#include "Rusanov_overlap1_batched_functors.cpph"
+#include "Rusanov_overlap1_batched_static_calls.cpph"
 
 
 #endif

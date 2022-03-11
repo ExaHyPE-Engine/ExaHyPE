@@ -3,7 +3,7 @@
 
 
 template <typename Solver, typename TempDataEnumerator>
-void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
+void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched(
   PatchData&              patchData,
   int                     numberOfVolumesPerAxisInPatch,
   int                     unknowns,
@@ -36,7 +36,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
   TempDataEnumerator ncpEnumerator       (patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,unknowns,0);
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
-  logDebug( "timeStepWithRusanov_overlap1_sequential_AoS(...)", "evaluate source terms and/or copy solution over" );
+  logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate source terms and/or copy solution over" );
   if (Dimensions==2 and evaluateSource) {
     otterLoopBegin();
     #if defined(SharedOMP)
@@ -98,7 +98,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
     for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       otterLoopIterationBegin();
-      internal::copy_solution_loop_body(
+      internal::copySolution_LoopBody(
         patchData.QIn[patchIndex],
         QInEnumerator,
         patchIndex,
@@ -122,7 +122,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
     for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
     for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
       otterLoopIterationBegin();
-      internal::copy_solution_loop_body(
+      internal::copySolution_LoopBody(
         patchData.QIn[patchIndex],
         QInEnumerator,
         patchIndex,
@@ -137,7 +137,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
   }
 
 
-  logDebug( "timeStepWithRusanov_overlap1_sequential_AoS(...)", "evaluate directional eigenvalues per volume" );
+  logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate directional eigenvalues per volume" );
   if (Dimensions==2) {
     otterLoopBegin();
     #if defined(SharedOMP)
@@ -389,7 +389,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
   }
 
   if (evaluateFlux and Dimensions==2) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential_AoS(...)", "evaluate flux in x-direction" );
+    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate flux in x-direction" );
     otterLoopBegin();
     #if defined(SharedOMP)
     #pragma omp simd collapse(3) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
@@ -463,7 +463,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
     otterLoopEnd();
   }
   else if (evaluateFlux and Dimensions==3) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential_AoS(...)", "evaluate flux in x-direction" );
+    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate flux in x-direction" );
     otterLoopBegin();
     #if defined(SharedOMP)
     #pragma omp simd collapse(4) aligned(tempFluxX,tempFluxY,tempFluxZ,tempEigenvalueX,tempEigenvalueY,tempEigenvalueZ,tempNonconservativeProductX,tempNonconservativeProductY,tempNonconservativeProductZ:Alignment)
@@ -748,7 +748,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
 
 
   if (evaluateMaximumEigenvalueAfterTimeStep and Dimensions==2) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential_AoS(...)", "compute maximum eigenvalue for subsequent time step" );
+    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
       double newMaxEigenvalue = 0.0;
 
@@ -777,7 +777,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_batched_AoS(
     }
   }
   else if (evaluateMaximumEigenvalueAfterTimeStep) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential_AoS(...)", "compute maximum eigenvalue for subsequent time step" );
+    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
     for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
       double newMaxEigenvalue = 0.0;
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)

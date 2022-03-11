@@ -3,17 +3,17 @@
 
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
-void exahype2::fv::rusanov::internal::copy_solution_loop_body(
-    const double* __restrict__                QIn,
-    QInEnumeratorType                         QInEnumerator,
-    int                                       patchIndex,
-    const tarch::la::Vector<Dimensions,int>&  volumeIndex,
-    int                                       unknown,
-    double* __restrict__                      QOut,
-    QOutEnumeratorType                        QOutEnumerator
-  ) {
-    QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
-  }
+void exahype2::fv::rusanov::internal::copySolution_LoopBody(
+  const double* __restrict__                QIn,
+  QInEnumeratorType                         QInEnumerator,
+  int                                       patchIndex,
+  const tarch::la::Vector<Dimensions,int>&  volumeIndex,
+  int                                       unknown,
+  double* __restrict__                      QOut,
+  QOutEnumeratorType                        QOutEnumerator
+) {
+  QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
+}
 
 
 template <class QInEnumeratorType, class QOutEnumeratorType>
