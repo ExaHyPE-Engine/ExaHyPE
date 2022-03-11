@@ -784,17 +784,26 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
           int                                          normal,
           double * __restrict__                        F
           ) -> void {
-          eulerFlux(Q,x,t,normal,F);
+          elasticFlux(Q,x,t,normal,F);
         },
-        nullptr,
-        [&](
+      [&](
+          const double * __restrict__                  Q,
+          const double * __restrict__                  dQdx,
+          const tarch::la::Vector<Dimensions,double>&  x,
+          double                                       t,
+          int                                          normal,
+          double * __restrict__                        F
+        ) -> void {
+          elasticNonConservativeProduct(Q, dQdx, x, t, normal, F);
+        },
+      [&](
           const double * __restrict__                  Qinside,
           double * __restrict__                         Qoutside,
           const tarch::la::Vector<Dimensions,double>&  x,
           double                                       t,
           int                                          normal
         ) -> void {
-          eulerBoundaryConditions(Qinside, Qoutside, x, t, normal);
+          elasticBoundaryConditions(Qinside, Qoutside, x, t, normal);
         },
         QHull,
         QHullForRiemann,
@@ -808,7 +817,7 @@ void exahype2::dg::tests::DGTest::runDGElastic(){
         maxEigenvaluePerFace,
         atBoundary,
         true,
-        false
+        true
         );
 
   file_stream << "\nRusanov Fluxes per Face:\n";

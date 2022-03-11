@@ -127,7 +127,7 @@ void exahype2::dg::computeRusanovOnHull(
         */
         if(atBoundary[2*dim+lr]&&lr==0){ //on left boundary
           //qr = &QHullIn[(2*((2*Dimensions+lr)*nodesPerFace+node)+1)*strideQ];
-          qr = &QHullIn[2*Dimensions+lr][(2*node+1)*strideQ];
+          qr = &QHullIn[2*dim+lr][(2*node+1)*strideQ];
           boundaryConditions(  qr,
                 boundaryValuesLeft,
                 x, //TODO: add positioning
@@ -151,11 +151,11 @@ void exahype2::dg::computeRusanovOnHull(
           //ql = &QHullIn[2*((2*Dimensions+lr)*nodesPerFace+node)*strideQ];
           //qr = &QHullIn[(2*((2*Dimensions+lr)*nodesPerFace+node)+1)*strideQ];
           ql = &QHullIn[2*dim+lr][2*node*strideQ];
-          qr = &QHullIn[2*dim+lr][2*(node+1)*strideQ];
+          qr = &QHullIn[2*dim+lr][(2*node+1)*strideQ];
         }
 
         for(int var=0; var<unknowns; var++){
-          QHullOut[((2*Dimensions+lr)*nodesPerFace+node)*strideQ] = 0.0;
+          QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] = 0.0;
         }
 
         if(useFlux){
@@ -172,7 +172,7 @@ void exahype2::dg::computeRusanovOnHull(
 
             for(int var=0; var<unknowns; var++){
               //Rusanov flux
-              QHullOut[((2*Dimensions+lr)*nodesPerFace+node)*strideQ] += 0.5*(fluxValuesLeft[var]+fluxValuesRight[var])
+              QHullOut[((2*dim+lr)*nodesPerFace+node)*strideQ+var] += 0.5*(fluxValuesLeft[var]-fluxValuesRight[var])
                   - coeff*(qr[var]-ql[var]);
             } //var
         } //if useFlux
