@@ -32,7 +32,9 @@
 #include "observers/HydroPrepareForce.h"
 #include "observers/ForceNonSym.h"
 #include "observers/NewtonRaphsonSmoothingLength.h"
+#include "observers/HybridNewtonRaphson.h"
 #include "observers/Kick.h"
+#include "observers/KickCorrector.h"
 #include "observers/HydroKickExtra.h"
 #include "observers/Drift.h"
 #include "observers/RearrangeAtStart.h"
@@ -45,67 +47,67 @@ int main(int argc, char** argv) {
   const int ExitCodeUnitTestsFailed = 1;
 
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "peano4", 
+    tarch::logging::LogFilter::FilterListEntry::TargetDebug,
+    tarch::logging::LogFilter::FilterListEntry::AnyRank,
+    "peano4",
     tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetTrace, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "peano4", 
+    tarch::logging::LogFilter::FilterListEntry::TargetTrace,
+    tarch::logging::LogFilter::FilterListEntry::AnyRank,
+    "peano4",
     tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetInfo, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "peano4", 
+    tarch::logging::LogFilter::FilterListEntry::TargetInfo,
+    tarch::logging::LogFilter::FilterListEntry::AnyRank,
+    "peano4",
     tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
-  
+
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "tarch", 
+    tarch::logging::LogFilter::FilterListEntry::TargetDebug,
+    tarch::logging::LogFilter::FilterListEntry::AnyRank,
+    "tarch",
     tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetTrace, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "tarch", 
+    tarch::logging::LogFilter::FilterListEntry::TargetTrace,
+    tarch::logging::LogFilter::FilterListEntry::AnyRank,
+    "tarch",
     tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetInfo, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "tarch", 
+    tarch::logging::LogFilter::FilterListEntry::TargetInfo,
+    tarch::logging::LogFilter::FilterListEntry::AnyRank,
+    "tarch",
     tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
- 
+
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetDebug, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "examples::particles", 
+    tarch::logging::LogFilter::FilterListEntry::TargetDebug,
+    tarch::logging::LogFilter::FilterListEntry::AnyRank,
+    "examples::particles",
     tarch::logging::LogFilter::FilterListEntry::BlackListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetTrace, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "examples::particles", 
+    tarch::logging::LogFilter::FilterListEntry::TargetTrace,
+    tarch::logging::LogFilter::FilterListEntry::AnyRank,
+    "examples::particles",
     tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
   tarch::logging::LogFilter::getInstance().addFilterListEntry( tarch::logging::LogFilter::FilterListEntry(
-    tarch::logging::LogFilter::FilterListEntry::TargetInfo, 
-    tarch::logging::LogFilter::FilterListEntry::AnyRank, 
-    "examples::particles", 
+    tarch::logging::LogFilter::FilterListEntry::TargetInfo,
+    tarch::logging::LogFilter::FilterListEntry::AnyRank,
+    "examples::particles",
     tarch::logging::LogFilter::FilterListEntry::WhiteListEntry,
     tarch::logging::LogFilter::FilterListEntry::AlwaysOn
   ));
@@ -127,7 +129,7 @@ int main(int argc, char** argv) {
     DomainSize,
     0
   );
-  
+
   #if PeanoDebug>=2
   tarch::tests::TestCase* peanoCoreTests = peano4::getUnitTests();
   peanoCoreTests->run();
@@ -144,17 +146,17 @@ int main(int argc, char** argv) {
     exit(ExitCodeUnitTestsFailed);
   }
   delete peanoTarchTests;
- 
+
   #endif
 
   #if defined(SharedOMP)
   #pragma omp parallel
   {
-  #pragma omp master 
+  #pragma omp master
   {
   #endif
   if (tarch::mpi::Rank::getInstance().isGlobalMaster() ) {
-  
+
     //
     // =================
     // inserted manually
@@ -184,76 +186,98 @@ int main(int argc, char** argv) {
         logInfo( "main()", "run timestep" )
 
 /*
-        // Debug Step (if 1D setup is needed)
+        // Initial step (e.g., re-arrange the particles into a particular configuration)
         if(i==0){
           examples::particles::observers::RearrangeAtStart rearrangeObserver;
           peano4::parallel::SpacetreeSet::getInstance().traverse(rearrangeObserver);
         }
 */
 
-        /* Synchro step (as in N-body -- might not be accurate here) */
-        if(i>0){ // Do not synchronize at the IC
-          examples::particles::observers::Kick synchroObserver;                // Synchronization step (last kick from previous time-step)
-          peano4::parallel::SpacetreeSet::getInstance().traverse(synchroObserver);
-        }
-
         /* Density loop */
-        examples::particles::observers::DensityNonSym densityObserver;
-        peano4::parallel::SpacetreeSet::getInstance().traverse(densityObserver);
+        examples::particles::observers::DensityNonSym density;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(density);
 
+        /* "Ghost tasks" */
         examples::particles::observers::HydroPrepareGradient prepareGradient;
         peano4::parallel::SpacetreeSet::getInstance().traverse(prepareGradient);
 
         examples::particles::observers::HydroResetGradient ResetGradient;
         peano4::parallel::SpacetreeSet::getInstance().traverse(ResetGradient);
 
+        examples::particles::observers::HydroPrepareForce prepareForce;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+
+        /* Newton Raphson iteration */
+//        examples::particles::observers::NewtonRaphsonSmoothingLength newtonRaphson;
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
+
+//        /* Testing Hybrid Newton Raphson */
+//        examples::particles::observers::HybridNewtonRaphson hybridNR;
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(hybridNR);
+
         /* Gradient loop */
         examples::particles::observers::GradientNonSym Gradient;
         peano4::parallel::SpacetreeSet::getInstance().traverse(Gradient);
 
+        /* By default I do this here */
+        /* Newton Raphson iteration */
         examples::particles::observers::NewtonRaphsonSmoothingLength newtonRaphson;
         peano4::parallel::SpacetreeSet::getInstance().traverse(newtonRaphson);
 
-        examples::particles::observers::HydroPrepareForce prepareForce;
-        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
-
         /* Force loop */
-        examples::particles::observers::ForceNonSym forcesObserver;
-        peano4::parallel::SpacetreeSet::getInstance().traverse(forcesObserver);
+        examples::particles::observers::ForceNonSym forcespart;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
-        /* Time integration */
-        examples::particles::observers::Kick kickObserver;                     // First Kick from current time-step
-        peano4::parallel::SpacetreeSet::getInstance().traverse(kickObserver);
+        /*
+         * Time integration */
 
-        examples::particles::observers::HydroKickExtra kickExtra;              // Evolve internal energy
+        /* Synchro step (as in N-body -- might not be accurate here) */
+        if(i>0){ // Do not synchronize at the IC
+//          examples::particles::observers::Kick synchroObserver;                // Synchronization step (last kick from previous time-step)
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(synchroObserver);
+
+//          examples::particles::observers::HydroKickExtra kickExtra;              // Synchronise internal energy
+//          peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
+        }
+
+        /* First Kick from current time-step*/
+        examples::particles::observers::Kick kickpart;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickpart);
+
+        /* Also Kick other properties, e.g., internal energy */
+        examples::particles::observers::HydroKickExtra kickExtra;
         peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 
-        examples::particles::observers::Drift driftObserver;                   // Drift from current time-step
-        peano4::parallel::SpacetreeSet::getInstance().traverse(driftObserver);
+        /* Drift the particles */
+        examples::particles::observers::Drift driftpart;
+        peano4::parallel::SpacetreeSet::getInstance().traverse(driftpart);
 
-//        examples::particles::observers::Kick kickObserver;                     // Second Kick from current time-step
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickObserver);
+//        /* Predictor step*/
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickpart);
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 
-        /* Get new acceleration -- Eq 68 of Phantom paper */
-//        examples::particles::observers::HydroPrepareForce prepareForce;
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+        /* Second Force loop */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(prepareForce);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(forcespart);
 
-//        examples::particles::observers::ForceNonSym forcesObserver;
-//      peano4::parallel::SpacetreeSet::getInstance().traverse(forcesObserver);
+//        /* Second Kick from current time-step */
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickpart);
+        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 
-        /* Final, third kick -- Eq 69 of Phantom paper */
-//        examples::particles::observers::Kick2 kick2;                     
-//        peano4::parallel::SpacetreeSet::getInstance().traverse(kick2);
+//        /* Corrector step (mini-Kick) current time-step */
+//        examples::particles::observers::KickCorrector correctpart;
+//        peano4::parallel::SpacetreeSet::getInstance().traverse(correctpart);
+//	// TBA: corrector for U
+////        peano4::parallel::SpacetreeSet::getInstance().traverse(kickExtra);
 
-     
       }
       logInfo( "main()", "plot" )
       examples::particles::observers::Plot plotTimeStepObserver;
       peano4::parallel::SpacetreeSet::getInstance().traverse(plotTimeStepObserver);
     }
 
-    logInfo( "main()", "terminated successfully" ) 
-    
+    logInfo( "main()", "terminated successfully" )
+
     //
     // =================
     // End of manually inserted block
