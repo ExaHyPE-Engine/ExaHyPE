@@ -9,64 +9,61 @@
 #ifndef _examples_exahype2_ccz4_FiniteVolumeCCZ4_H_
 #define _examples_exahype2_ccz4_FiniteVolumeCCZ4_H_
 
-
 #include "AbstractFiniteVolumeCCZ4.h"
-
 #include "tarch/logging/Log.h"
 
-#ifdef IncludeTwoPunctures
-#include "libtwopunctures/TwoPunctures.h"
-#endif
 
-namespace examples {
-  namespace exahype2 {
-    namespace ccz4 {
-      class FiniteVolumeCCZ4;
-    }
-  }
-}
+namespace examples {namespace exahype2 {namespace ccz4 {
+  class FiniteVolumeCCZ4;
 
+}}}
 
 
 class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ4 {
   private:
     static tarch::logging::Log   _log;
 
-
   public:
-    FiniteVolumeCCZ4();   
+    FiniteVolumeCCZ4();
+    
+    /**
+     * Refinement criterion
+     *
+     * ExaHypE2 is guided by a maximum and minimum mesh (patch) size.
+     * All (dynamic) AMR is constrained by these values, i.e. if your
+     * mesh is coarser than the maximum mesh size, ExaHyPE 2 will
+     * automatically refine. If you try to refine further than the
+     * minimum mesh size, ExaHyPE 2 will ignore any refinement.
+     *
+     * Consequently, you are fine if you work with a regular mesh:
+     * You set the maximum mesh size, and you leave everything else
+     * to Peano 4/ExaHyPE 2. If you want to have an adaptive mesh,
+     * use this routine to implement the refinement pattern.
+     *
+     * @param Q This is the (current) solution. The data is not set
+     *  to a valid value throughout grid construction. That is: If
+     *  t equals 0.0, you cannot assume that Q is properly initialised.
+     *  Therefore, Q usually is only evaluated by dynamic AMR codes
+     *  which make the solution follow
+     */
+    ::exahype2::RefinementCommand refinementCriterion(
+      const double * __restrict__ Q, // Q[59+0],
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t
+    ) override;
+    
 
+
+    
     void initialCondition(
       double * __restrict__ Q,
       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       bool                                         gridIsConstructred
-    )  override;
-    
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static void sourceTerm(
-      const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      double * __restrict__ S,
-      Offloadable
-    );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-    
-    void sourceTerm(
-      const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      double                                       dt,
-      double * __restrict__ S
     ) override;
+    
+
     
     
     virtual void boundaryConditions(
@@ -77,68 +74,159 @@ class examples::exahype2::ccz4::FiniteVolumeCCZ4: public AbstractFiniteVolumeCCZ
       double                                       t,
       int                                          normal
     )  override;
+    
+
+    
+  public:
+    
+    void sourceTerm(
+      const double * __restrict__ Q,
+      const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      double * __restrict__ S
+    ) override;
+    
+
+    
+    /**
+     * Determine max eigenvalue over Jacobian in a given point with solution values
+     * (states) Q. All parameters are in.
+     *
+     * @return Max eigenvalue. Result has to be positive, so we are actually speaking
+     *   about the maximum absolute eigenvalue.
+     */
+    virtual double maxEigenvalue(
+      const double * __restrict__ Q, // Q[59+0],
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal
+    ) override;
+    
 
 
     
-    double maxEigenvalue(
-      const double * __restrict__ Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal
-    ) override;
-
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp declare target
-    #endif
-    static double maxEigenvalue(
-      const double * __restrict__ Q, // Q[59+0],
-      const tarch::la::Vector<Dimensions,double>&  faceCentre,
-      const tarch::la::Vector<Dimensions,double>&  volumeH,
-      double                                       t,
-      int                                          normal,
-      Offloadable
-    );
-    #if defined(OpenMPGPUOffloading)
-    #pragma omp end declare target
-    #endif
-
-    void nonconservativeProduct(
+     
+     
+    
+    virtual void nonconservativeProduct(
       const double * __restrict__ Q, // Q[59+0],
       const double * __restrict__             deltaQ, // [59+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
       double * __restrict__ BgradQ // BgradQ[59]
     ) override;
-
+    
+    
+   
+    
+    /**
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
+     *
+     * static inline void sourceTerm( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
+     */
     #if defined(OpenMPGPUOffloading)
     #pragma omp declare target
     #endif
-    static void nonconservativeProduct(
+    static GPUCallableMethod void sourceTerm(
+       const double * __restrict__ Q,
+       const tarch::la::Vector<Dimensions,double>&  volumeCentre,
+       const tarch::la::Vector<Dimensions,double>&  volumeH,
+       double                                       t,
+       double                                       dt,
+       double * __restrict__ S,
+       Offloadable
+     );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+    
+
+
+    
+    /**
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
+     *
+     * static inline double maxEigenvalue( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
+     */
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod double maxEigenvalue(
       const double * __restrict__ Q, // Q[59+0],
-      const double * __restrict__             deltaQ, // [59+0]
       const tarch::la::Vector<Dimensions,double>&  faceCentre,
       const tarch::la::Vector<Dimensions,double>&  volumeH,
       double                                       t,
+      double                                       dt,
       int                                          normal,
-      double * __restrict__ BgradQ, // BgradQ[59]
       Offloadable
     );
     #if defined(OpenMPGPUOffloading)
     #pragma omp end declare target
     #endif
+    
 
-    ::exahype2::RefinementCommand refinementCriterion(
-      const double * __restrict__ Q,
-      const tarch::la::Vector<Dimensions,double>& volumeCentre,
-      const tarch::la::Vector<Dimensions,double>& volumeH,
-      double t
-    ) override;
-#ifdef IncludeTwoPunctures
-    void prepare(TP::TwoPunctures* tp); 
-#endif
+
+    
+     
+   
+    
+    /**
+     * To obtain the best performance, I recommend to man inline command to 
+     * this signature and to copy the implementation into the header. So it would
+     * read 
+     *
+     * static inline void nonconservativeProduct( ... ) {
+     *  code here
+     * }
+     *
+     * The GPU offloading requires static functions. As we cannot overload the
+     * original (virtual) function with a static alternative, we do the
+     * TBB trick and overload by adding an additional enum. It has no semantics
+     * but helps the compiler to distinguish the different function variants.
+     */
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp declare target
+    #endif
+    static GPUCallableMethod void nonconservativeProduct(
+      const double * __restrict__                  Q,         // Q[5+0],
+      const double * __restrict__                  deltaQ,    // [5+0]
+      const tarch::la::Vector<Dimensions,double>&  faceCentre,
+      const tarch::la::Vector<Dimensions,double>&  volumeH,
+      double                                       t,
+      double                                       dt,
+      int                                          normal,
+      double * __restrict__                        BgradQ,     // BgradQ[5]
+      Offloadable
+    );
+    #if defined(OpenMPGPUOffloading)
+    #pragma omp end declare target
+    #endif
+        
 };
 
 

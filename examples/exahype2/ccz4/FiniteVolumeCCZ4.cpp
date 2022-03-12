@@ -212,10 +212,11 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal
 )
 {
-   return maxEigenvalue(Q, faceCentre, volumeH, t, normal, Offloadable::Yes);
+   return maxEigenvalue(Q, faceCentre, volumeH, t, dt, normal, Offloadable::Yes);
 }
 
 #if defined(OpenMPGPUOffloading)
@@ -226,6 +227,7 @@ double examples::exahype2::ccz4::FiniteVolumeCCZ4::maxEigenvalue(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   Offloadable
 )
@@ -261,6 +263,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ // BgradQ[59]
 )  {
@@ -270,7 +273,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   assertion( normal<Dimensions );
 #endif
   
-  nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, normal, BgradQ, Offloadable::Yes);
+  nonconservativeProduct(Q, deltaQ, faceCentre, volumeH, t, dt, normal, BgradQ, Offloadable::Yes);
 
 #if !defined(OpenMPGPUOffloading)
   for (int i=0; i<NumberOfUnknowns; i++) {
@@ -289,6 +292,7 @@ void examples::exahype2::ccz4::FiniteVolumeCCZ4::nonconservativeProduct(
   const tarch::la::Vector<Dimensions,double>&  faceCentre,
   const tarch::la::Vector<Dimensions,double>&  volumeH,
   double                                       t,
+  double                                       dt,
   int                                          normal,
   double * __restrict__ BgradQ, // BgradQ[59]
   Offloadable
