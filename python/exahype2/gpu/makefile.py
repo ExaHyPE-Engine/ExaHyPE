@@ -21,12 +21,12 @@ def add_exahype_objects(makefile):
   # Also, the DIM is never correctly set, so instead use the DIMENSIONS flag in the Makefile directly
 
   if not mode =="":
-      makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_{}_a-Generic.o".format(mode, **makefile.d))
-      makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_{}_a-Rusanov.o".format(mode, **makefile.d))
+      #makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_{}_a-Generic.o".format(mode, **makefile.d))
+      #makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_{}_a-Rusanov.o".format(mode, **makefile.d))
       makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_{}_a-PatchUtils.o".format(mode, **makefile.d))
       makefile.add_gpu_object( "{PEANODIR}/src/tarch/multicore/omp/libTarch_{}_a-multicore.o".format(mode, **makefile.d) )
   else:
-      makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_a-Generic.o".format(**makefile.d))
-      makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_a-Rusanov.o".format(**makefile.d))
+      #makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_a-Generic.o".format(**makefile.d))
+      #makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_a-Rusanov.o".format(**makefile.d))
       makefile.add_gpu_object( "{PEANODIR}/src/exahype2/fv/libExaHyPE2Core$(DIMENSIONS)d_a-PatchUtils.o".format(**makefile.d))
       makefile.add_gpu_object( "{PEANODIR}/src/tarch/multicore/omp/libTarch_a-multicore.o".format(**makefile.d) )
