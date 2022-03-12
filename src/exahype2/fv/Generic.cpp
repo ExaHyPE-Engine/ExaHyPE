@@ -100,7 +100,7 @@ int exahype2::fv::getTotalNumberOfFaceDoFs(
   int numberOfVolumesPerAxisInPatch,
   int overlap
 ) {
-  return getTotalNumberOfVolumeDoFs(numberOfPatches, numberOfVolumesPerAxisInPatch, overlap);
+  return getTotalNumberOfVolumeDoFs(numberOfPatches, numberOfVolumesPerAxisInPatch+1, overlap);
 /*
   return Dimensions==2
        ? numberOfPatches * (numberOfVolumesPerAxisInPatch+2*overlap-1) * (numberOfVolumesPerAxisInPatch+2*overlap)
