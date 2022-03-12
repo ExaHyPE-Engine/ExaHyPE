@@ -71,6 +71,11 @@ namespace exahype2 {
        * data and then fail. Unfortunately, such a mask stops the vectoriser from doing
        * its job, as the control flow simply becomes too complicated. So I enable the
        * masking if and only if I am not in release mode.
+       *
+       *
+       * ## Memory management
+       *
+       * See PatchData() for details
        */
       static void timeStepWithRusanov_overlap1_sequential(
         PatchData&              patchData,
@@ -112,8 +117,10 @@ namespace exahype2 {
       ;
 
 
-//      template <typename Solver, typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator>
-      template <typename Solver, typename TempDataEnumerator = exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>
+      template <
+        typename Solver,
+        typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
+      >
       static void timeStepWithRusanov_overlap1_sequential(
         PatchData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
@@ -130,7 +137,30 @@ namespace exahype2 {
       ;
 
 
-      template <typename Solver, typename TempDataEnumerator = exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator>
+      template <
+        typename Solver,
+        typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
+      >
+      static void timeStepWithRusanov_overlap1_sequential_split_terms(
+        PatchData&              patchData,
+        int                     numberOfVolumesPerAxisInPatch,
+        int                     unknowns,
+        int                     auxiliaryVariables,
+        bool                    evaluateFlux,
+        bool                    evaluateNonconservativeProduct,
+        bool                    evaluateSource,
+        bool                    evaluateMaximumEigenvalueAfterTimeStep
+      )
+      #if defined(UseManualInlining)
+      __attribute__((always_inline))
+      #endif
+      ;
+
+
+      template <
+        typename Solver,
+        typename TempDataEnumerator = exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator
+      >
       static void timeStepWithRusanov_overlap1_batched(
         PatchData&              patchData,
         int                     numberOfVolumesPerAxisInPatch,
@@ -153,6 +183,7 @@ namespace exahype2 {
 #include "Rusanov_Helper.cpph"
 #include "Rusanov_overlap1_sequential_functors.cpph"
 #include "Rusanov_overlap1_sequential_static_calls.cpph"
+#include "Rusanov_overlap1_sequential_split_terms_static_calls.cpph"
 #include "Rusanov_overlap1_batched_functors.cpph"
 #include "Rusanov_overlap1_batched_static_calls.cpph"
 

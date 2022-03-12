@@ -297,11 +297,17 @@ def create_compute_Riemann_kernel_for_Rusanov(flux_implementation, ncp_implement
   I return only the unqualified function call, i.e. without any namespaces.
   
   """  
-  template = """timeStepWithRusanov_overlap1_sequential
+  template = """
   {% if USE_STATELESS_FUNCTION_CALLS==True %}
-    <{{SOLVER_NAME}}>
-  {% endif %}
-  (
+  timeStepWithRusanov_overlap1_sequential<
+  //timeStepWithRusanov_overlap1_sequential_split_terms<
+    {{SOLVER_NAME}}
+//    ::exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator    
+    ::exahype2::fv::enumerator::AoSoALexicographicVolumeEnumerator    
+  >(
+  {% else %}  
+  timeStepWithRusanov_overlap1_sequential(
+  {% endif %}    
     patchData,
     {{NUMBER_OF_VOLUMES_PER_AXIS}},
     {{NUMBER_OF_UNKNOWNS}},

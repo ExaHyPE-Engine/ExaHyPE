@@ -34,9 +34,6 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
     double QSourceGathered[QInEnumerator._unknowns];
 
     // gather
-    #if defined(SharedOMP)
-    #pragma omp simd
-    #endif
     for (int unknown=0; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
       QInGathered[unknown] = QIn[ QInEnumerator(patchIndex,volumeIndex,unknown) ];
     }
@@ -50,17 +47,10 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
       QSourceGathered
     );
 
-    // scatter
-    #if defined(SharedOMP)
-    #pragma omp simd
-    #endif
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
       QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)]
                                                              + dt * QSourceGathered[unknown];
     }
-    #if defined(SharedOMP)
-    #pragma omp simd
-    #endif
     for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
       QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
     }
@@ -92,17 +82,10 @@ void exahype2::fv::rusanov::internal::copySolutionAndAddSourceTerm_LoopBody(
       QSourceGathered
     );
 
-    // scatter
-#if defined(SharedOMP)
-#pragma omp simd
-#endif
     for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
       QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)]
                                                              + dt * QSourceGathered[unknown];
     }
-#if defined(SharedOMP)
-#pragma omp simd
-#endif
     for (int unknown=QInEnumerator._unknowns; unknown<QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables; unknown++) {
       QOut[ QOutEnumerator(patchIndex,volumeIndex,unknown) ] = QIn[QInEnumerator(patchIndex,volumeIndex,unknown)];
     }
@@ -591,7 +574,7 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   const double* __restrict__                QIn,
-  QInEnumeratorType                   QInEnumerator,
+  const QInEnumeratorType &                  QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&  patchCentre,
   const tarch::la::Vector<Dimensions,double>&  patchSize,
   int                                          patchIndex,
@@ -600,7 +583,8 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
   double                              dt,
   int                                 normal,
   double* __restrict__                QFlux,
-  QFluxEnumeratorType                 QFluxEnumerator
+  const QFluxEnumeratorType &                QFluxEnumerator,
+  int                                 pick
 ) {
   double QInGathered[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QFluxGathered[QInEnumerator._unknowns];
@@ -636,17 +620,18 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
 
 template <typename Solver, class QFluxEnumeratorType>
 void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
-    const double* __restrict__                QIn,
-    exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator QInEnumerator,
-    const tarch::la::Vector<Dimensions,double>&  patchCentre,
-    const tarch::la::Vector<Dimensions,double>&  patchSize,
-    int                                          patchIndex,
-    const tarch::la::Vector<Dimensions,int>&     volumeIndex,
-    double                                       t,
-    double                              dt,
-    int                                 normal,
-    double* __restrict__                QFlux,
-    QFluxEnumeratorType                 QFluxEnumerator
+  const double* __restrict__                QIn,
+  const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator & QInEnumerator,
+  const tarch::la::Vector<Dimensions,double>&  patchCentre,
+  const tarch::la::Vector<Dimensions,double>&  patchSize,
+  int                                          patchIndex,
+  const tarch::la::Vector<Dimensions,int>&     volumeIndex,
+  double                                       t,
+  double                              dt,
+  int                                 normal,
+  double* __restrict__                QFlux,
+  const QFluxEnumeratorType &                QFluxEnumerator,
+  int                                 pick
 ) {
   double QFluxGathered[QInEnumerator._unknowns];
 
@@ -661,12 +646,17 @@ void exahype2::fv::rusanov::internal::computeFlux_LoopBody(
     ::exahype2::Solver::Offloadable::Yes
   );
 
-  // scatter
-  #if defined(SharedOMP)
-  #pragma omp simd
-  #endif
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+  if (pick==PickAllEntriesFromOutputVector) {
+    // scatter
+    #if defined(SharedOMP)
+    #pragma omp simd
+    #endif
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      QFlux[ QFluxEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+    }
+  }
+  else {
+    QFlux[ QFluxEnumerator(patchIndex,volumeIndex,pick) ] = QFluxGathered[pick];
   }
 }
 
@@ -785,7 +775,7 @@ void exahype2::fv::rusanov::internal::updateSolutionWithEigenvalueDamping_LoopBo
 
 
 template <class QInEnumeratorType, class QNCPFaceEnumeratorType>
-void exahype2::fv::rusanov::internal::compute_nonconservative_flux_loop_body(
+void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   const double* __restrict__                     QIn,
   QInEnumeratorType                              QInEnumerator,
   exahype2::fv::rusanov::NonconservativeProduct  ncp,
@@ -797,7 +787,8 @@ void exahype2::fv::rusanov::internal::compute_nonconservative_flux_loop_body(
   double                              dt,
   int                                 normal,
   double* __restrict__                QNcp,
-  QNCPFaceEnumeratorType              QNcpEnumerator
+  QNCPFaceEnumeratorType              QNcpEnumerator,
+  int                                 pick
 ) {
   double QAverage[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QJump[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
@@ -825,15 +816,20 @@ void exahype2::fv::rusanov::internal::compute_nonconservative_flux_loop_body(
     QFluxGathered
   );
 
-  // scatter
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    QNcp[ QNcpEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+  if (pick==PickAllEntriesFromOutputVector) {
+    // scatter
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      QNcp[ QNcpEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+    }
+  }
+  else {
+    QNcp[ QNcpEnumerator(patchIndex,volumeIndex,pick) ] = QFluxGathered[pick];
   }
 }
 
 
 template <typename Solver, class QInEnumeratorType, class QNCPFaceEnumeratorType>
-void exahype2::fv::rusanov::internal::compute_nonconservative_flux_loop_body(
+void exahype2::fv::rusanov::internal::computeNonconservativeFlux_LoopBody(
   const double* __restrict__                     QIn,
   QInEnumeratorType                              QInEnumerator,
   const tarch::la::Vector<Dimensions,double>&    patchCentre,
@@ -844,7 +840,8 @@ void exahype2::fv::rusanov::internal::compute_nonconservative_flux_loop_body(
   double                              dt,
   int                                 normal,
   double* __restrict__                QNcp,
-  QNCPFaceEnumeratorType              QNcpEnumerator
+  QNCPFaceEnumeratorType              QNcpEnumerator,
+  int                                 pick
 ) {
   double QAverage[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
   double QJump[QInEnumerator._unknowns+QInEnumerator._numberOfAuxiliaryVariables];
@@ -876,12 +873,17 @@ void exahype2::fv::rusanov::internal::compute_nonconservative_flux_loop_body(
     ::exahype2::Solver::Offloadable::Yes
   );
 
-  // scatter
-  #if defined(SharedOMP)
-  #pragma omp simd
-  #endif
-  for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
-    QNcp[ QNcpEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+  if (pick==PickAllEntriesFromOutputVector) {
+    // scatter
+    #if defined(SharedOMP)
+    #pragma omp simd
+    #endif
+    for (int unknown=0; unknown<QInEnumerator._unknowns; unknown++) {
+      QNcp[ QNcpEnumerator(patchIndex,volumeIndex,unknown) ] = QFluxGathered[unknown];
+    }
+  }
+  else {
+    QNcp[ QNcpEnumerator(patchIndex,volumeIndex,pick) ] = QFluxGathered[pick];
   }
 }
 

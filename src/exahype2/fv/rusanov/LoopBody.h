@@ -16,6 +16,8 @@
 namespace exahype2 {
   namespace fv {
     namespace rusanov {
+      constexpr int PickAllEntriesFromOutputVector = -1;
+
       /**
        * @namespace internal
        *
@@ -38,11 +40,11 @@ namespace exahype2 {
        * solvers.
        *
        *
-       * For all of the routines, I provide specialisations which exploits that
-       * input data and output data are available as AoS. All of ExaHyPE's user
-       * routines are phrased as AoS, i.e. you are given one or two or a set of
-       * structs representing a volume, and then you return a struct (tuple) of
-       * outputs. If the underlying data storage is not organised as AoS, then
+       * Where it makes sense, I provide specialisations of the routines which
+       * exploit that input data and output data are available as AoS. All of
+       * ExaHyPE's user routines are phrased as AoS, i.e. you are given one or two
+       * or a set of structs representing a volume, and then you return a struct
+       * (tuple) of outputs. If the underlying data storage is not organised as AoS, then
        * we have to first gather data, pass it into the user functions, and then
        * fetch it back. If data however is organised as AoS, we can directly
        * invoke the user's functions on the data. No need to gather and scatter.
@@ -64,6 +66,10 @@ namespace exahype2 {
        * but it is safe to ignore these. Without a static qualifier (which led to
        * this warning), the linking will fail due to multiple definitions.
        *
+       */
+
+
+      /******
        *
        * Don't use code like this one
        *
@@ -83,6 +89,21 @@ namespace exahype2 {
          *
          * There is no specialisation for this one, as it is a plain copy anyway.
          *
+         * ## Vectorisation
+         *
+         * One might be tempted to think of this as a plain memcopy. However, it
+         * is more than that: The input data has a halo, while the output data
+         * (typically) has no halo. So they are not of the same size. We therefore
+         * can copy lines from the input in one rush, but we cannot copy all of it.
+         * In the outer loop calling this routine, we exploit the fact that we
+         * know that we have AoS for both usually, so as long as we loop over the
+         * unknowns and the x-direction internally and collapse those two loops,
+         * we can actually use simd.
+         *
+         * It makes no sense to provide specialisation of this routine for
+         * different enumerators, as the routine works per volume per unknown
+         * anyway.
+         *
          * @param patchIndex: Which patch is to be updated. QIn can hold multiple
          *   patches, and this index picks one of them.
          * @param volumeIndex: Which volume is to be updated within the target
@@ -100,6 +121,9 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * @see copySolution_LoopBody() for vectorisation details.
+         */
         template <class QInEnumeratorType, class QOutEnumeratorType>
         static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
@@ -116,6 +140,18 @@ namespace exahype2 {
         ) InlineMethod;
 
 
+        /**
+         * Specialisation of the other copySolutionAndAddSourceTerm_LoopBody()
+         * which exploits knowledge that we do not have to gather input data,
+         * as the input data is delivered as AoS already.
+         *
+         * In line with the discussion in copySolution_LoopBody(), this operation
+         * can vectorise properly if and only if you make your x loop the
+         * innermost one and if and only if your input is AoS - which is what
+         * this specialisation is about.
+         *
+         * @see copySolution_LoopBody() for vectorisation details.
+         */
         template <>
         static void copySolutionAndAddSourceTerm_LoopBody(
           const double* __restrict__                QIn,
@@ -359,7 +395,7 @@ namespace exahype2 {
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
           exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
-          exahype2::fv::rusanov::Flux         flux,
+          exahype2::fv::rusanov::Flux                                 flux,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,
           const tarch::la::Vector<Dimensions,double>&                 patchSize,
           int                                                         patchIndex,
@@ -375,23 +411,24 @@ namespace exahype2 {
         template <typename Solver, class QInEnumeratorType, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                   QIn,
-          QInEnumeratorType                            QInEnumerator,
+          const QInEnumeratorType &                    QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&  patchCentre,
           const tarch::la::Vector<Dimensions,double>&  patchSize,
           int                                          patchIndex,
           const tarch::la::Vector<Dimensions,int>&     volumeIndex,
           double                                       t,
-          double                              dt,
-          int                                 normal,
-          double* __restrict__                QFlux,
-          QFluxEnumeratorType                 QFluxEnumerator
+          double                                       dt,
+          int                                          normal,
+          double* __restrict__                         QFlux,
+          const QFluxEnumeratorType &                  QFluxEnumerator,
+          int                                          pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
 
 
         template <typename Solver, class QFluxEnumeratorType>
         static void computeFlux_LoopBody(
           const double* __restrict__                                  QIn,
-          exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator  QInEnumerator,
+          const exahype2::fv::enumerator::AoSLexicographicVolumeEnumerator & QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&                 patchCentre,
           const tarch::la::Vector<Dimensions,double>&                 patchSize,
           int                                                         patchIndex,
@@ -400,7 +437,8 @@ namespace exahype2 {
           double                                                      dt,
           int                                                         normal,
           double* __restrict__                                        QFlux,
-          QFluxEnumeratorType                                         QFluxEnumerator
+          const QFluxEnumeratorType &                                 QFluxEnumerator,
+          int                                                         pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
 
 
@@ -497,7 +535,7 @@ namespace exahype2 {
          * always (we have to reconstruct the average and the jump term).
          */
         template <class QInEnumeratorType, class QNCPFaceEnumeratorType>
-        static void compute_nonconservative_flux_loop_body(
+        static void computeNonconservativeFlux_LoopBody(
           const double* __restrict__                     QIn,
           QInEnumeratorType                              QInEnumerator,
           exahype2::fv::rusanov::NonconservativeProduct  ncp,
@@ -509,12 +547,13 @@ namespace exahype2 {
           double                              dt,
           int                                 normal,
           double* __restrict__                QNcp,
-          QNCPFaceEnumeratorType              QNcpEnumerator
+          QNCPFaceEnumeratorType              QNcpEnumerator,
+          int                                                         pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
 
 
         template <typename Solver, class QInEnumeratorType, class QNCPFaceEnumeratorType>
-        static void compute_nonconservative_flux_loop_body(
+        static void computeNonconservativeFlux_LoopBody(
           const double* __restrict__                     QIn,
           QInEnumeratorType                              QInEnumerator,
           const tarch::la::Vector<Dimensions,double>&    patchCentre,
@@ -525,7 +564,8 @@ namespace exahype2 {
           double                              dt,
           int                                 normal,
           double* __restrict__                QNcp,
-          QNCPFaceEnumeratorType              QNcpEnumerator
+          QNCPFaceEnumeratorType              QNcpEnumerator,
+          int                                                         pick = PickAllEntriesFromOutputVector
         ) InlineMethod;
 
 

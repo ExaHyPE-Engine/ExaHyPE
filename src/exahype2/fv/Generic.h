@@ -28,8 +28,19 @@ namespace exahype2 {
      * vector data are converted in SoA which makes it fairly straightforward
      * later to move them over to an accelerator.
      *
+     * ## Memory responsibility
+     *
+     * The PatchData object is a meta object. It does not administer any major
+     * heap data itself. That is, its QIn data has to be redirected to the
+     * reconstructed data, i.e. the patch data including the halos, by the user.
+     * This happens for example in applyKernelToCell() where we create a
+     * PatchData object over both allocated input and output data.
+     *
+     *
      * @todo Doesn't belong into fv. The whole Generic header belongs into the
      * directory above.
+     *
+     * @todo The enclave task should use this one instead of its local fields
      */
     struct PatchData {
       double**   QIn;

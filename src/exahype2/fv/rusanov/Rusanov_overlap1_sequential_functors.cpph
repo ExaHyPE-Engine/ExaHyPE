@@ -455,7 +455,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++) {
         otterLoopIterationBegin();
-        internal::compute_nonconservative_flux_loop_body(
+        internal::computeNonconservativeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
           nonconservativeProduct,
@@ -477,7 +477,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++) {
         otterLoopIterationBegin();
-        internal::compute_nonconservative_flux_loop_body(
+        internal::computeNonconservativeFlux_LoopBody(
           patchData.QIn[patchIndex],
           QInEnumerator,
           nonconservativeProduct,
@@ -522,7 +522,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
           otterLoopIterationBegin();
-          internal::compute_nonconservative_flux_loop_body(
+          internal::computeNonconservativeFlux_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
             nonconservativeProduct,
@@ -545,7 +545,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
         for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
           otterLoopIterationBegin();
-          internal::compute_nonconservative_flux_loop_body(
+          internal::computeNonconservativeFlux_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
             nonconservativeProduct,
@@ -568,7 +568,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
         for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++) {
           otterLoopIterationBegin();
-          internal::compute_nonconservative_flux_loop_body(
+          internal::computeNonconservativeFlux_LoopBody(
             patchData.QIn[patchIndex],
             QInEnumerator,
             nonconservativeProduct,

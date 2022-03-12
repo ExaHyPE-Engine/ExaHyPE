@@ -2,12 +2,15 @@
 #include "otter/otter.h"
 
 
-template <typename Solver, typename TempDataEnumerator>
+template <
+  typename Solver,
+  typename TempDataEnumerator
+>
 void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   PatchData&              patchData,
-  int                     numberOfVolumesPerAxisInPatch,
-  int                     unknowns,
-  int                     auxiliaryVariables,
+  int      numberOfVolumesPerAxisInPatch,
+  int      unknowns,
+  int      auxiliaryVariables,
   bool                    evaluateFlux,
   bool                    evaluateNonconservativeProduct,
   bool                    evaluateSource,
@@ -37,11 +40,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
   TempDataEnumerator eigenvalueEnumerator(patchData.numberOfPatches, numberOfVolumesPerAxisInPatch,haloSize,1,0);
 
   for (int patchIndex=0; patchIndex<patchData.numberOfPatches; patchIndex++) {
-    logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "evaluate source terms and/or copy solution over" );
     if (Dimensions==2 and evaluateSource) {
       otterLoopBegin();
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -61,9 +66,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
     }
     else if (Dimensions==3 and evaluateSource) {
       otterLoopBegin();
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
+      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
-      for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++) {
         otterLoopIterationBegin();
         internal::copySolutionAndAddSourceTerm_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -83,11 +91,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
     }
     else if (Dimensions==2) {
       otterLoopBegin();
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       #if defined(SharedOMP)
-      #pragma omp simd
+      #pragma omp simd collapse(2)
       #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
         internal::copySolution_LoopBody(
@@ -105,9 +113,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
     }
     else {
       otterLoopBegin();
-      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
-      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++)
+      for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
+      for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int unknown=0; unknown<unknowns+auxiliaryVariables; unknown++) {
         otterLoopIterationBegin();
         internal::copySolution_LoopBody(
@@ -127,14 +138,19 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
 
     if (Dimensions==2) {
       otterLoopBegin();
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++) {
+      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
         otterLoopIterationBegin();
         bool isDiagonalCell = false;
+        #if PeanoDebug>0
         isDiagonalCell |= (x==-haloSize and y==-haloSize);
         isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
         isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
         isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
+        #endif
         if ( not isDiagonalCell ) {
           internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
@@ -148,7 +164,23 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
             tempEigenvalueX,
             eigenvalueEnumerator
           );
+        }
+      }
 
+      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+        otterLoopIterationBegin();
+        bool isDiagonalCell = false;
+        #if PeanoDebug>0
+        isDiagonalCell |= (x==-haloSize and y==-haloSize);
+        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
+        #endif
+        if ( not isDiagonalCell ) {
           internal::computeMaxEigenvalue_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
@@ -194,11 +226,15 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
     }
     else {
       otterLoopBegin();
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
+      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
-      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++) {
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
         otterLoopIterationBegin();
         bool isDiagonalCell = false;
+        #if PeanoDebug>0
         isDiagonalCell |= (x==-haloSize and y==-haloSize);
         isDiagonalCell |= (x==-haloSize and z==-haloSize);
         isDiagonalCell |= (y==-haloSize and z==-haloSize);
@@ -211,6 +247,7 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
         isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
         isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
+        #endif
         if ( not isDiagonalCell ) {
             internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
@@ -224,7 +261,35 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
               tempEigenvalueX,
               eigenvalueEnumerator
             );
+        }
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
 
+      otterLoopBegin();
+      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
+      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+        otterLoopIterationBegin();
+        bool isDiagonalCell = false;
+        #if PeanoDebug>0
+        isDiagonalCell |= (x==-haloSize and y==-haloSize);
+        isDiagonalCell |= (x==-haloSize and z==-haloSize);
+        isDiagonalCell |= (y==-haloSize and z==-haloSize);
+        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (x==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (y==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
+        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
+        #endif
+        if ( not isDiagonalCell ) {
             internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -237,7 +302,35 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
               tempEigenvalueY,
               eigenvalueEnumerator
             );
+        }
+        otterLoopIterationEnd();
+      }
+      otterLoopEnd();
 
+      otterLoopBegin();
+      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize; z++)
+      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
+        otterLoopIterationBegin();
+        bool isDiagonalCell = false;
+        #if PeanoDebug>0
+        isDiagonalCell |= (x==-haloSize and y==-haloSize);
+        isDiagonalCell |= (x==-haloSize and z==-haloSize);
+        isDiagonalCell |= (y==-haloSize and z==-haloSize);
+        isDiagonalCell |= (x==-haloSize and y==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (x==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (y==-haloSize and z==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==-haloSize);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
+        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==-haloSize);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and y==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (x==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
+        isDiagonalCell |= (y==numberOfVolumesPerAxisInPatch+haloSize-1 and z==numberOfVolumesPerAxisInPatch+haloSize-1);
+        #endif
+        if ( not isDiagonalCell ) {
             internal::computeMaxEigenvalue_LoopBody<Solver>(
               patchData.QIn[patchIndex],
               QInEnumerator,
@@ -285,8 +378,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
 
     if (evaluateFlux and Dimensions==2) {
       otterLoopBegin();
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
-      for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++) {
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -306,8 +402,11 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++) {
+      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -349,9 +448,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
     }
     else if (evaluateFlux and Dimensions==3) {
       otterLoopBegin();
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++)
+      for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;          y++)
-      for (int z =         0; z < numberOfVolumesPerAxisInPatch;          z++) {
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize; x++) {
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -371,9 +473,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
       for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize;  y++)
-      for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++) {
+      for (int z =         0; z < numberOfVolumesPerAxisInPatch;           z++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -393,9 +498,12 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++)
       for (int y =         0; y < numberOfVolumesPerAxisInPatch;           y++)
-      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++) {
+      for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize;  z++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;           x++) {
         otterLoopIterationBegin();
         internal::computeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
@@ -440,10 +548,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
 
     if (evaluateNonconservativeProduct and Dimensions==2) {
       otterLoopBegin();
-      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++)
-      for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++) {
+      for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
         otterLoopIterationBegin();
-        internal::compute_nonconservative_flux_loop_body<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -461,10 +572,13 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       otterLoopEnd();
 
       otterLoopBegin();
-      for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
-      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++) {
+      for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
+      #if defined(SharedOMP)
+      #pragma omp simd
+      #endif
+      for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
         otterLoopIterationBegin();
-        internal::compute_nonconservative_flux_loop_body<Solver>(
+        internal::computeNonconservativeFlux_LoopBody<Solver>(
           patchData.QIn[patchIndex],
           QInEnumerator,
           patchData.patchCentre[patchIndex],
@@ -504,11 +618,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
     }
     else if (evaluateNonconservativeProduct and Dimensions==3) {
         otterLoopBegin();
-        for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++)
+        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
-        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
+        #if defined(SharedOMP)
+        #pragma omp simd
+        #endif
+        for (int x = -haloSize; x < numberOfVolumesPerAxisInPatch+haloSize-1; x++) {
           otterLoopIterationBegin();
-          internal::compute_nonconservative_flux_loop_body<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -526,11 +643,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         otterLoopEnd();
 
         otterLoopBegin();
-        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
+        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++)
         for (int y = -haloSize; y < numberOfVolumesPerAxisInPatch+haloSize-1; y++)
-        for (int z =         0; z < numberOfVolumesPerAxisInPatch;            z++) {
+        #if defined(SharedOMP)
+        #pragma omp simd
+        #endif
+        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
           otterLoopIterationBegin();
-          internal::compute_nonconservative_flux_loop_body<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -548,11 +668,14 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
         otterLoopEnd();
 
         otterLoopBegin();
-        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++)
+        for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++)
         for (int y =         0; y < numberOfVolumesPerAxisInPatch;            y++)
-        for (int z = -haloSize; z < numberOfVolumesPerAxisInPatch+haloSize-1; z++) {
+        #if defined(SharedOMP)
+        #pragma omp simd
+        #endif
+        for (int x =         0; x < numberOfVolumesPerAxisInPatch;            x++) {
           otterLoopIterationBegin();
-          internal::compute_nonconservative_flux_loop_body<Solver>(
+          internal::computeNonconservativeFlux_LoopBody<Solver>(
             patchData.QIn[patchIndex],
             QInEnumerator,
             patchData.patchCentre[patchIndex],
@@ -596,6 +719,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
       otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(2)
+      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++) {
         otterLoopIterationBegin();
@@ -621,6 +747,9 @@ void exahype2::fv::rusanov::timeStepWithRusanov_overlap1_sequential(
       logDebug( "timeStepWithRusanov_overlap1_sequential(...)", "compute maximum eigenvalue for subsequent time step" );
       double newMaxEigenvalue = 0.0;
       otterLoopBegin(); // @todo how do I clarify that this is a reduction? Do we need this info here?
+      #if defined(SharedOMP)
+      #pragma omp simd collapse(3)
+      #endif
       for (int x = 0; x < numberOfVolumesPerAxisInPatch; x++)
       for (int y = 0; y < numberOfVolumesPerAxisInPatch; y++)
       for (int z = 0; z < numberOfVolumesPerAxisInPatch; z++) {

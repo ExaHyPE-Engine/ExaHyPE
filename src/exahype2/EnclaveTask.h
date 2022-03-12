@@ -39,9 +39,12 @@ namespace exahype2 {
  * responsibility to destroy it) to the bookkeeping and then can be deleted
  * themselves.
  *
- * I assume that the functor releases the input data.
+ * ## Data ownership
  *
- * <h2> SmartMPI </h2>
+ * - The run() operation allocates the output data and then invokes the functor.
+ * - I assume that the functor releases the input data.
+ *
+ * ## SmartMPI
  * 
  * If you enable SmartMPI, then all enclave tasks are SmartMPI tasks, too. I could
  * realise this through multiple inheritance, but I have to know excactly how big
